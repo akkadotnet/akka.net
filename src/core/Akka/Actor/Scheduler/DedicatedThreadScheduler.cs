@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="DedicatedThreadScheduler.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
@@ -110,7 +117,7 @@ namespace Akka.Actor
                 catch (OperationCanceledException) { }
                 catch (Exception x)
                 {
-                    _log.Error(x, "DedicatedThreadScheduler faild to execute action");
+                    _log.Error(x, "DedicatedThreadScheduler failed to execute action");
                 }                
             };
             AddWork(initialDelay, executeAction, token);
@@ -137,7 +144,7 @@ namespace Akka.Actor
                 catch (OperationCanceledException) { }
                 catch (Exception x)
                 {
-                    _log.Error(x,"DedicatedThreadScheduler faild to execute action");
+                    _log.Error(x,"DedicatedThreadScheduler failed to execute action");
                 }
             };
             AddWork(initialDelay, executeAction, token);

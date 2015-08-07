@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Akka.Actor.Internal;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Serialization;
@@ -209,7 +209,7 @@ namespace Akka.Actor
             {
                 _state = _state.ClearBehaviorStack();
                 instance = CreateNewActorInstance();
-                //TODO: this overwrites any already initiaized supervisor strategy
+                //TODO: this overwrites any already initialized supervisor strategy
                 //We should investigate what we can do to handle this better
                 instance.SupervisorStrategyInternal = _props.SupervisorStrategy;
                 //defaults to null - won't affect lazy instantiation unless explicitly set in props
@@ -303,6 +303,7 @@ namespace Akka.Actor
                     }
                 }
 
+                ReleaseActor(actor);
                 actor.Clear(_systemImpl.DeadLetters);
             }
             _actorHasBeenCleared = true;
@@ -310,6 +311,11 @@ namespace Akka.Actor
 
             //TODO: semantics here? should all "_state" be cleared? or just behavior?
             _state = _state.ClearBehaviorStack();
+        }
+
+        private void ReleaseActor(ActorBase a)
+        {
+            _props.Release(a);
         }
 
         protected void PrepareForNewActor()
@@ -335,13 +341,13 @@ namespace Akka.Actor
         public static IActorRef GetCurrentSelfOrNoSender()
         {
             var current = Current;
-            return current != null ? current.Self : NoSender.Instance;
+            return current != null ? current.Self : ActorRefs.NoSender;
         }
 
         public static IActorRef GetCurrentSenderOrNoSender()
         {
             var current = Current;
-            return current != null ? current.Sender : NoSender.Instance;
+            return current != null ? current.Sender : ActorRefs.NoSender;
         }
     }
 }

@@ -27,7 +27,7 @@ namespace Akka.Actor
             scheduler.Advanced.ScheduleOnce(initialDelay, () => receiver.Tell(message, sender), null);
         }
 
-        [Obsolete("Use ScheduleTellRepeatedly() or Context.SelfTellRepeatedely() which will return an ICancelable. This method will be removed in future versions.")]
+        [Obsolete("Use ScheduleTellRepeatedly() or Context.SelfTellRepeatedly() which will return an ICancelable. This method will be removed in future versions.")]
         public static void Schedule(this IScheduler scheduler, TimeSpan initialDelay, TimeSpan interval, IActorRef receiver, object message)
         {
             var sender = ActorCell.GetCurrentSelfOrNoSender();
@@ -35,7 +35,7 @@ namespace Akka.Actor
         }
 
 
-        [Obsolete("Use ScheduleTellRepeatedly() or Context.SelfTellRepeatedely() instead. This method will be removed in future versions.")]
+        [Obsolete("Use ScheduleTellRepeatedly() or Context.SelfTellRepeatedly() instead. This method will be removed in future versions.")]
         public static void Schedule(this IScheduler scheduler, TimeSpan initialDelay, TimeSpan interval, IActorRef receiver, object message, CancellationToken cancellationToken)
         {
             var sender = ActorCell.GetCurrentSelfOrNoSender();

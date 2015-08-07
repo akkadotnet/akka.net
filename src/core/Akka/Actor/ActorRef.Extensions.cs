@@ -19,7 +19,7 @@ namespace Akka.Actor
         /// </summary>
         public static bool IsNobody(this IActorRef actorRef)
         {
-            return actorRef == null || actorRef is Nobody || actorRef is NoSender || actorRef is DeadLetterActorRef;
+            return actorRef == null || actorRef is Nobody || actorRef is DeadLetterActorRef;
         }
     }
 }

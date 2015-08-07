@@ -13,7 +13,6 @@ using Akka.Configuration;
 using Akka.Remote.Serialization;
 using Akka.Routing;
 using Akka.TestKit;
-using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Remote.Tests.Serialization
@@ -28,34 +27,38 @@ namespace Akka.Remote.Tests.Serialization
             }
         }
 
-        private Akka.Serialization.Serialization ser;
-        private IActorRef supervisor;
+        private readonly Akka.Serialization.Serialization _ser;
+        private readonly IActorRef _supervisor;
 
         public DaemonMsgCreateSerializerSpec()
-            : base(@"akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""")
+            : base(@"
+            akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote"" 
+            akka.remote.helios.tcp {
+                hostname = localhost
+                port = 0
+            }        
+        ")
         {
-            Akka.Serialization.Serialization.CurrentTransportInformation = null;
-
-            ser = Sys.Serialization;
-            supervisor = Sys.ActorOf(Props.Create<MyActor>(), "supervisor");
+            _ser = Sys.Serialization;
+            _supervisor = Sys.ActorOf(Props.Create<MyActor>(), "supervisor");
         }
 
         [Fact]
         public void Serialization_must_resolve_DaemonMsgCreateSerializer()
         {
-            ser.FindSerializerForType(typeof(DaemonMsgCreate)).GetType().ShouldBe(typeof(DaemonMsgCreateSerializer));
+            _ser.FindSerializerForType(typeof(DaemonMsgCreate)).GetType().ShouldBe(typeof(DaemonMsgCreateSerializer));
         }
 
         [Fact]
         public void Serialization_must_serialize_and_deserialize_DaemonMsgCreate_with_FromClassCreator()
         {
-            VerifySerialization(new DaemonMsgCreate(Props.Create<MyActor>(), new Deploy(), "foo", supervisor));
+            VerifySerialization(new DaemonMsgCreate(Props.Create<MyActor>(), new Deploy(), "foo", _supervisor));
         }
 
         [Fact]
         public void Serialization_must_serialize_and_deserialize_DaemonMsgCreate_with_function_creator()
         {
-            VerifySerialization(new DaemonMsgCreate(Props.Create(() => new MyActor()), new Deploy(), "foo", supervisor));
+            VerifySerialization(new DaemonMsgCreate(Props.Create(() => new MyActor()), new Deploy(), "foo", _supervisor));
         }
 
         [Fact]
@@ -72,16 +75,18 @@ namespace Akka.Remote.Tests.Serialization
                 FromConfig.Instance,
                 new RemoteScope(new Address("akka", "Test", "host2", 1922)),
                 Deploy.NoDispatcherGiven);
-            VerifySerialization(new DaemonMsgCreate(Props.Create<MyActor>().WithDispatcher("my-disp").WithDeploy(deploy1), deploy2, "foo", supervisor));
+            VerifySerialization(new DaemonMsgCreate(Props.Create<MyActor>().WithDispatcher("my-disp").WithDeploy(deploy1), deploy2, "foo", _supervisor));
         }
 
         #region Helper methods
 
         private void VerifySerialization(DaemonMsgCreate msg)
         {
-            var daemonMsgSerializer = ser.FindSerializerFor(msg);
-            AssertDaemonMsgCreate(msg, ser.Deserialize(daemonMsgSerializer.ToBinary(msg), 
-                daemonMsgSerializer.Identifier, typeof(DaemonMsgCreate)).AsInstanceOf<DaemonMsgCreate>());
+            var daemonMsgSerializer = _ser.FindSerializerFor(msg);
+            var binary = daemonMsgSerializer.ToBinary(msg);
+            var actual = (DaemonMsgCreate) _ser.Deserialize(binary, daemonMsgSerializer.Identifier, typeof (DaemonMsgCreate));
+            
+            AssertDaemonMsgCreate(msg, actual);
         }
 
         private void AssertDaemonMsgCreate(DaemonMsgCreate expected, DaemonMsgCreate actual)

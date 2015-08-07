@@ -279,6 +279,17 @@ namespace Akka.Tests.Actor
             Assert.True(!(bool)t2.Result);
         }
 
+        [Fact]
+        public void An_ActorRef_should_never_have_a_null_Sender_Bug_1212()
+        {          
+            var actor = ActorOfAsTestActorRef<NonPublicActor>(Props.Create<NonPublicActor>(SupervisorStrategy.StoppingStrategy));
+            // actors with a null sender should always write to deadletters
+            EventFilter.DeadLetter<object>().ExpectOne(() => actor.Tell(new object(), null));
+
+            // will throw an exception if there's a bug
+            ExpectNoMsg();
+        }
+
         private void VerifyActorTermination(IActorRef actorRef)
         {
             var watcher = CreateTestProbe();

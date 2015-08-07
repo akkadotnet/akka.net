@@ -34,7 +34,7 @@ namespace Akka.Logger.NLog
         /// </summary>
         public NLogLogger()
         {
-            Receive<Error>(m => Log(m, logger => logger.Error("{0}", m.Message)));
+            Receive<Error>(m => Log(m, logger => logger.Error(string.Format("{0}", m.Message), m.Cause)));
             Receive<Warning>(m => Log(m, logger => logger.Warn("{0}", m.Message)));
             Receive<Info>(m => Log(m, logger => logger.Info("{0}", m.Message)));
             Receive<Debug>(m => Log(m, logger => logger.Debug("{0}", m.Message)));

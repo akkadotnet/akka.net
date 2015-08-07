@@ -77,6 +77,7 @@ namespace Akka.Persistence.Journal
 
         private void HandleReplayMessages(ReplayMessages msg)
         {
+            var context = Context;
             var sender = Sender;
             ReplayMessagesAsync(msg.PersistenceId, msg.FromSequenceNr, msg.ToSequenceNr, msg.Max, persistent =>
             {
@@ -85,7 +86,7 @@ namespace Akka.Persistence.Journal
             .NotifyAboutReplayCompletion(msg.PersistentActor)
             .ContinueWith(t =>
             {
-                if (!t.IsFaulted && CanPublish) Context.System.EventStream.Publish(msg);
+                if (!t.IsFaulted && CanPublish) context.System.EventStream.Publish(msg);
             });
         }
 

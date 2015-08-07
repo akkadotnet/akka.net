@@ -12,6 +12,7 @@ namespace Akka.Configuration.Hocon
     /// <summary>
     /// This class represents a custom akka node within a configuration file.
     /// <code>
+    /// <![CDATA[
     /// <?xml version="1.0" encoding="utf-8" ?>
     /// <configuration>
     ///   <configSections>
@@ -21,6 +22,7 @@ namespace Akka.Configuration.Hocon
     ///   ...
     ///   </akka>
     /// </configuration>
+    /// ]]>
     /// </code>
     /// </summary>
     public class AkkaConfigurationSection : ConfigurationSection

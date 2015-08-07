@@ -99,7 +99,7 @@ namespace Akka.Configuration
             HoconValue currentNode = Root;
             if (currentNode == null)
             {
-                throw new Exception("Current node should not be null");
+                throw new InvalidOperationException("Current node should not be null");
             }
             foreach (string key in elements)
             {

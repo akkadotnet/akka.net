@@ -65,7 +65,10 @@ namespace Akka.Actor
             TimeSpan? timeout)
         {
             var result = new TaskCompletionSource<object>(TaskContinuationOptions.AttachedToParent);
-            if (timeout.HasValue)
+
+            timeout = timeout ?? provider.Settings.AskTimeout;
+
+            if (timeout != Timeout.InfiniteTimeSpan && timeout.Value > default(TimeSpan))
             {
                 var cancellationSource = new CancellationTokenSource();
                 cancellationSource.Token.Register(() => result.TrySetCanceled());
@@ -203,7 +206,7 @@ namespace Akka.Actor
                 {
                     c.Cancel(false);
                 }
-            }, TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously);
+            }, TaskContinuationOptions.ExecuteSynchronously);
 
             return a;
         }
