@@ -14,6 +14,7 @@ namespace Akka.Configuration.Hocon
     /// This class represents the base implementation for retrieving text from
     /// an XML CDATA node within a configuration file.
     /// <code>
+    /// <![CDATA[
     /// <?xml version="1.0" encoding="utf-8" ?>
     /// <configuration>
     ///   <configSections>
@@ -21,12 +22,13 @@ namespace Akka.Configuration.Hocon
     ///   </configSections>
     ///   <akka>
     ///     <hocon>
-    ///       <![CDATA[
+    ///       &lt;![CDATA[
     ///       ...
-    ///       ]]>
+    ///       ]]&gt;
     ///     </hocon>
     ///   </akka>
     /// </configuration>
+    /// ]]>
     /// </code>
     /// </summary>
     public abstract class CDataConfigurationElement : ConfigurationElement

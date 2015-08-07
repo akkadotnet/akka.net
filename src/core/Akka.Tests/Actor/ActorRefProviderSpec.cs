@@ -5,7 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 using Akka.TestKit;
 using Xunit;
 

@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using Akka.Actor;
 using Akka.DI.Core;
 using Microsoft.Practices.Unity;
@@ -22,6 +23,7 @@ namespace Akka.DI.Unity
         private IUnityContainer container;
         private ConcurrentDictionary<string, Type> typeCache;
         private ActorSystem system;
+        private ConditionalWeakTable<ActorBase, IUnityContainer> references;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="UnityDependencyResolver"/> class.
@@ -39,6 +41,7 @@ namespace Akka.DI.Unity
             typeCache = new ConcurrentDictionary<string, Type>(StringComparer.InvariantCultureIgnoreCase);
             this.system = system;
             this.system.AddDependencyResolver(this);
+            this.references = new ConditionalWeakTable<ActorBase, IUnityContainer>();
         }
 
         /// <summary>
@@ -60,7 +63,13 @@ namespace Akka.DI.Unity
         /// <returns>A delegate factory used to create actors</returns>
         public Func<ActorBase> CreateActorFactory(Type actorType)
         {
-            return () => (ActorBase)container.Resolve(actorType);
+            return () =>
+            {
+                var childContainer = container.CreateChildContainer();
+                var actor = (ActorBase)childContainer.Resolve(actorType);
+                references.Add(actor, childContainer);
+                return actor;
+            };
         }
 
         /// <summary>
@@ -80,7 +89,13 @@ namespace Akka.DI.Unity
         /// <param name="actor">The actor to remove from the container</param>
         public void Release(ActorBase actor)
         {
-            container.Teardown(actor);
+            IUnityContainer childContainer;
+
+            if (references.TryGetValue(actor, out childContainer))
+            {
+                childContainer.Dispose();
+                references.Remove(actor);
+            }
         }
     }
 }

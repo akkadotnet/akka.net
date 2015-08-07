@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="JournalDbEngine.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -207,9 +214,9 @@ namespace Akka.Persistence.Sql.Common.Journal
             var sqlCommand = QueryBuilder.InsertBatchMessages(persistentMessages);
             CompleteCommand(sqlCommand);
 
-            var journalEntires = persistentMessages.Select(ToJournalEntry).ToList();
+            var journalEntries = persistentMessages.Select(ToJournalEntry).ToList();
 
-            InsertInTransaction(sqlCommand, journalEntires);
+            InsertInTransaction(sqlCommand, journalEntries);
         }
 
         /// <summary>
@@ -237,9 +244,9 @@ namespace Akka.Persistence.Sql.Common.Journal
             var sqlCommand = QueryBuilder.InsertBatchMessages(persistentMessages);
             CompleteCommand(sqlCommand);
 
-            var journalEntires = persistentMessages.Select(ToJournalEntry).ToList();
+            var journalEntries = persistentMessages.Select(ToJournalEntry).ToList();
 
-            await InsertInTransactionAsync(sqlCommand, journalEntires);
+            await InsertInTransactionAsync(sqlCommand, journalEntries);
         }
 
         /// <summary>
@@ -277,14 +284,14 @@ namespace Akka.Persistence.Sql.Common.Journal
                 payloadType.QualifiedTypeName(), serializer.ToBinary(message.Payload));
         }
 
-        private void InsertInTransaction(DbCommand sqlCommand, IEnumerable<JournalEntry> journalEntires)
+        private void InsertInTransaction(DbCommand sqlCommand, IEnumerable<JournalEntry> journalEntries)
         {
             using (var tx = _dbConnection.BeginTransaction())
             {
                 sqlCommand.Transaction = tx;
                 try
                 {
-                    foreach (var entry in journalEntires)
+                    foreach (var entry in journalEntries)
                     {
                         CopyParamsToCommand(sqlCommand, entry);
 
@@ -304,14 +311,14 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        private async Task InsertInTransactionAsync(DbCommand sqlCommand, IEnumerable<JournalEntry> journalEntires)
+        private async Task InsertInTransactionAsync(DbCommand sqlCommand, IEnumerable<JournalEntry> journalEntries)
         {
             using (var tx = _dbConnection.BeginTransaction())
             {
                 sqlCommand.Transaction = tx;
                 try
                 {
-                    foreach (var entry in journalEntires)
+                    foreach (var entry in journalEntries)
                     {
                         CopyParamsToCommand(sqlCommand, entry);
 

@@ -185,7 +185,7 @@ namespace Akka.Persistence.Snapshot
         private IEnumerable<SnapshotMetadata> GetSnapshotMetadata(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             var snapshots = _snapshotDirectory
-                .EnumerateFiles("snapshot-" + persistenceId + "-*", SearchOption.TopDirectoryOnly)
+                .EnumerateFiles("snapshot-" + Uri.EscapeDataString(persistenceId) + "-*", SearchOption.TopDirectoryOnly)
                 .Select(ExtractSnapshotMetadata)
                 .Where(metadata => metadata != null && criteria.IsMatch(metadata) && !_saving.Contains(metadata)).ToList();
 
@@ -197,7 +197,7 @@ namespace Akka.Persistence.Snapshot
             var match = FilenameRegex.Match(fileInfo.Name);
             if (match.Success)
             {
-                var pid = match.Groups[1].Value;
+                var pid = Uri.UnescapeDataString(match.Groups[1].Value);
                 var seqNrString = match.Groups[2].Value;
                 var timestampTicks = match.Groups[3].Value;
 
@@ -213,7 +213,7 @@ namespace Akka.Persistence.Snapshot
 
         private FileInfo GetSnapshotFile(SnapshotMetadata metadata, string extension = "")
         {
-            var filename = string.Format("snapshot-{0}-{1}-{2}{3}", metadata.PersistenceId, metadata.SequenceNr, metadata.Timestamp.Ticks, extension);
+            var filename = string.Format("snapshot-{0}-{1}-{2}{3}", Uri.EscapeDataString(metadata.PersistenceId), metadata.SequenceNr, metadata.Timestamp.Ticks, extension);
             var file = _snapshotDirectory.GetFiles(filename, SearchOption.TopDirectoryOnly).FirstOrDefault();
             return file ?? new FileInfo(Path.Combine(_snapshotDirectory.FullName, filename));
         }

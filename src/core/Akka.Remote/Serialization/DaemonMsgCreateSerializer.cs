@@ -133,7 +133,7 @@ namespace Akka.Remote.Serialization
 
             RouterConfig routerConfig;
             if (protoDeploy.HasRouterConfig)
-                routerConfig = (RouterConfig) Deserialize(protoDeploy.RouterConfig, protoDeploy.RouterConfig.GetType());
+                routerConfig = (RouterConfig)Deserialize(protoDeploy.RouterConfig, typeof(RouterConfig));
             else
                 routerConfig = RouterConfig.NoRouter;
 

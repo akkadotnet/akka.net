@@ -24,7 +24,7 @@ namespace Akka.Logger.Serilog
 
         private void WithSerilog(Action<ILogger> logStatement)
         {
-            var logger = Log.Logger.ForContext(GetType());
+            var logger = Log.Logger.ForContext("SourceContext", Context.Sender.Path);
             logStatement(logger);
         }
 

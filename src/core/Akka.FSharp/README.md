@@ -17,15 +17,15 @@ F# also gives you it's own actor system Configuration module with support of fol
 
 ### Creating actors with `actor` computation expression
 
-Unlike C# actors, which represent object oriented nature of the language, F# is able to define an actor's logic in more functional way. It is done by using `actor` computation expression. In most of the cases, an expression inside `actor` is expected to be represented as self-invoking recursive function - also invoking an other functions while maintaining recursive cycle is allowed, i.e. to change actor's behavior or even to create more advanced constructs like Finite State Machines. 
+Unlike C# actors, which represent object oriented nature of the language, F# is able to define an actor's logic in more functional way. It is done by using `actor` computation expression. In most of the cases, an expression inside `actor` is expected to be represented as self-invoking recursive function - also invoking an other functions while maintaining recursive cycle is allowed, i.e. to change actor's behavior or even to create more advanced constructs like Finite State Machines.
 
-It's important to remember, that each actor returning point should point to the next recursive function call - any other value returned will result in stopping current actor (see: [Actor Lifecycle](http://akkadotnet.github.io/wiki/Actor%20lifecycle)).
+It's important to remember, that each actor returning point should point to the next recursive function call - any other value returned will result in stopping current actor (see: [Actor Lifecycle](http://getakka.net/docs/Actor%20lifecycle)).
 
 Example:
 
-    let aref = 
-        spawn system "my-actor" 
-            (fun mailbox -> 
+    let aref =
+        spawn system "my-actor"
+            (fun mailbox ->
                 let rec loop() = actor {
                     let! message = mailbox.Receive()
                     // handle an incoming message
@@ -52,8 +52,8 @@ Example:
 
 Paragraph above already has shown, how actors may be created with help of the spawning function. There are several spawning function, which may be used to instantiate actors:
 
--   `spawn (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) : ActorRef` - spawns an actor using specified actor computation expression. The actor can only be used locally. 
--   `spawnOpt (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor computation expression, with custom spawn option settings. The actor can only be used locally. 
+-   `spawn (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) : ActorRef` - spawns an actor using specified actor computation expression. The actor can only be used locally.
+-   `spawnOpt (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor computation expression, with custom spawn option settings. The actor can only be used locally.
 -   `spawne (actorFactory : ActorRefFactory) (name : string) (expr : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor computation expression, using an Expression AST. The actor code can be deployed remotely.
 -   `spawnObj (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) : ActorRef` - spawns an actor using specified actor quotation. The actor can only be used locally.
 -   `spawnObjOpt (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor quotation, with custom spawn option settings. The actor can only be used locally.
@@ -71,28 +71,28 @@ Example:
     let disposableActor (mailbox:Actor<_>) =
         let resource = new DisposableResource()
         mailbox.Defer ((resource :> IDisposable).Dispose)
-        let rec loop () = 
+        let rec loop () =
             actor {
                 let! msg = mailbox.Receive()
-                return! loop ()   
+                return! loop ()
             }
         loop()
 
 ### Actor spawning options
 
-To be able to specifiy more precise actor creation behavior, you may use `spawnOpt` and `spawne` methods, both taking a list of `SpawnOption` values. Each specific option should be present only once in the collection. When a conflict occurs (more than one option of specified type has been found), the latest value found inside the list will be chosen.
+To be able to specify more precise actor creation behavior, you may use `spawnOpt` and `spawne` methods, both taking a list of `SpawnOption` values. Each specific option should be present only once in the collection. When a conflict occurs (more than one option of specified type has been found), the latest value found inside the list will be chosen.
 
 -   `SpawnOption.Deploy(Akka.Actor.Deploy)` - defines deployment strategy for created actors (see: Deploy). This option may be used along with `spawne` function to enable remote actors deployment.
--   `SpawnOption.Router(Akka.Routing.RouterConfig)` - defines an actor to be a router as well as it's routing specifics (see: [Routing](http://akkadotnet.github.io/wiki/Routing)).
--   `SpawnOption.SupervisiorStrategy(Akka.Actor.SupervisiorStrategy)` - defines a supervisor strategy of the current actor. It will affect it's children (see: [Supervision](http://akkadotnet.github.io/wiki/Supervision)).
--   `SpawnOption.Dispatcher(string)` - defines a type of the dispatcher used for resources management for the created actors. (See: [Dispatchers](http://akkadotnet.github.io/wiki/Dispatchers))
--   `SpawnOption.Mailbox(string)` - defines a type of the mailbox used for the created actors. (See: [Mailboxes](http://akkadotnet.github.io/wiki/Mailbox))
+-   `SpawnOption.Router(Akka.Routing.RouterConfig)` - defines an actor to be a router as well as it's routing specifics (see: [Routing](http://getakka.net/docs/working-with-actors/Routers)).
+-   `SpawnOption.SupervisiorStrategy(Akka.Actor.SupervisiorStrategy)` - defines a supervisor strategy of the current actor. It will affect it's children (see: [Supervision](http://getakka.net/docs/concepts/supervision)).
+-   `SpawnOption.Dispatcher(string)` - defines a type of the dispatcher used for resources management for the created actors. (See: [Dispatchers](http://getakka.net/docs/working-with-actors/Dispatchers))
+-   `SpawnOption.Mailbox(string)` - defines a type of the mailbox used for the created actors. (See: [Mailboxes](http://getakka.net/docs/working-with-actors/Mailbox))
 
 Example (deploy actor remotely):
 
     open Akka.Actor
-    let remoteRef = 
-        spawne system "my-actor" <@ actorOf myFunc @> 
+    let remoteRef =
+        spawne system "my-actor" <@ actorOf myFunc @>
             [SpawnOption.Deploy (Deploy(RemoteScope(Address.Parse "akka.tcp://remote-system@127.0.0.1:9000/")))]
 
 ### Ask and tell operators
@@ -106,7 +106,7 @@ Example:
 
 ### Actor selection
 
-Actors may be referenced not only by `ActorRef`s, but also through actor path selection (see: [Addressing](http://akkadotnet.github.io/wiki/Addressing)). With F# API you may select an actor with known path using `select` function:
+Actors may be referenced not only by `ActorRef`s, but also through actor path selection (see: [Addressing](http://getakka.net/docs/concepts/addressing)). With F# API you may select an actor with known path using `select` function:
 
 -   `select (path : string) (selector : ActorRefFactory) : ActorSelection` - where path is a valid URI string used to recognize actor path, and the selector is either actor system or actor itself.
 
@@ -147,7 +147,7 @@ Monitored actors will automatically send a `Terminated` message to their watcher
 
 ### Actor supervisor strategies
 
-Actors have a place in their system's hierarchy trees. To manage failures done by the child actors, their parents/supervisors may decide to use specific supervisor strategies (see: [Supervision](http://akkadotnet.github.io/wiki/Supervision)) in order to react to the specific types of errors. In F# this may be configured using functions of the `Strategy` module:
+Actors have a place in their system's hierarchy trees. To manage failures done by the child actors, their parents/supervisors may decide to use specific supervisor strategies (see: [Supervision](http://getakka.net/docs/concepts/supervision)) in order to react to the specific types of errors. In F# this may be configured using functions of the `Strategy` module:
 
 -   `Strategy.OneForOne (decider : exn -> Directive) : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution.
 -   `Strategy.OneForOne (decider : exn -> Directive, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur.
@@ -158,16 +158,16 @@ Actors have a place in their system's hierarchy trees. To manage failures done b
 
 Example:
 
-    let aref = 
-        spawnOpt system "my-actor" (actorOf myFunc) 
-            [ SpawnOption.SupervisorStrategy (Strategy.OneForOne (fun error -> 
+    let aref =
+        spawnOpt system "my-actor" (actorOf myFunc)
+            [ SpawnOption.SupervisorStrategy (Strategy.OneForOne (fun error ->
                 match error with
                 | :? ArithmeticException -> Directive.Escalate
                 | _ -> SupervisorStrategy.DefaultDecider error )) ]
-    
-    let remoteRef = 
+
+    let remoteRef =
         spawne system "remote-actor" <@ actorOf myFunc @>
-            [ SpawnOption.SupervisorStrategy (Strategy.OneForOne <@ fun error -> 
+            [ SpawnOption.SupervisorStrategy (Strategy.OneForOne <@ fun error ->
                 match error with
                 | :? ArithmeticException -> Directive.Escalate
                 | _ -> SupervisorStrategy.DefaultDecider error ) @>
@@ -181,25 +181,25 @@ While you may use built-in set of the event stream methods (see: Event Streams),
 -   `unsubscribe (channel: System.Type) (ref: ActorRef) (eventStream: Akka.Event.EventStream) : bool` - unsubscribes an actor reference from target channel of the provided event stream.
 -   `publish (event: 'Event) (eventStream: Akka.Event.EventStream) : unit` - publishes an event on the provided event stream. Event channel is resolved from event's type.
 
-Example: 
+Example:
 
-    type Message = 
-        | Subscribe 
+    type Message =
+        | Subscribe
         | Unsubscribe
         | Msg of ActorRef * string
 
-    let subscriber = 
-        spawn system "subscriber" 
-            (actorOf2 (fun mailbox msg -> 
+    let subscriber =
+        spawn system "subscriber"
+            (actorOf2 (fun mailbox msg ->
                 let eventStream = mailbox.Context.System.EventStream
                 match msg with
                 | Msg (sender, content) -> printfn "%A says %s" (sender.Path) content
                 | Subscribe -> subscribe typeof<Message> mailbox.Self eventStream |> ignore
                 | Unsubscribe -> unsubscribe typeof<Message> mailbox.Self eventStream |> ignore ))
-            
-    let publisher = 
-        spawn system "publisher" 
-            (actorOf2 (fun mailbox msg -> 
+
+    let publisher =
+        spawn system "publisher"
+            (actorOf2 (fun mailbox msg ->
                 publish msg mailbox.Context.System.EventStream))
 
     subscriber <! Subscribe
@@ -241,11 +241,11 @@ To operate directly between `Async` results and actors, use `pipeTo` function (a
 Example:
 
     open System.IO
-    let handler (mailbox: Actor<obj>) msg = 
+    let handler (mailbox: Actor<obj>) msg =
         match box msg with
-        | :? FileInfo as fi -> 
+        | :? FileInfo as fi ->
             let reader = new StreamReader(fi.OpenRead())
-            reader.AsyncReadToEnd() |!> mailbox.Self 
+            reader.AsyncReadToEnd() |!> mailbox.Self
         | :? string as content ->
             printfn "File content: %s" content
         | _ -> mailbox.Unhandled()

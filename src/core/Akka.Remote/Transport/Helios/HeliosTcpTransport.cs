@@ -78,8 +78,8 @@ namespace Akka.Remote.Transport.Helios
         /// <param name="closedChannel">The handle to the socket channel that closed.</param>
         protected override void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
         {
-            if (cause != null)
-                ChannelLocalActor.Notify(closedChannel, new UnderlyingTransportError(cause, "Underlying transport closed."));
+            //if (cause != null)
+            //    ChannelLocalActor.Notify(closedChannel, new UnderlyingTransportError(cause, "Underlying transport closed."));
 
             ChannelLocalActor.Notify(closedChannel, new Disassociated(DisassociateInfo.Unknown));
             ChannelLocalActor.Remove(closedChannel);
@@ -110,7 +110,9 @@ namespace Akka.Remote.Transport.Helios
         /// <param name="erroredChannel">The handle to the Helios channel that errored.</param>
         protected override void OnException(Exception ex, IConnection erroredChannel)
         {
-            ChannelLocalActor.Notify(erroredChannel, new UnderlyingTransportError(ex, "Non-fatal network error occurred inside underlying transport"));
+            // Want to notify only for encoding exceptions
+            if(!(ex is HeliosConnectionException))
+                ChannelLocalActor.Notify(erroredChannel, new UnderlyingTransportError(ex, "Non-fatal network error occurred inside underlying transport"));
         }
 
         public override void Dispose()
@@ -148,7 +150,7 @@ namespace Akka.Remote.Transport.Helios
                 Init(connection, remoteSocketAddress, remoteAddress, msg, out handle);
                 listener.Notify(new InboundAssociation(handle));
 
-            }, TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.NotOnCanceled & TaskContinuationOptions.NotOnFaulted);
+            }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.NotOnCanceled | TaskContinuationOptions.NotOnFaulted);
         }
 
         protected override void OnConnect(INode remoteAddress, IConnection responseChannel)

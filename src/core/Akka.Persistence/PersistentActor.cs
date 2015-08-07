@@ -8,7 +8,7 @@
 using System;
 using System.Collections.Generic;
 using Akka.Actor;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 using Akka.Tools.MatchHandler;
 
 namespace Akka.Persistence

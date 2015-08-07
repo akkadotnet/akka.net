@@ -57,12 +57,14 @@
     <Reference Include="Google.ProtocolBuffers.Serialization">
       <HintPath>..\..\packages\Google.ProtocolBuffers.2.4.1.521\lib\net40\Google.ProtocolBuffers.Serialization.dll</HintPath>
     </Reference>
+    <Reference Include="Helios, Version=1.4.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Helios.1.4.1\lib\net45\Helios.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Web" />
-    <Reference Include="Helios">
-      <HintPath>..\..\packages\Helios.1.4.0\lib\net45\Helios.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\SharedAssemblyInfo.cs">
@@ -86,7 +88,7 @@
     <Compile Include="Proto\Containerformats.cs" />
     <Compile Include="Proto\Wireformats.cs" />
     <Compile Include="RemoteActorRef.cs" />
-    <Compile Include="RemoteDaemon.cs" />
+    <Compile Include="RemoteSystemDaemon.cs" />
     <Compile Include="RemoteDeployer.cs" />
     <Compile Include="RemoteSettings.cs" />
     <Compile Include="RemoteTransport.cs" />
@@ -103,7 +105,6 @@
     <Compile Include="Transport\FailureInjectorTransportAdapter.cs" />
     <Compile Include="Transport\Helios\HeliosHelpers.cs" />
     <Compile Include="Transport\Helios\HeliosTcpTransport.cs" />
-    <Compile Include="SystemNanoTime.cs" />
     <Compile Include="Transport\ThrottleTransportAdapter.cs" />
     <Compile Include="Transport\TransportAdapters.cs" />
     <Compile Include="Transport\AkkaProtocolTransport.cs" />

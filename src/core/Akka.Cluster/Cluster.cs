@@ -9,7 +9,7 @@ using System;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote;
@@ -295,12 +295,12 @@ namespace Akka.Cluster
 
         public void LogInfo(string template, object arg1)
         {
-            _log.Info(String.Format("Cluster Node [{0}] - " + template, SelfAddress, arg1));
+            _log.Info("Cluster Node [{0}] - " + template, SelfAddress, arg1);
         }
 
         public void LogInfo(string template, object arg1, object arg2)
         {
-            _log.Info(String.Format("Cluster Node [{0}] - " + template, SelfAddress, arg1, arg2));
+            _log.Info("Cluster Node [{0}] - " + template, SelfAddress, arg1, arg2);
         }
     }
 }

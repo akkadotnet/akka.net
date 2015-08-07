@@ -16,7 +16,7 @@ namespace Akka.Persistence.TestKit
 {
     public abstract class PluginSpec : TestKitBase, IDisposable
     {
-        private readonly AtomicCounter _counter = new AtomicCounter(0);
+        private static readonly AtomicCounter Counter = new AtomicCounter(0);
         private readonly PersistenceExtension _extension;
         private string _pid;
 
@@ -26,7 +26,7 @@ namespace Akka.Persistence.TestKit
             : base(new XunitAssertions(), FromConfig(config), actorSystemName, testActorName)
         {
             _extension = Persistence.Instance.Apply(Sys as ExtendedActorSystem);
-            _pid = "p-" + _counter.IncrementAndGet();
+            _pid = "p-" + Counter.IncrementAndGet();
         }
 
         protected static Config FromConfig(Config config = null)

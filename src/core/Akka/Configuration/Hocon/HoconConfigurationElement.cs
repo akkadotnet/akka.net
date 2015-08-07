@@ -13,6 +13,7 @@ namespace Akka.Configuration.Hocon
     /// This class represents a custom HOCON (Human-Optimized Config Object Notation)
     /// node within a configuration file.
     /// <code>
+    /// <![CDATA[
     /// <?xml version="1.0" encoding="utf-8" ?>
     /// <configuration>
     ///   <configSections>
@@ -24,6 +25,7 @@ namespace Akka.Configuration.Hocon
     ///     </hocon>
     ///   </akka>
     /// </configuration>
+    /// ]]>
     /// </code>
     /// </summary>
     public class HoconConfigurationElement : CDataConfigurationElement

@@ -6,6 +6,12 @@
 [![Issue Stats](http://www.issuestats.com/github/akkadotnet/akka.net/badge/pr)](http://www.issuestats.com/github/akkadotnet/akka.net)
 [![Issue Stats](http://www.issuestats.com/github/akkadotnet/akka.net/badge/issue)](http://www.issuestats.com/github/akkadotnet/akka.net)
 
+***[Issues for Next Release (v1.1)](https://waffle.io/akkadotnet/akka.net?milestone=Akka.NET%20v1.1)***<br>
+[![Critical Issues](https://badge.waffle.io/akkadotnet/akka.net.svg?label=help%20wanted&title=Issues Needing Help Now!)](http://waffle.io/akkadotnet/akka.net)
+<br>
+[![Stories Up For Grabs](https://badge.waffle.io/akkadotnet/akka.net.svg?label=up%20for%20grabs&title=General Issues Up For Grabs)](http://waffle.io/akkadotnet/akka.net)
+
+
 **Akka.NET** is a community-driven port of the popular Java/Scala framework [Akka](http://akka.io) to .NET.
 
 * Subscribe to the Akka.NET dev feed: https://twitter.com/AkkaDotNet  (@AkkaDotNet)
@@ -35,9 +41,29 @@ And if you need F# support:
 PM> Install-Package Akka.FSharp
 ```
 
-### Contribute
-If you are interested in helping porting Akka to .NET please take a look at [Contributing to Akka.NET](http://akkadotnet.github.io/wiki/Contributing to Akka.NET).
+### Contributing
+#### Where Can I Contribute?
+***[Issues for the Next Release (v1.1)](https://waffle.io/akkadotnet/akka.net?milestone=Akka.NET%20v1.1)***
 
-Also, please see [Building Akka.NET](http://getakka.net/docs/Building%20and%20Distributing%20Akka).
+[![Critical Issues](https://badge.waffle.io/akkadotnet/akka.net.svg?label=help%20wanted&title=Issues Needing Help Now!)](http://waffle.io/akkadotnet/akka.net)
+<br>
+[![Stories Up For Grabs](https://badge.waffle.io/akkadotnet/akka.net.svg?label=up%20for%20grabs&title=General Issues Up For Grabs)](http://waffle.io/akkadotnet/akka.net)
 
+> *All contributions are welcome! Please consider the [issues categorized in the `Help!` column](http://waffle.io/akkadotnet/akka.net) first, as they are areas we could really use your help :)*
+
+#### Contribution Guidelines
+If you are interested in helping porting Akka to .NET please take a look at [Contributing to Akka.NET](http://getakka.net/docs/Contributing%20to%20Akka).
+
+Our [docs](http://getakka.net/docs/) are always a work in progress—to contribute to docs, please see the [docs contribution guidelines here](http://getakka.net/docs/Documentation%20guidelines).
+
+
+#### Builds
+Please see [Building Akka.NET](http://getakka.net/docs/Building%20and%20Distributing%20Akka).
+
+To access unstable nightly builds, please [see the instructions here](http://getakka.net/docs/akka-developers/nightly-builds).
+
+### Support
 <a href="http://www.jetbrains.com/resharper"><img src="http://i61.tinypic.com/15qvwj7.jpg" alt="ReSharper" title="ReSharper"></a>
+
+<a href="https://www.jetbrains.com/teamcity/"><img src="http://i59.tinypic.com/2hmiirp.gif" alt="TeamCity" title="TeamCity"></a>
+

@@ -7,9 +7,11 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using Akka.Actor;
 using Akka.DI.Core;
 using Ninject;
+using Ninject.Activation.Blocks;
 
 namespace Akka.DI.Ninject
 {
@@ -19,10 +21,11 @@ namespace Akka.DI.Ninject
     /// </summary>
     public class NinjectDependencyResolver : IDependencyResolver
     {
-       IKernel container;
+        IKernel container;
 
         private ConcurrentDictionary<string, Type> typeCache;
         private ActorSystem system;
+        private ConditionalWeakTable<ActorBase, IActivationBlock> references;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NinjectDependencyResolver"/> class.
@@ -40,6 +43,7 @@ namespace Akka.DI.Ninject
             typeCache = new ConcurrentDictionary<string, Type>(StringComparer.InvariantCultureIgnoreCase);
             this.system = system;
             this.system.AddDependencyResolver(this);
+            this.references = new ConditionalWeakTable<ActorBase, IActivationBlock>();
         }
 
         /// <summary>
@@ -49,9 +53,7 @@ namespace Akka.DI.Ninject
         /// <returns>The type with the specified actor name</returns>
         public Type GetType(string actorName)
         {
-            typeCache.TryAdd(actorName, actorName.GetTypeValue());
-
-            return typeCache[actorName];
+            return typeCache.GetOrAdd(actorName, key => key.GetTypeValue());
         }
 
         /// <summary>
@@ -61,7 +63,13 @@ namespace Akka.DI.Ninject
         /// <returns>A delegate factory used to create actors</returns>
         public Func<ActorBase> CreateActorFactory(Type actorType)
         {
-            return () => (ActorBase)container.GetService(actorType);
+            return () =>
+            {
+                var block = container.BeginBlock();
+                var actor = (ActorBase)block.Get(actorType);
+                references.Add(actor, block);
+                return actor;
+            };
         }
 
         /// <summary>
@@ -81,7 +89,13 @@ namespace Akka.DI.Ninject
         /// <param name="actor">The actor to remove from the container</param>
         public void Release(ActorBase actor)
         {
-            container.Release(actor);
+            IActivationBlock block;
+
+            if (references.TryGetValue(actor, out block))
+            {
+                block.Dispose();
+                references.Remove(actor);
+            }
         }
     }
 }

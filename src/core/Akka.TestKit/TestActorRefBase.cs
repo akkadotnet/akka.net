@@ -64,7 +64,7 @@ namespace Akka.TestKit
         /// If this call is made from within an actor, the current actor will be the sender.
         /// If the call is made from a test class that is based on TestKit, TestActor will 
         /// will be the sender;
-        /// otherwise <see cref="NoSender"/> will be set as sender.
+        /// otherwise <see cref="ActorRefs.NoSender"/> will be set as sender.
         /// </summary>
         /// <param name="message">The message.</param>
         public void Tell(object message)

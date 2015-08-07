@@ -170,9 +170,7 @@ namespace Akka.Remote.Transport
                 // Listen is called only during the initialization of the stack, and upstreamListener is not read before this
                 // finishes.
                 _upstreamListener = tr.Result;
-            }, TaskContinuationOptions.AttachedToParent & 
-            TaskContinuationOptions.ExecuteSynchronously & 
-            TaskContinuationOptions.OnlyOnRanToCompletion);
+            }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion);
             return Task.FromResult((IAssociationEventListener)this);
         }
 
@@ -193,7 +191,7 @@ namespace Akka.Remote.Transport
                    addressChaosTable.AddOrUpdate(NakedAddress(handle.RemoteAddress), address => PassThru.Instance,
                        (address, mode) => PassThru.Instance);
                    statusPromise.SetResult(new FailureInjectorHandle(handle, this));
-               }, TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously);
+               }, TaskContinuationOptions.ExecuteSynchronously);
             }
         }
 
@@ -228,9 +226,8 @@ namespace Akka.Remote.Transport
                 var drop = mode as Drop;
                 if (Rng.NextDouble() <= drop.InboundDropP)
                 {
-                    var logString = string.Format("Dropping inbound [{0}] for [{1}] {2}", instance.GetType(),
-                        remoteAddress, debugMessage);
-                    if(_shouldDebugLog) _log.Debug(logString);
+                    if (_shouldDebugLog) _log.Debug("Dropping inbound [{0}] for [{1}] {2}", instance.GetType(),
+                         remoteAddress, debugMessage);
                     return true;
                 }
             }
@@ -247,8 +244,8 @@ namespace Akka.Remote.Transport
                 var drop = mode as Drop;
                 if (Rng.NextDouble() <= drop.OutboundDropP)
                 {
-                    var logString = string.Format("Dropping outbound [{0}] for [{1}] {2}", instance.GetType(), remoteAddress, debugMessage);
-                    if (_shouldDebugLog) _log.Debug(logString);
+                    if (_shouldDebugLog) 
+                        _log.Debug("Dropping outbound [{0}] for [{1}] {2}", instance.GetType(), remoteAddress, debugMessage);
                     return true;
                 }
             }
@@ -298,9 +295,7 @@ namespace Akka.Remote.Transport
             {
                 _upstreamListener = tr.Result;
                 WrappedHandle.ReadHandlerSource.SetResult(this);
-            }, TaskContinuationOptions.AttachedToParent 
-            & TaskContinuationOptions.ExecuteSynchronously 
-            & TaskContinuationOptions.OnlyOnRanToCompletion);
+            }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion);
         }
 
         public override bool Write(ByteString payload)

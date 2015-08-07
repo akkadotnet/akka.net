@@ -64,7 +64,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             //Signal that the test run has ended
             return await MessageSinkActorRef.Ask<MessageSinkActor.SinkCanBeTerminated>(new EndTestRun())
                 .ContinueWith(tr => MessageSinkActorRef.GracefulStop(TimeSpan.FromSeconds(2)), 
-                TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously).Unwrap();
+                TaskContinuationOptions.ExecuteSynchronously).Unwrap();
         }
 
         #endregion

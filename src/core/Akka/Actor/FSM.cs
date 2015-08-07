@@ -184,8 +184,7 @@ namespace Akka.Actor
                 if(_debugLog != null)
                     send = () =>
                     {
-                        _debugLog.Debug("{3}Timer '{0}' went off. Sending {1} -> {2}", name, message, actor,
-                            _ref.IsCancellationRequested ? "Cancelled " : "");
+                        _debugLog.Debug("{0}Timer '{1}' went off. Sending {2} -> {3}",_ref.IsCancellationRequested ? "Cancelled " : "", name, message, actor);
                         actor.Tell(this, Context.Self);
                     };
                 else
@@ -691,7 +690,7 @@ namespace Akka.Actor
             {
                 return delegate(Event<TData> @event)
                 {
-                    _log.Warning(String.Format("unhandled event {0} in state {1}", @event.FsmEvent, StateName));
+                    _log.Warning("unhandled event {0} in state {1}", @event.FsmEvent, StateName);
                     return Stay();
                 };
             }
