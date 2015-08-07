@@ -44,7 +44,7 @@ namespace Akka.Actor
         {
             var message = envelope.Message;
             CurrentMessage = message;
-            Sender = envelope.Sender;
+            Sender = MatchSender(envelope);
 
             try
             {
@@ -62,6 +62,18 @@ namespace Akka.Actor
             {
                 CheckReceiveTimeout(); // Reschedule receive timeout
             }
+        }
+
+        /// <summary>
+        /// If the envelope.Sender property is null, then we'll substitute
+        /// Deadletters as the <see cref="Sender"/> of this message.
+        /// </summary>
+        /// <param name="envelope">The envelope we received</param>
+        /// <returns>An IActorRef that corresponds to a Sender</returns>
+        private IActorRef MatchSender(Envelope envelope)
+        {
+            var sender = envelope.Sender;
+            return sender ?? System.DeadLetters;
         }
 
 
