@@ -1,4 +1,39 @@
-#### 1.0.4 June 12 2015 ####
+#### 1.0.4 August 07 2015 ####
+**Maintenance release for Akka.NET v1.0.3**
+
+**Akka.IO**
+This release introduces some major new features to Akka.NET, including [Akka.IO - a new set of capabilities built directly into the Akka NuGet package that allow you to communicate with your actors directly via TCP and UDP sockets](http://getakka.net/docs/IO) from external (non-actor) systems.
+
+If you want to see a really cool example of Akka.IO in action, look at [this sample that shows off how to use the Telnet commandline to interact directly with Akka.NET actors](https://github.com/akkadotnet/akka.net/blob/dev/src/examples/TcpEchoService.Server).
+
+**Akka.Persistence.MongoDb** and **Akka.Persistence.Sqlite**
+Two new flavors of Akka.Persistence support are now available. You can install them via the commandline!
+
+```
+PM> Install-Package Akka.Persistence.MongoDb -pre
+```
+and
+
+```
+PM> Install-Package Akka.Persistence.Sqlite -pre
+```
+
+**Fixes & Changes - Akka.NET Core**
+* [F# API - problem with discriminated union serialization](https://github.com/akkadotnet/akka.net/issues/999)
+* [Fix Null Sender issue](https://github.com/akkadotnet/akka.net/issues/1212)
+* [Outdated FsPickler version in Akka.FSharp can lead to runtime errors when other FsPickler-dependent packages are installed](https://github.com/akkadotnet/akka.net/issues/1206)
+* [Add default Ask timeout to HOCON configuration](https://github.com/akkadotnet/akka.net/issues/1163)
+* [Remote watching is repeated](https://github.com/akkadotnet/akka.net/issues/1090)
+* [RemoteDaemon bug, not removing children ](https://github.com/akkadotnet/akka.net/pull/1068)
+* [HOCON include support](https://github.com/akkadotnet/akka.net/pull/1169)
+* [Replace SystemNanoTime with MonotonicClock](https://github.com/akkadotnet/akka.net/pull/1174)
+
+**Akka.DI.StructureMap**
+We now have support for the [StructureMap dependency injection framework](http://docs.structuremap.net/) out of the box. You can install it here!
+
+```
+PM> Install-Package Akka.DI.StructureMap
+```
 
 #### 1.0.3 June 12 2015 ####
 **Bugfix release for Akka.NET v1.0.2.**
