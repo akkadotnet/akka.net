@@ -11,6 +11,8 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using Akka.MultiNodeTestRunner.Shared;
 using Xunit.Abstractions;
+using System.Linq;
+using Akka.MultiNodeTests;
 
 namespace Akka.MultiNodeTestRunner
 {
@@ -31,7 +33,9 @@ namespace Akka.MultiNodeTestRunner
         public bool OnMessage(IMessageSinkMessage message)
         {
             var testCaseDiscoveryMessage = message as ITestCaseDiscoveryMessage;
-            if (testCaseDiscoveryMessage != null)
+
+            if (testCaseDiscoveryMessage != null 
+                && !IsToSkip(testCaseDiscoveryMessage))
             {
                 //TODO: Improve this
                 if (Regex.IsMatch(testCaseDiscoveryMessage.TestClass.Class.Name, @"\d+$"))
@@ -54,6 +58,18 @@ namespace Akka.MultiNodeTestRunner
                 Finished.Set();
 
             return true;
+        }
+
+        bool IsToSkip(ITestMethodMessage message)
+        {
+            var multinodeFactAttributes = message
+                .TestMethod
+                .Method
+                .GetCustomAttributes(typeof(MultiNodeFactAttribute).AssemblyQualifiedName);
+
+            return 
+                multinodeFactAttributes
+                    .Any(attr => attr.GetNamedArgument<string>("Skip") != null);
         }
 
         private NodeTest GetTestDetails(ITestCaseDiscoveryMessage nodeTest)

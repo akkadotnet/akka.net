@@ -27,7 +27,7 @@ namespace Akka.MultiNodeTests
             get
             {
                 return ExecutedByMultiNodeRunner.Value
-                    ? null
+                    ? base.Skip
                     : "Must be executed by multi-node test runner";
             }
             set { base.Skip = value; }
