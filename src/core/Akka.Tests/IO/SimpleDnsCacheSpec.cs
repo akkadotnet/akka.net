@@ -65,5 +65,19 @@ namespace Akka.Tests.IO
             cache.Cached("test.local").ShouldBe(null);
            
         }
+
+        [Fact]
+        public void Cache_should_be_updated_with_the_latest_resolved()
+        {
+            var localClock = new AtomicReference<long>(0);
+            var cache = new SimpleDnsCacheTestDouble(localClock);
+            var cacheEntryOne = Dns.Resolved.Create("test.local", System.Net.Dns.GetHostEntry("127.0.0.1").AddressList);
+            var cacheEntryTwo = Dns.Resolved.Create("test.local", System.Net.Dns.GetHostEntry("127.0.0.1").AddressList);
+            long ttl = 500;
+            cache.Put(cacheEntryOne, ttl);
+            cache.Cached("test.local").ShouldBe(cacheEntryOne);
+            cache.Put(cacheEntryTwo, ttl);
+            cache.Cached("test.local").ShouldBe(cacheEntryTwo);
+        }
     }
 }
