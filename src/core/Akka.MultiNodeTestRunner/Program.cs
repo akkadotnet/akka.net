@@ -75,6 +75,12 @@ namespace Akka.MultiNodeTestRunner
 
                     foreach (var test in discovery.Tests.Reverse())
                     {
+                        if (!string.IsNullOrEmpty(test.Value.First().SkipReason))
+                        {
+                            PublishRunnerMessage(string.Format("Skipping test {0}. Reason - {1}", test.Value.First().MethodName, test.Value.First().SkipReason));
+                            continue;
+                        }
+
                         PublishRunnerMessage(string.Format("Starting test {0}", test.Value.First().MethodName));
 
                         var processes = new List<Process>();
