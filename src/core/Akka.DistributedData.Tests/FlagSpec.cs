@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Akka.DistributedData.Tests
 {
-    public class FlagTests
+    public class FlagSpec
     {
         [Fact]
         public void AFlagMustBeAbleToSwitchOnOnce()

@@ -36,6 +36,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Numerics" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -52,7 +53,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="FlagTests.cs" />
+    <Compile Include="FlagSpec.cs" />
+    <Compile Include="GCounterSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -64,9 +66,17 @@
       <Project>{11f4d4b8-7e07-4457-abf2-609b3e7b2649}</Project>
       <Name>Akka.TestKit.Xunit</Name>
     </ProjectReference>
+    <ProjectReference Include="..\core\Akka.Cluster\Akka.Cluster.csproj">
+      <Project>{6ab00f61-269a-4501-b06a-026707f000a7}</Project>
+      <Name>Akka.Cluster</Name>
+    </ProjectReference>
     <ProjectReference Include="..\core\Akka.TestKit\Akka.TestKit.csproj">
       <Project>{0d3cbad0-bbdb-43e5-afc4-ed1d3ecdc224}</Project>
       <Name>Akka.TestKit</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\core\Akka\Akka.csproj">
+      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
+      <Name>Akka</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
