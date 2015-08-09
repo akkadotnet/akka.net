@@ -1,0 +1,198 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="AtomicState.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
+using System.Collections.Concurrent;
+using System.Runtime.ExceptionServices;
+using System.Threading.Tasks;
+
+namespace Akka.Util.Internal
+{
+    /// <summary>
+    /// Internal state abstraction
+    /// </summary>
+    internal abstract class AtomicState : AtomicCounterLong, IAtomicState
+    {
+        private readonly ConcurrentQueue<Action> _listeners;
+        private readonly TimeSpan _callTimeout;
+
+        protected AtomicState( TimeSpan callTimeout, long startingCount )
+            : base( startingCount )
+        {
+            _listeners = new ConcurrentQueue<Action>( );
+            _callTimeout = callTimeout;
+        }
+
+        /// <summary>
+        /// Add a listener function which is invoked on state entry
+        /// </summary>
+        /// <param name="listener">listener implementation</param>
+        public void AddListener( Action listener )
+        {
+            _listeners.Enqueue( listener );
+        }
+
+        /// <summary>
+        /// Test for whether listeners exist
+        /// </summary>
+        public bool HasListeners
+        {
+            get { return !_listeners.IsEmpty; }
+        }
+
+        /// <summary>
+        /// Notifies the listeners of the transition event via a 
+        /// </summary>
+        protected async Task NotifyTransitionListeners( )
+        {
+            if ( !HasListeners ) return;
+            await Task
+                .Factory
+                .StartNew
+                (
+                    ( ) =>
+                    {
+                        foreach ( var listener in _listeners )
+                        {
+                            listener.Invoke( );
+                        }
+                    }
+                );
+        }
+
+        /// <summary>
+        /// Shared implementation of call across all states.  Thrown exception or execution of the call beyond the allowed
+        /// call timeout is counted as a failed call, otherwise a successful call
+        /// 
+        /// NOTE: In .Net there is no way to cancel an uncancellable task. We are merely cancelling the wait and marking this
+        /// as a failure.
+        /// 
+        /// see http://blogs.msdn.com/b/pfxteam/archive/2011/11/10/10235834.aspx 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="task">Implementation of the call</param>
+        /// <returns>result of the call</returns>
+        public async Task<T> CallThrough<T>( Task<T> task )
+        {
+            var deadline = DateTime.UtcNow.Add( _callTimeout );
+            ExceptionDispatchInfo capturedException = null;
+            T result = default(T);
+            try
+            {
+                result = await task;
+            }
+            catch ( Exception ex )
+            {
+                capturedException = ExceptionDispatchInfo.Capture( ex );
+            }
+
+            bool throwException = capturedException != null;
+            if ( throwException || DateTime.UtcNow.CompareTo( deadline ) >= 0 )
+            {
+                CallFails( );
+                if ( throwException )
+                    capturedException.Throw( );
+            }
+            else
+            {
+                CallSucceeds( );
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Shared implementation of call across all states.  Thrown exception or execution of the call beyond the allowed
+        /// call timeout is counted as a failed call, otherwise a successful call
+        /// 
+        /// NOTE: In .Net there is no way to cancel an uncancellable task. We are merely cancelling the wait and marking this
+        /// as a failure.
+        /// 
+        /// see http://blogs.msdn.com/b/pfxteam/archive/2011/11/10/10235834.aspx 
+        /// </summary>
+        /// <param name="task"><see cref="Task"/> Implementation of the call</param>
+        /// <returns><see cref="Task"/></returns>
+        public async Task CallThrough( Task task )
+        {
+            var deadline = DateTime.UtcNow.Add( _callTimeout );
+            ExceptionDispatchInfo capturedException = null;
+
+            try
+            {
+                await task;
+            }
+            catch ( Exception ex )
+            {
+                capturedException = ExceptionDispatchInfo.Capture( ex );
+            }
+
+            bool throwException = capturedException != null;
+            if (throwException || DateTime.UtcNow.CompareTo(deadline) >= 0)
+            {
+                CallFails();
+                if (throwException) capturedException.Throw();
+            }
+            else
+            {
+                CallSucceeds();
+            }
+
+
+        }
+
+        /// <summary>
+        /// Abstract entry point for all states
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="body">Implementation of the call that needs protected</param>
+        /// <returns><see cref="Task"/> containing result of protected call</returns>
+        public abstract Task<T> Invoke<T>( Task<T> body );
+
+        /// <summary>
+        /// Abstract entry point for all states
+        /// </summary>
+        /// <param name="body">Implementation of the call that needs protected</param>
+        /// <returns><see cref="Task"/> containing result of protected call</returns>
+        public abstract Task Invoke( Task body );
+
+        /// <summary>
+        /// Invoked when call fails
+        /// </summary>
+        protected abstract void CallFails( );
+
+        /// <summary>
+        /// Invoked when call succeeds
+        /// </summary>
+        protected abstract void CallSucceeds( );
+
+        /// <summary>
+        /// Invoked on the transitioned-to state during transition. Notifies listeners after invoking subclass template method _enter
+        /// </summary>
+        protected abstract void EnterInternal( );
+
+        /// <summary>
+        /// Enter the state. NotifyTransitionListeners is not awaited -- its "fire and forget". 
+        /// It is up to the user to handle any errors that occur in this state.
+        /// </summary>
+        public void Enter( )
+        {
+            EnterInternal( );
+            NotifyTransitionListeners( );
+        }
+
+    }
+
+    /// <summary>
+    /// This interface represents the parts of the internal circuit breaker state; the behavior stack, watched by, watching and termination queue
+    /// </summary>
+    public interface IAtomicState
+    {
+        void AddListener( Action listener );
+        bool HasListeners { get; }
+        Task<T> Invoke<T>( Task<T> body );
+        void Enter( );
+    }
+}
