@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Akka.Actor;
+using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -22,5 +24,9 @@ namespace Akka.DistributedData
         {
             throw new NotImplementedException();
         }
+
+        public WriteAggregator()
+            : base(ImmutableHashSet<Address>.Empty)
+        { }
     }
 }
