@@ -80,7 +80,10 @@ namespace Akka.IO
             {
                 var until = _clock() + ttl;
                 _queue.Add(new ExpiryEntry(answer.Name, until));
-                _cache.Add(answer.Name, new CacheEntry(answer, until));
+                if (_cache.ContainsKey(answer.Name))
+                    _cache[answer.Name] = new CacheEntry(answer, until);
+                else
+                    _cache.Add(answer.Name, new CacheEntry(answer, until));
                 return this;
             }
 
