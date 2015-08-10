@@ -46,6 +46,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DataEnvelope.cs" />
+    <Compile Include="DeletedData.cs" />
     <Compile Include="Flag.cs" />
     <Compile Include="GCounter.cs" />
     <Compile Include="IRemovedNodePruning.cs" />
@@ -53,11 +54,13 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PruningState.cs" />
     <Compile Include="ReadAggregator.cs" />
+    <Compile Include="ReadConsistency.cs" />
     <Compile Include="ReadWriteAggregator.cs" />
     <Compile Include="ReplicatedData.cs" />
     <Compile Include="Replicator.cs" />
     <Compile Include="ReplicatorSettings.cs" />
     <Compile Include="WriteAggregator.cs" />
+    <Compile Include="WriteConsistency.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\core\Akka.Cluster\Akka.Cluster.csproj">
