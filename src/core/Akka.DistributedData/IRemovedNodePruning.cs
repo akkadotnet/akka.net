@@ -15,4 +15,9 @@ namespace Akka.DistributedData
 
         T PruningCleanup(UniqueAddress removedNode);
     }
+
+    public interface IRemovedNodePruning : IRemovedNodePruning<IReplicatedData>
+    {
+
+    }
 }
