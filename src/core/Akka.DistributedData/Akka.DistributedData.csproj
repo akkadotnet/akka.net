@@ -62,6 +62,7 @@
     <Compile Include="ReplicatedData.cs" />
     <Compile Include="Replicator.cs" />
     <Compile Include="ReplicatorSettings.cs" />
+    <Compile Include="Subscription.cs" />
     <Compile Include="WriteAggregator.cs" />
     <Compile Include="WriteConsistency.cs" />
   </ItemGroup>
