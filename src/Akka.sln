@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.22823.1
+VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{69279534-1DBA-4115-BF8B-03F77FC8125E}"
 EndProject
@@ -215,6 +215,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		WebEssentials-Settings.json = WebEssentials-Settings.json
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.MSpec", "contrib\testkits\Akka.TestKit.MSpec\Akka.TestKit.MSpec.csproj", "{B99C7DFB-9336-4F04-9C30-0B3BB4CACF6D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.MSpec.Tests", "contrib\testkits\Akka.TestKit.MSpec.Tests\Akka.TestKit.MSpec.Tests.csproj", "{4005B57A-567D-47D2-BE70-B126A64F5C5F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.MSpec", "contrib\testkits\Akka.TestKit.MSpec\Akka.TestKit.MSpec.csproj", "{B99C7DFB-9336-4F04-9C30-0B3BB4CACF6D}"
 EndProject
