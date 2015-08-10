@@ -64,6 +64,16 @@ namespace Akka.Actor
             get { return _protocol; }
         }
 
+        public bool HasLocalScope
+        {
+            get { return _host == null; }
+        }
+
+        public bool HasGlobalScope
+        {
+            get { return _host != null; }
+        }
+
         private Lazy<string> CreateLazyToString()
         {
             return new Lazy<string>(() =>
