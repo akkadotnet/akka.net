@@ -194,6 +194,7 @@ Target "CopyOutput" <| fun _ ->
       "contrib/testkits/Akka.TestKit.Xunit" 
       "contrib/testkits/Akka.TestKit.NUnit" 
       "contrib/testkits/Akka.TestKit.Xunit2" 
+      "contrib/testkits/Akka.TestKit.MSpec" 
       ]
     |> List.iter copyOutput
 
