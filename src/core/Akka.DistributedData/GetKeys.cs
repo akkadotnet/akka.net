@@ -7,8 +7,21 @@ using System.Threading.Tasks;
 
 namespace Akka.DistributedData
 {
-    internal class GetKeysIds
+    internal class GetKeyIds
     {
+        static readonly GetKeyIds _instance;
+        public static GetKeyIds Instance
+        {
+            get { return _instance; }
+        }
+
+        private GetKeyIds()
+        { }
+
+        public override bool Equals(object obj)
+        {
+            return obj != null && obj is GetKeyIds;
+        }
     }
 
     internal sealed class GetKeysIdsResult
@@ -22,7 +35,7 @@ namespace Akka.DistributedData
 
         internal GetKeysIdsResult(IImmutableSet<string> keys)
         {
-
+            _keys = keys;
         }
     }
 }
