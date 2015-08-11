@@ -60,6 +60,7 @@
     <Compile Include="ReadAggregator.cs" />
     <Compile Include="ReadConsistency.cs" />
     <Compile Include="ReadWriteAggregator.cs" />
+    <Compile Include="ReplicaCount.cs" />
     <Compile Include="ReplicatedData.cs" />
     <Compile Include="Replicator.cs" />
     <Compile Include="ReplicatorSettings.cs" />
