@@ -46,6 +46,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DataEnvelope.cs" />
+    <Compile Include="Delete.cs" />
     <Compile Include="DeletedData.cs" />
     <Compile Include="Flag.cs" />
     <Compile Include="GCounter.cs" />
