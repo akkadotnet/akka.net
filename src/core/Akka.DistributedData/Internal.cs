@@ -25,20 +25,20 @@ namespace Akka.DistributedData.Internal
         }
     }
 
-    internal class RemoveNodePruningTick
+    internal class RemovedNodePruningTick
     {
-        static readonly RemoveNodePruningTick _instance = new RemoveNodePruningTick();
-        internal static RemoveNodePruningTick Instance
+        static readonly RemovedNodePruningTick _instance = new RemovedNodePruningTick();
+        internal static RemovedNodePruningTick Instance
         {
             get { return _instance; }
         }
 
-        private RemoveNodePruningTick()
+        private RemovedNodePruningTick()
         { }
 
         public override bool Equals(object obj)
         {
-            return obj != null && obj is RemoveNodePruningTick;
+            return obj != null && obj is RemovedNodePruningTick;
         }
     }
 
