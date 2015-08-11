@@ -43,7 +43,4 @@ namespace Akka.DistributedData
             return _id;
         }
     }
-
-    public abstract class KeyR : Key<IReplicatedData>
-    { }
 }
