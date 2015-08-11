@@ -54,6 +54,10 @@
     <Optimize>false</Optimize>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Migrant, Version=0.10.3.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Migrant.0.10.3\lib\net40\Migrant.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=7.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -266,6 +270,7 @@
     <Compile Include="IO\TcpListener.cs" />
     <Compile Include="IO\TcpManager.cs" />
     <Compile Include="IO\TcpOutgoingConnection.cs" />
+    <Compile Include="Serialization\MigrantSerializer.cs" />
     <Compile Include="Util\ByteIterator.cs" />
     <Compile Include="Util\ByteString.cs" />
     <Compile Include="Util\ContinuousEnumerator.cs" />
@@ -379,7 +384,6 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
