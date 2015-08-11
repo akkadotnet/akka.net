@@ -15,7 +15,7 @@ using Akka.Routing;
 using Akka.TestKit;
 using Xunit;
 
-namespace Akka.MultiNodeTests.Routing
+namespace Akka.Cluster.Tests.MultiNode.Routing
 {
     public class ConsistentHashingRouterMultiNodeConfig : MultiNodeConfig
     {

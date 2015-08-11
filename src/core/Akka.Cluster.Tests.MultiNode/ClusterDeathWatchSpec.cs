@@ -15,7 +15,7 @@ using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Xunit;
 
-namespace Akka.MultiNodeTests
+namespace Akka.Cluster.Tests.MultiNode
 {
     public class ClusterDeathWatchSpecConfig : MultiNodeConfig
     {

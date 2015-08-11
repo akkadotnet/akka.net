@@ -249,21 +249,26 @@ Target "RunTestsMono" <| fun _ ->
 
 Target "MultiNodeTests" <| fun _ ->
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" "bin/core/Akka.MultiNodeTestRunner*"
+    let multiNodeTestAssemblies = !! "src/**/bin/Release/*.Tests.MultiNode.dll"
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
-    let spec = getBuildParam "spec"
+    let runMultiNodeSpec assembly =
+        let spec = getBuildParam "spec"
 
-    let args = new StringBuilder()
-                |> append "Akka.MultiNodeTests.dll"
+        let args = new StringBuilder()
+                |> append assembly
                 |> append "-Dmultinode.enable-filesink=on"
                 |> appendIfNotNullOrEmpty spec "-Dmultinode.test-spec="
                 |> toText
 
-    let result = ExecProcess(fun info -> 
-        info.FileName <- multiNodeTestPath
-        info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
-        info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
-    if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
+        let result = ExecProcess(fun info -> 
+            info.FileName <- multiNodeTestPath
+            info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
+            info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
+        if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
+    
+    multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
+
 
 //--------------------------------------------------------------------------------
 // Nuget targets 

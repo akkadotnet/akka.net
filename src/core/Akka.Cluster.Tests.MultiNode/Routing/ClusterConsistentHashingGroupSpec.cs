@@ -15,7 +15,7 @@ using Akka.Remote.TestKit;
 using Akka.Routing;
 using Akka.TestKit;
 
-namespace Akka.MultiNodeTests.Routing
+namespace Akka.Cluster.Tests.MultiNode.Routing
 {
     public class ClusterConsistentHashingGroupSpecConfig : MultiNodeConfig
     {
