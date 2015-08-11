@@ -79,10 +79,16 @@ namespace Akka.IO
             public Cache Put(Dns.Resolved answer, long ttl)
             {
                 var until = _clock() + ttl;
-                
+
+                var cache = new Dictionary<string, CacheEntry>(_cache);
+                if (cache.ContainsKey(answer.Name))
+                    cache[answer.Name] = new CacheEntry(answer, until);
+                else
+                    cache.Add(answer.Name, new CacheEntry(answer, until));
+
                 return new Cache(
-                    queue: new SortedSet<ExpiryEntry>(_queue) { new ExpiryEntry(answer.Name, until) },
-                    cache: new Dictionary<string, CacheEntry>(_cache) { { answer.Name, new CacheEntry(answer, until) } },
+                    queue: new SortedSet<ExpiryEntry>(_queue, new ExpiryEntryComparer()) { new ExpiryEntry(answer.Name, until) },
+                    cache: cache,
                     clock: _clock); 
             }
 
