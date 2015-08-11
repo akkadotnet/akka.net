@@ -140,5 +140,15 @@ namespace Akka.DistributedData
             }
             return this;
         }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as DataEnvelope;
+            if(other == null)
+            {
+                return false;
+            }
+            return other.Data == this.Data && other.Pruning == this.Pruning;
+        }
     }
 }

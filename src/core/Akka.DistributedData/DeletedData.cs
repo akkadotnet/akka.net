@@ -8,6 +8,16 @@ namespace Akka.DistributedData
 {
     public class DeletedData : AbstractReplicatedData<DeletedData>
     {
+        static readonly DeletedData _instance;
+
+        public static DeletedData Instance
+        {
+            get { return _instance; }
+        }
+
+        private DeletedData()
+        { }
+
         public override DeletedData Merge(DeletedData other)
         {
             return this;

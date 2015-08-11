@@ -54,6 +54,7 @@
     <Compile Include="Get.cs" />
     <Compile Include="GetKeys.cs" />
     <Compile Include="ICommand.cs" />
+    <Compile Include="Internal.cs" />
     <Compile Include="IRemovedNodePruning.cs" />
     <Compile Include="IReplicatorMessage.cs" />
     <Compile Include="Key.cs" />
