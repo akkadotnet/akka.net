@@ -19,8 +19,8 @@ namespace Akka.IO
 
     public class SimpleDnsCache : DnsBase, IPeriodicCacheCleanup
     {
-        private AtomicReference<Cache> _cache;
-        private long _ticksBase;
+        private readonly AtomicReference<Cache> _cache;
+        private readonly long _ticksBase;
 
         public SimpleDnsCache()
         {
@@ -58,10 +58,10 @@ namespace Akka.IO
         class Cache
         {
             private readonly SortedSet<ExpiryEntry> _queue;
-            private readonly IDictionary<string, CacheEntry> _cache;
+            private readonly Dictionary<string, CacheEntry> _cache;
             private readonly Func<long> _clock;
 
-            public Cache(SortedSet<ExpiryEntry> queue, IDictionary<string, CacheEntry> cache, Func<long> clock)
+            public Cache(SortedSet<ExpiryEntry> queue, Dictionary<string, CacheEntry> cache, Func<long> clock)
             {
                 _queue = queue;
                 _cache = cache;
@@ -79,12 +79,11 @@ namespace Akka.IO
             public Cache Put(Dns.Resolved answer, long ttl)
             {
                 var until = _clock() + ttl;
-                _queue.Add(new ExpiryEntry(answer.Name, until));
-                if (_cache.ContainsKey(answer.Name))
-                    _cache[answer.Name] = new CacheEntry(answer, until);
-                else
-                    _cache.Add(answer.Name, new CacheEntry(answer, until));
-                return this;
+                
+                return new Cache(
+                    queue: new SortedSet<ExpiryEntry>(_queue) { new ExpiryEntry(answer.Name, until) },
+                    cache: new Dictionary<string, CacheEntry>(_cache) { { answer.Name, new CacheEntry(answer, until) } },
+                    clock: _clock); 
             }
 
             public Cache Cleanup()
@@ -98,7 +97,7 @@ namespace Akka.IO
                     if (_cache.ContainsKey(name) && !_cache[name].IsValid(now))
                         _cache.Remove(name);
                 }
-                return new Cache(_queue, _cache, _clock);
+                return new Cache(new SortedSet<ExpiryEntry>(), new Dictionary<string, CacheEntry>(_cache), _clock);
             }
         }
 
