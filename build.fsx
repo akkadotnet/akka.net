@@ -254,7 +254,11 @@ Target "MultiNodeTests" <| fun _ ->
 
     mkdir testOutput
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" "bin/core/Akka.MultiNodeTestRunner*"
+<<<<<<< HEAD
     let multiNodeTestAssemblies = !! testSearchPath
+=======
+    let multiNodeTestAssemblies = !! "src/**/bin/Release/*.Tests.MultiNode.dll"
+>>>>>>> 39e400b... Akka.Remote.TestKit multi-node test tool fixes.
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
     let runMultiNodeSpec assembly =
