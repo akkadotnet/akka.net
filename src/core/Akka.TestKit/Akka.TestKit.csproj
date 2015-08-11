@@ -111,6 +111,7 @@
     <Compile Include="TestActors\BlackHoleActor.cs" />
     <Compile Include="TestActors\EchoActor.cs" />
     <Compile Include="TestBarrier.cs" />
+    <Compile Include="TestBreaker.cs" />
     <Compile Include="TestFSMRef.cs" />
     <Compile Include="ITestKitAssertions.cs" />
     <Compile Include="MessageEnvelope.cs" />

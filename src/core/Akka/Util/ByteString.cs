@@ -81,7 +81,7 @@ namespace Akka.IO
             return Create(buffer);
         }
 
-        public static readonly ByteString Empty = new ByteString1C(new byte[0]);
+        public static readonly ByteString Empty = CompactByteString.EmptyCompactByteString;
 
         public static ByteStringBuilder NewBuilder()
         {
@@ -224,6 +224,11 @@ namespace Akka.IO
             public override string DecodeString(Encoding charset)
             {
                 return charset.GetString(_length == _bytes.Length ? _bytes : ToArray());
+            }
+
+            public override IEnumerator<byte> GetEnumerator()
+            {
+                return _bytes.Skip(_startIndex).Take(_length).GetEnumerator();
             }
         }
 
@@ -499,9 +504,13 @@ namespace Akka.IO
 
     partial /*object*/ class CompactByteString
     {
+        internal static readonly CompactByteString EmptyCompactByteString = new ByteString1C(new byte[0]);
+
         public static CompactByteString FromString(string str, Encoding encoding)
         {
-            return new ByteString1C(encoding.GetBytes(str));
+            return string.IsNullOrEmpty(str)
+                ? EmptyCompactByteString
+                : new ByteString1C(encoding.GetBytes(str));
         }
 
         public static ByteString FromArray(byte[] array, int offset, int length)
