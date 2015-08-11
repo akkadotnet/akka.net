@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Security.Policy;
 using Akka.Actor;
 using Akka.Util;
 
@@ -25,17 +24,10 @@ namespace Akka.Serialization
               public MigrantSerializer(ExtendedActorSystem system) : base(system)
         {
             _serializer = new Antmicro.Migrant.Serializer();
-
-            _serializer.ForObject<ISurrogated>().SetSurrogate(x => 
-                x.ToSurrogate(system));
-
-            _serializer.ForSurrogate<ISurrogate>().SetObject(x => 
-                x.FromSurrogate(system));
-
-            _serializer.ForObject<Type>().SetSurrogate(t => 
-                new TypeSurrogate(t.AssemblyQualifiedName));
-            _serializer.ForSurrogate<TypeSurrogate>().SetObject(t => 
-                t.Restore());
+            _serializer.ForObject<ISurrogated>().SetSurrogate(x => x.ToSurrogate(system));
+            _serializer.ForSurrogate<ISurrogate>().SetObject(x => x.FromSurrogate(system));
+            _serializer.ForObject<Type>().SetSurrogate(t => new TypeSurrogate(t.AssemblyQualifiedName));
+            _serializer.ForSurrogate<TypeSurrogate>().SetObject(t => t.Restore());
         }
         
 
