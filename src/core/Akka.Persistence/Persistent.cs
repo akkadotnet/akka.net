@@ -84,9 +84,19 @@ namespace Akka.Persistence
         long SequenceNr { get; }
 
         /// <summary>
+        /// Returns the persistent payload's manifest if available.
+        /// </summary>
+        string Manifest { get; }
+
+        /// <summary>
         /// Creates a new persistent message with the specified <paramref name="payload"/>.
         /// </summary>
         IPersistentRepresentation WithPayload(object payload);
+
+        /// <summary>
+        /// Creates a new persistent message with the specified <paramref name="manifest"/>.
+        /// </summary>
+        IPersistentRepresentation WithManifest(string manifest);
 
         /// <summary>
         /// Creates a new deep copy of this message.
@@ -105,12 +115,15 @@ namespace Akka.Persistence
     [Serializable]
     public class Persistent : IPersistentRepresentation
     {
-        public Persistent(object payload, long sequenceNr = 0L, string persistenceId = null, bool isDeleted = false, IActorRef sender = null)
+        public readonly string Undefined = string.Empty;
+
+        public Persistent(object payload, long sequenceNr = 0L, string manifest = null, string persistenceId = null, bool isDeleted = false, IActorRef sender = null)
         {
             Payload = payload;
             SequenceNr = sequenceNr;
             IsDeleted = isDeleted;
-            PersistenceId = persistenceId ?? string.Empty;
+            Manifest = manifest ?? Undefined;
+            PersistenceId = persistenceId ?? Undefined;
             Sender = sender;
         }
 
@@ -119,20 +132,28 @@ namespace Akka.Persistence
         public string PersistenceId { get; private set; }
         public bool IsDeleted { get; private set; }
         public long SequenceNr { get; private set; }
+        public string Manifest { get; private set; }
 
         public IPersistentRepresentation WithPayload(object payload)
         {
-            return new Persistent(payload, SequenceNr, PersistenceId, IsDeleted, Sender);
+            return new Persistent(payload, sequenceNr: SequenceNr, manifest: Manifest, persistenceId: PersistenceId, isDeleted: IsDeleted, sender: Sender);
+        }
+
+        public IPersistentRepresentation WithManifest(string manifest)
+        {
+            return Manifest == manifest ?
+                this :
+                new Persistent(payload: Payload, sequenceNr: SequenceNr, manifest: manifest, persistenceId: PersistenceId, isDeleted: IsDeleted, sender: Sender);
         }
 
         public IPersistentRepresentation Update(long sequenceNr, string persistenceId, bool isDeleted, IActorRef sender)
         {
-            return new Persistent(Payload, sequenceNr, persistenceId, isDeleted, sender);
+            return new Persistent(payload: Payload, sequenceNr: sequenceNr, manifest: Manifest, persistenceId: persistenceId, isDeleted: isDeleted, sender: sender);
         }
 
         public IPersistentRepresentation PrepareWrite(IActorRef sender)
         {
-            return new Persistent(Payload, SequenceNr, PersistenceId, IsDeleted, sender);
+            return new Persistent(payload: Payload, sequenceNr: SequenceNr, manifest: Manifest, persistenceId: PersistenceId, isDeleted: IsDeleted, sender: sender);
         }
 
         public IPersistentRepresentation PrepareWrite(IActorContext context)

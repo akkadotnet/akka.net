@@ -15,11 +15,11 @@ namespace TcpEchoService.Server
 {
     public class EchoService : ReceiveActor
     {
-        private readonly TcpExt _extension = Tcp.Instance.Apply(Context.System);
+        private readonly IActorRef _manager = Context.System.Tcp();
 
         public EchoService(EndPoint endpoint)
         {
-            _extension.Manager.Tell(new Tcp.Bind(Self, endpoint));
+            _manager.Tell(new Tcp.Bind(Self, endpoint));
 
             // To behave as TCP listener, actor should be able to handle Tcp.Connected messages
             Receive<Tcp.Connected>(connected =>
