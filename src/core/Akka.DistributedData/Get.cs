@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Akka.DistributedData
 {
-    public sealed class Get<T> : ICommand<T>
+    public sealed class Get<T> : ICommand<T>, IReplicatorMessage
     {
         readonly Key<T> _key;
         readonly IReadConsistency _consistency;
@@ -41,7 +41,7 @@ namespace Akka.DistributedData
         Object Request { get; }
     }
 
-    public sealed class GetSuccess<T> : IGetResponse<T>
+    public sealed class GetSuccess<T> : IGetResponse<T>, IReplicatorMessage
     {
         readonly Key<T> _key;
         readonly Object _request;
@@ -70,7 +70,7 @@ namespace Akka.DistributedData
         }
     }
 
-    public sealed class NotFound<T> : IGetResponse<T>
+    public sealed class NotFound<T> : IGetResponse<T>, IReplicatorMessage
     {
         readonly Key<T> _key;
         readonly object _request;
@@ -92,7 +92,7 @@ namespace Akka.DistributedData
         }
     }
 
-    public sealed class GetFailure<T> : IGetResponse<T>
+    public sealed class GetFailure<T> : IGetResponse<T>, IReplicatorMessage
     {
         private Key<T> _key;
         private object _request;

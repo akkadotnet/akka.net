@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Akka.DistributedData
 {
-    public sealed class Subscribe<T> where T : IReplicatedData
+    public sealed class Subscribe<T> : IReplicatorMessage where T : IReplicatedData
     {
         readonly Key<T> _key;
         readonly IActorRef _subscriber;
@@ -29,7 +29,7 @@ namespace Akka.DistributedData
         }
     }
 
-    public sealed class Unsubscribe<T> where T : IReplicatedData
+    public sealed class Unsubscribe<T> : IReplicatorMessage where T : IReplicatedData
     {
         readonly Key<T> _key;
         readonly IActorRef _subscriber;
@@ -51,7 +51,7 @@ namespace Akka.DistributedData
         }
     }
 
-    public sealed class Changed<T> where T : IReplicatedData
+    public sealed class Changed<T> : IReplicatorMessage where T : IReplicatedData
     {
         readonly Key<T> _key;
         readonly T _data;
