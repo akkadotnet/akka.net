@@ -61,6 +61,14 @@
     <Reference Include="FluentAssertions.Core">
       <HintPath>..\..\packages\FluentAssertions.3.3.0\lib\net45\FluentAssertions.Core.dll</HintPath>
     </Reference>
+    <Reference Include="FsCheck, Version=2.0.5.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\FsCheck.2.0.5\lib\net45\FsCheck.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="FSharp.Core, Version=4.3.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\FSharp.Core.3.1.2.5\lib\net40\FSharp.Core.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Web" />
@@ -166,6 +174,7 @@
     <Compile Include="TestUtils\Comparable.cs" />
     <Compile Include="TestUtils\PropsWithName.cs" />
     <Compile Include="TestUtils\Supervisor.cs" />
+    <Compile Include="Util\ByteStringSpec.cs" />
     <Compile Include="Util\CollectionExtensionsSpec.cs" />
     <Compile Include="Util\ContinuousEnumeratorSpec.cs" />
     <Compile Include="Util\Internal\Collections\IteratorTests.cs" />
