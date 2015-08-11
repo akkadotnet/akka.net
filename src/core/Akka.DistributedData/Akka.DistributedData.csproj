@@ -49,6 +49,7 @@
     <Compile Include="Delete.cs" />
     <Compile Include="DeletedData.cs" />
     <Compile Include="Flag.cs" />
+    <Compile Include="FlushChanges.cs" />
     <Compile Include="GCounter.cs" />
     <Compile Include="Get.cs" />
     <Compile Include="GetKeys.cs" />
