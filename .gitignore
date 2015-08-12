@@ -214,3 +214,6 @@ FakesAssemblies/
 /src/.Akka.boltdata/TestResults.json
 resetdev.bat
 /src/packages/repositories.config
+
+# FAKE build folder
+.fake/
