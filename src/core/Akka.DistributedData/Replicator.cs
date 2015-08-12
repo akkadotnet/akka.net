@@ -3,10 +3,12 @@ using Akka.Cluster;
 using Akka.DistributedData.Internal;
 using Akka.IO;
 using Akka.Serialization;
+using Akka.Util;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -17,6 +19,8 @@ namespace Akka.DistributedData
         static readonly ByteString DeletedDigest = ByteString.Empty;
         static readonly ByteString LazyDigest = ByteString.Create(new byte[] { 0 }, 0, 1);
         static readonly ByteString NotFoundDigest = ByteString.Create(new byte[] { 255 }, 0, 1);
+
+        static readonly DataEnvelope DeletedEnvelope = new DataEnvelope(DeletedData.Instance);
 
         readonly ReplicatorSettings _settings;
 
@@ -39,6 +43,10 @@ namespace Akka.DistributedData
         IImmutableSet<UniqueAddress> _tombstonedNodes;
 
         Address _leader = null;
+        bool IsLeader
+        {
+            get { return _leader != null && _leader == _selfAddress; }
+        }
 
         long _previousClockTime;
         long _allReachableClockTime = 0;
@@ -50,9 +58,9 @@ namespace Akka.DistributedData
         long _statusCount = 0;
         int _statusTotChunks = 0;
 
-        readonly Dictionary<string, HashSet<IActorRef>> _subscribers = new Dictionary<string, HashSet<IActorRef>>();
-        readonly Dictionary<string, HashSet<IActorRef>> _newSubscribers = new Dictionary<string, HashSet<IActorRef>>();
-        IImmutableDictionary<string, KeyR> _subscriptionKeys;
+        readonly Dictionary<string, ISet<IActorRef>> _subscribers = new Dictionary<string, ISet<IActorRef>>();
+        readonly Dictionary<string, ISet<IActorRef>> _newSubscribers = new Dictionary<string, ISet<IActorRef>>();
+        IImmutableDictionary<string, Key<IReplicatedData>> _subscriptionKeys;
 
         public Replicator(ReplicatorSettings settings)
         {
@@ -70,10 +78,10 @@ namespace Akka.DistributedData
                 throw new ArgumentException(String.Format("The cluster node {0} does not have the role {1}", _selfAddress, _settings.Role));
             }
 
-            _gossipTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_settings.GossipInterval, _settings.GossipInterval, Self, new object(), Self);
-            _notifyTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_settings.NotifySubscribersInterval, _settings.NotifySubscribersInterval, Self, new object(), Self);
-            _pruningTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_settings.PruningInterval, _settings.PruningInterval, Self, new object(), Self);
-            _clockTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_settings.GossipInterval, _settings.GossipInterval, Self, new object(), Self);
+            _gossipTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_settings.GossipInterval, _settings.GossipInterval, Self, GossipTick.Instance, Self);
+            _notifyTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_settings.NotifySubscribersInterval, _settings.NotifySubscribersInterval, Self, FlushChanges.Instance, Self);
+            _pruningTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_settings.PruningInterval, _settings.PruningInterval, Self, RemovedNodePruningTick.Instance, Self);
+            _clockTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_settings.GossipInterval, _settings.GossipInterval, Self, ClockTick.Instance, Self);
 
             _serializer = Context.System.Serialization.FindSerializerForType(typeof(DataEnvelope));
             _maxPruningDisseminationNanos = (long)_settings.MaxPruningDissemination.Ticks * 100;
@@ -90,7 +98,7 @@ namespace Akka.DistributedData
             _dataEntries = ImmutableDictionary<string, Tuple<DataEnvelope, ByteString>>.Empty;
             _changed = ImmutableHashSet<string>.Empty;
 
-            _subscriptionKeys = ImmutableDictionary<string, KeyR>.Empty;
+            _subscriptionKeys = ImmutableDictionary<string, Key<IReplicatedData>>.Empty;
         }
 
         protected override void PreStart()
@@ -144,7 +152,19 @@ namespace Akka.DistributedData
             Context.System.Log.Debug("Received get for key {0}, local value {1}", key.Id, localValue);
             if(IsLocalGet(consistency))
             {
-
+                if(localValue == null)
+                {
+                    Sender.Tell(new NotFound<IReplicatedData>(key, req));
+                }
+                if(localValue.Data == DeletedData.Instance)
+                {
+                    Sender.Tell(new DataDeleted<IReplicatedData>(key));
+                }
+                Sender.Tell(new GetSuccess<IReplicatedData>(key, req, localValue.Data));
+            }
+            else
+            {
+                Context.ActorOf(ReadAggregator.GetProps(key, consistency, req, _nodes, localValue, Sender).WithDispatcher(Context.Props.Dispatcher));
             }
         }
 
@@ -163,7 +183,7 @@ namespace Akka.DistributedData
 
         private void ReceiveRead(string key)
         {
-
+            Sender.Tell(new ReadResult(GetData(key)));
         }
 
         private bool MatchingRole(Member m)
@@ -178,7 +198,15 @@ namespace Akka.DistributedData
 
         private void ReceiveUpdate(Key<IReplicatedData> key, Func<IReplicatedData, IReplicatedData> modify, IWriteConsistency consistency, object request)
         {
+            Tuple<DataEnvelope, ByteString> value;
+            var contained = _dataEntries.TryGetValue(key.Id, out value);
+            if(contained)
+            {
+                if(value.Item1.Data == DeletedData.Instance)
+                {
 
+                }
+            }
         }
 
         private bool IsLocalUpdate(IWriteConsistency consistency)
@@ -196,62 +224,242 @@ namespace Akka.DistributedData
 
         private void ReceiveWrite(string key, DataEnvelope envelope)
         {
-
+            Write(key, envelope);
+            Sender.Tell(WriteAck.Instance);
         }
 
         private void Write(string key, DataEnvelope writeEnvelope)
         {
-
+            var envelope = GetData(key);
+            if(envelope != null)
+            {
+                var existing = envelope.Data;
+                if(existing != DeletedData.Instance)
+                {
+                    if(existing.GetType() == writeEnvelope.Data.GetType() || writeEnvelope.Data == DeletedData.Instance)
+                    {
+                        var merged = envelope.Merge(PruningCleanupTombstoned(writeEnvelope).AddSeen(_selfAddress));
+                        SetData(key, merged);
+                    }
+                    else
+                    {
+                        Context.System.Log.Warning("Wrong type for writing {0}, existing type {1}, got {2}", key, existing.GetType().Name, writeEnvelope.Data.GetType().Name);
+                    }
+                }
+            }
+            else
+            {
+                SetData(key, PruningCleanupTombstoned(writeEnvelope).AddSeen(_selfAddress));
+            }
         }
 
         private void ReceiveReadRepair(string key, DataEnvelope writeEnvelope)
         {
-
+            Write(key, writeEnvelope);
+            Sender.Tell(ReadRepairAck.Instance);
         }
 
         private void ReceiveGetKeyIds()
         {
-
+            var keys = _dataEntries.Where(kvp => kvp.Value.Item1 != DataEnvelope.DeletedEnvelope)
+                                   .Select(x => x.Key)
+                                   .ToImmutableHashSet();
+            Sender.Tell(new GetKeysIdsResult(keys));
         }
 
         private void ReceiveDelete(Key<IReplicatedData> key, IWriteConsistency consistency)
         {
-
+            Tuple<DataEnvelope, ByteString> value;
+            var contained = _dataEntries.TryGetValue(key.Id, out value);
+            if(contained)
+            {
+                if(value.Item1.Data == DeletedData.Instance)
+                {
+                    Sender.Tell(new DataDeleted<IReplicatedData>(key));
+                }
+                else
+                {
+                    SetData(key.Id, DeletedEnvelope);
+                    if(IsLocalUpdate(consistency))
+                    {
+                        Sender.Tell(new DeleteSuccess<IReplicatedData>(key));
+                    }
+                    else
+                    {
+                        Context.ActorOf(WriteAggregator.GetProps(key, DeletedEnvelope, consistency, null, _nodes, Sender).WithDispatcher(Context.Props.Dispatcher));
+                    }
+                }
+            }
         }
 
         private void SetData(string key, DataEnvelope envelope)
         {
+            ByteString digest;
+            if(_subscribers.ContainsKey(key) && !_changed.Contains(key))
+            {
+                var oldDigest = GetDigest(key);
+                var dig = GetDigest(key);
+                if(dig != oldDigest)
+                {
+                    _changed = _changed.Add(key);
+                }
+                digest = dig;
+            }
+            else if(envelope.Data == DeletedData.Instance)
+            {
+                digest = DeletedDigest;
+            }
+            else
+            {
+                digest = LazyDigest;
+            }
+            _dataEntries = _dataEntries.SetItem(key, Tuple.Create(envelope, digest));
+        }
 
+        private ByteString GetDigest(String key)
+        {
+            Tuple<DataEnvelope, ByteString> value;
+            var contained = _dataEntries.TryGetValue(key, out value);
+            if(contained)
+            {
+                if(value.Item2 == LazyDigest)
+                {
+                    var digest = Digest(value.Item1);
+                    _dataEntries = _dataEntries.SetItem(key, Tuple.Create(value.Item1, digest));
+                    return digest;
+                }
+                else
+                {
+                    return value.Item2;
+                }
+            }
+            else
+            {
+                return NotFoundDigest;
+            }
         }
 
         private ByteString Digest(DataEnvelope envelope)
         {
-
+            if(envelope.Data == DeletedData.Instance)
+            {
+                return DeletedDigest;
+            }
+            else
+            {
+                var bytes = _serializer.ToBinary(envelope);
+                var serialized = MD5.Create().ComputeHash(bytes);
+                return ByteString.FromByteBuffer(new ByteBuffer(bytes));
+            }
         }
 
         private DataEnvelope GetData(string key)
         {
+            Tuple<DataEnvelope, ByteString> value;
+            bool success = _dataEntries.TryGetValue(key, out value);
+            if(value == null)
+            {
+                return null;
+            }
+            return value.Item1;
+        }
 
+        private void Notify(string keyId, ISet<IActorRef> subs)
+        {
+            var key = _subscriptionKeys[keyId];
+            var data = GetData(keyId);
+            if(data != null)
+            {
+                object msg = data.Data == DeletedData.Instance ? (object)new DataDeleted<IReplicatedData>(key) : (object)new Changed<IReplicatedData>(key, data.Data);
+                foreach(var sub in subs)
+                {
+                    sub.Tell(msg);
+                }
+            }
         }
 
         private void ReceiveFlushChanges()
         {
+            if(_subscribers.Any())
+            {
+                foreach(var key in _changed)
+                {
+                    if(_subscribers.ContainsKey(key))
+                    {
+                        Notify(key, _subscribers[key]);
+                    }
+                }
+            }
 
+            if(_newSubscribers.Any())
+            {
+                foreach(var kvp in _newSubscribers)
+                {
+                    Notify(kvp.Key, kvp.Value);
+                    foreach(var sub in kvp.Value)
+                    {
+                        _subscribers.AddBinding(kvp.Key, sub);
+                    }
+                }
+                _newSubscribers.Clear();
+            }
+
+            _changed = ImmutableHashSet<string>.Empty;
         }
 
         private void ReceiveGossipTick()
         {
-
+            var node = SelectRandomNode(_nodes);
+            if(node != null)
+            {
+                GossipTo(node);
+            }
         }
 
         private void GossipTo(Address address)
         {
-
+            var to = Replica(address);
+            if(_dataEntries.Count <= _settings.MaxDeltaElements)
+            {
+                var status = new Akka.DistributedData.Internal.Status(_dataEntries.Select(x => new KeyValuePair<string, ByteString>(x.Key, GetDigest(x.Key))).ToImmutableDictionary(), 0, 1);
+                to.Tell(status);
+            }
+            else
+            {
+                var totChunks = _dataEntries.Count / _settings.MaxDeltaElements;
+                for (var i = 1; i <= Math.Min(totChunks, 10); i++)
+                {
+                    if (totChunks == _statusTotChunks)
+                    {
+                        _statusCount += 1;
+                    }
+                    else
+                    {
+                        _statusCount = ThreadLocalRandom.Current.Next(0, totChunks);
+                        _statusTotChunks = totChunks;
+                    }
+                    var chunk = (int)(_statusCount % totChunks);
+                    var entries = _dataEntries.Where(x => Math.Abs(x.Key.GetHashCode()) % totChunks == chunk)
+                                              .Select(x => new KeyValuePair<string, ByteString>(x.Key, GetDigest(x.Key)))
+                                              .ToImmutableDictionary();
+                    var status = new Akka.DistributedData.Internal.Status(entries, chunk, totChunks);
+                    to.Tell(status);
+                }
+            }
         }
 
         private Address SelectRandomNode(IEnumerable<Address> addresses)
         {
-
+            var count = addresses.Count();
+            if(count != 0)
+            {
+                var random = ThreadLocalRandom.Current.Next(count - 1);
+                return addresses.Skip(count).First(); 
+            }
+            else
+            {
+                return null;
+            }
         }
 
         private ActorSelection Replica(Address address)
@@ -259,24 +467,104 @@ namespace Akka.DistributedData
             return Context.ActorSelection(Self.Path.ToStringWithAddress(address));
         }
 
+        private bool IsOtherDifferent(String key, ByteString otherDigest)
+        {
+            var d = GetDigest(key);
+            return d != NotFoundDigest && d != otherDigest;
+        }
+
         private void ReceiveStatus(IImmutableDictionary<string, ByteString> otherDigests, int chunk, int totChunks)
         {
+            if(Context.System.Log.IsDebugEnabled)
+            {
+                var k = String.Join(", ", otherDigests.Keys);
+                Context.System.Log.Debug("Received gossip status from {0}, chunk {1} of {2} containing {3}", Sender.Path.Address, chunk, totChunks, k);
+            }
 
+            var otherDifferentKeys = otherDigests.Where(x => IsOtherDifferent(x.Key, x.Value))
+                                                 .Select(x => x.Key);
+
+            var otherKeys = otherDigests.Keys.ToImmutableHashSet();
+            var myKeys = (totChunks == 1 ? _dataEntries.Keys : _dataEntries.Keys.Where(x => x.GetHashCode() % totChunks == chunk)).ToImmutableHashSet();
+
+            var otherMissingKeys = myKeys.Except(otherKeys);
+
+            var keys = otherDifferentKeys.Union(otherMissingKeys).Take(_settings.MaxDeltaElements);
+
+            if(keys.Any())
+            {
+                if(Context.System.Log.IsDebugEnabled)
+                {
+                    Context.System.Log.Debug("Sending gossip to {0}, containing {1}", Sender.Path.Address, String.Join(", ", keys));
+                }
+                var g = new Akka.DistributedData.Internal.Gossip(keys.Select(k => new KeyValuePair<string, DataEnvelope>(k, GetData(k))).ToImmutableDictionary(), otherDifferentKeys.Any());
+                Sender.Tell(g);
+            }
+            var myMissingKeys = otherKeys.Except(myKeys);
+            if(myMissingKeys.Any())
+            {
+                if(Context.System.Log.IsDebugEnabled)
+                {
+                    Context.System.Log.Debug("Sending gossip status to {0}, requesting missing {1}", Sender.Path.Address, String.Join(", ", myMissingKeys));
+                }
+                var status = new Akka.DistributedData.Internal.Status(myMissingKeys.Select(x => new KeyValuePair<string, ByteString>(x, NotFoundDigest)).ToImmutableDictionary(), chunk, totChunks);
+                Sender.Tell(status);
+            }
         }
 
         private void ReceiveGossip(IImmutableDictionary<string, DataEnvelope> updatedData, bool sendBack)
         {
-
+            if(Context.System.Log.IsDebugEnabled)
+            {
+                Context.System.Log.Debug("Received gossip from {0}, containing {1}", Sender.Path.Address, String.Join(", ", updatedData.Keys));
+            }
+            var replyData = ImmutableDictionary<String, DataEnvelope>.Empty;
+            foreach(var d in replyData)
+            {
+                var key = d.Key;
+                var envelope = d.Value;
+                var hadData = _dataEntries.ContainsKey(key);
+                Write(key, envelope);
+                if(sendBack)
+                {
+                    var data = GetData(key);
+                    if(data != null)
+                    {
+                        if(hadData || data.Pruning.Any())
+                        {
+                            replyData = replyData.SetItem(key, data);
+                        }
+                    }
+                }
+            }
+            if(sendBack && replyData.Any())
+            {
+                Sender.Tell(new Gossip(replyData, false));
+            }
         }
 
         private void ReceiveSubscribe(Key<IReplicatedData> key, IActorRef subscriber)
         {
-
+            _newSubscribers.AddBinding(key.Id, subscriber);
+            if(!_subscriptionKeys.ContainsKey(key.Id))
+            {
+                _subscriptionKeys = _subscriptionKeys.SetItem(key.Id, key);
+            }
+            Context.Watch(subscriber);
         }
 
         private void ReceiveUnsubscribe(Key<IReplicatedData> key, IActorRef subscriber)
         {
-
+            _subscribers.RemoveBinding(key.Id, subscriber);
+            _newSubscribers.RemoveBinding(key.Id, subscriber);
+            if(!HasSubscriber(subscriber))
+            {
+                Context.Unwatch(subscriber);
+            }
+            if(!_subscribers.ContainsKey(key.Id) || !_newSubscribers.ContainsKey(key.Id))
+            {
+                _subscriptionKeys = _subscriptionKeys.Remove(key.Id);
+            }
         }
 
         private bool HasSubscriber(IActorRef subscriber)
@@ -287,7 +575,28 @@ namespace Akka.DistributedData
 
         private void ReceiveTerminated(IActorRef terminated)
         {
-
+            var keys1 = _subscribers.Where(x => x.Value.Contains(terminated))
+                                    .Select(x => x.Key)
+                                    .ToImmutableHashSet();
+            foreach(var k in keys1)
+            {
+                _subscribers.RemoveBinding(k, terminated);
+            }
+            var keys2 = _newSubscribers.Where(x => x.Value.Contains(terminated))
+                                       .Select(x => x.Key)
+                                       .ToImmutableHashSet();
+            foreach(var k in keys2)
+            {
+                _newSubscribers.RemoveBinding(k, terminated);
+            }
+            var allKeys = keys1.Union(keys2);
+            foreach(var k in allKeys)
+            {
+                if(!_subscribers.ContainsKey(k) && !_newSubscribers.ContainsKey(k))
+                {
+                    _subscriptionKeys = _subscriptionKeys.Remove(k);
+                }
+            }
         }
 
         private void ReceiveMemberUp(Member m)
@@ -338,12 +647,176 @@ namespace Akka.DistributedData
 
         private void ReceiveClockTick()
         {
-
+            var now = Context.System.Scheduler.MonotonicClock.Ticks * 100;
+            if(_unreachable.Count == 0)
+            {
+                _allReachableClockTime += (now - _previousClockTime);
+            }
+            _previousClockTime = now;
         }
 
         private void ReceiveRemovedNodePruningTick()
         {
+            if(IsLeader && _removedNodes.Any())
+            {
+                InitRemovedNodePruning();
+            }
+            PerformRemovedNodePruning();
+            TombstoneRemovedNodePruning();
+        }
 
+        private bool AllPruningPerformed(UniqueAddress removed)
+        {
+            return _dataEntries.All(x =>
+                {
+                    var key = x.Key;
+                    var envelope = x.Value.Item1;
+                    var data = x.Value.Item1.Data;
+                    var pruning = x.Value.Item1.Pruning;
+                    if(data is IRemovedNodePruning)
+                    {
+                        var z = pruning[removed];
+                        return (z != null) && !(z.Phase is PruningInitialized);
+                    }
+                    return false;
+                });
+        }
+
+        private void TombstoneRemovedNodePruning()
+        {
+            foreach(var performed in _pruningPerformed)
+            {
+                var removed = performed.Key;
+                var timestamp = performed.Value;
+                if((_allReachableClockTime - timestamp) > _maxPruningDisseminationNanos && AllPruningPerformed(removed))
+                {
+                    Context.System.Log.Debug("All pruning performed for {0}, tombstoned", removed);
+                    _pruningPerformed = _pruningPerformed.Remove(removed);
+                    _removedNodes = _removedNodes.Remove(removed);
+                    _tombstonedNodes = _tombstonedNodes.Add(removed);
+                    foreach(var entry in _dataEntries)
+                    {
+                        var key = entry.Key;
+                        var envelope = entry.Value.Item1;
+                        var pruning = envelope.Data as IRemovedNodePruning;
+                        if(pruning != null)
+                        {
+                            SetData(key, PruningCleanupTombstoned(removed, envelope));
+                        }
+                    }
+                }
+            }
+        }
+
+        private void PerformRemovedNodePruning()
+        {
+            foreach(var entry in _dataEntries)
+            {
+                var key = entry.Key;
+                var envelope = entry.Value.Item1;
+                if(entry.Value.Item1.Data is IRemovedNodePruning)
+                {
+                    foreach(var pruning in entry.Value.Item1.Pruning)
+                    {
+                        var removed = pruning.Key;
+                        var owner = pruning.Value.Owner;
+                        var phase = pruning.Value.Phase as PruningInitialized;
+                        if(phase != null && owner == _selfUniqueAddress && (_nodes.Count == 0 || _nodes.All(x => phase.Seen.Contains(x))))
+                        {
+                            var newEnvelope = envelope.Prune(removed);
+                            _pruningPerformed = _pruningPerformed.SetItem(removed, _allReachableClockTime);
+                            Context.System.Log.Debug("Perform pruning of {0} from {1} to {2}", key, removed, _selfUniqueAddress);
+                            SetData(key, newEnvelope);
+                        }
+                    }
+                }
+            }
+        }
+
+        private DataEnvelope PruningCleanupTombstoned(DataEnvelope envelope)
+        {
+            return _tombstonedNodes.Aggregate(envelope, (env, address) =>
+                {
+                    return PruningCleanupTombstoned(address, env);
+                });
+        }
+
+        private DataEnvelope PruningCleanupTombstoned(UniqueAddress removed, DataEnvelope envelope)
+        {
+            var pruningCleanedup = PruningCleanupTombstoned(removed, envelope.Data);
+            if ((pruningCleanedup != envelope.Data) || envelope.Pruning.ContainsKey(removed))
+                return new DataEnvelope(pruningCleanedup, envelope.Pruning.Remove(removed));
+            else
+                return envelope;
+        }
+
+        private IReplicatedData PruningCleanupTombstoned(IReplicatedData data)
+        {
+            if(_tombstonedNodes.Count == 0)
+            {
+                return data;
+            }
+            else
+            {
+                return _tombstonedNodes.Aggregate(data, (d, removed) =>
+                    {
+                        return PruningCleanupTombstoned(removed, d);
+                    });
+            }
+        }
+
+        private IReplicatedData PruningCleanupTombstoned(UniqueAddress removed, IReplicatedData data)
+        {
+            var d = data as IRemovedNodePruning;
+            if(d != null)
+            {
+                if(d.NeedPruningFrom(removed))
+                {
+                    return d.PruningCleanup(removed);
+                }
+            }
+            return data;
+        }
+
+        private void InitRemovedNodePruning()
+        {
+            var removedSet = _removedNodes.Where(x => (_allReachableClockTime - x.Value) > _maxPruningDisseminationNanos)
+                                          .Select(x => x.Key)
+                                          .ToImmutableHashSet();
+
+            if(removedSet.Any())
+            {
+                foreach(var entry in _dataEntries)
+                {
+                    var key = entry.Key;
+                    var envelope = entry.Value.Item1;
+
+                    foreach(var removed in removedSet)
+                    {
+                        Action init = () =>
+                            {
+                                var newEnvelope = envelope.InitRemovedNodePruning(removed, _selfUniqueAddress);
+                                Context.System.Log.Debug("Initiating pruning of {0} with data {1}", removed, key);
+                                SetData(key, newEnvelope);
+                            };
+                        if(envelope.NeedPruningFrom(removed))
+                        {
+                            if(envelope.Data is IRemovedNodePruning)
+                            {
+                                var res = envelope.Pruning[removed];
+                                if(res == null)
+                                {
+                                    init();
+                                }
+                                else if(res.Phase is PruningInitialized && res.Owner == _selfUniqueAddress)
+                                {
+                                    init();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         private void ReceiveGetReplicaCount()
