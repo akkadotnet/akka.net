@@ -101,6 +101,11 @@ namespace Akka.DistributedData
             _subscriptionKeys = ImmutableDictionary<string, Key<IReplicatedData>>.Empty;
         }
 
+        public static Props GetProps(ReplicatorSettings settings)
+        {
+            return Props.Create(() => new Replicator(settings)).WithDeploy(Deploy.Local).WithDispatcher(settings.Dispatcher);
+        }
+
         protected override void PreStart()
         {
             var leaderChangedClass = _settings.Role != null ? typeof(ClusterEvent.RoleLeaderChanged) : typeof(ClusterEvent.LeaderChanged);

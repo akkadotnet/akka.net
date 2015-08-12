@@ -48,6 +48,7 @@
     <Compile Include="DataEnvelope.cs" />
     <Compile Include="Delete.cs" />
     <Compile Include="DeletedData.cs" />
+    <Compile Include="DistributedData.cs" />
     <Compile Include="Flag.cs" />
     <Compile Include="FlushChanges.cs" />
     <Compile Include="GCounter.cs" />
