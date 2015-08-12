@@ -71,26 +71,19 @@ namespace Akka.DistributedData
             _maxPruningDissemination = maxPruningDissemination;
         }
 
-        public static ReplicatorSettings FromConfig(Config config)
-        {
-            var dispatcher = config.GetString("use-dispatcher");
-            if(String.IsNullOrEmpty(dispatcher))
-            {
-                dispatcher = Dispatchers.DefaultDispatcherId;
-            }
-            return new ReplicatorSettings(config.GetString("role"),
-                                          config.GetTimeSpan("gossip-interval"),
-                                          config.GetTimeSpan("notify-subscribers-interval"),
-                                          config.GetInt("max-delta-elements"), dispatcher,
-                                          config.GetTimeSpan("pruning-interval"),
-                                          config.GetTimeSpan("max-pruning-dissemination"));
-        }
+        public ReplicatorSettings(Config config)
+            : this(config.GetString("role"),
+                   config.GetTimeSpan("gossip-interval"),
+                   config.GetTimeSpan("notify-subscribers-interval"),
+                   config.GetInt("max-delta-elements"),
+                   config.GetString("use-dispatcher", Dispatchers.DefaultDispatcherId),
+                   config.GetTimeSpan("pruning-interval"),
+                   config.GetTimeSpan("max-pruning-dissemination"))
+        { }
 
-        public static ReplicatorSettings FromSystem(ActorSystem system)
-        {
-            var config = system.Settings.Config.GetConfig("akka.cluster.distributed-data");
-            return FromConfig(config);
-        }
+        public ReplicatorSettings(ActorSystem system)
+            : this(system.Settings.Config.GetConfig("akka.cluster.distributed-data"))
+        { }
 
         public object Clone()
         {
