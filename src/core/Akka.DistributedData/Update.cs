@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Akka.DistributedData
 {
-    public class Update<T> : ICommand<T>
+    public class Update<T> : ICommand<T> where T : IReplicatedData
     {
         private T ModifyWithInitial(T initial, Func<T,T> modifier, T data)
         {
@@ -54,13 +54,13 @@ namespace Akka.DistributedData
         }
     }
 
-    public interface IUpdateResponse<T>
+    public interface IUpdateResponse<T> where T : IReplicatedData
     {
         Key<T> Key { get; }
         Object Request { get; }
     }
 
-    public sealed class UpdateSuccess<T> : IUpdateResponse<T>
+    public sealed class UpdateSuccess<T> : IUpdateResponse<T> where T : IReplicatedData
     {
         readonly Key<T> _key;
         readonly Object _request;
@@ -82,10 +82,10 @@ namespace Akka.DistributedData
         }
     }
 
-    public interface IUpdateFailure<T> : IUpdateResponse<T>
+    public interface IUpdateFailure<T> : IUpdateResponse<T> where T : IReplicatedData
     { }
 
-    public class UpdateTimeout<T> : IUpdateFailure<T>
+    public class UpdateTimeout<T> : IUpdateFailure<T> where T : IReplicatedData
     {
         private Key<T> _key;
         private Object _request;
@@ -107,7 +107,7 @@ namespace Akka.DistributedData
         }
     }
 
-    public class ModifyFailure<T> : IUpdateFailure<T>
+    public class ModifyFailure<T> : IUpdateFailure<T> where T : IReplicatedData
     {
         private Key<T> _key;
         private Object _request;

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Akka.DistributedData
 {
-    public class Delete<T> : ICommand<T>
+    public class Delete<T> : ICommand<T> where T : IReplicatedData
     {
         readonly Key<T> _key;
         readonly IWriteConsistency _consistency;
@@ -33,7 +33,7 @@ namespace Akka.DistributedData
         Key<T> Key { get; }
     }
 
-    public class DeleteSuccess<T> : IDeleteResponse<T>
+    public class DeleteSuccess<T> : IDeleteResponse<T> where T : IReplicatedData
     {
         readonly Key<T> _key;
 
@@ -48,7 +48,7 @@ namespace Akka.DistributedData
         }
     }
 
-    public class ReplicationDeletedFailure<T> : IDeleteResponse<T>
+    public class ReplicationDeletedFailure<T> : IDeleteResponse<T> where T : IReplicatedData
     {
         readonly Key<T> _key;
 
@@ -63,7 +63,7 @@ namespace Akka.DistributedData
         }
     }
 
-    public class DataDeleted<T> : Exception, IDeleteResponse<T>
+    public class DataDeleted<T> : Exception, IDeleteResponse<T> where T : IReplicatedData
     {
         readonly Key<T> _key;
 
