@@ -13,6 +13,24 @@ using Xunit;
 
 namespace Akka.Tests.Dispatch
 {
+    class ReceiveTimeoutAsyncActor : ReceiveActor
+    {
+        private IActorRef _replyTo;
+        public ReceiveTimeoutAsyncActor()
+        {
+            Receive<ReceiveTimeout>(t =>
+            {
+                _replyTo.Tell("GotIt");
+            });
+            Receive<string>(async s =>
+            {
+                _replyTo = Sender;
+                
+                await Task.Delay(TimeSpan.FromMilliseconds(100));
+                SetReceiveTimeout(TimeSpan.FromMilliseconds(100));
+            });
+        }
+    }
     class AsyncActor : ReceiveActor
     {
         public AsyncActor()
@@ -324,6 +342,16 @@ namespace Akka.Tests.Dispatch
 
             var res = await asker.Ask<string>("stop", TimeSpan.FromSeconds(5));
             res.ShouldBe("done");
+        }
+
+
+        [Fact]
+        public void Actor_should_be_able_to_ReceiveTimeout_after_async_operation()
+        {
+            var actor = Sys.ActorOf<ReceiveTimeoutAsyncActor>();
+
+            actor.Tell("hello");
+            ExpectMsg<string>(m => m == "GotIt");
         }
     }
 }
