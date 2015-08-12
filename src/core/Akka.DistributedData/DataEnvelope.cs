@@ -13,7 +13,7 @@ namespace Akka.DistributedData
     {
         static internal DataEnvelope DeletedEnvelope
         {
-            get { return new DataEnvelope(new DeletedData()); }
+            get { return new DataEnvelope(DeletedData.Instance); }
         }
 
         readonly IReplicatedData _data;
@@ -72,7 +72,7 @@ namespace Akka.DistributedData
 
         internal DataEnvelope Merge(DataEnvelope other)
         {
-            if(other.Data == new DeletedData())
+            if(other.Data == DeletedData.Instance)
             {
                 return DeletedEnvelope;
             }
