@@ -7,13 +7,12 @@
 
 using System;
 using System.Linq;
-using Akka.Cluster;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Xunit;
 
-namespace Akka.MultiNodeTests
+namespace Akka.Cluster.Tests.MultiNode
 {
     public class InitialHeartbeatMultiNodeConfig : MultiNodeConfig
     {

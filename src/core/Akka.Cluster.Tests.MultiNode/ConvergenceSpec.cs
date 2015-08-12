@@ -9,13 +9,12 @@ using System;
 using System.Linq;
 using System.Threading;
 using Akka.Actor;
-using Akka.Cluster;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Xunit;
 
-namespace Akka.MultiNodeTests
+namespace Akka.Cluster.Tests.MultiNode
 {
     public class ConvergenceSpecConfig : MultiNodeConfig
     {
