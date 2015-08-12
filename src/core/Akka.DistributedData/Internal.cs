@@ -194,7 +194,7 @@ namespace Akka.DistributedData.Internal
     {
         static readonly ReadRepairAck _instance = new ReadRepairAck();
 
-        public ReadRepairAck Instance
+        public static ReadRepairAck Instance
         {
             get { return _instance; }
         }

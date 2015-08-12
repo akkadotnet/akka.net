@@ -10,9 +10,17 @@ namespace Akka.DistributedData
     {
         static readonly FlushChanges _instance;
 
-        static FlushChanges Instance
+        public static FlushChanges Instance
         {
             get { return _instance; }
+        }
+
+        private FlushChanges()
+        { }
+
+        public override bool Equals(object obj)
+        {
+            return obj != null && obj is FlushChanges;
         }
     }
 }
