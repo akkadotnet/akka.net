@@ -194,6 +194,7 @@ Target "CopyOutput" <| fun _ ->
       "contrib/testkits/Akka.TestKit.Xunit" 
       "contrib/testkits/Akka.TestKit.NUnit" 
       "contrib/testkits/Akka.TestKit.Xunit2" 
+      "contrib/testkits/Akka.TestKit.MSpec" 
       ]
     |> List.iter copyOutput
 
@@ -217,9 +218,11 @@ open XUnit2Helper
 Target "RunTests" <| fun _ ->  
     let msTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
     let nunitTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll"
+    let mSpecTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.MSpec.Tests.dll"
     let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- 
                                     "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll" -- 
-                                    "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll" 
+                                    "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll" --
+                                    "src/**/bin/Release/Akka.TestKit.MSpec.Tests.dll"
 
     mkdir testOutput
 
@@ -229,6 +232,11 @@ Target "RunTests" <| fun _ ->
         {p with
             DisableShadowCopy = true; 
             OutputFile = testOutput + @"\NUnitTestResults.xml"})
+            
+    let mSpecToolPath = findToolInSubPath "mspec-clr4.exe" "src/packages/Machine.Specifications.Runner.Console*/tools"
+    printfn "Using MSpec runner: %s" mSpecToolPath    
+    mSpecTestAssemblies
+    |> MSpec(fun p -> {p with ToolPath = mSpecToolPath; XmlOutputPath = testOutput + @"\MSpecTestResults.xml"})
 
     let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath

@@ -1,9 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.22823.1
-# Visual Studio 2013
-VisualStudioVersion = 12.0.31101.0
+VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{69279534-1DBA-4115-BF8B-03F77FC8125E}"
 EndProject
@@ -213,10 +211,15 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.MultiNodeTests", "core\Akka.MultiNodeTests\Akka.MultiNodeTests.csproj", "{F0781BEA-5BA0-4AF0-BB15-E3F209B681F5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PersistenceBenchmark", "benchmark\PersistenceBenchmark\PersistenceBenchmark.csproj", "{39E6F51F-FA1E-4C62-B8F8-19065DE6D55D}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A59BAE84-70E2-46A0-9E26-7413C103E2D7}"
 	ProjectSection(SolutionItems) = preProject
 		WebEssentials-Settings.json = WebEssentials-Settings.json
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.MSpec", "contrib\testkits\Akka.TestKit.MSpec\Akka.TestKit.MSpec.csproj", "{B99C7DFB-9336-4F04-9C30-0B3BB4CACF6D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.MSpec.Tests", "contrib\testkits\Akka.TestKit.MSpec.Tests\Akka.TestKit.MSpec.Tests.csproj", "{4005B57A-567D-47D2-BE70-B126A64F5C5F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -783,6 +786,22 @@ Global
 		{39E6F51F-FA1E-4C62-B8F8-19065DE6D55D}.Release Mono|Any CPU.Build.0 = Release|Any CPU
 		{39E6F51F-FA1E-4C62-B8F8-19065DE6D55D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{39E6F51F-FA1E-4C62-B8F8-19065DE6D55D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B99C7DFB-9336-4F04-9C30-0B3BB4CACF6D}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
+		{B99C7DFB-9336-4F04-9C30-0B3BB4CACF6D}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
+		{B99C7DFB-9336-4F04-9C30-0B3BB4CACF6D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B99C7DFB-9336-4F04-9C30-0B3BB4CACF6D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B99C7DFB-9336-4F04-9C30-0B3BB4CACF6D}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
+		{B99C7DFB-9336-4F04-9C30-0B3BB4CACF6D}.Release Mono|Any CPU.Build.0 = Release|Any CPU
+		{B99C7DFB-9336-4F04-9C30-0B3BB4CACF6D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B99C7DFB-9336-4F04-9C30-0B3BB4CACF6D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4005B57A-567D-47D2-BE70-B126A64F5C5F}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
+		{4005B57A-567D-47D2-BE70-B126A64F5C5F}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
+		{4005B57A-567D-47D2-BE70-B126A64F5C5F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4005B57A-567D-47D2-BE70-B126A64F5C5F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4005B57A-567D-47D2-BE70-B126A64F5C5F}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
+		{4005B57A-567D-47D2-BE70-B126A64F5C5F}.Release Mono|Any CPU.Build.0 = Release|Any CPU
+		{4005B57A-567D-47D2-BE70-B126A64F5C5F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4005B57A-567D-47D2-BE70-B126A64F5C5F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -878,5 +897,7 @@ Global
 		{54C76459-D93B-4FF5-A051-4D9329EF4201} = {B1D10183-8FAE-4506-B935-403FCED89BDB}
 		{F0781BEA-5BA0-4AF0-BB15-E3F209B681F5} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
 		{39E6F51F-FA1E-4C62-B8F8-19065DE6D55D} = {73108242-625A-4D7B-AA09-63375DBAE464}
+		{B99C7DFB-9336-4F04-9C30-0B3BB4CACF6D} = {7625FD95-4B2C-4A5B-BDD5-94B1493FAC8E}
+		{4005B57A-567D-47D2-BE70-B126A64F5C5F} = {7625FD95-4B2C-4A5B-BDD5-94B1493FAC8E}
 	EndGlobalSection
 EndGlobal
