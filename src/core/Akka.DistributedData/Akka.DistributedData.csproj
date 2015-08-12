@@ -58,6 +58,7 @@
     <Compile Include="IRemovedNodePruning.cs" />
     <Compile Include="IReplicatorMessage.cs" />
     <Compile Include="Key.cs" />
+    <Compile Include="MultiMapBinding.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PruningState.cs" />
     <Compile Include="ReadAggregator.cs" />
