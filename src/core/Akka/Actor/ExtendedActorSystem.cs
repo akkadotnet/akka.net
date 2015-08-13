@@ -49,20 +49,16 @@ namespace Akka.Actor
         /// terminated.</summary>
         public abstract IActorRef SystemActorOf<TActor>(string name = null) where TActor : ActorBase, new();
 
-        //TODO: Missing threadFactory, dynamicAccess, printTree
+        /// <summary>The wrapper which is used by the framework to perform any reflective
+        /// operations in order to retrieve types at runtime. By default, uses the same
+        /// assembly which the ActorSystem was loaded into.</summary>
+        public abstract IDynamicAccess DynamicAccess { get; }
+
+        //TODO: Missing threadFactory, printTree
         //  /**
         //  * A ThreadFactory that can be used if the transport needs to create any Threads
         //  */
         //  def threadFactory: ThreadFactory
-  
-        //  /**
-        //  * ClassLoader wrapper which is used for reflective accesses internally. This is set
-        //  * to use the context class loader, if one is set, or the class loader which
-        //  * loaded the ActorSystem implementation. The context class loader is also
-        //  * set on all threads created by the ActorSystem, if one was set during
-        //  * creation.
-        //  */
-        //  def dynamicAccess: DynamicAccess
   
         //  /**
         //  * For debugging: traverse actor hierarchy and make string representation.

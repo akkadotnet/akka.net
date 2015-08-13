@@ -85,10 +85,12 @@
     <Compile Include="Actor\Cancellation\Cancelable.cs" />
     <Compile Include="Actor\Dsl\Act.cs" />
     <Compile Include="Actor\Cancellation\ICancellable.cs" />
+    <Compile Include="Actor\IDynamicAccess.cs" />
     <Compile Include="Actor\Inbox.Actor.cs" />
     <Compile Include="Actor\Internal\InternalCurrentActorCellKeeper.cs" />
     <Compile Include="Actor\Internal\InternalSupportsTestFSMRef.cs" />
     <Compile Include="Actor\Internal\InitializableActor.cs" />
+    <Compile Include="Actor\ReflectiveDynamicAccess.cs" />
     <Compile Include="Actor\Scheduler\DateTimeNowTimeProvider.cs" />
     <Compile Include="Actor\Scheduler\DedicatedThreadScheduler.cs" />
     <Compile Include="Actor\Scheduler\IDateTimeNowTimeProvider.cs" />

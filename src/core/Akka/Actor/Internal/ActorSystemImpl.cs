@@ -37,6 +37,7 @@ namespace Akka.Actor.Internal
         private Mailboxes _mailboxes;
         private IScheduler _scheduler;
         private ActorProducerPipelineResolver _actorProducerPipelineResolver;
+        private IDynamicAccess _dynamicAccess;
 
         public ActorSystemImpl(string name)
             : this(name, ConfigurationFactory.Load())
@@ -60,6 +61,7 @@ namespace Akka.Actor.Internal
             ConfigureMailboxes();
             ConfigureDispatchers();
             ConfigureActorProducerPipeline();
+            CreateDynamicAccess();
         }
 
         public override IActorRefProvider Provider { get { return _provider; } }
@@ -79,6 +81,10 @@ namespace Akka.Actor.Internal
         public override IInternalActorRef Guardian { get { return _provider.Guardian; } }
         public override IInternalActorRef SystemGuardian { get { return _provider.SystemGuardian; } }
 
+        public override IDynamicAccess DynamicAccess
+        {
+            get { return _dynamicAccess; }
+        }
 
         /// <summary>Creates a new system actor.</summary>
         public override IActorRef SystemActorOf(Props props, string name = null)
@@ -343,7 +349,10 @@ namespace Akka.Actor.Internal
                 ((IInternalActorRef)actor).Stop();
         }
 
-
+        protected IDynamicAccess CreateDynamicAccess()
+        {
+            return new ReflectiveDynamicAccess(System.Reflection.Assembly.GetEntryAssembly());
+        }
     }
 }
 
