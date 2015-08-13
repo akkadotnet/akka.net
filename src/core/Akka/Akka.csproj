@@ -265,6 +265,7 @@
     <Compile Include="IO\TcpListener.cs" />
     <Compile Include="IO\TcpManager.cs" />
     <Compile Include="IO\TcpOutgoingConnection.cs" />
+    <Compile Include="Serialization\SerializerWithStringManifest.cs" />
     <Compile Include="Util\ByteIterator.cs" />
     <Compile Include="Util\ByteString.cs" />
     <Compile Include="Util\ContinuousEnumerator.cs" />

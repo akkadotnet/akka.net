@@ -106,6 +106,36 @@ namespace Akka.Serialization
             return _serializers[serializerId].FromBinary(bytes, type);
         }
 
+        public object Deserialize(byte[] bytes, int serializerId, string manifest)
+        {
+            var serializer = _serializers[serializerId];
+            if(serializer is SerializerWithStringManifest)
+            {
+                var s2 = (SerializerWithStringManifest)serializer;
+                return s2.FromBinary(bytes, manifest);
+            }
+            else
+            {
+                if(manifest == "")
+                {
+                    return serializer.FromBinary(bytes, null);
+                }
+                else
+                {
+                    try
+                    {
+                        var type = ((ExtendedActorSystem)System).DynamicAccess.GetClassFor<Object>(manifest);
+                        return serializer.FromBinary(bytes, type);
+                    }
+                    catch
+                    {
+                        throw new System.Runtime.Serialization.SerializationException(
+                            String.Format("Cannot find manifest class {0} for serializer with ID {1}", manifest, serializerId));
+                    }
+                }
+            }
+        }
+
         public Serializer FindSerializerFor(object obj)
         {
             if (obj == null)
