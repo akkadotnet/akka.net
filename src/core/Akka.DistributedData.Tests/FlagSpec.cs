@@ -16,7 +16,7 @@ namespace Akka.DistributedData.Tests
             var f2 = f1.SwitchOn();
             var f3 = f2.SwitchOn();
 
-            Assert.Equal(false, f2.Enabled);
+            Assert.Equal(false, f1.Enabled);
             Assert.Equal(true, f2.Enabled);
             Assert.Equal(true, f3.Enabled);
         }
