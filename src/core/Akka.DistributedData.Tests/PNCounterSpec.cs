@@ -13,11 +13,17 @@ namespace Akka.DistributedData.Tests
         readonly UniqueAddress _address1;
         readonly UniqueAddress _address2;
 
+        public PNCounterSpec()
+        {
+            _address1 = new UniqueAddress(new Actor.Address("akka.tcp", "PNCounterSpec", "some.host.org", 112), 1);
+            _address2 = new UniqueAddress(new Actor.Address("akka.tcp", "PNCounterSpec2", "other.host.org", 112), 2);
+        }
+
         [Fact]
         public void APNCounterMustBeAbleToIncrementEachNodesRecordByOne()
         {
             var c1 = new PNCounter();
-            
+
             var c2 = c1.Increment(_address1);
             var c3 = c2.Increment(_address1);
 
@@ -50,10 +56,10 @@ namespace Akka.DistributedData.Tests
         {
             var c1 = new PNCounter();
 
-            var c2 = c1.Increment (_address1, 3);
-            var c3 = c2.Increment (_address1, 4);
-            var c4 = c3.Increment (_address2, 2);
-            var c5 = c4.Increment (_address2, 7);
+            var c2 = c1.Increment(_address1, 3);
+            var c3 = c2.Increment(_address1, 4);
+            var c4 = c3.Increment(_address2, 2);
+            var c5 = c4.Increment(_address2, 7);
             var c6 = c5.Increment(_address2);
 
             Assert.Equal(7, c6.Increments.State[_address1]);
@@ -108,24 +114,7 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void APNCounterMustbBeAbleToSummarizeTheHistoryToTheCorrectAggregatedValueOfIncrementsAndDecrements()
-        {
-            var c1 = new PNCounter();
-
-            var c2 = c1.Increment(_address1, 3);
-            var c3 = c2.Decrement(_address1, 2);
-            var c4 = c3.Increment(_address2, 5);
-            var c5 = c4.Decrement(_address2, 2);
-            var c6 = c5.Increment(_address2);
-
-            Assert.Equal(9, (long)c6.Increments.Value);
-            Assert.Equal(4, (long)c6.Decrements.Value);
-
-            Assert.Equal(5, (long)c6.Value);
-        }
-
-        [Fact]
-        public void APNCounterMustbBeAbleToHaveItsHistoryCorrectlyMergedWithAnotherGCounter()
+        public void APNCounterMustbBeAbleToHaveItsHistoryCorrectlyMergedWithAnotherPNCounter()
         {
             var c11 = new PNCounter();
             var c12 = c11.Increment(_address1, 3);

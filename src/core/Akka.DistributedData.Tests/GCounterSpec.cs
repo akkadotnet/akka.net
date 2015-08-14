@@ -26,7 +26,7 @@ namespace Akka.DistributedData.Tests
             var c6 = c5.Increment(Node2);
 
             Assert.Equal(new BigInteger(2), c6.State[Node1]);
-            Assert.Equal(new BigInteger(3), c5.State[Node2]);
+            Assert.Equal(new BigInteger(3), c6.State[Node2]);
         }
     }
 }
