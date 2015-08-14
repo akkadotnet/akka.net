@@ -61,6 +61,7 @@
     <Compile Include="GCounter.cs" />
     <Compile Include="Get.cs" />
     <Compile Include="GetKeys.cs" />
+    <Compile Include="GSet.cs" />
     <Compile Include="ICommand.cs" />
     <Compile Include="Internal.cs" />
     <Compile Include="IRemovedNodePruning.cs" />
