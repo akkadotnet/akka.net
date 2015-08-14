@@ -92,7 +92,7 @@ namespace Akka.DistributedData
             _pruningPerformed = ImmutableDictionary<UniqueAddress, long>.Empty;
             _tombstonedNodes = ImmutableHashSet<UniqueAddress>.Empty;
 
-            _previousClockTime = Context.System.Scheduler.MonotonicClock.Ticks * 100;
+            _previousClockTime = MonotonicClock.GetNanos();
             _unreachable = ImmutableHashSet<Address>.Empty;
 
             _dataEntries = ImmutableDictionary<string, Tuple<DataEnvelope, ByteString>>.Empty;
@@ -652,7 +652,7 @@ namespace Akka.DistributedData
 
         private void ReceiveClockTick()
         {
-            var now = Context.System.Scheduler.MonotonicClock.Ticks * 100;
+            var now = MonotonicClock.GetNanos();
             if(_unreachable.Count == 0)
             {
                 _allReachableClockTime += (now - _previousClockTime);
