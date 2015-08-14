@@ -72,6 +72,7 @@
     <Compile Include="Proto\OtherMessageComparator.cs" />
     <Compile Include="Proto\Protobufs\ReplicatedDataMessages.cs" />
     <Compile Include="Proto\Protobufs\ReplicatorMessages.cs" />
+    <Compile Include="Proto\ReplicatedDataSerializer.cs" />
     <Compile Include="Proto\ReplicatorMessageSerializer.cs" />
     <Compile Include="PruningState.cs" />
     <Compile Include="ReadAggregator.cs" />
