@@ -56,7 +56,7 @@ namespace Akka.DistributedData
 
         public PNCounter Decrement(UniqueAddress address, long delta = 1)
         {
-            return Decrement(address, delta);
+            return Decrement(address, new BigInteger(delta));
         }
 
         public PNCounter Increment(UniqueAddress address, BigInteger delta)
@@ -77,7 +77,7 @@ namespace Akka.DistributedData
             }
             else if(delta < 0)
             {
-                return new PNCounter(_increments, _decrements.Increment(key, delta));
+                return new PNCounter(_increments, _decrements.Increment(key, -delta));
             }
             else
             {

@@ -97,10 +97,7 @@ namespace Akka.DistributedData
             var contained = _state.TryGetValue(removedNode, out prunedNodeValue);
             if(contained)
             {
-                var newState = _state.Remove(removedNode);
-                var collapseIntoValue = _state[collapseInto];
-                newState = newState.SetItem(removedNode, collapseIntoValue + prunedNodeValue);
-                return new GCounter(newState);
+                return new GCounter(_state.Remove(removedNode)).Increment(collapseInto, prunedNodeValue);
             }
             else
             {
