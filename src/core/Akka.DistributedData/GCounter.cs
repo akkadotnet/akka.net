@@ -9,7 +9,14 @@ using System.Threading.Tasks;
 
 namespace Akka.DistributedData
 {
-    public class GCounter : AbstractReplicatedData<GCounter>, IRemovedNodePruning<GCounter>
+    public sealed class GCounterKey : Key<GCounter>
+    {
+        public GCounterKey(string id)
+            : base(id)
+        { }
+    }
+
+    public sealed class GCounter : AbstractReplicatedData<GCounter>, IRemovedNodePruning<GCounter>
     {
         private static BigInteger Zero = new BigInteger(0);
 
