@@ -27,6 +27,11 @@ namespace Akka.DistributedData
             get { return _state; }
         }
 
+        public static GCounter Empty
+        {
+            get { return new GCounter(); }
+        }
+
         public BigInteger Value
         {
             get { return _state.Aggregate(Zero, (v, acc) => v + acc.Value); }
