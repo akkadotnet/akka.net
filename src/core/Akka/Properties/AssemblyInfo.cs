@@ -29,10 +29,11 @@ using System.Runtime.InteropServices;
 [assembly: Guid("1a5cab08-b032-49ca-8db3-9428c5a9db14")]
 #endif
 [assembly: InternalsVisibleTo("Akka.Tests")]
+[assembly: InternalsVisibleTo("Akka.TestKit")]
 [assembly: InternalsVisibleTo("Akka.TestKit.Tests")]
 [assembly: InternalsVisibleTo("Akka.Remote")]
 [assembly: InternalsVisibleTo("Akka.Remote.Tests")]
 [assembly: InternalsVisibleTo("Akka.Cluster")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Tests")]
 [assembly: InternalsVisibleTo("Akka.MultiNodeTestRunner.Shared.Tests")]
-[assembly: InternalsVisibleTo("Akka.MultiNodeTests")]
+[assembly: InternalsVisibleTo("Akka.Cluster.Tests.MultiNode")]

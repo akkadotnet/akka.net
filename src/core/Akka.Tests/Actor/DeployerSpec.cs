@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 using Akka.Routing;
 using Akka.TestKit;
 using Akka.Util.Internal;

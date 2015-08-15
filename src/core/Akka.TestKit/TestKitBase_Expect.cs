@@ -357,9 +357,9 @@ namespace Akka.TestKit
 
         private void ConditionalLog(string format, params object[] args)
         {
-            if (_testKitSettings.LogTestKitCalls)
+            if (_testState.TestKitSettings.LogTestKitCalls)
             {
-                _log.Debug(format, args);
+                _testState.Log.Debug(format, args);
             }
         }
     }

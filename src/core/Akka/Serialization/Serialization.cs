@@ -12,6 +12,7 @@ using System.Linq;
 using System.Reflection;
 #endif
 using Akka.Actor;
+using Akka.Actor.Internal;
 using Akka.Util.Internal;
 
 namespace Akka.Serialization
@@ -24,9 +25,20 @@ namespace Akka.Serialization
 
     public class Serialization
     {
-        [ThreadStatic] public static Information CurrentTransportInformation;
+        [ThreadStatic] private static Information _currentTransportInformation;
 
-        [ThreadStatic] public static ActorSystem CurrentSystem;
+        public static T SerializeWithTransport<T>(ActorSystem system, Address address, Func<T> action)
+        {
+            _currentTransportInformation = new Information()
+            {
+                System = system,
+                Address = address
+            };
+            var res = action();
+            _currentTransportInformation = null;
+            return res;
+        }
+
         private readonly Serializer _nullSerializer;
 
         private readonly Dictionary<Type, Serializer> _serializerMap = new Dictionary<Type, Serializer>();
@@ -126,42 +138,48 @@ namespace Akka.Serialization
             throw new Exception("Serializer not found for type " + objectType.Name);
         }
 
-        public static string SerializedActorPath(IActorRef @ref)
+        public static string SerializedActorPath(IActorRef actorRef)
         {
-            if (@ref == ActorRefs.NoSender) return String.Empty;
+            if (Equals(actorRef, ActorRefs.NoSender)) 
+                return String.Empty;
 
-            /*
-val path = actorRef.path
-    val originalSystem: ExtendedActorSystem = actorRef match {
-      case a: ActorRefWithCell ⇒ a.underlying.system.asInstanceOf[ExtendedActorSystem]
-      case _                   ⇒ null
-    }
-    Serialization.currentTransportInformation.value match {
-      case null ⇒ originalSystem match {
-        case null ⇒ path.toSerializationFormat
-        case system ⇒
-          try path.toSerializationFormatWithAddress(system.provider.getDefaultAddress)
-          catch { case NonFatal(_) ⇒ path.toSerializationFormat }
-      }
-      case Information(address, system) ⇒
-        if (originalSystem == null || originalSystem == system)
-          path.toSerializationFormatWithAddress(address)
-        else {
-          val provider = originalSystem.provider
-          path.toSerializationFormatWithAddress(provider.getExternalAddressFor(address).getOrElse(provider.getDefaultAddress))
-        }
-    }*/
-            ActorSystem originalSystem = null;
-            if (@ref is ActorRefWithCell)
+            var path = actorRef.Path;
+            ExtendedActorSystem originalSystem = null;
+            if (actorRef is ActorRefWithCell)
             {
-                originalSystem = @ref.AsInstanceOf<ActorRefWithCell>().Underlying.System;
-                if (CurrentTransportInformation == null)
-                {
-                    return @ref.Path.ToSerializationFormat();
-                }
-                return @ref.Path.ToStringWithAddress(CurrentTransportInformation.Address);
+                originalSystem = actorRef.AsInstanceOf<ActorRefWithCell>().Underlying.System.AsInstanceOf<ExtendedActorSystem>();
             }
-            return @ref.Path.ToSerializationFormat();
+
+            if (_currentTransportInformation == null)
+            {
+                if (originalSystem == null)
+                {
+                    var res = path.ToSerializationFormat();
+                    return res;
+                }
+                else
+                {
+                    var defaultAddress = originalSystem.Provider.DefaultAddress;
+                    var res = path.ToStringWithAddress(defaultAddress);
+                    return res;
+                }
+            }
+
+            //CurrentTransportInformation exists
+            var system = _currentTransportInformation.System;
+            var address = _currentTransportInformation.Address;
+            if (originalSystem == null || originalSystem == system)
+            {
+                var res = path.ToStringWithAddress(address);
+                return res;
+            }
+            else
+            {
+                var provider = originalSystem.Provider;
+                var res =
+                    path.ToStringWithAddress(provider.GetExternalAddressFor(address).GetOrElse(provider.DefaultAddress));
+                return res;
+            }
         }
 
         public Serializer GetSerializerById(int serializerId)

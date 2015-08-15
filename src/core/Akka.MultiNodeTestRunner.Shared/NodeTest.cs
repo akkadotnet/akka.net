@@ -13,6 +13,7 @@ namespace Akka.MultiNodeTestRunner.Shared
         public string TestName { get; set; }
         public string TypeName { get; set; }
         public string MethodName { get; set; }
+        public string SkipReason { get; set; }
     }
 }
 

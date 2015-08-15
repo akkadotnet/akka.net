@@ -31,11 +31,10 @@ namespace Akka.Event
         /// <summary>
         /// Gets the provider.
         /// </summary>
-        /// <value>The provider.</value>
-        /// <exception cref="System.Exception">StandardOutLogged does not provide</exception>
+        /// <exception cref="System.NotSupportedException">StandardOutLogger does not provide</exception>
         public override IActorRefProvider Provider
         {
-            get { throw new Exception("StandardOutLogger does not provide"); }
+            get { throw new NotSupportedException("StandardOutLogger does not provide"); }
         }
 
         /// <summary>

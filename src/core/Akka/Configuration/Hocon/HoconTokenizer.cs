@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -19,6 +20,17 @@ namespace Akka.Configuration.Hocon
     {
         private readonly string _text;
         private int _index;
+        private readonly Stack<int> _indexStack = new Stack<int>();
+
+        public void Push()
+        {
+            _indexStack.Push(_index);
+        }
+
+        public void Pop()
+        {
+            _index = _indexStack.Pop();
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Tokenizer"/> class.
@@ -190,7 +202,7 @@ namespace Akka.Configuration.Hocon
         /// Retrieves the next token from the string.
         /// </summary>
         /// <returns>The next token contained in the string.</returns>
-        /// <exception cref="System.Exception">
+        /// <exception cref="System.FormatException">
         /// This exception is thrown when an unknown token is encountered.
         /// </exception>
         public Token PullNext()
@@ -212,6 +224,10 @@ namespace Akka.Configuration.Hocon
             {
                 return PullAssignment();
             }
+            if (IsInclude())
+            {
+                return PullInclude();
+            }
             if (IsStartOfQuotedKey())
             {
                 return PullQuotedKey();
@@ -232,7 +248,7 @@ namespace Akka.Configuration.Hocon
             {
                 return new Token(TokenType.EoF);
             }
-            throw new Exception("unknown token");
+            throw new FormatException("unknown token");
         }
 
         private bool IsStartOfQuotedKey()
@@ -434,9 +450,14 @@ namespace Akka.Configuration.Hocon
             return (!EoF && !IsWhitespace() && !IsStartOfComment() && !NotInUnquotedKey.Contains(Peek()));
         }
 
-        private bool IsWhitespace()
+        public bool IsWhitespace()
         {
             return char.IsWhiteSpace(Peek());
+        }
+
+        public bool IsWhitespaceOrComment()
+        {
+            return IsWhitespace() || IsStartOfComment();
         }
 
         /// <summary>
@@ -511,6 +532,15 @@ namespace Akka.Configuration.Hocon
             return Token.Key(sb.ToString());
         }
 
+        public Token PullInclude()
+        {
+            Take("include".Length);
+            PullWhitespaceAndComments();
+            var rest = PullQuotedText();
+            var unQuote = rest.Value;
+            return Token.Include(unQuote);
+        }
+
         private string PullEscapeSequence()
         {
             Take(); //consume "\"
@@ -542,7 +572,7 @@ namespace Akka.Configuration.Hocon
             }
         }
 
-        private bool IsStartOfComment()
+        public bool IsStartOfComment()
         {
             return (Matches("#", "//"));
         }
@@ -551,7 +581,7 @@ namespace Akka.Configuration.Hocon
         /// Retrieves a value token from the tokenizer's current position.
         /// </summary>
         /// <returns>A value token from the tokenizer's current position.</returns>
-        /// <exception cref="System.Exception">
+        /// <exception cref="System.FormatException">
         /// Expected value: Null literal, Array, Quoted Text, Unquoted Text,
         ///     Triple quoted Text, Object or End of array
         /// </exception>
@@ -589,7 +619,7 @@ namespace Akka.Configuration.Hocon
                 return PullSubstitution();
             }
 
-            throw new Exception(
+            throw new FormatException(
                 "Expected value: Null literal, Array, Quoted Text, Unquoted Text, Triple quoted Text, Object or End of array");
         }
 
@@ -600,6 +630,34 @@ namespace Akka.Configuration.Hocon
         public bool IsSubstitutionStart()
         {
             return Matches("${");
+        }
+
+        public bool IsInclude()
+        {
+            Push();
+            try
+            {
+                if (Matches("include"))
+                {
+                    Take("include".Length);
+
+                    if (IsWhitespaceOrComment())
+                    {
+                        PullWhitespaceAndComments();
+
+                        if (IsStartOfQuotedText())
+                        {
+                            PullQuotedText();
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+            finally
+            {
+                Pop();
+            }
         }
 
         /// <summary>
@@ -676,7 +734,7 @@ namespace Akka.Configuration.Hocon
         /// Retrieves the current token as a string literal token.
         /// </summary>
         /// <returns>A token that contains the string literal value.</returns>
-        /// <exception cref="System.Exception">
+        /// <exception cref="System.FormatException">
         /// This exception is thrown when the tokenizer cannot find
         /// a string literal value from the current token.
         /// </exception>
@@ -687,7 +745,7 @@ namespace Akka.Configuration.Hocon
             if (IsUnquotedText())
                 return PullUnquotedText();
 
-            throw new Exception("No simple value found");
+            throw new FormatException("No simple value found");
         }
 
         /// <summary>

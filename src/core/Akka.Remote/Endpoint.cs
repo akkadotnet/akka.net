@@ -17,6 +17,7 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Remote.Transport;
 using Akka.Serialization;
+using Akka.Util;
 using Akka.Util.Internal;
 using Google.ProtocolBuffers;
 
@@ -828,7 +829,7 @@ namespace Akka.Remote
 
         //buffer for IPriorityMessages - ensures that heartbeats get delivered before user-defined messages
         private readonly LinkedList<EndpointManager.Send> _prioBuffer = new LinkedList<EndpointManager.Send>();
-        private long _largeBufferLogTimestamp = SystemNanoTime.GetNanos();
+        private long _largeBufferLogTimestamp = MonotonicClock.GetNanos();
 
         #region ActorBase methods
 
@@ -862,7 +863,7 @@ namespace Akka.Remote
                         }
                         return new Handle(handle.Result);
                     },
-                    TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent)
+                    TaskContinuationOptions.ExecuteSynchronously)
                     .PipeTo(Self);
             }
             else
@@ -1102,8 +1103,7 @@ namespace Akka.Remote
                 throw new EndpointException("Internal error: No handle was present during serialization of outbound message.");
             }
 
-            Akka.Serialization.Serialization.CurrentTransportInformation = new Information() { Address = _handle.LocalAddress, System = _system };
-            return MessageSerializer.Serialize(_system, msg);
+            return MessageSerializer.Serialize(_system, _handle.LocalAddress, msg);
         }
 
         private int _writeCount = 0;
@@ -1147,14 +1147,14 @@ namespace Akka.Remote
             {
                 _smallBackoffCount += 1;
                 var s = Self;
-                var backoffDeadlineNanoTime = SystemNanoTime.GetNanos() + _adaptiveBackoffNanos;
+                var backoffDeadlineNanoTime = MonotonicClock.GetNanos() + _adaptiveBackoffNanos;
 
                 Task.Run(() =>
                 {
                     Action backoff = null;
                     backoff = () =>
                     {
-                        var backOffNanos = backoffDeadlineNanoTime - SystemNanoTime.GetNanos();
+                        var backOffNanos = backoffDeadlineNanoTime - MonotonicClock.GetNanos();
                         if (backOffNanos > 0)
                         {
                             Thread.Sleep(new TimeSpan(backOffNanos.ToTicks()));
@@ -1343,7 +1343,7 @@ namespace Akka.Remote
             {
                 if (size > Settings.LogBufferSizeExceeding)
                 {
-                    var now = SystemNanoTime.GetNanos();
+                    var now = MonotonicClock.GetNanos();
                     if (now - _largeBufferLogTimestamp >= LogBufferSizeInterval)
                     {
                         _log.Warning("[{0}] buffered messages in EndpointWriter for [{1}]. " +

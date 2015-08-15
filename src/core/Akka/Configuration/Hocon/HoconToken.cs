@@ -71,7 +71,8 @@ namespace Akka.Configuration.Hocon
         /// <summary>
         /// This token type represents a replacement variable, <c>$foo</c> .
         /// </summary>
-        Substitute
+        Substitute,
+        Include
     }
 
     /// <summary>
@@ -157,6 +158,15 @@ namespace Akka.Configuration.Hocon
             {
                 Type = TokenType.LiteralValue,
                 Value = value,
+            };
+        }
+
+        internal static Token Include(string path)
+        {
+            return new Token
+            {
+                Value = path,
+                Type = TokenType.Include
             };
         }
     }

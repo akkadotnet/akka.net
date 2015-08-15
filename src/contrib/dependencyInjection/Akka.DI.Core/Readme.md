@@ -4,7 +4,7 @@
 
 #What is it?
 
-**Akka.DI.Core** is an **ActorSystem extension** library for the Akka.NET framework that provides a simple way to create an Actor Dependency Resolver that can be used as an alternative to the basic capabilities of [Props](http://akkadotnet.github.io/wiki/Props) when you have actors with multiple dependencies.  
+**Akka.DI.Core** is an **ActorSystem extension** library for the Akka.NET framework that provides a simple way to create an Actor Dependency Resolver that can be used as an alternative to the basic capabilities of [Props](http://getakka.net/docs/Props) when you have actors with multiple dependencies.  
 
 #How do you create an Extension?
 

@@ -177,6 +177,33 @@ namespace Akka.Configuration.Hocon
             }
             return text;
         }
+
+        public void Merge(HoconObject other)
+        {
+            var thisItems = Items;
+            var otherItems = other.Items;
+
+            foreach (var otherItem in otherItems)
+            {
+                if (thisItems.ContainsKey(otherItem.Key))
+                {
+                    //other key was present in this object.
+                    //if we have a value, just ignore the other value, unless it is an object
+                    var thisItem = thisItems[otherItem.Key];
+
+                    //if both values are objects, merge them
+                    if (thisItem.IsObject() && otherItem.Value.IsObject())
+                    {
+                        thisItem.GetObject().Merge(otherItem.Value.GetObject());
+                    }
+                }
+                else
+                {
+                    //other key was not present in this object, just copy it over
+                    Items.Add(otherItem.Key,otherItem.Value);
+                }
+            }            
+        }
     }
 }
 

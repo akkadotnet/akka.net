@@ -54,14 +54,15 @@
     <Optimize>false</Optimize>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=7.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Xml" />
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\SharedAssemblyInfo.cs">
@@ -85,9 +86,9 @@
     <Compile Include="Actor\Dsl\Act.cs" />
     <Compile Include="Actor\Cancellation\ICancellable.cs" />
     <Compile Include="Actor\Inbox.Actor.cs" />
-    <Compile Include="Actor\Internals\InternalCurrentActorCellKeeper.cs" />
-    <Compile Include="Actor\Internals\InternalSupportsTestFSMRef.cs" />
-    <Compile Include="Actor\Internals\InitializableActor.cs" />
+    <Compile Include="Actor\Internal\InternalCurrentActorCellKeeper.cs" />
+    <Compile Include="Actor\Internal\InternalSupportsTestFSMRef.cs" />
+    <Compile Include="Actor\Internal\InitializableActor.cs" />
     <Compile Include="Actor\Scheduler\DateTimeNowTimeProvider.cs" />
     <Compile Include="Actor\Scheduler\DedicatedThreadScheduler.cs" />
     <Compile Include="Actor\Scheduler\IDateTimeNowTimeProvider.cs" />
@@ -119,7 +120,7 @@
     <Compile Include="Actor\EmptyLocalActorRef.cs" />
     <Compile Include="Actor\ICanTell.cs" />
     <Compile Include="Actor\Inbox.cs" />
-    <Compile Include="Actor\Internals\ActorSystemImpl.cs" />
+    <Compile Include="Actor\Internal\ActorSystemImpl.cs" />
     <Compile Include="Actor\LocalScope.cs" />
     <Compile Include="Actor\NameAndUid.cs" />
     <Compile Include="Actor\ReceiveTimeout.cs" />
@@ -231,9 +232,44 @@
     <Compile Include="Event\LogMessage.cs" />
     <Compile Include="Event\StandardOutLogger.cs" />
     <Compile Include="Helios.Concurrency.DedicatedThreadPool.cs" />
+    <Compile Include="Pattern\BackoffSupervisor.cs" />
+    <Compile Include="IO\DatagramChannel.cs" />
+    <Compile Include="IO\Dns.cs" />
+    <Compile Include="IO\DnsProvider.cs" />
+    <Compile Include="IO\InetAddressDnsProvider.cs" />
+    <Compile Include="IO\InetAddressDnsResolver.cs" />
+    <Compile Include="IO\SimpleDnsCache.cs" />
+    <Compile Include="IO\SimpleDnsManager.cs" />
+    <Compile Include="IO\Udp.cs" />
+    <Compile Include="IO\UdpConnected.cs" />
+    <Compile Include="IO\UdpConnectedManager.cs" />
+    <Compile Include="IO\UdpConnection.cs" />
+    <Compile Include="IO\UdpListener.cs" />
+    <Compile Include="IO\UdpManager.cs" />
+    <Compile Include="IO\UdpSender.cs" />
+    <Compile Include="IO\WithUdpSend.cs" />
+    <Compile Include="Pattern\CircuitBreaker.cs" />
+    <Compile Include="Pattern\CircuitBreakerState.cs" />
+    <Compile Include="Pattern\OpenCircuitException.cs" />
     <Compile Include="Routing\ConsistentHashRouter.cs" />
     <Compile Include="Serialization\JavaSerializer.cs" />
+    <Compile Include="IO\ByteBuffer.cs" />
+    <Compile Include="IO\DirectByteBufferPool.cs" />
+    <Compile Include="IO\Inet.cs" />
+    <Compile Include="IO\IO.cs" />
+    <Compile Include="IO\SelectionHandler.cs" />
+    <Compile Include="IO\SocketAsyncEventArgsPool.cs" />
+    <Compile Include="IO\SocketChannel.cs" />
+    <Compile Include="IO\Tcp.cs" />
+    <Compile Include="IO\TcpConnection.cs" />
+    <Compile Include="IO\TcpIncomingConnection.cs" />
+    <Compile Include="IO\TcpListener.cs" />
+    <Compile Include="IO\TcpManager.cs" />
+    <Compile Include="IO\TcpOutgoingConnection.cs" />
+    <Compile Include="Util\ByteIterator.cs" />
+    <Compile Include="Util\ByteString.cs" />
     <Compile Include="Util\ContinuousEnumerator.cs" />
+    <Compile Include="Util\Internal\AtomicState.cs" />
     <Compile Include="Util\Internal\Collections\EnumeratorExtensions.cs" />
     <Compile Include="Util\Internal\Collections\Iterator.cs" />
     <Compile Include="Util\Internal\ImmutabilityUtils.cs" />
@@ -343,6 +379,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

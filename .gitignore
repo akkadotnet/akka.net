@@ -117,6 +117,9 @@ _TeamCity*
 # NCrunch
 _NCrunch_*
 .*crunch*.local.xml
+*.ncrunchsolution
+*.v2.ncrunchproject
+
 
 # MightyMoose
 *.mm.*
@@ -211,3 +214,7 @@ FakesAssemblies/
 /src/.Akka.boltdata/TestResults.json
 resetdev.bat
 /src/packages/repositories.config
+
+# FAKE build folder
+.fake/
+project.lock.json

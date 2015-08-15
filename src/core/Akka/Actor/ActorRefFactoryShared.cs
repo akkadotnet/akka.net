@@ -7,7 +7,7 @@
 
 using System;
 using System.Linq;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 
 namespace Akka.Actor
 {

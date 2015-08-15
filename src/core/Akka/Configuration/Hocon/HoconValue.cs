@@ -16,6 +16,7 @@ namespace Akka.Configuration.Hocon
     /// <summary>
     /// This class represents the root type for a HOCON (Human-Optimized Config Object Notation)
     /// configuration object.
+    /// </summary>
     public class HoconValue : IMightBeAHoconObject
     {
         /// <summary>

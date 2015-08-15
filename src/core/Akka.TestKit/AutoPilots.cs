@@ -75,7 +75,7 @@ namespace Akka.TestKit
 
         public override AutoPilot Run(IActorRef sender, object message)
         {
-            throw new Exception("Must not call");
+            throw new InvalidOperationException("Must not call");
         }
     }
 

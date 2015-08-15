@@ -31,7 +31,7 @@ namespace Akka.TestKit
             _logTestKitCalls = config.GetBoolean("akka.test.testkit.debug");
 
             if(_timefactor <= 0)
-                throw new Exception(@"Expected a positive value for ""akka.test.timefactor"" but found "+_timefactor);
+                throw new ConfigurationException(@"Expected a positive value for ""akka.test.timefactor"" but found " + _timefactor);
         }
 
 

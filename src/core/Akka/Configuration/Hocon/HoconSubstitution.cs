@@ -44,7 +44,7 @@ namespace Akka.Configuration.Hocon
         /// <summary>
         ///     The full path to the value which should substitute this instance.
         /// </summary>
-        public string Path { get; private set; }
+        public string Path { get; set; }
 
         /// <summary>
         ///     The evaluated value from the Path property
@@ -104,20 +104,6 @@ namespace Akka.Configuration.Hocon
         {
             return ResolvedValue.GetObject();
         }
-
-        #region Implicit operators
-
-        /// <summary>
-        /// Performs an implicit conversion from <see cref="HoconSubstitution" /> to <see cref="HoconObject" />.
-        /// </summary>
-        /// <param name="substitution">The HOCON object that contains the substitution.</param>
-        /// <returns>The HOCON object contained in the substitution.</returns>
-        public static implicit operator HoconObject(HoconSubstitution substitution)
-        {
-            return substitution.GetObject();
-        }
-
-        #endregion
     }
 }
 

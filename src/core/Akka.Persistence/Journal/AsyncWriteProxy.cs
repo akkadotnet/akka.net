@@ -164,12 +164,11 @@ namespace Akka.Persistence.Journal
         private IActorRef _store;
 
         public IStash Stash { get; set; }
-        public TimeSpan Timeout { get; private set; }
+        public TimeSpan ReplayTimeout { get; private set; }
 
         protected AsyncWriteProxy()
         {
-            //TODO: turn into configurable value
-            Timeout = TimeSpan.FromSeconds(5);
+            ReplayTimeout = Context.System.Settings.Config.GetTimeSpan("akka.persistence.journal.async-proxy-replay-timeout");
             _initialized = base.Receive;
         }
 
@@ -190,7 +189,7 @@ namespace Akka.Persistence.Journal
         public override Task ReplayMessagesAsync(string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> replayCallback)
         {
             var replayCompletionPromise = new TaskCompletionSource<object>();
-            var mediator = Context.ActorOf(Props.Create(() => new ReplayMediator(replayCallback, replayCompletionPromise, Timeout)).WithDeploy(Deploy.Local));
+            var mediator = Context.ActorOf(Props.Create(() => new ReplayMediator(replayCallback, replayCompletionPromise, ReplayTimeout)).WithDeploy(Deploy.Local));
 
             _store.Tell(new AsyncWriteTarget.ReplayMessages(persistenceId, fromSequenceNr, toSequenceNr, max), mediator);
 

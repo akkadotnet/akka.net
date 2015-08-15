@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using Akka.Configuration;
 using Helios.Concurrency;
 
@@ -29,6 +30,16 @@ namespace Akka.Dispatch
         {
             return string.Compare(threadType, ThreadType.Foreground.ToString(), StringComparison.OrdinalIgnoreCase) == 0 ?
                 ThreadType.Foreground : ThreadType.Background;
+        }
+
+        internal static ApartmentState GetApartmentState(Config cfg)
+        {
+            var s = cfg.GetString("apartment");
+            return string.Compare(s, "sta", StringComparison.InvariantCultureIgnoreCase) == 0
+                ? ApartmentState.STA
+                : string.Compare(s, "mta", StringComparison.InvariantCultureIgnoreCase) == 0
+                    ? ApartmentState.MTA
+                    : ApartmentState.Unknown;
         }
 
         /// <summary>
