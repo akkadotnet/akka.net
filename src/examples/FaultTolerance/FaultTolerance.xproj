@@ -6,13 +6,13 @@
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\DNX\Microsoft.DNX.Props" Condition="'$(VSToolsPath)' != ''" />
   <PropertyGroup Label="Globals">
-    <ProjectGuid>89adbfd6-7d3b-4d10-b432-09234ce2f540</ProjectGuid>
-    <RootNamespace>Akka.Tests.Shared.Internals</RootNamespace>
+    <ProjectGuid>8aa73cf1-bd25-4d8d-9c95-c011212af363</ProjectGuid>
+    <RootNamespace>Akka</RootNamespace>
     <BaseIntermediateOutputPath Condition="'$(BaseIntermediateOutputPath)'=='' ">..\..\artifacts\obj\$(MSBuildProjectName)</BaseIntermediateOutputPath>
     <OutputPath Condition="'$(OutputPath)'=='' ">..\..\artifacts\bin\$(MSBuildProjectName)\</OutputPath>
   </PropertyGroup>
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <AssemblyName>Akka</AssemblyName>
+    <AssemblyName>FaultTolerance</AssemblyName>
   </PropertyGroup>
   <PropertyGroup>
     <SchemaVersion>2.0</SchemaVersion>
