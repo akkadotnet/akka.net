@@ -39,11 +39,15 @@ namespace Akka.Util
 		}
 
 	    public static long GetMilliseconds()
-	    {
+        {
+#if !DNXCORE50
 	        return IsMono
 	            ? Stopwatch.ElapsedMilliseconds
 	            : (long) GetTickCount64();
-	    }
+#else
+            return Stopwatch.ElapsedMilliseconds;
+#endif
+        }
 
 	    public static long GetNanos()
 	    {
