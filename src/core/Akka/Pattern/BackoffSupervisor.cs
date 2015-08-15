@@ -23,14 +23,17 @@ namespace Akka.Pattern
         /// <summary>
         /// Request <see cref="BackoffSupervisor"/> with this message to receive <see cref="CurrentChild"/> response with current child.
         /// </summary>
+#if !DNXCORE50
         [Serializable]
+#endif
         public sealed class GetCurrentChild
         {
             public static readonly GetCurrentChild Instance = new GetCurrentChild();
             private GetCurrentChild() { }
         }
-
+#if !DNXCORE50
         [Serializable]
+#endif
         public sealed class CurrentChild
         {
             public readonly IActorRef Ref;
@@ -40,15 +43,17 @@ namespace Akka.Pattern
                 Ref = @ref;
             }
         }
-
+#if !DNXCORE50
         [Serializable]
+#endif
         public sealed class StartChild
         {
             public static readonly StartChild Instance = new StartChild();
             private StartChild() { }
         }
-
+#if !DNXCORE50
         [Serializable]
+#endif
         public sealed class ResetRestartCount
         {
             public readonly int Current;

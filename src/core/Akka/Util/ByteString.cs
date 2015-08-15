@@ -523,8 +523,9 @@ namespace Akka.IO
             return new ByteString1C(copyArray);
         }
     }
-
+#if !DNXCORE50
     [Serializable]
+#endif
     public abstract partial class CompactByteString : ByteString
     {
         public override bool IsCompact()
