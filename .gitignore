@@ -218,3 +218,4 @@ resetdev.bat
 # FAKE build folder
 .fake/
 project.lock.json
+src/.vs/
