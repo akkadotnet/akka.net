@@ -10,7 +10,6 @@
         "Newtonsoft.Json": "7.0.1"
     },
 
-
     "resource": [ "Configuration\\Pigeon.conf" ],
 
     "frameworks": {
@@ -19,6 +18,12 @@
                 "System.Configuration": "4.0.0.0",
                 "System.Xml": "4.0.0.0"
             }
+        },
+        "dnx451": {
+            "frameworkAssemblies": {
+                "System.Configuration": "4.0.0.0",
+                "System.Xml": "4.0.0.0"
+            }        
         },
         "dnxcore50": {
             "dependencies": {
