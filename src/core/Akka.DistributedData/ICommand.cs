@@ -6,8 +6,24 @@ using System.Threading.Tasks;
 
 namespace Akka.DistributedData
 {
-    public interface ICommand<T> where T : IReplicatedData
+    internal interface ICommand
     {
-        Key<T> Key { get; }
+        IKey Key { get; }
+    }
+
+    internal interface ICommand<T> where T : IReplicatedData
+    {
+        IKey<T> Key { get; }
+    }
+
+    public abstract class BaseCommand : ICommand, IReplicatorMessage
+    {
+        readonly IKey _key;
+        IKey ICommand.Key { get { return _key; } }
+
+        internal BaseCommand(IKey key)
+        {
+            _key = key;
+        }
     }
 }
