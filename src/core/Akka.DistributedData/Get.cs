@@ -6,16 +6,17 @@ using System.Threading.Tasks;
 
 namespace Akka.DistributedData
 {
-    public sealed class Get<T> : ICommand<T>, IReplicatorMessage where T : IReplicatedData
+    internal interface IGet
+    {
+        IReadConsistency Consistency { get; }
+        Object Request { get; }
+    }
+
+    public sealed class Get<T> : BaseCommand, IGet, ICommand<T> where T : IReplicatedData
     {
         readonly Key<T> _key;
         readonly IReadConsistency _consistency;
         readonly Object _request;
-
-        public Key<T> Key
-        {
-            get { return _key; }
-        }
 
         public IReadConsistency Consistency
         {
@@ -28,10 +29,29 @@ namespace Akka.DistributedData
         }
 
         public Get(Key<T> key, IReadConsistency consistency, Object request = null)
+            : base(key)
         {
             _key = key;
             _consistency = consistency;
             _request = request;
+        }
+
+        IKey<T> ICommand<T>.Key
+        {
+            get { return _key; }
+        }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as Get<T>;
+            if(other!=null)
+            {
+                var keysEqual = _key.Equals(other._key);
+                var consistencyEqual = _consistency.Equals(other._consistency);
+                var requestsEqual = (_request != null) ? _request.Equals(other._request) : false;
+                return keysEqual && consistencyEqual && requestsEqual;
+            }
+            return false;
         }
     }
 
