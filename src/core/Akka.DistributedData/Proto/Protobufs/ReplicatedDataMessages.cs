@@ -50,6 +50,8 @@ namespace Akka.DistributedData.Messages {
     internal static pb::FieldAccess.FieldAccessorTable<global::Akka.DistributedData.Messages.ORMultiMap, global::Akka.DistributedData.Messages.ORMultiMap.Builder> internal__static_Akka_DistributedData_Messages_ORMultiMap__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_Akka_DistributedData_Messages_ORMultiMap_Entry__Descriptor;
     internal static pb::FieldAccess.FieldAccessorTable<global::Akka.DistributedData.Messages.ORMultiMap.Types.Entry, global::Akka.DistributedData.Messages.ORMultiMap.Types.Entry.Builder> internal__static_Akka_DistributedData_Messages_ORMultiMap_Entry__FieldAccessorTable;
+    internal static pbd::MessageDescriptor internal__static_Akka_DistributedData_Messages_GenericKey__Descriptor;
+    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.DistributedData.Messages.GenericKey, global::Akka.DistributedData.Messages.GenericKey.Builder> internal__static_Akka_DistributedData_Messages_GenericKey__FieldAccessorTable;
     #endregion
     #region Descriptor
     public static pbd::FileDescriptor Descriptor {
@@ -60,57 +62,58 @@ namespace Akka.DistributedData.Messages {
     static ReplicatedDataMessages() {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           "ChxSZXBsaWNhdGVkRGF0YU1lc3NhZ2VzLnByb3RvEh1Ba2thLkRpc3RyaWJ1" + 
-          "dGVkRGF0YS5NZXNzYWdlcxoYUmVwbGljYXRvck1lc3NhZ2VzLnByb3RvIpUB" + 
-          "CgRHU2V0EhYKDnN0cmluZ0VsZW1lbnRzGAEgAygJEhcKC2ludEVsZW1lbnRz" + 
-          "GAIgAygRQgIQARIYCgxsb25nRWxlbWVudHMYAyADKBJCAhABEkIKDW90aGVy" + 
-          "RWxlbWVudHMYBCADKAsyKy5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5NZXNzYWdl" + 
-          "cy5PdGhlck1lc3NhZ2UikQIKBU9SU2V0Ej0KB3Z2ZWN0b3IYASACKAsyLC5B" + 
-          "a2thLkRpc3RyaWJ1dGVkRGF0YS5NZXNzYWdlcy5WZXJzaW9uVmVjdG9yEjoK" + 
-          "BGRvdHMYAiADKAsyLC5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5NZXNzYWdlcy5W" + 
-          "ZXJzaW9uVmVjdG9yEhYKDnN0cmluZ0VsZW1lbnRzGAMgAygJEhcKC2ludEVs" + 
-          "ZW1lbnRzGAQgAygRQgIQARIYCgxsb25nRWxlbWVudHMYBSADKBJCAhABEkIK" + 
-          "DW90aGVyRWxlbWVudHMYBiADKAsyKy5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5N" + 
-          "ZXNzYWdlcy5PdGhlck1lc3NhZ2UiFwoERmxhZxIPCgdlbmFibGVkGAEgAigI" + 
-          "IpgBCgtMV1dSZWdpc3RlchIRCgl0aW1lc3RhbXAYASACKBISOgoEbm9kZRgC" + 
-          "IAIoCzIsLkFra2EuRGlzdHJpYnV0ZWREYXRhLk1lc3NhZ2VzLlVuaXF1ZUFk" + 
-          "ZHJlc3MSOgoFc3RhdGUYAyACKAsyKy5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5N" + 
-          "ZXNzYWdlcy5PdGhlck1lc3NhZ2UingEKCEdDb3VudGVyEj4KB2VudHJpZXMY" + 
-          "ASADKAsyLS5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5NZXNzYWdlcy5HQ291bnRl" + 
-          "ci5FbnRyeRpSCgVFbnRyeRI6CgRub2RlGAEgAigLMiwuQWtrYS5EaXN0cmli" + 
-          "dXRlZERhdGEuTWVzc2FnZXMuVW5pcXVlQWRkcmVzcxINCgV2YWx1ZRgCIAIo" + 
-          "DCKFAQoJUE5Db3VudGVyEjsKCmluY3JlbWVudHMYASACKAsyJy5Ba2thLkRp" + 
-          "c3RyaWJ1dGVkRGF0YS5NZXNzYWdlcy5HQ291bnRlchI7CgpkZWNyZW1lbnRz" + 
-          "GAIgAigLMicuQWtrYS5EaXN0cmlidXRlZERhdGEuTWVzc2FnZXMuR0NvdW50" + 
-          "ZXIiqgEKDVZlcnNpb25WZWN0b3ISQwoHZW50cmllcxgBIAMoCzIyLkFra2Eu" + 
-          "RGlzdHJpYnV0ZWREYXRhLk1lc3NhZ2VzLlZlcnNpb25WZWN0b3IuRW50cnka" + 
-          "VAoFRW50cnkSOgoEbm9kZRgBIAIoCzIsLkFra2EuRGlzdHJpYnV0ZWREYXRh" + 
-          "Lk1lc3NhZ2VzLlVuaXF1ZUFkZHJlc3MSDwoHdmVyc2lvbhgCIAIoAyLKAQoF" + 
-          "T1JNYXASMgoEa2V5cxgBIAIoCzIkLkFra2EuRGlzdHJpYnV0ZWREYXRhLk1l" + 
-          "c3NhZ2VzLk9SU2V0EjsKB2VudHJpZXMYAiADKAsyKi5Ba2thLkRpc3RyaWJ1" + 
-          "dGVkRGF0YS5NZXNzYWdlcy5PUk1hcC5FbnRyeRpQCgVFbnRyeRILCgNrZXkY" + 
-          "ASACKAkSOgoFdmFsdWUYAiACKAsyKy5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5N" + 
-          "ZXNzYWdlcy5PdGhlck1lc3NhZ2UiywEKBkxXV01hcBIyCgRrZXlzGAEgAigL" + 
-          "MiQuQWtrYS5EaXN0cmlidXRlZERhdGEuTWVzc2FnZXMuT1JTZXQSPAoHZW50" + 
-          "cmllcxgCIAMoCzIrLkFra2EuRGlzdHJpYnV0ZWREYXRhLk1lc3NhZ2VzLkxX" + 
-          "V01hcC5FbnRyeRpPCgVFbnRyeRILCgNrZXkYASACKAkSOQoFdmFsdWUYAiAC" + 
-          "KAsyKi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5NZXNzYWdlcy5MV1dSZWdpc3Rl" + 
-          "ciLVAQoMUE5Db3VudGVyTWFwEjIKBGtleXMYASACKAsyJC5Ba2thLkRpc3Ry" + 
-          "aWJ1dGVkRGF0YS5NZXNzYWdlcy5PUlNldBJCCgdlbnRyaWVzGAIgAygLMjEu" + 
-          "QWtrYS5EaXN0cmlidXRlZERhdGEuTWVzc2FnZXMuUE5Db3VudGVyTWFwLkVu" + 
-          "dHJ5Gk0KBUVudHJ5EgsKA2tleRgBIAIoCRI3CgV2YWx1ZRgCIAIoCzIoLkFr" + 
-          "a2EuRGlzdHJpYnV0ZWREYXRhLk1lc3NhZ2VzLlBOQ291bnRlciLNAQoKT1JN" + 
-          "dWx0aU1hcBIyCgRrZXlzGAEgAigLMiQuQWtrYS5EaXN0cmlidXRlZERhdGEu" + 
-          "TWVzc2FnZXMuT1JTZXQSQAoHZW50cmllcxgCIAMoCzIvLkFra2EuRGlzdHJp" + 
-          "YnV0ZWREYXRhLk1lc3NhZ2VzLk9STXVsdGlNYXAuRW50cnkaSQoFRW50cnkS" + 
-          "CwoDa2V5GAEgAigJEjMKBXZhbHVlGAIgAigLMiQuQWtrYS5EaXN0cmlidXRl" + 
-          "ZERhdGEuTWVzc2FnZXMuT1JTZXRCIwofYWtrYS5jbHVzdGVyLmRkYXRhLnBy" + 
-          "b3RvYnVmLm1zZ0gB");
+          "dGVkRGF0YS5NZXNzYWdlcxoYUmVwbGljYXRvck1lc3NhZ2VzLnByb3RvIq0B" + 
+          "CgRHU2V0EhYKDnR5cGVEZXNjcmlwdG9yGAEgAigFEhYKDnN0cmluZ0VsZW1l" + 
+          "bnRzGAIgAygJEhcKC2ludEVsZW1lbnRzGAMgAygRQgIQARIYCgxsb25nRWxl" + 
+          "bWVudHMYBCADKBJCAhABEkIKDW90aGVyRWxlbWVudHMYBSADKAsyKy5Ba2th" + 
+          "LkRpc3RyaWJ1dGVkRGF0YS5NZXNzYWdlcy5PdGhlck1lc3NhZ2UikQIKBU9S" + 
+          "U2V0Ej0KB3Z2ZWN0b3IYASACKAsyLC5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5N" + 
+          "ZXNzYWdlcy5WZXJzaW9uVmVjdG9yEjoKBGRvdHMYAiADKAsyLC5Ba2thLkRp" + 
+          "c3RyaWJ1dGVkRGF0YS5NZXNzYWdlcy5WZXJzaW9uVmVjdG9yEhYKDnN0cmlu" + 
+          "Z0VsZW1lbnRzGAMgAygJEhcKC2ludEVsZW1lbnRzGAQgAygRQgIQARIYCgxs" + 
+          "b25nRWxlbWVudHMYBSADKBJCAhABEkIKDW90aGVyRWxlbWVudHMYBiADKAsy" + 
+          "Ky5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5NZXNzYWdlcy5PdGhlck1lc3NhZ2Ui" + 
+          "FwoERmxhZxIPCgdlbmFibGVkGAEgAigIIpgBCgtMV1dSZWdpc3RlchIRCgl0" + 
+          "aW1lc3RhbXAYASACKBISOgoEbm9kZRgCIAIoCzIsLkFra2EuRGlzdHJpYnV0" + 
+          "ZWREYXRhLk1lc3NhZ2VzLlVuaXF1ZUFkZHJlc3MSOgoFc3RhdGUYAyACKAsy" + 
+          "Ky5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5NZXNzYWdlcy5PdGhlck1lc3NhZ2Ui" + 
+          "ngEKCEdDb3VudGVyEj4KB2VudHJpZXMYASADKAsyLS5Ba2thLkRpc3RyaWJ1" + 
+          "dGVkRGF0YS5NZXNzYWdlcy5HQ291bnRlci5FbnRyeRpSCgVFbnRyeRI6CgRu" + 
+          "b2RlGAEgAigLMiwuQWtrYS5EaXN0cmlidXRlZERhdGEuTWVzc2FnZXMuVW5p" + 
+          "cXVlQWRkcmVzcxINCgV2YWx1ZRgCIAIoDCKFAQoJUE5Db3VudGVyEjsKCmlu" + 
+          "Y3JlbWVudHMYASACKAsyJy5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5NZXNzYWdl" + 
+          "cy5HQ291bnRlchI7CgpkZWNyZW1lbnRzGAIgAigLMicuQWtrYS5EaXN0cmli" + 
+          "dXRlZERhdGEuTWVzc2FnZXMuR0NvdW50ZXIiqgEKDVZlcnNpb25WZWN0b3IS" + 
+          "QwoHZW50cmllcxgBIAMoCzIyLkFra2EuRGlzdHJpYnV0ZWREYXRhLk1lc3Nh" + 
+          "Z2VzLlZlcnNpb25WZWN0b3IuRW50cnkaVAoFRW50cnkSOgoEbm9kZRgBIAIo" + 
+          "CzIsLkFra2EuRGlzdHJpYnV0ZWREYXRhLk1lc3NhZ2VzLlVuaXF1ZUFkZHJl" + 
+          "c3MSDwoHdmVyc2lvbhgCIAIoAyLKAQoFT1JNYXASMgoEa2V5cxgBIAIoCzIk" + 
+          "LkFra2EuRGlzdHJpYnV0ZWREYXRhLk1lc3NhZ2VzLk9SU2V0EjsKB2VudHJp" + 
+          "ZXMYAiADKAsyKi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5NZXNzYWdlcy5PUk1h" + 
+          "cC5FbnRyeRpQCgVFbnRyeRILCgNrZXkYASACKAkSOgoFdmFsdWUYAiACKAsy" + 
+          "Ky5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5NZXNzYWdlcy5PdGhlck1lc3NhZ2Ui" + 
+          "ywEKBkxXV01hcBIyCgRrZXlzGAEgAigLMiQuQWtrYS5EaXN0cmlidXRlZERh" + 
+          "dGEuTWVzc2FnZXMuT1JTZXQSPAoHZW50cmllcxgCIAMoCzIrLkFra2EuRGlz" + 
+          "dHJpYnV0ZWREYXRhLk1lc3NhZ2VzLkxXV01hcC5FbnRyeRpPCgVFbnRyeRIL" + 
+          "CgNrZXkYASACKAkSOQoFdmFsdWUYAiACKAsyKi5Ba2thLkRpc3RyaWJ1dGVk" + 
+          "RGF0YS5NZXNzYWdlcy5MV1dSZWdpc3RlciLVAQoMUE5Db3VudGVyTWFwEjIK" + 
+          "BGtleXMYASACKAsyJC5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5NZXNzYWdlcy5P" + 
+          "UlNldBJCCgdlbnRyaWVzGAIgAygLMjEuQWtrYS5EaXN0cmlidXRlZERhdGEu" + 
+          "TWVzc2FnZXMuUE5Db3VudGVyTWFwLkVudHJ5Gk0KBUVudHJ5EgsKA2tleRgB" + 
+          "IAIoCRI3CgV2YWx1ZRgCIAIoCzIoLkFra2EuRGlzdHJpYnV0ZWREYXRhLk1l" + 
+          "c3NhZ2VzLlBOQ291bnRlciLNAQoKT1JNdWx0aU1hcBIyCgRrZXlzGAEgAigL" + 
+          "MiQuQWtrYS5EaXN0cmlidXRlZERhdGEuTWVzc2FnZXMuT1JTZXQSQAoHZW50" + 
+          "cmllcxgCIAMoCzIvLkFra2EuRGlzdHJpYnV0ZWREYXRhLk1lc3NhZ2VzLk9S" + 
+          "TXVsdGlNYXAuRW50cnkaSQoFRW50cnkSCwoDa2V5GAEgAigJEjMKBXZhbHVl" + 
+          "GAIgAigLMiQuQWtrYS5EaXN0cmlidXRlZERhdGEuTWVzc2FnZXMuT1JTZXQi" + 
+          "KgoKR2VuZXJpY0tleRIKCgJpZBgBIAIoDBIQCgh0eXBlaGludBgCIAIoDEIj" + 
+          "Ch9ha2thLmNsdXN0ZXIuZGRhdGEucHJvdG9idWYubXNnSAE=");
       pbd::FileDescriptor.InternalDescriptorAssigner assigner = delegate(pbd::FileDescriptor root) {
         descriptor = root;
         internal__static_Akka_DistributedData_Messages_GSet__Descriptor = Descriptor.MessageTypes[0];
         internal__static_Akka_DistributedData_Messages_GSet__FieldAccessorTable = 
             new pb::FieldAccess.FieldAccessorTable<global::Akka.DistributedData.Messages.GSet, global::Akka.DistributedData.Messages.GSet.Builder>(internal__static_Akka_DistributedData_Messages_GSet__Descriptor,
-                new string[] { "StringElements", "IntElements", "LongElements", "OtherElements", });
+                new string[] { "TypeDescriptor", "StringElements", "IntElements", "LongElements", "OtherElements", });
         internal__static_Akka_DistributedData_Messages_ORSet__Descriptor = Descriptor.MessageTypes[1];
         internal__static_Akka_DistributedData_Messages_ORSet__FieldAccessorTable = 
             new pb::FieldAccess.FieldAccessorTable<global::Akka.DistributedData.Messages.ORSet, global::Akka.DistributedData.Messages.ORSet.Builder>(internal__static_Akka_DistributedData_Messages_ORSet__Descriptor,
@@ -175,6 +178,10 @@ namespace Akka.DistributedData.Messages {
         internal__static_Akka_DistributedData_Messages_ORMultiMap_Entry__FieldAccessorTable = 
             new pb::FieldAccess.FieldAccessorTable<global::Akka.DistributedData.Messages.ORMultiMap.Types.Entry, global::Akka.DistributedData.Messages.ORMultiMap.Types.Entry.Builder>(internal__static_Akka_DistributedData_Messages_ORMultiMap_Entry__Descriptor,
                 new string[] { "Key", "Value", });
+        internal__static_Akka_DistributedData_Messages_GenericKey__Descriptor = Descriptor.MessageTypes[11];
+        internal__static_Akka_DistributedData_Messages_GenericKey__FieldAccessorTable = 
+            new pb::FieldAccess.FieldAccessorTable<global::Akka.DistributedData.Messages.GenericKey, global::Akka.DistributedData.Messages.GenericKey.Builder>(internal__static_Akka_DistributedData_Messages_GenericKey__Descriptor,
+                new string[] { "Id", "Typehint", });
         return null;
       };
       pbd::FileDescriptor.InternalBuildGeneratedFileFrom(descriptorData,
@@ -190,8 +197,8 @@ namespace Akka.DistributedData.Messages {
   public sealed partial class GSet : pb::GeneratedMessage<GSet, GSet.Builder> {
     private GSet() { }
     private static readonly GSet defaultInstance = new GSet().MakeReadOnly();
-    private static readonly string[] _gSetFieldNames = new string[] { "intElements", "longElements", "otherElements", "stringElements" };
-    private static readonly uint[] _gSetFieldTags = new uint[] { 18, 26, 34, 10 };
+    private static readonly string[] _gSetFieldNames = new string[] { "intElements", "longElements", "otherElements", "stringElements", "typeDescriptor" };
+    private static readonly uint[] _gSetFieldTags = new uint[] { 26, 34, 42, 18, 8 };
     public static GSet DefaultInstance {
       get { return defaultInstance; }
     }
@@ -212,7 +219,17 @@ namespace Akka.DistributedData.Messages {
       get { return global::Akka.DistributedData.Messages.ReplicatedDataMessages.internal__static_Akka_DistributedData_Messages_GSet__FieldAccessorTable; }
     }
     
-    public const int StringElementsFieldNumber = 1;
+    public const int TypeDescriptorFieldNumber = 1;
+    private bool hasTypeDescriptor;
+    private int typeDescriptor_;
+    public bool HasTypeDescriptor {
+      get { return hasTypeDescriptor; }
+    }
+    public int TypeDescriptor {
+      get { return typeDescriptor_; }
+    }
+    
+    public const int StringElementsFieldNumber = 2;
     private pbc::PopsicleList<string> stringElements_ = new pbc::PopsicleList<string>();
     public scg::IList<string> StringElementsList {
       get { return pbc::Lists.AsReadOnly(stringElements_); }
@@ -224,7 +241,7 @@ namespace Akka.DistributedData.Messages {
       return stringElements_[index];
     }
     
-    public const int IntElementsFieldNumber = 2;
+    public const int IntElementsFieldNumber = 3;
     private int intElementsMemoizedSerializedSize;
     private pbc::PopsicleList<int> intElements_ = new pbc::PopsicleList<int>();
     public scg::IList<int> IntElementsList {
@@ -237,7 +254,7 @@ namespace Akka.DistributedData.Messages {
       return intElements_[index];
     }
     
-    public const int LongElementsFieldNumber = 3;
+    public const int LongElementsFieldNumber = 4;
     private int longElementsMemoizedSerializedSize;
     private pbc::PopsicleList<long> longElements_ = new pbc::PopsicleList<long>();
     public scg::IList<long> LongElementsList {
@@ -250,7 +267,7 @@ namespace Akka.DistributedData.Messages {
       return longElements_[index];
     }
     
-    public const int OtherElementsFieldNumber = 4;
+    public const int OtherElementsFieldNumber = 5;
     private pbc::PopsicleList<global::Akka.DistributedData.Messages.OtherMessage> otherElements_ = new pbc::PopsicleList<global::Akka.DistributedData.Messages.OtherMessage>();
     public scg::IList<global::Akka.DistributedData.Messages.OtherMessage> OtherElementsList {
       get { return otherElements_; }
@@ -264,6 +281,7 @@ namespace Akka.DistributedData.Messages {
     
     public override bool IsInitialized {
       get {
+        if (!hasTypeDescriptor) return false;
         foreach (global::Akka.DistributedData.Messages.OtherMessage element in OtherElementsList) {
           if (!element.IsInitialized) return false;
         }
@@ -274,17 +292,20 @@ namespace Akka.DistributedData.Messages {
     public override void WriteTo(pb::ICodedOutputStream output) {
       int size = SerializedSize;
       string[] field_names = _gSetFieldNames;
+      if (hasTypeDescriptor) {
+        output.WriteInt32(1, field_names[4], TypeDescriptor);
+      }
       if (stringElements_.Count > 0) {
-        output.WriteStringArray(1, field_names[3], stringElements_);
+        output.WriteStringArray(2, field_names[3], stringElements_);
       }
       if (intElements_.Count > 0) {
-        output.WritePackedSInt32Array(2, field_names[0], intElementsMemoizedSerializedSize, intElements_);
+        output.WritePackedSInt32Array(3, field_names[0], intElementsMemoizedSerializedSize, intElements_);
       }
       if (longElements_.Count > 0) {
-        output.WritePackedSInt64Array(3, field_names[1], longElementsMemoizedSerializedSize, longElements_);
+        output.WritePackedSInt64Array(4, field_names[1], longElementsMemoizedSerializedSize, longElements_);
       }
       if (otherElements_.Count > 0) {
-        output.WriteMessageArray(4, field_names[2], otherElements_);
+        output.WriteMessageArray(5, field_names[2], otherElements_);
       }
       UnknownFields.WriteTo(output);
     }
@@ -296,6 +317,9 @@ namespace Akka.DistributedData.Messages {
         if (size != -1) return size;
         
         size = 0;
+        if (hasTypeDescriptor) {
+          size += pb::CodedOutputStream.ComputeInt32Size(1, TypeDescriptor);
+        }
         {
           int dataSize = 0;
           foreach (string element in StringElementsList) {
@@ -327,7 +351,7 @@ namespace Akka.DistributedData.Messages {
           longElementsMemoizedSerializedSize = dataSize;
         }
         foreach (global::Akka.DistributedData.Messages.OtherMessage element in OtherElementsList) {
-          size += pb::CodedOutputStream.ComputeMessageSize(4, element);
+          size += pb::CodedOutputStream.ComputeMessageSize(5, element);
         }
         size += UnknownFields.SerializedSize;
         memoizedSerializedSize = size;
@@ -457,6 +481,9 @@ namespace Akka.DistributedData.Messages {
       public override Builder MergeFrom(GSet other) {
         if (other == global::Akka.DistributedData.Messages.GSet.DefaultInstance) return this;
         PrepareBuilder();
+        if (other.HasTypeDescriptor) {
+          TypeDescriptor = other.TypeDescriptor;
+        }
         if (other.stringElements_.Count != 0) {
           result.stringElements_.Add(other.stringElements_);
         }
@@ -512,21 +539,25 @@ namespace Akka.DistributedData.Messages {
               ParseUnknownField(input, unknownFields, extensionRegistry, tag, field_name);
               break;
             }
-            case 10: {
-              input.ReadStringArray(tag, field_name, result.stringElements_);
+            case 8: {
+              result.hasTypeDescriptor = input.ReadInt32(ref result.typeDescriptor_);
               break;
             }
-            case 18:
-            case 16: {
-              input.ReadSInt32Array(tag, field_name, result.intElements_);
+            case 18: {
+              input.ReadStringArray(tag, field_name, result.stringElements_);
               break;
             }
             case 26:
             case 24: {
+              input.ReadSInt32Array(tag, field_name, result.intElements_);
+              break;
+            }
+            case 34:
+            case 32: {
               input.ReadSInt64Array(tag, field_name, result.longElements_);
               break;
             }
-            case 34: {
+            case 42: {
               input.ReadMessageArray(tag, field_name, result.otherElements_, global::Akka.DistributedData.Messages.OtherMessage.DefaultInstance, extensionRegistry);
               break;
             }
@@ -539,6 +570,26 @@ namespace Akka.DistributedData.Messages {
         return this;
       }
       
+      
+      public bool HasTypeDescriptor {
+        get { return result.hasTypeDescriptor; }
+      }
+      public int TypeDescriptor {
+        get { return result.TypeDescriptor; }
+        set { SetTypeDescriptor(value); }
+      }
+      public Builder SetTypeDescriptor(int value) {
+        PrepareBuilder();
+        result.hasTypeDescriptor = true;
+        result.typeDescriptor_ = value;
+        return this;
+      }
+      public Builder ClearTypeDescriptor() {
+        PrepareBuilder();
+        result.hasTypeDescriptor = false;
+        result.typeDescriptor_ = 0;
+        return this;
+      }
       
       public pbc::IPopsicleList<string> StringElementsList {
         get { return PrepareBuilder().stringElements_; }
@@ -6531,6 +6582,323 @@ namespace Akka.DistributedData.Messages {
       }
     }
     static ORMultiMap() {
+      object.ReferenceEquals(global::Akka.DistributedData.Messages.ReplicatedDataMessages.Descriptor, null);
+    }
+  }
+  
+  [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+  public sealed partial class GenericKey : pb::GeneratedMessage<GenericKey, GenericKey.Builder> {
+    private GenericKey() { }
+    private static readonly GenericKey defaultInstance = new GenericKey().MakeReadOnly();
+    private static readonly string[] _genericKeyFieldNames = new string[] { "id", "typehint" };
+    private static readonly uint[] _genericKeyFieldTags = new uint[] { 10, 18 };
+    public static GenericKey DefaultInstance {
+      get { return defaultInstance; }
+    }
+    
+    public override GenericKey DefaultInstanceForType {
+      get { return DefaultInstance; }
+    }
+    
+    protected override GenericKey ThisMessage {
+      get { return this; }
+    }
+    
+    public static pbd::MessageDescriptor Descriptor {
+      get { return global::Akka.DistributedData.Messages.ReplicatedDataMessages.internal__static_Akka_DistributedData_Messages_GenericKey__Descriptor; }
+    }
+    
+    protected override pb::FieldAccess.FieldAccessorTable<GenericKey, GenericKey.Builder> InternalFieldAccessors {
+      get { return global::Akka.DistributedData.Messages.ReplicatedDataMessages.internal__static_Akka_DistributedData_Messages_GenericKey__FieldAccessorTable; }
+    }
+    
+    public const int IdFieldNumber = 1;
+    private bool hasId;
+    private pb::ByteString id_ = pb::ByteString.Empty;
+    public bool HasId {
+      get { return hasId; }
+    }
+    public pb::ByteString Id {
+      get { return id_; }
+    }
+    
+    public const int TypehintFieldNumber = 2;
+    private bool hasTypehint;
+    private pb::ByteString typehint_ = pb::ByteString.Empty;
+    public bool HasTypehint {
+      get { return hasTypehint; }
+    }
+    public pb::ByteString Typehint {
+      get { return typehint_; }
+    }
+    
+    public override bool IsInitialized {
+      get {
+        if (!hasId) return false;
+        if (!hasTypehint) return false;
+        return true;
+      }
+    }
+    
+    public override void WriteTo(pb::ICodedOutputStream output) {
+      int size = SerializedSize;
+      string[] field_names = _genericKeyFieldNames;
+      if (hasId) {
+        output.WriteBytes(1, field_names[0], Id);
+      }
+      if (hasTypehint) {
+        output.WriteBytes(2, field_names[1], Typehint);
+      }
+      UnknownFields.WriteTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public override int SerializedSize {
+      get {
+        int size = memoizedSerializedSize;
+        if (size != -1) return size;
+        
+        size = 0;
+        if (hasId) {
+          size += pb::CodedOutputStream.ComputeBytesSize(1, Id);
+        }
+        if (hasTypehint) {
+          size += pb::CodedOutputStream.ComputeBytesSize(2, Typehint);
+        }
+        size += UnknownFields.SerializedSize;
+        memoizedSerializedSize = size;
+        return size;
+      }
+    }
+    
+    public static GenericKey ParseFrom(pb::ByteString data) {
+      return ((Builder) CreateBuilder().MergeFrom(data)).BuildParsed();
+    }
+    public static GenericKey ParseFrom(pb::ByteString data, pb::ExtensionRegistry extensionRegistry) {
+      return ((Builder) CreateBuilder().MergeFrom(data, extensionRegistry)).BuildParsed();
+    }
+    public static GenericKey ParseFrom(byte[] data) {
+      return ((Builder) CreateBuilder().MergeFrom(data)).BuildParsed();
+    }
+    public static GenericKey ParseFrom(byte[] data, pb::ExtensionRegistry extensionRegistry) {
+      return ((Builder) CreateBuilder().MergeFrom(data, extensionRegistry)).BuildParsed();
+    }
+    public static GenericKey ParseFrom(global::System.IO.Stream input) {
+      return ((Builder) CreateBuilder().MergeFrom(input)).BuildParsed();
+    }
+    public static GenericKey ParseFrom(global::System.IO.Stream input, pb::ExtensionRegistry extensionRegistry) {
+      return ((Builder) CreateBuilder().MergeFrom(input, extensionRegistry)).BuildParsed();
+    }
+    public static GenericKey ParseDelimitedFrom(global::System.IO.Stream input) {
+      return CreateBuilder().MergeDelimitedFrom(input).BuildParsed();
+    }
+    public static GenericKey ParseDelimitedFrom(global::System.IO.Stream input, pb::ExtensionRegistry extensionRegistry) {
+      return CreateBuilder().MergeDelimitedFrom(input, extensionRegistry).BuildParsed();
+    }
+    public static GenericKey ParseFrom(pb::ICodedInputStream input) {
+      return ((Builder) CreateBuilder().MergeFrom(input)).BuildParsed();
+    }
+    public static GenericKey ParseFrom(pb::ICodedInputStream input, pb::ExtensionRegistry extensionRegistry) {
+      return ((Builder) CreateBuilder().MergeFrom(input, extensionRegistry)).BuildParsed();
+    }
+    private GenericKey MakeReadOnly() {
+      return this;
+    }
+    
+    public static Builder CreateBuilder() { return new Builder(); }
+    public override Builder ToBuilder() { return CreateBuilder(this); }
+    public override Builder CreateBuilderForType() { return new Builder(); }
+    public static Builder CreateBuilder(GenericKey prototype) {
+      return new Builder(prototype);
+    }
+    
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+    public sealed partial class Builder : pb::GeneratedBuilder<GenericKey, Builder> {
+      protected override Builder ThisBuilder {
+        get { return this; }
+      }
+      public Builder() {
+        result = DefaultInstance;
+        resultIsReadOnly = true;
+      }
+      internal Builder(GenericKey cloneFrom) {
+        result = cloneFrom;
+        resultIsReadOnly = true;
+      }
+      
+      private bool resultIsReadOnly;
+      private GenericKey result;
+      
+      private GenericKey PrepareBuilder() {
+        if (resultIsReadOnly) {
+          GenericKey original = result;
+          result = new GenericKey();
+          resultIsReadOnly = false;
+          MergeFrom(original);
+        }
+        return result;
+      }
+      
+      public override bool IsInitialized {
+        get { return result.IsInitialized; }
+      }
+      
+      protected override GenericKey MessageBeingBuilt {
+        get { return PrepareBuilder(); }
+      }
+      
+      public override Builder Clear() {
+        result = DefaultInstance;
+        resultIsReadOnly = true;
+        return this;
+      }
+      
+      public override Builder Clone() {
+        if (resultIsReadOnly) {
+          return new Builder(result);
+        } else {
+          return new Builder().MergeFrom(result);
+        }
+      }
+      
+      public override pbd::MessageDescriptor DescriptorForType {
+        get { return global::Akka.DistributedData.Messages.GenericKey.Descriptor; }
+      }
+      
+      public override GenericKey DefaultInstanceForType {
+        get { return global::Akka.DistributedData.Messages.GenericKey.DefaultInstance; }
+      }
+      
+      public override GenericKey BuildPartial() {
+        if (resultIsReadOnly) {
+          return result;
+        }
+        resultIsReadOnly = true;
+        return result.MakeReadOnly();
+      }
+      
+      public override Builder MergeFrom(pb::IMessage other) {
+        if (other is GenericKey) {
+          return MergeFrom((GenericKey) other);
+        } else {
+          base.MergeFrom(other);
+          return this;
+        }
+      }
+      
+      public override Builder MergeFrom(GenericKey other) {
+        if (other == global::Akka.DistributedData.Messages.GenericKey.DefaultInstance) return this;
+        PrepareBuilder();
+        if (other.HasId) {
+          Id = other.Id;
+        }
+        if (other.HasTypehint) {
+          Typehint = other.Typehint;
+        }
+        this.MergeUnknownFields(other.UnknownFields);
+        return this;
+      }
+      
+      public override Builder MergeFrom(pb::ICodedInputStream input) {
+        return MergeFrom(input, pb::ExtensionRegistry.Empty);
+      }
+      
+      public override Builder MergeFrom(pb::ICodedInputStream input, pb::ExtensionRegistry extensionRegistry) {
+        PrepareBuilder();
+        pb::UnknownFieldSet.Builder unknownFields = null;
+        uint tag;
+        string field_name;
+        while (input.ReadTag(out tag, out field_name)) {
+          if(tag == 0 && field_name != null) {
+            int field_ordinal = global::System.Array.BinarySearch(_genericKeyFieldNames, field_name, global::System.StringComparer.Ordinal);
+            if(field_ordinal >= 0)
+              tag = _genericKeyFieldTags[field_ordinal];
+            else {
+              if (unknownFields == null) {
+                unknownFields = pb::UnknownFieldSet.CreateBuilder(this.UnknownFields);
+              }
+              ParseUnknownField(input, unknownFields, extensionRegistry, tag, field_name);
+              continue;
+            }
+          }
+          switch (tag) {
+            case 0: {
+              throw pb::InvalidProtocolBufferException.InvalidTag();
+            }
+            default: {
+              if (pb::WireFormat.IsEndGroupTag(tag)) {
+                if (unknownFields != null) {
+                  this.UnknownFields = unknownFields.Build();
+                }
+                return this;
+              }
+              if (unknownFields == null) {
+                unknownFields = pb::UnknownFieldSet.CreateBuilder(this.UnknownFields);
+              }
+              ParseUnknownField(input, unknownFields, extensionRegistry, tag, field_name);
+              break;
+            }
+            case 10: {
+              result.hasId = input.ReadBytes(ref result.id_);
+              break;
+            }
+            case 18: {
+              result.hasTypehint = input.ReadBytes(ref result.typehint_);
+              break;
+            }
+          }
+        }
+        
+        if (unknownFields != null) {
+          this.UnknownFields = unknownFields.Build();
+        }
+        return this;
+      }
+      
+      
+      public bool HasId {
+        get { return result.hasId; }
+      }
+      public pb::ByteString Id {
+        get { return result.Id; }
+        set { SetId(value); }
+      }
+      public Builder SetId(pb::ByteString value) {
+        pb::ThrowHelper.ThrowIfNull(value, "value");
+        PrepareBuilder();
+        result.hasId = true;
+        result.id_ = value;
+        return this;
+      }
+      public Builder ClearId() {
+        PrepareBuilder();
+        result.hasId = false;
+        result.id_ = pb::ByteString.Empty;
+        return this;
+      }
+      
+      public bool HasTypehint {
+        get { return result.hasTypehint; }
+      }
+      public pb::ByteString Typehint {
+        get { return result.Typehint; }
+        set { SetTypehint(value); }
+      }
+      public Builder SetTypehint(pb::ByteString value) {
+        pb::ThrowHelper.ThrowIfNull(value, "value");
+        PrepareBuilder();
+        result.hasTypehint = true;
+        result.typehint_ = value;
+        return this;
+      }
+      public Builder ClearTypehint() {
+        PrepareBuilder();
+        result.hasTypehint = false;
+        result.typehint_ = pb::ByteString.Empty;
+        return this;
+      }
+    }
+    static GenericKey() {
       object.ReferenceEquals(global::Akka.DistributedData.Messages.ReplicatedDataMessages.Descriptor, null);
     }
   }
