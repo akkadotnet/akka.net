@@ -13,6 +13,9 @@ using dm = Akka.DistributedData.Messages;
 
 namespace Akka.DistributedData.Proto
 {
+    public interface IReplicatorMessageSerializer
+    { }
+
     public class ReplicatorMessageSerializer : SerializerWithStringManifest, ISerializationSupport
     {
         private const string GetManifest = "A";
@@ -46,14 +49,14 @@ namespace Akka.DistributedData.Proto
             else if (obj is Read) { return ReadManifest; }
             else if (obj is ReadResult) { return ReadResultManifest; }
             else if (obj is Akka.DistributedData.Internal.Status) { return StatusManifest; }
-            else if (obj is Get<IReplicatedData>) { return GetManifest; }
+            else if (obj is Gossip) { return GossipManifest; }
+            else if (obj is IGet) { return GetManifest; }
             else if (obj is GetSuccess<IReplicatedData>) { return GetSuccessManifest; }
             else if (obj is Changed<IReplicatedData>) { return ChangedManifest; }
             else if (obj is NotFound<IReplicatedData>) { return NotFoundManifest; }
             else if (obj is GetFailure<IReplicatedData>) { return GetFailureManifest; }
             else if (obj is Subscribe<IReplicatedData>) { return SubscribeManifest; }
             else if (obj is Unsubscribe<IReplicatedData>) { return UnsubscribeManifest; }
-            else if (obj is Gossip) { return GossipManifest; }
             else { throw new ArgumentException("Unable to serialize {0}", obj.GetType().Name); }
         }
 
@@ -102,20 +105,20 @@ namespace Akka.DistributedData.Proto
             else if (obj is Read) { return ReadToProto((Read)obj).ToByteArray(); }
             else if (obj is ReadResult) { return ReadResultToProto((ReadResult)obj).ToByteArray(); }
             else if (obj is Akka.DistributedData.Internal.Status) { return StatusToProto((Akka.DistributedData.Internal.Status)obj).ToByteArray(); }
-            else if (obj is Get<IReplicatedData>) { return GetToProto((Get<IReplicatedData>)obj).ToByteArray(); }
+            else if (obj is Gossip) { return GossipToProto((Gossip)obj).ToByteArray(); }
+            else if (obj is IGet) { return GetToProto((IGet)obj).ToByteArray(); }
             else if (obj is GetSuccess<IReplicatedData>) { return GetSuccessToProto((GetSuccess<IReplicatedData>)obj).ToByteArray(); }
             else if (obj is Changed<IReplicatedData>) { return ChangedToproto((Changed<IReplicatedData>)obj).ToByteArray(); }
             else if (obj is NotFound<IReplicatedData>) { return NotFoundToProto((NotFound<IReplicatedData>)obj).ToByteArray(); }
             else if (obj is GetFailure<IReplicatedData>) { return GetFailureToProto((GetFailure<IReplicatedData>)obj).ToByteArray(); }
             else if (obj is Subscribe<IReplicatedData>) { return SubscribeToProto((Subscribe<IReplicatedData>)obj).ToByteArray(); }
             else if (obj is Unsubscribe<IReplicatedData>) { return UnsubscribeToProto((Unsubscribe<IReplicatedData>)obj).ToByteArray(); }
-            else if (obj is Gossip) { return GossipToProto((Gossip)obj).ToByteArray(); }
             else { throw new ArgumentException("Unable to serialize {0}", obj.GetType().Name); }
         }
 
         public override int Identifier
         {
-            get { return System.Settings.Config.GetInt("akka.cluster.replicated-data.ReplicatorMessageSerializer"); }
+            get { return 12; }
         }
 
         public Actor.ExtendedActorSystem System
@@ -197,7 +200,7 @@ namespace Akka.DistributedData.Proto
             return new Gossip(entries, gossip.SendBack);
         }
 
-        private dm.Get GetToProto(Get<IReplicatedData> get)
+        private dm.Get GetToProto(IGet get)
         {
             int consistencyValue = 0;
             if (get.Consistency is ReadLocal) { consistencyValue = 1; }
@@ -205,7 +208,7 @@ namespace Akka.DistributedData.Proto
             else if (get.Consistency is ReadMajority) { consistencyValue = 0; }
             else { consistencyValue = ((ReadFrom)get.Consistency).N; }
             var b = dm.Get.CreateBuilder()
-                          .SetKey(this.OtherMessageToProto(get.Key))
+                          .SetKey(this.OtherMessageToProto(((ICommand)get).Key))
                           .SetConsistency(consistencyValue)
                           .SetTimeout((uint)get.Consistency.Timeout.TotalMilliseconds);
             if(get.Request != null)
@@ -215,18 +218,20 @@ namespace Akka.DistributedData.Proto
             return b.Build();
         }
 
-        private Get<IReplicatedData> GetFromBinary(byte[] bytes)
+        private object GetFromBinary(byte[] bytes)
         {
             var get = dm.Get.ParseFrom(bytes);
-            var key = this.OtherMessageFromProto(get.Key) as Key<IReplicatedData>;
+            var key = this.OtherMessageFromProto(get.Key);
             var request = get.HasRequest ? this.OtherMessageFromProto(get.Request) : null;
             var timeout = TimeSpan.FromMilliseconds(get.Timeout);
             IReadConsistency consistency;
             if (get.Consistency == 0) { consistency = new ReadMajority(timeout); }
             else if (get.Consistency == -1) { consistency = new ReadAll(timeout); }
-            else if (get.Consistency == 1) { consistency = new ReadLocal(); }
+            else if (get.Consistency == 1) { consistency = ReadLocal.Instance; }
             else { consistency = new ReadFrom(get.Consistency, timeout); }
-            return new Get<IReplicatedData>(key, consistency, request);
+            var keyInterfaceType = key.GetType().GetInterface("IKey`1").GetGenericArguments()[0];
+            var invokeType = typeof(Get<>).MakeGenericType(keyInterfaceType);
+            return Activator.CreateInstance(invokeType, key, consistency, request);
         }
 
         private dm.GetSuccess GetSuccessToProto(GetSuccess<IReplicatedData> succ)
