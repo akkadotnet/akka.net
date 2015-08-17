@@ -53,7 +53,7 @@ namespace Akka.DistributedData.Proto
             else if (obj is IGet) { return GetManifest; }
             else if (obj is IGetSuccess) { return GetSuccessManifest; }
             else if (obj is Changed<IReplicatedData>) { return ChangedManifest; }
-            else if (obj is NotFound<IReplicatedData>) { return NotFoundManifest; }
+            else if (obj is INotFound) { return NotFoundManifest; }
             else if (obj is GetFailure<IReplicatedData>) { return GetFailureManifest; }
             else if (obj is Subscribe<IReplicatedData>) { return SubscribeManifest; }
             else if (obj is Unsubscribe<IReplicatedData>) { return UnsubscribeManifest; }
@@ -109,7 +109,7 @@ namespace Akka.DistributedData.Proto
             else if (obj is IGet) { return GetToProto((IGet)obj).ToByteArray(); }
             else if (obj is IGetSuccess) { return GetSuccessToProto((IGetSuccess)obj).ToByteArray(); }
             else if (obj is Changed<IReplicatedData>) { return ChangedToproto((Changed<IReplicatedData>)obj).ToByteArray(); }
-            else if (obj is NotFound<IReplicatedData>) { return NotFoundToProto((NotFound<IReplicatedData>)obj).ToByteArray(); }
+            else if (obj is INotFound) { return NotFoundToProto((INotFound)obj).ToByteArray(); }
             else if (obj is GetFailure<IReplicatedData>) { return GetFailureToProto((GetFailure<IReplicatedData>)obj).ToByteArray(); }
             else if (obj is Subscribe<IReplicatedData>) { return SubscribeToProto((Subscribe<IReplicatedData>)obj).ToByteArray(); }
             else if (obj is Unsubscribe<IReplicatedData>) { return UnsubscribeToProto((Unsubscribe<IReplicatedData>)obj).ToByteArray(); }
@@ -257,23 +257,25 @@ namespace Akka.DistributedData.Proto
             return Activator.CreateInstance(invokeType, new object[] { key, request, data });
         }
 
-        private dm.NotFound NotFoundToProto(NotFound<IReplicatedData> notFound)
+        private dm.NotFound NotFoundToProto(INotFound notFound)
         {
             var b = dm.NotFound.CreateBuilder()
                                .SetKey(this.OtherMessageToProto(notFound.Key));
-            if(notFound.Request == null)
+            if(notFound.Request != null)
             {
                 b.SetRequest(this.OtherMessageToProto(notFound.Request));
             }
             return b.Build();
         }
 
-        private NotFound<IReplicatedData> NotFoundFromBinary(byte[] bytes)
+        private object NotFoundFromBinary(byte[] bytes)
         {
             var nf = dm.NotFound.ParseFrom(bytes);
-            var request = nf.HasRequest ? nf.Request : null;
-            var key = this.OtherMessageFromProto(nf.Key) as Key<IReplicatedData>;
-            return new NotFound<IReplicatedData>(key, request);
+            var request = nf.HasRequest ? this.OtherMessageFromProto(nf.Request) : null;
+            var key = this.OtherMessageFromProto(nf.Key);
+            var keyInterfaceType = key.GetType().GetInterface("IKey`1").GetGenericArguments()[0];
+            var invokeType = typeof(NotFound<>).MakeGenericType(keyInterfaceType);
+            return Activator.CreateInstance(invokeType, new object[] { key, request });
         }
 
         private dm.GetFailure GetFailureToProto(GetFailure<IReplicatedData> fail)

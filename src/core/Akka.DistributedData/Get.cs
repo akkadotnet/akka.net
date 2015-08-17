@@ -124,7 +124,13 @@ namespace Akka.DistributedData
         }
     }
 
-    public sealed class NotFound<T> : IGetResponse<T>, IReplicatorMessage where T : IReplicatedData
+    internal interface INotFound
+    {
+        IKey Key { get; }
+        Object Request { get; }
+    }
+
+    public sealed class NotFound<T> : IGetResponse<T>, INotFound, IReplicatorMessage where T : IReplicatedData
     {
         readonly Key<T> _key;
         readonly object _request;
@@ -139,10 +145,28 @@ namespace Akka.DistributedData
             get { return _request; }
         }
 
-        internal NotFound(Key<T> key, object request)
+        public NotFound(Key<T> key, object request)
         {
             _key = key;
             _request = request;
+        }
+
+        IKey INotFound.Key
+        {
+            get { return _key; }
+        }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as NotFound<T>;
+            if(other != null)
+            {
+                bool requestsEqual = false;
+                if (_request == null && other._request == null) { requestsEqual = true; }
+                else if (_request != null) { requestsEqual = _request.Equals(other._request); }
+                return _key.Equals(other._key) && requestsEqual;
+            }
+            return false;
         }
     }
 
