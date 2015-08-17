@@ -124,7 +124,7 @@ namespace Akka.DistributedData
         protected override bool Receive(object message)
         {
             return message.Match()
-                          .With<Get<IReplicatedData>>(g => ReceiveGet(g.Key, g.Consistency, g.Request))
+                          .With<Get<IReplicatedData>>(g => ReceiveGet(((ICommand)g).Key, g.Consistency, g.Request))
                           .With<Update<IReplicatedData>>(u => ReceiveUpdate(u.Key, u.Modify, u.Consistency, u.Request))
                           .With<Read>(r => ReceiveRead(r.Key))
                           .With<Write>(w => ReceiveWrite(w.Key, w.Envelope))
@@ -151,25 +151,26 @@ namespace Akka.DistributedData
                           .WasHandled;
         }
 
-        private void ReceiveGet(Key<IReplicatedData> key, IReadConsistency consistency, Object req)
+        private void ReceiveGet(IKey key, IReadConsistency consistency, Object req)
         {
+            var k = key as Key<IReplicatedData>;
             var localValue = GetData(key.Id);
             Context.System.Log.Debug("Received get for key {0}, local value {1}", key.Id, localValue);
             if(IsLocalGet(consistency))
             {
                 if(localValue == null)
                 {
-                    Sender.Tell(new NotFound<IReplicatedData>(key, req));
+                    Sender.Tell(new NotFound<IReplicatedData>(k, req));
                 }
                 if(localValue.Data == DeletedData.Instance)
                 {
-                    Sender.Tell(new DataDeleted<IReplicatedData>(key));
+                    Sender.Tell(new DataDeleted<IReplicatedData>(k));
                 }
-                Sender.Tell(new GetSuccess<IReplicatedData>(key, req, localValue.Data));
+                Sender.Tell(new GetSuccess<IReplicatedData>(k, req, localValue.Data));
             }
             else
             {
-                Context.ActorOf(ReadAggregator.GetProps(key, consistency, req, _nodes, localValue, Sender).WithDispatcher(Context.Props.Dispatcher));
+                Context.ActorOf(ReadAggregator.GetProps(k, consistency, req, _nodes, localValue, Sender).WithDispatcher(Context.Props.Dispatcher));
             }
         }
 
