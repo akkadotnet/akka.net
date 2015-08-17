@@ -89,7 +89,7 @@ namespace Akka.DistributedData.Tests.Serialization
             CheckSerialization(new GetSuccess<GSet<string>>(_keyA, null, data1));
             CheckSerialization(new GetSuccess<GSet<string>>(_keyA, "x", data1));
             CheckSerialization(new NotFound<GSet<string>>(_keyA, "x"));
-            //CheckSerialization(new GetFailure<GSet<string>>(_keyA, "x"));
+            CheckSerialization(new GetFailure<GSet<string>>(_keyA, "x"));
             //CheckSerialization(new Subscribe<GSet<string>>(_keyA, ref1));
             //CheckSerialization(new Unsubscribe<GSet<string>>(_keyA, ref1));
             //CheckSerialization(new Changed<GSet<string>>(_keyA, data1));

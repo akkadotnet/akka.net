@@ -54,7 +54,7 @@ namespace Akka.DistributedData.Proto
             else if (obj is IGetSuccess) { return GetSuccessManifest; }
             else if (obj is Changed<IReplicatedData>) { return ChangedManifest; }
             else if (obj is INotFound) { return NotFoundManifest; }
-            else if (obj is GetFailure<IReplicatedData>) { return GetFailureManifest; }
+            else if (obj is IGetFailure) { return GetFailureManifest; }
             else if (obj is Subscribe<IReplicatedData>) { return SubscribeManifest; }
             else if (obj is Unsubscribe<IReplicatedData>) { return UnsubscribeManifest; }
             else { throw new ArgumentException("Unable to serialize {0}", obj.GetType().Name); }
@@ -110,7 +110,7 @@ namespace Akka.DistributedData.Proto
             else if (obj is IGetSuccess) { return GetSuccessToProto((IGetSuccess)obj).ToByteArray(); }
             else if (obj is Changed<IReplicatedData>) { return ChangedToproto((Changed<IReplicatedData>)obj).ToByteArray(); }
             else if (obj is INotFound) { return NotFoundToProto((INotFound)obj).ToByteArray(); }
-            else if (obj is GetFailure<IReplicatedData>) { return GetFailureToProto((GetFailure<IReplicatedData>)obj).ToByteArray(); }
+            else if (obj is IGetFailure) { return GetFailureToProto((IGetFailure)obj).ToByteArray(); }
             else if (obj is Subscribe<IReplicatedData>) { return SubscribeToProto((Subscribe<IReplicatedData>)obj).ToByteArray(); }
             else if (obj is Unsubscribe<IReplicatedData>) { return UnsubscribeToProto((Unsubscribe<IReplicatedData>)obj).ToByteArray(); }
             else { throw new ArgumentException("Unable to serialize {0}", obj.GetType().Name); }
@@ -278,7 +278,7 @@ namespace Akka.DistributedData.Proto
             return Activator.CreateInstance(invokeType, new object[] { key, request });
         }
 
-        private dm.GetFailure GetFailureToProto(GetFailure<IReplicatedData> fail)
+        private dm.GetFailure GetFailureToProto(IGetFailure fail)
         {
             var b = dm.GetFailure.CreateBuilder()
                                  .SetKey(this.OtherMessageToProto(fail.Key));
@@ -289,12 +289,14 @@ namespace Akka.DistributedData.Proto
             return b.Build();
         }
 
-        private GetFailure<IReplicatedData> GetFailureFromBinary(byte[] bytes)
+        private object GetFailureFromBinary(byte[] bytes)
         {
             var fail = dm.GetFailure.ParseFrom(bytes);
-            var req = fail.HasRequest ? fail.Request : null;
-            var key = this.OtherMessageFromProto(fail.Key) as Key<IReplicatedData>;
-            return new GetFailure<IReplicatedData>(key, req);
+            var req = fail.HasRequest ? this.OtherMessageFromProto(fail.Request) : null;
+            var key = this.OtherMessageFromProto(fail.Key) as IKey;
+            var keyInterfaceType = key.GetType().GetInterface("IKey`1").GetGenericArguments()[0];
+            var invokeType = typeof(GetFailure<>).MakeGenericType(keyInterfaceType);
+            return Activator.CreateInstance(invokeType, new object[] { key, req });
         }
 
         private dm.Subscribe SubscribeToProto(Subscribe<IReplicatedData> sub)
