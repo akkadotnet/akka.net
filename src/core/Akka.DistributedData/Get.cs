@@ -48,7 +48,9 @@ namespace Akka.DistributedData
             {
                 var keysEqual = _key.Equals(other._key);
                 var consistencyEqual = _consistency.Equals(other._consistency);
-                var requestsEqual = (_request != null) ? _request.Equals(other._request) : false;
+                bool requestsEqual = false;
+                if (_request == null && other._request == null) { requestsEqual = true; }
+                else if (_request != null) { requestsEqual = _request.Equals(other._request); }
                 return keysEqual && consistencyEqual && requestsEqual;
             }
             return false;
