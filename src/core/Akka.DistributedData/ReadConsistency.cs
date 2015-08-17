@@ -15,12 +15,15 @@ namespace Akka.DistributedData
     {
         static readonly ReadLocal _instance = new ReadLocal();
 
-        static ReadLocal Instance { get { return _instance; } }
+        public static ReadLocal Instance { get { return _instance; } }
         
         public TimeSpan Timeout
         {
             get { return TimeSpan.Zero; }
         }
+
+        private ReadLocal()
+        { }
     }
 
     public class ReadFrom : IReadConsistency
@@ -43,6 +46,16 @@ namespace Akka.DistributedData
             _n = n;
             _timeout = timeout;
         }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as ReadFrom;
+            if(other != null)
+            {
+                return _n == other._n && _timeout.Equals(other._timeout);
+            }
+            return false;
+        }
     }
 
     public class ReadMajority : IReadConsistency
@@ -58,6 +71,16 @@ namespace Akka.DistributedData
         {
             _timeout = timeout;
         }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as ReadMajority;
+            if(other!=null)
+            {
+                return _timeout == other._timeout;
+            }
+            return false;
+        }
     }
 
     public class ReadAll : IReadConsistency
@@ -72,6 +95,16 @@ namespace Akka.DistributedData
         public ReadAll(TimeSpan timeout)
         {
             _timeout = timeout;
+        }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as ReadAll;
+            if(other != null)
+            {
+                return _timeout == other._timeout;
+            }
+            return false;
         }
     }
 
