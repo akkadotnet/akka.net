@@ -51,7 +51,7 @@ namespace Akka.DistributedData.Proto
             else if (obj is Akka.DistributedData.Internal.Status) { return StatusManifest; }
             else if (obj is Gossip) { return GossipManifest; }
             else if (obj is IGet) { return GetManifest; }
-            else if (obj is GetSuccess<IReplicatedData>) { return GetSuccessManifest; }
+            else if (obj is IGetSuccess) { return GetSuccessManifest; }
             else if (obj is Changed<IReplicatedData>) { return ChangedManifest; }
             else if (obj is NotFound<IReplicatedData>) { return NotFoundManifest; }
             else if (obj is GetFailure<IReplicatedData>) { return GetFailureManifest; }
@@ -107,7 +107,7 @@ namespace Akka.DistributedData.Proto
             else if (obj is Akka.DistributedData.Internal.Status) { return StatusToProto((Akka.DistributedData.Internal.Status)obj).ToByteArray(); }
             else if (obj is Gossip) { return GossipToProto((Gossip)obj).ToByteArray(); }
             else if (obj is IGet) { return GetToProto((IGet)obj).ToByteArray(); }
-            else if (obj is GetSuccess<IReplicatedData>) { return GetSuccessToProto((GetSuccess<IReplicatedData>)obj).ToByteArray(); }
+            else if (obj is IGetSuccess) { return GetSuccessToProto((IGetSuccess)obj).ToByteArray(); }
             else if (obj is Changed<IReplicatedData>) { return ChangedToproto((Changed<IReplicatedData>)obj).ToByteArray(); }
             else if (obj is NotFound<IReplicatedData>) { return NotFoundToProto((NotFound<IReplicatedData>)obj).ToByteArray(); }
             else if (obj is GetFailure<IReplicatedData>) { return GetFailureToProto((GetFailure<IReplicatedData>)obj).ToByteArray(); }
@@ -234,7 +234,7 @@ namespace Akka.DistributedData.Proto
             return Activator.CreateInstance(invokeType, key, consistency, request);
         }
 
-        private dm.GetSuccess GetSuccessToProto(GetSuccess<IReplicatedData> succ)
+        private dm.GetSuccess GetSuccessToProto(IGetSuccess succ)
         {
             var b = dm.GetSuccess.CreateBuilder()
                                  .SetKey(this.OtherMessageToProto(succ.Key))
@@ -246,13 +246,15 @@ namespace Akka.DistributedData.Proto
             return b.Build();
         }
 
-        private GetSuccess<IReplicatedData> GetSuccessFromBinary(byte[] bytes)
+        private object GetSuccessFromBinary(byte[] bytes)
         {
             var succ = dm.GetSuccess.ParseFrom(bytes);
-            var key = this.OtherMessageFromProto(succ.Key) as Key<IReplicatedData>;
-            var request = succ.HasRequest ? succ.Request : null;
+            var key = this.OtherMessageFromProto(succ.Key) as IKey;
+            var request = succ.HasRequest ? this.OtherMessageFromProto(succ.Request) : null;
             var data = this.OtherMessageFromProto(succ.Data) as IReplicatedData;
-            return new GetSuccess<IReplicatedData>(key, request, data);
+            var keyInterfaceType = key.GetType().GetInterface("IKey`1").GetGenericArguments()[0];
+            var invokeType = typeof(GetSuccess<>).MakeGenericType(keyInterfaceType);
+            return Activator.CreateInstance(invokeType, new object[] { key, request, data });
         }
 
         private dm.NotFound NotFoundToProto(NotFound<IReplicatedData> notFound)

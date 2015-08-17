@@ -63,7 +63,14 @@ namespace Akka.DistributedData
         Object Request { get; }
     }
 
-    public sealed class GetSuccess<T> : IGetResponse<T>, IReplicatorMessage where T : IReplicatedData
+    internal interface IGetSuccess
+    {
+        object Data { get; }
+        IKey Key { get; }
+        object Request { get; }
+    }
+
+    public sealed class GetSuccess<T> : IGetResponse<T>, IGetSuccess, IReplicatorMessage where T : IReplicatedData
     {
         readonly Key<T> _key;
         readonly Object _request;
@@ -84,11 +91,36 @@ namespace Akka.DistributedData
             get { return _data; }
         }
 
-        internal GetSuccess(Key<T> key, Object request, T data)
+        public GetSuccess(Key<T> key, Object request, T data)
         {
             _key = key;
             _request = request;
             _data = data;
+        }
+
+        object IGetSuccess.Data
+        {
+            get { return (object)_data; }
+        }
+
+        IKey IGetSuccess.Key
+        {
+            get { return (IKey)_key; }
+        }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as GetSuccess<T>;
+            if (other != null)
+            {
+                var keysEqual = _key.Equals(other._key);
+                var dataEqual = _data.Equals(other._data);
+                bool requestsEqual = false;
+                if (_request == null && other._request == null) { requestsEqual = true; }
+                else if (_request != null) { requestsEqual = _request.Equals(other._request); }
+                return keysEqual && dataEqual && requestsEqual;
+            }
+            return false;
         }
     }
 

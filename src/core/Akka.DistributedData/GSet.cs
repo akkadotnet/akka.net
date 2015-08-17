@@ -75,7 +75,8 @@ namespace Akka.DistributedData
             var other = obj as GSet<T>;
             if(other != null)
             {
-                return other.Elements == Elements;
+                var elementsEqual = _elements.SetEquals(other._elements);
+                return elementsEqual;
             }
             return false;
         }

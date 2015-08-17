@@ -86,8 +86,8 @@ namespace Akka.DistributedData.Tests.Serialization
             var data1 = new GSet<string>().Add("a");
             CheckSerialization(new Get<GSet<string>>(_keyA, ReadLocal.Instance));
             CheckSerialization(new Get<GSet<string>>(_keyA, new ReadMajority(TimeSpan.FromSeconds(2.0)), "x"));
-            //CheckSerialization(new GetSuccess<GSet<string>>(_keyA, null, data1));
-            //CheckSerialization(new GetSuccess<GSet<string>>(_keyA, "x", data1));
+            CheckSerialization(new GetSuccess<GSet<string>>(_keyA, null, data1));
+            CheckSerialization(new GetSuccess<GSet<string>>(_keyA, "x", data1));
             //CheckSerialization(new NotFound<GSet<string>>(_keyA, "x"));
             //CheckSerialization(new GetFailure<GSet<string>>(_keyA, "x"));
             //CheckSerialization(new Subscribe<GSet<string>>(_keyA, ref1));
