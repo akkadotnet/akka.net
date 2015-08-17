@@ -6,7 +6,20 @@ using System.Threading.Tasks;
 
 namespace Akka.DistributedData
 {
-    public abstract class Key<T> where T : IReplicatedData
+    public interface IKey
+    {
+        string Id { get; }
+    }
+
+    public interface IKey<T> : IKey
+    { }
+
+    interface IKeyWithGenericType : IKey
+    {
+        Type Type { get; }
+    }
+
+    public abstract class Key<T> : IKey<T> where T : IReplicatedData
     {
         private readonly string _id;
 
