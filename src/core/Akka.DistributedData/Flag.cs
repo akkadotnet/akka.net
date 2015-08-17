@@ -47,6 +47,16 @@ namespace Akka.DistributedData
                 return new Flag(true);
             }
         }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as Flag;
+            if(other != null)
+            {
+                return Enabled == other.Enabled;
+            }
+            return false;
+        }
     }
 
     public sealed class FlagKey : Key<Flag>
