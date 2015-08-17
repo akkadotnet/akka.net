@@ -172,6 +172,14 @@ namespace Akka.Remote.Transport.Helios
             }
         }
 
+        public override long MaximumPayloadBytes
+        {
+            get
+            {
+                return Settings.MaxFrameSize;
+            }
+        }
+
         protected ILoggingAdapter Log;
 
         /// <summary>

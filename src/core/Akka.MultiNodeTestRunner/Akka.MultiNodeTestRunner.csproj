@@ -94,28 +94,6 @@
     <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
     <Error Condition="!Exists('..\..\packages\xunit.core.2.0.0\build\portable-net45+win+wpa81+wp80+monotouch+monoandroid+Xamarin.iOS\xunit.core.props')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\xunit.core.2.0.0\build\portable-net45+win+wpa81+wp80+monotouch+monoandroid+Xamarin.iOS\xunit.core.props'))" />
   </Target>
-  <PropertyGroup>
-    <PreBuildEvent>echo PREBUILDSTEP for $(ProjectName)
-
-echo Copying files from $(SolutionDir)core\Akka.Remote.Tests.MultiNode\$(OutDir) to $(ProjectDir)bin\$(Configuration)\Akka.Remote
-
-if not exist "$(ProjectDir)bin\$(Configuration)\Akka.Remote" mkdir "$(ProjectDir)bin\$(Configuration)\Akka.Remote"
- 
-xcopy "$(SolutionDir)core\Akka.Remote.Tests.MultiNode\$(OutDir)*.dll" "$(ProjectDir)bin\$(Configuration)\Akka.Remote" /i /d /y
-if errorlevel 1 goto BuildEventFailed
-
-if errorlevel 1 goto BuildEventFailed 
-
-REM Exit properly because the build will not fail 
-REM unless the final step exits with an error code
-
-goto BuildEventOK
-:BuildEventFailed
-echo PREBUILDSTEP for $(ProjectName) FAILED
-exit 1
-:BuildEventOK
-echo PREBUILDSTEP for $(ProjectName) COMPLETED OK</PreBuildEvent>
-  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

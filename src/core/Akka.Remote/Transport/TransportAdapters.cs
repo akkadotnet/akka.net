@@ -147,6 +147,14 @@ namespace Akka.Remote.Transport
             }
         }
 
+        public override long MaximumPayloadBytes
+        {
+            get
+            {
+                return WrappedTransport.MaximumPayloadBytes;
+            }
+        }
+
         protected abstract Task<IAssociationEventListener> InterceptListen(Address listenAddress,
             Task<IAssociationEventListener> listenerTask);
 
