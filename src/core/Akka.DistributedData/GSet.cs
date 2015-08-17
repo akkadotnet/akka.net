@@ -1,5 +1,6 @@
 ﻿using Akka.DistributedData.Proto;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -8,7 +9,20 @@ using System.Threading.Tasks;
 
 namespace Akka.DistributedData
 {
-    public sealed class GSet<T> : AbstractReplicatedData<GSet<T>>, IReplicatedDataSerialization
+    internal interface IGSet
+    {
+        IImmutableSet<object> Elements { get; }
+    }
+
+    public static class GSet
+    {
+        public static GSet<T> Create<T>(IImmutableSet<T> elements)
+        {
+            return new GSet<T>(elements);
+        }
+    }
+
+    public sealed class GSet<T> : AbstractReplicatedData<GSet<T>>, IReplicatedDataSerialization, IGSet
     {
         readonly IImmutableSet<T> _elements;
 
@@ -50,12 +64,39 @@ namespace Akka.DistributedData
         {
             return new GSet<T>(_elements.Add(element));
         }
+
+        IImmutableSet<object> IGSet.Elements
+        {
+            get { return _elements.Cast<object>().ToImmutableHashSet(); }
+        }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as GSet<T>;
+            if(other != null)
+            {
+                return other.Elements == Elements;
+            }
+            return false;
+        }
     }
 
-    public sealed class GSetKey<T> : Key<GSet<T>>
+    internal interface IGSetKey
+    { }
+
+    public sealed class GSetKey<T> : Key<GSet<T>>, IKeyWithGenericType, IGSetKey, IReplicatedDataSerialization
     {
+        readonly Type _type;
+
         public GSetKey(string id)
             : base(id)
-        { }
+        {
+            _type = typeof(T);
+        }
+
+        public Type Type
+        {
+            get { return _type; }
+        }
     }
 }
