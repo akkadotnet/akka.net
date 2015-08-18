@@ -83,11 +83,11 @@ namespace Akka.DistributedData.Internal
         public override bool Equals(object obj)
         {
             var other = obj as Write;
-            if(other == null)
+            if(other != null)
             {
-                return false;
+                return _key.Equals(other._key) && _envelope.Equals(other._envelope);
             }
-            return other.Key == this.Key && other.Envelope == this.Envelope;
+            return false;
         }
     }
 
