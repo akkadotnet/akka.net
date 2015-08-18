@@ -23,11 +23,30 @@ namespace Akka.DistributedData
         {
             _seen = seen;
         }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as PruningInitialized;
+            if(other != null)
+            {
+                return _seen.SetEquals(other._seen);
+            }
+            return false;
+        }
     }
 
     internal sealed class PruningPerformed : IPruningPhase
     {
-        public static PruningPerformed Instance { get { return new PruningPerformed(); } }
+        static readonly PruningPerformed _instance = new PruningPerformed();
+        public static PruningPerformed Instance { get { return _instance; } }
+        
+        private PruningPerformed()
+        { }
+
+        public override bool Equals(object obj)
+        {
+            return obj != null && obj is PruningPerformed;
+        }
     }
 
     internal sealed class PruningState
@@ -106,6 +125,17 @@ namespace Akka.DistributedData
             {
                 throw new Exception("Invalid pruning state provided");
             }
+        }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as PruningState;
+            if(other != null)
+            {
+                var equal = _owner.Equals(other._owner) && _phase.Equals(other._phase);
+                return equal;
+            }
+            return false;
         }
     }
 }

@@ -97,10 +97,10 @@ namespace Akka.DistributedData.Tests.Serialization
             CheckSerialization(new Changed<GSet<string>>(_keyA, data1));
             CheckSerialization(new DataEnvelope(data1));
 
-            //var pruning = ImmutableDictionary<UniqueAddress, PruningState>.Empty
-            //                            .SetItem(_address1, new PruningState(_address2, PruningPerformed.Instance))
-            //                            .SetItem(_address3, new PruningState(_address2, new PruningInitialized(ImmutableHashSet<Address>.Empty.Add(_address1.Address))));
-            //CheckSerialization(new DataEnvelope(data1, pruning));
+            var pruning = ImmutableDictionary<UniqueAddress, PruningState>.Empty
+                                        .SetItem(_address1, new PruningState(_address2, PruningPerformed.Instance))
+                                        .SetItem(_address3, new PruningState(_address2, new PruningInitialized(ImmutableHashSet<Address>.Empty.Add(_address1.Address))));
+            CheckSerialization(new DataEnvelope(data1, pruning));
             ////CheckSerialization(new Write("A", new DataEnvelope(data1)));
             //CheckSerialization(WriteAck.Instance);
             //CheckSerialization(new Read("A"));
@@ -114,7 +114,6 @@ namespace Akka.DistributedData.Tests.Serialization
             //    .SetItem("A", new DataEnvelope(data1))
             //    .SetItem("B", new DataEnvelope(new GSet<string>().Add("b").Add("c")));
             //CheckSerialization(new Gossip(gossip, true));
-            //_system.Shutdown();
         }
 
         protected override void AfterAll()

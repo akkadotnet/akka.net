@@ -148,7 +148,9 @@ namespace Akka.DistributedData
             {
                 return false;
             }
-            return Data.Equals(other.Data) && Pruning.Equals(other.Pruning);
+            var pruningCountsEqual = Pruning.Count == other.Pruning.Count;
+            var elementsEqual = !Pruning.Except(other.Pruning).Any();
+            return Data.Equals(other.Data) && pruningCountsEqual && elementsEqual;
         }
     }
 }
