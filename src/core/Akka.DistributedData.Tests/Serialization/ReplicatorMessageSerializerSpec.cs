@@ -106,10 +106,10 @@ namespace Akka.DistributedData.Tests.Serialization
             CheckSerialization(new Read("A"));
             CheckSerialization(new ReadResult(new DataEnvelope(data1)));
             CheckSerialization(new ReadResult(null));
-            //var status = ImmutableDictionary<string, ByteString>.Empty
-            //                    .SetItem("A", ByteString.FromString("a"))
-            //                    .SetItem("B", ByteString.FromString("b"));
-            //CheckSerialization(new Akka.DistributedData.Internal.Status(status, 3, 10));
+            var status = ImmutableDictionary<string, ByteString>.Empty
+                                .SetItem("A", ByteString.FromString("a"))
+                                .SetItem("B", ByteString.FromString("b"));
+            CheckSerialization(new Akka.DistributedData.Internal.Status(status, 3, 10));
             //var gossip = ImmutableDictionary<string, DataEnvelope>.Empty
             //    .SetItem("A", new DataEnvelope(data1))
             //    .SetItem("B", new DataEnvelope(new GSet<string>().Add("b").Add("c")));

@@ -246,7 +246,8 @@ namespace Akka.DistributedData.Internal
             {
                 return false;
             }
-            return other.Digests == this.Digests && other.Chunk == this.Chunk && other.TotChunks == this.TotChunks;
+            var digestsEqual = Digests.Count.Equals(other.Digests.Count) && Digests.Except(other.Digests).Any();
+            return digestsEqual && other.Chunk.Equals(Chunk) && other.TotChunks.Equals(TotChunks);
         }
     }
 
