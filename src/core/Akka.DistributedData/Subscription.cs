@@ -7,7 +7,13 @@ using System.Threading.Tasks;
 
 namespace Akka.DistributedData
 {
-    public sealed class Subscribe<T> : IReplicatorMessage where T : IReplicatedData
+    internal interface ISubscribe
+    {
+        IKey Key { get; }
+        IActorRef Subscriber { get; }
+    }
+
+    public sealed class Subscribe<T> : ISubscribe, IReplicatorMessage where T : IReplicatedData
     {
         readonly Key<T> _key;
         readonly IActorRef _subscriber;
@@ -27,9 +33,30 @@ namespace Akka.DistributedData
             _key = key;
             _subscriber = subscriber;
         }
+
+        IKey ISubscribe.Key
+        {
+            get { return _key; }
+        }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as Subscribe<T>;
+            if (other != null)
+            {
+                return _key.Equals(other._key) && _subscriber.Equals(other._subscriber);
+            }
+            return false;
+        }
     }
 
-    public sealed class Unsubscribe<T> : IReplicatorMessage where T : IReplicatedData
+    internal interface IUnsubscribe
+    {
+        IKey Key { get; }
+        IActorRef Subscriber { get; }
+    }
+
+    public sealed class Unsubscribe<T> : IUnsubscribe, IReplicatorMessage where T : IReplicatedData
     {
         readonly Key<T> _key;
         readonly IActorRef _subscriber;
@@ -48,6 +75,21 @@ namespace Akka.DistributedData
         {
             _key = key;
             _subscriber = subscriber;
+        }
+
+        IKey IUnsubscribe.Key
+        {
+            get { return _key; }
+        }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as Unsubscribe<T>;
+            if(other != null)
+            {
+                return _key.Equals(other._key) && _subscriber.Equals(other._subscriber);
+            }
+            return false;
         }
     }
 

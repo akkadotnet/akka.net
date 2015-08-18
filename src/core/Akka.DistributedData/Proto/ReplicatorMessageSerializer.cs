@@ -55,8 +55,8 @@ namespace Akka.DistributedData.Proto
             else if (obj is Changed<IReplicatedData>) { return ChangedManifest; }
             else if (obj is INotFound) { return NotFoundManifest; }
             else if (obj is IGetFailure) { return GetFailureManifest; }
-            else if (obj is Subscribe<IReplicatedData>) { return SubscribeManifest; }
-            else if (obj is Unsubscribe<IReplicatedData>) { return UnsubscribeManifest; }
+            else if (obj is ISubscribe) { return SubscribeManifest; }
+            else if (obj is IUnsubscribe) { return UnsubscribeManifest; }
             else { throw new ArgumentException("Unable to serialize {0}", obj.GetType().Name); }
         }
 
@@ -111,8 +111,8 @@ namespace Akka.DistributedData.Proto
             else if (obj is Changed<IReplicatedData>) { return ChangedToproto((Changed<IReplicatedData>)obj).ToByteArray(); }
             else if (obj is INotFound) { return NotFoundToProto((INotFound)obj).ToByteArray(); }
             else if (obj is IGetFailure) { return GetFailureToProto((IGetFailure)obj).ToByteArray(); }
-            else if (obj is Subscribe<IReplicatedData>) { return SubscribeToProto((Subscribe<IReplicatedData>)obj).ToByteArray(); }
-            else if (obj is Unsubscribe<IReplicatedData>) { return UnsubscribeToProto((Unsubscribe<IReplicatedData>)obj).ToByteArray(); }
+            else if (obj is ISubscribe) { return SubscribeToProto((ISubscribe)obj).ToByteArray(); }
+            else if (obj is IUnsubscribe) { return UnsubscribeToProto((IUnsubscribe)obj).ToByteArray(); }
             else { throw new ArgumentException("Unable to serialize {0}", obj.GetType().Name); }
         }
 
@@ -299,22 +299,26 @@ namespace Akka.DistributedData.Proto
             return Activator.CreateInstance(invokeType, new object[] { key, req });
         }
 
-        private dm.Subscribe SubscribeToProto(Subscribe<IReplicatedData> sub)
+        private dm.Subscribe SubscribeToProto(ISubscribe sub)
         {
+            var path = Akka.Serialization.Serialization.SerializedActorPath(sub.Subscriber);
             return dm.Subscribe.CreateBuilder()
                                .SetKey(this.OtherMessageToProto(sub.Key))
-                               .SetRef(Akka.Serialization.Serialization.SerializedActorPath(sub.Subscriber))
+                               .SetRef(path)
                                .Build();
         }
 
-        private Subscribe<IReplicatedData> SubscribeFromBinary(byte[] bytes)
+        private object SubscribeFromBinary(byte[] bytes)
         {
             var sub = dm.Subscribe.ParseFrom(bytes);
-            var key = this.OtherMessageFromProto(sub.Key) as Key<IReplicatedData>;
-            return new Subscribe<IReplicatedData>(key, this.ResolveActorRef(sub.Ref));
+            var key = this.OtherMessageFromProto(sub.Key) as IKey;
+            var actorRef = this.ResolveActorRef(sub.Ref);
+            var keyInterfaceType = key.GetType().GetInterface("IKey`1").GetGenericArguments()[0];
+            var invokeType = typeof(Subscribe<>).MakeGenericType(keyInterfaceType);
+            return Activator.CreateInstance(invokeType, new object[] { key, actorRef });
         }
 
-        private dm.Unsubscribe UnsubscribeToProto(Unsubscribe<IReplicatedData> data)
+        private dm.Unsubscribe UnsubscribeToProto(IUnsubscribe data)
         {
             return dm.Unsubscribe.CreateBuilder()
                                  .SetKey(this.OtherMessageToProto(data.Key))
@@ -322,11 +326,14 @@ namespace Akka.DistributedData.Proto
                                  .Build();
         }
 
-        private Unsubscribe<IReplicatedData> UnsubscribeFromBinary(byte[] bytes)
+        private object UnsubscribeFromBinary(byte[] bytes)
         {
             var unsub = dm.Unsubscribe.ParseFrom(bytes);
-            var key = this.OtherMessageFromProto(unsub.Key) as Key<IReplicatedData>;
-            return new Unsubscribe<IReplicatedData>(key, this.ResolveActorRef(unsub.Ref));
+            var key = this.OtherMessageFromProto(unsub.Key) as IKey;
+            var actorRef = this.ResolveActorRef(unsub.Ref);
+            var keyInterfaceType = key.GetType().GetInterface("IKey`1").GetGenericArguments()[0];
+            var invokeType = typeof(Unsubscribe<>).MakeGenericType(keyInterfaceType);
+            return Activator.CreateInstance(invokeType, new object[] { key, actorRef });
         }
 
         private dm.Changed ChangedToproto(Changed<IReplicatedData> data)

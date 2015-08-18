@@ -55,7 +55,9 @@ namespace Akka.DistributedData.Tests.Serialization
         public ReplicatorMessageSerializerSpec()
             : this(ActorSystem.Create("ReplicatorMessageSerializerSpec", ConfigurationFactory.ParseString(@"
                 akka.actor.provider=""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-                akka.remote.helios.tcp.port=0
+                akka.remote.helios.tcp.port=3398
+                akka.remote.helios.tcp.hostname=localhost
+                akka.cluster.seed-nodes = [""akka.tcp://ReplicatorMessageSerializerSpec@127.0.0.1:3398"" ]
                 akka.test.timefactor=1.0
                 akka.test.calling-thread-dispatcher.type=""Akka.TestKit.CallingThreadDispatcherConfigurator, Akka.TestKit""
                 akka.test.calling-thread-dispatcher.throughput=2147483647
@@ -90,8 +92,8 @@ namespace Akka.DistributedData.Tests.Serialization
             CheckSerialization(new GetSuccess<GSet<string>>(_keyA, "x", data1));
             CheckSerialization(new NotFound<GSet<string>>(_keyA, "x"));
             CheckSerialization(new GetFailure<GSet<string>>(_keyA, "x"));
-            //CheckSerialization(new Subscribe<GSet<string>>(_keyA, ref1));
-            //CheckSerialization(new Unsubscribe<GSet<string>>(_keyA, ref1));
+            CheckSerialization(new Subscribe<GSet<string>>(_keyA, ref1));
+            CheckSerialization(new Unsubscribe<GSet<string>>(_keyA, ref1));
             //CheckSerialization(new Changed<GSet<string>>(_keyA, data1));
             //CheckSerialization(new DataEnvelope(data1));
 
