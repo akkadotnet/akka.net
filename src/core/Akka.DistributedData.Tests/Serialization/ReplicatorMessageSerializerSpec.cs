@@ -102,7 +102,7 @@ namespace Akka.DistributedData.Tests.Serialization
                                         .SetItem(_address3, new PruningState(_address2, new PruningInitialized(ImmutableHashSet<Address>.Empty.Add(_address1.Address))));
             CheckSerialization(new DataEnvelope(data1, pruning));
             ////CheckSerialization(new Write("A", new DataEnvelope(data1)));
-            //CheckSerialization(WriteAck.Instance);
+            CheckSerialization(WriteAck.Instance);
             //CheckSerialization(new Read("A"));
             //CheckSerialization(new ReadResult(new DataEnvelope(data1)));
             //CheckSerialization(new ReadResult(null));

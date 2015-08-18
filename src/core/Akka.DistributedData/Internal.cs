@@ -93,7 +93,7 @@ namespace Akka.DistributedData.Internal
 
     internal class WriteAck : IReplicatorMessage
     {
-        static readonly WriteAck _instance;
+        static readonly WriteAck _instance = new WriteAck();
         public static WriteAck Instance
         {
             get { return _instance; }
@@ -104,7 +104,7 @@ namespace Akka.DistributedData.Internal
 
         public override bool Equals(object obj)
         {
-            return obj is WriteAck;
+            return obj != null && obj is WriteAck;
         }
     }
 
