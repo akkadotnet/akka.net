@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -14,6 +15,18 @@ using Akka.Persistence.Journal;
 
 namespace Akka.Persistence
 {
+    internal struct PluginHolder
+    {
+        public readonly IActorRef Ref;
+        public readonly EventAdapters Adapters;
+
+        public PluginHolder(IActorRef @ref, EventAdapters adapters)
+        {
+            Ref = @ref;
+            Adapters = adapters;
+        }
+    }
+
     public class PersistenceExtension : IExtension
     {
         private const string DefaultPluginDispatcherId = "akka.persistence.dispatchers.default-plugin-dispatcher";
@@ -25,8 +38,8 @@ namespace Akka.Persistence
         private readonly Lazy<string> _defaultJournalPluginId;
         private readonly Lazy<string> _defaultSnapshotPluginId;
 
-        private readonly ConcurrentDictionary<string, Lazy<IActorRef>> _journalPluginExtensionIds = new ConcurrentDictionary<string, Lazy<IActorRef>>();
-        private readonly ConcurrentDictionary<string, Lazy<IActorRef>> _snapshotPluginExtensionIds = new ConcurrentDictionary<string, Lazy<IActorRef>>();
+        private readonly ConcurrentDictionary<string, Lazy<PluginHolder>> _journalPluginExtensionIds = new ConcurrentDictionary<string, Lazy<PluginHolder>>();
+        private readonly ConcurrentDictionary<string, Lazy<PluginHolder>> _snapshotPluginExtensionIds = new ConcurrentDictionary<string, Lazy<PluginHolder>>();
 
         public PersistenceExtension(ExtendedActorSystem system)
         {
@@ -65,13 +78,14 @@ namespace Akka.Persistence
         public IActorRef SnapshotStoreFor(string snapshotPluginId)
         {
             var configPath = string.IsNullOrEmpty(snapshotPluginId) ? _defaultSnapshotPluginId.Value : snapshotPluginId;
-            Lazy<IActorRef> pluginContainer;
+            Lazy<PluginHolder> pluginContainer;
             if (!_snapshotPluginExtensionIds.TryGetValue(configPath, out pluginContainer))
             {
-                pluginContainer = _snapshotPluginExtensionIds.AddOrUpdate(configPath, new Lazy<IActorRef>(() => CreatePlugin(configPath, _ => DefaultPluginDispatcherId)), (key, old) => old);
+                var plugin = new Lazy<PluginHolder>(() => CreatePlugin(configPath, _ => DefaultPluginDispatcherId));
+                pluginContainer = _snapshotPluginExtensionIds.AddOrUpdate(configPath, plugin, (key, old) => plugin);
             }
 
-            return pluginContainer.Value;
+            return pluginContainer.Value.Ref;
         }
 
         /// <summary>
@@ -81,17 +95,56 @@ namespace Akka.Persistence
         public IActorRef JournalFor(string journalPluginId)
         {
             var configPath = string.IsNullOrEmpty(journalPluginId) ? _defaultJournalPluginId.Value : journalPluginId;
-            Lazy<IActorRef> pluginContainer;
+            Lazy<PluginHolder> pluginContainer;
             if (!_journalPluginExtensionIds.TryGetValue(configPath, out pluginContainer))
             {
-                pluginContainer = _journalPluginExtensionIds.AddOrUpdate(configPath, new Lazy<IActorRef>(() => CreatePlugin(configPath, type =>
-                    typeof(AsyncWriteJournal).IsAssignableFrom(type) ? Dispatchers.DefaultDispatcherId : DefaultPluginDispatcherId)), (key, old) => old);
+                var plugin = new Lazy<PluginHolder>(() => CreatePlugin(configPath, type =>
+                    typeof (AsyncWriteJournal).IsAssignableFrom(type)
+                        ? Dispatchers.DefaultDispatcherId
+                        : DefaultPluginDispatcherId));
+                pluginContainer = _journalPluginExtensionIds.AddOrUpdate(configPath, plugin, (key, old) => plugin);
             }
 
-            return pluginContainer.Value;
+            return pluginContainer.Value.Ref;
         }
 
-        private IActorRef CreatePlugin(string configPath, Func<Type, string> dispatcherSelector)
+        /// <summary>
+        /// Returns an <see cref="EventAdapters"/> object which serves as a per-journal collection of bound event adapters. 
+        /// If no adapters are registered for a given journal the EventAdapters object will simply return the identity adapter for each 
+        /// class, otherwise the most specific adapter matching a given class will be returned.
+        /// </summary>
+        /// <param name="journalPluginId"></param>
+        /// <returns></returns>
+        public EventAdapters AdaptersFor(string journalPluginId)
+        {
+            var configPath = string.IsNullOrEmpty(journalPluginId) ? _defaultJournalPluginId.Value : journalPluginId;
+            Lazy<PluginHolder> pluginContainer;
+            if (!_journalPluginExtensionIds.TryGetValue(configPath, out pluginContainer))
+            {
+                var plugin = new Lazy<PluginHolder>(() =>
+                    CreatePlugin(configPath, type => typeof (AsyncWriteJournal).IsAssignableFrom(type)
+                        ? Dispatchers.DefaultDispatcherId
+                        : DefaultPluginDispatcherId));
+                pluginContainer = _journalPluginExtensionIds.AddOrUpdate(configPath, plugin, (key, old) => plugin);
+            }
+
+            return pluginContainer.Value.Adapters;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="journalRef"></param>
+        /// <returns></returns>
+        internal EventAdapters AdaptersFor(IActorRef journalRef)
+        {
+            return _journalPluginExtensionIds.Values
+                .Select(ext => Equals(ext.Value.Ref, journalRef) ? ext.Value.Adapters : null)
+                .FirstOrDefault(r => r != null) 
+                ?? IdentityEventAdapters.Instance;
+        }
+
+        private PluginHolder CreatePlugin(string configPath, Func<Type, string> dispatcherSelector)
         {
             if (string.IsNullOrEmpty(configPath) || !_system.Settings.Config.HasPath(configPath))
             {
@@ -110,7 +163,13 @@ namespace Akka.Persistence
             var pluginActorProps = new Props(pluginType, pluginActorArgs).WithDispatcher(pluginDispatcherId);
 
             var pluginRef = _system.SystemActorOf(pluginActorProps, configPath);
-            return pluginRef;
+            return new PluginHolder(pluginRef, CreateAdapters(configPath));
+        }
+
+        private EventAdapters CreateAdapters(string configPath)
+        {
+            var pluginConfig = _system.Settings.Config.GetConfig(configPath);
+            return EventAdapters.Create(_system, pluginConfig);
         }
     }
 

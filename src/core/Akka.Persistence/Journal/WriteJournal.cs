@@ -13,21 +13,54 @@ namespace Akka.Persistence.Journal
 {
     public abstract class WriteJournalBase : ActorBase
     {
-        protected IEnumerable<IPersistentRepresentation> CreatePersistentBatch(IEnumerable<IPersistentEnvelope> resequencables)
+        private readonly PersistenceExtension _persistence;
+        private readonly EventAdapters _eventAdapters;
+
+        protected WriteJournalBase()
         {
-            return resequencables.Where(PreparePersistentWrite).Cast<IPersistentRepresentation>();
+            _persistence = Persistence.Instance.Apply(Context.System);
+            _eventAdapters = _persistence.AdaptersFor(Self);
         }
+
+        //protected IEnumerable<IPersistentRepresentation> CreatePersistentBatch(IEnumerable<IPersistentEnvelope> resequencables)
+        //{
+        //    return resequencables.Where(PreparePersistentWrite).Cast<IPersistentRepresentation>();
+        //}
 
         protected bool PreparePersistentWrite(IPersistentEnvelope persistentEnvelope)
         {
             if (persistentEnvelope is IPersistentRepresentation)
             {
-                var repr = persistentEnvelope as IPersistentRepresentation;
+                var repr = AdaptToJournal(persistentEnvelope as IPersistentRepresentation);
                 repr.PrepareWrite(Context);
                 return true;
             }
 
             return false;
+        }
+
+        protected IEnumerable<IPersistentRepresentation> CreatePersistentBatch(IEnumerable<IPersistentEnvelope> resequencables)
+        {
+            return resequencables
+               .Where(e => e is IPersistentRepresentation)
+               .Select(e => AdaptToJournal(e as IPersistentRepresentation).PrepareWrite(Context));
+        }
+
+        protected IEnumerable<IPersistentRepresentation> AdaptFromJournal(IPersistentRepresentation representation)
+        {
+            return _eventAdapters.Get(representation.Payload.GetType())
+                .FromJournal(representation.Payload, representation.Manifest)
+                .Events
+                .Select(representation.WithPayload);
+        }
+
+        protected IPersistentRepresentation AdaptToJournal(IPersistentRepresentation representation)
+        {
+            var payload = representation.Payload;
+            var adapter = _eventAdapters.Get(payload.GetType());
+            var manifest = adapter.Manifest(payload);
+
+            return representation.WithPayload(adapter.ToJournal(payload)).WithManifest(manifest);
         }
     }
 }
