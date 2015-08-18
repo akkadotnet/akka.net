@@ -103,9 +103,9 @@ namespace Akka.DistributedData.Tests.Serialization
             CheckSerialization(new DataEnvelope(data1, pruning));
             CheckSerialization(new Write("A", new DataEnvelope(data1)));
             CheckSerialization(WriteAck.Instance);
-            //CheckSerialization(new Read("A"));
-            //CheckSerialization(new ReadResult(new DataEnvelope(data1)));
-            //CheckSerialization(new ReadResult(null));
+            CheckSerialization(new Read("A"));
+            CheckSerialization(new ReadResult(new DataEnvelope(data1)));
+            CheckSerialization(new ReadResult(null));
             //var status = ImmutableDictionary<string, ByteString>.Empty
             //                    .SetItem("A", ByteString.FromString("a"))
             //                    .SetItem("B", ByteString.FromString("b"));

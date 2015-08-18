@@ -154,7 +154,10 @@ namespace Akka.DistributedData.Internal
             {
                 return false;
             }
-            return other.Envelope == this.Envelope;
+            bool envelopesEqual = false;
+            if (_envelope == null && other._envelope == null) { envelopesEqual = true; }
+            else if (_envelope != null) { envelopesEqual = _envelope.Equals(other._envelope); }
+            return envelopesEqual;
         }
     }
 
