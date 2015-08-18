@@ -110,10 +110,10 @@ namespace Akka.DistributedData.Tests.Serialization
                                 .SetItem("A", ByteString.FromString("a"))
                                 .SetItem("B", ByteString.FromString("b"));
             CheckSerialization(new Akka.DistributedData.Internal.Status(status, 3, 10));
-            //var gossip = ImmutableDictionary<string, DataEnvelope>.Empty
-            //    .SetItem("A", new DataEnvelope(data1))
-            //    .SetItem("B", new DataEnvelope(new GSet<string>().Add("b").Add("c")));
-            //CheckSerialization(new Gossip(gossip, true));
+            var gossip = ImmutableDictionary<string, DataEnvelope>.Empty
+                .SetItem("A", new DataEnvelope(data1))
+                .SetItem("B", new DataEnvelope(new GSet<string>().Add("b").Add("c")));
+            CheckSerialization(new Gossip(gossip, true));
         }
 
         protected override void AfterAll()

@@ -279,7 +279,7 @@ namespace Akka.DistributedData.Internal
             {
                 return false;
             }
-            return other.SendBack == this.SendBack && other.UpdatedData == this.UpdatedData;
+            return other.SendBack.Equals(SendBack) && other.UpdatedData.Count.Equals(UpdatedData.Count) && !other.UpdatedData.Except(UpdatedData).Any();
         }
     }
 }
