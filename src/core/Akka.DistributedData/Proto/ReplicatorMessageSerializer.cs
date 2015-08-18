@@ -52,7 +52,7 @@ namespace Akka.DistributedData.Proto
             else if (obj is Gossip) { return GossipManifest; }
             else if (obj is IGet) { return GetManifest; }
             else if (obj is IGetSuccess) { return GetSuccessManifest; }
-            else if (obj is Changed<IReplicatedData>) { return ChangedManifest; }
+            else if (obj is IChanged) { return ChangedManifest; }
             else if (obj is INotFound) { return NotFoundManifest; }
             else if (obj is IGetFailure) { return GetFailureManifest; }
             else if (obj is ISubscribe) { return SubscribeManifest; }
@@ -108,7 +108,7 @@ namespace Akka.DistributedData.Proto
             else if (obj is Gossip) { return GossipToProto((Gossip)obj).ToByteArray(); }
             else if (obj is IGet) { return GetToProto((IGet)obj).ToByteArray(); }
             else if (obj is IGetSuccess) { return GetSuccessToProto((IGetSuccess)obj).ToByteArray(); }
-            else if (obj is Changed<IReplicatedData>) { return ChangedToproto((Changed<IReplicatedData>)obj).ToByteArray(); }
+            else if (obj is IChanged) { return ChangedToproto((IChanged)obj).ToByteArray(); }
             else if (obj is INotFound) { return NotFoundToProto((INotFound)obj).ToByteArray(); }
             else if (obj is IGetFailure) { return GetFailureToProto((IGetFailure)obj).ToByteArray(); }
             else if (obj is ISubscribe) { return SubscribeToProto((ISubscribe)obj).ToByteArray(); }
@@ -336,7 +336,7 @@ namespace Akka.DistributedData.Proto
             return Activator.CreateInstance(invokeType, new object[] { key, actorRef });
         }
 
-        private dm.Changed ChangedToproto(Changed<IReplicatedData> data)
+        private dm.Changed ChangedToproto(IChanged data)
         {
             return dm.Changed.CreateBuilder()
                              .SetKey(this.OtherMessageToProto(data.Key))
@@ -344,12 +344,14 @@ namespace Akka.DistributedData.Proto
                              .Build();
         }
 
-        private Changed<IReplicatedData> ChangedFromBinary(byte[] bytes)
+        private object ChangedFromBinary(byte[] bytes)
         {
             var changed = dm.Changed.ParseFrom(bytes);
             var data = this.OtherMessageFromProto(changed.Data) as IReplicatedData;
-            var key = this.OtherMessageFromProto(changed.Key) as Key<IReplicatedData>;
-            return new Changed<IReplicatedData>(key, data);
+            var key = this.OtherMessageFromProto(changed.Key) as IKey;
+            var keyInterfaceType = key.GetType().GetInterface("IKey`1").GetGenericArguments()[0];
+            var invokeType = typeof(Changed<>).MakeGenericType(keyInterfaceType);
+            return Activator.CreateInstance(invokeType, new object[] { key, data });
         }
 
         private dm.DataEnvelope DataEnvelopeToProto(DataEnvelope envelope)

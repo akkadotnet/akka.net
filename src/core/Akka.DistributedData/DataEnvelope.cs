@@ -148,7 +148,7 @@ namespace Akka.DistributedData
             {
                 return false;
             }
-            return other.Data == this.Data && other.Pruning == this.Pruning;
+            return Data.Equals(other.Data) && Pruning.Equals(other.Pruning);
         }
     }
 }

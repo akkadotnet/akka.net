@@ -93,7 +93,13 @@ namespace Akka.DistributedData
         }
     }
 
-    public sealed class Changed<T> : IReplicatorMessage where T : IReplicatedData
+    internal interface IChanged
+    {
+        IKey Key { get; }
+        Object Data { get; }
+    }
+
+    public sealed class Changed<T> : IChanged, IReplicatorMessage where T : IReplicatedData
     {
         readonly Key<T> _key;
         readonly T _data;
@@ -112,6 +118,26 @@ namespace Akka.DistributedData
         {
             _key = key;
             _data = data;
+        }
+
+        IKey IChanged.Key
+        {
+            get { return _key; }
+        }
+
+        object IChanged.Data
+        {
+            get { return (object)_data; }
+        }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as Changed<T>;
+            if(other != null)
+            {
+                return _key.Equals(other._key) && _data.Equals(other._data);
+            }
+            return false;
         }
     }
 }

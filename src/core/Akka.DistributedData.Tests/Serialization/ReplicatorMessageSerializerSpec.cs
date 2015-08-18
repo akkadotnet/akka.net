@@ -94,8 +94,8 @@ namespace Akka.DistributedData.Tests.Serialization
             CheckSerialization(new GetFailure<GSet<string>>(_keyA, "x"));
             CheckSerialization(new Subscribe<GSet<string>>(_keyA, ref1));
             CheckSerialization(new Unsubscribe<GSet<string>>(_keyA, ref1));
-            //CheckSerialization(new Changed<GSet<string>>(_keyA, data1));
-            //CheckSerialization(new DataEnvelope(data1));
+            CheckSerialization(new Changed<GSet<string>>(_keyA, data1));
+            CheckSerialization(new DataEnvelope(data1));
 
             //var pruning = ImmutableDictionary<UniqueAddress, PruningState>.Empty
             //                            .SetItem(_address1, new PruningState(_address2, PruningPerformed.Instance))
