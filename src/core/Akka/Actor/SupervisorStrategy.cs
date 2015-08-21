@@ -80,17 +80,10 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="exception">The exception.</param>
         /// <returns>Directive.</returns>
-        public static Directive DefaultDecider(Exception exception)
-        {
-            if (exception is ActorInitializationException)
-                return Directive.Stop;
-            if (exception is ActorKilledException)
-                return Directive.Stop;
-            if (exception is DeathPactException)
-                return Directive.Stop;
-
-            return Directive.Restart;
-        }
+        public static IDecider DefaultDecider = Decider.From(Directive.Restart,
+            Directive.Stop.When<ActorInitializationException>(),
+            Directive.Stop.When<ActorKilledException>(),
+            Directive.Stop.When<DeathPactException>());
 
         /// <summary>
         ///     Restarts the child.
@@ -364,6 +357,8 @@ namespace Akka.Actor
 
         public override ISurrogate ToSurrogate(ActorSystem system)
         {
+            if (Decider is LocalOnlyDecider)
+                throw new NotSupportedException("Can not serialize LocalOnlyDecider");
             return new OneForOneStrategySurrogate
             {
                 Decider = Decider,

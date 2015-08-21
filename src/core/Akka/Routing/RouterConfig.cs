@@ -412,7 +412,7 @@ namespace Akka.Routing
         /// </summary>
         public static SupervisorStrategy DefaultStrategy
         {
-            get { return new OneForOneStrategy(10, TimeSpan.FromSeconds(10), ex => Directive.Escalate); }
+            get { return new OneForOneStrategy(10, TimeSpan.FromSeconds(10), Decider.From(Directive.Escalate)); }
         }
 
         #endregion
