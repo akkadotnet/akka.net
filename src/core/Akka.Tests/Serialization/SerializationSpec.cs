@@ -495,7 +495,7 @@ namespace Akka.Tests.Serialization
             Sys.Serialization.FindSerializerFor(null).GetType().ShouldBe(typeof(NullSerializer));
             Sys.Serialization.FindSerializerFor(new byte[]{1,2,3}).GetType().ShouldBe(typeof(ByteArraySerializer));
             Sys.Serialization.FindSerializerFor("dummy").GetType().ShouldBe(typeof(DummySerializer));
-            Sys.Serialization.FindSerializerFor(123).GetType().ShouldBe(typeof(NewtonSoftJsonSerializer));
+            Sys.Serialization.FindSerializerFor(123).GetType().ShouldBe(typeof(MigrantSerializer));
         }
 
 
