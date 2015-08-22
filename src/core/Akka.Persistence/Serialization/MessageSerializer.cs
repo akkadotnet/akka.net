@@ -151,7 +151,7 @@ namespace Akka.Persistence.Serialization
             var address = system.Provider.DefaultAddress;
             return !string.IsNullOrEmpty(address.Host)
                 ? new Information { Address = address, System = system }
-                : null;
+                : new Information { System = system };
         }
     }
 }
