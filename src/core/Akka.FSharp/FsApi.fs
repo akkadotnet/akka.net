@@ -275,9 +275,23 @@ module Actors =
             | Func fx -> Func(fun m -> this.Combine(fx m, g))
             | Return _ -> g
 
-    type FunActor<'Message, 'Returned>(actor : Actor<'Message> -> Cont<'Message, 'Returned>) as this = 
+    type BaseMethodCallAt =
+        | Start
+        | End
+        | No
+
+    type Overrides = 
+        {
+            PreStart    : (BaseMethodCallAt * (unit -> unit)) option;
+            PostStop    : (BaseMethodCallAt * (unit -> unit)) option;
+            PreRestart  : (BaseMethodCallAt * (exn -> obj -> unit)) option;
+            PostRestart : (BaseMethodCallAt * (exn -> unit)) option
+        }
+
+    type FunActor<'Message, 'Returned>(actor : Actor<'Message> -> Cont<'Message, 'Returned>, overrides : Overrides option) as this = 
         inherit Actor()
-    
+
+        let ovr = overrides
         let mutable deferables = []
         let mutable state = 
             let self' = this.Self
@@ -299,7 +313,8 @@ module Actors =
                         member __.Unstash() = (this :> IWithUnboundedStash).Stash.Unstash()
                         member __.UnstashAll() = (this :> IWithUnboundedStash).Stash.UnstashAll() }
         
-        new(actor : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) = FunActor(actor.Compile () ())
+        new(actor : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) = FunActor(actor.Compile () (), None)
+        new(actor : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>, overrides : Overrides option) = FunActor(actor.Compile () (), overrides)
         member __.Sender() : IActorRef = base.Sender
         member __.Unhandled msg = base.Unhandled msg
         override x.OnReceive msg = 
@@ -317,6 +332,14 @@ module Actors =
             base.PostStop ()
             List.iter (fun fn -> fn()) deferables
             
+        override x.PreStart() = 
+            
+//            let preStartOvrd = match ovr with
+//                                | Some o -> match o.PreStart with
+//                                            | Some f -> f
+//                                            | None -> (fun baseFn -> baseFn)
+//                                | None -> (fun baseFn -> baseFn)
+            ()
 
     /// Builds an actor message handler using an actor expression syntax.
     let actor = ActorBuilder()                
@@ -543,8 +566,8 @@ module Spawn =
     /// <param name="f">Used by actor for handling response for incoming request</param>
     /// <param name="options">List of options used to configure actor creation</param>
     let spawnOpt (actorFactory : IActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) 
-        (options : SpawnOption list) : IActorRef = 
-        let e = Linq.Expression.ToExpression(fun () -> new FunActor<'Message, 'Returned>(f))
+        (options : SpawnOption list) (overrides : Overrides option) : IActorRef = 
+        let e = Linq.Expression.ToExpression(fun () -> new FunActor<'Message, 'Returned>(f, overrides))
         let props = applySpawnOptions (Props.Create e) options
         actorFactory.ActorOf(props, name)
 
@@ -556,7 +579,7 @@ module Spawn =
     /// <param name="name">Name of spawned child actor</param>
     /// <param name="f">Used by actor for handling response for incoming request</param>
     let spawn (actorFactory : IActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) : IActorRef = 
-        spawnOpt actorFactory name f []
+        spawnOpt actorFactory name f [] None
 
     /// <summary>
     /// Spawns an actor using specified actor quotation, with custom spawn option settings.
@@ -685,4 +708,3 @@ module EventStreaming =
     /// Publishes an event on the provided event stream. Event channel is resolved from event's type.
     /// </summary>
     let publish (event: 'Event) (eventStream: Akka.Event.EventStream) : unit = eventStream.Publish event
-
