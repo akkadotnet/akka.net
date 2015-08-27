@@ -565,11 +565,23 @@ module Spawn =
     /// <param name="name">Name of spawned child actor</param>
     /// <param name="f">Used by actor for handling response for incoming request</param>
     /// <param name="options">List of options used to configure actor creation</param>
-    let spawnOpt (actorFactory : IActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) 
+    let spawnOptOvrd (actorFactory : IActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) 
         (options : SpawnOption list) (overrides : Overrides option) : IActorRef = 
         let e = Linq.Expression.ToExpression(fun () -> new FunActor<'Message, 'Returned>(f, overrides))
         let props = applySpawnOptions (Props.Create e) options
         actorFactory.ActorOf(props, name)
+
+    /// <summary>
+    /// Spawns an actor using specified actor computation expression, with custom spawn option settings.
+    /// The actor can only be used locally. 
+    /// </summary>
+    /// <param name="actorFactory">Either actor system or parent actor</param>
+    /// <param name="name">Name of spawned child actor</param>
+    /// <param name="f">Used by actor for handling response for incoming request</param>
+    /// <param name="options">List of options used to configure actor creation</param>
+    let spawnOpt (actorFactory : IActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) 
+        (options : SpawnOption list) : IActorRef = 
+        spawnOptOvrd actorFactory name f options None
 
     /// <summary>
     /// Spawns an actor using specified actor computation expression.
@@ -579,7 +591,7 @@ module Spawn =
     /// <param name="name">Name of spawned child actor</param>
     /// <param name="f">Used by actor for handling response for incoming request</param>
     let spawn (actorFactory : IActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) : IActorRef = 
-        spawnOpt actorFactory name f [] None
+        spawnOpt actorFactory name f []
 
     /// <summary>
     /// Spawns an actor using specified actor quotation, with custom spawn option settings.
