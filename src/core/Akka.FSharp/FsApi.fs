@@ -275,20 +275,13 @@ module Actors =
             | Func fx -> Func(fun m -> this.Combine(fx m, g))
             | Return _ -> g
 
-    type BaseMethodCallAt =
-        | Start
-        | End
-        | No
+    type LifetimeOverride =
+        | PreStart of ((unit -> unit) -> unit)
+        | PostStop of ((unit -> unit) -> unit)
+        | PreRestart of ((exn -> obj -> unit) -> unit)
+        | PostRestart of ((exn -> unit) -> unit)
 
-    type Overrides = 
-        {
-            PreStart    : (BaseMethodCallAt * (unit -> unit)) option;
-            PostStop    : (BaseMethodCallAt * (unit -> unit)) option;
-            PreRestart  : (BaseMethodCallAt * (exn -> obj -> unit)) option;
-            PostRestart : (BaseMethodCallAt * (exn -> unit)) option
-        }
-
-    type FunActor<'Message, 'Returned>(actor : Actor<'Message> -> Cont<'Message, 'Returned>, overrides : Overrides option) as this = 
+    type FunActor<'Message, 'Returned>(actor : Actor<'Message> -> Cont<'Message, 'Returned>, overrides : LifetimeOverride list) as this = 
         inherit Actor()
 
         let ovr = overrides
@@ -313,8 +306,8 @@ module Actors =
                         member __.Unstash() = (this :> IWithUnboundedStash).Stash.Unstash()
                         member __.UnstashAll() = (this :> IWithUnboundedStash).Stash.UnstashAll() }
         
-        new(actor : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) = FunActor(actor.Compile () (), None)
-        new(actor : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>, overrides : Overrides option) = FunActor(actor.Compile () (), overrides)
+        new(actor : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) = FunActor(actor.Compile () (), [])
+        new(actor : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>, overrides : LifetimeOverride list) = FunActor(actor.Compile () (), overrides)
         member __.Sender() : IActorRef = base.Sender
         member __.Unhandled msg = base.Unhandled msg
         override x.OnReceive msg = 
@@ -566,7 +559,7 @@ module Spawn =
     /// <param name="f">Used by actor for handling response for incoming request</param>
     /// <param name="options">List of options used to configure actor creation</param>
     let spawnOptOvrd (actorFactory : IActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) 
-        (options : SpawnOption list) (overrides : Overrides option) : IActorRef = 
+        (options : SpawnOption list) (overrides : LifetimeOverride list) : IActorRef = 
         let e = Linq.Expression.ToExpression(fun () -> new FunActor<'Message, 'Returned>(f, overrides))
         let props = applySpawnOptions (Props.Create e) options
         actorFactory.ActorOf(props, name)
@@ -581,7 +574,7 @@ module Spawn =
     /// <param name="options">List of options used to configure actor creation</param>
     let spawnOpt (actorFactory : IActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) 
         (options : SpawnOption list) : IActorRef = 
-        spawnOptOvrd actorFactory name f options None
+        spawnOptOvrd actorFactory name f options []
 
     /// <summary>
     /// Spawns an actor using specified actor computation expression.
