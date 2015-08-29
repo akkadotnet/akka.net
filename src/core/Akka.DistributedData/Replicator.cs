@@ -176,7 +176,12 @@ namespace Akka.DistributedData
                           .With<ClusterEvent.LeaderChanged>(l => ReceiveLeaderChanged(l.Leader, null))
                           .With<ClusterEvent.RoleLeaderChanged>(r => ReceiveLeaderChanged(r.Leader, r.Role))
                           .With<GetKeyIds>(_ => GetKeyIds())
-                          .With<IDelete>(d => _deleteMethodInfo.Invoke(this, new object[] { d.Key, d.Consistency }))
+                          .With<IDelete>(d => 
+                              {
+                                  var genericArg = d.Key.GetType().GetInterface("IKey`1").GetGenericArguments()[0];
+                                  var genericMethod = _deleteMethodInfo.MakeGenericMethod(genericArg);
+                                  genericMethod.Invoke(this, new object[] { d.Key, d.Consistency });
+                              })
                           .With<RemovedNodePruningTick>(r => ReceiveRemovedNodePruningTick())
                           .With<GetReplicaCount>(_ => GetReplicaCount())
                           .WasHandled;
