@@ -71,6 +71,7 @@ namespace Akka.DistributedData.Tests.Serialization
             CheckSerialization(new GCounter().Increment(_address1, 2).Increment(_address2, 5));
 
             CheckSerialization(new GSet<string>());
+            CheckSerialization(new GSet<string>().Add("Hello").Add("World"));
 
             _system.Shutdown();
         }
