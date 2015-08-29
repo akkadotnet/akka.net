@@ -63,6 +63,14 @@ namespace Akka.DistributedData.Tests.MultiNode
         readonly GCounterKey KeyY = new GCounterKey("Y");
         readonly GCounterKey KeyZ = new GCounterKey("Z");
 
+        readonly TimeSpan _timeOut;
+        readonly WriteTo _writeTwo;
+        readonly WriteMajority _writeMajority;
+        readonly WriteAll _writeAll;
+        readonly ReadFrom _readFrom;
+        readonly ReadMajority _readMajority;
+        readonly ReadAll _readAll;
+
         public ReplicatorSpec()
             : this(new ReplicatorSpecConfig())
         { }
@@ -75,6 +83,14 @@ namespace Akka.DistributedData.Tests.MultiNode
             var settings = new ReplicatorSettings(Sys).WithGossipInterval(TimeSpan.FromSeconds(1.0)).WithMaxDeltaElements(10);
             var props = Replicator.GetProps(settings);
             _replicator = Sys.ActorOf(props, "replicator");
+
+            _timeOut = Dilated(TimeSpan.FromSeconds(2.0));
+            _writeTwo = new WriteTo(2, _timeOut);
+            _writeMajority = new WriteMajority(_timeOut);
+            _writeAll = new WriteAll(_timeOut);
+            _readFrom = new ReadFrom(2, _timeOut);
+            _readMajority = new ReadMajority(_timeOut);
+            _readAll = new ReadAll(_timeOut);
         }
 
         [MultiNodeFact]
@@ -105,6 +121,15 @@ namespace Akka.DistributedData.Tests.MultiNode
                     changedProbe.ExpectMsg(new Changed<GCounter>(KeyA, c3));
                     _replicator.Tell(new Get<GCounter>(KeyA, ReadLocal.Instance));
                     ExpectMsg(new GetSuccess<GCounter>(KeyA, null, c3));
+
+                    var changedProbe2 = CreateTestProbe();
+                    _replicator.Tell(new Subscribe<GCounter>(KeyA, changedProbe2.Ref));
+                    changedProbe2.ExpectMsg(new Changed<GCounter>(KeyA, c3));
+
+                    
+                    var c4 = c3.Increment(_cluster.SelfUniqueAddress);
+                    _replicator.Tell(new Update<GCounter>(KeyA, _writeTwo, x => ((GCounter)x).Increment(_cluster.SelfUniqueAddress)));
+                    ExpectMsg(new UpdateTimeout<GCounter>(KeyA, null));
                 }, _config.First);
         }
 
