@@ -15,7 +15,7 @@ namespace Akka.DistributedData
     {
         static readonly WriteLocal _instance = new WriteLocal();
 
-        static WriteLocal Instance { get { return _instance; } }
+        public static WriteLocal Instance { get { return _instance; } }
 
         public TimeSpan Timeout
         {

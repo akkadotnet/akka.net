@@ -99,7 +99,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                         });
 
                     var c3 = GCounter.Empty.Increment(_cluster.SelfUniqueAddress, 3);
-                    var update = new Update<GCounter>(KeyA, GCounter.Empty, new WriteLocal(), x => ((GCounter)x).Increment(_cluster.SelfUniqueAddress, 3));
+                    var update = new Update<GCounter>(KeyA, GCounter.Empty, WriteLocal.Instance, x => ((GCounter)x).Increment(_cluster.SelfUniqueAddress, 3));
                     _replicator.Tell(update);
                     ExpectMsg(new UpdateSuccess<GCounter>(KeyA, null));
                     changedProbe.ExpectMsg(new Changed<GCounter>(KeyA, c3));
