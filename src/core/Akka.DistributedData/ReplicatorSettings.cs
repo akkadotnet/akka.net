@@ -72,18 +72,37 @@ namespace Akka.DistributedData
         }
 
         public ReplicatorSettings(Config config)
-            : this(config.GetString("role"),
-                   config.GetTimeSpan("gossip-interval"),
-                   config.GetTimeSpan("notify-subscribers-interval"),
-                   config.GetInt("max-delta-elements"),
+            : this(config.GetString("role", null),
+                   config.GetTimeSpan("gossip-interval", TimeSpan.FromSeconds(2.0)),
+                   config.GetTimeSpan("notify-subscribers-interval", TimeSpan.FromMilliseconds(500.0)),
+                   config.GetInt("max-delta-elements", 1000),
                    config.GetString("use-dispatcher", Dispatchers.DefaultDispatcherId),
-                   config.GetTimeSpan("pruning-interval"),
-                   config.GetTimeSpan("max-pruning-dissemination"))
+                   config.GetTimeSpan("pruning-interval", TimeSpan.FromSeconds(30.0)),
+                   config.GetTimeSpan("max-pruning-dissemination", TimeSpan.FromSeconds(60.0)))
+        { }
+
+        public ReplicatorSettings()
+            : this(ConfigurationFactory.ParseString(""))
         { }
 
         public ReplicatorSettings(ActorSystem system)
             : this(system.Settings.Config.GetConfig("akka.cluster.distributed-data"))
         { }
+
+        public static Config DefaultConfig()
+        {
+            var assembly = typeof(IReplicatedData).Assembly;
+
+            using (var stream = assembly.GetManifestResourceStream("Akka.DistributedData.Resources.Reference.conf"))
+            {
+                using (var reader = new System.IO.StreamReader(stream))
+                {
+                    var result = reader.ReadToEnd();
+
+                    return ConfigurationFactory.ParseString(result);
+                }
+            }
+        }
 
         public object Clone()
         {
