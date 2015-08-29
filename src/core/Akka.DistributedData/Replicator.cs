@@ -334,7 +334,7 @@ namespace Akka.DistributedData
 
         private void GetKeyIds()
         {
-            var keys = _dataEntries.Where(kvp => kvp.Value.Item1 != DataEnvelope.DeletedEnvelope)
+            var keys = _dataEntries.Where(kvp => !kvp.Value.Item1.Equals(DataEnvelope.DeletedEnvelope))
                                    .Select(x => x.Key)
                                    .ToImmutableHashSet();
             Sender.Tell(new GetKeysIdsResult(keys));
