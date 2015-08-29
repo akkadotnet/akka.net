@@ -60,6 +60,7 @@
     <Compile Include="FlagSpec.cs" />
     <Compile Include="GCounterSpec.cs" />
     <Compile Include="GSetSpec.cs" />
+    <Compile Include="MultiNode\ReplicatorSpec.cs" />
     <Compile Include="PNCounterSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Serialization\ReplicatedDataMessageSerializerSpec.cs" />
@@ -82,18 +83,28 @@
       <Project>{59cffc88-8a73-445d-b191-281e40be9421}</Project>
       <Name>Akka.DistributedData</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Akka.MultiNodeTests\Akka.MultiNodeTests.csproj">
+      <Project>{f0781bea-5ba0-4af0-bb15-e3f209b681f5}</Project>
+      <Name>Akka.MultiNodeTests</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj">
+      <Project>{e5957c3e-2b1e-469f-a680-7953b4dea31b}</Project>
+      <Name>Akka.Remote.TestKit</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj">
       <Project>{0d3cbad0-bbdb-43e5-afc4-ed1d3ecdc224}</Project>
       <Name>Akka.TestKit</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj">
+      <Project>{e636d23c-3432-4aa9-9a5d-5f29d33d3399}</Project>
+      <Name>Akka.Tests.Shared.Internals</Name>
     </ProjectReference>
     <ProjectReference Include="..\Akka\Akka.csproj">
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Name>Akka</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="MultiNode\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
