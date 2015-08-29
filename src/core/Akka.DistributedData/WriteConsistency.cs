@@ -31,7 +31,7 @@ namespace Akka.DistributedData
         { }
     }
 
-    public class WriteTo : IReadConsistency
+    public class WriteTo : IWriteConsistency
     {
         readonly int _n;
         readonly TimeSpan _timeout;
@@ -67,7 +67,7 @@ namespace Akka.DistributedData
         }
     }
 
-    public class WriteMajority : IReadConsistency
+    public class WriteMajority : IWriteConsistency
     {
         readonly TimeSpan _timeout;
 
@@ -92,7 +92,7 @@ namespace Akka.DistributedData
         }
     }
 
-    public class WriteAll : IReadConsistency
+    public class WriteAll : IWriteConsistency
     {
         readonly TimeSpan _timeout;
 
