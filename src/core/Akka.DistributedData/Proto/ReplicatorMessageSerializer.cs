@@ -208,7 +208,7 @@ namespace Akka.DistributedData.Proto
             else if (get.Consistency is ReadMajority) { consistencyValue = 0; }
             else { consistencyValue = ((ReadFrom)get.Consistency).N; }
             var b = dm.Get.CreateBuilder()
-                          .SetKey(this.OtherMessageToProto(((ICommand)get).Key))
+                          .SetKey(this.OtherMessageToProto(get.Key))
                           .SetConsistency(consistencyValue)
                           .SetTimeout((uint)get.Consistency.Timeout.TotalMilliseconds);
             if(get.Request != null)
