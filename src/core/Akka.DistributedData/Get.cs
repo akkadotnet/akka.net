@@ -8,11 +8,12 @@ namespace Akka.DistributedData
 {
     internal interface IGet
     {
+        IKey Key { get; }
         IReadConsistency Consistency { get; }
         Object Request { get; }
     }
 
-    public sealed class Get<T> : BaseCommand, IGet, ICommand<T> where T : IReplicatedData
+    public sealed class Get<T> : IGet, ICommand<T> where T : IReplicatedData
     {
         readonly Key<T> _key;
         readonly IReadConsistency _consistency;
@@ -29,7 +30,6 @@ namespace Akka.DistributedData
         }
 
         public Get(Key<T> key, IReadConsistency consistency, Object request = null)
-            : base(key)
         {
             _key = key;
             _consistency = consistency;
@@ -44,7 +44,7 @@ namespace Akka.DistributedData
         public override bool Equals(object obj)
         {
             var other = obj as Get<T>;
-            if(other!=null)
+            if(other != null)
             {
                 var keysEqual = _key.Equals(other._key);
                 var consistencyEqual = _consistency.Equals(other._consistency);
@@ -54,6 +54,11 @@ namespace Akka.DistributedData
                 return keysEqual && consistencyEqual && requestsEqual;
             }
             return false;
+        }
+
+        IKey IGet.Key
+        {
+            get { return _key; }
         }
     }
 
@@ -167,6 +172,11 @@ namespace Akka.DistributedData
                 return _key.Equals(other._key) && requestsEqual;
             }
             return false;
+        }
+
+        public static NotFound<T> Create<T>(Key<T> key, object request) where T : IReplicatedData
+        {
+            return new NotFound<T>(key, request);
         }
     }
 

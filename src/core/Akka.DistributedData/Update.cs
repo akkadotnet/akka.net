@@ -6,9 +6,17 @@ using System.Threading.Tasks;
 
 namespace Akka.DistributedData
 {
-    public class Update<T> : ICommand<T> where T : IReplicatedData
+    internal interface IUpdate
     {
-        private T ModifyWithInitial(T initial, Func<T,T> modifier, T data)
+        IKey Key { get; }
+        IWriteConsistency Consistency { get; }
+        Object Request { get; }
+        Func<IReplicatedData, IReplicatedData> Modify { get; }
+    }
+
+    public class Update<T> : IUpdate, ICommand<T> where T : IReplicatedData
+    {
+        private IReplicatedData ModifyWithInitial(T initial, Func<IReplicatedData, IReplicatedData> modifier, IReplicatedData data)
         {
             if(data == null)
             {
@@ -23,12 +31,7 @@ namespace Akka.DistributedData
         readonly Key<T> _key;
         readonly IWriteConsistency _consistency;
         readonly Object _request;
-        readonly Func<T, T> _modify;
-
-        public Key<T> Key
-        {
-            get { return _key; }
-        }
+        readonly Func<IReplicatedData, IReplicatedData> _modify;
 
         public IWriteConsistency Consistency
         {
@@ -40,17 +43,35 @@ namespace Akka.DistributedData
             get { return _request; }
         }
 
-        public Func<T,T> Modify
-        {
-            get { return _modify; }
-        }
-
-        public Update(Key<T> key, IWriteConsistency consistency, Func<T,T> modify, Object requst = null)
+        public Update(Key<T> key, IWriteConsistency consistency, Func<IReplicatedData,IReplicatedData> modify, Object requst = null)
         {
             _key = key;
             _consistency = consistency;
             _modify = modify;
             _request = requst;
+        }
+
+        public Update(Key<T> key, T initial, IWriteConsistency consistency, Func<IReplicatedData, IReplicatedData> modify, Object request = null)
+        {
+            _key = key;
+            _consistency = consistency;
+            _request = request;
+            _modify = x => ModifyWithInitial(initial, modify, x);
+        }
+
+        IKey IUpdate.Key
+        {
+            get { return _key; }
+        }
+
+        public Func<IReplicatedData, IReplicatedData> Modify
+        {
+            get { return x => _modify(x); }
+        }
+
+        IKey<T> ICommand<T>.Key
+        {
+            get { return _key; }
         }
     }
 
@@ -79,6 +100,19 @@ namespace Akka.DistributedData
         {
             _key = key;
             _request = request;
+        }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as UpdateSuccess<T>;
+            if(other != null)
+            {
+                bool requestsEqual = false;
+                if (_request == null && other._request == null) { requestsEqual = true; }
+                else if (_request != null) { requestsEqual = _request.Equals(other._request); }
+                return Key.Equals(other.Key) && requestsEqual;
+            }
+            return false;
         }
     }
 
@@ -109,8 +143,10 @@ namespace Akka.DistributedData
 
     public class ModifyFailure<T> : IUpdateFailure<T> where T : IReplicatedData
     {
-        private Key<T> _key;
-        private Object _request;
+        readonly Key<T> _key;
+        readonly Object _request;
+        readonly string _errorMessage;
+        readonly Exception _cause;
 
         public Key<T> Key
         {
@@ -120,6 +156,29 @@ namespace Akka.DistributedData
         public object Request
         {
             get { return _request; }
+        }
+
+        public string ErrorMessage
+        {
+            get { return _errorMessage; }
+        }
+
+        public Exception Cause
+        {
+            get { return _cause; }
+        }
+
+        public ModifyFailure(Key<T> key, string errorMessage, Exception cause, object request)
+        {
+            _key = key;
+            _request = request;
+            _errorMessage = errorMessage;
+            _cause = cause;
+        }
+
+        public override string ToString()
+        {
+            return String.Format("ModifyFailure {0}: {1}", Key, ErrorMessage);
         }
     }
 }

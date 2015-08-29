@@ -6,7 +6,13 @@ using System.Threading.Tasks;
 
 namespace Akka.DistributedData
 {
-    public class Delete<T> : ICommand<T> where T : IReplicatedData
+    internal interface IDelete
+    {
+        IKey Key { get; }
+        IWriteConsistency Consistency { get; }
+    }
+
+    public class Delete<T> : IDelete, ICommand<T> where T : IReplicatedData
     {
         readonly Key<T> _key;
         readonly IWriteConsistency _consistency;
@@ -25,6 +31,16 @@ namespace Akka.DistributedData
         {
             _key = key;
             _consistency = consistency;
+        }
+
+        IKey<T> ICommand<T>.Key
+        {
+            get { return _key; }
+        }
+
+        IKey IDelete.Key
+        {
+            get { return _key; }
         }
     }
 
