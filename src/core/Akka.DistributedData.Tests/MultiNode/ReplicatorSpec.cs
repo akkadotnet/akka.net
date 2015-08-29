@@ -5,6 +5,7 @@ using Akka.Remote.TestKit;
 using Akka.TestKit;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -126,10 +127,46 @@ namespace Akka.DistributedData.Tests.MultiNode
                     _replicator.Tell(new Subscribe<GCounter>(KeyA, changedProbe2.Ref));
                     changedProbe2.ExpectMsg(new Changed<GCounter>(KeyA, c3));
 
-                    
+
                     var c4 = c3.Increment(_cluster.SelfUniqueAddress);
                     _replicator.Tell(new Update<GCounter>(KeyA, _writeTwo, x => ((GCounter)x).Increment(_cluster.SelfUniqueAddress)));
                     ExpectMsg(new UpdateTimeout<GCounter>(KeyA, null));
+                    _replicator.Tell(new Get<GCounter>(KeyA, ReadLocal.Instance));
+                    ExpectMsg(new GetSuccess<GCounter>(KeyA, null, c4));
+                    changedProbe.ExpectMsg(new Changed<GCounter>(KeyA, c4));
+
+                    var c5 = c4.Increment(_cluster.SelfUniqueAddress);
+                    _replicator.Tell(new Update<GCounter>(KeyA, _writeMajority, x => ((GCounter)x).Increment(_cluster.SelfUniqueAddress)));
+                    ExpectMsg(new UpdateSuccess<GCounter>(KeyA, null));
+                    _replicator.Tell(new Get<GCounter>(KeyA, _readMajority));
+                    ExpectMsg(new GetSuccess<GCounter>(KeyA, null, c5));
+                    changedProbe.ExpectMsg(new Changed<GCounter>(KeyA, c5));
+
+                    var c6 = c5.Increment(_cluster.SelfUniqueAddress);
+                    _replicator.Tell(new Update<GCounter>(KeyA, _writeAll, x => ((GCounter)x).Increment(_cluster.SelfUniqueAddress)));
+                    ExpectMsg(new UpdateSuccess<GCounter>(KeyA, null));
+                    _replicator.Tell(new Get<GCounter>(KeyA, _readAll));
+                    ExpectMsg(new GetSuccess<GCounter>(KeyA, null, c6));
+                    changedProbe.ExpectMsg(new Changed<GCounter>(KeyA, c6));
+
+                    var c9 = GCounter.Empty.Increment(_cluster.SelfUniqueAddress, 9);
+                    _replicator.Tell(new Update<GCounter>(KeyX, GCounter.Empty, WriteLocal.Instance, x => ((GCounter)x).Increment(_cluster.SelfUniqueAddress, 9)));
+                    ExpectMsg(new UpdateSuccess<GCounter>(KeyX, null));
+                    changedProbe.ExpectMsg(new Changed<GCounter>(KeyX, c9));
+                    _replicator.Tell(new Delete<GCounter>(KeyX, WriteLocal.Instance));
+                    ExpectMsg(new DeleteSuccess<GCounter>(KeyX));
+                    changedProbe.ExpectMsg(new DataDeleted<GCounter>(KeyX), TimeSpan.FromMinutes(5.0));
+                    _replicator.Tell(new Get<GCounter>(KeyX, ReadLocal.Instance));
+                    ExpectMsg(new DataDeleted<GCounter>(KeyX));
+                    _replicator.Tell(new Get<GCounter>(KeyX, _readAll));
+                    ExpectMsg(new DataDeleted<GCounter>(KeyX));
+                    _replicator.Tell(new Update<GCounter>(KeyX, WriteLocal.Instance, x => ((GCounter)x).Increment(_cluster.SelfUniqueAddress)));
+                    ExpectMsg(new DataDeleted<GCounter>(KeyX));
+                    _replicator.Tell(new Delete<GCounter>(KeyX, WriteLocal.Instance));
+                    ExpectMsg(new DataDeleted<GCounter>(KeyX));
+
+                    _replicator.Tell(GetKeyIds.Instance);
+                    ExpectMsg(new GetKeysIdsResult(ImmutableHashSet<string>.Empty.Add("A")));
                 }, _config.First);
         }
 
