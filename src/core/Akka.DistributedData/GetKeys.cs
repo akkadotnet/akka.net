@@ -9,7 +9,7 @@ namespace Akka.DistributedData
 {
     internal class GetKeyIds
     {
-        static readonly GetKeyIds _instance;
+        static readonly GetKeyIds _instance = new GetKeyIds();
         public static GetKeyIds Instance
         {
             get { return _instance; }
@@ -36,6 +36,16 @@ namespace Akka.DistributedData
         internal GetKeysIdsResult(IImmutableSet<string> keys)
         {
             _keys = keys;
+        }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as GetKeysIdsResult;
+            if(other != null)
+            {
+                return _keys.SetEquals(other._keys);
+            }
+            return false;
         }
     }
 }
