@@ -14,12 +14,13 @@ namespace Akka.DistributedData
         protected class SendToSecondary { }
 
         private static int MaxSecondaryNodes = 10;
+        readonly TimeSpan _timeout;
 
         private ICancelable sendToSecondarySchedule;
         private ICancelable timeoutSchedule;
         readonly IImmutableSet<Address> _nodes;
         private readonly Random _random = new Random();
-        protected abstract TimeSpan Timeout { get; }
+        protected TimeSpan Timeout { get { return _timeout; } }
         protected abstract int DoneWhenRemainingSize { get; }
 
         protected Lazy<Tuple<IImmutableSet<Address>, IImmutableSet<Address>>> _primaryAndSecondaryNodes;
@@ -31,8 +32,9 @@ namespace Akka.DistributedData
             get { return _nodes; }
         }
 
-        public ReadWriteAggregator(IImmutableSet<Address> nodes)
+        public ReadWriteAggregator(IImmutableSet<Address> nodes, TimeSpan timeout)
         {
+            _timeout = timeout;
             _nodes = nodes;
             _remaining = _nodes;
             sendToSecondarySchedule = Context.System.Scheduler.ScheduleTellOnceCancelable((int)Timeout.TotalMilliseconds / 5, Self, new SendToSecondary(), Self);

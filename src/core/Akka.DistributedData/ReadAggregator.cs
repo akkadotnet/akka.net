@@ -25,11 +25,6 @@ namespace Akka.DistributedData
             return Props.Create<ReadAggregator<T>>(() => new ReadAggregator<T>(key, consistency, req, nodes, localValue, replyTo)).WithDeploy(Deploy.Local);
         }
 
-        protected override TimeSpan Timeout
-        {
-            get { return _consistency.Timeout; }
-        }
-
         protected override int DoneWhenRemainingSize
         {
             get
@@ -158,7 +153,7 @@ namespace Akka.DistributedData
         }
 
         public ReadAggregator(Key<T> key, IReadConsistency consistency, object req, IImmutableSet<Address> nodes, DataEnvelope localValue, IActorRef replyTo)
-            : base(nodes)
+            : base(nodes, consistency.Timeout)
         {
             _key = key;
             _consistency = consistency;

@@ -23,11 +23,6 @@ namespace Akka.DistributedData
             return Props.Create<WriteAggregator<T>>(() => new WriteAggregator<T>(key, envelope, consistency, req, nodes, replyTo)).WithDeploy(Deploy.Local);
         }
 
-        protected override TimeSpan Timeout
-        {
-            get { return _consistency.Timeout; }
-        }
-
         protected override int DoneWhenRemainingSize
         {
             get
@@ -119,7 +114,7 @@ namespace Akka.DistributedData
         }
 
         public WriteAggregator(Key<T> key, DataEnvelope envelope, IWriteConsistency consistency, object req, IImmutableSet<Address> nodes, IActorRef replyTo)
-            : base(nodes)
+            : base(nodes, consistency.Timeout)
         {
             _key = key;
             _envelope = envelope;
