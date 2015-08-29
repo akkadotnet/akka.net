@@ -24,6 +24,11 @@ namespace Akka.DistributedData
 
         private ReadLocal()
         { }
+
+        public override bool Equals(object obj)
+        {
+            return obj != null && obj is ReadLocal;
+        }
     }
 
     public class ReadFrom : IReadConsistency

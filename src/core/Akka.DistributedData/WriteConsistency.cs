@@ -21,6 +21,14 @@ namespace Akka.DistributedData
         {
             get { return TimeSpan.Zero; }
         }
+
+        public override bool Equals(object obj)
+        {
+            return obj != null && obj is WriteLocal;
+        }
+
+        private WriteLocal()
+        { }
     }
 
     public class WriteTo : IReadConsistency
@@ -47,6 +55,16 @@ namespace Akka.DistributedData
             _n = n;
             _timeout = timeout;
         }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as WriteTo;
+            if(other != null)
+            {
+                return _n == other._n && _timeout == other._timeout;
+            }
+            return false;
+        }
     }
 
     public class WriteMajority : IReadConsistency
@@ -61,6 +79,16 @@ namespace Akka.DistributedData
         public WriteMajority(TimeSpan timeout)
         {
             _timeout = timeout;
+        }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as WriteMajority;
+            if(other != null)
+            {
+                return _timeout == other._timeout;
+            }
+            return false;
         }
     }
 
@@ -77,6 +105,15 @@ namespace Akka.DistributedData
         {
             _timeout = timeout;
         }
-    }
 
+        public override bool Equals(object obj)
+        {
+            var other = obj as WriteAll;
+            if(obj != null)
+            {
+                return _timeout == other._timeout;
+            }
+            return false;
+        }
+    }
 }
