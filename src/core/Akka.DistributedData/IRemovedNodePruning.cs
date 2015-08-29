@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Akka.DistributedData
 {
-    public interface IRemovedNodePruning<T> : IReplicatedData<T>
+    public interface IRemovedNodePruning<T> : IReplicatedData<T> where T : IReplicatedData
     {
         bool NeedPruningFrom(UniqueAddress removedNode);
 
