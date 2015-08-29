@@ -8,7 +8,7 @@ namespace Akka.DistributedData
 {
     public class DeletedData : AbstractReplicatedData<DeletedData>
     {
-        static readonly DeletedData _instance;
+        static readonly DeletedData _instance = new DeletedData();
 
         public static DeletedData Instance
         {
