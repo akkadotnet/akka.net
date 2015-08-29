@@ -8,19 +8,19 @@ namespace Akka.DistributedData
 {
     public interface IReplicatedData
     {
-        object Merge(object other);
+        IReplicatedData Merge(IReplicatedData other);
     }
 
-    public interface IReplicatedData<T> : IReplicatedData
+    public interface IReplicatedData<T> : IReplicatedData where T : IReplicatedData
     {
         T Merge(T other);
     }
 
-    public abstract class AbstractReplicatedData<T> : IReplicatedData<T>
+    public abstract class AbstractReplicatedData<T> : IReplicatedData<T> where T : IReplicatedData
     {
         public abstract T Merge(T other);
 
-        public object Merge(object other)
+        public IReplicatedData Merge(IReplicatedData other)
         {
             if(other is T)
             {
