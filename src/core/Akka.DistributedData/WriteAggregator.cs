@@ -9,18 +9,18 @@ using System.Threading.Tasks;
 
 namespace Akka.DistributedData
 {
-    internal class WriteAggregator : ReadWriteAggregator
+    internal class WriteAggregator<T> : ReadWriteAggregator where T : IReplicatedData
     {
-        readonly Key<IReplicatedData> _key;
+        readonly Key<T> _key;
         readonly DataEnvelope _envelope;
         readonly IWriteConsistency _consistency;
         readonly object _req;
         readonly IActorRef _replyTo;
         readonly Write _write;
 
-        public static Props GetProps(Key<IReplicatedData> key, DataEnvelope envelope, IWriteConsistency consistency, Object req, IImmutableSet<Address> nodes, IActorRef replyTo)
+        public static Props GetProps<T>(Key<T> key, DataEnvelope envelope, IWriteConsistency consistency, Object req, IImmutableSet<Address> nodes, IActorRef replyTo) where T : IReplicatedData
         {
-            return Props.Create(() => new WriteAggregator(key, envelope, consistency, req, nodes, replyTo)).WithDeploy(Deploy.Local);
+            return Props.Create<WriteAggregator<T>>(() => new WriteAggregator<T>(key, envelope, consistency, req, nodes, replyTo)).WithDeploy(Deploy.Local);
         }
 
         protected override TimeSpan Timeout
@@ -101,24 +101,24 @@ namespace Akka.DistributedData
         {
             if(ok && _envelope.Data == DeletedData.Instance)
             {
-                _replyTo.Tell(new DeleteSuccess<IReplicatedData>(_key), Context.Parent);
+                _replyTo.Tell(new DeleteSuccess<T>(_key), Context.Parent);
             }
             else if(ok)
             {
-                _replyTo.Tell(new UpdateSuccess<IReplicatedData>(_key, _req), Context.Parent);
+                _replyTo.Tell(new UpdateSuccess<T>(_key, _req), Context.Parent);
             }
             else if(_envelope.Data == DeletedData.Instance)
             {
-                _replyTo.Tell(new ReplicationDeletedFailure<IReplicatedData>(_key), Context.Parent);
+                _replyTo.Tell(new ReplicationDeletedFailure<T>(_key), Context.Parent);
             }
             else
             {
-                _replyTo.Tell(new UpdateTimeout<IReplicatedData>(_key, _req), Context.Parent);
+                _replyTo.Tell(new UpdateTimeout<T>(_key, _req), Context.Parent);
             }
             Context.Stop(Self);
         }
 
-        public WriteAggregator(Key<IReplicatedData> key, DataEnvelope envelope, IWriteConsistency consistency, object req, IImmutableSet<Address> nodes, IActorRef replyTo)
+        public WriteAggregator(Key<T> key, DataEnvelope envelope, IWriteConsistency consistency, object req, IImmutableSet<Address> nodes, IActorRef replyTo)
             : base(nodes)
         {
             _key = key;

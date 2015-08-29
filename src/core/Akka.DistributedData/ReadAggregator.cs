@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 
 namespace Akka.DistributedData
 {
-    internal class ReadAggregator : ReadWriteAggregator
+    internal class ReadAggregator<T> : ReadWriteAggregator where T : IReplicatedData
     {
-        readonly Key<IReplicatedData> _key;
+        readonly Key<T> _key;
         readonly IReadConsistency _consistency;
         readonly object _req;
         readonly DataEnvelope _localValue;
@@ -20,9 +20,9 @@ namespace Akka.DistributedData
 
         DataEnvelope _result;
 
-        public static Props GetProps(Key<IReplicatedData> key, IReadConsistency consistency, Object req, IImmutableSet<Address> nodes, DataEnvelope localValue, IActorRef replyTo)
+        public static Props GetProps<T>(Key<T> key, IReadConsistency consistency, Object req, IImmutableSet<Address> nodes, DataEnvelope localValue, IActorRef replyTo) where T : IReplicatedData
         {
-            return Props.Create(() => new ReadAggregator(key, consistency, req, nodes, localValue, replyTo)).WithDeploy(Deploy.Local);
+            return Props.Create<ReadAggregator<T>>(() => new ReadAggregator<T>(key, consistency, req, nodes, localValue, replyTo)).WithDeploy(Deploy.Local);
         }
 
         protected override TimeSpan Timeout
@@ -123,12 +123,12 @@ namespace Akka.DistributedData
             }
             if(ok && _result == null)
             {
-                _replyTo.Tell(new NotFound<IReplicatedData>(_key, _req), Context.Parent);
+                _replyTo.Tell(new NotFound<T>(_key, _req), Context.Parent);
                 Context.Stop(Self);
             }
             else
             {
-                _replyTo.Tell(new GetFailure<IReplicatedData>(_key, _req), Context.Parent);
+                _replyTo.Tell(new GetFailure<T>(_key, _req), Context.Parent);
                 Context.Stop(Self);
             }
         }
@@ -142,11 +142,11 @@ namespace Akka.DistributedData
                     {
                         if (envelope.Data == DeletedData.Instance)
                         {
-                            _replyTo.Tell(new DataDeleted<IReplicatedData>(_key), Context.Parent);
+                            _replyTo.Tell(new DataDeleted<T>(_key), Context.Parent);
                         }
                         else
                         {
-                            _replyTo.Tell(new GetSuccess<IReplicatedData>(_key, _req, envelope.Data));
+                            _replyTo.Tell(new GetSuccess<T>(_key, _req, (T)envelope.Data));
                         }
                         Context.Stop(Self);
                     })
@@ -157,7 +157,7 @@ namespace Akka.DistributedData
             };
         }
 
-        public ReadAggregator(Key<IReplicatedData> key, IReadConsistency consistency, object req, IImmutableSet<Address> nodes, DataEnvelope localValue, IActorRef replyTo)
+        public ReadAggregator(Key<T> key, IReadConsistency consistency, object req, IImmutableSet<Address> nodes, DataEnvelope localValue, IActorRef replyTo)
             : base(nodes)
         {
             _key = key;
