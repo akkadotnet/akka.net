@@ -8,7 +8,7 @@ namespace Akka.DistributedData
 {
     public class FlushChanges
     {
-        static readonly FlushChanges _instance;
+        static readonly FlushChanges _instance = new FlushChanges();
 
         public static FlushChanges Instance
         {
