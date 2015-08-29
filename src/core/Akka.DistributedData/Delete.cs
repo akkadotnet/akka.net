@@ -62,6 +62,16 @@ namespace Akka.DistributedData
         {
             _key = key;
         }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as DeleteSuccess<T>;
+            if(other != null)
+            {
+                return _key.Equals(other._key);
+            }
+            return false;
+        }
     }
 
     public class ReplicationDeletedFailure<T> : IDeleteResponse<T> where T : IReplicatedData
@@ -96,6 +106,16 @@ namespace Akka.DistributedData
         public override string ToString()
         {
  	        return String.Format("DataDeleted {0}", _key.Id);
+        }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as DataDeleted<T>;
+            if(other != null)
+            {
+                return _key.Equals(other._key);
+            }
+            return false;
         }
     }
 }
