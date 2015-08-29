@@ -29,5 +29,15 @@ namespace Akka.DistributedData
         {
             _n = n;
         }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as ReplicaCount;
+            if(other != null)
+            {
+                return _n == other._n;
+            }
+            return false;
+        }
     }
 }
