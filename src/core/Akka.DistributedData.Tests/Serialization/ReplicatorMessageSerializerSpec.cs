@@ -20,22 +20,6 @@ namespace Akka.DistributedData.Tests.Serialization
 {
     public class ReplicatorMessageSerializerSpec : TestKit.Xunit2.TestKit
     {
-        internal static Config FromResource(string resourceName)
-        {
-            var assembly = typeof(IReplicatedData).Assembly;
-
-            using (var stream = assembly.GetManifestResourceStream(resourceName))
-            {
-                using (var reader = new StreamReader(stream))
-                {
-                    var result = reader.ReadToEnd();
-
-                    return ConfigurationFactory.ParseString(result);
-                }
-            }
-        }
-
-
         readonly ReplicatorMessageSerializer _serializer;
         readonly ActorSystem _system;
 
@@ -63,7 +47,7 @@ namespace Akka.DistributedData.Tests.Serialization
                 akka.test.calling-thread-dispatcher.throughput=2147483647
                 akka.test.test-actor.dispatcher.type=""Akka.TestKit.CallingThreadDispatcherConfigurator, Akka.TestKit""
                 akka.test.test-actor.dispatcher.throughput=2147483647
-            ").WithFallback(FromResource("Akka.DistributedData.Resources.Reference.conf"))))
+            ").WithFallback(ReplicatorSettings.DefaultConfig())))
         {   
         }
 
