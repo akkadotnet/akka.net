@@ -139,6 +139,19 @@ namespace Akka.DistributedData
             _key = key;
             _request = request;
         }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as UpdateTimeout<T>;
+            if(other != null)
+            {
+                bool requestEqual = false;
+                if (_request == null && other._request == null) requestEqual = true;
+                else if(_request != null && _request.Equals(other._request)) requestEqual = true;
+                return requestEqual && _key.Equals(other._key);
+            }
+            return false;
+        }
     }
 
     public class ModifyFailure<T> : IUpdateFailure<T> where T : IReplicatedData
