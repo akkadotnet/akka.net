@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 
 namespace Akka.Util.Internal.Collections
 {
@@ -74,7 +75,12 @@ namespace Akka.Util.Internal.Collections
 			return Remove(key);
 		}
 
-		bool IImmutableMap<TKey, TValue>.TryRemove(TKey key, out IImmutableMap<TKey, TValue> newMap)
+	    public IImmutableMap<TKey, TValue> Remove(IEnumerable<TKey> keys)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    bool IImmutableMap<TKey, TValue>.TryRemove(TKey key, out IImmutableMap<TKey, TValue> newMap)
 		{
 			ImmutableTreeMap<TKey, TValue> newTreeMap;
 			var result = TryRemove(key, out newTreeMap);
@@ -82,7 +88,17 @@ namespace Akka.Util.Internal.Collections
 			return result;
 		}
 
-		public ImmutableTreeMap<TKey, TValue> Remove(TKey key)
+	    public IImmutableMap<TKey, TValue> Range(TKey fromKey, TKey toKey)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public IImmutableMap<TKey, TValue> Concat(IImmutableMap<TKey, TValue> other)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public ImmutableTreeMap<TKey, TValue> Remove(TKey key)
 		{
 			ImmutableTreeMap<TKey, TValue> newMap;
 			return TryRemove(key, out newMap) ? newMap : this;

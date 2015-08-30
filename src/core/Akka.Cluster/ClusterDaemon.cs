@@ -447,6 +447,21 @@ namespace Akka.Cluster
             }
         }
 
+        public sealed class AddOnMemberRemovedListener : INoSerializationVerificationNeeded
+        {
+            readonly Action _callback;
+
+            public AddOnMemberRemovedListener(Action callback)
+            {
+                _callback = callback;
+            }
+
+            public Action Callback
+            {
+                get { return _callback; }
+            }
+        }
+
         public interface ISubscriptionMessage { }
 
         public sealed class Subscribe : ISubscriptionMessage
@@ -578,7 +593,10 @@ namespace Akka.Cluster
                 .With<InternalClusterAction.GetClusterCoreRef>(msg => _coreSupervisor.Forward(msg))
                 .With<InternalClusterAction.AddOnMemberUpListener>(
                     msg =>
-                        Context.ActorOf(Props.Create(() => new OnMemberUpListener(msg.Callback)).WithDispatcher(_settings.UseDispatcher).WithDeploy(Deploy.Local)))
+                        Context.ActorOf(Props.Create(() => new OnMemberStatusChangedListener(msg.Callback, MemberStatus.Up)).WithDispatcher(_settings.UseDispatcher).WithDeploy(Deploy.Local)))
+                .With<InternalClusterAction.AddOnMemberRemovedListener>(
+                    msg =>
+                        Context.ActorOf(Props.Create(() => new OnMemberStatusChangedListener(msg.Callback, MemberStatus.Removed)).WithDispatcher(_settings.UseDispatcher).WithDeploy(Deploy.Local)))
                 .With<InternalClusterAction.PublisherCreated>(
                     msg =>
                     {
@@ -662,7 +680,7 @@ namespace Akka.Cluster
             _publisher = publisher;
             SelfUniqueAddress = _cluster.SelfUniqueAddress;
             _vclockNode = new VectorClock.Node(VclockName(SelfUniqueAddress));
-            
+
             var settings = _cluster.Settings;
             var scheduler = _cluster.Scheduler;
 
@@ -672,36 +690,36 @@ namespace Akka.Cluster
 
             _gossipTaskCancellable =
                 scheduler.ScheduleTellRepeatedlyCancelable(
-                    settings.PeriodicTasksInitialDelay.Max(settings.GossipInterval), 
-                    settings.GossipInterval, 
-                    Self, 
-                    InternalClusterAction.GossipTick.Instance, 
+                    settings.PeriodicTasksInitialDelay.Max(settings.GossipInterval),
+                    settings.GossipInterval,
+                    Self,
+                    InternalClusterAction.GossipTick.Instance,
                     Self);
 
             _failureDetectorReaperTaskCancellable =
                 scheduler.ScheduleTellRepeatedlyCancelable(
-                    settings.PeriodicTasksInitialDelay.Max(settings.UnreachableNodesReaperInterval), 
-                    settings.UnreachableNodesReaperInterval, 
-                    Self, 
-                    InternalClusterAction.ReapUnreachableTick.Instance, 
+                    settings.PeriodicTasksInitialDelay.Max(settings.UnreachableNodesReaperInterval),
+                    settings.UnreachableNodesReaperInterval,
+                    Self,
+                    InternalClusterAction.ReapUnreachableTick.Instance,
                     Self);
 
             _leaderActionsTaskCancellable =
                 scheduler.ScheduleTellRepeatedlyCancelable(
-                    settings.PeriodicTasksInitialDelay.Max(settings.LeaderActionsInterval), 
-                    settings.LeaderActionsInterval, 
-                    Self, 
-                    InternalClusterAction.LeaderActionsTick.Instance, 
+                    settings.PeriodicTasksInitialDelay.Max(settings.LeaderActionsInterval),
+                    settings.LeaderActionsInterval,
+                    Self,
+                    InternalClusterAction.LeaderActionsTick.Instance,
                     Self);
 
             if (settings.PublishStatsInterval != null && settings.PublishStatsInterval > TimeSpan.Zero && settings.PublishStatsInterval != TimeSpan.MaxValue)
             {
                 _publishStatsTaskTaskCancellable =
                     scheduler.ScheduleTellRepeatedlyCancelable(
-                        settings.PeriodicTasksInitialDelay.Max(settings.PublishStatsInterval.Value), 
-                        settings.PublishStatsInterval.Value, 
-                        Self, 
-                        InternalClusterAction.PublishStatsTick.Instance, 
+                        settings.PeriodicTasksInitialDelay.Max(settings.PublishStatsInterval.Value),
+                        settings.PublishStatsInterval.Value,
+                        Self,
+                        InternalClusterAction.PublishStatsTick.Instance,
                         Self);
             }
 
@@ -1467,7 +1485,7 @@ namespace Akka.Cluster
                 else
                 {
                     _leaderActionCounter += 1;
-                    if (_leaderActionCounter == firstNotice || _leaderActionCounter%periodicNotice == 0)
+                    if (_leaderActionCounter == firstNotice || _leaderActionCounter % periodicNotice == 0)
                     {
                         _log.Info(
                             "Leader can currently not perform its duties, reachability status: [{0}], member status: [{1}]",
@@ -1993,66 +2011,72 @@ namespace Akka.Cluster
         #endregion
     }
 
-    /// <summary>
-    /// INTERNAL API
-    /// 
-    /// The supplied callback will be run once when the current cluster member is <see cref="MemberStatus.Up"/>
-    /// </summary>
-    class OnMemberUpListener : ReceiveActor
+    class OnMemberStatusChangedListener : ReceiveActor
     {
-        readonly Action _callback;
-        readonly ILoggingAdapter _log = Context.GetLogger();
-        readonly Cluster _cluster;
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+        private readonly Cluster _cluster = Cluster.Get(Context.System);
+        private readonly Action _callback;
+        private readonly MemberStatus _status;
+        private readonly Type _to;
 
-        public OnMemberUpListener(Action callback)
+        public OnMemberStatusChangedListener(Action callback, MemberStatus status)
         {
             _callback = callback;
-            _cluster = Cluster.Get(Context.System);
+            _status = status;
+            switch (status)
+            {
+                case MemberStatus.Up: _to = typeof(ClusterEvent.MemberUp); break;
+                case MemberStatus.Removed: _to = typeof(ClusterEvent.MemberRemoved); break;
+            }
+
             Receive<ClusterEvent.CurrentClusterState>(state =>
             {
-                if (state.Members.Any(IsSelfUp))
-                    Done();
+                if (state.Members.Any(IsTriggered)) Done();
             });
-
             Receive<ClusterEvent.MemberUp>(up =>
             {
-                if (IsSelfUp(up.Member))
-                    Done();
+                if (IsTriggered(up.Member)) Done();
             });
-        }
-
-        protected override void PreStart()
-        {
-            _cluster.Subscribe(Self, new[] { typeof(ClusterEvent.MemberUp) });
+            Receive<ClusterEvent.MemberRemoved>(removed =>
+            {
+                if (IsTriggered(removed.Member)) Done();
+            });
         }
 
         protected override void PostStop()
         {
+            if (_status == MemberStatus.Removed)
+                Done();
             _cluster.Unsubscribe(Self);
+        }
+
+        protected override void PreStart()
+        {
+            _cluster.Subscribe(Self, new[] { _to });
+        }
+
+        private bool IsTriggered(Member m)
+        {
+            return m.UniqueAddress == _cluster.SelfUniqueAddress && m.Status == _status;
         }
 
         private void Done()
         {
             try
             {
-                _callback.Invoke();
+                _callback();
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                _log.Error(ex, "OnMemberUp callback failed with [{0}]", ex.Message);
+                _log.Error(e, "[On{0}] callback failed with [{1}] ", _to.Name, e.Message);
             }
             finally
             {
                 Context.Stop(Self);
             }
         }
-
-        private bool IsSelfUp(Member m)
-        {
-            return m.UniqueAddress == _cluster.SelfUniqueAddress && m.Status == MemberStatus.Up;
-        }
     }
-
+    
     public class VectorClockStats
     {
         readonly int _versionSize;
