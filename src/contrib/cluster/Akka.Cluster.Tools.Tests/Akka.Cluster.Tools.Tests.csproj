@@ -75,6 +75,7 @@
     <ProjectReference Include="..\..\..\core\Akka.Cluster.Tests.MultiNode\Akka.Cluster.Tests.MultiNode.csproj">
       <Project>{f0781bea-5ba0-4af0-bb15-e3f209b681f5}</Project>
       <Name>Akka.Cluster.Tests.MultiNode</Name>
+      <Name>Akka.MultiNodeTests</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\..\core\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj">
       <Project>{E5957C3E-2B1E-469F-A680-7953B4DEA31B}</Project>
@@ -107,6 +108,7 @@
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
