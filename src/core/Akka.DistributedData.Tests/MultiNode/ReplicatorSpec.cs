@@ -72,6 +72,13 @@ namespace Akka.DistributedData.Tests.MultiNode
         readonly ReadMajority _readMajority;
         readonly ReadAll _readAll;
 
+        int afterCounter = 0;
+        private void EnterBarrierAfterTestStep()
+        {
+            afterCounter++;
+            EnterBarrier("after-" + afterCounter);
+        }
+
         private void Join(RoleName from, RoleName to)
         {
             RunOn(() =>
@@ -186,6 +193,8 @@ namespace Akka.DistributedData.Tests.MultiNode
                     _replicator.Tell(GetKeyIds.Instance);
                     ExpectMsg(new GetKeysIdsResult(ImmutableHashSet<string>.Empty.Add("A")));
                 }, _config.First);
+
+            EnterBarrierAfterTestStep();
         }
 
         private void MergeTheUpdateWithExistingValue()
@@ -201,6 +210,8 @@ namespace Akka.DistributedData.Tests.MultiNode
                     _replicator.Tell(new Get<GSet<string>>(KeyJ, ReadLocal.Instance));
                     ExpectMsg<GetSuccess<GSet<string>>>(x => x.Data.Equals(new GSet<string>(new[] { "a", "b", "c" }.ToImmutableHashSet())));
                 }, _config.First);
+
+            EnterBarrierAfterTestStep();
         }
 
         private void ReplyWithModifyFailureIfExceptionIsThrownByModifyFunction()
@@ -215,6 +226,8 @@ namespace Akka.DistributedData.Tests.MultiNode
                     _replicator.Tell(new Update<GCounter>(KeyA, GCounter.Empty, WriteLocal.Instance, update));
                     ExpectMsg<ModifyFailure<GCounter>>(x => x.Cause.Equals(exception));
                 }, _config.First);
+
+            EnterBarrierAfterTestStep();
         }
 
         protected override int InitialParticipantsValueFactory
