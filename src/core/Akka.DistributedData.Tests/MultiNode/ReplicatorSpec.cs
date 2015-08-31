@@ -59,7 +59,7 @@ namespace Akka.DistributedData.Tests.MultiNode
         //readonly ORSetKey KeyG = new ORSetKey[String]("G")
         //readonly GCounterKey KeyH = new ORMapKey[Flag]("H")
         //readonly GCounterKey KeyI = new GSetKey[String]("I")
-        //readonly GCounterKey KeyJ = new GSetKey[String]("J")
+        readonly GSetKey<string> KeyJ = new GSetKey<string>("J");
         readonly GCounterKey KeyX = new GCounterKey("X");
         readonly GCounterKey KeyY = new GCounterKey("Y");
         readonly GCounterKey KeyZ = new GCounterKey("Z");
@@ -107,6 +107,7 @@ namespace Akka.DistributedData.Tests.MultiNode
         public void ReplicatorSpecTests()
         {
             ClusterCRDTMustWorkInSingleNodeCluster();
+            MergeTheUpdateWithExistingValue();
         }
 
         public void ClusterCRDTMustWorkInSingleNodeCluster()
@@ -183,6 +184,21 @@ namespace Akka.DistributedData.Tests.MultiNode
 
                     _replicator.Tell(GetKeyIds.Instance);
                     ExpectMsg(new GetKeysIdsResult(ImmutableHashSet<string>.Empty.Add("A")));
+                }, _config.First);
+        }
+
+        private void MergeTheUpdateWithExistingValue()
+        {
+            RunOn(() =>
+                {
+                    var update = new Update<GSet<string>>(KeyJ, new GSet<string>(), WriteLocal.Instance, x => ((GSet<string>)x).Add("a").Add("b"));
+                    _replicator.Tell(update);
+                    ExpectMsg(new UpdateSuccess<GSet<string>>(KeyJ, null));
+                    var update2 = new Update<GSet<string>>(KeyJ, new GSet<string>(), WriteLocal.Instance, x => ((GSet<string>)x).Add("c"));
+                    _replicator.Tell(update2);
+                    ExpectMsg(new UpdateSuccess<GSet<string>>(KeyJ, null));
+                    _replicator.Tell(new Get<GSet<string>>(KeyJ, ReadLocal.Instance));
+                    ExpectMsg<GetSuccess<GSet<string>>>(x => x.Data.Equals(new GSet<string>(new[] { "a", "b", "c" }.ToImmutableHashSet())));
                 }, _config.First);
         }
 
