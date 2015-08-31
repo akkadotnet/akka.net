@@ -108,6 +108,7 @@ namespace Akka.DistributedData.Tests.MultiNode
         {
             ClusterCRDTMustWorkInSingleNodeCluster();
             MergeTheUpdateWithExistingValue();
+            ReplyWithModifyFailureIfExceptionIsThrownByModifyFunction();
         }
 
         public void ClusterCRDTMustWorkInSingleNodeCluster()
@@ -199,6 +200,20 @@ namespace Akka.DistributedData.Tests.MultiNode
                     ExpectMsg(new UpdateSuccess<GSet<string>>(KeyJ, null));
                     _replicator.Tell(new Get<GSet<string>>(KeyJ, ReadLocal.Instance));
                     ExpectMsg<GetSuccess<GSet<string>>>(x => x.Data.Equals(new GSet<string>(new[] { "a", "b", "c" }.ToImmutableHashSet())));
+                }, _config.First);
+        }
+
+        private void ReplyWithModifyFailureIfExceptionIsThrownByModifyFunction()
+        {
+            RunOn(() =>
+                {
+                    var exception = new Exception("Test exception");
+                    Func<IReplicatedData, IReplicatedData> update = x => 
+                    {
+                        throw exception;
+                    };
+                    _replicator.Tell(new Update<GCounter>(KeyA, GCounter.Empty, WriteLocal.Instance, update));
+                    ExpectMsg<ModifyFailure<GCounter>>(x => x.Cause.Equals(exception));
                 }, _config.First);
         }
 
