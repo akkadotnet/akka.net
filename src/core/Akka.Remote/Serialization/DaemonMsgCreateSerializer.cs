@@ -113,7 +113,23 @@ namespace Akka.Remote.Serialization
         public override object FromBinary(byte[] bytes, Type type)
         {
             var proto = DaemonMsgCreateData.ParseFrom(bytes);
-            var clazz = Type.GetType(proto.Props.Clazz);
+            Type clazz; 
+
+            try
+            {
+                clazz = Type.GetType(proto.Props.Clazz, true);
+            }
+            catch (TypeLoadException ex)
+            {
+                var msg = string.Format(
+                       "Could not find type '{0}' on the remote system. " +
+                       "Ensure that the remote system has an assembly that contains the type {0} in its assembly search path", 
+                       proto.Props.Clazz);
+
+
+                throw new TypeLoadException(msg, ex);
+            }
+
             var args = GetArgs(proto);
             var props = new Props(GetDeploy(proto.Props.Deploy), clazz, args);
             return new DaemonMsgCreate(
