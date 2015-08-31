@@ -11,12 +11,12 @@ using Akka.Routing;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.Routing
 {
     public class BroadcastSpec : AkkaSpec
     {
-
         public new class TestActor : UntypedActor
         {
             protected override void OnReceive(object message)
@@ -51,8 +51,7 @@ namespace Akka.Tests.Routing
                 }
             }
         }
-
-
+        
         [Fact]
         public void BroadcastGroup_router_must_broadcast_message_using_Tell()
         {
