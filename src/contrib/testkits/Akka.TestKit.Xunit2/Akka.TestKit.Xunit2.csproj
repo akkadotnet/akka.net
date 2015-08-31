@@ -53,6 +53,7 @@
     <Compile Include="Internals\AkkaAssertEqualityComparer.cs" />
     <Compile Include="Internals\AkkaAssertEqualityComparerAdapter.cs" />
     <Compile Include="Internals\AkkaEqualException.cs" />
+    <Compile Include="Internals\Loggers.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestKit.cs" />
     <Compile Include="XunitAssertions.cs" />
