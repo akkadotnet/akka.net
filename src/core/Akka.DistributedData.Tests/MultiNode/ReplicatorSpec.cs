@@ -78,7 +78,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 {
                     _cluster.Join(Node(to).Address);
                 }, from);
-            //EnterBarrier(from.Name + "-joined");
+            EnterBarrier(from.Name + "-joined");
         }
 
         public ReplicatorSpec()
