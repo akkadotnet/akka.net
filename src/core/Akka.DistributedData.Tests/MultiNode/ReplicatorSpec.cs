@@ -72,6 +72,15 @@ namespace Akka.DistributedData.Tests.MultiNode
         readonly ReadMajority _readMajority;
         readonly ReadAll _readAll;
 
+        private void Join(RoleName from, RoleName to)
+        {
+            RunOn(() =>
+                {
+                    _cluster.Join(Node(to).Address);
+                }, from);
+            //EnterBarrier(from.Name + "-joined");
+        }
+
         public ReplicatorSpec()
             : this(new ReplicatorSpecConfig())
         { }
@@ -95,8 +104,15 @@ namespace Akka.DistributedData.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void AClusterCRDTMustWorkInSingleNodeCluster()
+        public void ReplicatorSpecTests()
         {
+            ClusterCRDTMustWorkInSingleNodeCluster();
+        }
+
+        public void ClusterCRDTMustWorkInSingleNodeCluster()
+        {
+            Join(_config.First, _config.First);
+
             RunOn(() =>
                 {
                     Within(TimeSpan.FromSeconds(5.0), () =>
