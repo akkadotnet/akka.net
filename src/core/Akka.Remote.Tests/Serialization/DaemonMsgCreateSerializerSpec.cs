@@ -64,7 +64,10 @@ namespace Akka.Remote.Tests.Serialization
         [Fact]
         public void Serialization_must_serialize_and_deserialize_DaemonMsgCreate_with_Deploy_and_RouterConfig()
         {
-            var supervisorStrategy = new OneForOneStrategy(3, TimeSpan.FromSeconds(10), exception => Directive.Escalate);
+            var decider = Decider.From(
+              Directive.Escalate);
+
+            var supervisorStrategy = new OneForOneStrategy(3, TimeSpan.FromSeconds(10), decider);
             var deploy1 = new Deploy("path1",
                 ConfigurationFactory.ParseString("a=1"),
                 new RoundRobinPool(5, null, supervisorStrategy, null),

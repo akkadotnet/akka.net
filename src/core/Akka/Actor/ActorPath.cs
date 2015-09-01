@@ -86,8 +86,8 @@ namespace Akka.Actor
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
                 var actorPath = obj as ActorPath;
-                if (actorPath != null) return Equals(actorPath);
-                return Equals((Surrogate) obj);
+
+                return Equals(actorPath);
             }
 
             public override int GetHashCode()
