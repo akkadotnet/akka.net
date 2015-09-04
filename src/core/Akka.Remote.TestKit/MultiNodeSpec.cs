@@ -603,7 +603,7 @@ namespace Akka.Remote.TestKit
                         // controller node is finished/exited before r.addr is run
                         // on the other nodes
                         var unresolved = "akka://unresolved-replacement-" + r.Role.Name;
-                        Log.Warning(unresolved + " due to: " + e.ToString());
+						 Log.Warning("{0} due to: {1}", unresolved, e.ToString());
                         replaceWith = unresolved;
                     }
                     return @base.Replace(r.Tag, replaceWith);
