@@ -342,8 +342,7 @@ namespace Akka.Remote
                 ex.Match()
                     .With<InvalidAssociation>(ia =>
                     {
-                        log.Warning("Tried to associate with unreachable remote address [{0}]. " +
-                                 "Address is now gated for {1} ms, all messages to this address will be delivered to dead letters. Reason: [{2}]",
+                        log.Warning("Tried to associate with unreachable remote address [{0}]. Address is now gated for {1} ms, all messages to this address will be delivered to dead letters. Reason: [{2}]",
                                  ia.RemoteAddress, settings.RetryGateClosedFor.TotalMilliseconds, ia.Message);
                         endpoints.MarkAsFailed(Sender, Deadline.Now + settings.RetryGateClosedFor);
                         AddressTerminatedTopic.Get(Context.System).Publish(new AddressTerminated(ia.RemoteAddress));
@@ -351,8 +350,7 @@ namespace Akka.Remote
                     })
                     .With<ShutDownAssociation>(shutdown =>
                     {
-                        log.Debug("Remote system with address [{0}] has shut down. " +
-                                  "Address is now gated for {1}ms, all messages to this address will be delivered to dead letters.",
+                        log.Debug("Remote system with address [{0}] has shut down. Address is now gated for {1}ms, all messages to this address will be delivered to dead letters.",
                                   shutdown.RemoteAddress, settings.RetryGateClosedFor.TotalMilliseconds);
                         endpoints.MarkAsFailed(Sender, Deadline.Now + settings.RetryGateClosedFor);
                         AddressTerminatedTopic.Get(Context.System).Publish(new AddressTerminated(shutdown.RemoteAddress));
@@ -369,8 +367,7 @@ namespace Akka.Remote
                         }
                         else
                         {
-                            log.Warning("Association to [{0}] with unknown UID is irrecoverably failed. " +
-                                     "Address cannot be quarantined without knowing the UID, gating instead for {1} ms.",
+                            log.Warning("Association to [{0}] with unknown UID is irrecoverably failed. Address cannot be quarantined without knowing the UID, gating instead for {1} ms.",
                                 hopeless.RemoteAddress, settings.RetryGateClosedFor.TotalMilliseconds);
                             endpoints.MarkAsFailed(Sender, Deadline.Now + settings.RetryGateClosedFor);
                         }
@@ -508,8 +505,7 @@ namespace Akka.Remote
                         Context.Stop(pass.Endpoint);
                         if (!pass.Uid.HasValue)
                         {
-                            log.Warning("Association to [{0}] with unknown UID is reported as quarantined, but " +
-                                     "address cannot be quarantined without knowing the UID, gated instead for {0} ms",
+                            log.Warning("Association to [{0}] with unknown UID is reported as quarantined, but address cannot be quarantined without knowing the UID, gated instead for {0} ms",
                                 quarantine.RemoteAddress, settings.RetryGateClosedFor.TotalMilliseconds);
                             endpoints.MarkAsFailed(pass.Endpoint, Deadline.Now + settings.RetryGateClosedFor);
                         }

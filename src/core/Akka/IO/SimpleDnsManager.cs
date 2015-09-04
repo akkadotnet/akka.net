@@ -40,7 +40,7 @@ namespace Akka.IO
             var r = message as Dns.Resolve;
             if (r != null)
             {
-                _log.Debug("Resolution request for {} from {}", r.Name, Sender);
+                _log.Debug("Resolution request for {0} from {1}", r.Name, Sender);
                 _resolver.Forward(r);
             }
             if (message is CacheCleanup)
