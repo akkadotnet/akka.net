@@ -61,6 +61,7 @@
     <Compile Include="NewRemoteActorSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RemoteDeliverySpec.cs" />
+    <Compile Include="RemoteGatePiercingSpec.cs" />
     <Compile Include="RemoteRoundRobinSpec.cs" />
   </ItemGroup>
   <ItemGroup>
