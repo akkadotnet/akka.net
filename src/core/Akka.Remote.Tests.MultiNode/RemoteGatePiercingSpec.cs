@@ -107,7 +107,10 @@ namespace Akka.Remote.Tests.MultiNode
                 return task.Result;
             }
 
-            protected override int InitialParticipantsValueFactory => Roles.Count;
+            protected override int InitialParticipantsValueFactory
+            {
+                get { return Roles.Count; }
+            }
         }
     }
 }
