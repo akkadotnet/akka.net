@@ -62,7 +62,7 @@
             }
         }
 
-        [MultiNodeFact]
+        //[MultiNodeFact]
         public void LookupRemoteActorSpecs()
         {
             RunOn(

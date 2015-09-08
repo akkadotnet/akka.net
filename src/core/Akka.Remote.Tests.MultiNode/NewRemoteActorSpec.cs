@@ -90,7 +90,7 @@ namespace Akka.Remote.Tests.MultiNode
             get { return true; }
         }
 
-        [MultiNodeFact]
+        //[MultiNodeFact]
         public void NewRemoteActorSpecs()
         {
             ANewRemoteActorMustBeLocallyInstantiatedOnARemoteNodeAndBeAbleToCommunicateThroughItsRemoteActorRef();
