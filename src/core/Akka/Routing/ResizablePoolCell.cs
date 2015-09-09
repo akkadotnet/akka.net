@@ -11,6 +11,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Dispatch;
+using Akka.Dispatch.SysMsg;
 using Akka.Util;
 using Akka.Util.Internal;
 
@@ -55,6 +56,7 @@ namespace Akka.Routing
         public override void Post(IActorRef sender, object message)
         {
             if(!(_routerProps.RouterConfig.IsManagementMessage(message)) &&
+                !(message is ISystemMessage) &&
                 resizer.IsTimeForResize(_resizeCounter.GetAndIncrement()) &&
                 _resizeInProgress.CompareAndSet(false, true))
             {
