@@ -111,7 +111,12 @@ namespace Akka.Remote.Tests.MultiNode
         public void RemoteRoundRobinSpecs()
         {
             ARemoteRoundRobinMustBeLocallyInstantiatedOnARemoteNodeAndBeAbleToCommunicateThroughItsRemoteActorRef();
-            ARemoteRoundRobinPoolWithResizerMustBeLocallyInstantiatedOnARemoteNodeAfterSeveralResizeRounds();
+
+            /*
+            Test is commented out until it is no longer flaky (issue1311 https://github.com/akkadotnet/akka.net/issues/1311).
+            */
+            //ARemoteRoundRobinPoolWithResizerMustBeLocallyInstantiatedOnARemoteNodeAfterSeveralResizeRounds();
+
             ARemoteRoundRobinGroupMustSendMessagesWithActorSelectionToRemotePaths();
         }
 
