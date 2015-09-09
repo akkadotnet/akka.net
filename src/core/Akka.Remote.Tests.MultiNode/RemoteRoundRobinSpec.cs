@@ -190,9 +190,8 @@ namespace Akka.Remote.Tests.MultiNode
                     {
                         //each message triggers a resize, incrementing number of routees with 1
                         actor.Tell("hit");
-                        // TODO what should be timeout ?
-                        var routees = actor.AskAndWait<Routees>(RouterMessage.GetRoutees, TimeSpan.FromSeconds(2));
-                        //routees.Members.Count().ShouldBe(n); // TODO this assert fails
+                        var routees = actor.AskAndWait<Routees>(RouterMessage.GetRoutees, TimeSpan.FromSeconds(5));
+                        routees.Members.Count().ShouldBe(n);
                         return ExpectMsg<IActorRef>();
                     }).ToImmutableHashSet();
 
