@@ -95,7 +95,7 @@ namespace Akka.Routing
                 }
                 finally
                 {
-                    _resizeInProgress = false;
+                    _resizeInProgress.Value = false;
                 }
         }
     }
