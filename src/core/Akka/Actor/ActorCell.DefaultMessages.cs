@@ -110,6 +110,7 @@ namespace Akka.Actor
             else if (m is PoisonPill) HandlePoisonPill();
             else if (m is ActorSelectionMessage) ReceiveSelection(m as ActorSelectionMessage);
             else if (m is Identify) HandleIdentity(m as Identify);
+            else if (m is AsyncContinuation) HandleAsyncContinuation(m as AsyncContinuation);
         }
 
         /// <summary>
@@ -134,7 +135,17 @@ namespace Akka.Actor
 
         internal void ReceiveMessage(object message)
         {
-            var wasHandled = _actor.AroundReceive(_state.GetCurrentBehavior(), message);
+            bool wasHandled;
+            var oldCtx = SynchronizationContext.Current;
+            try
+            {
+                SynchronizationContext.SetSynchronizationContext(new ActorSynchronizationContext(this));
+                wasHandled = _actor.AroundReceive(_state.GetCurrentBehavior(), message);
+            }
+            finally
+            {
+                SynchronizationContext.SetSynchronizationContext(oldCtx);
+            }
 
             if (System.Settings.AddLoggingReceive && _actor is ILogReceive)
             {
@@ -275,6 +286,11 @@ namespace Akka.Actor
         private void HandlePoisonPill()
         {
             _self.Stop();
+        }
+
+        void HandleAsyncContinuation(AsyncContinuation m)
+        {
+            m.Continuation(m.State);
         }
 
 
