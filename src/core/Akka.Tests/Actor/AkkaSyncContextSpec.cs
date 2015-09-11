@@ -43,13 +43,12 @@ namespace Akka.Tests.Actor
                 switch(message as string)
                 {
                     case "start":
-                        var sender = Sender;
                         System.Diagnostics.Debug.WriteLine("{0:O} Before async thread: {1}", DateTime.Now, Thread.CurrentThread.ManagedThreadId);
                         await Task.Delay(100);
                         System.Diagnostics.Debug.WriteLine("{0:O} After async thread: {1}", DateTime.Now, Thread.CurrentThread.ManagedThreadId);
                         Thread.Sleep(300);
                         System.Diagnostics.Debug.WriteLine("{0:O} After sleep thread: {1}", DateTime.Now, Thread.CurrentThread.ManagedThreadId);
-                        sender.Tell("finish");
+                        Sender.Tell("finish");
                         break;
                     case "start2":
                         System.Diagnostics.Debug.WriteLine("{0:O} Got start2 in thread {1}", DateTime.Now, Thread.CurrentThread.ManagedThreadId);
