@@ -14,6 +14,7 @@ using System.Linq;
 using System.Threading;
 using Akka.Actor;
 using Akka.MultiNodeTestRunner.Shared;
+using Akka.MultiNodeTestRunner.Shared.Persistence;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
 using Akka.Remote.TestKit;
 using Xunit;
@@ -153,9 +154,34 @@ namespace Akka.MultiNodeTestRunner
 
         static void EnableAllSinks(string assemblyName)
         {
+            var now = DateTime.UtcNow;
+
+            Func<MessageSink> createJsonFileSink = () =>
+                {
+                    var fileName = FileNameGenerator.GenerateFileName(assemblyName, ".json", now);
+
+                    var visualizerProps = Props.Create(() =>
+                        new FileSystemMessageSinkActor(new JsonPersistentTestRunStore(), fileName, true));
+
+                    return new FileSystemMessageSink(visualizerProps);
+                };
+
+            Func<MessageSink> createVisualizerFileSink = () =>
+                {
+                    var fileName = FileNameGenerator.GenerateFileName(assemblyName, ".html", now);
+
+                    var visualizerProps = Props.Create(() =>
+                        new FileSystemMessageSinkActor(new VisualizerPersistentTestRunStore(), fileName, true));
+
+                    return new FileSystemMessageSink(visualizerProps);
+                };
+
             var fileSystemSink = CommandLine.GetProperty("multinode.enable-filesink");
             if (!string.IsNullOrEmpty(fileSystemSink))
-                SinkCoordinator.Tell(new SinkCoordinator.EnableSink(new FileSystemMessageSink(assemblyName)));
+            {
+                SinkCoordinator.Tell(new SinkCoordinator.EnableSink(createJsonFileSink()));
+                SinkCoordinator.Tell(new SinkCoordinator.EnableSink(createVisualizerFileSink()));
+            }
         }
 
         static void CloseAllSinks()
