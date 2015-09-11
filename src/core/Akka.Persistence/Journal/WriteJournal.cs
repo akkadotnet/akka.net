@@ -58,9 +58,15 @@ namespace Akka.Persistence.Journal
         {
             var payload = representation.Payload;
             var adapter = _eventAdapters.Get(payload.GetType());
-            var manifest = adapter.Manifest(payload);
+            representation = representation.WithPayload(adapter.ToJournal(payload));
 
-            return representation.WithPayload(adapter.ToJournal(payload)).WithManifest(manifest);
+            // IdentityEventAdapter returns "" as manifest and normally the incoming PersistentRepr
+            // doesn't have an assigned manifest, but when WriteMessages is sent directly to the
+            // journal for testing purposes we want to preserve the original manifest instead of
+            // letting IdentityEventAdapter clearing it out.
+            return Equals(adapter, IdentityEventAdapter.Instance) 
+                ? representation
+                : representation.WithManifest(adapter.Manifest(payload));
         }
     }
 }

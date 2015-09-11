@@ -12,6 +12,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
+﻿using Xunit.Abstractions;
 
 namespace Akka.Persistence.TestKit.Journal
 {
@@ -36,8 +37,8 @@ namespace Akka.Persistence.TestKit.Journal
         private TestProbe _senderProbe;
         private TestProbe _receiverProbe;
 
-        protected JournalSpec(Config config = null, string actorSystemName = null, string testActorName = null)
-            : base(FromConfig(config).WithFallback(Config), actorSystemName ?? "JournalSpec", testActorName)
+        protected JournalSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null)
+            : base(FromConfig(config).WithFallback(Config), actorSystemName ?? "JournalSpec", output)
         {
         }
 
