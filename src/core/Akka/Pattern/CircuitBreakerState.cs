@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Globalization;
 using System.Threading.Tasks;
 using Akka.Util;
@@ -31,7 +32,7 @@ namespace Akka.Pattern
         /// <typeparam name="T"></typeparam>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override Task<T> Invoke<T>( Task<T> body )
+        public override Task<T> Invoke<T>( Func<Task<T>> body )
         {
             throw new OpenCircuitException( );
         }
@@ -41,7 +42,7 @@ namespace Akka.Pattern
         /// </summary>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override Task Invoke( Task body )
+        public override Task Invoke( Func<Task> body )
         {
             throw new OpenCircuitException( );
         }
@@ -94,7 +95,7 @@ namespace Akka.Pattern
         /// <typeparam name="T"></typeparam>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override async Task<T> Invoke<T>( Task<T> body )
+        public override async Task<T> Invoke<T>( Func<Task<T>> body )
         {
             if ( !_lock.CompareAndSet( true, false) )
             {
@@ -109,7 +110,7 @@ namespace Akka.Pattern
         /// </summary>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override async Task Invoke( Task body )
+        public override async Task Invoke( Func<Task> body )
         {
             if ( !_lock.CompareAndSet( true, false ) )
             {
@@ -171,7 +172,7 @@ namespace Akka.Pattern
         /// <typeparam name="T"></typeparam>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override async Task<T> Invoke<T>( Task<T> body )
+        public override async Task<T> Invoke<T>( Func<Task<T>> body )
         {
             return await CallThrough( body );
         }
@@ -181,7 +182,7 @@ namespace Akka.Pattern
         /// </summary>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override async Task Invoke( Task body )
+        public override async Task Invoke( Func<Task> body )
         {
             await CallThrough( body );
         }
