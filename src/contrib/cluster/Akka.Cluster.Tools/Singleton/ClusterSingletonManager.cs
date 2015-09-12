@@ -94,7 +94,6 @@ namespace Akka.Cluster.Tools.Singleton
 
     internal sealed class OldestChangedBuffer : UntypedActor
     {
-
         public sealed class GetNext { }
 
         public sealed class InitialOldestState
@@ -251,42 +250,15 @@ namespace Akka.Cluster.Tools.Singleton
         private readonly int _maxHandOverRetries;
         private readonly int _maxTakeOverRetries;
         //private readonly object _terminationMessage;
-        private readonly Akka.Cluster.Cluster _cluster = Akka.Cluster.Cluster.Get(Context.System);
+        private readonly Cluster _cluster = Cluster.Get(Context.System);
         private readonly ILoggingAdapter _log = Logging.GetLogger(Context.System, "ClusterSingletonManager");
-
-        //public ClusterSingletonManagerActor(
-        //        Props singletonProps,
-        //        string singletonName,
-        //        object terminationMessage,
-        //        string role,
-        //        int maxHandOverRetries,
-        //        int maxTakeOverRetries,
-        //        TimeSpan retryInterval
-        //    )
-        //{
-        //    //Guard.Assert(
-        //    //    maxTakeOverRetries < maxHandOverRetries,
-        //    //    String.Format(
-        //    //        "maxTakeOverRetries [{0}]must be < maxHandOverRetries [{1}]",
-        //    //        maxTakeOverRetries,
-        //    //        maxHandOverRetries));
-
-        //    //Guard.Assert(
-        //    //    string.IsNullOrEmpty(role) || _cluster.SelfRoles.Contains(role),
-        //    //    String.Format("This cluster member [{0}] doesn't have the role [{1}]", _cluster.SelfAddress, role));
-
-        //    _singletonProps = singletonProps;
-        //    _singletonName = singletonName;
-        //    _role = role;
-        //    _maxHandOverRetries = maxHandOverRetries;
-        //    _maxTakeOverRetries = maxTakeOverRetries;
-        //    _retryInterval = retryInterval;
-        //    _terminationMessage = terminationMessage;
-        //    InitializeFSM();
-        //}
-
+        
         public ClusterSingletonManagerActor(Props singletonProps, object terminationMessage, ClusterSingletonManagerSettings settings)
         {
+            var role = settings.Role;
+            if (!string.IsNullOrEmpty(role) && !_cluster.SelfRoles.Contains(role))
+                throw new ArgumentException(string.Format("This cluster member [{0}] doesn't have the role [{1}]", _cluster.SelfAddress, role));
+
             _singletonProps = singletonProps;
             _terminationMessage = terminationMessage;
             _settings = settings;

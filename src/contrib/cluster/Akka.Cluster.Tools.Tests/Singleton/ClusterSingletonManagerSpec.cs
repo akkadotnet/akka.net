@@ -461,9 +461,11 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
         #endregion
         
-        //[MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact()]
         public void ClusterSingletonManager_should_startup_6_node_cluster()
         {
+            AwaitClusterUp(_controller, _observer, _first, _second, _third, _fourth, _fifth, _sixth);
+
             Within(TimeSpan.FromSeconds(60), () =>
             {
                 var memberProbe = CreateTestProbe();
