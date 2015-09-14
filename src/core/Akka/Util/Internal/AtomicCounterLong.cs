@@ -100,6 +100,24 @@ namespace Akka.Util.Internal
         {
             Interlocked.Exchange(ref _value, 0);
         }
+
+        /// <summary>
+        /// Returns current counter value and sets a new value on it's place in one operation.
+        /// </summary>
+        public long GetAndSet(long value)
+        {
+            return Interlocked.Exchange(ref _value, value);
+        }
+
+        /// <summary>
+        /// Compares current counter value with provided <paramref name="expected"/> value,
+        /// and sets it to <paramref name="newValue"/> if compared values where equal.
+        /// Returns true if replacement has succeed.
+        /// </summary>
+        public bool CompareAndSet(long expected, long newValue)
+        {
+             return Interlocked.CompareExchange(ref _value, newValue, expected) != _value;
+        }
     }
 }
 

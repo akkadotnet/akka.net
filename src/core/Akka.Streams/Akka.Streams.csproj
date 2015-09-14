@@ -1,0 +1,150 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{6180A876-AE4A-41E2-A08F-84FDEA0C8A0E}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Akka.Streams</RootNamespace>
+    <AssemblyName>Akka.Streams</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Collections.Immutable, Version=1.1.37.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\System.Collections.Immutable.1.1.37\lib\dotnet\System.Collections.Immutable.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ActorMaterializer.cs" />
+    <Compile Include="Actors\ActorPublisher.cs" />
+    <Compile Include="Actors\ActorSubscriber.cs" />
+    <Compile Include="Actors\RequestStrategies.cs" />
+    <Compile Include="Dsl\BidiFlow.cs" />
+    <Compile Include="Dsl\FlexiMerge.cs" />
+    <Compile Include="Dsl\Graph.cs" />
+    <Compile Include="Dsl\RunnableGraph.cs" />
+    <Compile Include="Dsl\Sink.cs" />
+    <Compile Include="Dsl\SubFlow.cs" />
+    <Compile Include="Extra\Implicits.cs" />
+    <Compile Include="Extra\Timed.cs" />
+    <Compile Include="FanInShape.cs" />
+    <Compile Include="FanOutShape.cs" />
+    <Compile Include="Fusing.cs" />
+    <Compile Include="Implementation\AcknowledgePublisher.cs" />
+    <Compile Include="Implementation\AcknowledgeSubscriber.cs" />
+    <Compile Include="Implementation\ActorMaterializerImpl.cs" />
+    <Compile Include="Implementation\ActorRefSinkActor.cs" />
+    <Compile Include="Implementation\ActorRefSourceActor.cs" />
+    <Compile Include="Implementation\BlackholeSubscriber.cs" />
+    <Compile Include="Implementation\ConcatAllImpl.cs" />
+    <Compile Include="Implementation\EnumerableActorName.cs" />
+    <Compile Include="Implementation\ExposedPublisherReceive.cs" />
+    <Compile Include="Implementation\FixedSizeBuffer.cs" />
+    <Compile Include="Implementation\FlowModule.cs" />
+    <Compile Include="Implementation\Fusing\ActorGraphInterpreter.cs" />
+    <Compile Include="Implementation\Fusing\EnumeratorInterpreter.cs" />
+    <Compile Include="Implementation\Fusing\Fusing.cs" />
+    <Compile Include="Implementation\Fusing\GraphAssembly.cs" />
+    <Compile Include="Implementation\Fusing\GraphInterpreter.cs" />
+    <Compile Include="Implementation\Fusing\GraphStages.cs" />
+    <Compile Include="Implementation\Fusing\Ops.cs" />
+    <Compile Include="Implementation\Fusing\StreamOfStreams.cs" />
+    <Compile Include="Implementation\Junctions.cs" />
+    <Compile Include="Implementation\Modules.cs" />
+    <Compile Include="Implementation\ResizableMultiReaderRingBuffer.cs" />
+    <Compile Include="Implementation\Sinks.cs" />
+    <Compile Include="Implementation\SplitDecisionWhereImpl.cs" />
+    <Compile Include="Implementation\StreamOfStreamProcessors.cs" />
+    <Compile Include="Implementation\SubFlowImpl.cs" />
+    <Compile Include="Implementation\Throttle.cs" />
+    <Compile Include="Implementation\TickPublisher.cs" />
+    <Compile Include="Implementation\Timers.cs" />
+    <Compile Include="Implementation\Unfold.cs" />
+    <Compile Include="Queue.cs" />
+    <Compile Include="Dsl\FlattenStrategy.cs" />
+    <Compile Include="Dsl\Flow.cs" />
+    <Compile Include="Dsl\FlowOperations.cs" />
+    <Compile Include="Dsl\Materialization.cs" />
+    <Compile Include="Dsl\Source.cs" />
+    <Compile Include="IMaterializer.cs" />
+    <Compile Include="Graph.cs" />
+    <Compile Include="Implementation\ActorMaterializer.cs" />
+    <Compile Include="Implementation\ActorProcessor.cs" />
+    <Compile Include="Implementation\ActorPublisher.cs" />
+    <Compile Include="Implementation\CompletedPublishers.cs" />
+    <Compile Include="Implementation\Flows.cs" />
+    <Compile Include="Implementation\Fusing\Interpreter.cs" />
+    <Compile Include="Implementation\ReactiveStreamsCompliance.cs" />
+    <Compile Include="Implementation\Stages\Stages.cs" />
+    <Compile Include="Implementation\StreamLayout.cs" />
+    <Compile Include="Implementation\StreamSubscriptionTimeout.cs" />
+    <Compile Include="Implementation\SubscriberManagement.cs" />
+    <Compile Include="Implementation\Transfer.cs" />
+    <Compile Include="Attributes.cs" />
+    <Compile Include="OverflowStrategy.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Shape.cs" />
+    <Compile Include="Stage\AbstractStage.cs" />
+    <Compile Include="Stage\Context.cs" />
+    <Compile Include="Stage\GraphStage.cs" />
+    <Compile Include="Stage\Stage.cs" />
+    <Compile Include="StreamTcpException.cs" />
+    <Compile Include="Supervision\Supervision.cs" />
+    <Compile Include="ThrottleMode.cs" />
+    <Compile Include="Transformer.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\System.Reactive.Streams\System.Reactive.Streams.csproj">
+      <Project>{68fbb4df-6d83-4cf1-8105-a1d41912852f}</Project>
+      <Name>System.Reactive.Streams</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka\Akka.csproj">
+      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
+      <Name>Akka</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Implementation\IO\" />
+    <Folder Include="IO\" />
+    <Folder Include="Linq\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

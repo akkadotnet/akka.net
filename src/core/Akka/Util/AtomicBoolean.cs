@@ -16,7 +16,7 @@ namespace Akka.Util
     /// without any explicit locking. .NET's strong memory on write guarantees might already enforce
     /// this ordering, but the addition of the MemoryBarrier guarantees it.
     /// </summary>
-    internal class AtomicBoolean
+    public class AtomicBoolean
     {
         private const int _falseValue = 0;
         private const int _trueValue = 1;
