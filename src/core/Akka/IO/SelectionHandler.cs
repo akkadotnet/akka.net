@@ -212,7 +212,7 @@ namespace Akka.IO
                     var writeable = _write.Keys.ToList();
                     try
                     {
-                        Socket.Select(readable, writeable, null, 0);
+                        Socket.Select(readable, writeable, null, 1);
                         foreach (var socket in readable)
                         {
                             var channel = _read[socket];

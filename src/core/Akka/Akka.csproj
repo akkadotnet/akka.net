@@ -248,6 +248,9 @@
     <Compile Include="IO\UdpManager.cs" />
     <Compile Include="IO\UdpSender.cs" />
     <Compile Include="IO\WithUdpSend.cs" />
+    <Compile Include="Pattern\CircuitBreaker.cs" />
+    <Compile Include="Pattern\CircuitBreakerState.cs" />
+    <Compile Include="Pattern\OpenCircuitException.cs" />
     <Compile Include="Routing\ConsistentHashRouter.cs" />
     <Compile Include="Serialization\JavaSerializer.cs" />
     <Compile Include="IO\ByteBuffer.cs" />
@@ -266,6 +269,7 @@
     <Compile Include="Util\ByteIterator.cs" />
     <Compile Include="Util\ByteString.cs" />
     <Compile Include="Util\ContinuousEnumerator.cs" />
+    <Compile Include="Util\Internal\AtomicState.cs" />
     <Compile Include="Util\Internal\Collections\EnumeratorExtensions.cs" />
     <Compile Include="Util\Internal\Collections\Iterator.cs" />
     <Compile Include="Util\Internal\ImmutabilityUtils.cs" />

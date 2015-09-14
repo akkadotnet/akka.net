@@ -484,7 +484,7 @@ namespace Akka.IO
         /// Whenever data are read from a socket they will be transferred within this
         /// class to the handler actor which was designated in the <see cref="Register" /> message.
         /// </summary>
-        public sealed class Received
+        public sealed class Received : Event
         {
             public Received(ByteString data)
             {
@@ -500,7 +500,7 @@ namespace Akka.IO
         /// in the <see cref="Bind" /> message. The connection is characterized by the `remoteAddress`
         /// and `localAddress` TCP endpoints.
         /// </summary>
-        public sealed class Connected
+        public sealed class Connected : Event
         {
             public Connected(EndPoint remoteAddress, EndPoint localAddress)
             {
