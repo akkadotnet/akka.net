@@ -1357,8 +1357,7 @@ namespace Akka.Remote
                     var now = MonotonicClock.GetNanos();
                     if (now - _largeBufferLogTimestamp >= LogBufferSizeInterval)
                     {
-                        _log.Warning("[{0}] buffered messages in EndpointWriter for [{1}]. " +
-                                     "You should probably implement flow control to avoid flooding the remote connection.", size, RemoteAddress);
+                        _log.Warning("[{0}] buffered messages in EndpointWriter for [{1}]. You should probably implement flow control to avoid flooding the remote connection.", size, RemoteAddress);
                         _largeBufferLogTimestamp = now;
                     }
                 }

@@ -138,8 +138,7 @@ namespace Akka.IO
                             }
                             else
                             {
-                                Log.Debug("Could not establish connection because finishConnect " +
-                                          "never returned true (consider increasing akka.io.tcp.finish-connect-retries)");
+                                Log.Debug("Could not establish connection because finishConnect never returned true (consider increasing akka.io.tcp.finish-connect-retries)");
                                 Stop();
                             }
                         }

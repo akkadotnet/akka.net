@@ -94,7 +94,7 @@ namespace Akka.Persistence.Tests
                 }
                 else
                 {
-                    Log.Debug("Recover message: " + message);
+                    Log.Debug("Recover message: {0}", message);
                 }
 
                 return true;
@@ -142,4 +142,3 @@ namespace Akka.Persistence.Tests
         }
     }
 }
-
