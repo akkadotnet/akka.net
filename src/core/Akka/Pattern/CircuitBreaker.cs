@@ -128,9 +128,9 @@ namespace Akka.Pattern
         /// <typeparam name="T"></typeparam>
         /// <param name="body">Call needing protected</param>
         /// <returns><see cref="Task"/> containing the call result</returns>
-        public async Task<T> WithCircuitBreaker<T>( Task<T> body )
+        public async Task<T> WithCircuitBreaker<T>( Func<Task<T>> body )
         {
-            return await CurrentState.Invoke( body );
+            return await CurrentState.Invoke<T>( body );
         }
 
         /// <summary>
@@ -138,7 +138,7 @@ namespace Akka.Pattern
         /// </summary>
         /// <param name="body">Call needing protected</param>
         /// <returns><see cref="Task"/></returns>
-        public async Task WithCircuitBreaker( Task body )
+        public async Task WithCircuitBreaker( Func<Task> body )
         {
             await CurrentState.Invoke( body );
         }
@@ -149,7 +149,7 @@ namespace Akka.Pattern
         /// <param name="body"></param>
         public void WithSyncCircuitBreaker( Action body )
         {
-            var cbTask = WithCircuitBreaker( Task.Factory.StartNew( body ) );
+            var cbTask = WithCircuitBreaker( () => Task.Factory.StartNew( body ) );
             if ( !cbTask.Wait( CallTimeout ) )
             {
                 //throw new TimeoutException( string.Format( "Execution did not complete within the time alotted {0} ms", CallTimeout.TotalMilliseconds ) );
@@ -176,7 +176,7 @@ namespace Akka.Pattern
         /// <returns><typeparam name="T"></typeparam> or default(<typeparam name="T"></typeparam>)</returns>
         public T WithSyncCircuitBreaker<T>( Func<T> body )
         {
-            var cbTask = WithCircuitBreaker( Task.Factory.StartNew( body ) );
+            var cbTask = WithCircuitBreaker( () => Task.Factory.StartNew( body ) );
             return cbTask.Wait( CallTimeout ) ? cbTask.Result : default(T);
         }
 

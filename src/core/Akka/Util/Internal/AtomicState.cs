@@ -76,14 +76,14 @@ namespace Akka.Util.Internal
         /// <typeparam name="T"></typeparam>
         /// <param name="task">Implementation of the call</param>
         /// <returns>result of the call</returns>
-        public async Task<T> CallThrough<T>( Task<T> task )
+        public async Task<T> CallThrough<T>( Func<Task<T>> task )
         {
             var deadline = DateTime.UtcNow.Add( _callTimeout );
             ExceptionDispatchInfo capturedException = null;
             T result = default(T);
             try
             {
-                result = await task;
+                result = await task();
             }
             catch ( Exception ex )
             {
@@ -115,14 +115,14 @@ namespace Akka.Util.Internal
         /// </summary>
         /// <param name="task"><see cref="Task"/> Implementation of the call</param>
         /// <returns><see cref="Task"/></returns>
-        public async Task CallThrough( Task task )
+        public async Task CallThrough( Func<Task> task )
         {
             var deadline = DateTime.UtcNow.Add( _callTimeout );
             ExceptionDispatchInfo capturedException = null;
 
             try
             {
-                await task;
+                await task();
             }
             catch ( Exception ex )
             {
@@ -149,14 +149,14 @@ namespace Akka.Util.Internal
         /// <typeparam name="T"></typeparam>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public abstract Task<T> Invoke<T>( Task<T> body );
+        public abstract Task<T> Invoke<T>( Func<Task<T>> body );
 
         /// <summary>
         /// Abstract entry point for all states
         /// </summary>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public abstract Task Invoke( Task body );
+        public abstract Task Invoke( Func<Task> body );
 
         /// <summary>
         /// Invoked when call fails
@@ -192,7 +192,7 @@ namespace Akka.Util.Internal
     {
         void AddListener( Action listener );
         bool HasListeners { get; }
-        Task<T> Invoke<T>( Task<T> body );
+        Task<T> Invoke<T>( Func<Task<T>> body );
         void Enter( );
     }
 }
