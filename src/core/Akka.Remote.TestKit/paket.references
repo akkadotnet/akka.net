@@ -1,0 +1,6 @@
+Google.ProtocolBuffers
+Helios
+Microsoft.Bcl.Immutable
+Newtonsoft.Json
+group Test
+xunit

@@ -1,4 +1,4 @@
-﻿#I @"src/packages/FAKE/tools"
+#I @"packages/build/FAKE/tools"
 #r "FakeLib.dll"
 #r "System.Xml.Linq"
 
@@ -59,14 +59,6 @@ let libDir = workingDir @@ @"lib\net45\"
 let nugetExe = FullName @"src\.nuget\NuGet.exe"
 let docDir = "bin" @@ "doc"
 
-open Fake.RestorePackageHelper
-Target "RestorePackages" (fun _ -> 
-     "./src/Akka.sln"
-     |> RestoreMSSolutionPackages (fun p ->
-         { p with
-             OutputPath = "./src/packages"
-             Retries = 4 })
- )
 
 //--------------------------------------------------------------------------------
 // Clean build results
@@ -230,10 +222,8 @@ Target "RunTests" <| fun _ ->
             DisableShadowCopy = true; 
             OutputFile = testOutput + @"\NUnitTestResults.xml"})
 
-    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
-    printfn "Using XUnit runner: %s" xunitToolPath
     xUnit2
-        (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
+        (fun p -> { p with OutputDir = testOutput })
         xunitTestAssemblies
 
 Target "RunTestsMono" <| fun _ ->  
@@ -241,10 +231,8 @@ Target "RunTestsMono" <| fun _ ->
 
     mkdir testOutput
 
-    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
-    printfn "Using XUnit runner: %s" xunitToolPath
     xUnit2
-        (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
+        (fun p -> { p with OutputDir = testOutput })
         xunitTestAssemblies
 
 Target "MultiNodeTests" <| fun _ ->
@@ -321,15 +309,18 @@ let createNugetPackages _ =
     ensureDirectory nugetDir
     for nuspec in !! "src/**/*.nuspec" do
         printfn "Creating nuget packages for %s" nuspec
-        
-        CleanDir workingDir
 
         let project = Path.GetFileNameWithoutExtension nuspec 
+        
+        let workingDir = workingDir </> project
+
+        CleanDir workingDir
+
         let projectDir = Path.GetDirectoryName nuspec
         let projectFile = (!! (projectDir @@ project + ".*sproj")) |> Seq.head
         let releaseDir = projectDir @@ @"bin\Release"
-        let packages = projectDir @@ "packages.config"
-        let packageDependencies = if (fileExists packages) then (getDependencies packages) else []
+        let packages = projectDir @@ "paket.references"
+        let packageDependencies = if (fileExists packages) then (Paket.GetDependenciesForReferencesFile packages |> Seq.toList) else []
         let dependencies = packageDependencies @ getAkkaDependency project
         let releaseVersion = getProjectVersion project
 
@@ -376,8 +367,6 @@ let createNugetPackages _ =
         // Create both normal nuget package and symbols nuget package. 
         // Uses the files we copied to workingDir and outputs to nugetdir
         pack nugetDir NugetSymbolPackage.Nuspec
-        
-        removeDir workingDir
 
 let publishNugetPackages _ = 
     let rec publishPackage url accessKey trialsLeft packageFile =
@@ -546,7 +535,7 @@ Target "HelpMultiNodeTests" <| fun _ ->
 //--------------------------------------------------------------------------------
 
 // build dependencies
-"Clean" ==> "AssemblyInfo" ==> "RestorePackages" ==> "Build" ==> "CopyOutput" ==> "BuildRelease"
+"Clean" ==> "AssemblyInfo" ==> "Build" ==> "CopyOutput" ==> "BuildRelease"
 
 // tests dependencies
 "CleanTests" ==> "RunTests"
