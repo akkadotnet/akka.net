@@ -154,10 +154,6 @@ publish/
 *.nupkg
 # The packages folder can be ignored because of Package Restore
 **/packages/*
-# except build/, which is used as an MSBuild target.
-!**/packages/build/
-# If using the old MSBuild-Integrated Package Restore, uncomment this:
-!**/packages/repositories.config
 
 # Windows Azure Build Output
 csx/
@@ -220,3 +216,5 @@ resetdev.bat
 
 # Akka.Persistence Test Output
 target/
+# paket tool
+.paket/paket.exe

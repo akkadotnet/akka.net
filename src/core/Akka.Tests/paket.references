@@ -1,0 +1,7 @@
+fastJSON
+
+group Test
+FluentAssertions
+FsCheck
+xunit.extensions
+xunit.runner.visualstudio
