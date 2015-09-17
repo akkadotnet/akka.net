@@ -1,0 +1,70 @@
+NUGET
+  remote: https://www.nuget.org/api/v2
+  specs:
+    Autofac (3.5.2)
+    Castle.Core (3.3.3)
+    Castle.Windsor (3.3.0)
+      Castle.Core (>= 3.3.0)
+    CommonServiceLocator (1.3) - framework: monoandroid, winv4.5
+    faker-csharp (1.2.0)
+    fastJSON (2.1.14.0)
+    FsPickler (1.4.0)
+    FSPowerPack.Core.Community (3.0.0.0)
+    FSPowerPack.Linq.Community (3.0.0.0)
+      FSPowerPack.Core.Community
+    Google.ProtocolBuffers (2.4.1.555)
+    Google.ProtocolBuffersLite (2.4.1.555)
+    Helios (1.4.1)
+    Microsoft.Bcl.Immutable (1.0.34)
+    Newtonsoft.Json (7.0.1)
+    Ninject (3.2.2.0)
+    NLog (4.1.1)
+    qdfeed (1.1.0)
+    Serilog (1.5.11)
+    slf4net (0.1.32.1)
+    structuremap (3.1.6.186)
+    Unity (3.5.1404.0)
+      CommonServiceLocator (>= 1.2.0) - framework: monoandroid, winv4.5
+
+GROUP Build
+NUGET
+  remote: https://www.nuget.org/api/v2
+  specs:
+    FAKE (4.4.2)
+    NuGet.CommandLine (2.8.6)
+    SourceLink.Fake (1.1.0)
+
+GROUP Legacy
+NUGET
+  remote: https://www.nuget.org/api/v2
+  specs:
+    xunit (1.9.2)
+
+GROUP Test
+NUGET
+  remote: https://www.nuget.org/api/v2
+  specs:
+    FluentAssertions (3.5.0)
+    FsCheck (2.0.7)
+      FSharp.Core (>= 3.1.2.5)
+    FsCheck.Xunit (2.0.7)
+      FsCheck (>= 2.0.7)
+      xunit (>= 1.9.2)
+    FSharp.Core (4.0.0.1)
+    NUnit (2.6.4)
+    NUnit.Runners (2.6.4)
+    xunit (2.0.0)
+      xunit.assert (2.0.0)
+      xunit.core (2.0.0)
+    xunit.abstractions (2.0.0)
+    xunit.assert (2.0.0)
+    xunit.core (2.0.0)
+      xunit.extensibility.core (2.0.0)
+    xunit.extensibility.core (2.0.0)
+      xunit.abstractions (2.0.0)
+    xunit.extensions (2.0.0)
+      xunit (2.0.0)
+    xunit.runner.console (2.0.0)
+    xunit.runner.utility (2.0.0)
+      xunit.abstractions (2.0.0)
+    xunit.runner.visualstudio (2.0.1)
