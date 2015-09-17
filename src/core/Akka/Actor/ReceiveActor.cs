@@ -116,7 +116,7 @@ namespace Akka.Actor
             _matchHandlerBuilders.Peek().Match<T>( m =>
             {
                 Func<Task> wrap = () => handler(m);
-                ActorTaskScheduler.RunTask(wrap);
+                ActorTaskScheduler.AwaitTask(wrap);
             });
         }
 
