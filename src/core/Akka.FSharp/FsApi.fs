@@ -435,7 +435,7 @@ and ExprDecider (expr: Expr<(exn->Directive)>) =
         member this.Decide (e: exn): Directive = this.Compiled.Value (e)
     interface ISurrogated with
         member this.ToSurrogate _ = 
-            let fsp = Nessos.FsPickler.FsPickler.CreateBinary()        
+            let fsp = Nessos.FsPickler.FsPickler.CreateBinary()
             ExprDeciderSurrogate(Serialization.serializeToBinary fsp this.Expr) :> ISurrogate
         
 type Strategy = 
