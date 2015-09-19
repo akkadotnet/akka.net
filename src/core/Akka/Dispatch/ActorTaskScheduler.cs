@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
 using System.Runtime.Remoting.Messaging;
 using System.Threading;
 using System.Threading.Tasks;
@@ -88,6 +89,25 @@ namespace Akka.Dispatch
             }
 
             return false;
+        }
+
+        public static void AwaitTask(Func<Task> func)
+        {
+            var task = func();
+
+            // if task is null, treat as synchronous execution
+            if (task == null)
+                return;
+
+            if (task.IsFaulted)
+                ExceptionDispatchInfo.Capture(task.Exception.InnerException).Throw();
+
+            // if task is completed, return synchronously
+            if (task.IsCompleted)
+                return;
+
+            // dispatch to actor scheduler only if needed
+            RunTask(() => task);
         }
 
         public static void RunTask(Action action)
