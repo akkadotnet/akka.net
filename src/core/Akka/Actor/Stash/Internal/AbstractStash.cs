@@ -64,7 +64,7 @@ An (unbounded) deque-based mailbox can be configured as follows:
             if(_theStash.Count > 0)
             {
                 var lastEnvelope = _theStash.Last.Value;
-                if(lastEnvelope.Message.Equals(currMsg) && lastEnvelope.Sender == sender)
+                if(ReferenceEquals(lastEnvelope.Message,currMsg) && lastEnvelope.Sender == sender)
                     throw new IllegalActorStateException(string.Format("Can't stash the same message {0} more than once", currMsg));
             }
             if(_capacity <= 0 || _theStash.Count < _capacity)
