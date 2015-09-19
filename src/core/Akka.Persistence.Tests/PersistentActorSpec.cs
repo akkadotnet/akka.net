@@ -12,6 +12,7 @@ using System.Threading;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.Tests
 {

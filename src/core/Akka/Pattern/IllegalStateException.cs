@@ -10,6 +10,10 @@ using Akka.Actor;
 
 namespace Akka.Pattern
 {
+    /// <summary>
+    /// Signals that a method has been invoked at an illegal or
+    /// inappropriate time.
+    /// </summary>
     public class IllegalStateException : AkkaException
     {
 

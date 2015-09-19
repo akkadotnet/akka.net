@@ -8,7 +8,7 @@
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 
-namespace Akka.MultiNodeTests
+namespace Akka.Cluster.Tests.MultiNode
 {
     /// <summary>
     /// Static <see cref="Config"/> provider that allows toggleable logging
@@ -19,7 +19,7 @@ namespace Akka.MultiNodeTests
 // ReSharper disable once InconsistentNaming
         private static readonly Config _loggingConfig =
             ConfigurationFactory.ParseString(@"
-                akka.loggers = [""Akka.Event.DefaultLogger""]");
+                akka.loggers = []");
 
         /// <summary>
         /// Used to specify which loggers to enable for the <see cref="MultiNodeClusterSpec"/> instances

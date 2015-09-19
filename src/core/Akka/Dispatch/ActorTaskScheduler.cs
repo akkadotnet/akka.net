@@ -128,6 +128,7 @@ namespace Akka.Dispatch
 
                 //if mailbox was suspended, make sure we re-enable message processing again
                 mailbox.Resume(MailboxSuspendStatus.AwaitingTask);
+                context.CheckReceiveTimeout();
             },
                 Outer,
                 CancellationToken.None,

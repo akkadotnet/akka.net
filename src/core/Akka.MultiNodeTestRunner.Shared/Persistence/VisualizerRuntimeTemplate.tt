@@ -1,0 +1,54 @@
+﻿<#@ template language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+
+<html>
+<head>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.8.1/vis.min.js"></script>
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.8.1/vis.min.css" rel="stylesheet" type="text/css" />
+	<style type="text/css">
+		.vis-item-one { border-color:#00AABF; background-color:#7FD4DF; }
+		.vis-item-two { border-color:#0D9DBC; background-color:#86CEDD; }
+		.vis-item-three { border-color:#1B91B9; background-color:#8DC8DC; }
+		.vis-item-four { border-color:#2885B6; background-color:#93C2DA; }
+		.vis-item-five { border-color:#3679B3; background-color:#9ABCD9; }
+		.vis-item-six { border-color:#446DB0; background-color:#A1B6D7; }
+		.vis-item-seven { border-color:#5161AD; background-color:#A8B0D6; }
+		.vis-item-eight { border-color:#5F55AB; background-color:#AFAAD5; }
+		.vis-item-nine { border-color:#6D48A8; background-color:#B6A3D3; }
+		.vis-item-ten { border-color:#7A3CA5; background-color:#BC9DD2; }
+		.vis-item-eleven { border-color:#8830A2; background-color:#C397D0; }
+		.vis-item-twelve { border-color:#96249F; background-color:#CA91CF; }
+		.vis-item-thirteen { border-color:#A3189C; background-color:#D18BCD; }
+		.vis-item-fourteen { border-color:#B10C99; background-color:#D885CC; }
+		.vis-item-fifteen { border-color:#BF0097; background-color:#DF7FCB; }
+	</style>
+	<title><# Write(Prefix); #></title>
+</head>
+<body>
+
+<# foreach (var spec in Tree.Specs) { #>
+<h3><# Write(spec.FactName.Replace(Prefix, "")); #></h3>
+<div id="<# Write(BuildSpecificationId(spec)); #>"></div>
+
+<script type="text/javascript">
+	var container = document.getElementById('<# Write(BuildSpecificationId(spec)); #>');
+
+	var items = [
+		<# Write(BuildTimelineItem(spec)); #>
+	];
+
+	var groups = [
+		<# Write(BuildGroupItems(spec)); #>
+	];
+
+	var options = {};
+
+	var timeline = new vis.Timeline(container, items, groups, options);
+</script>
+
+<# } #>
+</body>
+</html>

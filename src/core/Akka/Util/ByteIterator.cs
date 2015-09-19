@@ -149,8 +149,7 @@ namespace Akka.Util
         internal class MultiByteIterator : ByteIterator
         {
             private ILinearSeq<ByteArrayIterator> _iterators;
-            private ByteArrayIterator _current;
-            private static readonly ByteArrayIterator[] ClearedList = new ByteArrayIterator[0];
+            private static readonly ILinearSeq<ByteArrayIterator> ClearedList = new ArrayLinearSeq<ByteArrayIterator>(new ByteArrayIterator[0]);
 
             public MultiByteIterator(params ByteArrayIterator[] iterators)
             {
@@ -166,18 +165,26 @@ namespace Akka.Util
 
             private MultiByteIterator Normalize()
             {
-                Func<IEnumerable<ByteArrayIterator>, IEnumerable<ByteArrayIterator>> norm = null;
+                Func<ILinearSeq<ByteArrayIterator>, ILinearSeq<ByteArrayIterator>> norm = null;
                 norm = xs =>
                 {
-                    if (!xs.Any()) return ClearedList;
-                    if (!xs.First().HasNext) return norm(xs.Skip(1));
+                    if (xs.IsEmpty) return ClearedList;
+                    if (!xs.Head.HasNext) return norm(xs.Tail());
                     return xs;
 
                 };
-                _iterators = new ArrayLinearSeq<ByteArrayIterator>(norm(_iterators).ToArray());
+                _iterators = norm(_iterators);
                 return this;
             }
 
+
+            private ByteArrayIterator Current
+            {
+                get
+                {
+                    return _iterators.Head;
+                }
+            }
             private void DropCurrent()
             {
                 _iterators = _iterators.Tail();
@@ -190,17 +197,17 @@ namespace Akka.Util
 
             public override bool HasNext
             {
-                get { return _current.HasNext; }
+                get { return Current.HasNext; }
             }
 
             public override byte Head
             {
-                get { return _current.Head; }
+                get { return Current.Head; }
             }
 
             public override byte Next()
             {
-                var result = _current.Next();
+                var result = Current.Next();
                 Normalize();
                 return result;
             }
@@ -217,11 +224,11 @@ namespace Akka.Util
                 var builder = new List<ByteArrayIterator>();
                 while (rest > 0 && !_iterators.IsEmpty)
                 {
-                    _current.Take(rest);
-                    if (_current.HasNext)
+                    Current.Take(rest);
+                    if (Current.HasNext)
                     {
-                        rest -= _current.Len;
-                        builder.Add(_current);
+                        rest -= Current.Len;
+                        builder.Add(Current);
                     }
                     _iterators = _iterators.Tail();
                 }
@@ -233,8 +240,8 @@ namespace Akka.Util
             {
                 if (n > 0 && Len > 0)
                 {
-                    var nCurrent = Math.Min(n, _current.Len);
-                    _current.Drop(n);
+                    var nCurrent = Math.Min(n, Current.Len);
+                    Current.Drop(n);
                     var rest = n - nCurrent;
                     Normalize();
                     return Drop(rest);
@@ -248,10 +255,10 @@ namespace Akka.Util
                 var builder = new List<ByteArrayIterator>();
                 while (!stop && !_iterators.IsEmpty)
                 {
-                    var lastLen = _current.Len;
-                    _current.TakeWhile(p);
-                    if (_current.HasNext) builder.Add(_current);
-                    if (_current.Len < lastLen) stop = true;
+                    var lastLen = Current.Len;
+                    Current.TakeWhile(p);
+                    if (Current.HasNext) builder.Add(Current);
+                    if (Current.Len < lastLen) stop = true;
                     DropCurrent();
                 }
                 _iterators = new ArrayLinearSeq<ByteArrayIterator>(builder.ToArray());
@@ -262,8 +269,8 @@ namespace Akka.Util
             {
                 if (Len > 0)
                 {
-                    _current.DropWhile(p);
-                    var dropMore = _current.Len == 0;
+                    Current.DropWhile(p);
+                    var dropMore = Current.Len == 0;
                     Normalize();
                     if (dropMore) return DropWhile(p);
                 }
@@ -280,12 +287,12 @@ namespace Akka.Util
 
             protected MultiByteIterator GetToArray<T>(T[] xs, int offset, int n, int elemSize, Func<T> getSingle, Action<T[], int, int> getMulti)
             {
-                if(n >= 0) return this;
+                if(n <= 0) return this;
                 Func<int> nDoneF = () =>
                 {
-                    if (_current.Len >= elemSize)
+                    if (Current.Len >= elemSize)
                     {
-                        var nCurrent = Math.Min(n, _current.Len/elemSize);
+                        var nCurrent = Math.Min(n, Current.Len/elemSize);
                         getMulti(xs, offset, nCurrent);
                         return nCurrent;
                     }
@@ -302,13 +309,13 @@ namespace Akka.Util
 
             public override ByteIterator GetBytes(byte[] xs, int offset, int n)
             {
-                return GetToArray(xs, offset, n, 1, GetByte, (a, b, c) => _current.GetBytes(a, b, c));
+                return GetToArray(xs, offset, n, 1, GetByte, (a, b, c) => Current.GetBytes(a, b, c));
             }
 
 
             public override byte[] ToArray()
             {
-                throw new NotImplementedException();
+                return GetBytes(Len);
             }
 
             public override int CopyToBuffer(ByteBuffer buffer)
@@ -484,7 +491,7 @@ namespace Akka.Util
 
         public bool IsEmpty
         {
-            get { return _length > 0; }
+            get { return _length == 0; }
         }
 
         public T Head
@@ -516,6 +523,7 @@ namespace Akka.Util
         {
             private readonly ILinearSeq<T> _orig;
             private ILinearSeq<T> _seq;
+            private T _current;
 
             public Enumerator(ILinearSeq<T> seq)
             {
@@ -530,8 +538,11 @@ namespace Akka.Util
 
             public bool MoveNext()
             {
+                if (_seq.IsEmpty)
+                    return false;
+                _current = _seq.Head;
                 _seq = _seq.Tail();
-                return !_seq.IsEmpty;
+                return true;
             }
 
             public void Reset()
@@ -541,7 +552,7 @@ namespace Akka.Util
 
             public T Current
             {
-                get { return _seq.Head; }
+                get { return _current; }
             }
 
             object IEnumerator.Current

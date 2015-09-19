@@ -93,6 +93,8 @@ namespace Akka.Routing
             BackoffThreshold = backoffThreshold;
             BackoffRate = backoffRate;
             MessagesPerResize = messagesPerResize;
+
+            Validate();
         }
 
         /// <summary>

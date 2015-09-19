@@ -22,7 +22,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             : this(
                 Props.Create(
                     () =>
-                        new FileSystemMessageSinkActor(new JsonPersistentTestRunStore(), GenerateFileName(assemblyName),
+                        new FileSystemMessageSinkActor(new JsonPersistentTestRunStore(), FileNameGenerator.GenerateFileName(assemblyName, ".json"),
                             true)))
         {
             
@@ -36,15 +36,6 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         {
             //do nothing
         }
-
-        #region Static methods
-
-        public static string GenerateFileName(string assemblyName)
-        {
-            return string.Format("{0}-{1}.json", assemblyName.Replace(".dll", ""), DateTime.UtcNow.Ticks);
-        }
-
-        #endregion
     }
 
     /// <summary>

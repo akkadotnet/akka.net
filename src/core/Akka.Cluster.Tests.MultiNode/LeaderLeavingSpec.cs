@@ -8,11 +8,10 @@
 using System;
 using System.Linq;
 using Akka.Actor;
-using Akka.Cluster;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 
-namespace Akka.MultiNodeTests
+namespace Akka.Cluster.Tests.MultiNode
 {
     public class LeaderLeavingSpecConfig : MultiNodeConfig
     {

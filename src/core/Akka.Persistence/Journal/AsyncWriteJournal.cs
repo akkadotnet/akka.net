@@ -89,7 +89,13 @@ namespace Akka.Persistence.Journal
             // to resequence replayed messages relative to written and looped messages.
             ReplayMessagesAsync(message.PersistenceId, message.FromSequenceNr, message.ToSequenceNr, message.Max, p =>
             {
-                if (!p.IsDeleted || message.ReplayDeleted) message.PersistentActor.Tell(new ReplayedMessage(p), p.Sender);
+                if (!p.IsDeleted || message.ReplayDeleted)
+                {
+                    foreach (var adaptedRepresentation in AdaptFromJournal(p))
+                    {
+                        message.PersistentActor.Tell(new ReplayedMessage(adaptedRepresentation), p.Sender);
+                    }
+                }
             })
             .NotifyAboutReplayCompletion(message.PersistentActor)
             .ContinueWith(t =>
@@ -127,21 +133,22 @@ namespace Akka.Persistence.Journal
              * execution context.
              */
             var self = Self;
-            WriteMessagesAsync(CreatePersistentBatch(message.Messages)).ContinueWith(t =>
-            {
-                if (!t.IsFaulted)
-                {
-                    _resequencer.Tell(new Desequenced(WriteMessagesSuccessful.Instance, counter, message.PersistentActor, self));
-                    resequence(x => new WriteMessageSuccess(x, message.ActorInstanceId));
-                }
-                else
-                {
-                    _resequencer.Tell(new Desequenced(new WriteMessagesFailed(t.Exception), counter, message.PersistentActor, self));
-                    resequence(x => new WriteMessageFailure(x, t.Exception, message.ActorInstanceId));
-                }
-            }, _continuationOptions);
             var resequencablesLength = message.Messages.Count();
             _resequencerCounter += resequencablesLength + 1;
+            WriteMessagesAsync(CreatePersistentBatch(message.Messages).ToArray())
+                .ContinueWith(t =>
+                {
+                    if (!t.IsFaulted)
+                    {
+                        _resequencer.Tell(new Desequenced(WriteMessagesSuccessful.Instance, counter, message.PersistentActor, self));
+                        resequence(x => new WriteMessageSuccess(x, message.ActorInstanceId));
+                    }
+                    else
+                    {
+                        _resequencer.Tell(new Desequenced(new WriteMessagesFailed(t.Exception), counter, message.PersistentActor, self));
+                        resequence(x => new WriteMessageFailure(x, t.Exception, message.ActorInstanceId));
+                    }
+                }, _continuationOptions);
         }
 
         internal sealed class Desequenced

@@ -59,7 +59,7 @@ let main() =
                     Strategy.OneForOne(fun e ->
                     match e with
                     | :? CustomException -> Directive.Restart 
-                    | _ -> SupervisorStrategy.DefaultDecider(e)))  ]
+                    | _ -> SupervisorStrategy.DefaultDecider.Decide(e)))  ]
 
     async {
         let! response = parent <? Echo "hello world"

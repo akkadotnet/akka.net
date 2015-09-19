@@ -12,9 +12,66 @@ open System
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Linq.QuotationEvaluation
 
+module Serialization = 
+    open Nessos.FsPickler
+    open Akka.Serialization
+
+    let internal serializeToBinary (fsp:BinarySerializer) o = 
+            use stream = new System.IO.MemoryStream()
+            fsp.Serialize(stream, o)
+            stream.ToArray()
+
+    let internal deserializeFromBinary<'t> (fsp:BinarySerializer) (bytes: byte array) =
+            use stream = new System.IO.MemoryStream(bytes)
+            fsp.Deserialize<'t> stream
+            
+    let private jobjectType = Type.GetType("Newtonsoft.Json.Linq.JObject, Newtonsoft.Json") 
+    let private jsonSerlizerType = Type.GetType("Newtonsoft.Json.JsonSerializer, Newtonsoft.Json")
+    let private toObjectMethod = jobjectType.GetMethod("ToObject", [|typeof<System.Type>; jsonSerlizerType|])
+
+    let tryDeserializeJObject jsonSerializer o : 'Message option =
+        let t = typeof<'Message>
+        if o <> null && o.GetType().Equals jobjectType 
+        then 
+            try
+                let res = toObjectMethod.Invoke(o, [|t; jsonSerializer|]) 
+                Some (res :?> 'Message)
+            with
+            | _ -> None // type conversion failed (passed JSON is not of expected type)
+        else None
+
+    
+    // used for top level serialization
+    type ExprSerializer(system) = 
+        inherit Serializer(system)
+        let fsp = FsPickler.CreateBinary()
+        override __.Identifier = 9
+        override __.IncludeManifest = true        
+        override __.ToBinary(o) = serializeToBinary fsp o        
+        override __.FromBinary(bytes, _) = deserializeFromBinary fsp bytes
+        
+                        
+    let internal exprSerializationSupport (system: ActorSystem) =
+        let serializer = ExprSerializer(system :?> ExtendedActorSystem)
+        system.Serialization.AddSerializer(serializer)
+        system.Serialization.AddSerializationMap(typeof<Expr>, serializer)
 
 [<AutoOpen>]
 module Actors =
+    open System.Threading.Tasks
+
+    let private tryCast (t:Task<obj>) : 'Message =
+        match t.Result with
+        | :? 'Message as m -> m
+        | o ->
+            let context = Akka.Actor.Internal.InternalCurrentActorCellKeeper.Current
+            if context = null 
+            then failwith "Cannot cast JObject outside the actor system context "
+            else
+                let serializer = context.System.Serialization.FindSerializerForType typeof<'Message> :?> Akka.Serialization.NewtonSoftJsonSerializer
+                match Serialization.tryDeserializeJObject serializer.Serializer o with
+                | Some m -> m
+                | None -> raise (InvalidCastException("Tried to cast JObject to " + typeof<'Message>.ToString()))
 
     /// <summary>
     /// Unidirectional send operator. 
@@ -26,7 +83,9 @@ module Actors =
     /// Bidirectional send operator. Sends a message object directly to actor 
     /// tracked by actorRef and awaits for response send back from corresponding actor. 
     /// </summary>
-    let inline (<?) (tell : #ICanTell) (msg : obj) : Async<'Message> = tell.Ask<'Message> msg |> Async.AwaitTask
+    let (<?) (tell : #ICanTell) (msg : obj) : Async<'Message> = 
+        tell.Ask(msg).ContinueWith(Func<_,'Message>(tryCast), TaskContinuationOptions.AttachedToParent|||TaskContinuationOptions.ExecuteSynchronously)
+        |> Async.AwaitTask
 
     /// Pipes an output of asynchronous expression directly to the recipients mailbox.
     let pipeTo (computation : Async<'T>) (recipient : ICanTell) (sender : IActorRef) : unit = 
@@ -239,7 +298,7 @@ module Actors =
                         member __.Stash() = (this :> IWithUnboundedStash).Stash.Stash()
                         member __.Unstash() = (this :> IWithUnboundedStash).Stash.Unstash()
                         member __.UnstashAll() = (this :> IWithUnboundedStash).Stash.UnstashAll() }
-    
+        
         new(actor : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) = FunActor(actor.Compile () ())
         member __.Sender() : IActorRef = base.Sender
         member __.Unhandled msg = base.Unhandled msg
@@ -247,8 +306,12 @@ module Actors =
             match state with
             | Func f -> 
                 match msg with
-                | :? 'Message as matched -> state <- f matched
-                | _ -> x.Unhandled msg
+                | :? 'Message as m -> state <- f m
+                | _ -> 
+                    let serializer = UntypedActor.Context.System.Serialization.FindSerializerForType typeof<obj> :?> Akka.Serialization.NewtonSoftJsonSerializer
+                    match Serialization.tryDeserializeJObject serializer.Serializer msg with
+                    | Some(m) -> state <- f m
+                    | None -> x.Unhandled msg
             | Return _ -> x.PostStop()
         override x.PostStop() =
             base.PostStop ()
@@ -337,35 +400,7 @@ module Linq =
     type Expression = 
         static member ToExpression(f : System.Linq.Expressions.Expression<System.Func<FunActor<'Message, 'v>>>) = toExpression<FunActor<'Message, 'v>> f
         static member ToExpression<'Actor>(f : Quotations.Expr<(unit -> 'Actor)>) = toExpression<'Actor> (QuotationEvaluator.ToLinqExpression f)  
-
-module Serialization = 
-    open Nessos.FsPickler
-    open Akka.Serialization
-
-    let internal serializeToBinary (fsp:BinarySerializer) o = 
-            use stream = new System.IO.MemoryStream()
-            fsp.Serialize(stream, o)
-            stream.ToArray()
-
-    let internal deserializeFromBinary<'t> (fsp:BinarySerializer) (bytes: byte array) =
-            use stream = new System.IO.MemoryStream(bytes)
-            fsp.Deserialize<'t> stream
-    
-    // used for top level serialization
-    type ExprSerializer(system) = 
-        inherit Serializer(system)
-        let fsp = FsPickler.CreateBinary()
-        override __.Identifier = 9
-        override __.IncludeManifest = true        
-        override __.ToBinary(o) = serializeToBinary fsp o        
-        override __.FromBinary(bytes, _) = deserializeFromBinary fsp bytes
         
-                        
-    let internal exprSerializationSupport (system: ActorSystem) =
-        let serializer = ExprSerializer(system :?> ExtendedActorSystem)
-        system.Serialization.AddSerializer(serializer)
-        system.Serialization.AddSerializationMap(typeof<Expr>, serializer)
-
 [<RequireQualifiedAccess>]
 module Configuration = 
 

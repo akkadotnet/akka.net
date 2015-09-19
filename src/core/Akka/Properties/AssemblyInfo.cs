@@ -38,3 +38,4 @@ using System.Runtime.InteropServices;
 [assembly: InternalsVisibleTo("Akka.MultiNodeTests")]
 [assembly: InternalsVisibleTo("Akka.DistributedData")]
 [assembly: InternalsVisibleTo("Akka.DistributedData.Tests")]
+[assembly: InternalsVisibleTo("Akka.Cluster.Tests.MultiNode")]

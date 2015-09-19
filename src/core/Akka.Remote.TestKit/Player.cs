@@ -117,7 +117,7 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public void Enter(TimeSpan timeout, ImmutableList<string> names)
         {
-            _system.Log.Debug("entering barriers " + names.Aggregate((a,b) => a = ", " + b));
+            _system.Log.Debug("entering barriers {0}", names.Aggregate((a,b) => a = ", " + b));
             var stop = Deadline.Now + timeout;
 
             foreach (var name in names)

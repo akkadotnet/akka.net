@@ -7,7 +7,11 @@
 
 using System;
 using Akka.Actor;
+using Akka.Actor.Internal;
 using Akka.Configuration;
+using Akka.Event;
+using Akka.TestKit.Xunit2.Internals;
+using Xunit.Abstractions;
 
 namespace Akka.TestKit.Xunit2
 {
@@ -25,10 +29,10 @@ namespace Akka.TestKit.Xunit2
         /// with <see cref="DefaultConfig"/> will be created.
         /// </summary>
         /// <param name="system">Optional: The actor system.</param>
-        public TestKit(ActorSystem system = null)
+        public TestKit(ActorSystem system = null, ITestOutputHelper output = null)
             : base(_assertions, system)
         {
-            //Intentionally left blank
+            InitializeLogger(output);
         }
 
         /// <summary>
@@ -37,10 +41,10 @@ namespace Akka.TestKit.Xunit2
         /// </summary>
         /// <param name="config">The configuration to use for the system.</param>
         /// <param name="actorSystemName">Optional: the name of the system. Default: "test"</param>
-        public TestKit(Config config, string actorSystemName=null)
+        public TestKit(Config config, string actorSystemName = null, ITestOutputHelper output = null)
             : base(_assertions, config, actorSystemName)
         {
-            //Intentionally left blank
+            InitializeLogger(output);
         }
 
 
@@ -49,9 +53,9 @@ namespace Akka.TestKit.Xunit2
         /// A new system with the specified configuration will be created.
         /// </summary>
         /// <param name="config">The configuration to use for the system.</param>
-        public TestKit(string config): base(_assertions, ConfigurationFactory.ParseString(config))
+        public TestKit(string config, ITestOutputHelper output = null) : base(_assertions, ConfigurationFactory.ParseString(config))
         {
-            //Intentionally left blank
+            InitializeLogger(output);
         }
 
         public new static Config DefaultConfig { get { return TestKitBase.DefaultConfig; } }
@@ -91,6 +95,15 @@ namespace Akka.TestKit.Xunit2
             GC.SuppressFinalize(this);
         }
 
+        private void InitializeLogger(ITestOutputHelper output)
+        {
+            if (output != null)
+            {
+                var system = (ExtendedActorSystem) Sys;
+                var logger = system.SystemActorOf(Props.Create(() => new TestOutputLogger(output)), "log-test");
+                logger.Tell(new InitializeLogger(system.EventStream));
+            }
+        }
 
         /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
         /// <param name="disposing">if set to <c>true</c> the method has been called directly or indirectly by a 

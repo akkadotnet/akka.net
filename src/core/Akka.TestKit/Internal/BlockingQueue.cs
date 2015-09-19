@@ -193,9 +193,6 @@ namespace Akka.TestKit.Internal
             public object SyncRoot { get { throw new NotImplementedException(); } }
 
             public bool IsSynchronized { get { return false; } }
-
-
-
         }
     }
 }

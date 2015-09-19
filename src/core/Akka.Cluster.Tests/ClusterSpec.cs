@@ -21,7 +21,6 @@ namespace Akka.Cluster.Tests
             auto-down-unreachable-after = 0s
             periodic-tasks-initial-delay = 120 s // turn off scheduled tasks
             publish-stats-interval = 0 s # always, when it happens
-            failure-detector.implementation-class = ""Akka.MultiNodeTests.FailureDetectorPuppet, Akka.MultiNodeTests""
         }
         akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
         akka.remote.helios.tcp.port = 0";

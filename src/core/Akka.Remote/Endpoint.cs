@@ -1234,17 +1234,28 @@ namespace Akka.Remote
 
                 //todo: RemoteMetrics https://github.com/akka/akka/blob/dc0547dd73b54b5de9c3e0b45a21aa865c5db8e2/akka-remote/src/main/scala/akka/remote/Endpoint.scala#L742
 
-                //todo: max payload size validation
-
-                var ok = _handle.Write(pdu);
-
-                if (ok)
+                if (pdu.Length > Transport.MaximumPayloadBytes)
                 {
-                    _ackDeadline = NewAckDeadline();
-                    _lastAck = null;
+                    var reason = new OversizedPayloadException(
+                        string.Format("Discarding oversized payload sent to {0}: max allowed size {1} bytes, actual size of encoded {2} was {3} bytes.",
+                            send.Recipient,
+                            Transport.MaximumPayloadBytes,
+                            send.Message.GetType(),
+                            pdu.Length));
+                    _log.Error(reason, "Transient association error (association remains live)");
                     return true;
                 }
+                else
+                {
+                    var ok = _handle.Write(pdu);
 
+                    if (ok)
+                    {
+                        _ackDeadline = NewAckDeadline();
+                        _lastAck = null;
+                        return true;
+                    }
+                }
                 return false;
             }
             catch (SerializationException ex)
@@ -1346,8 +1357,7 @@ namespace Akka.Remote
                     var now = MonotonicClock.GetNanos();
                     if (now - _largeBufferLogTimestamp >= LogBufferSizeInterval)
                     {
-                        _log.Warning("[{0}] buffered messages in EndpointWriter for [{1}]. " +
-                                     "You should probably implement flow control to avoid flooding the remote connection.", size, RemoteAddress);
+                        _log.Warning("[{0}] buffered messages in EndpointWriter for [{1}]. You should probably implement flow control to avoid flooding the remote connection.", size, RemoteAddress);
                         _largeBufferLogTimestamp = now;
                     }
                 }
@@ -1519,6 +1529,7 @@ namespace Akka.Remote
             _provider = RARP.For(Context.System).Provider;
         }
 
+        private readonly ILoggingAdapter _log = Context.GetLogger();
         private readonly AkkaPduCodec _codec;
         private readonly IActorRef _reliableDeliverySupervisor;
         private readonly ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> _receiveBuffers;
@@ -1553,23 +1564,34 @@ namespace Akka.Remote
             }
             else if (message is InboundPayload)
             {
-                var payload = message as InboundPayload;
-                var ackAndMessage = TryDecodeMessageAndAck(payload.Payload);
-                if (ackAndMessage.AckOption != null && _reliableDeliverySupervisor != null)
-                    _reliableDeliverySupervisor.Tell(ackAndMessage.AckOption);
-                if (ackAndMessage.MessageOption != null)
+                var payload = ((InboundPayload)message).Payload;
+                if (payload.Length > Transport.MaximumPayloadBytes)
                 {
-                    if (ackAndMessage.MessageOption.ReliableDeliveryEnabled)
+                    var reason = new OversizedPayloadException(
+                        string.Format("Discarding oversized payload received: max allowed size {0} bytes, actual size {1} bytes.",
+                            Transport.MaximumPayloadBytes,
+                            payload.Length));
+                    _log.Error(reason, "Transient error while reading from association (association remains live)");
+                }
+                else
+                {
+                    var ackAndMessage = TryDecodeMessageAndAck(payload);
+                    if (ackAndMessage.AckOption != null && _reliableDeliverySupervisor != null)
+                        _reliableDeliverySupervisor.Tell(ackAndMessage.AckOption);
+                    if (ackAndMessage.MessageOption != null)
                     {
-                        _ackedReceiveBuffer = _ackedReceiveBuffer.Receive(ackAndMessage.MessageOption);
-                        DeliverAndAck();
-                    }
-                    else
-                    {
-                        _msgDispatch.Dispatch(ackAndMessage.MessageOption.Recipient,
-                            ackAndMessage.MessageOption.RecipientAddress,
-                            ackAndMessage.MessageOption.SerializedMessage,
-                            ackAndMessage.MessageOption.SenderOptional);
+                        if (ackAndMessage.MessageOption.ReliableDeliveryEnabled)
+                        {
+                            _ackedReceiveBuffer = _ackedReceiveBuffer.Receive(ackAndMessage.MessageOption);
+                            DeliverAndAck();
+                        }
+                        else
+                        {
+                            _msgDispatch.Dispatch(ackAndMessage.MessageOption.Recipient,
+                                ackAndMessage.MessageOption.RecipientAddress,
+                                ackAndMessage.MessageOption.SerializedMessage,
+                                ackAndMessage.MessageOption.SenderOptional);
+                        }
                     }
                 }
             }
