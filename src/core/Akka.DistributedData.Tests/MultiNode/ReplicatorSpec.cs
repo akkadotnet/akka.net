@@ -1,6 +1,5 @@
 ﻿using Akka.Actor;
 using Akka.Configuration;
-using Akka.MultiNodeTests;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 using System;

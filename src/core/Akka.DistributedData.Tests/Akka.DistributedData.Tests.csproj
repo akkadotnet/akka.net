@@ -83,10 +83,6 @@
       <Project>{59cffc88-8a73-445d-b191-281e40be9421}</Project>
       <Name>Akka.DistributedData</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Akka.MultiNodeTests\Akka.MultiNodeTests.csproj">
-      <Project>{f0781bea-5ba0-4af0-bb15-e3f209b681f5}</Project>
-      <Name>Akka.MultiNodeTests</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj">
       <Project>{e5957c3e-2b1e-469f-a680-7953b4dea31b}</Project>
       <Name>Akka.Remote.TestKit</Name>
