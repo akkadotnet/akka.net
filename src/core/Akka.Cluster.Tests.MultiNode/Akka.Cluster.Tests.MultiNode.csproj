@@ -62,6 +62,7 @@
     <Compile Include="InitialHeartbeatSpec.cs" />
     <Compile Include="JoinInProgressSpec.cs" />
     <Compile Include="JoinSeedNodeSpec.cs" />
+    <Compile Include="LeaderElectionSpec.cs" />
     <Compile Include="LeaderLeavingSpec.cs" />
     <Compile Include="MultiNodeClusterSpec.cs" />
     <Compile Include="MultiNodeLoggingConfig.cs" />
