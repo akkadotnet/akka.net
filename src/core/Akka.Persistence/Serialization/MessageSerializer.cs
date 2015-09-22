@@ -131,18 +131,16 @@ namespace Akka.Persistence.Serialization
 
         private PersistentPayload.Builder PersistentPayloadToProto(object payload)
         {
-            if (TransportInformation != null)
-            {
-                Akka.Serialization.Serialization.CurrentTransportInformation = TransportInformation;
-            }
-
             var serializer = system.Serialization.FindSerializerFor(payload);
             var builder = PersistentPayload.CreateBuilder();
 
-            if (serializer.IncludeManifest) builder.SetPayloadManifest(ByteString.CopyFromUtf8(payload.GetType().FullName));
+            if (serializer.IncludeManifest)
+                builder.SetPayloadManifest(ByteString.CopyFromUtf8(payload.GetType().FullName));
+
+            var bytes = serializer.ToBinaryWithAddress(TransportInformation.Address, payload);
 
             builder
-                .SetPayload(ByteString.CopyFrom(serializer.ToBinary(payload)))
+                .SetPayload(ByteString.CopyFrom(bytes))
                 .SetSerializerId(serializer.Identifier);
 
             return builder;
@@ -153,7 +151,7 @@ namespace Akka.Persistence.Serialization
             var address = system.Provider.DefaultAddress;
             return !string.IsNullOrEmpty(address.Host)
                 ? new Information { Address = address, System = system }
-                : null;
+                : new Information { System = system };
         }
     }
 }

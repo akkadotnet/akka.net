@@ -75,7 +75,7 @@ namespace Akka.Actor
 
                 internalTarget.Tell(new Unwatch(target, fref));
                 return returnResult;
-            }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+            }, TaskContinuationOptions.ExecuteSynchronously);
         }
     }
 }

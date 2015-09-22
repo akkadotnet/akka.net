@@ -247,7 +247,7 @@ namespace Akka.Remote.Transport.Helios
                 {
                     var listener = s.Result;
                     RegisterListener(channel, listener, msg, remoteSocketAddress);
-                }, TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.NotOnCanceled & TaskContinuationOptions.NotOnFaulted);
+                }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.NotOnCanceled | TaskContinuationOptions.NotOnFaulted);
                 op = handle;
             }
             else

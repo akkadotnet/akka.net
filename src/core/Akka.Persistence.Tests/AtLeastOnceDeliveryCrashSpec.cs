@@ -38,7 +38,7 @@ namespace Akka.Persistence.Tests
                 return new OneForOneStrategy(10, TimeSpan.FromSeconds(10), reason =>
                 {
                     if (reason is IllegalActorStateException) return Directive.Stop;
-                    return Actor.SupervisorStrategy.DefaultDecider(reason);
+                    return Actor.SupervisorStrategy.DefaultDecider.Decide(reason);
                 });
             }
         }
@@ -94,7 +94,7 @@ namespace Akka.Persistence.Tests
                 }
                 else
                 {
-                    Log.Debug("Recover message: " + message);
+                    Log.Debug("Recover message: {0}", message);
                 }
 
                 return true;
@@ -142,4 +142,3 @@ namespace Akka.Persistence.Tests
         }
     }
 }
-

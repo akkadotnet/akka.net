@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
@@ -356,10 +356,8 @@ namespace Akka.Actor
                 {
                     var d = Deployer.Lookup(path);
                     if (d != null && d.RouterConfig != RouterConfig.NoRouter)
-                        Log.Warning(
-                            string.Format(
-                                "Configuration says that [{0}] should be a router, but code disagrees. Remove the config or add a RouterConfig to its Props.",
-                                path));
+                        Log.Warning("Configuration says that [{0}] should be a router, but code disagrees. Remove the config or add a RouterConfig to its Props.",
+                                	path);
                 }
 
                 var props2 = props;

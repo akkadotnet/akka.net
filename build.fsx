@@ -189,6 +189,8 @@ Target "CopyOutput" <| fun _ ->
       "contrib/dependencyinjection/Akka.DI.AutoFac"
       "contrib/dependencyinjection/Akka.DI.CastleWindsor"
       "contrib/dependencyinjection/Akka.DI.Ninject"
+      "contrib/dependencyinjection/Akka.DI.Unity"
+      "contrib/dependencyinjection/Akka.DI.TestKit"
       "contrib/testkits/Akka.TestKit.Xunit" 
       "contrib/testkits/Akka.TestKit.NUnit" 
       "contrib/testkits/Akka.TestKit.Xunit2" 
@@ -217,10 +219,7 @@ Target "RunTests" <| fun _ ->
     let nunitTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll"
     let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- 
                                     "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll" -- 
-                                    "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll" --
-                                    "src/**/bin/Release/Akka.Persistence.SqlServer.Tests.dll" --
-                                    "src/**/bin/Release/Akka.Persistence.PostgreSql.Tests.dll" --
-                                    "src/**/bin/Release/Akka.Persistence.Cassandra.Tests.dll"
+                                    "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll" 
 
     mkdir testOutput
 
@@ -249,46 +248,31 @@ Target "RunTestsMono" <| fun _ ->
         xunitTestAssemblies
 
 Target "MultiNodeTests" <| fun _ ->
+    let testSearchPath =
+        let assemblyFilter = getBuildParamOrDefault "spec-assembly" String.Empty
+        sprintf "src/**/bin/Release/*%s*.Tests.MultiNode.dll" assemblyFilter
+
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" "bin/core/Akka.MultiNodeTestRunner*"
+    let multiNodeTestAssemblies = !! testSearchPath
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
-    let spec = getBuildParam "spec"
+    let runMultiNodeSpec assembly =
+        let spec = getBuildParam "spec"
 
-    let args = new StringBuilder()
-                |> append "Akka.MultiNodeTests.dll"
+        let args = new StringBuilder()
+                |> append assembly
                 |> append "-Dmultinode.enable-filesink=on"
                 |> appendIfNotNullOrEmpty spec "-Dmultinode.test-spec="
                 |> toText
 
-    let result = ExecProcess(fun info -> 
-        info.FileName <- multiNodeTestPath
-        info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
-        info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
-    if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
+        let result = ExecProcess(fun info -> 
+            info.FileName <- multiNodeTestPath
+            info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
+            info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
+        if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
+    
+    multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
 
-Target "RunSqlServerTests" <| fun _ ->
-    let sqlServerTests = !! "src/**/bin/Release/Akka.Persistence.SqlServer.Tests.dll"
-    let xunitToolPath = findToolInSubPath "xunit.console.clr4.exe" "src/packages/xunit.runners*"
-    printfn "Using XUnit runner: %s" xunitToolPath
-    xUnit
-        (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
-        sqlServerTests
-
-Target "RunPostgreSqlTests" <| fun _ ->
-    let postgreSqlTests = !! "src/**/bin/Release/Akka.Persistence.PostgreSql.Tests.dll"
-    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
-    printfn "Using XUnit runner: %s" xunitToolPath
-    xUnit2
-        (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
-        postgreSqlTests
-
-Target "RunCassandraTests" <| fun _ ->
-    let cassandraTests = !! "src/**/bin/Release/Akka.Persistence.Cassandra.Tests.dll"
-    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
-    printfn "Using XUnit runner: %s" xunitToolPath
-    xUnit2
-        (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
-        cassandraTests
 
 //--------------------------------------------------------------------------------
 // Nuget targets 
@@ -300,7 +284,10 @@ module Nuget =
         match project with
         | "Akka" -> []
         | "Akka.Cluster" -> ["Akka.Remote", release.NugetVersion]
+        | "Akka.Persistence.TestKit" -> ["Akka.Persistence", preReleaseVersion; "Akka.TestKit.Xunit2", release.NugetVersion]
+        | persistence when (persistence.Contains("Sql") && not (persistence.Equals("Akka.Persistence.Sql.Common"))) -> ["Akka.Persistence.Sql.Common", preReleaseVersion]
         | persistence when (persistence.StartsWith("Akka.Persistence.")) -> ["Akka.Persistence", preReleaseVersion]
+        | "Akka.DI.TestKit" -> ["Akka.DI.Core", release.NugetVersion; "Akka.TestKit.Xunit2", release.NugetVersion]
         | di when (di.StartsWith("Akka.DI.") && not (di.EndsWith("Core"))) -> ["Akka.DI.Core", release.NugetVersion]
         | testkit when testkit.StartsWith("Akka.TestKit.") -> ["Akka.TestKit", release.NugetVersion]
         | _ -> ["Akka", release.NugetVersion]
@@ -408,7 +395,7 @@ let publishNugetPackages _ =
                     info.WorkingDirectory <- (Path.GetDirectoryName (FullName packageFile))
                     info.Arguments <- args (packageFile, accessKey,url)) (System.TimeSpan.FromMinutes 1.0)
             enableProcessTracing <- tracing
-            if result <> 0 then failwithf "Error during NuGet symbol push. %s %s" nugetExe (args (packageFile, accessKey,url))
+            if result <> 0 then failwithf "Error during NuGet symbol push. %s %s" nugetExe (args (packageFile, "key omitted",url))
         with exn -> 
             if (trialsLeft > 0) then (publishPackage url accessKey (trialsLeft-1) packageFile)
             else raise exn
@@ -455,12 +442,14 @@ Target "Help" <| fun _ ->
       " * Build      Builds"
       " * Nuget      Create and optionally publish nugets packages"
       " * RunTests   Runs tests"
+      " * MultiNodeTests  Runs the slower multiple node specifications"
       " * All        Builds, run tests, creates and optionally publish nuget packages"
       ""
       " Other Targets"
       " * Help       Display this help" 
       " * HelpNuget  Display help about creating and pushing nuget packages" 
-      " * HelpDocs   Display help about creating and pushing API docs" 
+      " * HelpDocs   Display help about creating and pushing API docs"
+      " * HelpMultiNodeTests  Display help about running the multiple node specifications"
       ""]
 
 Target "HelpNuget" <| fun _ ->
@@ -539,6 +528,19 @@ Target "HelpDocs" <| fun _ ->
       "                                   Build and publish docs to http://fooaccount.blob.core.windows.net/docs/unstable"
       ""]
 
+Target "HelpMultiNodeTests" <| fun _ ->
+    List.iter printfn [
+      "usage: "
+      "build MultiNodeTests [spec-assembly=<filter>]"
+      "Just runs the MultiNodeTests. Does not build the projects."
+      ""
+      "Arguments for MultiNodeTests target:"
+      "   [spec-assembly=<filter>]  Restrict which spec projects are run."
+      ""
+      "       Alters the discovery filter to enable restricting which specs are run."
+      "       If not supplied the filter used is '*.Tests.Multinode.Dll'"
+      "       When supplied this is altered to '*<filter>*.Tests.Multinode.Dll'"
+      ""]
 //--------------------------------------------------------------------------------
 //  Target dependencies
 //--------------------------------------------------------------------------------
@@ -548,6 +550,7 @@ Target "HelpDocs" <| fun _ ->
 
 // tests dependencies
 "CleanTests" ==> "RunTests"
+"BuildRelease" ==> "CleanTests" ==> "MultiNodeTests"
 
 // nuget dependencies
 "CleanNuget" ==> "CreateNuget"
@@ -559,7 +562,12 @@ Target "HelpDocs" <| fun _ ->
 Target "All" DoNothing
 "BuildRelease" ==> "All"
 "RunTests" ==> "All"
-"BuildRelease" ==> "MultiNodeTests" //Invovles a lot of BIN copying.
+"MultiNodeTests" ==> "All"
 "Nuget" ==> "All"
+
+Target "AllTests" DoNothing //used for Mono builds, due to Mono 4.0 bug with FAKE / NuGet https://github.com/fsharp/fsharp/issues/427
+"BuildRelease" ==> "AllTests"
+"RunTests" ==> "AllTests"
+"MultiNodeTests" ==> "AllTests"
 
 RunTargetOrDefault "Help"

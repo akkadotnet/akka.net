@@ -9,10 +9,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using Akka.Actor;
 using Akka.MultiNodeTestRunner.Shared;
+using Akka.MultiNodeTestRunner.Shared.Persistence;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
 using Akka.Remote.TestKit;
 using Xunit;
@@ -45,8 +47,8 @@ namespace Akka.MultiNodeTestRunner
         ///     <description>
         ///         The full path or name of an assembly containing as least one MultiNodeSpec in the current working directory.
         /// 
-        ///         i.e. "Akka.Cluster.Tests.dll"
-        ///              "C:\akka.net\src\Akka.Cluster.Tests\bin\Debug\Akka.Cluster.Tests.dll"
+        ///         i.e. "Akka.Cluster.Tests.MultiNode.dll"
+        ///              "C:\akka.net\src\Akka.Cluster.Tests\bin\Debug\Akka.Cluster.Tests.MultiNode.dll"
         ///     </description>
         /// </item>
         /// <item>
@@ -62,9 +64,9 @@ namespace Akka.MultiNodeTestRunner
             TestRunSystem = ActorSystem.Create("TestRunnerLogging");
             SinkCoordinator = TestRunSystem.ActorOf(Props.Create<SinkCoordinator>(), "sinkCoordinator");
 
-            var assemblyName = args[0];
-
+            var assemblyName = Path.GetFullPath(args[0]);
             EnableAllSinks(assemblyName);
+            PublishRunnerMessage(String.Format("Running MultiNodeTests for {0}", assemblyName));
 
             using (var controller = new XunitFrontController(assemblyName))
             {
@@ -75,6 +77,12 @@ namespace Akka.MultiNodeTestRunner
 
                     foreach (var test in discovery.Tests.Reverse())
                     {
+                        if (!string.IsNullOrEmpty(test.Value.First().SkipReason))
+                        {
+                            PublishRunnerMessage(string.Format("Skipping test {0}. Reason - {1}", test.Value.First().MethodName, test.Value.First().SkipReason));
+                            continue;
+                        }
+
                         PublishRunnerMessage(string.Format("Starting test {0}", test.Value.First().MethodName));
 
                         var processes = new List<Process>();
@@ -146,9 +154,34 @@ namespace Akka.MultiNodeTestRunner
 
         static void EnableAllSinks(string assemblyName)
         {
+            var now = DateTime.UtcNow;
+
+            Func<MessageSink> createJsonFileSink = () =>
+                {
+                    var fileName = FileNameGenerator.GenerateFileName(assemblyName, ".json", now);
+
+                    var visualizerProps = Props.Create(() =>
+                        new FileSystemMessageSinkActor(new JsonPersistentTestRunStore(), fileName, true));
+
+                    return new FileSystemMessageSink(visualizerProps);
+                };
+
+            Func<MessageSink> createVisualizerFileSink = () =>
+                {
+                    var fileName = FileNameGenerator.GenerateFileName(assemblyName, ".html", now);
+
+                    var visualizerProps = Props.Create(() =>
+                        new FileSystemMessageSinkActor(new VisualizerPersistentTestRunStore(), fileName, true));
+
+                    return new FileSystemMessageSink(visualizerProps);
+                };
+
             var fileSystemSink = CommandLine.GetProperty("multinode.enable-filesink");
             if (!string.IsNullOrEmpty(fileSystemSink))
-                SinkCoordinator.Tell(new SinkCoordinator.EnableSink(new FileSystemMessageSink(assemblyName)));
+            {
+                SinkCoordinator.Tell(new SinkCoordinator.EnableSink(createJsonFileSink()));
+                SinkCoordinator.Tell(new SinkCoordinator.EnableSink(createVisualizerFileSink()));
+            }
         }
 
         static void CloseAllSinks()

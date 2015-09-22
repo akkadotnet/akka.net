@@ -7,7 +7,7 @@
 
 using System.Threading;
 using Akka.Actor;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 using Akka.TestKit;
 using Xunit;
 
@@ -48,10 +48,10 @@ akka {
     remote {
          test-transport {
             transport-class = ""Akka.Remote.Transport.TestTransport, Akka.Remote""
-		    applied-adapters = []
-		    transport-protocol = test
-		    port = 891
-		    hostname = ""127.0.0.1""
+            applied-adapters = []
+            transport-protocol = test
+            port = 891
+            hostname = ""127.0.0.1""
         }
     }
 }

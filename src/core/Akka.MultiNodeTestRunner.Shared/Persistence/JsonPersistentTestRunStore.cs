@@ -16,9 +16,9 @@ using Newtonsoft.Json.Serialization;
 namespace Akka.MultiNodeTestRunner.Shared.Persistence
 {
     /// <summary>
-    /// JavaScript Object Notation (JSON) implementation of the <see cref="IPersistentTestRunStore"/>
+    /// JavaScript Object Notation (JSON) implementation of the <see cref="IRetrievableTestRunStore"/>
     /// </summary>
-    public class JsonPersistentTestRunStore : IPersistentTestRunStore
+    public class JsonPersistentTestRunStore : IRetrievableTestRunStore
     {
         //Internal version of the contract resolver
         private class AkkaContractResolver : DefaultContractResolver

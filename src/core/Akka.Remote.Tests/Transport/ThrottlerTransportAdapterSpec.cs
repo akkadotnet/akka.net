@@ -14,6 +14,7 @@ using Akka.TestKit;
 using Akka.TestKit.Internal;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
+using Akka.Util;
 using Akka.Util.Internal;
 using Xunit;
 
@@ -64,7 +65,7 @@ namespace Akka.Remote.Tests.Transport
                 Receive<string>(s => s.Equals("start"), s =>
                 {
                     Self.Tell("sendNext");
-                    _startTime = SystemNanoTime.GetNanos();
+                    _startTime = MonotonicClock.GetNanos();
                 });
 
                 Receive<string>(s => s.Equals("sendNext") && _messageCount > 0, s =>
@@ -78,7 +79,7 @@ namespace Akka.Remote.Tests.Transport
                 {
                     _received++;
                     if (_received >= MessageCount)
-                        _controller.Tell(SystemNanoTime.GetNanos() - _startTime);
+                        _controller.Tell(MonotonicClock.GetNanos() - _startTime);
                 });
             }
 

@@ -41,20 +41,24 @@ namespace Akka.Remote.Transport
 
         public TestTransport(ActorSystem system, Config conf)
             : this(
-                Address.Parse(GetConfigString(conf, "local-address")), AssociationRegistry.Get(GetConfigString(conf,"registry-key")),
-                GetConfigString(conf,"scheme-identifier")) { }
+                Address.Parse(GetConfigString(conf, "local-address")), 
+                AssociationRegistry.Get(GetConfigString(conf,"registry-key")),
+                conf.GetByteSize("maximum-payload-bytes") ?? 32000,
+                GetConfigString(conf,"scheme-identifier")
+            ) { }
 
         private static string GetConfigString(Config conf, string name)
         {
             var value = conf.GetString(name);
-            if(value==null) throw new Exception("you must specify a value for config setting \""+name+"\"");
+            if(value==null) throw new ConfigurationException("Please specify a value for config setting \""+name+"\"");
             return value;
         }
 
-        public TestTransport(Address localAddress, AssociationRegistry registry, string schemeIdentifier = "test")
+        public TestTransport(Address localAddress, AssociationRegistry registry, long maximumPayloadBytes = 32000, string schemeIdentifier = "test")
         {
             LocalAddress = localAddress;
             _registry = registry;
+            MaximumPayloadBytes = maximumPayloadBytes;
             SchemeIdentifier = schemeIdentifier;
             ListenBehavior =
                 new SwitchableLoggedBehavior<bool, Tuple<Address, TaskCompletionSource<IAssociationEventListener>>>(

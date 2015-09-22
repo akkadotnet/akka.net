@@ -10,6 +10,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Transport;
@@ -116,7 +117,7 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public void Enter(TimeSpan timeout, ImmutableList<string> names)
         {
-            _system.Log.Debug("entering barriers " + names.Aggregate((a,b) => a = ", " + b));
+            _system.Log.Debug("entering barriers {0}", names.Aggregate((a,b) => a = ", " + b));
             var stop = Deadline.Now + timeout;
 
             foreach (var name in names)
@@ -449,8 +450,8 @@ namespace Akka.Remote.TestKit
                         cmdTask.ContinueWith(t =>
                         {
                             if (t.IsFaulted)
-                                throw new Exception("Throttle was requested from the TestConductor, but no transport " +
-                                                    "adapters available that support throttling. Specify 'testTransport(on=true)' in your MultiNodeConfig");
+                                throw new ConfigurationException("Throttle was requested from the TestConductor, but no transport " +
+                                    "adapters available that support throttling. Specify 'testTransport(on=true)' in your MultiNodeConfig");
                             Self.Tell(new ToServer<Done>(Done.Instance));
                         });
                         return Stay();

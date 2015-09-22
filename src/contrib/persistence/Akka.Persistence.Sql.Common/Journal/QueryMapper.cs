@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="QueryMapper.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Data.Common;
 using Akka.Actor;
 
@@ -34,14 +41,14 @@ namespace Akka.Persistence.Sql.Common.Journal
             var persistenceId = reader.GetString(0);
             var sequenceNr = reader.GetInt64(1);
             var isDeleted = reader.GetBoolean(2);
-            var payload = GetPayload(reader);
+            var payloadType = reader.GetString(3);
+            var payload = GetPayload(reader, payloadType);
 
-            return new Persistent(payload, sequenceNr, persistenceId, isDeleted, sender);
+            return new Persistent(payload, sequenceNr, payloadType, persistenceId, isDeleted, sender);
         }
 
-        private object GetPayload(DbDataReader reader)
+        private object GetPayload(DbDataReader reader, string payloadType)
         {
-            var payloadType = reader.GetString(3);
             var type = Type.GetType(payloadType, true);
             var binary = (byte[]) reader[4];
 

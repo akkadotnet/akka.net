@@ -251,7 +251,7 @@ namespace Akka.Dispatch
         /// Only really used in dispatchers with 1:1 relationship with dispatcher.
         /// </remarks>
         /// </summary>
-        /// <param name="cell">The ActorCell belonging to the actor who's deatching from this dispatcher.</param>
+        /// <param name="cell">The ActorCell belonging to the actor who's detaching from this dispatcher.</param>
         public virtual void Detach(ActorCell cell)
         {
 

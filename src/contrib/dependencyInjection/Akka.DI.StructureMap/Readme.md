@@ -4,7 +4,7 @@
 
 #What is it?
 
-**Akka.DI.StructureMap** is an **ActorSystem extension** for the Akka.NET framework that provides an alternative to the basic capabilities of [Props](http://akkadotnet.github.io/wiki/Props) when you have Actors with multiple dependencies.  
+**Akka.DI.StructureMap** is an **ActorSystem extension** for the Akka.NET framework that provides an alternative to the basic capabilities of [Props](http://getakka.net/docs/Props) when you have Actors with multiple dependencies.  
 
 If StructureMap is your IoC container of choice and your actors have dependencies that make using the factory method provided by Props prohibitive and code maintenance is an important concern then this is the extension for you.
 
@@ -16,7 +16,7 @@ Start by creating your StructureMap ```Container```, registering your actors and
 
 ```csharp
 // Setup StructureMap
-IContainer container = new Container(cfg => 
+IContainer container = new Container(cfg =>
     {
         cfg.For<IWorkerService>().Use<WorkerService>();
         cfg.For<TypedWorker>().Use<TypedWorker>();
@@ -65,7 +65,7 @@ The resulting code should look similar to the the following:
 
 ```csharp
 // Setup StructureMap
-IContainer container = new Container(cfg => 
+IContainer container = new Container(cfg =>
     {
         cfg.For<IWorkerService>().Use<WorkerService>();
         cfg.For<TypedWorker>().Use<TypedWorker>();

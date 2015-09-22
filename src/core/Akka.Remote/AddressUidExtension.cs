@@ -38,10 +38,7 @@ namespace Akka.Remote
     /// </summary>
     public class AddressUid : IExtension
     {
-        public int Uid
-        {
-            get { return ThreadLocalRandom.Current.Next(); }
-        }
+        public readonly int Uid = ThreadLocalRandom.Current.Next();
     }
 }
 

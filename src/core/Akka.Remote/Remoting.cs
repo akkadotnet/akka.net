@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote.Transport;
 using Akka.Util.Internal;
@@ -150,7 +151,7 @@ namespace Akka.Remote
                     addressPromise.Task.Wait(Provider.RemoteSettings.StartupTimeout);
                     var akkaProtocolTransports = addressPromise.Task.Result;
                     if(akkaProtocolTransports.Count==0)
-                        throw new Exception("No transports enabled");
+                        throw new ConfigurationException(@"No transports enabled under ""akka.remote.enabled-transports""");
                     _addresses = new HashSet<Address>(akkaProtocolTransports.Select(a => a.Address));
                     //   this.transportMapping = akkaProtocolTransports
                     //       .ToDictionary(p => p.ProtocolTransport.Transport.SchemeIdentifier,);
@@ -221,13 +222,12 @@ namespace Akka.Remote
                     {
                         if (!result.Result)
                         {
-                            log.Warning(
-                                "Shutdown finished, but flushing might not have been successful and some messages might have been dropped. " +
+                            log.Warning("Shutdown finished, but flushing might not have been successful and some messages might have been dropped. " +
                                 "Increase akka.remote.flush-wait-on-shutdown to a larger value to avoid this.");
                         }
                         finalize();
                     }
-                }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+                }, TaskContinuationOptions.ExecuteSynchronously);
             }
         }
 
@@ -255,9 +255,10 @@ namespace Akka.Remote
                     Provider.RemoteSettings.CommandAckTimeout)
                     .ContinueWith(result =>
                     {
+                        if (result.IsCanceled || result.IsFaulted)
+                            return false;
                         return result.Result.Status;
-                    },
-                        TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent);
+                    }, TaskContinuationOptions.ExecuteSynchronously);
         }
 
         public override Address LocalAddressForRemote(Address remote)
@@ -290,7 +291,7 @@ namespace Akka.Remote
 
         public const string EndpointManagerName = "endpointManager";
 
-        internal static Address LocalAddressForRemote(
+        internal Address LocalAddressForRemote(
             IDictionary<string, HashSet<ProtocolTransportAddressPair>> transportMapping, Address remote)
         {
             HashSet<ProtocolTransportAddressPair> transports;

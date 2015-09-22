@@ -79,16 +79,16 @@ namespace Akka.Remote.Transport
                 {
                     return r.Result is SetThrottleAck;
                 }, 
-                    TaskContinuationOptions.AttachedToParent & 
-                    TaskContinuationOptions.ExecuteSynchronously &
+                    TaskContinuationOptions.AttachedToParent | 
+                    TaskContinuationOptions.ExecuteSynchronously |
                     TaskContinuationOptions.OnlyOnRanToCompletion);
             }
 
             if (message is ForceDisassociate || message is ForceDisassociateExplicitly)
             {
                 return manager.Ask(message, AskTimeout).ContinueWith(r => r.Result is ForceDisassociateAck,
-                    TaskContinuationOptions.AttachedToParent &
-                    TaskContinuationOptions.ExecuteSynchronously &
+                    TaskContinuationOptions.AttachedToParent |
+                    TaskContinuationOptions.ExecuteSynchronously |
                     TaskContinuationOptions.OnlyOnRanToCompletion);
             }
 
@@ -227,7 +227,7 @@ namespace Akka.Remote.Transport
             if (message is InboundAssociation)
             {
                 var ia = message as InboundAssociation;
-                var wrappedHandle = WrapHandle(ia.Association, associationListener, true);
+                var wrappedHandle = WrapHandle(ia.Association, AssociationListener, true);
                 wrappedHandle.ThrottlerActor.Tell(new Handle(wrappedHandle));
             }
             else if (message is AssociateUnderlying)
@@ -248,18 +248,17 @@ namespace Akka.Remote.Transport
                         self.Tell(new AssociateResult(tr.Result, ua.StatusPromise));
                     }
                     
-                }, TaskContinuationOptions.AttachedToParent 
-                & TaskContinuationOptions.ExecuteSynchronously);
+                }, TaskContinuationOptions.ExecuteSynchronously);
 
             }
             else if (message is AssociateResult) // Finished outbound association and got back the handle
             {
                 var ar = message as AssociateResult;
-                var wrappedHandle = WrapHandle(ar.AssociationHandle, associationListener, false);
+                var wrappedHandle = WrapHandle(ar.AssociationHandle, AssociationListener, false);
                 var naked = NakedAddress(ar.AssociationHandle.RemoteAddress);
                 var inMode = GetInboundMode(naked);
                 wrappedHandle.OutboundThrottleMode.Value = GetOutboundMode(naked);
-                wrappedHandle.ReadHandlerSource.Task.ContinueWith(tr => new ListenerAndMode(tr.Result, inMode), TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously)
+                wrappedHandle.ReadHandlerSource.Task.ContinueWith(tr => new ListenerAndMode(tr.Result, inMode), TaskContinuationOptions.ExecuteSynchronously)
                     .PipeTo(wrappedHandle.ThrottlerActor);
                 _handleTable.Add(Tuple.Create(naked, wrappedHandle));
                 ar.StatusPromise.SetResult(wrappedHandle);
@@ -281,8 +280,7 @@ namespace Akka.Remote.Transport
                 Task.WhenAll(modes).ContinueWith(tr =>
                 {
                     return SetThrottleAck.Instance;
-                },
-                    TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously)
+                }, TaskContinuationOptions.ExecuteSynchronously)
                     .PipeTo(sender);
             }
             else if (message is ForceDisassociate)
@@ -451,7 +449,7 @@ namespace Akka.Remote.Transport
             return new ThrottlerHandle(originalHandle, Context.ActorOf(
                 RARP.For(Context.System).ConfigureDispatcher(
                 Props.Create(() => new ThrottledAssociation(managerRef, listener, originalHandle, inbound)).WithDeploy(Deploy.Local)),
-                "throttler" + nextId()));
+                "throttler" + NextId()));
         }
 
         #endregion
@@ -554,7 +552,9 @@ namespace Akka.Remote.Transport
 
         int TokensGenerated(long nanoTimeOfSend)
         {
-            return Convert.ToInt32(((double)(nanoTimeOfSend - _nanoTimeOfLastSend) / TimeSpan.TicksPerMillisecond) * _tokensPerSecond / 1000);
+            var milliSecondsSinceLastSend = ((nanoTimeOfSend - _nanoTimeOfLastSend).ToTicks()/TimeSpan.TicksPerMillisecond);
+            var tokensGenerated = milliSecondsSinceLastSend*_tokensPerSecond/1000;
+            return Convert.ToInt32(tokensGenerated);
         }
 
         TokenBucket Copy(int? capacity = null, double? tokensPerSecond = null, long? nanoTimeOfLastSend = null, int? availableTokens = null)
@@ -688,7 +688,7 @@ namespace Akka.Remote.Transport
             Func<ThrottleMode, bool> tryConsume = null; 
             tryConsume = currentBucket =>
             {
-                var timeOfSend = SystemNanoTime.GetNanos();
+                var timeOfSend = MonotonicClock.GetNanos();
                 var res = currentBucket.TryConsumeTokens(timeOfSend, tokens);
                 var newBucket = res.Item1;
                 var allow = res.Item2;
@@ -882,7 +882,7 @@ namespace Akka.Remote.Transport
                             var self = Self;
                             exposedHandle.ReadHandlerSource.Task.ContinueWith(
                                 r => new ThrottlerManager.Listener(r.Result),
-                                TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously)
+                                TaskContinuationOptions.ExecuteSynchronously)
                                 .PipeTo(self);
                             return GoTo(ThrottlerState.WaitUpstreamListener);
                         }
@@ -945,7 +945,7 @@ namespace Akka.Remote.Transport
                     if(mode is Blackhole) ThrottledMessages = new Queue<ByteString>();
                     CancelTimer(DequeueTimerName);
                     if(ThrottledMessages.Any())
-                        ScheduleDequeue(InboundThrottleMode.TimeToAvailable(SystemNanoTime.GetNanos(), ThrottledMessages.Peek().Length));
+                        ScheduleDequeue(InboundThrottleMode.TimeToAvailable(MonotonicClock.GetNanos(), ThrottledMessages.Peek().Length));
                     Sender.Tell(SetThrottleAck.Instance);
                     return Stay();
                 }
@@ -962,10 +962,10 @@ namespace Akka.Remote.Transport
                     {
                         var payload = ThrottledMessages.Dequeue();
                         UpstreamListener.Notify(new InboundPayload(payload));
-                        InboundThrottleMode = InboundThrottleMode.TryConsumeTokens(SystemNanoTime.GetNanos(),
+                        InboundThrottleMode = InboundThrottleMode.TryConsumeTokens(MonotonicClock.GetNanos(),
                             payload.Length).Item1;
                         if(ThrottledMessages.Any())
-                            ScheduleDequeue(InboundThrottleMode.TimeToAvailable(SystemNanoTime.GetNanos(), ThrottledMessages.Peek().Length));
+                            ScheduleDequeue(InboundThrottleMode.TimeToAvailable(MonotonicClock.GetNanos(), ThrottledMessages.Peek().Length));
                     }
                     return Stay();
                 }
@@ -1052,7 +1052,7 @@ namespace Akka.Remote.Transport
                 if (!ThrottledMessages.Any())
                 {
                     var tokens = payload.Length;
-                    var res = InboundThrottleMode.TryConsumeTokens(SystemNanoTime.GetNanos(), tokens);
+                    var res = InboundThrottleMode.TryConsumeTokens(MonotonicClock.GetNanos(), tokens);
                     var newBucket = res.Item1;
                     var success = res.Item2;
                     if (success)
@@ -1063,7 +1063,7 @@ namespace Akka.Remote.Transport
                     else
                     {
                         ThrottledMessages.Enqueue(payload);
-                        ScheduleDequeue(InboundThrottleMode.TimeToAvailable(SystemNanoTime.GetNanos(), tokens));
+                        ScheduleDequeue(InboundThrottleMode.TimeToAvailable(MonotonicClock.GetNanos(), tokens));
                     }
                 }
                 else

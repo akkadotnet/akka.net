@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Util;
@@ -412,7 +412,7 @@ namespace Akka.Routing
         /// </summary>
         public static SupervisorStrategy DefaultStrategy
         {
-            get { return new OneForOneStrategy(10, TimeSpan.FromSeconds(10), ex => Directive.Escalate); }
+            get { return new OneForOneStrategy(10, TimeSpan.FromSeconds(10), Decider.From(Directive.Escalate)); }
         }
 
         #endregion
