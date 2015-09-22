@@ -99,6 +99,30 @@
 
         protected Action Sleep { get; set; }
 
+        protected Lazy<IActorRef> RemoteWatcher { get; set; }
+
+        private IActorRef Identify(RoleName roleName, string actorName)
+        {
+            Sys.ActorSelection("/system/remote-watcher")
+               .Tell(new Identify(null));
+            return ExpectMsg<ActorIdentity>().Subject;
+        }
+
+        private void AssertCleanup(int timeOutInSeconds = 5)
+        {
+            Within(
+                   TimeSpan.FromSeconds(timeOutInSeconds),
+                   () =>
+                       {
+                           AwaitAssert(
+                                       () =>
+                                           {
+                                               RemoteWatcher.Value.Tell(Remote.RemoteWatcher.Stats.Empty);
+                                               ExpectMsg(Remote.RemoteWatcher.Stats.Empty);
+                                           });
+                       });
+        }
+
         public RemoteNodeDeathWatchSpec()
             :this(new RemoteNodeDeathWatchMultiNetSpec())
         {
@@ -120,5 +144,7 @@
                 return Roles.Count;
             }
         }
+
+
     }
 }
