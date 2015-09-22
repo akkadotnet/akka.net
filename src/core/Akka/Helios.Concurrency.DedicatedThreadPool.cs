@@ -30,7 +30,23 @@ namespace Helios.Concurrency
         /// Background threads are the default thread type
         /// </summary>
         public const ThreadType DefaultThreadType = ThreadType.Background;
+#if DNXCORE50
+        public DedicatedThreadPoolSettings(int numThreads, string name = null, TimeSpan? deadlockTimeout = null)
+            : this(numThreads, DefaultThreadType, name, deadlockTimeout)
+        { }
 
+        public DedicatedThreadPoolSettings(int numThreads, ThreadType threadType, string name = null, TimeSpan? deadlockTimeout = null)
+        {
+            Name = name ?? ("DedicatedThreadPool-" + Guid.NewGuid());
+            ThreadType = threadType;
+            NumThreads = numThreads;
+            DeadlockTimeout = deadlockTimeout;
+            if (deadlockTimeout.HasValue && deadlockTimeout.Value.TotalMilliseconds <= 0)
+                throw new ArgumentOutOfRangeException("deadlockTimeout", string.Format("deadlockTimeout must be null or at least 1ms. Was {0}.", deadlockTimeout));
+            if (numThreads <= 0)
+                throw new ArgumentOutOfRangeException("numThreads", string.Format("numThreads must be at least 1. Was {0}", numThreads));
+        }
+# else
         public DedicatedThreadPoolSettings(int numThreads, string name = null, TimeSpan? deadlockTimeout = null, ApartmentState apartmentState = ApartmentState.Unknown) 
             : this(numThreads, DefaultThreadType, name, deadlockTimeout, apartmentState) { }
 
@@ -46,6 +62,7 @@ namespace Helios.Concurrency
             if (numThreads <= 0)
                 throw new ArgumentOutOfRangeException("numThreads", string.Format("numThreads must be at least 1. Was {0}", numThreads));
         }
+#endif
 
         /// <summary>
         /// The total number of threads to run in this thread pool.
@@ -57,10 +74,12 @@ namespace Helios.Concurrency
         /// </summary>
         public ThreadType ThreadType { get; private set; }
 
+#if !DNXCORE50
         /// <summary>
         /// Apartment state for threads to run in this thread pool
         /// </summary>
         public ApartmentState ApartmentState { get; private set; }
+#endif
 
         /// <summary>
         /// Interval to check for thread deadlocks.
@@ -345,7 +364,7 @@ namespace Helios.Concurrency
             return success;
         }
 
-        #region IDisposable members
+#region IDisposable members
 
         public void Dispose()
         {
@@ -367,9 +386,9 @@ namespace Helios.Concurrency
             WasDisposed = true;
         }
 
-        #endregion
+#endregion
 
-        #region Pool worker implementation
+#region Pool worker implementation
 
         internal sealed class WorkerQueue
         {
@@ -432,8 +451,10 @@ namespace Helios.Concurrency
                 {
                     IsBackground = _pool.Settings.ThreadType == ThreadType.Background
                 };
+#if !DNXCORE50
                 if (_pool.Settings.ApartmentState != ApartmentState.Unknown)
                     _thread.SetApartmentState(_pool.Settings.ApartmentState);
+#endif
 
                 _thread.Start();
             }

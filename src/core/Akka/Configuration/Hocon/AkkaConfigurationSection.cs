@@ -4,6 +4,7 @@
 //     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
+#if !DNXCORE50
 using System.Configuration;
 
 namespace Akka.Configuration.Hocon
@@ -63,3 +64,4 @@ namespace Akka.Configuration.Hocon
         }
     }
 }
+#endif

@@ -45,7 +45,6 @@ namespace Akka.Configuration
             return new Config(res);
         }
 
-#if !DNXCORE50
         /// <summary>
         /// Generates a configuration defined in the supplied
         /// HOCON (Human-Optimized Config Object Notation) string.
@@ -58,6 +57,7 @@ namespace Akka.Configuration
             return ParseString(hocon, null);
         }
 
+#if !DNXCORE50
         /// <summary>
         /// Loads a configuration defined in the current application's
         /// configuration file, e.g. app.config or web.config

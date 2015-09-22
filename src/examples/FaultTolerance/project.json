@@ -7,14 +7,12 @@
     "licenseUrl": "",
 
     "dependencies": {
-        "Akka": "1.0.0-*",
-        "Akka.TestKit": "1.0.0-*",
-        "Akka.TestKit.Xunit2": "1.0.0-*"
+        "Akka": ""
     },
 
+    "commands": { "run": "FaultTolerance" },
+
     "frameworks": {
-        "net45": {
-        },
         "dnx451": {
         },
         "dnxcore50": {

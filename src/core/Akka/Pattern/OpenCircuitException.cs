@@ -27,10 +27,11 @@ namespace Akka.Pattern
             : base( message, innerException )
         {
         }
-
+#if !DNXCORE50
         protected OpenCircuitException( SerializationInfo info, StreamingContext context )
             : base( info, context )
         {
         }
+#endif
     }
 }

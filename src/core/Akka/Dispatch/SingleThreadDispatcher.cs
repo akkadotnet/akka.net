@@ -38,8 +38,12 @@ namespace Akka.Dispatch
                     DedicatedThreadPoolConfigHelpers.ConfigureThreadType(dtp.GetString("threadtype",
                         ThreadType.Background.ToString())),
                     config.GetString("id"),
-                    DedicatedThreadPoolConfigHelpers.GetSafeDeadlockTimeout(dtp),
-                    DedicatedThreadPoolConfigHelpers.GetApartmentState(dtp));
+                    DedicatedThreadPoolConfigHelpers.GetSafeDeadlockTimeout(dtp)
+#if !DNXCORE50
+                    , DedicatedThreadPoolConfigHelpers.GetApartmentState(dtp)); 
+#else
+                    );
+#endif
             }
         }
 
