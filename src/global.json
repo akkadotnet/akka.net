@@ -1,8 +1,8 @@
 {
     "projects": [ "core", "contrib/testkits" ],
     "sdk": {
-        "version": "1.0.0-beta6",
+        "version": "1.0.0-beta7",
         "runtime": "coreclr",
-        "architecture": "x64"
+        "architecture": "x86"
     }
 }

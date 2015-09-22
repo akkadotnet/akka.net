@@ -9,7 +9,7 @@
     "dependencies": {
         "Akka": "",
         "Akka.TestKit": "",
-        "xunit": "2.1.0-beta4"
+        "xunit": "2.1.0-rc1-*"
     },
 
     "frameworks": {

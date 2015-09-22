@@ -11,7 +11,7 @@
         "Akka.TestKit": "",
         "Akka.Tests.Shared.Internals": "",
         "Akka.TestKit.Xunit2": "",
-        "xunit.runner.dnx": "2.1.0-beta4",
+        "xunit.runner.dnx": "2.1.0-beta5",
         "FsCheck": "2.0.6",
         "FluentAssertions": "3.3.0",
         "fastJSON": "2.0.27.1"

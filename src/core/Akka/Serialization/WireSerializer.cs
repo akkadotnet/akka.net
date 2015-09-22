@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if !DNXCORE50
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -50,3 +51,4 @@ namespace Akka.Serialization
         }
     }
 }
+#endif
