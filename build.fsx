@@ -51,7 +51,7 @@ printfn "Assembly version: %s\nNuget version; %s\n" release.AssemblyVersion rele
 // Directories
 
 let binDir = "bin"
-let testOutput = "TestResults"
+let testOutput = FullName "TestResults"
 
 let nugetDir = binDir @@ "nuget"
 let workingDir = binDir @@ "build"
@@ -213,7 +213,7 @@ Target "CleanTests" <| fun _ ->
 //--------------------------------------------------------------------------------
 // Run tests
 
-open XUnit2Helper
+open Fake.Testing
 Target "RunTests" <| fun _ ->  
     let msTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
     let nunitTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll"
@@ -233,7 +233,7 @@ Target "RunTests" <| fun _ ->
     let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
     xUnit2
-        (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
+        (fun p -> { p with XmlOutputPath = Some (testOutput + @"\XUnitTestResults.xml"); HtmlOutputPath = Some (testOutput + @"\XUnitTestResults.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization })
         xunitTestAssemblies
 
 Target "RunTestsMono" <| fun _ ->  
@@ -244,7 +244,7 @@ Target "RunTestsMono" <| fun _ ->
     let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
     xUnit2
-        (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
+        (fun p -> { p with XmlOutputPath = Some (testOutput + @"\XUnitTestResults.xml"); HtmlOutputPath = Some (testOutput + @"\XUnitTestResults.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization })
         xunitTestAssemblies
 
 Target "MultiNodeTests" <| fun _ ->
@@ -252,6 +252,7 @@ Target "MultiNodeTests" <| fun _ ->
         let assemblyFilter = getBuildParamOrDefault "spec-assembly" String.Empty
         sprintf "src/**/bin/Release/*%s*.Tests.MultiNode.dll" assemblyFilter
 
+    mkdir testOutput
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" "bin/core/Akka.MultiNodeTestRunner*"
     let multiNodeTestAssemblies = !! testSearchPath
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
@@ -262,6 +263,7 @@ Target "MultiNodeTests" <| fun _ ->
         let args = new StringBuilder()
                 |> append assembly
                 |> append "-Dmultinode.enable-filesink=on"
+                |> append (sprintf "-Dmultinode.output-directory=\"%s\"" testOutput)
                 |> appendIfNotNullOrEmpty spec "-Dmultinode.test-spec="
                 |> toText
 
