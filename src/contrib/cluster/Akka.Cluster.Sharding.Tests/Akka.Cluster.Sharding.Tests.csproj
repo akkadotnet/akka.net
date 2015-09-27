@@ -74,7 +74,7 @@
     </ProjectReference>
     <ProjectReference Include="..\..\..\core\Akka.Cluster.Tests.MultiNode\Akka.Cluster.Tests.MultiNode.csproj">
       <Project>{f0781bea-5ba0-4af0-bb15-e3f209b681f5}</Project>
-      <Name>Akka.MultiNodeTests</Name>
+      <Name>Akka.Cluster.Tests.MultiNode</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj">
       <Project>{fca84dea-c118-424b-9eb8-34375dfef18a}</Project>
