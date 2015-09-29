@@ -34,18 +34,19 @@ namespace Akka.MultiNodeTestRunner.Shared.Persistence
 
         public string BuildTimelineItem(FactData spec)
         {
-            var messages =
-                spec.RunnerMessages
-                    .Select(m =>
-                        TimelineItem.CreateSpecMessage(m.Message, m.NodeIndex, m.TimeStamp));
+            var messages = spec.RunnerMessages
+                .Select(m => TimelineItemFactory.CreateSpecMessage(Prefix, m.Message, m.NodeIndex, m.TimeStamp));
 
             var facts =
-                spec.NodeFacts
-                    .SelectMany(m =>
-                        m.Value.EventStream
-                            .Select(e =>
-                                TimelineItem.CreateNodeFact(e.Message, e.NodeIndex, e.TimeStamp)));
-
+                spec.NodeFacts.SelectMany(
+                    m =>
+                    m.Value.EventStream.Select(
+                        e =>
+                        TimelineItemFactory.CreateNodeFact(
+                            Prefix,
+                            e.Message,
+                            e.NodeIndex,
+                            e.TimeStamp)));
 
             var itemStrings = messages.Concat(facts)
                 .Select(i => i.ToJavascriptString());
