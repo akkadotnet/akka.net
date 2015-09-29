@@ -19,6 +19,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Persistence
             Content = content;
             Start = dateTime;
             GroupId = groupId;
+            Title = title;
         }
 
         public string Classname { get; private set; }

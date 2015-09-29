@@ -23,7 +23,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Persistence
                 "vis-item-fifteen"
             };
 
-        private static readonly string passedTestContent = @"<div class='tick-image' />";
+        private static readonly string passedTestContent = @"<div class=""tick-image"" />";
 
         public static TimelineItem CreateSpecMessage(string prefix, string title, int groupId, long startTimeStamp)
         {
