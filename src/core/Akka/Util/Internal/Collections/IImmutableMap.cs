@@ -6,11 +6,12 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Akka.Util.Internal.Collections
 {
-	public interface IImmutableMap<TKey, TValue> where TKey : IComparable<TKey>
+	public interface IImmutableMap<TKey, TValue> : IEnumerable<IKeyValuePair<TKey, TValue>> where TKey : IComparable<TKey>
 	{
 		bool IsEmpty { get; }
 		int Count { get; }
@@ -35,8 +36,11 @@ namespace Akka.Util.Internal.Collections
 		IEnumerable<TValue> AllValuesMaxToMin { get; }
 
 		IImmutableMap<TKey, TValue> Remove(TKey key);
-		bool TryRemove(TKey key, out IImmutableMap<TKey, TValue> newMap);
+        IImmutableMap<TKey, TValue> Remove(IEnumerable<TKey> keys);
+        bool TryRemove(TKey key, out IImmutableMap<TKey, TValue> newMap);
 
+	    IImmutableMap<TKey, TValue> Range(TKey fromKey, TKey toKey);
+	    IImmutableMap<TKey, TValue> Concat(IImmutableMap<TKey, TValue> other);
 	}
 }
 
