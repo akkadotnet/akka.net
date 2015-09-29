@@ -45,23 +45,11 @@ namespace Akka.Cluster.Tests.MultiNode
             _third = Role("third");
             _forth = Role("forth");
 
-            if (failureDectectorPuppet)
-            {
-                CommonConfig = MultiNodeLoggingConfig.LoggingConfig
-                    .WithFallback(DebugConfig(true))
-                    .WithFallback(@"akka.cluster.auto-down-unreachable-after = 0s
+            CommonConfig = MultiNodeLoggingConfig.LoggingConfig
+                .WithFallback(DebugConfig(true))
+                .WithFallback(@"akka.cluster.auto-down-unreachable-after = 0s
 akka.cluster.publish-stats-interval = 25 s")
-                    .WithFallback(MultiNodeClusterSpec.ClusterConfigWithFailureDetectorPuppet());
-            }
-            else
-            {
-                CommonConfig = MultiNodeLoggingConfig.LoggingConfig
-                    .WithFallback(DebugConfig(true))
-                    .WithFallback(@"akka.cluster.auto-down-unreachable-after = 0s
-akka.cluster.publish-stats-interval = 25 s")
-                    .WithFallback(MultiNodeClusterSpec.ClusterConfig());
-            }
-
+                .WithFallback(MultiNodeClusterSpec.ClusterConfig(failureDectectorPuppet));
         }
     }
 
@@ -151,14 +139,14 @@ akka.cluster.publish-stats-interval = 25 s")
         }
 
         [MultiNodeFact]
-        public void BeAbleToReElectASingleLeaderAfterLeaderHasLeft()
+        public void AClusterOfFourNodesMustBeAbleToReElectASingleLeaderAfterLeaderHasLeft()
         {
             ShutdownLeaderAndVerifyNewLeader(0);
             EnterBarrier("after-2");
         }
 
         [MultiNodeFact]
-        public void BeAbleToReElectASingleLeaderAfterLeaderHasLeftAgain()
+        public void AClusterOfFourNodesMustBeAbleToReElectASingleLeaderAfterLeaderHasLeftAgain()
         {
             ShutdownLeaderAndVerifyNewLeader(1);
             EnterBarrier("after-3");
