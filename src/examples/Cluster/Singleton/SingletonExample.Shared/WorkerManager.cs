@@ -38,7 +38,7 @@ namespace SingletonExample.Shared
             });
 
             Context.System.Scheduler.ScheduleTellOnce(TimeSpan.FromSeconds(3), Self, GetBatch(), Self);
-            Context.System.Scheduler.ScheduleTellRepeatedly(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(10), counter, SendReport.Instance, Self);
+            Context.System.Scheduler.ScheduleTellRepeatedly(TimeSpan.Zero, TimeSpan.FromSeconds(10), counter, SendReport.Instance, Self);
         }
 
         private IActorRef GetWorkerRouter(IActorRef counter)

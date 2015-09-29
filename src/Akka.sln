@@ -238,9 +238,11 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SingletonExample.Client", "examples\Cluster\Singleton\SingletonExample.Client\SingletonExample.Client.csproj", "{5F7D8BD7-A258-47F0-A15D-D9ADCAC98ACD}"
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SingletonExample.Shared", "SingletonExample.Shared\SingletonExample.Shared.csproj", "{F56AC719-94AA-4ACE-A216-D05B50A123A1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SingletonExample.Host", "SingletonExample.Host\SingletonExample.Host.csproj", "{78178CB6-86B8-431D-A3E1-41E7F198A142}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SingletonExample.Shared", "examples\Cluster\Singleton\SingletonExample.Shared\SingletonExample.Shared.csproj", "{F5DE3A30-FDE1-4377-BFAD-9B4B4D903015}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SingletonExample.Client", "SingletonExample.Client\SingletonExample.Client.csproj", "{5F7D8BD7-A258-47F0-A15D-D9ADCAC98ACD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SingletonExample.Host", "examples\Cluster\Singleton\SingletonExample.Host\SingletonExample.Host.csproj", "{78178CB6-86B8-431D-A3E1-41E7F198A142}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SingletonExample.Client", "examples\Cluster\Singleton\SingletonExample.Client\SingletonExample.Client.csproj", "{5F7D8BD7-A258-47F0-A15D-D9ADCAC98ACD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
