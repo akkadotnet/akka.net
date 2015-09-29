@@ -58,10 +58,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="LookupRemoteActorMultiNetSpec.cs" />
+    <Compile Include="AttemptSysMsgRedeliverySpec.cs" />
     <Compile Include="NewRemoteActorSpec.cs" />
     <Compile Include="PiercingShouldKeepQuarantineSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RemoteDeliverySpec.cs" />
+    <Compile Include="RemoteNodeDeathWatchMultiNetSpec.cs" />
     <Compile Include="RemoteRoundRobinSpec.cs" />
     <Compile Include="RemoteRandomSpec.cs" />
   </ItemGroup>
