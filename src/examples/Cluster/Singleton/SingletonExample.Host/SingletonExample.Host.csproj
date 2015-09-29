@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{5F7D8BD7-A258-47F0-A15D-D9ADCAC98ACD}</ProjectGuid>
+    <ProjectGuid>{78178CB6-86B8-431D-A3E1-41E7F198A142}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>SingletonExample.Client</RootNamespace>
-    <AssemblyName>SingletonExample.Client</AssemblyName>
+    <RootNamespace>SingletonExample.Host</RootNamespace>
+    <AssemblyName>SingletonExample.Host</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -74,19 +74,19 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\contrib\cluster\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj">
+    <ProjectReference Include="..\..\..\..\contrib\cluster\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj">
       <Project>{7ae6de46-24a7-41eb-a18c-5c3ab748e81e}</Project>
       <Name>Akka.Cluster.Tools</Name>
     </ProjectReference>
-    <ProjectReference Include="..\core\Akka.Cluster\Akka.Cluster.csproj">
+    <ProjectReference Include="..\..\..\..\core\Akka.Cluster\Akka.Cluster.csproj">
       <Project>{6ab00f61-269a-4501-b06a-026707f000a7}</Project>
       <Name>Akka.Cluster</Name>
     </ProjectReference>
-    <ProjectReference Include="..\core\Akka.Remote\Akka.Remote.csproj">
+    <ProjectReference Include="..\..\..\..\core\Akka.Remote\Akka.Remote.csproj">
       <Project>{ea4ff8fd-7c53-49c8-b9aa-02e458b3e6a7}</Project>
       <Name>Akka.Remote</Name>
     </ProjectReference>
-    <ProjectReference Include="..\core\Akka\Akka.csproj">
+    <ProjectReference Include="..\..\..\..\core\Akka\Akka.csproj">
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Name>Akka</Name>
     </ProjectReference>

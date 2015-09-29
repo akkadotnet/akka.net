@@ -4,7 +4,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{F56AC719-94AA-4ACE-A216-D05B50A123A1}</ProjectGuid>
+    <ProjectGuid>{F5DE3A30-FDE1-4377-BFAD-9B4B4D903015}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>SingletonExample.Shared</RootNamespace>
@@ -71,19 +71,19 @@
     <Compile Include="WorkLoadCounter.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\contrib\cluster\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj">
+    <ProjectReference Include="..\..\..\..\contrib\cluster\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj">
       <Project>{7ae6de46-24a7-41eb-a18c-5c3ab748e81e}</Project>
       <Name>Akka.Cluster.Tools</Name>
     </ProjectReference>
-    <ProjectReference Include="..\core\Akka.Cluster\Akka.Cluster.csproj">
+    <ProjectReference Include="..\..\..\..\core\Akka.Cluster\Akka.Cluster.csproj">
       <Project>{6ab00f61-269a-4501-b06a-026707f000a7}</Project>
       <Name>Akka.Cluster</Name>
     </ProjectReference>
-    <ProjectReference Include="..\core\Akka.Remote\Akka.Remote.csproj">
+    <ProjectReference Include="..\..\..\..\core\Akka.Remote\Akka.Remote.csproj">
       <Project>{ea4ff8fd-7c53-49c8-b9aa-02e458b3e6a7}</Project>
       <Name>Akka.Remote</Name>
     </ProjectReference>
-    <ProjectReference Include="..\core\Akka\Akka.csproj">
+    <ProjectReference Include="..\..\..\..\core\Akka\Akka.csproj">
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Name>Akka</Name>
     </ProjectReference>
