@@ -32,6 +32,8 @@ namespace Akka.Actor
     /// </summary>
     public class Props : IEquatable<Props> , ISurrogated
     {
+        private const string NullActorTypeExceptionText = "Props must be instantiated with an actor type.";
+
         public class PropsSurrogate : ISurrogate
         {
             public Type Type { get; set; }
@@ -183,6 +185,8 @@ namespace Akka.Actor
         public Props(Type type, object[] args)
             : this(defaultDeploy, type, args)
         {
+            if (type == null)
+                throw new ArgumentNullException("type", NullActorTypeExceptionText);
         }
 
         /// <summary>
@@ -192,6 +196,8 @@ namespace Akka.Actor
         public Props(Type type)
             : this(defaultDeploy, type, noArgs)
         {
+            if (type == null)
+                throw new ArgumentNullException("type", NullActorTypeExceptionText);
         }
 
         /// <summary>
@@ -203,6 +209,9 @@ namespace Akka.Actor
         public Props(Type type, SupervisorStrategy supervisorStrategy, IEnumerable<object> args)
             : this(defaultDeploy, type, args.ToArray())
         {
+            if (type == null)
+                throw new ArgumentNullException("type", NullActorTypeExceptionText);
+
             SupervisorStrategy = supervisorStrategy;
         }
 
@@ -215,6 +224,9 @@ namespace Akka.Actor
         public Props(Type type, SupervisorStrategy supervisorStrategy, params object[] args)
             : this(defaultDeploy, type, args)
         {
+            if (type == null)
+                throw new ArgumentNullException("type", NullActorTypeExceptionText);
+
             SupervisorStrategy = supervisorStrategy;
         }
 
@@ -227,6 +239,8 @@ namespace Akka.Actor
         public Props(Deploy deploy, Type type, IEnumerable<object> args)
             : this(deploy, type, args.ToArray())
         {
+            if (type == null)
+                throw new ArgumentNullException("type", NullActorTypeExceptionText);
         }
 
         /// <summary>
@@ -394,6 +408,9 @@ namespace Akka.Actor
         /// <returns>Props.</returns>
         public static Props Create(Type type, params object[] args)
         {
+            if (type == null)
+                throw new ArgumentNullException("type", NullActorTypeExceptionText);
+
             return new Props(type, args);
         }
 

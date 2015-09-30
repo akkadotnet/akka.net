@@ -62,7 +62,9 @@
     <Compile Include="AtLeastOnceDeliveryCrashSpec.cs" />
     <Compile Include="AtLeastOnceDeliveryFailureSpec.cs" />
     <Compile Include="AtLeastOnceDeliverySpec.cs" />
+    <Compile Include="EndToEndEventAdapterSpec.cs" />
     <Compile Include="Journal\ChaosJournal.cs" />
+    <Compile Include="MemoryEventAdapterSpec.cs" />
     <Compile Include="PersistenceSpec.cs" />
     <Compile Include="PersistentActorFailureSpec.cs" />
     <Compile Include="PersistentActorSpec.cs" />

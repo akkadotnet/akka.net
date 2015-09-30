@@ -5,16 +5,16 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{F0781BEA-5BA0-4AF0-BB15-E3F209B681F5}</ProjectGuid>
+    <ProjectGuid>{C9105C76-B084-4DA1-9348-1C74A8F22F6B}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Akka.MultiNodeTests</RootNamespace>
-    <AssemblyName>Akka.MultiNodeTests</AssemblyName>
+    <RootNamespace>Akka.Remote.Tests.MultiNode</RootNamespace>
+    <AssemblyName>Akka.Remote.Tests.MultiNode</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
-    <NuGetPackageImportStamp>1a218765</NuGetPackageImportStamp>
+    <NuGetPackageImportStamp>39dbaf16</NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -36,7 +36,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Collections.Immutable">
-      <HintPath>..\..\packages\Microsoft.Bcl.Immutable.1.0.34\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
+      <HintPath>..\..\packages\System.Collections.Immutable.1.1.37\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
     </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -46,44 +46,36 @@
     <Reference Include="System.Xml" />
     <Reference Include="xunit.abstractions">
       <HintPath>..\..\packages\xunit.abstractions.2.0.0\lib\net35\xunit.abstractions.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="xunit.assert">
       <HintPath>..\..\packages\xunit.assert.2.0.0\lib\portable-net45+win+wpa81+wp80+monotouch+monoandroid+Xamarin.iOS\xunit.assert.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="xunit.core">
       <HintPath>..\..\packages\xunit.extensibility.core.2.0.0\lib\portable-net45+win+wpa81+wp80+monotouch+monoandroid+Xamarin.iOS\xunit.core.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ClusterDeathWatchSpec.cs" />
-    <Compile Include="ConvergenceSpec.cs" />
-    <Compile Include="FailureDetectorPuppet.cs" />
-    <Compile Include="InitialHeartbeatSpec.cs" />
-    <Compile Include="JoinInProgressSpec.cs" />
-    <Compile Include="JoinSeedNodeSpec.cs" />
-    <Compile Include="LeaderLeavingSpec.cs" />
-    <Compile Include="MultiNodeClusterSpec.cs" />
-    <Compile Include="MultiNodeFact.cs" />
-    <Compile Include="MultiNodeLoggingConfig.cs" />
+    <Compile Include="LookupRemoteActorMultiNetSpec.cs" />
+    <Compile Include="NewRemoteActorSpec.cs" />
+    <Compile Include="PiercingShouldKeepQuarantineSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Routing\ClusterConsistentHashingGroupSpec.cs" />
-    <Compile Include="Routing\ClusterConsistentHashingRouterSpec.cs" />
+    <Compile Include="RemoteDeliverySpec.cs" />
+    <Compile Include="RemoteRoundRobinSpec.cs" />
+    <Compile Include="RemoteRandomSpec.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj">
       <Project>{7dbd5c17-5e9d-40c4-9201-d092751532a7}</Project>
       <Name>Akka.TestKit.Xunit2</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Akka.Cluster\Akka.Cluster.csproj">
-      <Project>{6ab00f61-269a-4501-b06a-026707f000a7}</Project>
-      <Name>Akka.Cluster</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj">
       <Project>{e5957c3e-2b1e-469f-a680-7953b4dea31b}</Project>
       <Name>Akka.Remote.TestKit</Name>
     </ProjectReference>
     <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj">
-      <Project>{EA4FF8FD-7C53-49C8-B9AA-02E458B3E6A7}</Project>
+      <Project>{ea4ff8fd-7c53-49c8-b9aa-02e458b3e6a7}</Project>
       <Name>Akka.Remote</Name>
     </ProjectReference>
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj">

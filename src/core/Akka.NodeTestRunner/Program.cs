@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.IO;
 using System.Threading;
 using Akka.Remote.TestKit;
 using Xunit;
@@ -17,15 +18,22 @@ namespace Akka.NodeTestRunner
         static void Main(string[] args)
         {
             var nodeIndex = CommandLine.GetInt32("multinode.index");
-            var assemblyName = CommandLine.GetProperty("multinode.test-assembly");
+            var assemblyFileName = CommandLine.GetProperty("multinode.test-assembly");
             var typeName = CommandLine.GetProperty("multinode.test-class");
             var testName = CommandLine.GetProperty("multinode.test-method");
             var displayName = testName;
 
             Thread.Sleep(TimeSpan.FromSeconds(10));
 
-            using (var controller = new XunitFrontController(assemblyName))
+            using (var controller = new XunitFrontController(assemblyFileName))
             {
+                /* need to pass in just the assembly name to Discovery, not the full path
+                 * i.e. "Akka.Cluster.Tests.MultiNode.dll"
+                 * not "bin/Release/Akka.Cluster.Tests.MultiNode.dll" - this will cause
+                 * the Discovery class to actually not find any indivudal specs to run
+                 */
+                var assemblyName = Path.GetFileName(assemblyFileName);
+                Console.WriteLine("Running specs for {0} [{1}]", assemblyName, assemblyFileName);
                 using (var discovery = new Discovery(assemblyName, typeName))
                 {
                     using (var sink = new Sink(nodeIndex))

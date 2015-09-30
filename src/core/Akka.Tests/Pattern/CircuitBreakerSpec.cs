@@ -122,7 +122,7 @@ namespace Akka.Tests.Pattern
         public void Should_Allow_Call_Through( )
         {
             var breaker = LongCallTimeoutCb( );
-            var result = breaker.Instance.WithCircuitBreaker( Task.Run( ( ) => SayTest( ) ) );
+            var result = breaker.Instance.WithCircuitBreaker( () => Task.Run( ( ) => SayTest( ) ) );
 
             Assert.Equal( SayTest( ), result.Result );
         }
@@ -133,7 +133,7 @@ namespace Akka.Tests.Pattern
             var breaker = LongCallTimeoutCb( );
 
             Assert.Equal( breaker.Instance.CurrentFailureCount, 0 );
-            Assert.True( InterceptExceptionType<TestException>( ( ) => breaker.Instance.WithCircuitBreaker( Task.Run( ( ) => ThrowException( ) ) ).Wait( AwaitTimeout ) ) );
+            Assert.True( InterceptExceptionType<TestException>( ( ) => breaker.Instance.WithCircuitBreaker( () => Task.Run( ( ) => ThrowException( ) ) ).Wait( AwaitTimeout ) ) );
             Assert.True( CheckLatch( breaker.OpenLatch ) );
             Assert.Equal( 1, breaker.Instance.CurrentFailureCount );
         }
@@ -146,16 +146,16 @@ namespace Akka.Tests.Pattern
             Assert.Equal( breaker.Instance.CurrentFailureCount, 0 );
 
             var whenall = Task.WhenAll(
-                breaker.Instance.WithCircuitBreaker(Task.Factory.StartNew(ThrowException))
-                , breaker.Instance.WithCircuitBreaker(Task.Factory.StartNew(ThrowException))
-                , breaker.Instance.WithCircuitBreaker(Task.Factory.StartNew(ThrowException))
-                , breaker.Instance.WithCircuitBreaker(Task.Factory.StartNew(ThrowException)));
+                breaker.Instance.WithCircuitBreaker(() => Task.Factory.StartNew(ThrowException))
+                , breaker.Instance.WithCircuitBreaker(() => Task.Factory.StartNew(ThrowException))
+                , breaker.Instance.WithCircuitBreaker(() => Task.Factory.StartNew(ThrowException))
+                , breaker.Instance.WithCircuitBreaker(() => Task.Factory.StartNew(ThrowException)));
 
             Assert.True( InterceptExceptionType<TestException>( ( ) => whenall.Wait( AwaitTimeout ) ) );
 
             Assert.Equal( breaker.Instance.CurrentFailureCount, 4 );
 
-            var result = breaker.Instance.WithCircuitBreaker( Task.Run( ( ) => SayTest( ) ) ).Result;
+            var result = breaker.Instance.WithCircuitBreaker(() => Task.Run( ( ) => SayTest( ) ) ).Result;
 
             Assert.Equal( SayTest( ), result );
             Assert.Equal( 0, breaker.Instance.CurrentFailureCount );
@@ -166,7 +166,7 @@ namespace Akka.Tests.Pattern
         {
             var breaker = ShortCallTimeoutCb( );
 
-            breaker.Instance.WithCircuitBreaker( Task.Factory.StartNew( ( ) =>
+            breaker.Instance.WithCircuitBreaker( () => Task.Factory.StartNew( ( ) =>
             {
                 Thread.Sleep( 500 );
                 return SayTest( );
@@ -183,10 +183,10 @@ namespace Akka.Tests.Pattern
         public void Should_Pass_Call_And_Transition_To_Close_On_Success( )
         {
             var breaker = ShortResetTimeoutCb( );
-            InterceptExceptionType<TestException>( ( ) => breaker.Instance.WithCircuitBreaker( Task.Factory.StartNew( ThrowException ) ) );
+            InterceptExceptionType<TestException>( ( ) => breaker.Instance.WithCircuitBreaker( () => Task.Factory.StartNew( ThrowException ) ) );
             Assert.True( CheckLatch( breaker.HalfOpenLatch ) );
 
-            var result = breaker.Instance.WithCircuitBreaker( Task.Factory.StartNew( ( ) => SayTest( ) ) );
+            var result = breaker.Instance.WithCircuitBreaker( () => Task.Factory.StartNew( ( ) => SayTest( ) ) );
 
             Assert.True( CheckLatch( breaker.ClosedLatch ) );
             Assert.Equal( SayTest( ), result.Result );
@@ -198,10 +198,10 @@ namespace Akka.Tests.Pattern
             var breaker = ShortResetTimeoutCb( );
 
 
-            Assert.True( InterceptExceptionType<TestException>( ( ) => breaker.Instance.WithCircuitBreaker( Task.Factory.StartNew( ThrowException ) ).Wait( ) ) );
+            Assert.True( InterceptExceptionType<TestException>( ( ) => breaker.Instance.WithCircuitBreaker( () => Task.Factory.StartNew( ThrowException ) ).Wait( ) ) );
             Assert.True( CheckLatch( breaker.HalfOpenLatch ) );
 
-            Assert.True( InterceptExceptionType<TestException>( ( ) => breaker.Instance.WithCircuitBreaker( Task.Factory.StartNew( ThrowException ) ).Wait( ) ) );
+            Assert.True( InterceptExceptionType<TestException>( ( ) => breaker.Instance.WithCircuitBreaker( () => Task.Factory.StartNew( ThrowException ) ).Wait( ) ) );
             Assert.True( CheckLatch( breaker.OpenLatch ) );
         }
 
@@ -210,10 +210,10 @@ namespace Akka.Tests.Pattern
         {
             var breaker = ShortResetTimeoutCb( );
 
-            breaker.Instance.WithCircuitBreaker( Task.Factory.StartNew( ThrowException ) );
+            breaker.Instance.WithCircuitBreaker( () => Task.Factory.StartNew( ThrowException ) );
             Assert.True( CheckLatch( breaker.HalfOpenLatch ) );
 
-            breaker.Instance.WithCircuitBreaker( Task.Factory.StartNew( ThrowException ) );
+            breaker.Instance.WithCircuitBreaker( () => Task.Factory.StartNew( ThrowException ) );
             Assert.True( CheckLatch( breaker.OpenLatch ) );
         }
     }
@@ -225,9 +225,9 @@ namespace Akka.Tests.Pattern
         {
             var breaker = LongResetTimeoutCb( );
 
-            Assert.True( InterceptExceptionType<TestException>( ( ) => breaker.Instance.WithCircuitBreaker( Task.Factory.StartNew( ThrowException ) ).Wait( ) ) );
+            Assert.True( InterceptExceptionType<TestException>( ( ) => breaker.Instance.WithCircuitBreaker( () => Task.Factory.StartNew( ThrowException ) ).Wait( ) ) );
             Assert.True( CheckLatch( breaker.OpenLatch ) );
-            Assert.True( InterceptExceptionType<OpenCircuitException>( ( ) => breaker.Instance.WithCircuitBreaker( Task.Factory.StartNew( ThrowException ) ).Wait( ) ) );
+            Assert.True( InterceptExceptionType<OpenCircuitException>( ( ) => breaker.Instance.WithCircuitBreaker( () => Task.Factory.StartNew( ThrowException ) ).Wait( ) ) );
         }
 
         [Fact(DisplayName = "An asynchronous circuit breaker that is open should transition to half open when reset timeout")]
@@ -235,7 +235,7 @@ namespace Akka.Tests.Pattern
         {
             var breaker = ShortResetTimeoutCb( );
 
-            Assert.True( InterceptExceptionType<TestException>( ( ) => breaker.Instance.WithCircuitBreaker( Task.Factory.StartNew( ThrowException ) ).Wait( ) ) );
+            Assert.True( InterceptExceptionType<TestException>( ( ) => breaker.Instance.WithCircuitBreaker( () => Task.Factory.StartNew( ThrowException ) ).Wait( ) ) );
             Assert.True( CheckLatch( breaker.HalfOpenLatch ) );
         }
     }

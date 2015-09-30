@@ -75,7 +75,7 @@ namespace Akka.Persistence.TestKit.Journal
 
         private Persistent[] WriteMessages(int from, int to, string pid, IActorRef sender)
         {
-            var messages = Enumerable.Range(from, to).Select(i => new Persistent("a-" + i, i, pid, false, sender)).ToArray();
+            var messages = Enumerable.Range(from, to).Select(i => new Persistent("a-" + i, i, string.Empty, pid, false, sender)).ToArray();
             var probe = CreateTestProbe();
 
             Journal.Tell(new WriteMessages(messages, probe.Ref, ActorInstanceId));

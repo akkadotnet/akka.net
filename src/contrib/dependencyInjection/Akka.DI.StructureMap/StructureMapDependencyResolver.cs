@@ -17,7 +17,7 @@ namespace Akka.DI.StructureMap
 {
     /// <summary>
     /// Provides services to the <see cref="ActorSystem "/> extension system
-    /// used to create actors using the AutoFac IoC container.
+    /// used to create actors using the StructureMap IoC container.
     /// </summary>
     public class StructureMapDependencyResolver : IDependencyResolver
     {

@@ -10,7 +10,7 @@ using Akka.Event;
 using Akka.Remote;
 using Akka.Util;
 
-namespace Akka.MultiNodeTests
+namespace Akka.Cluster.Tests.MultiNode
 {
     /// <summary>
     /// User controllable "puppet" failure detector.
