@@ -28,6 +28,13 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
+        public void RelativeActorPath_starting_with_slash_must_match_single_name()
+        {
+            Elements("/foo").ShouldBe(new List<string>() { "foo" });
+        }
+
+
+        [Fact]
         public void RelativeActorPath_must_match_path_separated_names()
         {
             Elements("foo/bar/baz").ShouldBe(new List<string>() { "foo", "bar", "baz" });
