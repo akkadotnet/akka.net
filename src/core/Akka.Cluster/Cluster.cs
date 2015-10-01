@@ -27,13 +27,13 @@ namespace Akka.Cluster
 
     //TODO: xmldoc
     /// <summary>
-    /// This module is responsible cluster membership information. Changes to the cluster
-    /// information is retrieved through [[#subscribe]]. Commands to operate the cluster is
-    /// available through methods in this class, such as [[#join]], [[#down]] and [[#leave]].
+    /// This module is responsible for cluster membership information. Changes to the cluster
+    /// information is retrieved through <see cref="Akka.Cluster.Cluster.Subscribe"/>. Commands to operate the cluster is
+    /// available through methods in this class, such as <see cref="Akka.Cluster.Cluster.Join"/>, <see cref="Akka.Cluster.Cluster.Down"/> and <see cref="Akka.Cluster.Cluster.Leave"/>.
     /// 
-    /// Each cluster [[Member]] is identified by its [[akka.actor.Address]], and
+    /// Each cluster <see cref="Akka.Cluster.Member"/> is identified by its <see cref="Akka.Actor.Address"/>, and
     /// the cluster address of this actor system is [[#selfAddress]]. A member also has a status;
-    /// initially [[MemberStatus.Joining]] followed by [[MemberStatus.Up]].
+    /// initially <see cref="Akka.Cluster.MemberStatus.Joining"/> followed by <see cref="Akka.Cluster.MemberStatus.Up"/>.
     /// </summary>
     public class Cluster :IExtension
     {
