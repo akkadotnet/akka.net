@@ -24,7 +24,6 @@ namespace Akka.Cluster.Tools.PubSub.Internal
     public sealed class Count
     {
         public static readonly Count Instance = new Count();
-
         private Count() { }
     }
 
@@ -68,7 +67,7 @@ namespace Akka.Cluster.Tools.PubSub.Internal
 
         public Status(IDictionary<Address, long> versions)
         {
-            Versions = versions;
+            Versions = versions ?? new Dictionary<Address, long>(0);
         }
     }
 
@@ -79,7 +78,7 @@ namespace Akka.Cluster.Tools.PubSub.Internal
 
         public Delta(Bucket[] buckets)
         {
-            Buckets = buckets;
+            Buckets = buckets ?? new Bucket[0];
         }
     }
 

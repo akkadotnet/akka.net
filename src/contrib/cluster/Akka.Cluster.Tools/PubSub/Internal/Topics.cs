@@ -11,6 +11,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Remote;
 using Akka.Routing;
+using Akka.Util.Internal.Collections;
 
 namespace Akka.Cluster.Tools.PubSub.Internal
 {
