@@ -358,7 +358,7 @@ namespace Akka.IO
 
         /// <summary>
         /// A write command which aggregates two other write commands. Using this construct
-        /// you can chain a number of <see cref="Write" /> and/or [[WriteFile]] commands together in a way
+        /// you can chain a number of <see cref="Akka.IO.Tcp.Write" /> and/or <see cref="Akka.IO.Tcp.WriteFile" /> commands together in a way
         /// that allows them to be handled as a single write which gets written out to the
         /// network as quickly as possible.
         /// If the sub commands contain `ack` requests they will be honored as soon as the

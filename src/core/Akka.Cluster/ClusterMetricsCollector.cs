@@ -662,7 +662,7 @@ namespace Akka.Cluster
         }
 
         /**
-        * @param address [[akka.actor.Address]] of the node the metrics are gathered at
+        * @param address <see cref="Akka.Actor.Address"/> of the node the metrics are gathered at
         * @param timestamp the time of sampling, in milliseconds since midnight, January 1, 1970 UTC
         * @param systemLoadAverage OS-specific average load on the CPUs in the system, for the past 1 minute,
         *    The system is possibly nearing a bottleneck if the system load average is nearing number of cpus/cores.

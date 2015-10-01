@@ -19,7 +19,7 @@ namespace Akka.Actor
     ///     An actor system is a hierarchical group of actors which share common
     ///     configuration, e.g. dispatchers, deployments, remote capabilities and
     ///     addresses. It is also the entry point for creating or looking up actors.
-    ///     There are several possibilities for creating actors (see [[Akka.Actor.Props]]
+    ///     There are several possibilities for creating actors (see <see cref="Akka.Actor.Props"/>
     ///     for details on `props`):
     ///     <code>
     /// system.ActorOf(props, "name");
