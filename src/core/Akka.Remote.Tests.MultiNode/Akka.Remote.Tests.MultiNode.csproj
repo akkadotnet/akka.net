@@ -64,6 +64,8 @@
     <Compile Include="RemoteDeliverySpec.cs" />
     <Compile Include="RemoteRoundRobinSpec.cs" />
     <Compile Include="RemoteRandomSpec.cs" />
+    <Compile Include="NewRemoteActorSpec.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj">

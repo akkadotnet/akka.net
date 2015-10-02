@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #### 1.0.5 August 07 2015 ####
 
 #### 1.0.4 August 07 2015 ####
@@ -37,6 +38,8 @@ We now have support for the [StructureMap dependency injection framework](http:/
 PM> Install-Package Akka.DI.StructureMap
 ```
 
+=======
+>>>>>>> aa6a812... close #1044
 #### 1.0.3 June 12 2015 ####
 **Bugfix release for Akka.NET v1.0.2.**
 
