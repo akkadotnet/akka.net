@@ -111,7 +111,7 @@ namespace Akka.Cluster.Tools.Client
 
             public Contacts(ActorSelection[] contactPoints)
             {
-                ContactPoints = contactPoints;
+                ContactPoints = contactPoints ?? new ActorSelection[0];
             }
         }
 
@@ -165,11 +165,11 @@ namespace Akka.Cluster.Tools.Client
         private readonly IActorRef _pubSubMediator;
         private readonly ClusterReceptionistSettings _settings;
         private readonly int _virtualNodesFactor = 10;
+        private readonly Cluster _cluster = Cluster.Get(Context.System);
 
         private ConsistentHash<Address> _consistentHash;
-        private Cluster _cluster;
-        private ILoggingAdapter _log;
         private SortedDictionary<int, Address> _nodes;
+        private ILoggingAdapter _log;
 
         public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
 
@@ -177,7 +177,6 @@ namespace Akka.Cluster.Tools.Client
         {
             _pubSubMediator = pubSubMediator;
             _settings = settings;
-            _cluster = Cluster.Get(Context.System);
 
             if (!(_settings.Role == null || _cluster.SelfRoles.Contains(_settings.Role)))
                 throw new ArgumentException(string.Format("This cluster member [{0}] does not have a role [{1}]", _cluster.SelfAddress, _settings.Role));
@@ -294,7 +293,7 @@ namespace Akka.Cluster.Tools.Client
             var encName = client.Path.ToSerializationFormat();
             var child = Context.Child(encName);
 
-            return child != ActorRefs.Nobody
+            return !Equals(child, ActorRefs.Nobody)
                 ? child
                 : Context.ActorOf(Props.Create(() => new ClientResponseTunnel(client, _settings.ResponseTunnelReceiveTimeout)), encName);
         }

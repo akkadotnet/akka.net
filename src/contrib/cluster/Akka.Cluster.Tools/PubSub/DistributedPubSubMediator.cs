@@ -92,7 +92,7 @@ namespace Akka.Cluster.Tools.PubSub
         #region Messages
 
         [Serializable]
-        public sealed class Put
+        public sealed class Put : IEquatable<Put>
         {
             public readonly IActorRef Ref;
 
@@ -100,10 +100,32 @@ namespace Akka.Cluster.Tools.PubSub
             {
                 Ref = @ref;
             }
+
+            public bool Equals(Put other)
+            {
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(other, this)) return true;
+                return Equals(Ref, other.Ref);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as Put);
+            }
+
+            public override int GetHashCode()
+            {
+                return (Ref != null ? Ref.GetHashCode() : 0);
+            }
+
+            public override string ToString()
+            {
+                return string.Format("Put<ref:{0}>", Ref);
+            }
         }
 
         [Serializable]
-        public sealed class Remove
+        public sealed class Remove : IEquatable<Remove>
         {
             public readonly string Path;
 
@@ -111,10 +133,32 @@ namespace Akka.Cluster.Tools.PubSub
             {
                 Path = path;
             }
+
+            public bool Equals(Remove other)
+            {
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(other, this)) return true;
+                return Equals(Path, other.Path);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as Remove);
+            }
+
+            public override int GetHashCode()
+            {
+                return (Path != null ? Path.GetHashCode() : 0);
+            }
+
+            public override string ToString()
+            {
+                return string.Format("Remove<path:{0}>", Path);
+            }
         }
 
         [Serializable]
-        public sealed class Subscribe
+        public sealed class Subscribe : IEquatable<Subscribe>
         {
             public readonly string Topic;
             public readonly string Group;
@@ -128,10 +172,40 @@ namespace Akka.Cluster.Tools.PubSub
                 Group = @group;
                 Ref = @ref;
             }
+
+            public bool Equals(Subscribe other)
+            {
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(other, this)) return true;
+                return Equals(Topic, other.Topic) &&
+                       Equals(Group, other.Group) &&
+                       Equals(Ref, other.Ref);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as Subscribe);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hashCode = (Topic != null ? Topic.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ (Group != null ? Group.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ (Ref != null ? Ref.GetHashCode() : 0);
+                    return hashCode;
+                }
+            }
+
+            public override string ToString()
+            {
+                return string.Format("Subscribe<topic:{0}, group:{1}, ref:{2}>", Topic, Group, Ref);
+            }
         }
 
         [Serializable]
-        public sealed class Unsubscribe
+        public sealed class Unsubscribe : IEquatable<Unsubscribe>
         {
             public readonly string Topic;
             public readonly string Group;
@@ -145,10 +219,40 @@ namespace Akka.Cluster.Tools.PubSub
                 Group = @group;
                 Ref = @ref;
             }
+
+            public bool Equals(Unsubscribe other)
+            {
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(other, this)) return true;
+                return Equals(Topic, other.Topic) &&
+                       Equals(Group, other.Group) &&
+                       Equals(Ref, other.Ref);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as Unsubscribe);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hashCode = (Topic != null ? Topic.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ (Group != null ? Group.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ (Ref != null ? Ref.GetHashCode() : 0);
+                    return hashCode;
+                }
+            }
+
+            public override string ToString()
+            {
+                return string.Format("Unsubscribe<topic:{0}, group:{1}, ref:{2}>", Topic, Group, Ref);
+            }
         }
 
         [Serializable]
-        public sealed class SubscribeAck
+        public sealed class SubscribeAck : IEquatable<SubscribeAck>
         {
             public readonly Subscribe Subscribe;
 
@@ -156,10 +260,32 @@ namespace Akka.Cluster.Tools.PubSub
             {
                 Subscribe = subscribe;
             }
+
+            public bool Equals(SubscribeAck other)
+            {
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(other, this)) return true;
+                return Equals(Subscribe, other.Subscribe);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as SubscribeAck);
+            }
+
+            public override int GetHashCode()
+            {
+                return (Subscribe != null ? Subscribe.GetHashCode() : 0);
+            }
+
+            public override string ToString()
+            {
+                return string.Format("SubscribeAck<{0}>", Subscribe);
+            }
         }
 
         [Serializable]
-        public sealed class UnsubscribeAck
+        public sealed class UnsubscribeAck : IEquatable<UnsubscribeAck>
         {
             public readonly Unsubscribe Unsubscribe;
 
@@ -167,10 +293,32 @@ namespace Akka.Cluster.Tools.PubSub
             {
                 Unsubscribe = unsubscribe;
             }
+
+            public bool Equals(UnsubscribeAck other)
+            {
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(other, this)) return true;
+                return Equals(Unsubscribe, other.Unsubscribe);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as UnsubscribeAck);
+            }
+
+            public override int GetHashCode()
+            {
+                return (Unsubscribe != null ? Unsubscribe.GetHashCode() : 0);
+            }
+
+            public override string ToString()
+            {
+                return string.Format("UnsubscribeAck<{0}>", Unsubscribe);
+            }
         }
 
         [Serializable]
-        public sealed class Publish : IDistributedPubSubMessage
+        public sealed class Publish : IDistributedPubSubMessage, IEquatable<Publish>
         {
             public readonly string Topic;
             public readonly object Message;
@@ -182,10 +330,40 @@ namespace Akka.Cluster.Tools.PubSub
                 Message = message;
                 SendOneMessageToEachGroup = sendOneMessageToEachGroup;
             }
+
+            public bool Equals(Publish other)
+            {
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(other, this)) return true;
+                return Equals(Topic, other.Topic) &&
+                       Equals(SendOneMessageToEachGroup, other.SendOneMessageToEachGroup) &&
+                       Equals(Message, other.Message);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as Publish);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hashCode = (Topic != null ? Topic.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ (Message != null ? Message.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ SendOneMessageToEachGroup.GetHashCode();
+                    return hashCode;
+                }
+            }
+
+            public override string ToString()
+            {
+                return string.Format("Publish<topic:{0}, sendOneToEachGroup:{1}, message:{2}>", Topic, SendOneMessageToEachGroup, Message);
+            }
         }
 
         [Serializable]
-        public sealed class Send : IDistributedPubSubMessage
+        public sealed class Send : IDistributedPubSubMessage, IEquatable<Send>
         {
             public readonly string Path;
             public readonly object Message;
@@ -197,10 +375,40 @@ namespace Akka.Cluster.Tools.PubSub
                 Message = message;
                 LocalAffinity = localAffinity;
             }
+
+            public bool Equals(Send other)
+            {
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(other, this)) return true;
+                return Equals(Path, other.Path) &&
+                       Equals(LocalAffinity, other.LocalAffinity) &&
+                       Equals(Message, other.Message);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as Send);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hashCode = (Path != null ? Path.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ (Message != null ? Message.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ LocalAffinity.GetHashCode();
+                    return hashCode;
+                }
+            }
+
+            public override string ToString()
+            {
+                return string.Format("Send<path:{0}, localAffinity:{1}, message:{2}>", Path, LocalAffinity, Message);
+            }
         }
 
         [Serializable]
-        public sealed class SendToAll : IDistributedPubSubMessage
+        public sealed class SendToAll : IDistributedPubSubMessage, IEquatable<SendToAll>
         {
             public readonly string Path;
             public readonly object Message;
@@ -212,30 +420,104 @@ namespace Akka.Cluster.Tools.PubSub
                 Message = message;
                 ExcludeSelf = excludeSelf;
             }
+
+            public bool Equals(SendToAll other)
+            {
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(other, this)) return true;
+                return Equals(ExcludeSelf, other.ExcludeSelf) &&
+                       Equals(Path, other.Path) &&
+                       Equals(Message, other.Message);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as SendToAll);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hashCode = (Path != null ? Path.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ (Message != null ? Message.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ ExcludeSelf.GetHashCode();
+                    return hashCode;
+                }
+            }
+
+            public override string ToString()
+            {
+                return string.Format("SendToAll<path:{0}, excludeSelf:{1}, message:{2}>", Path, ExcludeSelf, Message);
+            }
         }
 
         [Serializable]
-        public sealed class GetTopics
+        public sealed class GetTopics: IEquatable<GetTopics>
         {
             public static readonly GetTopics Instance = new GetTopics();
             private GetTopics() { }
+
+            public bool Equals(GetTopics other)
+            {
+                if (other == null) return false;
+                return true;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as GetTopics);
+            }
+
+            public override string ToString()
+            {
+                return "GetTopics<>";
+            }
         }
 
         [Serializable]
-        public sealed class CurrentTopics
+        public sealed class CurrentTopics : IEquatable<CurrentTopics>
         {
             public readonly string[] Topics;
 
             public CurrentTopics(string[] topics)
             {
-                Topics = topics;
+                Topics = topics ?? new string[0];
+            }
+
+            public bool Equals(CurrentTopics other)
+            {
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return Equals(Topics, other.Topics);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as CurrentTopics);
+            }
+
+            public override int GetHashCode()
+            {
+                return (Topics != null ? Topics.GetHashCode() : 0);
+            }
+
+            public override string ToString()
+            {
+                return string.Format("CurrentTopics<{0}>", string.Join(",", Topics));
             }
         }
 
         #endregion
 
+        public static Props Props(DistributedPubSubSettings settings)
+        {
+            return Actor.Props.Create(() => new DistributedPubSubMediator(settings)).WithDeploy(Deploy.Local);
+        }
+
+        private readonly Cluster _cluster = Cluster.Get(Context.System);
         private readonly DistributedPubSubSettings _settings;
-        private readonly Cluster _cluster;
         private readonly ICancelable _gossipCancelable;
         private readonly ICancelable _pruneCancelable;
         private readonly TimeSpan _pruneInterval;
@@ -262,10 +544,14 @@ namespace Akka.Cluster.Tools.PubSub
                 throw new ArgumentException("Consistent hashing routing logic cannot be used by the pub-sub mediator");
 
             _settings = settings;
-            _cluster = Cluster.Get(Context.System);
 
             if (!string.IsNullOrEmpty(_settings.Role) && !_cluster.SelfRoles.Contains(_settings.Role))
-                throw new ArgumentException(string.Format("The cluster member [{0}] doesn't have the role {1}", _cluster.SelfAddress, _settings.Role));
+                throw new ArgumentException(string.Format("The cluster member [{0}] doesn't have the role [{1}]", _cluster.SelfAddress, _settings.Role));
+
+            //Start periodic gossip to random nodes in cluster
+            _gossipCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_settings.GossipInterval, _settings.GossipInterval, Self, GossipTick.Instance, Self);
+            _pruneInterval = new TimeSpan(_settings.RemovedTimeToLive.Ticks / 2);
+            _pruneCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_pruneInterval, _pruneInterval, Self, Prune.Instance, Self);
 
             Receive<Send>(send =>
             {
@@ -278,7 +564,7 @@ namespace Akka.Cluster.Tools.PubSub
                     if (bucket.Content.TryGet(send.Path, out valueHolder) && send.LocalAffinity)
                     {
                         var routee = valueHolder.Routee;
-                        if(routee != null) routees.Add(routee);
+                        if (routee != null) routees.Add(routee);
                     }
                     else
                     {
@@ -305,15 +591,11 @@ namespace Akka.Cluster.Tools.PubSub
             Receive<Publish>(publish =>
             {
                 var topic = Uri.EscapeDataString(publish.Topic);
-                var path = Self.Path/topic;
+                var path = Self.Path / topic;
                 if (publish.SendOneMessageToEachGroup)
-                {
                     PublishToEachGroup(path.ToStringWithoutAddress(), publish.Message);
-                }
                 else
-                {
                     PublishMessage(path.ToStringWithoutAddress(), publish.Message);
-                }
             });
             Receive<Put>(put =>
             {
@@ -349,7 +631,7 @@ namespace Akka.Cluster.Tools.PubSub
                 }
                 else
                 {
-                    var t = Context.ActorOf(Props.Create(() => 
+                    var t = Context.ActorOf(Actor.Props.Create(() =>
                         new Topic(_settings.RemovedTimeToLive, _settings.RoutingLogic)), topic);
                     t.Forward(subscribe);
                     HandleRegisterTopic(t);
@@ -372,9 +654,7 @@ namespace Akka.Cluster.Tools.PubSub
                 var topic = Uri.EscapeDataString(unsubscribe.Topic);
                 var child = Context.Child(topic);
                 if (child != null)
-                {
                     child.Forward(unsubscribe);
-                }
             });
             Receive<Unsubscribed>(unsubscribed =>
             {
@@ -385,14 +665,10 @@ namespace Akka.Cluster.Tools.PubSub
                 // gossip chat starts with a Status message, containing the bucket versions of the other node
                 var delta = CollectDelta(status.Versions).ToArray();
                 if (delta.Length != 0)
-                {
                     Sender.Tell(new Delta(delta));
-                }
 
                 if (OtherHasNewerVersions(status.Versions))
-                {
                     Sender.Tell(new Status(OwnVersions));
-                }
             });
             Receive<Delta>(delta =>
             {
@@ -486,7 +762,7 @@ namespace Akka.Cluster.Tools.PubSub
                 {
                     var deltaContent = bucket.Content
                         .Where(kv => kv.Value.Version > v)
-                        .Aggregate(ImmutableTreeMap<string, ValueHolder>.Empty, 
+                        .Aggregate(ImmutableTreeMap<string, ValueHolder>.Empty,
                             (current, kv) => current.AddOrUpdate(kv.Key, kv.Value));
 
                     count += deltaContent.Count;
@@ -564,14 +840,14 @@ namespace Akka.Cluster.Tools.PubSub
         {
             var prefix = path + "/";
             var lastKey = path + "0";   // '0' is the next char of '/'
-            
+
             var groups = ExtractGroups(prefix, lastKey).GroupBy(kv => kv.Key);
             var wrappedMessage = new SendToOneSubscriber(message);
 
             foreach (var g in groups)
             {
                 var routees = g.Select(r => r.Value).ToArray();
-                if(routees.Length != 0)
+                if (routees.Length != 0)
                     new Router(_settings.RoutingLogic, routees).Route(wrappedMessage, Sender);
             }
         }
