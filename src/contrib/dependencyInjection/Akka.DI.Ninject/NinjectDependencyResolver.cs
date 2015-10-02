@@ -79,7 +79,17 @@ namespace Akka.DI.Ninject
         /// <returns>The configuration object for the given actor type</returns>
         public Props Create<TActor>() where TActor : ActorBase
         {
-            return system.GetExtension<DIExt>().Props(typeof(TActor));
+            return Create(typeof(TActor));
+        }
+
+        /// <summary>
+        /// Used to register the configuration for an actor of the specified type <paramref name="actorType"/> 
+        /// </summary>
+        /// <param name="actorType">The <see cref="Type"/> of actor the configuration is based</param>
+        /// <returns>The configuration object for the given actor type</returns>
+        public virtual Props Create(Type actorType)
+        {
+            return system.GetExtension<DIExt>().Props(actorType);
         }
 
         /// <summary>
