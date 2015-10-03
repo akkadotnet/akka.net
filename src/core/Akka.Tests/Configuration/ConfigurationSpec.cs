@@ -94,6 +94,19 @@ a {
             public bool BoolProperty { get; set; }
             public int[] IntergerArray { get; set; }
         }
+
+        [Fact]
+        public void ParsingEmptyStringShouldProduceEmptyHoconRoot()
+        {
+            var value = Parser.Parse(string.Empty, null).Value;
+            value.IsEmpty.ShouldBeTrue();
+        }
+
+        [Fact]
+        public void Config_Empty_is_Empty()
+        {
+            ConfigurationFactory.Empty.IsEmpty.ShouldBeTrue();
+        }
    }
 }
 
