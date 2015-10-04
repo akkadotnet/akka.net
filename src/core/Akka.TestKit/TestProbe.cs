@@ -138,6 +138,11 @@ namespace Akka.TestKit
         {
             ((IInternalActorRef)TestActor).Suspend();
         }
+
+        public int CompareTo(object obj)
+        {
+            return TestActor.CompareTo(obj);
+        }
     }
 }
 
