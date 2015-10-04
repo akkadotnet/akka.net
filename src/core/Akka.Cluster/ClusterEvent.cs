@@ -29,7 +29,7 @@ namespace Akka.Cluster
             //TODO: Sort out xml doc references
             /// <summary>
             /// When using this subscription mode a snapshot of
-            /// [[akka.cluster.ClusterEvent.CurrentClusterState]] will be sent to the
+            /// <see cref="CurrentClusterState"/> will be sent to the
             /// subscriber as the first message.
             /// </summary>
             InitialStateAsSnapshot,
@@ -215,7 +215,7 @@ namespace Akka.Cluster
 
         //TODO: Sort out xml doc references
         /// <summary>
-        /// Member status changed to [[MemberStatus.Exiting]] and will be removed
+        /// Member status changed to <see cref="Akka.Cluster.MemberStatus.Exiting"/> and will be removed
         /// when all members have seen the `Exiting` status.
         /// </summary>
         public sealed class MemberExited : MemberStatusChange
@@ -363,10 +363,9 @@ namespace Akka.Cluster
             public static readonly IClusterDomainEvent Instance = new ClusterShuttingDown();
         }
 
-        //TODO: xml doc
         /// <summary>
-        /// Marker interface to facilitate subscription of
-        /// both [[UnreachableMember]] and [[ReachableMember]].
+        /// A marker interface to facilitate the subscription of
+        /// both <see cref="Akka.Cluster.ClusterEvent.UnreachableMember"/> and <see cref="Akka.Cluster.ClusterEvent.ReachableMember"/>.
         /// </summary>
         public interface IReachabilityEvent : IClusterDomainEvent
         {
@@ -419,7 +418,7 @@ namespace Akka.Cluster
         /// <summary>
         /// A member is considered as reachable by the failure detector
         /// after having been unreachable.
-        /// @see [[UnreachableMember]]
+        /// <see cref="Akka.Cluster.ClusterEvent.UnreachableMember"/>
         /// </summary>
         public sealed class ReachableMember : ReachabilityEvent
         {

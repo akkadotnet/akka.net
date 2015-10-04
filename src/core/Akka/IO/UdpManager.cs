@@ -25,31 +25,30 @@ namespace Akka.IO
      *
      * == Bind and send ==
      *
-     * To bind and listen to a local address, a [[akka.io.Udp..Bind]] command must be sent to this actor. If the binding
-     * was successful, the sender of the [[akka.io.Udp.Bind]] will be notified with a [[akka.io.Udp.Bound]]
-     * message. The sender of the [[akka.io.Udp.Bound]] message is the Listener actor (an internal actor responsible for
-     * listening to server events). To unbind the port an [[akka.io.Tcp.Unbind]] message must be sent to the Listener actor.
+     * To bind and listen to a local address, a <see cref="Akka.IO.Udp.Bind"/> command must be sent to this actor. If the binding
+     * was successful, the sender of the <see cref="Akka.IO.Udp.Bind"/> will be notified with a <see cref="Akka.IO.Udp.Bound"/>
+     * message. The sender of the <see cref="Akka.IO.Udp.Bound"/> message is the Listener actor (an internal actor responsible for
+     * listening to server events). To unbind the port an <see cref="Akka.IO.Udp.Unbind"/> message must be sent to the Listener actor.
      *
-     * If the bind request is rejected because the Udp system is not able to register more channels (see the nr-of-selectors
-     * and max-channels configuration options in the akka.io.udp section of the configuration) the sender will be notified
-     * with a [[akka.io.Udp.CommandFailed]] message. This message contains the original command for reference.
+     * If the bind request is rejected because the Udp system is not able to register more channels (see the <c>nr-of-selectors</c>
+     * and <c>max-channels</c> configuration options in the <c>akka.io.udp</c> section of the configuration) the sender will be notified
+     * with a <see cref="Akka.IO.Udp.CommandFailed"/> message. This message contains the original command for reference.
      *
-     * The handler provided in the [[akka.io.Udp.Bind]] message will receive inbound datagrams to the bound port
-     * wrapped in [[akka.io.Udp.Received]] messages which contain the payload of the datagram and the sender address.
+     * The handler provided in the <see cref="Akka.IO.Udp.Bind"/> message will receive inbound datagrams to the bound port
+     * wrapped in <see cref="Akka.IO.Udp.Received"/> messages which contain the payload of the datagram and the sender address.
      *
-     * UDP datagrams can be sent by sending [[akka.io.Udp.Send]] messages to the Listener actor. The sender port of the
+     * UDP datagrams can be sent by sending <see cref="Akka.IO.Udp.Send"/> messages to the Listener actor. The sender port of the
      * outbound datagram will be the port to which the Listener is bound.
      *
      * == Simple send ==
      *
      * Udp provides a simple method of sending UDP datagrams if no reply is expected. To acquire the Sender actor
      * a SimpleSend message has to be sent to the manager. The sender of the command will be notified by a SimpleSenderReady
-     * message that the service is available. UDP datagrams can be sent by sending [[akka.io.Udp.Send]] messages to the
+     * message that the service is available. UDP datagrams can be sent by sending <see cref="Akka.IO.Udp.Send"/> messages to the
      * sender of SimpleSenderReady. All the datagrams will contain an ephemeral local port as sender and answers will be
      * discarded.
      *
      */
-
     internal class UdpManager : SelectionHandler.SelectorBasedManager
     {
         private readonly UdpExt _udp;
