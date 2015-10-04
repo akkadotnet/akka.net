@@ -125,7 +125,7 @@ namespace Akka.Actor
             return actorCell != null ? actorCell.Self : ActorRefs.NoSender;
         }
     }
-    public interface IActorRef : ICanTell, IEquatable<IActorRef>, IComparable<IActorRef>, ISurrogated
+    public interface IActorRef : ICanTell, IEquatable<IActorRef>, IComparable<IActorRef>, ISurrogated, IComparable
     {
         ActorPath Path { get; }
     }
@@ -213,6 +213,13 @@ namespace Akka.Actor
                 hash = hash * 23 + Path.GetHashCode();
                 return hash;
             }
+        }
+
+        public int CompareTo(object obj)
+        {
+            if (obj != null && !(obj is IActorRef))
+                throw new ArgumentException("Object must be of type IActorRef.");
+            return CompareTo((IActorRef) obj);
         }
 
         public bool Equals(IActorRef other)

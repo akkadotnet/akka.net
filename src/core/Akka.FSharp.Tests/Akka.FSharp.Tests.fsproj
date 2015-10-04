@@ -70,9 +70,10 @@
   <ItemGroup>
     <Compile Include="Tests.fs" />
     <Compile Include="ComputationExpression.fs" />
-    <Compile Include="ApiTests.fs" />
     <None Include="packages.config" />
     <None Include="app.config" />
+    <Compile Include="ApiTests.fs" />
+    <Compile Include="InfrastructureTests.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FsCheck">

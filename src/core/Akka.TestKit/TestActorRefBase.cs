@@ -139,6 +139,11 @@ namespace Akka.TestKit
             return _internalRef.GetHashCode();
         }
 
+        public int CompareTo(object obj)
+        {
+            return ((IComparable) _internalRef).CompareTo(obj);
+        }
+
         public bool Equals(IActorRef other)
         {
             return _internalRef.Equals(other);
