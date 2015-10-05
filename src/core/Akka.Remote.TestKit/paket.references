@@ -1,6 +1,7 @@
 Google.ProtocolBuffers
 Helios
-Microsoft.Bcl.Immutable
+System.Collections.Immutable
 Newtonsoft.Json
 group Test
-xunit
+xunit.core
+xunit.assert

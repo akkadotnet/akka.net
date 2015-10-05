@@ -3,13 +3,12 @@ source https://www.nuget.org/api/v2/
 nuget Autofac
 nuget Castle.Windsor
 nuget faker-csharp
-nuget fastJSON 
-nuget FsPickler 
+nuget FsPickler >= 1.2
 nuget FSPowerPack.Linq.Community 
 nuget Google.ProtocolBuffers 
 nuget Google.ProtocolBuffersLite 
 nuget Helios  
-nuget Microsoft.Bcl.Immutable 
+nuget System.Collections.Immutable
 nuget Newtonsoft.Json  
 nuget Ninject 
 nuget NLog 
@@ -18,6 +17,7 @@ nuget Serilog
 nuget slf4net
 nuget structuremap 
 nuget Unity 
+nuget Wire
 
 group Test
 source https://www.nuget.org/api/v2/
@@ -25,6 +25,8 @@ nuget NUnit
 nuget NUnit.Runners
 nuget FluentAssertions ~> 3
 nuget FsCheck.Xunit
+nuget xunit.core >= 2.1
+nuget xunit.assert
 nuget xunit.extensions
 nuget xunit.runner.console
 nuget xunit.runner.utility

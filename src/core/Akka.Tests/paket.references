@@ -1,7 +1,7 @@
-fastJSON
+Newtonsoft.Json
 
 group Test
 FluentAssertions
 FsCheck
-xunit.extensions
-xunit.runner.visualstudio
+xunit.core
+xunit.assert

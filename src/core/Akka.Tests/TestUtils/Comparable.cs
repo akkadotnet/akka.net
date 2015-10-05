@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Newtonsoft.Json;
+
 namespace Akka.Tests.TestUtils
 {
     public class Comparable
@@ -23,7 +25,7 @@ namespace Akka.Tests.TestUtils
 
         public override string ToString()
         {
-            var res = fastJSON.JSON.Instance.ToJSON(this);
+            var res = JsonConvert.SerializeObject(this);
             return res;
         }
     }

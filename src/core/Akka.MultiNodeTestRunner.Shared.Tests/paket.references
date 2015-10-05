@@ -1,3 +1,4 @@
 faker-csharp
 group Test
-xunit
+xunit.core
+xunit.assert

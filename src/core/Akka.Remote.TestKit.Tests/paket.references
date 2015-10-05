@@ -1,4 +1,5 @@
 Helios
-Microsoft.Bcl.Immutable
+System.Collections.Immutable
 group Test
-xunit
+xunit.core
+xunit.assert

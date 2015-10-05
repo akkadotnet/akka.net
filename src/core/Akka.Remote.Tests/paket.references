@@ -1,3 +1,4 @@
 Google.ProtocolBuffers
 group Test
-xunit
+xunit.core
+xunit.assert
