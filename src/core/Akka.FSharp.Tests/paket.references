@@ -1,2 +1,4 @@
 group Test
 FsCheck.Xunit
+xunit.core
+xunit.assert

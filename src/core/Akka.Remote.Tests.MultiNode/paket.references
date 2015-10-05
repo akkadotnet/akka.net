@@ -1,5 +1,6 @@
+System.Collections.Immutable
+
 group Test
-xunit
 xunit.abstractions
 xunit.assert
 xunit.core
