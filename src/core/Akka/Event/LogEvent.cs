@@ -67,7 +67,7 @@ namespace Akka.Event
         /// <returns>A <see cref="System.String" /> that represents this LogEvent.</returns>
         public override string ToString()
         {
-            return string.Format("[{0}][{1}][Thread {2}][{3}] {4}", LogLevel().ToString().Replace("Level", "").ToUpperInvariant(), Timestamp, Thread.ManagedThreadId.ToString().PadLeft(4, '0'), LogSource, Message);
+            return string.Format("[{0}][{1}][Thread {2}][{3}] {4}", LogLevel().ToString().Replace("Level", "").ToUpperInvariant(), Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff"), Thread.ManagedThreadId.ToString().PadLeft(4, '0'), LogSource, Message);
         }
     }
 }
