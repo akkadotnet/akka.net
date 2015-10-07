@@ -19,7 +19,7 @@ namespace Akka.Util
     public class AtomicReference<T>
     {
         /// <summary>
-        /// Sets the initial value of this <see cref="AtomicReference{T}"/> to <see cref="originalValue"/>.
+        /// Sets the initial value of this <see cref="AtomicReference{T}"/> to <paramref name="originalValue"/>.
         /// </summary>
         public AtomicReference(T originalValue)
         {
@@ -56,10 +56,10 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// If <see cref="Value"/> equals <see cref="expected"/>, then set the Value to
-        /// <see cref="newValue"/>.
+        /// If <see cref="Value"/> equals <paramref name="expected"/>, then set the Value to
+        /// <paramref name="newValue"/>.
         /// </summary>
-        /// <returns><c>true</c> if <see cref="newValue"/> was set</returns>
+        /// <returns><c>true</c> if <paramref name="newValue"/> was set</returns>
         public bool CompareAndSet(T expected, T newValue)
         {
             //special handling for null values
@@ -84,7 +84,7 @@ namespace Akka.Util
         #region Conversion operators
 
         /// <summary>
-        /// Implicit conversion operator = automatically casts the <see cref="AtomicReference{T}"/> to an instance of <typeparam name="T"></typeparam>
+        /// Implicit conversion operator = automatically casts the <see cref="AtomicReference{T}"/> to an instance of <typeparamref name="T"/>.
         /// </summary>
         public static implicit operator T(AtomicReference<T> aRef)
         {

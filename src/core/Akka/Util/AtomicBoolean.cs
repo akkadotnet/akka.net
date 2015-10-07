@@ -23,7 +23,7 @@ namespace Akka.Util
 
         private int _value;
         /// <summary>
-        /// Sets the initial value of this <see cref="AtomicBoolean"/> to <see cref="initialValue"/>.
+        /// Sets the initial value of this <see cref="AtomicBoolean"/> to <paramref name="initialValue"/>.
         /// </summary>
         public AtomicBoolean(bool initialValue = false)
         {
@@ -47,10 +47,10 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// If <see cref="Value"/> equals <see cref="expected"/>, then set the Value to
-        /// <see cref="newValue"/>.
+        /// If <see cref="Value"/> equals <paramref name="expected"/>, then set the Value to
+        /// <paramref name="newValue"/>.
         /// </summary>
-        /// <returns><c>true</c> if <see cref="newValue"/> was set</returns>
+        /// <returns><c>true</c> if <paramref name="newValue"/> was set</returns>
         public bool CompareAndSet(bool expected, bool newValue)
         {
             var expectedInt = expected ? _trueValue : _falseValue;

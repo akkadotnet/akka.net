@@ -190,9 +190,9 @@ namespace Akka.Persistence
         public int UnconfirmedCount { get { return _unconfirmed.Count; } }
 
         /// <summary>
-        /// Send the message created with <paramref name="deliveryMessageMapper"/> function to the <see cref="destination"/>
+        /// Send the message created with <paramref name="deliveryMessageMapper"/> function to the <paramref name="destination"/>
         /// actor. It will retry sending the message until the delivery is confirmed with <see cref="ConfirmDelivery"/>.
-        /// Correlation between these two methods is performed by delivery id - parameter of <see cref="deliveryMessageMapper"/>.
+        /// Correlation between these two methods is performed by delivery id - parameter of <paramref name="deliveryMessageMapper"/>.
         /// Usually it's passed inside the message to the destination, which replies with the message having the same id.
         /// 
         /// During recovery this method won't send out any message, but it will be sent later until corresponding 

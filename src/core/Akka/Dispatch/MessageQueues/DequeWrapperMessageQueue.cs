@@ -20,7 +20,7 @@ namespace Akka.Dispatch.MessageQueues
         private readonly Stack<Envelope> _prependBuffer = new Stack<Envelope>();
         private readonly IMessageQueue _messageQueue;
         /// <summary>
-        /// Takes another <see cref="MessageQueue"/> as an argument - wraps <see cref="messageQueue"/>
+        /// Takes another <see cref="MessageQueue"/> as an argument - wraps <paramref name="messageQueue"/>
         /// in order to provide it with prepend (<see cref="EnqueueFirst"/>) semantics.
         /// </summary>
         /// <param name="messageQueue"></param>
