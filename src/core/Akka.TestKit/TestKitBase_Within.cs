@@ -15,7 +15,7 @@ namespace Akka.TestKit
     {
 
         /// <summary>
-        /// Execute code block while bounding its execution time between 0 seconds and <see cref="max"/>.
+        /// Execute code block while bounding its execution time between 0 seconds and <paramref name="max"/>.
         /// <para>`within` blocks may be nested. All methods in this class which take maximum wait times 
         /// are available in a version which implicitly uses the remaining time governed by 
         /// the innermost enclosing `within` block.</para>
@@ -27,7 +27,7 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// Execute code block while bounding its execution time between <see cref="min"/> and <see cref="max"/>.
+        /// Execute code block while bounding its execution time between <paramref name="min"/> and <paramref name="max"/>.
         /// <para>`within` blocks may be nested. All methods in this class which take maximum wait times 
         /// are available in a version which implicitly uses the remaining time governed by 
         /// the innermost enclosing `within` block.</para>
@@ -40,7 +40,7 @@ namespace Akka.TestKit
 
 
         /// <summary>
-        /// Execute code block while bounding its execution time between 0 seconds and <see cref="max"/>.
+        /// Execute code block while bounding its execution time between 0 seconds and <paramref name="max"/>.
         /// <para>`within` blocks may be nested. All methods in this class which take maximum wait times 
         /// are available in a version which implicitly uses the remaining time governed by 
         /// the innermost enclosing `within` block.</para>
@@ -52,7 +52,7 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// Execute code block while bounding its execution time between <see cref="min"/> and <see cref="max"/>.
+        /// Execute code block while bounding its execution time between <paramref name="min"/> and <paramref name="max"/>.
         /// <para>`within` blocks may be nested. All methods in this class which take maximum wait times 
         /// are available in a version which implicitly uses the remaining time governed by 
         /// the innermost enclosing `within` block.</para>

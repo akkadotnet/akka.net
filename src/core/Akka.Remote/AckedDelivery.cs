@@ -196,7 +196,7 @@ namespace Akka.Remote
         /// Class representing an acknowledgement with select negative acknowledgements.
         /// </summary>
         /// <param name="cumulativeAck">Represents the highest sequence number received</param>
-        /// <param name="nacks">Set of sequence numbers between the last delivered one and <see cref="cumulativeAck"/> that has not been received.</param>
+        /// <param name="nacks">Set of sequence numbers between the last delivered one and <paramref name="cumulativeAck"/> that has not been received.</param>
         public Ack(SeqNo cumulativeAck, IEnumerable<SeqNo> nacks)
         {
             Nacks = new SortedSet<SeqNo>(nacks, SeqNo.Comparer);

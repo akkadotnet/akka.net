@@ -63,9 +63,9 @@ namespace Akka.Util
     internal static class ContinuousEnumeratorExtensions
     {
         /// <summary>
-        /// Provides a <see cref="ContinuousEnumerator{T}"/> instance for <see cref="collection"/>.
+        /// Provides a <see cref="ContinuousEnumerator{T}"/> instance for <paramref name="collection"/>.
         /// 
-        /// Internally, it just wraps <see cref="collection"/>'s internal iterator with circular iteration behavior.
+        /// Internally, it just wraps <paramref name="collection"/>'s internal iterator with circular iteration behavior.
         /// </summary>
         public static ContinuousEnumerator<T> GetContinuousEnumerator<T>(this IEnumerable<T> collection)
         {

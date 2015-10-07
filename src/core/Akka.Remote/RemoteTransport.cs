@@ -68,7 +68,7 @@ namespace Akka.Remote
         public abstract Task Shutdown();
 
         /// <summary>
-        /// Sends the given message to the recipient, supplying <see cref="sender"/> if any.
+        /// Sends the given message to the recipient, supplying <paramref name="sender"/> if any.
         /// </summary>
         public abstract void Send(object message, IActorRef sender, RemoteActorRef recipient);
 

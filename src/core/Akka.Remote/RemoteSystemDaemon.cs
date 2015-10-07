@@ -102,7 +102,8 @@ namespace Akka.Remote
         /// <summary>
         ///     Called when [receive].
         /// </summary>
-        /// <param name="message">The message.</param>
+        /// <param name="message">The message that was received.</param>
+        /// <param name="sender">The actor that sent the message.</param>
         protected void OnReceive(object message, IActorRef sender)
         {
             //note: RemoteDaemon does not handle ActorSelection messages - those are handled directly by the RemoteActorRefProvider.
