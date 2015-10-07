@@ -62,7 +62,9 @@ namespace Akka.Tests.Event
         [Fact]
         public void ManageSubscriptions()
         {
+
             var bus = new EventStream(true);
+            bus.StartUnsubscriber(Sys);
             bus.Subscribe(TestActor, typeof(M));
 
             bus.Publish(new M { Value = 42 });
