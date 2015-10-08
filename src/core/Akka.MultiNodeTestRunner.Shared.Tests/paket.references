@@ -1,0 +1,4 @@
+faker-csharp
+group Test
+xunit.core
+xunit.assert

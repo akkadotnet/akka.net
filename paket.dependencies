@@ -1,0 +1,43 @@
+source https://www.nuget.org/api/v2/
+
+nuget Autofac
+nuget Castle.Windsor
+nuget faker-csharp
+nuget FsPickler >= 1.2
+nuget FSPowerPack.Linq.Community 
+nuget Google.ProtocolBuffers 
+nuget Google.ProtocolBuffersLite 
+nuget Helios  
+nuget System.Collections.Immutable
+nuget Newtonsoft.Json  
+nuget Ninject 
+nuget NLog 
+nuget qdfeed 
+nuget Serilog 
+nuget slf4net
+nuget structuremap 
+nuget Unity 
+nuget Wire
+
+group Test
+source https://www.nuget.org/api/v2/
+nuget NUnit 
+nuget NUnit.Runners
+nuget FluentAssertions ~> 3
+nuget FsCheck.Xunit
+nuget xunit.core >= 2.1
+nuget xunit.assert
+nuget xunit.extensions
+nuget xunit.runner.console
+nuget xunit.runner.utility
+nuget xunit.runner.visualstudio
+
+group Build
+source https://www.nuget.org/api/v2/
+nuget Nuget.CommandLine
+nuget FAKE
+nuget SourceLink.Fake
+
+group Legacy
+source https://www.nuget.org/api/v2/
+nuget xunit 1.9.2
