@@ -32,7 +32,19 @@ namespace Akka.Configuration.Hocon
         /// </summary>
         public bool IsEmpty
         {
-            get { return Values.Count == 0; }
+            get
+            {
+                if (Values.Count == 0)
+                    return true;
+
+                var first = Values[0] as HoconObject;
+                if (first != null)
+                {
+                    if (first.Items.Count == 0)
+                        return true;
+                }
+                return false;
+            }
         }
 
         /// <summary>
