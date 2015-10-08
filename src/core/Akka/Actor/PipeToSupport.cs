@@ -16,7 +16,7 @@ namespace Akka.Actor
     public static class PipeToSupport
     {
         /// <summary>
-        /// Pipes the output of a Task directly to the <see cref="recipient"/>'s mailbox once
+        /// Pipes the output of a Task directly to the <paramref name="recipient"/>'s mailbox once
         /// the task completes
         /// </summary>
         public static Task PipeTo<T>(this Task<T> taskToPipe, ICanTell recipient, IActorRef sender = null)
@@ -32,8 +32,8 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Pipes the output of a Task directly to the <see cref="recipient"/>'s mailbox once
-        /// the task completes.  As this task has no result, only exceptions will be piped to the <see cref="recipient"/>
+        /// Pipes the output of a Task directly to the <paramref name="recipient"/>'s mailbox once
+        /// the task completes.  As this task has no result, only exceptions will be piped to the <paramref name="recipient"/>
         /// </summary>
         public static Task PipeTo(this Task taskToPipe, ICanTell recipient, IActorRef sender = null)
         {

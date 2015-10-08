@@ -245,7 +245,7 @@ namespace Akka.Remote.Transport
         public TaskCompletionSource<IHandleEventListener> ReadHandlerSource { get; protected set; }
 
         /// <summary>
-        /// Asynchronously sends the specified <see cref="payload"/> to the remote endpoint. This method's implementation MUST be thread-safe
+        /// Asynchronously sends the specified <paramref name="payload"/> to the remote endpoint. This method's implementation MUST be thread-safe
         /// as it might be called from different threads. This method MUST NOT block.
         /// 
         /// Writes guarantee ordering of messages, but not their reception. The call to write returns with a boolean indicating if the

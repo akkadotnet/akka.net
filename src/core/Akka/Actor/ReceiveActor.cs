@@ -122,7 +122,7 @@ namespace Akka.Actor
 
         /// <summary>
         /// Registers a handler for incoming messages of the specified type <typeparamref name="T"/>.
-        /// If <paramref name="shouldHandle"/>!=<c>null</c> then it must return true before a message is passed to <paramref name="handler"/>.        
+        /// If <paramref name="shouldHandle"/>!=<c>null</c> then it must return true before a message is passed to <paramref name="handler"/>.
         /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(System.Action)"/> or <see cref="BecomeStacked"/>.</remarks>
         /// <remarks>Note that handlers registered prior to this may have handled the message already. 
         /// In that case, this handler will not be invoked.</remarks>
@@ -138,8 +138,8 @@ namespace Akka.Actor
 
         /// <summary>
         /// Registers a handler for incoming messages of the specified type <typeparamref name="T"/>.
-        /// If <paramref name="shouldHandle"/>!=<c>null</c> then it must return true before a message is passed to <paramref name="handler"/>.        
-        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(System.Action)"/> or <see cref="BecomeStacked"/>.</remarks>
+        /// If <paramref name="shouldHandle"/>!=<c>null</c> then it must return true before a message is passed to <paramref name="handler"/>.
+        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(Action)"/> or <see cref="BecomeStacked"/>.</remarks>
         /// <remarks>Note that handlers registered prior to this may have handled the message already. 
         /// In that case, this handler will not be invoked.</remarks>
         /// </summary>
@@ -153,14 +153,14 @@ namespace Akka.Actor
 
 
         /// <summary>
-        /// Registers a handler for incoming messages of the specified <see cref="messageType"/>.
-        /// If <paramref name="shouldHandle"/>!=<c>null</c> then it must return true before a message is passed to <paramref name="handler"/>.        
-        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(System.Action)"/> or <see cref="BecomeStacked"/>.</remarks>
+        /// Registers a handler for incoming messages of the specified <paramref name="messageType"/>.
+        /// If <paramref name="shouldHandle"/>!=<c>null</c> then it must return true before a message is passed to <paramref name="handler"/>.
+        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(Action)"/> or <see cref="BecomeStacked"/>.</remarks>
         /// <remarks>Note that handlers registered prior to this may have handled the message already. 
         /// In that case, this handler will not be invoked.</remarks>
         /// </summary>
         /// <param name="messageType">The type of the message</param>
-        /// <param name="handler">The message handler that is invoked for incoming messages of the specified <see cref="messageType"/></param>
+        /// <param name="handler">The message handler that is invoked for incoming messages of the specified <paramref name="messageType"/></param>
         /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
         protected void Receive(Type messageType, Action<object> handler, Predicate<object> shouldHandle = null)
         {
@@ -170,14 +170,14 @@ namespace Akka.Actor
 
 
         /// <summary>
-        /// Registers a handler for incoming messages of the specified <see cref="messageType"/>.
-        /// If <paramref name="shouldHandle"/>!=<c>null</c> then it must return true before a message is passed to <paramref name="handler"/>.        
-        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(System.Action)"/> or <see cref="BecomeStacked"/>.</remarks>
+        /// Registers a handler for incoming messages of the specified <paramref name="messageType"/>.
+        /// If <paramref name="shouldHandle"/>!=<c>null</c> then it must return true before a message is passed to <paramref name="handler"/>.
+        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(Action)"/> or <see cref="BecomeStacked"/>.</remarks>
         /// <remarks>Note that handlers registered prior to this may have handled the message already. 
         /// In that case, this handler will not be invoked.</remarks>
         /// </summary>
         /// <param name="messageType">The type of the message</param>
-        /// <param name="handler">The message handler that is invoked for incoming messages of the specified <see cref="messageType"/></param>
+        /// <param name="handler">The message handler that is invoked for incoming messages of the specified <paramref name="messageType"/></param>
         /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
         protected void Receive(Type messageType, Predicate<object> shouldHandle, Action<object> handler)
         {
@@ -192,7 +192,7 @@ namespace Akka.Actor
         /// Registers a handler for incoming messages of the specified type <typeparamref name="T"/>.
         /// The handler should return <c>true</c> if it has handled the message. 
         /// If the handler returns true no more handlers will be tried; otherwise the next registered handler will be tried.
-        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(System.Action)"/> or <see cref="BecomeStacked"/>.</remarks>
+        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(Action)"/> or <see cref="BecomeStacked"/>.</remarks>
         /// <remarks>Note that handlers registered prior to this may have handled the message already. 
         /// In that case, this handler will not be invoked.</remarks>
         /// </summary>
@@ -207,16 +207,16 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Registers a handler for incoming messages of the specified <see cref="messageType"/>.
+        /// Registers a handler for incoming messages of the specified <paramref name="messageType"/>.
         /// The handler should return <c>true</c> if it has handled the message. 
         /// If the handler returns true no more handlers will be tried; otherwise the next registered handler will be tried.
-        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(System.Action)"/> or <see cref="BecomeStacked"/>.</remarks>
+        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(Action)"/> or <see cref="BecomeStacked"/>.</remarks>
         /// <remarks>Note that handlers registered prior to this may have handled the message already. 
         /// In that case, this handler will not be invoked.</remarks>
         /// </summary>
         /// <param name="messageType">The type of the message</param>
         /// <param name="handler">The message handler that is invoked for incoming messages of the 
-        /// specified type <see cref="messageType"/>. It should return <c>true</c>if it handled/matched 
+        /// specified type <paramref name="messageType"/>. It should return <c>true</c>if it handled/matched 
         /// the message; <c>false</c> otherwise.</param>
         protected void Receive(Type messageType, Func<object, bool> handler)
         {
@@ -230,7 +230,7 @@ namespace Akka.Actor
 
         /// <summary>
         /// Registers a handler for incoming messages of any type.
-        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(System.Action)"/> or <see cref="BecomeStacked"/>.</remarks>
+        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(Action)"/> or <see cref="BecomeStacked"/>.</remarks>
         /// <remarks>Note that handlers registered prior to this may have handled the message already. 
         /// In that case, this handler will not be invoked.</remarks>
         /// </summary>

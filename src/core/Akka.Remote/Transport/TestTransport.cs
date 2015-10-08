@@ -333,7 +333,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// Changes the current behavior to the provided one
         /// </summary>
-        /// <param name="behavior">Function that takes a parameter type <typeparam name="TIn"/> and returns a Task<typeparam name="TOut"></typeparam></param>
+        /// <param name="behavior">Function that takes a parameter type <typeparamref name="TIn"/> and returns a Task<typeparamref name="TOut"/>.</param>
         public void Push(Func<TIn, Task<TOut>> behavior)
         {
             _behaviorStack.Push(behavior);
@@ -484,7 +484,7 @@ namespace Akka.Remote.Transport
         /// </summary>
         /// <param name="key">Ordered pair of addresses representing an association. First element must be the address of the initiator.</param>
         /// <param name="listeners">A pair of listeners that will be responsible for handling the events of the two endpoints
-        /// of the association. Elements in the Tuple must be in the same order as the addresses in <see cref="key"/>.</param>
+        /// of the association. Elements in the Tuple must be in the same order as the addresses in <paramref name="key"/>.</param>
         public void RegisterListenerPair(Tuple<Address, Address> key,
             Tuple<IHandleEventListener, IHandleEventListener> listeners)
         {
