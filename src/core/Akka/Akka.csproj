@@ -221,6 +221,7 @@
     <Compile Include="Event\DefaultLogMessageFormatter.cs" />
     <Compile Include="Event\Error.cs" />
     <Compile Include="Event\EventBus.cs" />
+    <Compile Include="Event\EventBusUnsubscriber.cs" />
     <Compile Include="Event\EventStream.cs" />
     <Compile Include="Event\EventStreamExtensions.cs" />
     <Compile Include="Event\ILogMessageFormatter.cs" />
