@@ -95,6 +95,7 @@ namespace Akka.Remote
 
         private volatile IActorRef _remotingTerminator;
         private volatile IActorRef _remoteWatcher;
+        private volatile IActorRef _remoteDeploymentWatcher;
 
         public virtual void Init(ActorSystemImpl system)
         {
@@ -111,6 +112,7 @@ namespace Akka.Remote
 
             Transport.Start();
             _remoteWatcher = CreateRemoteWatcher(system);
+            _remoteDeploymentWatcher = CreateRemoteDeploymentWatcher(system);
         }
 
         protected virtual IActorRef CreateRemoteWatcher(ActorSystemImpl system)
@@ -122,6 +124,12 @@ namespace Akka.Remote
                     RemoteSettings.WatchHeartBeatInterval,
                     RemoteSettings.WatchUnreachableReaperInterval,
                     RemoteSettings.WatchHeartbeatExpectedResponseAfter)), "remote-watcher");
+        }
+
+        protected virtual IActorRef CreateRemoteDeploymentWatcher(ActorSystemImpl system)
+        {
+            return system.SystemActorOf(RemoteSettings.ConfigureDispatcher(Props.Create<RemoteDeploymentWatcher>()),
+                "remote-deployment-watcher");
         }
 
         protected DefaultFailureDetectorRegistry<Address> CreateRemoteWatcherFailureDetector(ActorSystem system)
@@ -358,6 +366,7 @@ namespace Akka.Remote
             _log.Debug("[{0}] Instantiating Remote Actor [{1}]", RootPath, actor.Path);
             IActorRef remoteNode = ResolveActorRef(new RootActorPath(actor.Path.Address) / "remote");
             remoteNode.Tell(new DaemonMsgCreate(props, deploy, actor.Path.ToSerializationFormat(), supervisor));
+            _remoteDeploymentWatcher.Tell(new RemoteDeploymentWatcher.WatchRemote(actor, supervisor));
         }
 
         /// <summary>
