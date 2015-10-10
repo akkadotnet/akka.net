@@ -1,4 +1,5 @@
 Google.ProtocolBuffers
+
 group Test
 xunit.core
 xunit.assert

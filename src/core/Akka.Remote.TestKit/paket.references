@@ -1,7 +1,7 @@
 Google.ProtocolBuffers
-Helios
 System.Collections.Immutable
-Newtonsoft.Json
+Helios
+
 group Test
 xunit.core
 xunit.assert

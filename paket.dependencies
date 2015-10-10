@@ -5,11 +5,12 @@ nuget Castle.Windsor
 nuget faker-csharp
 nuget FsPickler >= 1.2
 nuget FSPowerPack.Linq.Community 
-nuget Google.ProtocolBuffers 
+nuget Google.ProtocolBuffers
 nuget Google.ProtocolBuffersLite 
-nuget Helios  
+nuget Helios 
+nuget Nuget.CommandLine
 nuget System.Collections.Immutable
-nuget Newtonsoft.Json  
+nuget Newtonsoft.Json 
 nuget Ninject 
 nuget NLog 
 nuget qdfeed 
@@ -18,6 +19,11 @@ nuget slf4net
 nuget structuremap 
 nuget Unity 
 nuget Wire
+nuget xunit
+nuget xunit.abstractions 
+nuget xunit.assert
+nuget xunit.core
+nuget xunit.extensibility.core
 
 group Test
 source https://www.nuget.org/api/v2/
