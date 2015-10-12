@@ -21,13 +21,15 @@ namespace Akka.Remote.AkkaIOTransport
                 return new Address(AkkaIOTransport.Protocal, system.Name, dns.Host, dns.Port);
             var ip = endpoint as IPEndPoint;
             if (ip != null)
-                return new Address(AkkaIOTransport.Protocal, system.Name, "127.0.0.1", ip.Port);
+                return new Address(AkkaIOTransport.Protocal, system.Name, ip.Address.MapToIPv4().ToString(), ip.Port);
             throw new ArgumentException("endpoint");
         }
 
         public static EndPoint ToEndpoint(this Address address)
         {
-            return new DnsEndPoint(address.Host, address.Port.GetValueOrDefault(9099), AddressFamily.InterNetwork);
+            if (address == null || address.Host == null || !address.Port.HasValue)
+                throw new ArgumentException("Invalid address", "address");
+            return new DnsEndPoint(address.Host, address.Port.Value, AddressFamily.InterNetwork);
         }
     }
 }

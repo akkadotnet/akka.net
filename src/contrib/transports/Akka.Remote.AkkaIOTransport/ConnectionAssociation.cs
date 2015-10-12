@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
@@ -53,7 +54,7 @@ namespace Akka.Remote.AkkaIOTransport
             if (message is IHandleEventListener)
             {
                 var el = message as IHandleEventListener;
-                Context.Become(Receiving(el));
+                Context.Become(WaitingForPrefix(el, IO.ByteString.Empty));
                 Stash.UnstashAll();
             }
             else
@@ -62,25 +63,55 @@ namespace Akka.Remote.AkkaIOTransport
             }
         }
 
-        private UntypedReceive Receiving(IHandleEventListener el)
+        private UntypedReceive WaitingForPrefix(IHandleEventListener el, IO.ByteString buffer)
         {
+            if (buffer.Count >= 4)
+            {
+                var length = buffer.Iterator().GetInt();
+                return WaitingForBody(el, buffer.Drop(4), length);
+            }
             return message =>
             {
                 if (message is Tcp.Received)
                 {
                     var received = message as Tcp.Received;
-                    el.Notify(new InboundPayload(ByteString.CopyFrom(received.Data.ToArray())));
+                    Become(WaitingForPrefix(el, buffer.Concat(received.Data)));
                 }
-                if (message is ByteString)
-                {
-                    var bs = message as ByteString;
-                    _connection.Tell(Tcp.Write.Create(IO.ByteString.Create(bs.ToByteArray())));
-                }
-                else
-                {
-                    Unhandled(message);
-                }
+                else HandleWrite(message);
             };
+        }
+
+        private UntypedReceive WaitingForBody(IHandleEventListener el, IO.ByteString buffer, int length)
+        {
+            if (buffer.Count >= length)
+            {
+                var parts = buffer.SplitAt(length);
+                el.Notify(new InboundPayload(ByteString.CopyFrom(parts.Item1.ToArray())));
+                return WaitingForPrefix(el, parts.Item2);
+            }
+            return message =>
+            {
+                if (message is Tcp.Received)
+                {
+                    var received = message as Tcp.Received;
+                    Become(WaitingForBody(el, buffer.Concat(received.Data), length));
+                }
+                else HandleWrite(message);
+            };
+        }
+
+        private void HandleWrite(object message)
+        {
+            if (message is ByteString)
+            {
+                var bs = message as ByteString;
+                var buffer = ByteString.Unsafe.GetBuffer(bs);
+                var builder = new ByteStringBuilder();
+                builder.PutInt(buffer.Length, ByteOrder.BigEndian);
+                builder.PutBytes(buffer);
+                _connection.Tell(Tcp.Write.Create(builder.Result()));
+            }
+            else Unhandled(message);
         }
 
         public IStash Stash { get; set; }
