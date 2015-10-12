@@ -22,9 +22,11 @@ namespace Akka.Remote.AkkaIOTransport
             public Settings(Config config)
             {
                 Port = config.GetInt("port");
+                Hostname = config.GetString("hostname");
             }
 
-            public int Port { get; set; }
+            public int Port { get; private set; }
+            public string Hostname { get; private set; }
         }
 
         private readonly IActorRef _manager;
@@ -37,6 +39,9 @@ namespace Akka.Remote.AkkaIOTransport
         }
 
         public override string SchemeIdentifier { get { return Protocal; } }
+
+        public override long MaximumPayloadBytes { get { return 128000; } }
+
         public override bool IsResponsibleFor(Address remote)
         {
             return true;
@@ -44,7 +49,7 @@ namespace Akka.Remote.AkkaIOTransport
 
         public override Task<Tuple<Address, TaskCompletionSource<IAssociationEventListener>>> Listen()
         {
-            return _manager.Ask<Tuple<Address, TaskCompletionSource<IAssociationEventListener>>>(new Listen(_settings.Port));
+            return _manager.Ask<Tuple<Address, TaskCompletionSource<IAssociationEventListener>>>(new Listen(_settings.Hostname, _settings.Port));
         }
         public override Task<AssociationHandle> Associate(Address remoteAddress)
         {
