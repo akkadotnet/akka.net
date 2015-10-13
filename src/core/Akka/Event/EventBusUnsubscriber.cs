@@ -123,9 +123,9 @@ namespace Akka.Event
             get { return _instance; }
         }
 
-        public void Start(ActorSystem system, EventStream eventStream, bool debug)
+        public void Start(ActorSystemImpl system, EventStream eventStream, bool debug)
         {
-            system.ActorOf(Props.Create<EventStreamUnsubscriber>(eventStream, system, debug),
+            system.SystemActorOf(Props.Create<EventStreamUnsubscriber>(eventStream, system, debug),
                 string.Format("EventStreamUnsubscriber-{0}", _unsubscribersCounter.IncrementAndGet()));
         }
     }

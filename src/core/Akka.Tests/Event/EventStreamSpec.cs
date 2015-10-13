@@ -12,6 +12,7 @@ using Akka.TestKit;
 using Akka.Tests.TestUtils;
 using System;
 using System.Linq;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Tests.Event
@@ -64,7 +65,7 @@ namespace Akka.Tests.Event
         {
 
             var bus = new EventStream(true);
-            bus.StartUnsubscriber(Sys);
+            bus.StartUnsubscriber(Sys.AsInstanceOf<ActorSystemImpl>());
             bus.Subscribe(TestActor, typeof(M));
 
             bus.Publish(new M { Value = 42 });
