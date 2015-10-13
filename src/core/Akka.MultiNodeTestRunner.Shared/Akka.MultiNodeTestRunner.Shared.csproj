@@ -21,6 +21,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <LangVersion>5</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -44,6 +45,7 @@
     <Compile Include="Persistence\IRetrievableTestRunStore.cs" />
     <Compile Include="Persistence\JsonPersistentTestRunStore.cs" />
     <Compile Include="Persistence\TimelineItem.cs" />
+    <Compile Include="Persistence\TimelineItemFactory.cs" />
     <Compile Include="Persistence\VisualizerRuntimeTemplate.Tree.cs" />
     <Compile Include="Persistence\VisualizerPersistentTestRunStore.cs" />
     <Compile Include="Persistence\VisualizerRuntimeTemplate.cs">
