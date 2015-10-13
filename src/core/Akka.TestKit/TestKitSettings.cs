@@ -64,7 +64,7 @@ namespace Akka.TestKit
 
         /// <summary>
         /// If set to <c>true</c> calls to testkit will be logged.
-        /// This is enabled by seting configuration "akka.test.testkit.debug" value to a true.
+        /// This is enabled by setting the configuration value "akka.test.testkit.debug" to a true.
         /// </summary>
         public bool LogTestKitCalls { get { return _logTestKitCalls; } }
     }

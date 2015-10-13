@@ -19,7 +19,6 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class ISystemMessage.
     /// </summary>
-    /// **
     public interface ISystemMessage : INoSerializationVerificationNeeded
     {
     }

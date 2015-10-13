@@ -93,8 +93,7 @@ namespace Akka.DI.Ninject
         }
 
         /// <summary>
-        /// Signals the DI container to release it's reference to the actor.
-        /// <see href="http://www.amazon.com/Dependency-Injection-NET-Mark-Seemann/dp/1935182501/ref=sr_1_1?ie=UTF8&qid=1425861096&sr=8-1&keywords=mark+seemann">HERE</see> 
+        /// Signals the container to release it's reference to the actor.
         /// </summary>
         /// <param name="actor">The actor to remove from the container</param>
         public void Release(ActorBase actor)
