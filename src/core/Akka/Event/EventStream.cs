@@ -102,7 +102,7 @@ namespace Akka.Event
             return base.Unsubscribe(subscriber);
         }
 
-        public void StartUnsubscriber(ActorSystem system)
+        public void StartUnsubscriber(ActorSystemImpl system)
         {
             EventStreamUnsubscribersProvider.Instance.Start(system, this, _debug);
         }
