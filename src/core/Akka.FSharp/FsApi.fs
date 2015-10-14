@@ -307,11 +307,7 @@ module Actors =
             | Func f -> 
                 match msg with
                 | :? 'Message as m -> state <- f m
-                | _ -> 
-                    let serializer = UntypedActor.Context.System.Serialization.FindSerializerForType typeof<obj> :?> Akka.Serialization.NewtonSoftJsonSerializer
-                    match Serialization.tryDeserializeJObject serializer.Serializer msg with
-                    | Some(m) -> state <- f m
-                    | None -> x.Unhandled msg
+                | _ -> x.Unhandled msg
             | Return _ -> x.PostStop()
         override x.PostStop() =
             base.PostStop ()
@@ -319,7 +315,7 @@ module Actors =
             
 
     /// Builds an actor message handler using an actor expression syntax.
-    let actor = ActorBuilder()                
+    let actor = ActorBuilder()    
     
 [<AutoOpen>]
 module Logging = 

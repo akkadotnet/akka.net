@@ -40,13 +40,16 @@ type TestUnion2 =
     | D of int
 
 [<Fact>]
-let ``can serialize and deserialize discriminated unions over remote nodes`` () =     
+let ``can serialize and deserialize discriminated unions over remote nodes using wire serializer`` () =     
     let remoteConfig port = 
         sprintf """
         akka { 
             actor {
                 ask-timeout = 5s
                 provider = "Akka.Remote.RemoteActorRefProvider, Akka.Remote"
+                serialization-bindings {
+                    "System.Object" = wire
+                }
             }
             remote {
                 helios.tcp {
