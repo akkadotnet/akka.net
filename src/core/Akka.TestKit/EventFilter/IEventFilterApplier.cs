@@ -123,7 +123,7 @@ namespace Akka.TestKit
 
         /// <summary>
         /// Prevents events from being logged from now on. To allow events to be logged again, call 
-        /// <see cref="IUnmutableFilter.Unmute">Unmute</see> on the returned object.
+        /// <see cref="IUnmutableFilter.Unmute"/> on the returned object.
         /// <example>
         /// <code>
         /// var filter = EventFilter.Debug().Mute();

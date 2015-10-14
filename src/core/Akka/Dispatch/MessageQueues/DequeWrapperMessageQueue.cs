@@ -20,7 +20,7 @@ namespace Akka.Dispatch.MessageQueues
         private readonly Stack<Envelope> _prependBuffer = new Stack<Envelope>();
         private readonly IMessageQueue _messageQueue;
         /// <summary>
-        /// Takes another <see cref="MessageQueue"/> as an argument - wraps <paramref name="messageQueue"/>
+        /// Takes another <see cref="IMessageQueue"/> as an argument - wraps <paramref name="messageQueue"/>
         /// in order to provide it with prepend (<see cref="EnqueueFirst"/>) semantics.
         /// </summary>
         /// <param name="messageQueue"></param>
@@ -47,7 +47,7 @@ namespace Akka.Dispatch.MessageQueues
         }
 
         /// <summary>
-        /// Enqueue a message to the back of the <see cref="MessageQueue"/>
+        /// Enqueue a message to the back of the <see cref="IMessageQueue"/>
         /// </summary>
         /// <param name="envelope"></param>
         public void Enqueue(Envelope envelope)
@@ -59,7 +59,7 @@ namespace Akka.Dispatch.MessageQueues
         /// Attempt to dequeue a message from the front of the prepend buffer.
         /// 
         /// If the prepend buffer is empty, dequeue a message from the normal
-        /// <see cref="MessageQueue"/> wrapped but this wrapper.
+        /// <see cref="IMessageQueue"/> wrapped but this wrapper.
         /// </summary>
         /// <param name="envelope">The message to return, if any</param>
         /// <returns><c>true</c> if a message was available, <c>false</c> otherwise.</returns>
