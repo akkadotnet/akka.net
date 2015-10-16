@@ -134,8 +134,6 @@ akka.cluster.publish-stats-interval = 25 s")
             }
 
             EnterBarrier("after-1");
-            ShutdownLeaderAndVerifyNewLeader(1);
-            EnterBarrier("after-3");
         }
 
         [MultiNodeFact]
