@@ -21,6 +21,8 @@ using Xunit;
 
 namespace Akka.MultiNodeTestRunner
 {
+    using Akka.NodeTestRunner;
+
     /// <summary>
     /// Entry point for the MultiNodeTestRunner
     /// </summary>
@@ -35,7 +37,10 @@ namespace Akka.MultiNodeTestRunner
         /// <summary>
         /// MultiNodeTestRunner takes the following <see cref="args"/>:
         /// 
-        /// C:\> Akka.MultiNodeTestRunner.exe [assembly name] [-Dmultinode.enable-filesink=on] [-Dmultinode.output-directory={dir path}]
+        /// C:\> Akka.MultiNodeTestRunner.exe [assembly name] 
+        ///                                   [-Dmultinode.enable-filesink=on] 
+        ///                                   [-Dmultinode.output-directory={dir path}]
+        ///                                   [-Dmultinode.test-spec={name of spec}]
         /// 
         /// <list type="number">
         /// <listheader>
@@ -64,16 +69,30 @@ namespace Akka.MultiNodeTestRunner
         ///                  as the test binary.
         ///     </description>
         /// </item>
+        /// <item>
+        ///     <term>-Dmultinode.test-spec</term>
+        ///     <description>Setting this property means that only the test/s which match this name will be run.
+        ///                  Any other tests will be skipped.
+        ///     </description>
+        /// </item>
         /// </list>
         /// </summary>
         static void Main(string[] args)
         {
+            TestSettings.Initialize(args);
+
             TestRunSystem = ActorSystem.Create("TestRunnerLogging");
             SinkCoordinator = TestRunSystem.ActorOf(Props.Create<SinkCoordinator>(), "sinkCoordinator");
 
             var assemblyName = Path.GetFullPath(args[0]);
             EnableAllSinks(assemblyName);
-            PublishRunnerMessage(String.Format("Running MultiNodeTests for {0}", assemblyName));
+            PublishRunnerMessage(string.Format("Running MultiNodeTests for {0}", assemblyName));
+
+            var specificationName = TestSettings.GetProperty("multinode.test-spec");
+            bool restrictToTestName = !string.IsNullOrEmpty(specificationName);
+
+            var autoLoadDebugger = TestSettings.GetProperty("multinode.auto-debug") != string.Empty;
+            var useAppDomains = TestSettings.GetProperty("multinode.use-appdomains") != string.Empty;
 
             using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, assemblyName))
             {
@@ -90,60 +109,22 @@ namespace Akka.MultiNodeTestRunner
                             continue;
                         }
 
+                        if ( restrictToTestName && string.Compare(test.Key, specificationName, StringComparison.OrdinalIgnoreCase) != 0)
+                        {
+                            PublishRunnerMessage(string.Format("Skipping test {0}.{1}. Reason - Doesn't match multinode.spec-name.", test.Value.First().TestName, test.Value.First().MethodName));
+                            continue;
+                        }
+
                         PublishRunnerMessage(string.Format("Starting test {0}", test.Value.First().MethodName));
 
-                        var processes = new List<Process>();
-
-                        StartNewSpec(test.Value);
-
-                        foreach (var nodeTest in test.Value)
+                        if (!useAppDomains)
                         {
-                            //Loop through each test, work out number of nodes to run on and kick off process
-                            var process = new Process();
-                            processes.Add(process);
-                            process.StartInfo.UseShellExecute = false;
-                            process.StartInfo.RedirectStandardOutput = true;
-                            process.StartInfo.FileName = "Akka.NodeTestRunner.exe";
-                            process.StartInfo.Arguments = String.Format(@"-Dmultinode.test-assembly=""{0}"" -Dmultinode.test-class=""{1}"" -Dmultinode.test-method=""{2}"" -Dmultinode.max-nodes={3} -Dmultinode.server-host=""{4}"" -Dmultinode.host=""{5}"" -Dmultinode.index={6}",
-                                assemblyName, nodeTest.TypeName, nodeTest.MethodName, test.Value.Count, "localhost", "localhost", nodeTest.Node - 1);
-                            var nodeIndex = nodeTest.Node;
-                            process.OutputDataReceived +=
-                                (sender, line) =>
-                                {
-                                    //ignore any trailing whitespace
-                                    if (string.IsNullOrEmpty(line.Data) || string.IsNullOrWhiteSpace(line.Data)) return;
-                                    string message = line.Data;
-                                    if (!message.StartsWith("[NODE", true, CultureInfo.InvariantCulture))
-                                    {
-                                        message = "[NODE" + nodeIndex + "]" + message;
-                                    }
-                                    PublishToAllSinks(message);
-                                };
-
-                            var closureTest = nodeTest;
-                            process.Exited += (sender, eventArgs) =>
-                            {
-                                if (process.ExitCode == 0)
-                                {
-                                    ReportSpecPassFromExitCode(nodeIndex, closureTest.TestName);
-                                }
-                            };
-                            process.Start();
-
-                            process.BeginOutputReadLine();
-                            PublishRunnerMessage(string.Format("Started node {0} on pid {1}", nodeTest.Node, process.Id));
+                            RunNodesInSeperateProcesses(test, assemblyName);
                         }
-
-                        foreach (var process in processes)
+                        else
                         {
-                            process.WaitForExit();
-                            var exitCode = process.ExitCode;
-                            process.Close();
+                            RunNodesInAppDomains(test, assemblyName, autoLoadDebugger);
                         }
-
-                        PublishRunnerMessage("Waiting 3 seconds for all messages from all processes to be collected.");
-                        Thread.Sleep(TimeSpan.FromSeconds(3));
-                        FinishSpec();
                     }
                 }
             }
@@ -159,13 +140,131 @@ namespace Akka.MultiNodeTestRunner
             Environment.Exit(ExitCodeContainer.ExitCode);
         }
 
+        private static void RunNodesInAppDomains(KeyValuePair<string, List<NodeTest>> test, string assemblyName, bool autoLaunchDebugger)
+        {
+            var runners = new List<Tuple<int,IsolatedTestRunner,Thread>>();
+
+            if (autoLaunchDebugger)
+            {
+                Debugger.Launch();
+            }
+
+            StartNewSpec(test.Value);
+
+            foreach (var nodeTest in test.Value)
+            {
+                var testArguments = new[]
+                                        {
+                                            string.Format(@"-Dmultinode.test-assembly={0}", assemblyName),
+                                            string.Format(@"-Dmultinode.test-class={0}", nodeTest.TypeName),
+                                            string.Format(@"-Dmultinode.test-method={0}", nodeTest.MethodName),
+                                            string.Format(@"-Dmultinode.max-nodes={0}", test.Value.Count),
+                                            string.Format(@"-Dmultinode.server-host={0}", "localhost"),
+                                            string.Format(@"-Dmultinode.host={0}", "localhost"),
+                                            string.Format(@"-Dmultinode.index={0}", nodeTest.Node - 1),
+                                        };
+
+                var testRunner = new IsolatedTestRunner();
+                testRunner.InitializeWithTestArgs(testArguments);
+
+                var thread = new Thread(testRunner.Run);
+                runners.Add(new Tuple<int, IsolatedTestRunner, Thread>(nodeTest.Node, testRunner, thread));
+
+                //TODO: override console output
+                // Figure out how to add in any missing [NODE prefixes.
+
+                thread.Start();
+
+                PublishRunnerMessage(string.Format("Started node {0} on thread id {1}", nodeTest.Node, thread.ManagedThreadId));
+            }
+
+            foreach (var process in runners)
+            {
+                process.Item3.Join();
+                var noErrors = process.Item2.NoErrors;
+                if (noErrors)
+                {
+                    ReportSpecPassFromExitCode(process.Item1, "Something Something");
+                }
+            }
+
+            PublishRunnerMessage("Waiting 3 seconds for all messages from all processes to be collected.");
+            Thread.Sleep(TimeSpan.FromSeconds(3));
+            FinishSpec();
+        }
+
+        private static void RunNodesInSeperateProcesses(KeyValuePair<string, List<NodeTest>> test, string assemblyName)
+        {
+            var processes = new List<Process>();
+
+            StartNewSpec(test.Value);
+
+            foreach (var nodeTest in test.Value)
+            {
+                var testArguments =
+                    string.Format(
+                        @"-Dmultinode.test-assembly=""{0}"" -Dmultinode.test-class=""{1}"" -Dmultinode.test-method=""{2}"" -Dmultinode.max-nodes={3} -Dmultinode.server-host=""{4}"" -Dmultinode.host=""{5}"" -Dmultinode.index={6}",
+                        assemblyName,
+                        nodeTest.TypeName,
+                        nodeTest.MethodName,
+                        test.Value.Count,
+                        "localhost",
+                        "localhost",
+                        nodeTest.Node - 1);
+
+                //Loop through each test, work out number of nodes to run on and kick off process
+                var process = new Process();
+                processes.Add(process);
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.RedirectStandardOutput = true;
+                process.StartInfo.FileName = "Akka.NodeTestRunner.exe";
+                process.StartInfo.Arguments = testArguments;
+                var nodeIndex = nodeTest.Node;
+                process.OutputDataReceived += (sender, line) =>
+                    {
+                        //ignore any trailing whitespace
+                        if (string.IsNullOrEmpty(line.Data) || string.IsNullOrWhiteSpace(line.Data)) return;
+                        string message = line.Data;
+                        if (!message.StartsWith("[NODE", true, CultureInfo.InvariantCulture))
+                        {
+                            message = "[NODE" + nodeIndex + "]" + message;
+                        }
+                        PublishToAllSinks(message);
+                    };
+
+                var closureTest = nodeTest;
+                process.Exited += (sender, eventArgs) =>
+                    {
+                        if (process.ExitCode == 0)
+                        {
+                            ReportSpecPassFromExitCode(nodeIndex, closureTest.TestName);
+                        }
+                    };
+                process.Start();
+
+                process.BeginOutputReadLine();
+                PublishRunnerMessage(string.Format("Started node {0} on pid {1}", nodeTest.Node, process.Id));
+            }
+
+            foreach (var process in processes)
+            {
+                process.WaitForExit();
+                var exitCode = process.ExitCode;
+                process.Close();
+            }
+
+            PublishRunnerMessage("Waiting 3 seconds for all messages from all processes to be collected.");
+            Thread.Sleep(TimeSpan.FromSeconds(3));
+            FinishSpec();
+        }
+
         static void EnableAllSinks(string assemblyName)
         {
             var now = DateTime.UtcNow;
 
             // if multinode.output-directory wasn't specified, the results files will be written
             // to the same directory as the test assembly.
-            var outputDirectory = CommandLine.GetProperty("multinode.output-directory");
+            var outputDirectory = TestSettings.GetProperty("multinode.output-directory");
 
             Func<MessageSink> createJsonFileSink = () =>
                 {
@@ -187,7 +286,7 @@ namespace Akka.MultiNodeTestRunner
                     return new FileSystemMessageSink(visualizerProps);
                 };
 
-            var fileSystemSink = CommandLine.GetProperty("multinode.enable-filesink");
+            var fileSystemSink = TestSettings.GetProperty("multinode.enable-filesink");
             if (!string.IsNullOrEmpty(fileSystemSink))
             {
                 SinkCoordinator.Tell(new SinkCoordinator.EnableSink(createJsonFileSink()));
