@@ -529,23 +529,30 @@ namespace Akka.Remote
 
             protected override void TellInternal(object message, IActorRef sender)
             {
-                var send = message as EndpointManager.Send;
-                if (send != null)
-                {
-                    // else ignore: it is a reliably delivered message that might be retried later, and it has not yet deserved
-                    // the dead letter status
-                    //TODO: Seems to have started causing endless cycle of messages (and stack overflow)
-                    //if (send.Seq == null) Tell(message, sender);
-                    return;
-                }
-                var deadLetter = message as DeadLetter;
-                if (deadLetter != null)
-                {
-                    // else ignore: it is a reliably delivered message that might be retried later, and it has not yet deserved
-                    // the dead letter status
-                    //TODO: if(deadLetter.Message)
-                }
-
+                message
+                    .Match()
+                    .With<EndpointManager.Send>(
+                        send =>
+                        {
+                            // else ignore: it is a reliably delivered message that might be retried later, and it has not yet deserved
+                            // the dead letter status
+                            if (send.Seq == null)
+                            {
+                                base.TellInternal(send.Message, send.SenderOption ?? ActorRefs.NoSender);
+                            }
+                        })
+                    .With<DeadLetter>(
+                        deadLetter =>
+                        {
+                            // else ignore: it is a reliably delivered message that might be retried later, and it has not yet deserved
+                            // the dead letter status
+                            var deadSend = deadLetter.Message as EndpointManager.Send;
+                            if (deadSend != null && deadSend.Seq == null)
+                            {
+                                base.TellInternal(deadSend.Message, deadSend.SenderOption ?? ActorRefs.NoSender);
+                            }
+                        })
+                    .Default(_ => base.TellInternal(message, sender));
             }
         }
     }
