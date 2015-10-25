@@ -878,16 +878,19 @@ namespace Akka.Remote
         protected override void PostStop()
         {
             _ackIdleTimerCancelable.CancelIfNotNull();
-            while (_prioBuffer.Any())
+
+            foreach (var msg in _prioBuffer)
             {
-                _system.DeadLetters.Tell(_prioBuffer.First);
-                _prioBuffer.RemoveFirst();
+                _system.DeadLetters.Tell(msg);
             }
-            while (_buffer.Any())
+            _prioBuffer.Clear();
+
+            foreach (var msg in _buffer)
             {
-                _system.DeadLetters.Tell(_buffer.First);
-                _buffer.RemoveFirst();
+                _system.DeadLetters.Tell(msg);
             }
+            _buffer.Clear();
+
             if (_handle != null) _handle.Disassociate(_stopReason);
             EventPublisher.NotifyListeners(new DisassociatedEvent(LocalAddress, RemoteAddress, Inbound));
         }
