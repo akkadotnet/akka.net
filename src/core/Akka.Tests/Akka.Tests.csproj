@@ -79,6 +79,7 @@
     <Compile Include="Actor\Cancellation\CancelableTests.cs" />
     <Compile Include="Actor\InboxSpec.cs" />
     <Compile Include="Actor\LocalActorRefProviderSpec.cs" />
+    <Compile Include="Actor\PipeToSupportSpec.cs" />
     <Compile Include="Actor\PropsSpec.cs" />
     <Compile Include="Actor\ReceiveActorTests.cs" />
     <Compile Include="Actor\ActorRefProviderSpec.cs" />
