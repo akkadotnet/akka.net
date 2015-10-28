@@ -353,7 +353,7 @@ namespace Akka.IO
             {
                 try
                 {
-                    var e = (ActorInitializationException) cause;
+                    var e = cause as ActorInitializationException;
                     var logMessage = e != null
                         ? e.GetBaseException() .Message
                         : cause.Message;
