@@ -8,6 +8,8 @@
 using System;
 using Akka.Actor;
 using Akka.Event;
+using Akka.Logger.Serilog.SemanticAdapter;
+using Akka.Util.Internal;
 using Serilog;
 
 namespace Akka.Logger.Serilog
@@ -30,28 +32,56 @@ namespace Akka.Logger.Serilog
 
         private ILogger SetContextFromLogEvent(ILogger logger, LogEvent logEvent)
         {
+            //Origin is the address of the sending system
+            //Before Akka.Remote starts, the Origin is just set to 'local'
+            var origin = "local";
+            var address = Context.System.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;
+            if (address != null)
+                origin = string.Format("{0}@{1}:{2}", address.System, address.Host, address.Port);
+
+            logger.ForContext("Origin", origin);
             logger.ForContext("Timestamp", logEvent.Timestamp);
             logger.ForContext("LogSource", logEvent.LogSource);
             logger.ForContext("Thread", logEvent.Thread);
+            if (logEvent is Error)
+            {
+                logger.ForContext("Cause", logEvent.AsInstanceOf<Error>().Cause);
+            }
             return logger;
         }
 
-        private static string GetFormat(object message)
+        private string GetFormat(object message)
         {
-            var logMessage = message as LogMessage;
+            var eventBase = message as LogEvent;
+            if (eventBase != null)
+            {
+                var format = "{@Message}";
+                var logMessage = eventBase.Message as LogMessage;
+                if (logMessage != null)
+                {
+                    format = TemplateTransform.Transform(logMessage.Format);
+                }
+                return format;
+            }
 
-            return logMessage != null
-                ? logMessage.Format
-                : "{Message}";
+            return message.ToString();
         }
 
-        private static object[] GetArgs(object message)
-        {
-            var logMessage = message as LogMessage;
 
-            return logMessage != null
-                ? logMessage.Args
-                : new[] { message };
+        private object[] GetArgs(object message)
+        {
+            var eventBase = message as LogEvent;
+            if (eventBase != null)
+            {
+                var format = new[] { eventBase.Message };
+                var logMessage = eventBase.Message as LogMessage;
+                if (logMessage != null)
+                {
+                    format = logMessage.Args;
+                }
+                return format;
+            }
+            return new object[0];
         }
 
         /// <summary>

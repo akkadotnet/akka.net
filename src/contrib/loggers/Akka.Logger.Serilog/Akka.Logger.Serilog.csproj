@@ -42,6 +42,8 @@
     </Compile>
     <Compile Include="Event\Serilog\SerilogLogMessageFormatter.cs" />
     <Compile Include="MessageTemplateCache.cs" />
+    <Compile Include="SemanticAdapter\FormatPart.cs" />
+    <Compile Include="SemanticAdapter\TemplateTransform.cs" />
     <Compile Include="SerilogLogMessageFormatter.cs" />
     <Compile Include="SerilogLogger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
