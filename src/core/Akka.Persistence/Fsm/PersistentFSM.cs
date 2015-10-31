@@ -391,13 +391,13 @@ namespace Akka.Persistence.Fsm
 
         public class StateChangeEvent : IMessage
         {
-            public StateChangeEvent(string state, TimeSpan? timeOut)
+            public StateChangeEvent(TState state, TimeSpan? timeOut)
             {
                 State = state;
                 TimeOut = timeOut;
             }
 
-            public string State { get; private set; }
+            public TState State { get; private set; }
 
             public TimeSpan? TimeOut { get; private set; }
         }
@@ -450,9 +450,9 @@ namespace Akka.Persistence.Fsm
         private void ApplyState(State<TState, TData, TEvent> upcomingState)
         {
             var eventsToPersist = new List<Object>();
-            if (upcomingState.Notifies || upcomingState.Timeout.HasValue)
+            if ( upcomingState.Timeout.HasValue)
             {
-                eventsToPersist.Add(new StateChangeEvent(upcomingState.StateName.ToString(), upcomingState.Timeout));
+                eventsToPersist.Add(new StateChangeEvent(upcomingState.StateName, upcomingState.Timeout));
             }
             if (upcomingState.DomainEvents == null || upcomingState.DomainEvents.IsEmpty)
             {
@@ -460,30 +460,36 @@ namespace Akka.Persistence.Fsm
             }
             else
             {
-                eventsToPersist.Add(upcomingState.DomainEvents);
+                foreach (var domainEvent in upcomingState.DomainEvents)
+                {
+                    eventsToPersist.Add(domainEvent);
+                }
+                
 
-                var nextData = upcomingState.StateData;
+                var nextData = StateData;// upcomingState.StateData;
                 var handlersExecutedCounter = 0;
 
-                Persist<Object>(eventsToPersist, @event =>
-                {
-                    handlersExecutedCounter++;
-                    if (handlersExecutedCounter == upcomingState.DomainEvents.Count())
+                    
+                    Persist<Object>(eventsToPersist, @event =>
                     {
-                        BaseApplyState(upcomingState.Using(nextData));
+                        handlersExecutedCounter++;
                         if (@event is TEvent)
                         {
                             nextData = ApplyEvent((TEvent)@event, nextData);
                         }
-                       
-                        if (upcomingState.AfterTransitionHandler != null)
+                        if (handlersExecutedCounter == eventsToPersist.Count)
                         {
-                            upcomingState.AfterTransitionHandler(upcomingState.StateData);
+                            BaseApplyState(upcomingState.Using(nextData));
+
+                            if (upcomingState.AfterTransitionHandler != null)
+                            {
+                                upcomingState.AfterTransitionHandler(upcomingState.StateData);
+                            }
+
+
                         }
+                    });
 
-
-                    }
-                });
             }
         }
 
@@ -520,7 +526,7 @@ namespace Akka.Persistence.Fsm
                 var replies = upcomingState.Replies;
                 replies.Reverse();
                 foreach (var r in replies) { Sender.Tell(r); }
-                if (!_currentState.StateName.Equals(upcomingState.StateName) || upcomingState.Notifies)
+                if (!_currentState.StateName.Equals(upcomingState.StateName))
                 {
                     _nextState = upcomingState;
                     HandleTransition(_currentState.StateName, _nextState.StateName);
@@ -608,7 +614,7 @@ namespace Akka.Persistence.Fsm
                     StartWith(StateName, ApplyEvent(e, StateData));
                 }).With<StateChangeEvent>(sce =>
                 {
-                    StartWith(StateName, StateData, sce.TimeOut);
+                    StartWith(sce.State, StateData, sce.TimeOut);
                 });
 
             return match.WasHandled;
