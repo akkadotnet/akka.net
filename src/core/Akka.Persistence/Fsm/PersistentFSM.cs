@@ -450,22 +450,23 @@ namespace Akka.Persistence.Fsm
         private void ApplyState(State<TState, TData, TEvent> upcomingState)
         {
             var eventsToPersist = new List<Object>();
-            if ( upcomingState.Timeout.HasValue)
-            {
-                eventsToPersist.Add(new StateChangeEvent(upcomingState.StateName, upcomingState.Timeout));
-            }
-            if (upcomingState.DomainEvents == null || upcomingState.DomainEvents.IsEmpty)
-            {
-                BaseApplyState(upcomingState);
-            }
-            else
+            if (upcomingState.DomainEvents != null)
             {
                 foreach (var domainEvent in upcomingState.DomainEvents)
                 {
                     eventsToPersist.Add(domainEvent);
                 }
-                
-
+            }
+            if (!StateName.Equals(upcomingState.StateName) || upcomingState.Timeout.HasValue)
+            {
+                eventsToPersist.Add(new StateChangeEvent(upcomingState.StateName, upcomingState.Timeout));
+            }
+            if (eventsToPersist.Count == 0)
+            {
+                BaseApplyState(upcomingState);
+            }
+            else
+            {
                 var nextData = StateData;// upcomingState.StateData;
                 var handlersExecutedCounter = 0;
 
