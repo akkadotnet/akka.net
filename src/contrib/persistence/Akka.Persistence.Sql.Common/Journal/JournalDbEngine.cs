@@ -7,12 +7,14 @@
 
 using System;
 using System.Collections.Generic;
-using System.Data;
+using System.Configuration;
 using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Event;
+using Akka.Persistence.Sql.Common.Queries;
 
 namespace Akka.Persistence.Sql.Common.Journal
 {
@@ -20,21 +22,23 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// Class used for storing intermediate result of the <see cref="IPersistentRepresentation"/>
     /// in form which is ready to be stored directly in the SQL table.
     /// </summary>
-    public class JournalEntry
+    public sealed class JournalEntry
     {
         public readonly string PersistenceId;
         public readonly long SequenceNr;
         public readonly bool IsDeleted;
-        public readonly string PayloadType;
+        public readonly string Manifest;
+        public readonly DateTime Timestamp;
         public readonly byte[] Payload;
 
-        public JournalEntry(string persistenceId, long sequenceNr, bool isDeleted, string payloadType, byte[] payload)
+        public JournalEntry(string persistenceId, long sequenceNr, bool isDeleted, string manifest, DateTime timestamp, byte[] payload)
         {
             PersistenceId = persistenceId;
             SequenceNr = sequenceNr;
             IsDeleted = isDeleted;
-            PayloadType = payloadType;
+            Manifest = manifest;
             Payload = payload;
+            Timestamp = timestamp;
         }
     }
 
@@ -53,23 +57,38 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         protected readonly LinkedList<CancellationTokenSource> PendingOperations;
 
-        private readonly Akka.Serialization.Serialization _serialization;
-        private DbConnection _dbConnection;
+        /// <summary>
+        /// Timestamp provider used for generation of timestamps for incoming persistent messages.
+        /// </summary>
+        protected readonly ITimestampProvider TimestampProvider;
 
-        protected JournalDbEngine(JournalSettings settings, Akka.Serialization.Serialization serialization)
+        private readonly ActorSystem _system;
+
+        protected JournalDbEngine(ActorSystem system)
         {
-            Settings = settings;
-            _serialization = serialization;
+            _system = system;
 
-            QueryMapper = new DefaultJournalQueryMapper(serialization);
+            Settings = new JournalSettings(system.Settings.Config.GetConfig(JournalConfigPath));
+            QueryMapper = new DefaultJournalQueryMapper(_system.Serialization);
+            TimestampProvider = CreateTimestampProvider();
 
             PendingOperations = new LinkedList<CancellationTokenSource>();
         }
 
         /// <summary>
+        /// Returns a HOCON config path to associated journal.
+        /// </summary>
+        protected abstract string JournalConfigPath { get; }
+
+        /// <summary>
+        /// System logger.
+        /// </summary>
+        protected ILoggingAdapter Log { get { return _system.Log; } }
+
+        /// <summary>
         /// Initializes a database connection.
         /// </summary>
-        protected abstract DbConnection CreateDbConnection();
+        protected abstract DbConnection CreateDbConnection(string connectionString);
 
         /// <summary>
         /// Copies values from entities to database command.
@@ -79,30 +98,19 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected abstract void CopyParamsToCommand(DbCommand sqlCommand, JournalEntry entry);
 
         /// <summary>
-        /// Gets database connection.
-        /// </summary>
-        public IDbConnection DbConnection { get { return _dbConnection; } }
-
-        /// <summary>
         /// Used for generating SQL commands for journal-related database operations.
         /// </summary>
-        public IJournalQueryBuilder QueryBuilder { get; protected set; }
+        public IJournalQueryBuilder QueryBuilder { get; set; }
 
         /// <summary>
         /// Used for mapping results returned from database into <see cref="IPersistentRepresentation"/> objects.
         /// </summary>
-        public IJournalQueryMapper QueryMapper { get; protected set; }
+        public IJournalQueryMapper QueryMapper { get; set; }
 
-        /// <summary>
-        /// Initializes and opens a database connection.
-        /// </summary>
-        public void Open()
+        public DbConnection CreateDbConnection()
         {
-            // close connection if it was open
-            Close();
-
-            _dbConnection = CreateDbConnection();
-            _dbConnection.Open();
+            var connectionString = GetConnectionString();
+            return CreateDbConnection(connectionString);
         }
 
         /// <summary>
@@ -110,13 +118,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         public void Close()
         {
-            if (_dbConnection != null)
-            {
-                StopPendingOperations();
-
-                _dbConnection.Dispose();
-                _dbConnection = null;
-            }
+            StopPendingOperations();
         }
 
         /// <summary>
@@ -142,6 +144,37 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
 
         /// <summary>
+        /// Performs
+        /// </summary>
+        public async Task ReadEvents(object queryId, IEnumerable<IHint> hints, IActorRef sender, Action<IPersistentRepresentation> replayCallback)
+        {
+            using (var connection = CreateDbConnection())
+            {
+                await connection.OpenAsync();
+
+                var sqlCommand = QueryBuilder.SelectEvents(hints);
+                CompleteCommand(sqlCommand, connection);
+
+                var tokenSource = GetCancellationTokenSource();
+                var reader = await sqlCommand.ExecuteReaderAsync(tokenSource.Token);
+                try
+                {
+                    while (reader.Read())
+                    {
+                        var persistent = QueryMapper.Map(reader, sender);
+                        if (persistent != null)
+                            replayCallback(persistent);
+                    }
+                }
+                finally
+                {
+                    PendingOperations.Remove(tokenSource);
+                    reader.Close();
+                }
+            }
+        }
+
+        /// <summary>
         /// Asynchronously replays all requested messages related to provided <paramref name="persistenceId"/>,
         /// using provided sequence ranges (inclusive) with <paramref name="max"/> number of messages replayed
         /// (counting from the beginning). Replay callback is invoked for each replayed message.
@@ -151,85 +184,51 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="toSequenceNr">Upper inclusive sequence number bound. Unbound by default.</param>
         /// <param name="max">Maximum number of messages to be replayed. Unbound by default.</param>
         /// <param name="replayCallback">Action invoked for each replayed message.</param>
-        public Task ReplayMessagesAsync(string persistenceId, long fromSequenceNr, long toSequenceNr, long max, IActorRef sender, Action<IPersistentRepresentation> replayCallback)
+        public async Task ReplayMessagesAsync(string persistenceId, long fromSequenceNr, long toSequenceNr, long max, IActorRef sender, Action<IPersistentRepresentation> replayCallback)
         {
-            var sqlCommand = QueryBuilder.SelectMessages(persistenceId, fromSequenceNr, toSequenceNr, max);
-            CompleteCommand(sqlCommand);
+            using (var connection = CreateDbConnection())
+            {
+                await connection.OpenAsync();
 
-            var tokenSource = GetCancellationTokenSource();
+                var sqlCommand = QueryBuilder.SelectMessages(persistenceId, fromSequenceNr, toSequenceNr, max);
+                CompleteCommand(sqlCommand, connection);
 
-            return sqlCommand
-                .ExecuteReaderAsync(tokenSource.Token)
-                .ContinueWith(task =>
+                var tokenSource = GetCancellationTokenSource();
+                var reader = await sqlCommand.ExecuteReaderAsync(tokenSource.Token);
+
+                try
                 {
-                    var reader = task.Result;
-                    try
+                    while (reader.Read())
                     {
-                        while (reader.Read())
-                        {
-                            var persistent = QueryMapper.Map(reader, sender);
-                            if (persistent != null)
-                            {
-                                replayCallback(persistent);
-                            }
-                        }
+                        var persistent = QueryMapper.Map(reader, sender);
+                        if (persistent != null)
+                            replayCallback(persistent);
                     }
-                    finally
-                    {
-                        PendingOperations.Remove(tokenSource);
-                        reader.Close();
-                    }
-                }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+                }
+                finally
+                {
+                    PendingOperations.Remove(tokenSource);
+                    reader.Close();
+                }
+            }
         }
 
         /// <summary>
         /// Asynchronously reads a highest sequence number of the event stream related with provided <paramref name="persistenceId"/>.
         /// </summary>
-        public Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
+        public async Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
         {
-            var sqlCommand = QueryBuilder.SelectHighestSequenceNr(persistenceId);
-            CompleteCommand(sqlCommand);
+            using (var connection = CreateDbConnection())
+            {
+                await connection.OpenAsync();
 
-            var tokenSource = GetCancellationTokenSource();
+                var sqlCommand = QueryBuilder.SelectHighestSequenceNr(persistenceId);
+                CompleteCommand(sqlCommand, connection);
+                var tokenSource = GetCancellationTokenSource();
 
-            return sqlCommand
-                .ExecuteScalarAsync(tokenSource.Token)
-                .ContinueWith(task =>
-                {
-                    PendingOperations.Remove(tokenSource);
-                    var result = task.Result;
-                    return result is long ? Convert.ToInt64(task.Result) : 0L;
-                }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
-        }
-
-        /// <summary>
-        /// Synchronously writes all persistent <paramref name="messages"/> inside SQL Server database.
-        /// 
-        /// Specific table used for message persistence may be defined through configuration within 
-        /// 'akka.persistence.journal.sql-server' scope with 'schema-name' and 'table-name' keys.
-        /// </summary>
-        public void WriteMessages(IEnumerable<IPersistentRepresentation> messages)
-        {
-            var persistentMessages = messages.ToArray();
-            var sqlCommand = QueryBuilder.InsertBatchMessages(persistentMessages);
-            CompleteCommand(sqlCommand);
-
-            var journalEntries = persistentMessages.Select(ToJournalEntry).ToList();
-
-            InsertInTransaction(sqlCommand, journalEntries);
-        }
-
-        /// <summary>
-        /// Synchronously deletes all persisted messages identified by provided <paramref name="persistenceId"/>
-        /// up to provided message sequence number (inclusive). If <paramref name="isPermanent"/> flag is cleared,
-        /// messages will still reside inside database, but will be logically counted as deleted.
-        /// </summary>
-        public void DeleteMessagesTo(string persistenceId, long toSequenceNr, bool isPermanent)
-        {
-            var sqlCommand = QueryBuilder.DeleteBatchMessages(persistenceId, toSequenceNr, isPermanent);
-            CompleteCommand(sqlCommand);
-
-            sqlCommand.ExecuteNonQuery();
+                var seqNr = await sqlCommand.ExecuteScalarAsync(tokenSource.Token);
+                return seqNr is long ? Convert.ToInt64(seqNr) : 0L;
+            }
         }
 
         /// <summary>
@@ -240,13 +239,17 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         public async Task WriteMessagesAsync(IEnumerable<IPersistentRepresentation> messages)
         {
-            var persistentMessages = messages.ToArray();
-            var sqlCommand = QueryBuilder.InsertBatchMessages(persistentMessages);
-            CompleteCommand(sqlCommand);
+            using (var connection = CreateDbConnection())
+            {
+                await connection.OpenAsync();
 
-            var journalEntries = persistentMessages.Select(ToJournalEntry).ToList();
+                var persistentMessages = messages.ToArray();
+                var sqlCommand = QueryBuilder.InsertBatchMessages(persistentMessages);
+                CompleteCommand(sqlCommand, connection);
 
-            await InsertInTransactionAsync(sqlCommand, journalEntries);
+                var journalEntries = persistentMessages.Select(ToJournalEntry).ToList();
+                await InsertInTransactionAsync(sqlCommand, journalEntries);
+            }
         }
 
         /// <summary>
@@ -256,15 +259,34 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         public async Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, bool isPermanent)
         {
-            var sqlCommand = QueryBuilder.DeleteBatchMessages(persistenceId, toSequenceNr, isPermanent);
-            CompleteCommand(sqlCommand);
+            using (var connection = CreateDbConnection())
+            {
+                await connection.OpenAsync();
 
-            await sqlCommand.ExecuteNonQueryAsync();
+                var sqlCommand = QueryBuilder.DeleteBatchMessages(persistenceId, toSequenceNr, isPermanent);
+                CompleteCommand(sqlCommand, connection);
+
+                await sqlCommand.ExecuteNonQueryAsync();
+            }
         }
 
-        private void CompleteCommand(DbCommand sqlCommand)
+        /// <summary>
+        /// Returns connection string from either HOCON configuration or &lt;connectionStrings&gt; section of app.config.
+        /// </summary>
+        protected virtual string GetConnectionString()
         {
-            sqlCommand.Connection = _dbConnection;
+            var connectionString = Settings.ConnectionString;
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                connectionString = ConfigurationManager.ConnectionStrings[Settings.ConnectionStringName].ConnectionString;
+            }
+
+            return connectionString;
+        }
+
+        private void CompleteCommand(DbCommand sqlCommand, DbConnection connection)
+        {
+            sqlCommand.Connection = connection;
             sqlCommand.CommandTimeout = (int)Settings.ConnectionTimeout.TotalMilliseconds;
         }
 
@@ -278,42 +300,24 @@ namespace Akka.Persistence.Sql.Common.Journal
         private JournalEntry ToJournalEntry(IPersistentRepresentation message)
         {
             var payloadType = message.Payload.GetType();
-            var serializer = _serialization.FindSerializerForType(payloadType);
+            var serializer = _system.Serialization.FindSerializerForType(payloadType);
+            var manifest = string.IsNullOrEmpty(message.Manifest) ? payloadType.QualifiedTypeName() : message.Manifest;
+            var timestamp = TimestampProvider.GenerateTimestamp(message);
+            var payload = serializer.ToBinary(message.Payload);
 
-            return new JournalEntry(message.PersistenceId, message.SequenceNr, message.IsDeleted,
-                payloadType.QualifiedTypeName(), serializer.ToBinary(message.Payload));
+            return new JournalEntry(message.PersistenceId, message.SequenceNr, message.IsDeleted, manifest, timestamp, payload);
         }
 
-        private void InsertInTransaction(DbCommand sqlCommand, IEnumerable<JournalEntry> journalEntries)
+        private ITimestampProvider CreateTimestampProvider()
         {
-            using (var tx = _dbConnection.BeginTransaction())
-            {
-                sqlCommand.Transaction = tx;
-                try
-                {
-                    foreach (var entry in journalEntries)
-                    {
-                        CopyParamsToCommand(sqlCommand, entry);
-
-                        if (sqlCommand.ExecuteNonQuery() != 1)
-                        {
-                            //TODO: something went wrong, ExecuteNonQuery() should return 1 (number of rows added)
-                        }
-                    }
-
-                    tx.Commit();
-                }
-                catch (Exception)
-                {
-                    tx.Rollback();
-                    throw;
-                }
-            }
+            var type = Type.GetType(Settings.TimestampProvider, true);
+            var instance = Activator.CreateInstance(type);
+            return (ITimestampProvider) instance;
         }
 
         private async Task InsertInTransactionAsync(DbCommand sqlCommand, IEnumerable<JournalEntry> journalEntries)
         {
-            using (var tx = _dbConnection.BeginTransaction())
+            using (var tx = sqlCommand.Connection.BeginTransaction())
             {
                 sqlCommand.Transaction = tx;
                 try
@@ -322,10 +326,10 @@ namespace Akka.Persistence.Sql.Common.Journal
                     {
                         CopyParamsToCommand(sqlCommand, entry);
 
-                        var commandResult = await sqlCommand.ExecuteNonQueryAsync();
-                        if (commandResult != 1)
+                        var result = await sqlCommand.ExecuteNonQueryAsync();
+                        if (result != 1)
                         {
-                            //TODO: something went wrong, ExecuteNonQuery() should return 1 (number of rows added)
+                            Log.Error("Persisted event operation was expected to return 1, but returned [{0}]", result);
                         }
                     }
 

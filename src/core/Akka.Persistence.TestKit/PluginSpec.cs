@@ -8,13 +8,12 @@
 using System;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.TestKit;
-using Akka.TestKit.Xunit2;
 using Akka.Util.Internal;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.TestKit
 {
-    public abstract class PluginSpec : TestKitBase, IDisposable
+    public abstract class PluginSpec : Akka.TestKit.Xunit2.TestKit, IDisposable
     {
         private static readonly AtomicCounter Counter = new AtomicCounter(0);
         private readonly PersistenceExtension _extension;
@@ -22,8 +21,8 @@ namespace Akka.Persistence.TestKit
 
         protected int ActorInstanceId = 1;
 
-        protected PluginSpec(Config config = null, string actorSystemName = null, string testActorName = null) 
-            : base(new XunitAssertions(), FromConfig(config), actorSystemName, testActorName)
+        protected PluginSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null) 
+            : base(FromConfig(config), actorSystemName, output)
         {
             _extension = Persistence.Instance.Apply(Sys as ExtendedActorSystem);
             _pid = "p-" + Counter.IncrementAndGet();
@@ -52,8 +51,7 @@ namespace Akka.Persistence.TestKit
 
         protected virtual void Dispose(bool disposing)
         {
-            if (disposing)
-                Shutdown();
+            //if (disposing) FSMBase.Shutdown();
         }
     }
 }

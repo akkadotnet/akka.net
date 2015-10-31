@@ -153,7 +153,7 @@ namespace Akka.Persistence
 
             var pluginConfig = _system.Settings.Config.GetConfig(configPath);
             var pluginTypeName = pluginConfig.GetString("class");
-            var pluginType = Type.GetType(pluginTypeName);
+            var pluginType = Type.GetType(pluginTypeName, true);
 
             var shouldInjectConfig = pluginConfig.HasPath("inject-config") && pluginConfig.GetBoolean("inject-config");
             var pluginDispatcherId = pluginConfig.HasPath("plugin-dispatcher")

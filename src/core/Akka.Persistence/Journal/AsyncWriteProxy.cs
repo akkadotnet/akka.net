@@ -43,7 +43,7 @@ namespace Akka.Persistence.Journal
             Store = store;
         }
 
-        public IActorRef Store { get; private set; }
+        public readonly IActorRef Store;
     }
 
     public static class AsyncWriteTarget
@@ -106,7 +106,9 @@ namespace Akka.Persistence.Journal
             public long Max { get; private set; }
             public bool Equals(ReplayMessages other)
             {
-                if (other == null) return false;
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(this, other)) return true;
+
                 return PersistenceId == other.PersistenceId
                        && FromSequenceNr == other.FromSequenceNr
                        && ToSequenceNr == other.ToSequenceNr
@@ -127,7 +129,9 @@ namespace Akka.Persistence.Journal
             public long FromSequenceNr { get; private set; }
             public bool Equals(ReadHighestSequenceNr other)
             {
-                if (other == null) return false;
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(this, other)) return true;
+
                 return PersistenceId == other.PersistenceId
                        && FromSequenceNr == other.FromSequenceNr;
             }
@@ -148,7 +152,9 @@ namespace Akka.Persistence.Journal
             public bool IsPermanent { get; private set; }
             public bool Equals(DeleteMessagesTo other)
             {
-                if (other == null) return false;
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(this, other)) return true;
+
                 return PersistenceId == other.PersistenceId
                        && ToSequenceNr == other.ToSequenceNr
                        && IsPermanent == other.IsPermanent;

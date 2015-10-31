@@ -5,7 +5,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using System.Data.Common;
+using Akka.Persistence.Sql.Common.Queries;
 
 namespace Akka.Persistence.Sql.Common.Journal
 {
@@ -14,6 +16,11 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// </summary>
     public interface IJournalQueryBuilder
     {
+        /// <summary>
+        /// Returns query which should return events filtered accordingly to provided set of <paramref name="hints"/>.
+        /// </summary>
+        DbCommand SelectEvents(IEnumerable<IHint> hints);
+
         /// <summary>
         /// Returns query which should return a frame of messages filtered accordingly to provided parameters.
         /// </summary>
