@@ -455,6 +455,11 @@ namespace Akka.Persistence.Tests.Fsm
             public override string PersistenceId { get { return  _persistenceId; }}
 
 
+            protected override void OnRecoveryCompleted()
+            {
+                
+            }
+
             protected override IShoppingCart ApplyEvent(IDomainEvent e, IShoppingCart data)
             {
                 if (e is ItemAdded)
@@ -509,6 +514,11 @@ namespace Akka.Persistence.Tests.Fsm
             get { return _persistenceId; }
         }
 
+
+        protected override void OnRecoveryCompleted()
+        {
+
+        }
 
         protected override IShoppingCart ApplyEvent(IDomainEvent e, IShoppingCart data)
         {

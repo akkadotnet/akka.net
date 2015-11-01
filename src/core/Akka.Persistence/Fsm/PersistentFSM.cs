@@ -34,10 +34,16 @@ namespace Akka.Persistence.Fsm
             base.PostStop();
         }
 
+        protected abstract void OnRecoveryCompleted();
+
         protected override bool ReceiveRecover(object message)
         {
             var match = message.Match()
-                .With<RecoveryCompleted>(t => { Initialize(); })
+                .With<RecoveryCompleted>(t =>
+                {
+                    Initialize();
+                    OnRecoveryCompleted();
+                })
                 .With<TEvent>(e => { StartWith(StateName, ApplyEvent(e, StateData)); })
                 .With<StateChangeEvent>(sce => { StartWith(sce.State, StateData, sce.TimeOut); });
 
