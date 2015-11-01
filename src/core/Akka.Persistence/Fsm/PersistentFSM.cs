@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
-using Akka.Actor;
 
 namespace Akka.Persistence.Fsm
 {
@@ -18,8 +17,6 @@ namespace Akka.Persistence.Fsm
     /// <typeparam name="TEvent">The event data type</typeparam>
     public abstract class PersistentFSM<TState, TData, TEvent> : PersistentFSMBase<TState, TData, TEvent>
     {
-      
-
         protected abstract void OnRecoveryCompleted();
 
         protected override bool ReceiveRecover(object message)

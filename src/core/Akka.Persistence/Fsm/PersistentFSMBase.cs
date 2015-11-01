@@ -50,7 +50,8 @@ namespace Akka.Persistence.Fsm
 
         /// <summary>
         ///     FSM state data and current timeout handling
-        /// </summary>a
+        /// </summary>
+        /// a
         protected State<TState, TData, TEvent> _currentState;
 
         protected long _generation;
