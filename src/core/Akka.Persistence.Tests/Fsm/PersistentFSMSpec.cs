@@ -8,11 +8,12 @@ using Akka.Dispatch.SysMsg;
 using Akka.Persistence.Fsm;
 using Akka.TestKit;
 using Akka.Util;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Persistence.Tests.Fsm
 {
-     public partial class PersistentFSMSpec : PersistenceSpec
+    public partial class PersistentFSMSpec : PersistenceSpec
     {
         private readonly Random _random = new Random();
         public PersistentFSMSpec()
@@ -47,9 +48,21 @@ namespace Akka.Persistence.Tests.Fsm
             ExpectMsg<FSMBase.CurrentState<UserState>>(state => state.State == UserState.LookingAround);
             ExpectMsg<EmptyShoppingCart>();
             ExpectMsg<FSMBase.Transition<UserState>>(state => state.From == UserState.LookingAround);
-            ExpectMsg<NonEmptyShoppingCart>();
-            ExpectMsg<NonEmptyShoppingCart>();
-            ExpectMsg<NonEmptyShoppingCart>();
+            ExpectMsg<NonEmptyShoppingCart>(cart =>
+            {
+                return cart.Items.Any(i => i.Name == "Shirt") && cart.Items.Count == 1; 
+               
+            });
+            ExpectMsg<NonEmptyShoppingCart>(cart =>
+            {
+                return cart.Items.Any(i => i.Name == "Shoes") && cart.Items.Count == 2;
+
+            });
+            ExpectMsg<NonEmptyShoppingCart>(cart =>
+            {
+                return cart.Items.Any(i => i.Name == "Coat") && cart.Items.Count == 3;
+
+            });
             ExpectMsg<FSMBase.Transition<UserState>>();
             ExpectMsg<NonEmptyShoppingCart>();
             ExpectTerminated(fsmRef);
@@ -72,9 +85,9 @@ namespace Akka.Persistence.Tests.Fsm
             ExpectMsg<FSMBase.CurrentState<UserState>>(state =>
             {
                 return state.State == UserState.LookingAround;
-                
+
             });
-            
+
             ExpectMsg<FSMBase.Transition<UserState>>();
 
             Within(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1.9), () =>
@@ -91,7 +104,7 @@ namespace Akka.Persistence.Tests.Fsm
         {
             var dummyReportActorRef = CreateTestProbe().Ref;
 
-            var fsmRef = Sys.ActorOf(Props.Create(()=> new WebStoreCustomerFSM(Name, dummyReportActorRef)));
+            var fsmRef = Sys.ActorOf(Props.Create(() => new WebStoreCustomerFSM(Name, dummyReportActorRef)));
 
             Watch(fsmRef);
             fsmRef.Tell(new FSMBase.SubscribeTransitionCallBack(TestActor));
@@ -112,10 +125,18 @@ namespace Akka.Persistence.Tests.Fsm
             ExpectMsg<FSMBase.Transition<UserState>>(state =>
             {
                 return state.From == UserState.LookingAround;
-                
+
             });
-            ExpectMsg<NonEmptyShoppingCart>();
-            ExpectMsg<NonEmptyShoppingCart>();
+            ExpectMsg<NonEmptyShoppingCart>(cart =>
+            {
+                return cart.Items.Any(i => i.Name == "Shirt") && cart.Items.Count == 1;
+
+            });
+            ExpectMsg<NonEmptyShoppingCart>(cart =>
+            {
+                return cart.Items.Any(i => i.Name == "Shoes") && cart.Items.Count == 2;
+
+            });
 
             fsmRef.Tell(PoisonPill.Instance);
             ExpectTerminated(fsmRef);
@@ -134,10 +155,18 @@ namespace Akka.Persistence.Tests.Fsm
             ExpectMsg<FSMBase.CurrentState<UserState>>(state =>
             {
                 return state.State == UserState.Shopping;
-                
+
             });
-            ExpectMsg<NonEmptyShoppingCart>();
-            ExpectMsg<NonEmptyShoppingCart>();
+            ExpectMsg<NonEmptyShoppingCart>(cart =>
+            {
+                return cart.Items.Any(i => i.Name == "Shoes") && cart.Items.Count == 2;
+
+            });
+            ExpectMsg<NonEmptyShoppingCart>(cart =>
+            {
+                return cart.Items.Any(i => i.Name == "Coat") && cart.Items.Count == 3;
+
+            });
             ExpectMsg<FSMBase.Transition<UserState>>();
             ExpectMsg<NonEmptyShoppingCart>();
             ExpectTerminated(recoveredFsmRef);
@@ -361,11 +390,11 @@ namespace Akka.Persistence.Tests.Fsm
                 _reportActor = reportActor;
                 StartWith(UserState.LookingAround, new EmptyShoppingCart());
 
-                When(UserState.LookingAround, (@event,state) =>
+                When(UserState.LookingAround, (@event, state) =>
                 {
                     if (@event.FsmEvent is AddItem)
                     {
-                        var addItem = (AddItem) @event.FsmEvent;
+                        var addItem = (AddItem)@event.FsmEvent;
                         return
                             GoTo(UserState.Shopping)
                                 .Applying(new ItemAdded(addItem.Item)).ForMax(TimeSpan.FromSeconds(1));
@@ -382,7 +411,7 @@ namespace Akka.Persistence.Tests.Fsm
                 {
                     if (@event.FsmEvent is AddItem)
                     {
-                        var addItem = ((AddItem) @event.FsmEvent);
+                        var addItem = ((AddItem)@event.FsmEvent);
                         return Stay().Applying(new ItemAdded(addItem.Item)).ForMax(TimeSpan.FromSeconds(1));
                     }
                     if (@event.FsmEvent is Buy)
@@ -421,7 +450,7 @@ namespace Akka.Persistence.Tests.Fsm
                 {
                     if (@event.FsmEvent is AddItem)
                     {
-                        var addItem = (AddItem) @event.FsmEvent;
+                        var addItem = (AddItem)@event.FsmEvent;
                         return
                             GoTo(UserState.Shopping)
                                 .Applying(new ItemAdded(addItem.Item))
@@ -452,19 +481,19 @@ namespace Akka.Persistence.Tests.Fsm
                 });
             }
 
-            public override string PersistenceId { get { return  _persistenceId; }}
+            public override string PersistenceId { get { return _persistenceId; } }
 
 
             protected override void OnRecoveryCompleted()
             {
-                
+
             }
 
             protected override IShoppingCart ApplyEvent(IDomainEvent e, IShoppingCart data)
             {
                 if (e is ItemAdded)
                 {
-                    var itemAdded = (ItemAdded) e;
+                    var itemAdded = (ItemAdded)e;
                     return data.AddItem(itemAdded.Item);
                 }
                 if (e is OrderExecuted)
@@ -495,7 +524,7 @@ namespace Akka.Persistence.Tests.Fsm
 
             When(UserState.LookingAround, (@event, state) =>
             {
-                if ((string) @event.FsmEvent == "stay")
+                if ((string)@event.FsmEvent == "stay")
                 {
                     return Stay();
                 }
@@ -562,7 +591,7 @@ namespace Akka.Persistence.Tests.Fsm
     }
 
     #region Custome States
-internal enum UserState
+    internal enum UserState
     {
         Shopping,
         Inactive,
@@ -592,25 +621,37 @@ internal enum UserState
     {
         IShoppingCart AddItem(Item item);
         IShoppingCart Empty();
+        ICollection<Item> Items { get; set; }
+
     }
 
     internal class EmptyShoppingCart : IShoppingCart
     {
         public IShoppingCart AddItem(Item item)
         {
-            return new NonEmptyShoppingCart();
+            return new NonEmptyShoppingCart(item);
         }
 
         public IShoppingCart Empty()
         {
             return this;
         }
+
+        public ICollection<Item> Items { get; set; }
     }
 
     internal class NonEmptyShoppingCart : IShoppingCart
     {
+
+        public NonEmptyShoppingCart(Item item)
+        {
+            Items = new List<Item>();
+            Items.Add(item);
+        }
+
         public IShoppingCart AddItem(Item item)
         {
+            Items.Add(item);
             return this;
         }
 
@@ -618,6 +659,9 @@ internal enum UserState
         {
             return new EmptyShoppingCart();
         }
+
+        public ICollection<Item> Items { get; set; }
+
     }
 
     #endregion
@@ -665,7 +709,7 @@ internal enum UserState
             Item = item;
         }
 
-        public Item Item { get; }
+        public Item Item { get; private set; }
     }
 
     internal class OrderExecuted : IDomainEvent

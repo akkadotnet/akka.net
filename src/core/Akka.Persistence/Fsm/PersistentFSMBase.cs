@@ -50,7 +50,7 @@ namespace Akka.Persistence.Fsm
 
         /// <summary>
         ///     FSM state data and current timeout handling
-        /// </summary>
+        /// </summary>a
         protected State<TState, TData, TEvent> _currentState;
 
         protected long _generation;
@@ -548,6 +548,22 @@ namespace Akka.Persistence.Fsm
                     _currentState.StateData);
                 _terminateEvent(stopEvent);
             }
+        }
+
+        /// <summary>
+        ///     Call the <see cref="PersistentFSMBase.OnTermination" /> hook if you want to retain this behavior.
+        ///     When overriding make sure to call base.PostStop();
+        ///     Please note that this method is called by default from <see cref="ActorBase.PreRestart" /> so
+        ///     override that one if <see cref="PersistentFSMBase.OnTermination" /> shall not be called during restart.
+        /// </summary>
+        protected override void PostStop()
+        {
+            /*
+             * Setting this instance's state to Terminated does no harm during restart, since
+             * the new instance will initialize fresh using StartWith.
+             */
+            Terminate(Stay().WithStopReason(new FSMBase.Shutdown()));
+            base.PostStop();
         }
 
         /// <summary>

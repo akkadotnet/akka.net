@@ -18,21 +18,7 @@ namespace Akka.Persistence.Fsm
     /// <typeparam name="TEvent">The event data type</typeparam>
     public abstract class PersistentFSM<TState, TData, TEvent> : PersistentFSMBase<TState, TData, TEvent>
     {
-        /// <summary>
-        ///     Call the <see cref="PersistentFSMBase.OnTermination" /> hook if you want to retain this behavior.
-        ///     When overriding make sure to call base.PostStop();
-        ///     Please note that this method is called by default from <see cref="ActorBase.PreRestart" /> so
-        ///     override that one if <see cref="PersistentFSMBase.OnTermination" /> shall not be called during restart.
-        /// </summary>
-        protected override void PostStop()
-        {
-            /*
-             * Setting this instance's state to Terminated does no harm during restart, since
-             * the new instance will initialize fresh using StartWith.
-             */
-            Terminate(Stay().WithStopReason(new FSMBase.Shutdown()));
-            base.PostStop();
-        }
+      
 
         protected abstract void OnRecoveryCompleted();
 
