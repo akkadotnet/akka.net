@@ -126,7 +126,7 @@ namespace Akka.Persistence.Fsm
             set { _handleEvent = value; }
         }
 
-        public bool IsStateTimerActive { get; }
+        public bool IsStateTimerActive { get; private set; }
 
         public ListenerSupport Listeners
         {
@@ -595,7 +595,7 @@ namespace Akka.Persistence.Fsm
                 Func = func;
             }
 
-            public StateFunction Func { get; }
+            public StateFunction Func { get; private set; }
 
             public StateFunction Using(Func<State<TState, TData, TEvent>, State<TState, TData, TEvent>> andThen)
             {
@@ -637,7 +637,7 @@ namespace Akka.Persistence.Fsm
                 Generation = generation;
             }
 
-            public long Generation { get; }
+            public long Generation { get; private set; }
         }
 
         [DebuggerDisplay("Timer {Name,nq}, message: {Message")]
@@ -662,15 +662,15 @@ namespace Akka.Persistence.Fsm
                 _ref = new Cancelable(scheduler);
             }
 
-            public string Name { get; }
+            public string Name { get; private set; }
 
-            public object Message { get; }
+            public object Message { get; private set; }
 
-            public bool Repeat { get; }
+            public bool Repeat { get; private set; }
 
-            public int Generation { get; }
+            public int Generation { get; private set; }
 
-            public IActorContext Context { get; }
+            public IActorContext Context { get; private set; }
 
             public void Schedule(IActorRef actor, TimeSpan timeout)
             {
@@ -712,7 +712,7 @@ namespace Akka.Persistence.Fsm
         /// <typeparam name="TE">The event of the state</typeparam>
         public class State<TS, TD, TE> : FSMBase.State<TS, TD>
         {
-            public Action<TD> AfterTransitionHandler { get; }
+            public Action<TD> AfterTransitionHandler { get; private set; }
 
 
             public State(TS stateName, TD stateData, TimeSpan? timeout = null, FSMBase.Reason stopReason = null,
@@ -724,7 +724,7 @@ namespace Akka.Persistence.Fsm
                 Notifies = true;
             }
 
-            public ILinearSeq<TE> DomainEvents { get; }
+            public ILinearSeq<TE> DomainEvents { get; private set; }
 
             public bool Notifies { get; set; }
 

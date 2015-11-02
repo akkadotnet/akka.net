@@ -27,8 +27,8 @@ namespace Akka.Persistence.Fsm
                     Initialize();
                     OnRecoveryCompleted();
                 })
-                .With<TEvent>(e => { StartWith(StateName, ApplyEvent(e, StateData)); })
-                .With<StateChangeEvent>(sce => { StartWith(sce.State, StateData, sce.TimeOut); });
+                .With<TEvent>(e => StartWith(StateName, ApplyEvent(e, StateData)))
+                .With<StateChangeEvent>(sce => StartWith(sce.State, StateData, sce.TimeOut));
 
             return match.WasHandled;
         }

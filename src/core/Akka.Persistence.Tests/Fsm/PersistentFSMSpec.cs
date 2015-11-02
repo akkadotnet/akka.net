@@ -44,11 +44,11 @@ namespace Akka.Persistence.Tests.Fsm
             ExpectMsg<EmptyShoppingCart>();
             ExpectMsg<FSMBase.Transition<UserState>>(state => state.From == UserState.LookingAround);
             ExpectMsg<NonEmptyShoppingCart>(
-                cart => { return cart.Items.Any(i => i.Name == "Shirt") && cart.Items.Count == 1; });
+                cart => cart.Items.Any(i => i.Name == "Shirt") && cart.Items.Count == 1);
             ExpectMsg<NonEmptyShoppingCart>(
-                cart => { return cart.Items.Any(i => i.Name == "Shoes") && cart.Items.Count == 2; });
+                cart => cart.Items.Any(i => i.Name == "Shoes") && cart.Items.Count == 2);
             ExpectMsg<NonEmptyShoppingCart>(
-                cart => { return cart.Items.Any(i => i.Name == "Coat") && cart.Items.Count == 3; });
+                cart => cart.Items.Any(i => i.Name == "Coat") && cart.Items.Count == 3);
             ExpectMsg<FSMBase.Transition<UserState>>();
             ExpectMsg<NonEmptyShoppingCart>();
             ExpectTerminated(fsmRef);
@@ -68,7 +68,7 @@ namespace Akka.Persistence.Tests.Fsm
             var shirt = new Item("1", "Shirt", 59.99F);
 
             fsmRef.Tell(new AddItem(shirt));
-            ExpectMsg<FSMBase.CurrentState<UserState>>(state => { return state.State == UserState.LookingAround; });
+            ExpectMsg<FSMBase.CurrentState<UserState>>(state => state.State == UserState.LookingAround);
 
             ExpectMsg<FSMBase.Transition<UserState>>();
 
@@ -104,11 +104,11 @@ namespace Akka.Persistence.Tests.Fsm
 
             ExpectMsg<FSMBase.CurrentState<UserState>>();
             ExpectMsg<EmptyShoppingCart>();
-            ExpectMsg<FSMBase.Transition<UserState>>(state => { return state.From == UserState.LookingAround; });
+            ExpectMsg<FSMBase.Transition<UserState>>(state => state.From == UserState.LookingAround);
             ExpectMsg<NonEmptyShoppingCart>(
-                cart => { return cart.Items.Any(i => i.Name == "Shirt") && cart.Items.Count == 1; });
+                cart => cart.Items.Any(i => i.Name == "Shirt") && cart.Items.Count == 1);
             ExpectMsg<NonEmptyShoppingCart>(
-                cart => { return cart.Items.Any(i => i.Name == "Shoes") && cart.Items.Count == 2; });
+                cart => cart.Items.Any(i => i.Name == "Shoes") && cart.Items.Count == 2);
 
             fsmRef.Tell(PoisonPill.Instance);
             ExpectTerminated(fsmRef);
@@ -124,11 +124,11 @@ namespace Akka.Persistence.Tests.Fsm
             recoveredFsmRef.Tell(new GetCurrentCart());
             recoveredFsmRef.Tell(new Leave());
 
-            ExpectMsg<FSMBase.CurrentState<UserState>>(state => { return state.State == UserState.Shopping; });
+            ExpectMsg<FSMBase.CurrentState<UserState>>(state => state.State == UserState.Shopping);
             ExpectMsg<NonEmptyShoppingCart>(
-                cart => { return cart.Items.Any(i => i.Name == "Shoes") && cart.Items.Count == 2; });
+                cart => cart.Items.Any(i => i.Name == "Shoes") && cart.Items.Count == 2);
             ExpectMsg<NonEmptyShoppingCart>(
-                cart => { return cart.Items.Any(i => i.Name == "Coat") && cart.Items.Count == 3; });
+                cart => cart.Items.Any(i => i.Name == "Coat") && cart.Items.Count == 3);
             ExpectMsg<FSMBase.Transition<UserState>>();
             ExpectMsg<NonEmptyShoppingCart>();
             ExpectTerminated(recoveredFsmRef);
@@ -154,11 +154,11 @@ namespace Akka.Persistence.Tests.Fsm
             fsmRef.Tell(new Buy());
             fsmRef.Tell(new Leave());
 
-            ExpectMsg<FSMBase.CurrentState<UserState>>(state => { return state.State == UserState.LookingAround; });
+            ExpectMsg<FSMBase.CurrentState<UserState>>(state => state.State == UserState.LookingAround);
             ExpectMsg<FSMBase.Transition<UserState>>(
-                state => { return state.From == UserState.LookingAround && state.To == UserState.Shopping; });
+                state => state.From == UserState.LookingAround && state.To == UserState.Shopping);
             ExpectMsg<FSMBase.Transition<UserState>>(
-                state => { return state.From == UserState.Shopping && state.To == UserState.Paid; });
+                state => state.From == UserState.Shopping && state.To == UserState.Paid);
             reportActorProbe.ExpectMsg<PurchaseWasMade>();
             ExpectTerminated(fsmRef);
         }
@@ -182,9 +182,9 @@ namespace Akka.Persistence.Tests.Fsm
             fsmRef.Tell(new AddItem(coat));
             fsmRef.Tell(new Leave());
 
-            ExpectMsg<FSMBase.CurrentState<UserState>>(state => { return state.State == UserState.LookingAround; });
+            ExpectMsg<FSMBase.CurrentState<UserState>>(state => state.State == UserState.LookingAround);
             ExpectMsg<FSMBase.Transition<UserState>>(
-                state => { return state.From == UserState.LookingAround && state.To == UserState.Shopping; });
+                state => state.From == UserState.LookingAround && state.To == UserState.Shopping);
             reportActorProbe.ExpectMsg<ShoppingCardDiscarded>();
             ExpectTerminated(fsmRef);
         }
@@ -203,9 +203,9 @@ namespace Akka.Persistence.Tests.Fsm
 
             fsmRef.Tell(new AddItem(shirt));
 
-            ExpectMsg<FSMBase.CurrentState<UserState>>(state => { return state.State == UserState.LookingAround; });
+            ExpectMsg<FSMBase.CurrentState<UserState>>(state => state.State == UserState.LookingAround);
             ExpectMsg<FSMBase.Transition<UserState>>(
-                state => { return state.From == UserState.LookingAround && state.To == UserState.Shopping; });
+                state => state.From == UserState.LookingAround && state.To == UserState.Shopping);
 
             ExpectNoMsg(TimeSpan.FromSeconds(0.6));
             fsmRef.Tell(PoisonPill.Instance);
@@ -215,7 +215,7 @@ namespace Akka.Persistence.Tests.Fsm
             Watch(recoveredFsmRef);
             recoveredFsmRef.Tell(new FSMBase.SubscribeTransitionCallBack(TestActor));
 
-            ExpectMsg<FSMBase.CurrentState<UserState>>(state => { return state.State == UserState.Shopping; });
+            ExpectMsg<FSMBase.CurrentState<UserState>>(state => state.State == UserState.Shopping);
 
 
             Within(TimeSpan.FromSeconds(0.9), TimeSpan.FromSeconds(1.9), () =>
@@ -231,7 +231,7 @@ namespace Akka.Persistence.Tests.Fsm
             recoveredFsmRef = Sys.ActorOf(Props.Create(() => new WebStoreCustomerFSM(Name, dummyReportActorRef)));
             Watch(recoveredFsmRef);
             recoveredFsmRef.Tell(new FSMBase.SubscribeTransitionCallBack(TestActor));
-            ExpectMsg<FSMBase.CurrentState<UserState>>(state => { return state.State == UserState.Inactive; });
+            ExpectMsg<FSMBase.CurrentState<UserState>>(state => state.State == UserState.Inactive);
             ExpectTerminated(recoveredFsmRef);
         }
 
@@ -316,10 +316,11 @@ namespace Akka.Persistence.Tests.Fsm
         internal class WebStoreCustomerFSM : PersistentFSM<UserState, IShoppingCart, IDomainEvent>
         {
             private readonly IActorRef _reportActor;
+            private readonly string _persistenceId;
 
             public WebStoreCustomerFSM(string persistenceId, IActorRef reportActor)
             {
-                PersistenceId = persistenceId;
+                _persistenceId = persistenceId;
                 _reportActor = reportActor;
                 StartWith(UserState.LookingAround, new EmptyShoppingCart());
 
@@ -365,7 +366,7 @@ namespace Akka.Persistence.Tests.Fsm
                         return
                             Stop()
                                 .Applying(new OrderDiscarded())
-                                .AndThen(cart => { _reportActor.Tell(new ShoppingCardDiscarded()); });
+                                .AndThen(cart => _reportActor.Tell(new ShoppingCardDiscarded()));
                     }
                     if (@event.FsmEvent is GetCurrentCart)
                     {
@@ -395,7 +396,7 @@ namespace Akka.Persistence.Tests.Fsm
                         return
                             Stop()
                                 .Applying(new OrderDiscarded())
-                                .AndThen(cart => { _reportActor.Tell(new ShoppingCardDiscarded()); });
+                                .AndThen(cart => _reportActor.Tell(new ShoppingCardDiscarded()));
                     }
                     return state;
                 });
@@ -414,7 +415,10 @@ namespace Akka.Persistence.Tests.Fsm
                 });
             }
 
-            public override string PersistenceId { get; }
+            public override string PersistenceId
+            {
+                get { return _persistenceId; }
+            }
 
 
             protected override void OnRecoveryCompleted()
@@ -445,10 +449,11 @@ namespace Akka.Persistence.Tests.Fsm
     internal class SimpleTransitionFSM : PersistentFSM<UserState, IShoppingCart, IDomainEvent>
     {
         private readonly IActorRef _reportActor;
+        private readonly string _persistenceId;
 
         public SimpleTransitionFSM(string persistenceId, IActorRef reportActor)
         {
-            PersistenceId = persistenceId;
+            _persistenceId = persistenceId;
             _reportActor = reportActor;
             StartWith(UserState.LookingAround, new EmptyShoppingCart());
 
@@ -460,10 +465,13 @@ namespace Akka.Persistence.Tests.Fsm
                 }
                 return GoTo(UserState.LookingAround);
             });
-            OnTransition((state, nextState) => { _reportActor.Tell(string.Format("{0} -> {1}", state, nextState)); });
+            OnTransition((state, nextState) => _reportActor.Tell(string.Format("{0} -> {1}", state, nextState)));
         }
 
-        public override string PersistenceId { get; }
+        public override string PersistenceId
+        {
+            get { return _persistenceId; }
+        }
 
 
         protected override void OnRecoveryCompleted()
@@ -479,14 +487,18 @@ namespace Akka.Persistence.Tests.Fsm
     internal class PersistentEventsStreamer : PersistentActor
     {
         private readonly IActorRef _client;
+        private readonly string _persistenceId;
 
         public PersistentEventsStreamer(string persistenceId, IActorRef client)
         {
-            PersistenceId = persistenceId;
+            _persistenceId = persistenceId;
             _client = client;
         }
 
-        public override string PersistenceId { get; }
+        public override string PersistenceId
+        {
+            get { return _persistenceId; }
+        }
 
         protected override bool ReceiveRecover(object message)
         {
@@ -527,9 +539,9 @@ namespace Akka.Persistence.Tests.Fsm
             Price = price;
         }
 
-        public string Id { get; }
-        public string Name { get; }
-        public float Price { get; }
+        public string Id { get; private set; }
+        public string Name { get; private set; }
+        public float Price { get; private set; }
     }
 
     internal interface IShoppingCart
@@ -591,7 +603,7 @@ namespace Akka.Persistence.Tests.Fsm
             Item = item;
         }
 
-        public Item Item { get; }
+        public Item Item { get; private set; }
     }
 
     internal class Buy
@@ -621,7 +633,7 @@ namespace Akka.Persistence.Tests.Fsm
             Item = item;
         }
 
-        public Item Item { get; }
+        public Item Item { get; private set; }
     }
 
     internal class OrderExecuted : IDomainEvent
