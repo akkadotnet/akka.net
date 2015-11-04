@@ -123,10 +123,16 @@ namespace Akka.Persistence
                         UpdateLastSequenceNr(m.Persistent);
                         base.AroundReceive(recoveryBehavior, m.Persistent);
                     }
-                    catch (Exception exc)
+                    catch (Exception cause)
                     {
-                        var currentMessage = Context.AsInstanceOf<ActorCell>().CurrentMessage;
-                        ChangeState(ReplayFailed(exc, currentMessage));
+                        try
+                        {
+                            OnReplayFailure(cause, m.Persistent.Payload);
+                        }
+                        finally
+                        {
+                            Context.Stop(Self);
+                        }
                     }
                 }
                 else if (message is ReplayMessagesSuccess)
@@ -138,55 +144,11 @@ namespace Akka.Persistence
                 else if (message is ReplayMessagesFailure)
                 {
                     var failure = (ReplayMessagesFailure)message;
-                    OnReplayFailure(failure.Cause);
+                    OnReplayFailure(failure.Cause, message: null);
                     // FIXME what happens if RecoveryFailure is handled, i.e. actor is not stopped?
                     base.AroundReceive(recoveryBehavior, new RecoveryFailure(failure.Cause));
                 }
                 else _internalStash.Stash();
-            });
-        }
-
-        /// <summary>
-        /// Processes all remaining replayed messages and changes to <see cref="PrepareRestart"/>.
-        /// Message that caused and exception during replay, is re-added to the mailbox and re-received
-        /// in <see cref="PrepareRestart"/> state.
-        /// </summary>
-        private EventsourcedState ReplayFailed(Exception cause, object failureMessage)
-        {
-            return new EventsourcedState("replay failed", true, (receive, message) =>
-            {
-                if (message is ReplayMessagesFailure)
-                {
-                    ReplayCompleted(cause, failureMessage);
-                    // journal couldn't tell the maximum stored sequence number, hence the next
-                    // replay must be a full replay (up to the highest stored sequence number)
-                    // Recover(lastSequenceNr) is sent by PreRestart
-                    LastSequenceNr = long.MaxValue;
-                }
-                else if (message is ReplayMessagesSuccess) ReplayCompleted(cause, failureMessage);
-                else if (message is ReplayedMessage) UpdateLastSequenceNr(((ReplayedMessage)message).Persistent);
-                else if (message is Recover) return;  // ignore
-                else _internalStash.Stash();
-            });
-        }
-
-        private void ReplayCompleted(Exception cause, object failureMessage)
-        {
-            ChangeState(PrepareRestart(cause));
-
-            //TODO: this implementation requires mailbox.EnqueueFirst to be available, but that actually gives a large 
-            // amount of composition constrains. If any of the casts below will go wrong, user-defined messages won't be handled by actors.
-            Context.EnqueueMessageFirst(failureMessage);
-        }
-
-        /// <summary>
-        /// Re-receives replayed message that caused an exception and re-throws the <paramref name="cause"/>.
-        /// </summary>
-        private EventsourcedState PrepareRestart(Exception cause)
-        {
-            return new EventsourcedState("prepare restart", true, (receive, message) =>
-            {
-                if (message is ReplayedMessage) throw cause;
             });
         }
 
