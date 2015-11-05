@@ -96,6 +96,8 @@ namespace Akka.Persistence
         private IStash _internalStash;
         private ViewState _currentState;
 
+        protected Guid StateId { get { return _currentState.StateId; } }
+
         protected PersistentView()
         {
             LastSequenceNr = 0L;

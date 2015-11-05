@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -20,10 +20,10 @@ namespace Akka.Persistence
         /// Sends <paramref name="task"/> result to the <paramref name="receiver"/> in form of <see cref="ReplayMessagesSuccess"/> 
         /// or <see cref="ReplayMessagesFailure"/> depending on the success or failure of the task.
         /// </summary>
-        public static Task NotifyAboutReplayCompletion(this Task task, IActorRef receiver)
+        public static Task NotifyAboutReplayCompletion(this Task task, Guid requestId, IActorRef receiver)
         {
             return task
-                .ContinueWith(t => !t.IsFaulted ? (object) ReplayMessagesSuccess.Instance : new ReplayMessagesFailure(t.Exception))
+                .ContinueWith(t => !t.IsFaulted ? (object)new ReplayMessagesSuccess(requestId) : new ReplayMessagesFailure(requestId, t.Exception))
                 .PipeTo(receiver);
         }
 

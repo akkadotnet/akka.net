@@ -74,6 +74,8 @@ namespace Akka.Persistence
 
         protected readonly PersistenceExtension Extension;
 
+        protected Guid StateId { get { return _currentState.StateId; } }
+
         protected Eventsourced()
         {
             LastSequenceNr = 0L;

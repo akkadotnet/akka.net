@@ -17,8 +17,14 @@ namespace Akka.Persistence
 
     internal class EventsourcedState
     {
+        /// <summary>
+        /// State Id to coordinate answers
+        /// </summary>
+        public Guid StateId { get; private set; }
+
         public EventsourcedState(string name, bool isRecoveryRunning, StateReceive stateReceive)
         {
+            StateId = Guid.NewGuid();
             Name = name;
             IsRecoveryRunning = isRecoveryRunning;
             StateReceive = stateReceive;
@@ -92,7 +98,7 @@ namespace Akka.Persistence
                     }
 
                     ChangeState(ReplayStarted(recoveryBehavior));
-                    Journal.Tell(new ReplayMessages(LastSequenceNr + 1L, res.ToSequenceNr, maxReplays, PersistenceId, Self));
+                    Journal.Tell(new ReplayMessages(StateId, LastSequenceNr + 1L, res.ToSequenceNr, maxReplays, PersistenceId, Self));
                 }
                 else _internalStash.Stash();
             });
@@ -112,32 +118,98 @@ namespace Akka.Persistence
         /// </summary>
         private EventsourcedState ReplayStarted(Receive recoveryBehavior)
         {
+            long seqNr = LastSequenceNr+1L;
+
+            //var backlog = new LinkedList<IPersistentRepresentation>();
+
             return new EventsourcedState("replay started", true, (receive, message) =>
             {
                 if (message is Recover) return;
                 if (message is ReplayedMessage)
                 {
                     var m = (ReplayedMessage)message;
+                    if (m.RequestId != StateId)
+                        return; //todo over interface
+
+                    var persistent = m.Persistent;
+
                     try
                     {
-                        UpdateLastSequenceNr(m.Persistent);
-                        base.AroundReceive(recoveryBehavior, m.Persistent);
+                        //if(persistent.SequenceNr < seqNr)
+                        //    throw new InvalidOperationException(String.Format("Invalid SequenceNr {1} for persistenceId '{0}' expected {2}.", PersistenceId, m.Persistent.SequenceNr, seqNr));
+                        
+                        //if (persistent.SequenceNr != seqNr)
+                        //{
+                        //    var p = backlog.First;
+                        //    while (p != null && p.Value.SequenceNr < persistent.SequenceNr)
+                        //        p = p.Next;
+
+                        //    if (p != null)
+                        //        backlog.AddBefore(p, persistent);
+                        //    else
+                        //        backlog.AddLast(persistent);
+
+                        //    p = backlog.First;
+
+                        //    while(p.Value.SequenceNr == seqNr)
+                        //    {
+                        //        persistent = p.Value;
+                        //        backlog.RemoveFirst();
+
+                        //        UpdateLastSequenceNr(persistent);
+                        //        base.AroundReceive(recoveryBehavior, persistent);
+                        //        seqNr++;
+
+                        //        p = backlog.First;
+                        //    }                            
+                        //}
+                        //else 
+                        //{
+                        //    UpdateLastSequenceNr(persistent);
+                        //    base.AroundReceive(recoveryBehavior, persistent);
+                        //    seqNr++;
+                        //}
+
+                        if (persistent.PersistenceId != PersistenceId)
+                            throw new InvalidOperationException(String.Format("Invalid Persistent Message for persistenceId '{1}' expected '{0}'.", PersistenceId, persistent.PersistenceId));
+
+                        if (persistent.SequenceNr != seqNr)
+                            throw new InvalidOperationException(String.Format("Invalid SequenceNr {1} for persistenceId '{0}' expected {2}.", PersistenceId, m.Persistent.SequenceNr, seqNr));
+
+                        UpdateLastSequenceNr(persistent);
+                        base.AroundReceive(recoveryBehavior, persistent);
+                        seqNr++;
                     }
                     catch (Exception exc)
                     {
-                        var currentMessage = Context.AsInstanceOf<ActorCell>().CurrentMessage;
-                        ChangeState(ReplayFailed(exc, currentMessage));
+                        //var currentMessage = Context.AsInstanceOf<ActorCell>().CurrentMessage;
+                        ChangeState(ReplayFailed(exc, message));
+                        try
+                        {
+                            OnReplayFailure(exc);
+                        } 
+                        finally
+                        {
+                            Context.Stop(Self);
+                        }
                     }
                 }
                 else if (message is ReplayMessagesSuccess)
                 {
+                    var m = message as ReplayMessagesSuccess;
+                    if (m.RequestId != StateId)
+                        return; //todo over interface
+
                     OnReplaySuccess();
                     ChangeState(Initializing(recoveryBehavior));
-                    Journal.Tell(new ReadHighestSequenceNr(LastSequenceNr, PersistenceId, Self));
+                    Journal.Tell(new ReadHighestSequenceNr(StateId, LastSequenceNr, PersistenceId, Self));
                 }
                 else if (message is ReplayMessagesFailure)
                 {
                     var failure = (ReplayMessagesFailure)message;
+                    if (failure.RequestId != StateId)
+                        return; //todo over interface
+
                     OnReplayFailure(failure.Cause);
                     // FIXME what happens if RecoveryFailure is handled, i.e. actor is not stopped?
                     base.AroundReceive(recoveryBehavior, new RecoveryFailure(failure.Cause));
@@ -201,6 +273,9 @@ namespace Akka.Persistence
                 if (message is ReadHighestSequenceNrSuccess)
                 {
                     var m = (ReadHighestSequenceNrSuccess)message;
+                    if (m.RequestId != StateId)
+                        return; //todo over interface
+
                     ChangeState(ProcessingCommands());
                     _sequenceNr = m.HighestSequenceNr;
                     _internalStash.UnstashAll();
@@ -209,6 +284,10 @@ namespace Akka.Persistence
                 }
                 else if (message is ReadHighestSequenceNrFailure)
                 {
+                    var m = (ReadHighestSequenceNrFailure)message;
+                    if (m.RequestId != StateId)
+                        return; //todo over interface
+
                     base.AroundReceive(recoveryBehavior, RecoveryCompleted.Instance);
                 }
                 else _internalStash.Stash();

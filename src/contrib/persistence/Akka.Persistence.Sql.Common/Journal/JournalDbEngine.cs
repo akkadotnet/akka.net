@@ -54,7 +54,12 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected readonly LinkedList<CancellationTokenSource> PendingOperations;
 
         private readonly Akka.Serialization.Serialization _serialization;
-        private DbConnection _dbConnection;
+        //private DbConnection _dbConnection;
+
+        /// <summary>
+        /// Sync for operations, todo Lock Free LinkedList
+        /// </summary>
+        protected readonly Object SyncLock = new object();
 
         protected JournalDbEngine(JournalSettings settings, Akka.Serialization.Serialization serialization)
         {
@@ -81,7 +86,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// Gets database connection.
         /// </summary>
-        public IDbConnection DbConnection { get { return _dbConnection; } }
+        //public IDbConnection DbConnection { get { return _dbConnection; } }
 
         /// <summary>
         /// Used for generating SQL commands for journal-related database operations.
@@ -93,6 +98,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         public IJournalQueryMapper QueryMapper { get; protected set; }
 
+        bool open;
+
         /// <summary>
         /// Initializes and opens a database connection.
         /// </summary>
@@ -101,8 +108,10 @@ namespace Akka.Persistence.Sql.Common.Journal
             // close connection if it was open
             Close();
 
-            _dbConnection = CreateDbConnection();
-            _dbConnection.Open();
+            //_dbConnection = CreateDbConnection();
+            //_dbConnection.Open();
+
+            open = true;
         }
 
         /// <summary>
@@ -110,12 +119,14 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         public void Close()
         {
-            if (_dbConnection != null)
+            //if (_dbConnection != null)
+            if(open)
             {
                 StopPendingOperations();
 
-                _dbConnection.Dispose();
-                _dbConnection = null;
+                //_dbConnection.Dispose();
+                //_dbConnection = null;
+                open = false;
             }
         }
 
@@ -125,14 +136,17 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected void StopPendingOperations()
         {
             // stop all operations executed in the background
-            var node = PendingOperations.First;
-            while (node != null)
-            {
-                var curr = node;
-                node = node.Next;
+            lock(SyncLock)
+            { 
+                var node = PendingOperations.First;
+                while (node != null)
+                {
+                    var curr = node;
+                    node = node.Next;
 
-                curr.Value.Cancel();
-                PendingOperations.Remove(curr);
+                    curr.Value.Cancel();
+                }
+                PendingOperations.Clear();
             }
         }
 
@@ -151,55 +165,66 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="toSequenceNr">Upper inclusive sequence number bound. Unbound by default.</param>
         /// <param name="max">Maximum number of messages to be replayed. Unbound by default.</param>
         /// <param name="replayCallback">Action invoked for each replayed message.</param>
-        public Task ReplayMessagesAsync(string persistenceId, long fromSequenceNr, long toSequenceNr, long max, IActorRef sender, Action<IPersistentRepresentation> replayCallback)
+        public async Task ReplayMessagesAsync(string persistenceId, long fromSequenceNr, long toSequenceNr, long max, IActorRef sender, Action<IPersistentRepresentation> replayCallback)
         {
             var sqlCommand = QueryBuilder.SelectMessages(persistenceId, fromSequenceNr, toSequenceNr, max);
             CompleteCommand(sqlCommand);
 
             var tokenSource = GetCancellationTokenSource();
 
-            return sqlCommand
-                .ExecuteReaderAsync(tokenSource.Token)
-                .ContinueWith(task =>
+            using (var connection = sqlCommand.Connection)
+            { 
+                await connection.OpenAsync(tokenSource.Token);
+
+                var reader = await sqlCommand.ExecuteReaderAsync(tokenSource.Token);
+
+                try
                 {
-                    var reader = task.Result;
-                    try
+                    while (reader.Read())
                     {
-                        while (reader.Read())
+                        var persistent = QueryMapper.Map(reader, sender);
+                        if (persistent != null)
                         {
-                            var persistent = QueryMapper.Map(reader, sender);
-                            if (persistent != null)
-                            {
-                                replayCallback(persistent);
-                            }
+                            //if (seqNr != persistent.SequenceNr) //todo backlog with max-buffer
+                            //    throw new InvalidOperationException(String.Format("Invalid SequenceNr {1} for persistenceId '{0}' expected {2}.", persistenceId, persistent.SequenceNr, seqNr));
+
+                            replayCallback(persistent);
                         }
                     }
-                    finally
-                    {
+                }
+                finally
+                {
+                    lock(SyncLock)
                         PendingOperations.Remove(tokenSource);
-                        reader.Close();
-                    }
-                }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+                    reader.Close();
+                }
+                connection.Close();
+            }
         }
 
         /// <summary>
         /// Asynchronously reads a highest sequence number of the event stream related with provided <paramref name="persistenceId"/>.
         /// </summary>
-        public Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
+        public async Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
         {
             var sqlCommand = QueryBuilder.SelectHighestSequenceNr(persistenceId);
             CompleteCommand(sqlCommand);
 
             var tokenSource = GetCancellationTokenSource();
 
-            return sqlCommand
-                .ExecuteScalarAsync(tokenSource.Token)
-                .ContinueWith(task =>
-                {
+            using (var connection = sqlCommand.Connection)
+            {
+                await connection.OpenAsync(tokenSource.Token);
+
+                var result = await sqlCommand.ExecuteScalarAsync(tokenSource.Token);
+
+                lock (SyncLock)
                     PendingOperations.Remove(tokenSource);
-                    var result = task.Result;
-                    return result is long ? Convert.ToInt64(task.Result) : 0L;
-                }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+
+                connection.Close();
+
+                return result is long ? Convert.ToInt64(result) : 0L;
+            }
         }
 
         /// <summary>
@@ -214,9 +239,16 @@ namespace Akka.Persistence.Sql.Common.Journal
             var sqlCommand = QueryBuilder.InsertBatchMessages(persistentMessages);
             CompleteCommand(sqlCommand);
 
-            var journalEntries = persistentMessages.Select(ToJournalEntry).ToList();
+            using(var connection = sqlCommand.Connection)
+            {
+                connection.Open();
 
-            InsertInTransaction(sqlCommand, journalEntries);
+                var journalEntries = persistentMessages.Select(ToJournalEntry).ToList();
+
+                InsertInTransaction(sqlCommand, journalEntries);
+
+                connection.Close();
+            }
         }
 
         /// <summary>
@@ -229,7 +261,12 @@ namespace Akka.Persistence.Sql.Common.Journal
             var sqlCommand = QueryBuilder.DeleteBatchMessages(persistenceId, toSequenceNr, isPermanent);
             CompleteCommand(sqlCommand);
 
-            sqlCommand.ExecuteNonQuery();
+            using (var connection = sqlCommand.Connection)
+            {
+                connection.Open();
+                sqlCommand.ExecuteNonQuery();
+                connection.Close();
+            }
         }
 
         /// <summary>
@@ -244,9 +281,16 @@ namespace Akka.Persistence.Sql.Common.Journal
             var sqlCommand = QueryBuilder.InsertBatchMessages(persistentMessages);
             CompleteCommand(sqlCommand);
 
-            var journalEntries = persistentMessages.Select(ToJournalEntry).ToList();
+            using (var connection = sqlCommand.Connection)
+            {
+                await connection.OpenAsync();
+                var journalEntries = persistentMessages.Select(ToJournalEntry).ToList();
 
-            await InsertInTransactionAsync(sqlCommand, journalEntries);
+                await InsertInTransactionAsync(sqlCommand, journalEntries);
+                connection.Close();
+            }
+
+            
         }
 
         /// <summary>
@@ -259,19 +303,27 @@ namespace Akka.Persistence.Sql.Common.Journal
             var sqlCommand = QueryBuilder.DeleteBatchMessages(persistenceId, toSequenceNr, isPermanent);
             CompleteCommand(sqlCommand);
 
-            await sqlCommand.ExecuteNonQueryAsync();
+            using (var connection = sqlCommand.Connection)
+            {
+                await connection.OpenAsync();
+                await sqlCommand.ExecuteNonQueryAsync();
+                connection.Close();
+            }
+
+           
         }
 
         private void CompleteCommand(DbCommand sqlCommand)
         {
-            sqlCommand.Connection = _dbConnection;
+            sqlCommand.Connection = CreateDbConnection();
             sqlCommand.CommandTimeout = (int)Settings.ConnectionTimeout.TotalMilliseconds;
         }
 
         private CancellationTokenSource GetCancellationTokenSource()
         {
             var source = new CancellationTokenSource();
-            PendingOperations.AddLast(source);
+            lock (SyncLock)
+                PendingOperations.AddLast(source);
             return source;
         }
 
@@ -286,7 +338,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private void InsertInTransaction(DbCommand sqlCommand, IEnumerable<JournalEntry> journalEntries)
         {
-            using (var tx = _dbConnection.BeginTransaction())
+            using (var tx = sqlCommand.Connection.BeginTransaction())
             {
                 sqlCommand.Transaction = tx;
                 try
@@ -313,7 +365,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private async Task InsertInTransactionAsync(DbCommand sqlCommand, IEnumerable<JournalEntry> journalEntries)
         {
-            using (var tx = _dbConnection.BeginTransaction())
+            using (var tx = sqlCommand.Connection.BeginTransaction())
             {
                 sqlCommand.Transaction = tx;
                 try

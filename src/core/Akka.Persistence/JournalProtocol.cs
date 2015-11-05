@@ -230,9 +230,10 @@ namespace Akka.Persistence
     /// </summary>
     public sealed class ReplayMessages : IEquatable<ReplayMessages>
     {
-        public ReplayMessages(long fromSequenceNr, long toSequenceNr, long max, string persistenceId,
+        public ReplayMessages(Guid requestId, long fromSequenceNr, long toSequenceNr, long max, string persistenceId,
             IActorRef persistentActor, bool replayDeleted = false)
         {
+            RequestId = requestId;
             FromSequenceNr = fromSequenceNr;
             ToSequenceNr = toSequenceNr;
             Max = max;
@@ -240,6 +241,11 @@ namespace Akka.Persistence
             PersistentActor = persistentActor;
             ReplayDeleted = replayDeleted;
         }
+
+        /// <summary>
+        /// Request Id to coordinate answers
+        /// </summary>
+        public Guid RequestId { get; private set; }
 
         /// <summary>
         /// Inclusive lower sequence number bound where a replay should start.
@@ -275,6 +281,7 @@ namespace Akka.Persistence
         {
             if (other == null) return false;
             return PersistenceId == other.PersistenceId
+                   && RequestId == other.RequestId
                    && PersistentActor == other.PersistentActor
                    && FromSequenceNr == other.FromSequenceNr
                    && ToSequenceNr == other.ToSequenceNr
@@ -288,12 +295,18 @@ namespace Akka.Persistence
     /// </summary>
     public sealed class ReplayedMessage
     {
-        public ReplayedMessage(IPersistentRepresentation persistent)
+        public ReplayedMessage(Guid requestId, IPersistentRepresentation persistent)
         {
+            RequestId = requestId;
             Persistent = persistent;
         }
 
         public IPersistentRepresentation Persistent { get; private set; }
+
+        /// <summary>
+        /// Request Id to coordinate answers
+        /// </summary>
+        public Guid RequestId { get; private set; }
     }
 
     /// <summary>
@@ -302,37 +315,59 @@ namespace Akka.Persistence
     /// </summary>
     public class ReplayMessagesSuccess : IEquatable<ReplayMessagesSuccess>
     {
-        public static readonly ReplayMessagesSuccess Instance = new ReplayMessagesSuccess();
+        //public static readonly ReplayMessagesSuccess Instance = new ReplayMessagesSuccess();
 
-        private ReplayMessagesSuccess() { }
+        public ReplayMessagesSuccess(Guid requestId) 
+        {
+            RequestId = requestId;
+        }
+
+        /// <summary>
+        /// Request Id to coordinate answers
+        /// </summary>
+        public Guid RequestId { get; private set; }
 
         public bool Equals(ReplayMessagesSuccess other)
         {
-            return true;
+            if (other == null)
+                return false;
+            return RequestId == other.RequestId;
         }
     }
 
     public sealed class ReplayMessagesFailure
     {
-        public ReplayMessagesFailure(Exception cause)
+        public ReplayMessagesFailure(Guid requestId, Exception cause)
         {
             if (cause == null)
                 throw new ArgumentNullException("cause", "ReplayMessagesFailure cause exception cannot be null");
 
+            RequestId = requestId;
             Cause = cause;
         }
+
+        /// <summary>
+        /// Request Id to coordinate answers
+        /// </summary>
+        public Guid RequestId { get; private set; }
 
         public Exception Cause { get; private set; }
     }
 
     public sealed class ReadHighestSequenceNr : IEquatable<ReadHighestSequenceNr>
     {
-        public ReadHighestSequenceNr(long fromSequenceNr, string persistenceId, IActorRef persistentActor)
+        public ReadHighestSequenceNr(Guid requestId, long fromSequenceNr, string persistenceId, IActorRef persistentActor)
         {
+            RequestId = requestId;
             FromSequenceNr = fromSequenceNr;
             PersistenceId = persistenceId;
             PersistentActor = persistentActor;
         }
+
+        /// <summary>
+        /// Request Id to coordinate answers
+        /// </summary>
+        public Guid RequestId { get; private set; }
 
         public long FromSequenceNr { get; private set; }
 
@@ -352,10 +387,16 @@ namespace Akka.Persistence
     public sealed class ReadHighestSequenceNrSuccess : IEquatable<ReadHighestSequenceNrSuccess>, IComparable<ReadHighestSequenceNrSuccess>
     {
 
-        public ReadHighestSequenceNrSuccess(long highestSequenceNr)
+        public ReadHighestSequenceNrSuccess(Guid requestId, long highestSequenceNr)
         {
+            RequestId = requestId;
             HighestSequenceNr = highestSequenceNr;
         }
+
+        /// <summary>
+        /// Request Id to coordinate answers
+        /// </summary>
+        public Guid RequestId { get; private set; }
 
         public long HighestSequenceNr { get; private set; }
 
@@ -384,13 +425,19 @@ namespace Akka.Persistence
 
     public sealed class ReadHighestSequenceNrFailure
     {
-        public ReadHighestSequenceNrFailure(Exception cause)
+        public ReadHighestSequenceNrFailure(Guid requestId, Exception cause)
         {
             if (cause == null) 
                 throw new ArgumentNullException("cause", "ReadHighestSequenceNrFailure cause exception cannot be null");
 
+            RequestId = requestId;
             Cause = cause;
         }
+
+        /// <summary>
+        /// Request Id to coordinate answers
+        /// </summary>
+        public Guid RequestId { get; private set; }
 
         public Exception Cause { get; private set; }
     }
