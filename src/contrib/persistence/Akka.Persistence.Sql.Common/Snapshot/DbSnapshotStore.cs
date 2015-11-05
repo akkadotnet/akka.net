@@ -23,11 +23,6 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// </summary>
         protected readonly LinkedList<CancellationTokenSource> PendingOperations;
 
-        /// <summary>
-        /// Sync for operations, todo Lock Free LinkedList
-        /// </summary>
-        protected readonly object SyncLock = new object();
-        
         private DbConnection _connection;
 
         protected DbSnapshotStore()
@@ -49,7 +44,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <summary>
         /// Gets current database connection.
         /// </summary>
-        //public DbConnection DbConnection { get { return _connection; } }
+        public DbConnection DbConnection { get { return _connection; } }
 
         /// <summary>
         /// Query builder used to convert snapshot store related operations into corresponding SQL queries.
@@ -74,17 +69,14 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             base.PostStop();
 
             // stop all operations executed in the background
-            lock(SyncLock)
-            { 
-                var node = PendingOperations.First;
-                while (node != null)
-                {
-                    var curr = node;
-                    node = node.Next;
+            var node = PendingOperations.First;
+            while (node != null)
+            {
+                var curr = node;
+                node = node.Next;
 
-                    curr.Value.Cancel();
-                }
-                PendingOperations.Clear();
+                curr.Value.Cancel();
+                PendingOperations.Remove(curr);
             }
 
             _connection.Close();
@@ -110,8 +102,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
                     }
                     finally
                     {
-                        lock(SyncLock)
-                            PendingOperations.Remove(tokenSource);
+                        PendingOperations.Remove(tokenSource);
                         reader.Close();
                     }
                 }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
@@ -131,8 +122,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             return sqlCommand.ExecuteNonQueryAsync(tokenSource.Token)
                 .ContinueWith(task =>
                 {
-                    lock (SyncLock)
-                        PendingOperations.Remove(tokenSource);
+                    PendingOperations.Remove(tokenSource);
                 }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
         }
 
@@ -163,8 +153,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         private CancellationTokenSource GetCancellationTokenSource()
         {
             var source = new CancellationTokenSource();
-            lock (SyncLock)
-                PendingOperations.AddLast(source);
+            PendingOperations.AddLast(source);
             return source;
         }
 

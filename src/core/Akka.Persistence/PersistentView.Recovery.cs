@@ -19,13 +19,10 @@ namespace Akka.Persistence
     {
         public ViewState(string name, bool isRecoveryRunning, StateReceive stateReceive)
         {
-            StateId = Guid.NewGuid();
             Name = name;
             StateReceive = stateReceive;
             IsRecoveryRunning = isRecoveryRunning;
         }
-
-        public Guid StateId { get; private set; }
 
         public string Name { get; private set; }
         public bool IsRecoveryRunning { get; private set; }
@@ -80,7 +77,7 @@ namespace Akka.Persistence
                         base.AroundReceive(receive, new SnapshotOffer(selectedSnapshot.Metadata, selectedSnapshot.Snapshot));
                     }
                     ChangeState(ReplayStarted(true));
-                    Journal.Tell(new ReplayMessages(_currentState.StateId, LastSequenceNr + 1, loadResult.ToSequenceNr, replayMax, PersistenceId, Self));
+                    Journal.Tell(new ReplayMessages(LastSequenceNr + 1, loadResult.ToSequenceNr, replayMax, PersistenceId, Self));
                 }
                 else _internalStash.Stash();
             });
@@ -117,9 +114,6 @@ namespace Akka.Persistence
                 else if (message is ReplayedMessage)
                 {
                     var replayedMessage = (ReplayedMessage)message;
-
-                    if(replayedMessage.RequestId != StateId)
-
                     try
                     {
                         UpdateLastSequenceNr(replayedMessage.Persistent);
@@ -218,7 +212,7 @@ namespace Akka.Persistence
         private void ChangeStateToReplayStarted(bool isAwait, long replayMax)
         {
             ChangeState(ReplayStarted(isAwait));
-            Journal.Tell(new ReplayMessages(_currentState.StateId, LastSequenceNr + 1, long.MaxValue, replayMax, PersistenceId, Self));
+            Journal.Tell(new ReplayMessages(LastSequenceNr + 1, long.MaxValue, replayMax, PersistenceId, Self));
         }
     }
 }

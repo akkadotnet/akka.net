@@ -70,8 +70,8 @@ namespace Akka.Persistence.Journal
         {
             ReadHighestSequenceNrAsync(msg.PersistenceId, msg.FromSequenceNr)
                 .ContinueWith(t => t.IsFaulted
-                        ? (object)new ReadHighestSequenceNrFailure(msg.RequestId, t.Exception)
-                        : new ReadHighestSequenceNrSuccess(msg.RequestId, t.Result))
+                        ? (object)new ReadHighestSequenceNrFailure(t.Exception)
+                        : new ReadHighestSequenceNrSuccess(t.Result))
                 .PipeTo(msg.PersistentActor);
         }
 
@@ -85,11 +85,11 @@ namespace Akka.Persistence.Journal
                 {
                     foreach (var adapterRepresentation in AdaptFromJournal(persistent))
                     {
-                        msg.PersistentActor.Tell(new ReplayedMessage(msg.RequestId, adapterRepresentation), sender);
+                        msg.PersistentActor.Tell(new ReplayedMessage(adapterRepresentation), sender);
                     }
                 }
             })
-            .NotifyAboutReplayCompletion(msg.RequestId, msg.PersistentActor)
+            .NotifyAboutReplayCompletion(msg.PersistentActor)
             .ContinueWith(t =>
             {
                 if (!t.IsFaulted && CanPublish) context.System.EventStream.Publish(msg);
