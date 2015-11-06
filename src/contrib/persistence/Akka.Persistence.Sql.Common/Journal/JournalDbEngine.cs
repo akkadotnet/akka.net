@@ -51,18 +51,14 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// Settings applied to journal mapped from HOCON config file.
         /// </summary>
         public readonly JournalSettings Settings;
-
-        /// <summary>
-        /// List of cancellation tokens for each of the currently pending database operations.
-        /// </summary>
-        protected readonly LinkedList<CancellationTokenSource> PendingOperations;
-
+        
         /// <summary>
         /// Timestamp provider used for generation of timestamps for incoming persistent messages.
         /// </summary>
         protected readonly ITimestampProvider TimestampProvider;
 
         private readonly ActorSystem _system;
+        private readonly CancellationTokenSource _pendingRequestsCancellation;
 
         protected JournalDbEngine(ActorSystem system)
         {
@@ -72,7 +68,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             QueryMapper = new DefaultJournalQueryMapper(_system.Serialization);
             TimestampProvider = CreateTimestampProvider();
 
-            PendingOperations = new LinkedList<CancellationTokenSource>();
+            _pendingRequestsCancellation = new CancellationTokenSource();
         }
 
         /// <summary>
@@ -118,24 +114,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         public void Close()
         {
-            StopPendingOperations();
-        }
-
-        /// <summary>
-        /// Stops all currently executing database operations.
-        /// </summary>
-        protected void StopPendingOperations()
-        {
-            // stop all operations executed in the background
-            var node = PendingOperations.First;
-            while (node != null)
-            {
-                var curr = node;
-                node = node.Next;
-
-                curr.Value.Cancel();
-                PendingOperations.Remove(curr);
-            }
+            _pendingRequestsCancellation.Cancel();
         }
 
         void IDisposable.Dispose()
@@ -154,9 +133,8 @@ namespace Akka.Persistence.Sql.Common.Journal
 
                 var sqlCommand = QueryBuilder.SelectEvents(hints);
                 CompleteCommand(sqlCommand, connection);
-
-                var tokenSource = GetCancellationTokenSource();
-                var reader = await sqlCommand.ExecuteReaderAsync(tokenSource.Token);
+                
+                var reader = await sqlCommand.ExecuteReaderAsync(_pendingRequestsCancellation.Token);
                 try
                 {
                     while (reader.Read())
@@ -168,7 +146,6 @@ namespace Akka.Persistence.Sql.Common.Journal
                 }
                 finally
                 {
-                    PendingOperations.Remove(tokenSource);
                     reader.Close();
                 }
             }
@@ -192,9 +169,8 @@ namespace Akka.Persistence.Sql.Common.Journal
 
                 var sqlCommand = QueryBuilder.SelectMessages(persistenceId, fromSequenceNr, toSequenceNr, max);
                 CompleteCommand(sqlCommand, connection);
-
-                var tokenSource = GetCancellationTokenSource();
-                var reader = await sqlCommand.ExecuteReaderAsync(tokenSource.Token);
+                
+                var reader = await sqlCommand.ExecuteReaderAsync(_pendingRequestsCancellation.Token);
 
                 try
                 {
@@ -207,7 +183,6 @@ namespace Akka.Persistence.Sql.Common.Journal
                 }
                 finally
                 {
-                    PendingOperations.Remove(tokenSource);
                     reader.Close();
                 }
             }
@@ -224,9 +199,8 @@ namespace Akka.Persistence.Sql.Common.Journal
 
                 var sqlCommand = QueryBuilder.SelectHighestSequenceNr(persistenceId);
                 CompleteCommand(sqlCommand, connection);
-                var tokenSource = GetCancellationTokenSource();
 
-                var seqNr = await sqlCommand.ExecuteScalarAsync(tokenSource.Token);
+                var seqNr = await sqlCommand.ExecuteScalarAsync(_pendingRequestsCancellation.Token);
                 return seqNr is long ? Convert.ToInt64(seqNr) : 0L;
             }
         }
@@ -288,13 +262,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             sqlCommand.Connection = connection;
             sqlCommand.CommandTimeout = (int)Settings.ConnectionTimeout.TotalMilliseconds;
-        }
-
-        private CancellationTokenSource GetCancellationTokenSource()
-        {
-            var source = new CancellationTokenSource();
-            PendingOperations.AddLast(source);
-            return source;
         }
 
         private JournalEntry ToJournalEntry(IPersistentRepresentation message)
