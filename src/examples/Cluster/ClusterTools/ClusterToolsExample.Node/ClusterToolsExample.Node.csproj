@@ -1,0 +1,82 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{337A85B5-4A7C-4883-8634-46E7E52A765F}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>ClusterToolsExample.Node</RootNamespace>
+    <AssemblyName>ClusterToolsExample.Node</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+    <None Include="paket.references" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\contrib\cluster\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj">
+      <Project>{5cf8a8be-b634-473f-bb01-eba878746bd4}</Project>
+      <Name>Akka.Cluster.Tools</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\core\Akka.Cluster\Akka.Cluster.csproj">
+      <Project>{6ab00f61-269a-4501-b06a-026707f000a7}</Project>
+      <Name>Akka.Cluster</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\core\Akka.Remote\Akka.Remote.csproj">
+      <Project>{ea4ff8fd-7c53-49c8-b9aa-02e458b3e6a7}</Project>
+      <Name>Akka.Remote</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\core\Akka\Akka.csproj">
+      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
+      <Name>Akka</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ClusterToolsExample.Shared\ClusterToolsExample.Shared.csproj">
+      <Project>{88d7d845-2f50-4d37-9026-b0a8353d0e8d}</Project>
+      <Name>ClusterToolsExample.Shared</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

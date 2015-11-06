@@ -52,21 +52,6 @@
     <Content Include="CHANGES.txt">
       <Paket>True</Paket>
     </Content>
-    <Content Include="licenses\license.txt">
-      <Paket>True</Paket>
-    </Content>
-    <Content Include="licenses\protoc-license.txt">
-      <Paket>True</Paket>
-    </Content>
-    <Content Include="protos\google\protobuf\csharp_options.proto">
-      <Paket>True</Paket>
-    </Content>
-    <Content Include="protos\google\protobuf\descriptor.proto">
-      <Paket>True</Paket>
-    </Content>
-    <Content Include="protos\tutorial\addressbook.proto">
-      <Paket>True</Paket>
-    </Content>
     <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="System" />
     <Reference Include="System.Core" />

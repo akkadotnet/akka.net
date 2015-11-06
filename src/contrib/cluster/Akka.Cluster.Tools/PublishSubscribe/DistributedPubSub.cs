@@ -42,7 +42,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
         public static Config DefaultConfig()
         {
-            return ConfigurationFactory.FromResource<DistributedPubSub>("Akka.Cluster.Tools.PubSub.reference.conf");
+            return ConfigurationFactory.FromResource<DistributedPubSub>("Akka.Cluster.Tools.PublishSubscribe.reference.conf");
         }
 
         public DistributedPubSub(ExtendedActorSystem system)
