@@ -40,6 +40,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Client\ClusterClient.cs" />
+    <Compile Include="Client\ClusterClientReceptionist.cs" />
+    <Compile Include="Client\ClusterClientSettings.cs" />
+    <Compile Include="Client\ClusterReceptionist.cs" />
+    <Compile Include="Client\ClusterReceptionistSettings.cs" />
+    <Compile Include="Client\Serialization\ClusterClientMessageSerializer.cs" />
+    <Compile Include="Client\Serialization\Proto\ClusterClientMessages.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PublishSubscribe\DistributedPubSub.cs" />
     <Compile Include="PublishSubscribe\DistributedPubSubMediator.cs" />
@@ -56,10 +63,9 @@
     <Compile Include="Singleton\OldestChangedBuffer.cs" />
     <Compile Include="Singleton\Serialization\ClusterSingletonMessageSerializer.cs" />
   </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
-    <Folder Include="Client\Serialization\" />
-  </ItemGroup>
-  <ItemGroup>
+    <EmbeddedResource Include="Client\reference.conf" />
     <None Include="paket.references" />
     <EmbeddedResource Include="Singleton\reference.conf" />
     <EmbeddedResource Include="PublishSubscribe\reference.conf" />
