@@ -82,5 +82,44 @@ namespace Akka.Serialization
         /// <returns>The object contained in the array</returns>
         public abstract object FromBinary(byte[] bytes, Type type);
     }
+
+    public abstract class SerializerWithStringManifest : Serializer
+    {
+        protected SerializerWithStringManifest(ExtendedActorSystem system) : base(system)
+        {
+        }
+
+        public sealed override bool IncludeManifest { get { return true; } }
+
+        public sealed override object FromBinary(byte[] bytes, Type type)
+        {
+            var manifest = type == null ? string.Empty : type.FullName;
+            return FromBinary(bytes, manifest);
+        }
+
+        /// <summary>
+        /// Produces an object from an array of bytes, with an optional type-hint.
+        /// </summary>
+        public abstract object FromBinary(byte[] binary, string manifest);
+
+        /// <summary>
+        /// Return the manifest (type hint) that will be provided in the fromBinary method.
+        /// Return <see cref="string.Empty"/> if not needed.
+        /// </summary>
+        public abstract string Manifest(object o);
+    }
+
+    /// <summary>
+    /// INTERNAL API.
+    /// </summary>
+    public static class SerializerIdentifierHelper
+    {
+        public const string SerializationIdentifiers = "akka.actor.serialization-identifiers";
+
+        public static int GetSerializerIdentifierFromConfig(Type type, ExtendedActorSystem system)
+        {
+            return system.Settings.Config.GetInt(SerializationIdentifiers + "." + type);
+        }
+    }
 }
 
