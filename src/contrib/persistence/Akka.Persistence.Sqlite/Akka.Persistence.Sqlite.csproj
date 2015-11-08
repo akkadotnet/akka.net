@@ -51,7 +51,7 @@
     <Compile Include="Snapshot\SqliteSnapshotStore.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Akka.Persistence.Sqlite.nuspec" />
+    <None Include="Akka.Persistence.Sqlite.paket.template" />
     <None Include="paket.references" />
     <EmbeddedResource Include="sqlite.conf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

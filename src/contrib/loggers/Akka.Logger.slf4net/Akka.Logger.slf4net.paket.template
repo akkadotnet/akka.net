@@ -1,0 +1,22 @@
+﻿type project
+id Akka.Logger.slf4net
+authors 
+	Akka.NET Team
+owners 
+	Akka.NET Team
+projectUrl 
+	http://github.com/akkadotnet/akka.net
+licenseUrl 
+	https://github.com/akkadotnet/akka.net/blob/master/LICENSE
+iconUrl 
+	http://getakka.net/images/AkkaNetLogo.Normal.png
+requireLicenseAcceptance 
+	false
+copyright 
+	Copyright © 2013-2015 Akka.NET Team
+tags
+	akka actors actor model Akka concurrency logging slf4net
+description
+    slf4net logging adapter for Akka.NET
+releaseNotes
+	todo

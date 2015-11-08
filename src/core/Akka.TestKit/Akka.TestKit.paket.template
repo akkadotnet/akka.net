@@ -1,0 +1,24 @@
+﻿type project
+id Akka.TestKit
+authors 
+	Akka.NET Team
+owners 
+	Akka.NET Team
+projectUrl 
+	http://github.com/akkadotnet/akka.net
+licenseUrl 
+	https://github.com/akkadotnet/akka.net/blob/master/LICENSE
+iconUrl 
+	http://getakka.net/images/AkkaNetLogo.Normal.png
+requireLicenseAcceptance 
+	false
+copyright 
+	Copyright © 2013-2015 Akka.NET Team
+tags
+	akka actors actor model Akka concurrency testkit
+summary
+	This only contains base functionality. You need a Akka.TestKit.* package!
+description
+    You need a Akka.TestKit.* package! Add the one appropiate for the test framework you use instead. For example: Akka.TestKit.Xunit or Akka.TestKit.VsTest. This package only contains base functionality for writing tests for the Akka.NET framework.
+releaseNotes
+	todo

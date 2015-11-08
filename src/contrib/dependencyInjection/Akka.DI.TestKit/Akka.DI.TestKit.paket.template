@@ -1,0 +1,22 @@
+﻿type project
+id Akka.DI.TestKit
+authors 
+	Akka.NET Team
+owners 
+	Akka.NET Team
+projectUrl 
+	http://github.com/akkadotnet/akka.net
+licenseUrl 
+	https://github.com/akkadotnet/akka.net/blob/master/LICENSE
+iconUrl 
+	http://getakka.net/images/AkkaNetLogo.Normal.png
+requireLicenseAcceptance 
+	false
+copyright 
+	Copyright © 2013-2015 Akka.NET Team
+tags
+	akka actors actor model Akka concurrency dependency injection DI testkit
+description
+    Dependency Injection (DI) TestKit support for Akka.NET
+releaseNotes
+	todo

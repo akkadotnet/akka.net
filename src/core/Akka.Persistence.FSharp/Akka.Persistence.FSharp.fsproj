@@ -50,7 +50,7 @@
   <ItemGroup>
     <Compile Include="FsApi.fs" />
     <None Include="Script.fsx" />
-    <None Include="Akka.Persistence.FSharp.nuspec" />
+    <None Include="Akka.Persistence.FSharp.paket.template" />
     <Content Include="app.config" />
   </ItemGroup>
   <ItemGroup>

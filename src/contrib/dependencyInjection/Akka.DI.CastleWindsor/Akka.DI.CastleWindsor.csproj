@@ -57,7 +57,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Akka.DI.CastleWindsor.nuspec" />
+    <None Include="Akka.DI.CastleWindsor.paket.template" />
     <None Include="paket.references" />
     <None Include="Readme.md" />
   </ItemGroup>

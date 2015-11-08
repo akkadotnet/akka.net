@@ -49,6 +49,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Akka.TestKit.NUnit.paket.template" />
     <None Include="paket.references" />
   </ItemGroup>
   <ItemGroup>

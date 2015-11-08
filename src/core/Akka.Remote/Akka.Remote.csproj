@@ -120,7 +120,7 @@
     <Compile Include="Transport\Transport.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Akka.Remote.nuspec" />
+    <None Include="Akka.Remote.paket.template" />
     <EmbeddedResource Include="Configuration\Remote.conf" />
     <None Include="app.config" />
     <None Include="paket.references" />

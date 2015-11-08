@@ -48,6 +48,7 @@
     <Compile Include="XunitAssertions.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Akka.TestKit.Xunit2.paket.template" />
     <None Include="paket.references" />
   </ItemGroup>
   <ItemGroup>

@@ -29,6 +29,7 @@ let configuration = "Release"
 let toolDir = "tools"
 let CloudCopyDir = toolDir @@ "CloudCopy"
 let AzCopyDir = toolDir @@ "AzCopy"
+let PaketPath = ".paket" @@ "paket"
 
 // Read release notes and version
 
@@ -272,6 +273,7 @@ Target "MultiNodeTests" <| fun _ ->
 // Nuget targets 
 //--------------------------------------------------------------------------------
 
+[<AutoOpen>]
 module Nuget = 
     // add Akka dependency for other projects
     let getAkkaDependency project =
@@ -292,9 +294,7 @@ module Nuget =
       | "Akka.Cluster" -> preReleaseVersion
       | persistence when persistence.StartsWith("Akka.Persistence") -> preReleaseVersion
       | _ -> release.NugetVersion
-
-open Nuget
-
+      
 //--------------------------------------------------------------------------------
 // Clean nuget directory
 
@@ -313,40 +313,17 @@ let createNugetPackages _ =
         runWithRetries del 3 |> ignore
 
     ensureDirectory nugetDir
-    for nuspec in !! "src/**/*.nuspec" do
+    for nuspec in !! "src/**/*.paket.template" do
         printfn "Creating nuget packages for %s" nuspec
 
-        let project = Path.GetFileNameWithoutExtension nuspec 
+        let project = Path.GetFileNameWithoutExtension <| Path.GetFileNameWithoutExtension nuspec 
         
         let workingDir = workingDir </> project
 
         CleanDir workingDir
 
         let projectDir = Path.GetDirectoryName nuspec
-        let projectFile = (!! (projectDir @@ project + ".*sproj")) |> Seq.head
         let releaseDir = projectDir @@ @"bin\Release"
-        let packages = projectDir @@ "paket.references"
-        let packageDependencies = if (fileExists packages) then (Paket.GetDependenciesForReferencesFile packages |> Seq.toList) else []
-        let dependencies = packageDependencies @ getAkkaDependency project
-        let releaseVersion = getProjectVersion project
-
-        let pack outputDir symbolPackage =
-            NuGetHelper.NuGet
-                (fun p ->
-                    { p with
-                        Description = description
-                        Authors = authors
-                        Copyright = copyright
-                        Project =  project
-                        Properties = ["Configuration", "Release"]
-                        ReleaseNotes = release.Notes |> String.concat "\n"
-                        Version = releaseVersion
-                        Tags = tags |> String.concat " "
-                        OutputPath = outputDir
-                        WorkingDir = workingDir
-                        SymbolPackage = symbolPackage
-                        Dependencies = dependencies })
-                nuspec
 
         // Copy dll, pdb and xml to libdir = workingDir/lib/net45/
         ensureDirectory libDir
@@ -370,9 +347,16 @@ let createNugetPackages _ =
         removeDir (nugetSrcDir @@ "obj")
         removeDir (nugetSrcDir @@ "bin")
 
-        // Create both normal nuget package and symbols nuget package. 
-        // Uses the files we copied to workingDir and outputs to nugetdir
-        pack nugetDir NugetSymbolPackage.Nuspec
+    // Create both normal nuget package and symbols nuget package. 
+    // Uses the files we copied to workingDir and outputs to nugetdir
+    Paket.Pack(fun p -> 
+                { p with
+                    ToolPath = PaketPath
+                    BuildConfig = "Release"
+                    OutputPath = nugetDir
+                    WorkingDir = "src"
+                    ReleaseNotes = release.Notes |> String.concat "\n"
+                })
 
 let publishNugetPackages _ = 
     let rec publishPackage url accessKey trialsLeft packageFile =

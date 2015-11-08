@@ -72,9 +72,9 @@
     <Compile Include="FsApi.fs" />
     <Compile Include="Schedulers.fs" />
     <None Include="paket.references" />
-    <None Include="Akka.FSharp.nuspec" />
     <None Include="README.md" />
     <Content Include="app.config" />
+    <None Include="Akka.FSharp.paket.template" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />

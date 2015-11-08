@@ -53,7 +53,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Akka.DI.StructureMap.nuspec" />
+    <None Include="Akka.DI.StructureMap.paket.template" />
     <None Include="paket.references" />
     <None Include="Readme.md" />
   </ItemGroup>

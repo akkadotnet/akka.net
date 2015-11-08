@@ -1,0 +1,22 @@
+﻿type project
+id Akka.DI.StructureMap
+authors 
+	Akka.NET Team
+owners 
+	Akka.NET Team
+projectUrl 
+	http://github.com/akkadotnet/akka.net
+licenseUrl 
+	https://github.com/akkadotnet/akka.net/blob/master/LICENSE
+iconUrl 
+	http://getakka.net/images/AkkaNetLogo.Normal.png
+requireLicenseAcceptance 
+	false
+copyright 
+	Copyright © 2013-2015 Akka.NET Team
+tags
+	akka actors actor model Akka concurrency dependency injection DI StructureMap
+description
+    StructureMap Dependency Injection (DI) support for Akka.NET
+releaseNotes
+	todo
