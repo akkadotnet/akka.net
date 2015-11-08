@@ -49,9 +49,6 @@
     <DocumentationFile>bin\Release\Akka.Cluster.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Content Include="CHANGES.txt">
-      <Paket>True</Paket>
-    </Content>
     <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="System" />
     <Reference Include="System.Core" />

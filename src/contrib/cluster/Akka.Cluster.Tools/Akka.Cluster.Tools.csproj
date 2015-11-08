@@ -63,7 +63,6 @@
     <Compile Include="Singleton\OldestChangedBuffer.cs" />
     <Compile Include="Singleton\Serialization\ClusterSingletonMessageSerializer.cs" />
   </ItemGroup>
-  <ItemGroup />
   <ItemGroup>
     <EmbeddedResource Include="Client\reference.conf" />
     <None Include="paket.references" />
