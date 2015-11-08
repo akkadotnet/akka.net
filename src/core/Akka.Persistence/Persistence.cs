@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -52,14 +53,14 @@ namespace Akka.Persistence
                 var configPath = _config.GetString("journal.plugin");
                 if (string.IsNullOrEmpty(configPath)) throw new NullReferenceException("Default journal plugin is not configured");
                 return configPath;
-            });
+            }, LazyThreadSafetyMode.ExecutionAndPublication);
 
             _defaultSnapshotPluginId = new Lazy<string>(() =>
             {
                 var configPath = _config.GetString("snapshot-store.plugin");
                 if (string.IsNullOrEmpty(configPath)) throw new NullReferenceException("Default snapshot-store plugin is not configured");
                 return configPath;
-            });
+            }, LazyThreadSafetyMode.ExecutionAndPublication);
 
             Settings = new PersistenceSettings(_system, _config);
         }
@@ -81,7 +82,7 @@ namespace Akka.Persistence
             Lazy<PluginHolder> pluginContainer;
             if (!_snapshotPluginExtensionIds.TryGetValue(configPath, out pluginContainer))
             {
-                var plugin = new Lazy<PluginHolder>(() => CreatePlugin(configPath, _ => DefaultPluginDispatcherId));
+                var plugin = new Lazy<PluginHolder>(() => CreatePlugin(configPath, _ => DefaultPluginDispatcherId), LazyThreadSafetyMode.ExecutionAndPublication);
                 pluginContainer = _snapshotPluginExtensionIds.AddOrUpdate(configPath, plugin, (key, old) => plugin);
             }
 
@@ -101,7 +102,8 @@ namespace Akka.Persistence
                 var plugin = new Lazy<PluginHolder>(() => CreatePlugin(configPath, type =>
                     typeof (AsyncWriteJournal).IsAssignableFrom(type)
                         ? Dispatchers.DefaultDispatcherId
-                        : DefaultPluginDispatcherId));
+                        : DefaultPluginDispatcherId), 
+                        LazyThreadSafetyMode.ExecutionAndPublication);
                 pluginContainer = _journalPluginExtensionIds.AddOrUpdate(configPath, plugin, (key, old) => plugin);
             }
 
@@ -124,7 +126,8 @@ namespace Akka.Persistence
                 var plugin = new Lazy<PluginHolder>(() =>
                     CreatePlugin(configPath, type => typeof (AsyncWriteJournal).IsAssignableFrom(type)
                         ? Dispatchers.DefaultDispatcherId
-                        : DefaultPluginDispatcherId));
+                        : DefaultPluginDispatcherId), 
+                        LazyThreadSafetyMode.ExecutionAndPublication);
                 pluginContainer = _journalPluginExtensionIds.AddOrUpdate(configPath, plugin, (key, old) => plugin);
             }
 
@@ -153,7 +156,7 @@ namespace Akka.Persistence
 
             var pluginConfig = _system.Settings.Config.GetConfig(configPath);
             var pluginTypeName = pluginConfig.GetString("class");
-            var pluginType = Type.GetType(pluginTypeName);
+            var pluginType = Type.GetType(pluginTypeName, true);
 
             var shouldInjectConfig = pluginConfig.HasPath("inject-config") && pluginConfig.GetBoolean("inject-config");
             var pluginDispatcherId = pluginConfig.HasPath("plugin-dispatcher")

@@ -161,10 +161,10 @@ namespace Akka.Persistence.Journal
                 Sender = sender;
             }
 
-            public object Message { get; private set; }
-            public long SequenceNr { get; private set; }
-            public IActorRef Target { get; private set; }
-            public IActorRef Sender { get; private set; }
+            public readonly object Message;
+            public readonly long SequenceNr;
+            public readonly IActorRef Target;
+            public readonly IActorRef Sender;
         }
 
         internal class Resequencer : ActorBase

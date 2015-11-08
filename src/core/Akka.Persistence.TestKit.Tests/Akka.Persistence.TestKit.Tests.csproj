@@ -46,6 +46,10 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj">
+      <Project>{7DBD5C17-5E9D-40C4-9201-D092751532A7}</Project>
+      <Name>Akka.TestKit.Xunit2</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Akka.Persistence.TestKit\Akka.Persistence.TestKit.csproj">
       <Project>{AD9418B6-C452-4169-94FB-D43DE0BFA966}</Project>
       <Name>Akka.Persistence.TestKit</Name>
