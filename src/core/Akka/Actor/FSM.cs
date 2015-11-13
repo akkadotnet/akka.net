@@ -250,7 +250,7 @@ namespace Akka.Actor
 
             public Reason StopReason { get; private set; }
 
-            public List<object> Replies { get; private set; }
+            public List<object> Replies { get; protected set; }
 
             public State<TS, TD> Copy(TimeSpan? timeout, Reason stopReason = null, List<object> replies = null)
             {
