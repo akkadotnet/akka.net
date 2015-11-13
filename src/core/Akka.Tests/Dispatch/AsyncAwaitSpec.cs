@@ -243,8 +243,45 @@ namespace Akka.Tests.Dispatch
         }
     }
 
+    public class AsyncLongRunningActor : ReceiveActor
+    {
+        Task longRunning;
+        System.Threading.CancellationTokenSource cts;
+
+        public AsyncLongRunningActor()
+        {
+            Receive<string>(m =>
+            { 
+                if(m.Equals("start"))
+                { 
+                    cts = new System.Threading.CancellationTokenSource();
+                    //long running task as side effect
+                    longRunning = Task.Factory.StartNew(() =>
+                    {
+                        cts.Token.WaitHandle.WaitOne();
+                        Sender.Tell("done");
+                    }, TaskCreationOptions.LongRunning);
+                }
+                else if (m.Equals("stop"))
+                {
+                    cts.Cancel();
+                }
+            });
+        }
+    }
+
     public class ActorAsyncAwaitSpec : AkkaSpec
     {
+        [Fact]
+        public async Task Actors_should_be_able_to_start_longrunning_task()
+        {
+            var actor = Sys.ActorOf(Props.Create<AsyncLongRunningActor>());
+            var task = actor.Ask<string>("start", TimeSpan.FromSeconds(5));
+            actor.Tell("stop", ActorRefs.NoSender);
+            var res = await task;
+            Assert.Equal("done", res);
+        }
+
         [Fact]
         public async Task UntypedActors_should_be_able_to_async_await_ask_message_loop()
         {
