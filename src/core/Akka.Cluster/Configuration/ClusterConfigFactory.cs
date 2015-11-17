@@ -12,24 +12,26 @@ using Akka.Configuration;
 namespace Akka.Cluster.Configuration
 {
     /// <summary>
-    /// Internal class used for loading akka-cluster configuration values
+    /// This class contains methods used to retrieve cluster configuration options from this assembly's resources.
+    ///
+    /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
     internal static class ClusterConfigFactory
     {
         /// <summary>
-        /// Defaults this instance.
+        /// Retrieves the default cluster options that Akka.NET uses when no configuration has been defined.
         /// </summary>
-        /// <returns>Config.</returns>
+        /// <returns>The configuration that contains default values for all cluster options.</returns>
         public static Config Default()
         {
             return FromResource("Akka.Cluster.Configuration.Cluster.conf");
         }
 
         /// <summary>
-        /// Froms the resource.
+        /// Retrieves a configuration defined in a resource of the current executing assembly.
         /// </summary>
-        /// <param name="resourceName">Name of the resource.</param>
-        /// <returns>Config.</returns>
+        /// <param name="resourceName">The name of the resource that contains the configuration.</param>
+        /// <returns>The configuration defined in the current executing assembly.</returns>
         internal static Config FromResource(string resourceName)
         {
             var assembly = typeof(ClusterConfigFactory).Assembly;
@@ -47,4 +49,3 @@ namespace Akka.Cluster.Configuration
         }
     }
 }
-

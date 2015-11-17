@@ -12,25 +12,27 @@ using Akka.Configuration;
 namespace Akka.Remote.TestKit.Internals
 {
     /// <summary>
-    /// Loads required Multi-Node TestKit configuration values embedded into the assembly
+    /// This class contains methods used to retrieve Multi-Node TestKit configuration options from this assembly's resources
     /// and injects them in relevant tests.
+    ///
+    /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
     internal static class TestConductorConfigFactory
     {
         /// <summary>
-        /// Defaults this instance.
+        /// Retrieves the default Multi-Node TestKit options that Akka.NET uses when no configuration has been defined.
         /// </summary>
-        /// <returns>Config.</returns>
+        /// <returns>The configuration that contains default values for all Multi-Node TestKit options.</returns>
         public static Config Default()
         {
             return FromResource("Akka.Remote.TestKit.Internals.Reference.conf");
         }
 
         /// <summary>
-        /// Froms the resource.
+        /// Retrieves a configuration defined in a resource of the current executing assembly.
         /// </summary>
-        /// <param name="resourceName">Name of the resource.</param>
-        /// <returns>Config.</returns>
+        /// <param name="resourceName">The name of the resource that contains the configuration.</param>
+        /// <returns>The configuration defined in the current executing assembly.</returns>
         internal static Config FromResource(string resourceName)
         {
             var assembly = typeof(TestConductorConfigFactory).Assembly;

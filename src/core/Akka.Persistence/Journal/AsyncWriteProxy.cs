@@ -14,18 +14,33 @@ using System.Runtime.Serialization;
 
 namespace Akka.Persistence.Journal
 {
+    /// <summary>
+    /// This exception is thrown when the replay inactivity exceeds a specified timeout.
+    /// </summary>
     [Serializable]
     public class AsyncReplayTimeoutException : AkkaException
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AsyncReplayTimeoutException"/> class.
+        /// </summary>
         public AsyncReplayTimeoutException()
         {
         }
 
-        public AsyncReplayTimeoutException(string msg)
-            : base(msg)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AsyncReplayTimeoutException"/> class.
+        /// </summary>
+        /// <param name="message">The message that describes the error.</param>
+        public AsyncReplayTimeoutException(string message)
+            : base(message)
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AsyncReplayTimeoutException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
         protected AsyncReplayTimeoutException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {

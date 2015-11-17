@@ -29,20 +29,32 @@ namespace Akka.Remote.Transport
     }
 
     /// <summary>
-    /// The failure we're going to inject into a transport, of course :)
+    /// This exception is used to indicate a simulated failure in an association.
     /// </summary>
     public sealed class FailureInjectorException : AkkaException
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FailureInjectorException"/> class.
+        /// </summary>
+        /// <param name="msg">The message that describes the error.</param>
         public FailureInjectorException(string msg)
         {
             Msg = msg;
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FailureInjectorException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
         private FailureInjectorException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
 
+        /// <summary>
+        /// Retrieves the message of the simulated failure.
+        /// </summary>
         public string Msg { get; private set; }
     }
 
