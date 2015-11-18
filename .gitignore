@@ -210,6 +210,7 @@ FakesAssemblies/
 /src/.Akka.boltdata/TestResults.json
 resetdev.bat
 /src/packages/repositories.config
+/src/.nuget
 
 # FAKE build folder
 .fake/
