@@ -71,10 +71,22 @@ namespace Akka.Remote.TestKit
             }
         }
 
+        /// <summary>
+        /// This exception is thrown when a client has disconnected.
+        /// </summary>
         public class ClientDisconnectedException : AkkaException
         {
-            public ClientDisconnectedException(string msg) : base(msg){}
+            /// <summary>
+            /// Initializes a new instance of the <see cref="ClientDisconnectedException"/> class.
+            /// </summary>
+            /// <param name="message">The message that describes the error.</param>
+            public ClientDisconnectedException(string message) : base(message){}
 
+            /// <summary>
+            /// Initializes a new instance of the <see cref="ClientDisconnectedException"/> class.
+            /// </summary>
+            /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+            /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
             protected ClientDisconnectedException(SerializationInfo info, StreamingContext context) : base(info, context)
             {
             }

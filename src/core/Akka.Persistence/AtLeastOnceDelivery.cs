@@ -229,15 +229,25 @@ namespace Akka.Persistence
     #endregion
 
     /// <summary>
-    /// An exception thrown, when <see cref="AtLeastOnceDeliveryActor.MaxUnconfirmedMessages"/> threshold has been exceeded.
+    /// This exception is thrown when the <see cref="AtLeastOnceDeliveryActor.MaxUnconfirmedMessages"/> threshold has been exceeded.
     /// </summary>
     public class MaxUnconfirmedMessagesExceededException : AkkaException
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MaxUnconfirmedMessagesExceededException"/> class.
+        /// </summary>
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="cause">The exception that is the cause of the current exception.</param>
         public MaxUnconfirmedMessagesExceededException(string message, Exception cause = null)
             : base(message, cause)
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MaxUnconfirmedMessagesExceededException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
         protected MaxUnconfirmedMessagesExceededException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {

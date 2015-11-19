@@ -97,16 +97,26 @@ namespace Akka.Remote
     }
 
     /// <summary>
-    /// Represents a general failure within a <see cref="RemoteTransport"/>, such as
+    /// This exception is thrown when a general failure within a <see cref="RemoteTransport"/> occurs, such as
     /// the inability to start, wrong configuration, etc...
     /// </summary>
     public class RemoteTransportException : AkkaException
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RemoteTransportException"/> class.
+        /// </summary>
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="cause">The exception that is the cause of the current exception.</param>
         public RemoteTransportException(string message, Exception cause = null)
             : base(message, cause)
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RemoteTransportException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
         protected RemoteTransportException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {

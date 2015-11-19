@@ -105,7 +105,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// INTERNAL API
     /// 
-    /// A Codec that is able to convert Akka PDUs from and to <see cref="ByteString"/>
+    /// A codec that is able to convert Akka PDUs from and to <see cref="ByteString"/>
     /// </summary>
     internal abstract class AkkaPduCodec
     {

@@ -60,15 +60,25 @@ namespace Akka.Remote.Transport
     }
 
     /// <summary>
-    /// Indicates that the association setup request is invalid and it is impossible to recover (malformed IP address, unknown hostname, etc...)
+    /// This exception is thrown when an association setup request is invalid and it is impossible to recover (malformed IP address, unknown hostname, etc...).
     /// </summary>
     public class InvalidAssociationException : AkkaException
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="InvalidAssociationException"/> class.
+        /// </summary>
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="cause">The exception that is the cause of the current exception.</param>
         public InvalidAssociationException(string message, Exception cause = null)
             : base(message, cause)
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="InvalidAssociationException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
         protected InvalidAssociationException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
@@ -139,22 +149,37 @@ namespace Akka.Remote.Transport
     /// </summary>
     public interface IHandleEventListener
     {
+        /// <summary>
+        /// Notify the listener about an <see cref="IHandleEvent"/>.
+        /// </summary>
+        /// <param name="ev">The <see cref="IHandleEvent"/> to notify the listener about</param>
         void Notify(IHandleEvent ev);
     }
 
     /// <summary>
-    /// Converts an <see cref="IActorRef"/> instance into an <see cref="IHandleEventListener"/>, so <see cref="IHandleEvent"/> messages
+    /// Converts an <see cref="IActorRef"/> into an <see cref="IHandleEventListener"/>, so <see cref="IHandleEvent"/> messages
     /// can be passed directly to the Actor.
     /// </summary>
     public sealed class ActorHandleEventListener : IHandleEventListener
     {
+        /// <summary>
+        /// The Actor to notify about <see cref="IHandleEvent"/> messages.
+        /// </summary>
         public readonly IActorRef Actor;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ActorHandleEventListener"/> class.
+        /// </summary>
+        /// <param name="actor">The Actor to notify about <see cref="IHandleEvent"/> messages.</param>
         public ActorHandleEventListener(IActorRef actor)
         {
             Actor = actor;
         }
 
+        /// <summary>
+        /// Notify the Actor about an <see cref="IHandleEvent"/> message.
+        /// </summary>
+        /// <param name="ev">The <see cref="IHandleEvent"/> message to notify the Actor about</param>
         public void Notify(IHandleEvent ev)
         {
             Actor.Tell(ev);
@@ -189,22 +214,37 @@ namespace Akka.Remote.Transport
     /// </summary>
     public interface IAssociationEventListener
     {
+        /// <summary>
+        /// Notify the listener about an <see cref="IAssociationEvent"/> message.
+        /// </summary>
+        /// <param name="ev">The <see cref="IAssociationEvent"/> message to notify the listener about</param>
         void Notify(IAssociationEvent ev);
     }
 
     /// <summary>
-    /// Converts an <see cref="IActorRef"/> instance into an <see cref="IAssociationEventListener"/>, so <see cref="IAssociationEvent"/> messages
+    /// Converts an <see cref="IActorRef"/> into an <see cref="IAssociationEventListener"/>, so <see cref="IAssociationEvent"/> messages
     /// can be passed directly to the Actor.
     /// </summary>
     public sealed class ActorAssociationEventListener : IAssociationEventListener
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ActorAssociationEventListener"/> class.
+        /// </summary>
+        /// <param name="actor">The Actor to notify about <see cref="IAssociationEvent"/> messages.</param>
         public ActorAssociationEventListener(IActorRef actor)
         {
             Actor = actor;
         }
 
+        /// <summary>
+        /// The Actor to notify about <see cref="IAssociationEvent"/> messages.
+        /// </summary>
         public IActorRef Actor { get; private set; }
 
+        /// <summary>
+        /// Notify the Actor about an <see cref="IAssociationEvent"/>.
+        /// </summary>
+        /// <param name="ev">The <see cref="IAssociationEvent"/> message to notify the Actor about</param>
         public void Notify(IAssociationEvent ev)
         {
             Actor.Tell(ev);

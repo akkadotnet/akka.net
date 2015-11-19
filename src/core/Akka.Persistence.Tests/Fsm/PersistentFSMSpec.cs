@@ -259,7 +259,7 @@ namespace Akka.Persistence.Tests.Fsm
         {
             var dummyReportActorRef = CreateTestProbe().Ref;
 
-            var fsmRef = Sys.ActorOf(Props.Create<WebStoreCustomerFSM>(Name, dummyReportActorRef), Name);
+            var fsmRef = Sys.ActorOf(Props.Create(()=> new WebStoreCustomerFSM(Name, dummyReportActorRef)));
 
             Watch(fsmRef);
             fsmRef.Tell(new FSMBase.SubscribeTransitionCallBack(TestActor));
@@ -288,7 +288,8 @@ namespace Akka.Persistence.Tests.Fsm
             ExpectMsg<NonEmptyShoppingCart>();
             ExpectTerminated(fsmRef);
 
-            var persistentEventsStreamer = Sys.ActorOf(Props.Create<PersistentEventsStreamer>(Name, TestActor), Name);
+            var persistentEventsStreamer = Sys.ActorOf(Props.Create(()=> new PersistentEventsStreamer(Name, TestActor)));
+
 
             ExpectMsg<ItemAdded>();
             ExpectMsg<PersistentFSMBase<UserState, IShoppingCart, IDomainEvent>.StateChangeEvent>();
