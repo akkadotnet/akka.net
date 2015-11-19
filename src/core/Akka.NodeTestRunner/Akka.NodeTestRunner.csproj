@@ -53,12 +53,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Discovery.cs" />
-    <Compile Include="IsolatedTestRunner.cs" />
-    <Compile Include="ITestRunner.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Sink.cs" />
-    <Compile Include="TestRunner.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
