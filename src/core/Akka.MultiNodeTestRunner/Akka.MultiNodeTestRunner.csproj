@@ -40,17 +40,15 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Akka.Remote.TestKit\TestSettings.cs">
-      <Link>TestSettings.cs</Link>
+    <Compile Include="..\Akka.Remote.TestKit\CommandLine.cs">
+      <Link>CommandLine.cs</Link>
     </Compile>
     <Compile Include="Discovery.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config">
-      <SubType>Designer</SubType>
-    </None>
+    <None Include="App.config" />
     <None Include="paket.references" />
   </ItemGroup>
   <ItemGroup>
