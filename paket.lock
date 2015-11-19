@@ -20,6 +20,9 @@ NUGET
     NuGet.CommandLine (2.8.6)
     qdfeed (1.1.0)
     Serilog (1.5.11)
+    SimpleInjector (3.1.1)
+    SimpleInjector.Extensions.ExecutionContextScoping (3.1.1)
+      SimpleInjector (>= 3.1.1)
     slf4net (0.1.32.1)
     structuremap (3.1.6.186)
     System.Collections (4.0.10) - framework: dnxcore50
