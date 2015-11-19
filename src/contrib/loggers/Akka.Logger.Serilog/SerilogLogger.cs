@@ -30,9 +30,11 @@ namespace Akka.Logger.Serilog
 
         private ILogger SetContextFromLogEvent(ILogger logger, LogEvent logEvent)
         {
-            logger.ForContext("Timestamp", logEvent.Timestamp);
-            logger.ForContext("LogSource", logEvent.LogSource);
-            logger.ForContext("Thread", logEvent.Thread);
+            logger = logger
+                      .ForContext("Timestamp", logEvent.Timestamp)
+                      .ForContext("LogSource", logEvent.LogSource)
+                      .ForContext("Thread", logEvent.Thread.ManagedThreadId.ToString().PadLeft(4, '0'));
+
             return logger;
         }
 
