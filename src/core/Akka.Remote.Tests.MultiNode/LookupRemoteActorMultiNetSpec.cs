@@ -1,12 +1,17 @@
-﻿namespace Akka.Remote.Tests.MultiNode
+﻿//-----------------------------------------------------------------------
+// <copyright file="LookupRemoteActorMultiNetSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
+using Akka.Actor;
+using Akka.Remote.TestKit;
+using Xunit;
+
+namespace Akka.Remote.Tests.MultiNode
 {
-    using System;
-
-    using Akka.Actor;
-    using Akka.Remote.TestKit;
-
-    using Xunit;
-
     public class LookupRemoteActorMultiNetSpec : MultiNodeConfig
     {
         public RoleName Master { get; private set; }
