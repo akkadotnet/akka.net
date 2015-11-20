@@ -8,13 +8,6 @@ cd `dirname ${SCRIPT_PATH}` > /dev/null
 SCRIPT_PATH=`pwd`;
 popd  > /dev/null
 
-if ! [ -f $SCRIPT_PATH/src/.nuget/nuget.exe ] 
-    then
-        wget "https://www.nuget.org/nuget.exe" -P $SCRIPT_PATH/src/.nuget/
-fi
-
-mono $SCRIPT_PATH/src/.nuget/nuget.exe update -self
-
 if test "$OS" = "Windows_NT"
 then
   # use .Net
