@@ -8,6 +8,7 @@
 using System;
 using Akka.Actor;
 using Akka.Actor.Internal;
+using Akka.Remote.Transport.DotNetty;
 using Akka.Remote.Transport.Helios;
 using Akka.TestKit;
 using Akka.Util.Internal;
@@ -49,7 +50,7 @@ namespace Akka.Remote.Tests
             Assert.Equal(TimeSpan.FromDays(5), remoteSettings.QuarantineSilentSystemTimeout);
             Assert.Equal(TimeSpan.FromSeconds(30), remoteSettings.CommandAckTimeout);
             Assert.Equal(1, remoteSettings.Transports.Length);
-            Assert.Equal(typeof(HeliosTcpTransport), Type.GetType(remoteSettings.Transports.Head().TransportClass));
+            Assert.Equal(typeof(DotNettyTransport), Type.GetType(remoteSettings.Transports.Head().TransportClass));
             Assert.Equal(typeof(PhiAccrualFailureDetector), Type.GetType(remoteSettings.WatchFailureDetectorImplementationClass));
             Assert.Equal(TimeSpan.FromSeconds(1), remoteSettings.WatchHeartBeatInterval);
             Assert.Equal(TimeSpan.FromSeconds(3), remoteSettings.WatchHeartbeatExpectedResponseAfter);

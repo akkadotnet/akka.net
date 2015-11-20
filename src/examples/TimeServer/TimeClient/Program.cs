@@ -30,15 +30,10 @@ namespace TimeClient
 
                 while (!Program.IsShutdown)
                 {
-                    fiber.Add(() =>
-                    {
-                        Thread.Sleep(1);
-                        timeClient.Tell(Time);
-                    });
+                    timeClient.Tell(Time);
                 }
 
                 Console.WriteLine("Connection closed.");
-                fiber.GracefulShutdown(TimeSpan.FromSeconds(1));
 
                 Console.ReadLine();
                 IsShutdown = true;
