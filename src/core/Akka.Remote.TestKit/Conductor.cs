@@ -284,7 +284,11 @@ namespace Akka.Remote.TestKit
             _log.Debug("message from {0}: {1}", responseChannel.RemoteHost, message);
             if (message is INetworkOp)
             {
-                _clients[responseChannel].Tell(message);
+                IActorRef fsm;
+                if (_clients.TryGetValue(responseChannel, out fsm))
+                {
+                    fsm.Tell(message);
+                }
             }
             else
             {
