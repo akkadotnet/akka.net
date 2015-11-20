@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.IO;
 
 using Akka.MultiNodeTestRunner.Shared.Reporting;

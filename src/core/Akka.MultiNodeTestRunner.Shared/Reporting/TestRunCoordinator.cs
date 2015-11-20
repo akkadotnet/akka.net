@@ -17,7 +17,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
     /// <summary>
     /// Actor responsible for organizing all of the data for each test run
     /// </summary>
-    public class TestRunCoordinator : ReceiveActor
+    public class TestRunCoordinator : ReceiveActor, IWithUnboundedStash
     {
         #region Internal message classes
 
@@ -65,7 +65,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             TestRunStarted = testRunStarted;
             TestRunData = new TestRunTree(testRunStarted.Ticks);
             Subscribers = new List<IActorRef>();
-            SetReceive();
+            this.RunningTests();
         }
 
         #region Internal fields and Properties
@@ -104,35 +104,94 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
 
         #region Message-handling
 
-        private void SetReceive()
+        private void AwaitingShutdown()
         {
-            Receive<MultiNodeMessage>(message =>
-            {
-                if (_currentSpecRunActor == null) return;
-                _currentSpecRunActor.Forward(message);
-            });
-            Receive<BeginNewSpec>(spec => ReceiveBeginSpecRun(spec));
-            Receive<EndSpec>(spec => ReceiveEndSpecRun(spec));
-            Receive<RequestTestRunState>(state => Sender.Tell(TestRunData.Copy(TestRunPassed(TestRunData))));
-            Receive<SubscribeFactCompletionMessages>(messages => AddSubscriber(messages));
-            Receive<UnsubscribeFactCompletionMessages>(messages => RemoveSubscriber(messages));
-            Receive<EndTestRun>(async run =>
-            {
-                //clean up the current spec, if it hasn't been done already
-                if (_currentSpecRunActor != null)
-                {
-                    await ReceiveEndSpecRun(new EndSpec());
-                }
+            this.Receive<FactData>(
+                data =>
+                    {
+                        this.ReceiveFactData(data);
+                        this.Shutdown();
+                    });
+        }
 
-                //Mark the test run as finished
-                TestRunData.Complete();
+        private void RunningTests()
+        {
+            this.Receive<MultiNodeMessage>(
+                message =>
+                    {
+                        if (this._currentSpecRunActor == null)
+                        {
+                            return;
+                        }
+                        this._currentSpecRunActor.Forward(message);
+                    });
+            this.Receive<BeginNewSpec>(spec => this.ReceiveBeginSpecRun(spec));
+            this.Receive<EndSpec>(
+                spec =>
+                    {
+                        this.Become(EndingSpec);
+                        this.ReceiveEndSpecRun(spec);
+                    });
+            this.Receive<RequestTestRunState>(
+                state => this.Sender.Tell(this.TestRunData.Copy(TestRunPassed(this.TestRunData))));
+            this.Receive<SubscribeFactCompletionMessages>(messages => this.AddSubscriber(messages));
+            this.Receive<UnsubscribeFactCompletionMessages>(messages => this.RemoveSubscriber(messages));
+            this.Receive<EndTestRun>(
+                run =>
+                    {
+                        //clean up the current spec, if it hasn't been done already
+                        if (this._currentSpecRunActor != null)
+                        {
+                            this.Become(this.AwaitingShutdown);
 
-                //Deliver the final copy of the TestRunData
-                Sender.Tell(TestRunData.Copy());
+                            this.ReceiveEndSpecRun(new EndSpec());
 
-                //shutdown
-                Context.Stop(Self);
-            });
+                            return;
+                        }
+
+                        this.Shutdown();
+                    });
+            this.Receive<FactData>(data => this.ReceiveFactData(data));
+        }
+
+        private void EndingSpec()
+        {
+            this.Receive<MultiNodeMessage>(_ => Stash.Stash());
+            this.Receive<BeginNewSpec>(_ => Stash.Stash());
+            this.Receive<EndSpec>(_ => Stash.Stash());
+            this.Receive<RequestTestRunState>(_ => Stash.Stash());
+            this.Receive<SubscribeFactCompletionMessages>(_ => Stash.Stash());
+            this.Receive<UnsubscribeFactCompletionMessages>(_ => Stash.Stash());
+            this.Receive<EndTestRun>(_ => Stash.Stash());
+
+            this.Receive<FactData>(
+                data =>
+                    {
+                        this.ReceiveFactData(data);
+                        this.Become(this.RunningTests);
+                        Stash.UnstashAll();
+                    });
+        }
+
+        private void Shutdown()
+        {
+            //Mark the test run as finished
+            TestRunData.Complete();
+
+            //Deliver the final copy of the TestRunData
+            Sender.Tell(TestRunData.Copy());
+
+            //shutdown
+            Context.Stop(Self);
+        }
+        private void ReceiveFactData(FactData data)
+        {
+                    this.TestRunData.AddSpec(data);
+                    foreach (var subscriber in this.Subscribers)
+                    {
+                        subscriber.Tell(data);
+                    }
+                    this._currentSpecRunActor = null;
         }
 
         private void RemoveSubscriber(UnsubscribeFactCompletionMessages unsubscribe)
@@ -155,21 +214,10 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
                     Props.Create(() => new SpecRunCoordinator(spec.ClassName, spec.MethodName, spec.Nodes)));
         }
 
-        private async Task ReceiveEndSpecRun(EndSpec spec)
+        private void ReceiveEndSpecRun(EndSpec spec)
         {
-            //Should receive a FactData in return
-            var factData = await _currentSpecRunActor.Ask<FactData>(spec, TimeSpan.FromSeconds(2));
-
-            TestRunData.AddSpec(factData);
-
-            //Publish the FactData back to any subscribers who wanted it
-            foreach (var subscriber in Subscribers)
-            {
-                subscriber.Tell(factData);
-            }
-
-            //Ready to begin the next spec
-            _currentSpecRunActor = null;
+           _currentSpecRunActor.Ask<FactData>(spec, TimeSpan.FromSeconds(2))
+                .PipeTo(Self, Sender);
         }
 
         private static bool TestRunPassed(TestRunTree tree)
@@ -178,6 +226,8 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         }
 
         #endregion
+
+        public IStash Stash { get; set; }
     }
 }
 
