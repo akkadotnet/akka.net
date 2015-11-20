@@ -185,7 +185,7 @@ namespace Akka.Remote.TestKit
             {
                 if (_maxNodes == MaxNodesUnset)
                 {
-                    _maxNodes = TestSettings.GetInt32("multinode.max-nodes");
+                    _maxNodes = CommandLine.GetInt32("multinode.max-nodes");
                 }
 
                 if (_maxNodes <= 0) throw new InvalidOperationException("multinode.max-nodes must be greater than 0");
@@ -210,7 +210,7 @@ namespace Akka.Remote.TestKit
             {
                 if (string.IsNullOrEmpty(_multiNodeHost))
                 {
-                    _multiNodeHost = TestSettings.GetProperty("multinode.host");
+                    _multiNodeHost = CommandLine.GetProperty("multinode.host");
                 }
 
                 //Run this assertion every time. Consistency is more important than performance.
@@ -237,7 +237,7 @@ namespace Akka.Remote.TestKit
             {
                 if (_selfPort == SelfPortUnsetValue) //unset
                 {
-                    var selfPortStr = TestSettings.GetProperty("multinode.port");
+                    var selfPortStr = CommandLine.GetProperty("multinode.port");
                     _selfPort = string.IsNullOrEmpty(selfPortStr) ? 0 : Int32.Parse(selfPortStr);
                 }
 
@@ -259,7 +259,7 @@ namespace Akka.Remote.TestKit
             {
                 if (string.IsNullOrEmpty(_serverName))
                 {
-                    _serverName = TestSettings.GetProperty("multinode.server-host");
+                    _serverName = CommandLine.GetProperty("multinode.server-host");
                 }
                 if (string.IsNullOrEmpty(_serverName)) throw new InvalidOperationException("multinode.server-host must not be empty");
                 return _serverName;
@@ -289,7 +289,7 @@ namespace Akka.Remote.TestKit
             {
                 if (_serverPort == ServerPortUnsetValue)
                 {
-                    var serverPortStr = TestSettings.GetProperty("multinode.server-port");
+                    var serverPortStr = CommandLine.GetProperty("multinode.server-port");
                     _serverPort = string.IsNullOrEmpty(serverPortStr) ? ServerPortDefault : Int32.Parse(serverPortStr);
                 }
 
@@ -316,7 +316,7 @@ namespace Akka.Remote.TestKit
             {
                 if (_selfIndex == SelfIndexUnset)
                 {
-                    _selfIndex = TestSettings.GetInt32("multinode.index");
+                    _selfIndex = CommandLine.GetInt32("multinode.index");
                 }
 
                 if (!(_selfIndex >= 0 && _selfIndex < MaxNodes)) throw new InvalidOperationException("multinode.index is out of bounds: " + _selfIndex);

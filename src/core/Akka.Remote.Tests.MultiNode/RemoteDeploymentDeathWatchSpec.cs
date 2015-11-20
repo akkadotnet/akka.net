@@ -5,7 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-
 using System;
 using System.Threading;
 using Akka.Actor;

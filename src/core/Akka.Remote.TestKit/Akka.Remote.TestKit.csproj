@@ -59,7 +59,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BarrierCoordinator.cs" />
-    <Compile Include="TestSettings.cs" />
+    <Compile Include="CommandLine.cs" />
     <Compile Include="Conductor.cs" />
     <Compile Include="Controller.cs" />
     <Compile Include="DataTypes.cs" />
