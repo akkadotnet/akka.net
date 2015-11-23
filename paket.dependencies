@@ -5,7 +5,7 @@ nuget Castle.Windsor
 nuget faker-csharp
 nuget FsPickler >= 1.2
 nuget FSPowerPack.Linq.Community 
-nuget Google.ProtocolBuffers 2.4.1.521 framework: >= net45
+nuget Google.ProtocolBuffers
 nuget Google.ProtocolBuffersLite 
 nuget Helios  
 nuget Nuget.CommandLine
@@ -19,7 +19,7 @@ nuget slf4net
 nuget structuremap 
 nuget System.Data.SQLite.Core
 nuget Unity 
-nuget Wire 0.0.4 framework: >= net45
+nuget Wire 0.0.6
 nuget xunit 2.0.0 framework: >= net45
 nuget xunit.abstractions 2.0.0 framework: >= net45
 nuget xunit.assert 2.0.0 framework: >= net45
