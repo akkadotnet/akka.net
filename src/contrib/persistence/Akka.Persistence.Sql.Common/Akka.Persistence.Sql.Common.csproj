@@ -40,16 +40,24 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CommonExtension.cs" />
+    <Compile Include="CommonConnectionContext.cs" />
+    <Compile Include="CommonDbHelper.cs" />
     <Compile Include="InternalExtensions.cs" />
     <Compile Include="Journal\ITimestampProvider.cs" />
     <Compile Include="Journal\JournalDbEngine.cs" />
     <Compile Include="Journal\QueryBuilder.cs" />
     <Compile Include="Journal\QueryMapper.cs" />
+    <Compile Include="Journal\CommonJournal.cs" />
+    <Compile Include="Journal\CommonQueryBuilder.cs" />
     <Compile Include="Journal\SqlJournal.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Queries\Hints.cs" />
     <Compile Include="Queries\Query.cs" />
     <Compile Include="Settings.cs" />
+    <Compile Include="Snapshot\CommonQueryMapper.cs" />
+    <Compile Include="Snapshot\CommonSnapshotStore.cs" />
+    <Compile Include="Snapshot\CommonQueryBuilder.cs" />
     <Compile Include="Snapshot\SqlSnapshotStore.cs" />
     <Compile Include="Snapshot\QueryBuilder.cs" />
     <Compile Include="Snapshot\QueryMapper.cs" />
@@ -66,6 +74,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Akka.Persistence.Sql.Common.nuspec" />
+    <EmbeddedResource Include="common.conf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
