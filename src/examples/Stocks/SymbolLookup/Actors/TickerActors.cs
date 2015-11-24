@@ -8,7 +8,6 @@
 using System;
 using System.Net.Http;
 using Akka.Actor;
-using Newtonsoft.Json;
 using QDFeedParser;
 using SymbolLookup.Actors.Messages;
 using SymbolLookup.YahooFinance;
@@ -108,7 +107,7 @@ namespace SymbolLookup.Actors
                 var quoteStrTask = _client.GetStringAsync(StockUriHelper.CreateStockQuoteUri(symboldata.Symbol));
                 quoteStrTask.Wait();
                 var quoteStr = quoteStrTask.Result;
-                var quoteData = JsonConvert.DeserializeObject<RootObject>(quoteStr);
+                var quoteData = fastJSON.JSON.Instance.ToObject<RootObject>(quoteStr);
                 if (quoteData == null || quoteData.query == null || quoteData.query.results == null)
                 {
                     //request failed for whatever reason, 

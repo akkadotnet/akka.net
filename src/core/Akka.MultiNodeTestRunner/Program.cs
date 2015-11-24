@@ -75,7 +75,7 @@ namespace Akka.MultiNodeTestRunner
             EnableAllSinks(assemblyName);
             PublishRunnerMessage(String.Format("Running MultiNodeTests for {0}", assemblyName));
 
-            using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, assemblyName))
+            using (var controller = new XunitFrontController(assemblyName))
             {
                 using (var discovery = new Discovery())
                 {
