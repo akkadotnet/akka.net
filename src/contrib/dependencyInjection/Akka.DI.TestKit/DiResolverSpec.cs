@@ -119,7 +119,7 @@ namespace Akka.DI.TestKit
         class ConcreteDiSingleton : IDiSingleton
         {
             AtomicCounter _counter = new AtomicCounter(0);
-            public int CallCount { get { return _counter.Current; }}
+            public int CallCount { get { return _counter.Current; } }
 
             public void Call()
             {
@@ -201,7 +201,7 @@ namespace Akka.DI.TestKit
             : base(new XunitAssertions(), config, actorSystemName, testActorName)
         {
             _pid = "p-" + Counter.IncrementAndGet();
-// ReSharper disable once DoNotCallOverridableMethodsInConstructor
+            // ReSharper disable once DoNotCallOverridableMethodsInConstructor
             var resolver = ConfigureDependencyResolver(Sys);
         }
 
@@ -242,7 +242,7 @@ namespace Akka.DI.TestKit
         /// <typeparam name="T">The type we're binding onto the DI container.</typeparam>
         /// <param name="diContainer">The DI container.</param>
         /// <param name="generator">A generator function that yields new objects of type <typeparam name="T"/>.</param>
-        protected abstract void Bind<T>(object diContainer, Func<T> generator);
+        protected abstract void Bind<T>(object diContainer, Func<T> generator) where T : class;
 
         /// <summary>
         /// Create a binding for type <typeparam name="T"/> on the provided DI container.
@@ -252,7 +252,7 @@ namespace Akka.DI.TestKit
         /// </summary>
         /// <typeparam name="T">The type we're binding onto the DI container.</typeparam>
         /// <param name="diContainer">The DI container.</param>
-        protected abstract void Bind<T>(object diContainer);
+        protected abstract void Bind<T>(object diContainer) where T : class;
 
         #endregion
 
@@ -344,7 +344,7 @@ namespace Akka.DI.TestKit
             var stashActorProps = Sys.DI().Props<UnboundedStashActor>();
             var stashActor = Sys.ActorOf(stashActorProps);
 
-            var internalRef = (LocalActorRef) stashActor;
+            var internalRef = (LocalActorRef)stashActor;
 
             Assert.IsType<UnboundedDequeBasedMailbox>(internalRef.Cell.Mailbox);
         }

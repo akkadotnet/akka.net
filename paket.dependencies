@@ -25,6 +25,8 @@ nuget xunit.abstractions 2.0.0 framework: >= net45
 nuget xunit.assert 2.0.0 framework: >= net45
 nuget xunit.core 2.0.0 framework: >= net45
 nuget xunit.extensibility.core 2.0.0 framework: >= net45
+nuget SimpleInjector 3.1.0 framework: >= net45
+nuget SimpleInjector.Extensions.ExecutionContextScoping 3.1.0 framework: >= net45
 
 group Test
 source https://www.nuget.org/api/v2/
