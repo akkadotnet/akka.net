@@ -79,7 +79,7 @@ namespace Akka.Persistence.Tests.Fsm
 
             ExpectMsg<FSMBase.Transition<UserState>>();
 
-            Within(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1.9), () =>
+            Within(TimeSpan.FromSeconds(0.9), TimeSpan.FromSeconds(1.9), () =>
             {
                 ExpectMsg<FSMBase.Transition<UserState>>();
                 return true;
