@@ -56,7 +56,7 @@ let testOutput = FullName "TestResults"
 let nugetDir = binDir @@ "nuget"
 let workingDir = binDir @@ "build"
 let libDir = workingDir @@ @"lib\net45\"
-let nugetExe = FullName @"src\.nuget\NuGet.exe"
+let nugetExe = FullName @"./packages/NuGet.CommandLine/tools/NuGet.exe"
 let docDir = "bin" @@ "doc"
 
 
