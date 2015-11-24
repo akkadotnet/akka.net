@@ -14,7 +14,8 @@
     <Name>Akka.FSharp.Tests</Name>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
-    <NuGetPackageImportStamp>802fc494</NuGetPackageImportStamp>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -70,17 +71,19 @@
   <ItemGroup>
     <Compile Include="Tests.fs" />
     <Compile Include="ComputationExpression.fs" />
-    <None Include="packages.config" />
     <None Include="app.config" />
     <Compile Include="ApiTests.fs" />
     <Compile Include="InfrastructureTests.fs" />
+    <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FsCheck">
       <HintPath>..\..\packages\FsCheck.0.9.4.0\lib\net40-Client\FsCheck.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="FsCheck.Xunit">
       <HintPath>..\..\packages\FsCheck.Xunit.0.4.1.0\lib\net40-Client\FsCheck.Xunit.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="System" />
