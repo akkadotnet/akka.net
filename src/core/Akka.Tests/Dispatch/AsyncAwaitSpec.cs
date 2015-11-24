@@ -305,6 +305,10 @@ namespace Akka.Tests.Dispatch
             {
                 return "notsupported";
             }
+            catch(NullReferenceException)
+            {
+                return "notsupported";
+            }
             return "done";
         }
     }
