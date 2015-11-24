@@ -253,14 +253,18 @@ namespace Akka.Tests.Dispatch
             Receive<string>(m =>
             { 
                 if(m.Equals("start"))
-                { 
-                    cts = new System.Threading.CancellationTokenSource();
-                    //long running task as side effect
-                    longRunning = Task.Factory.StartNew(() =>
+                {
+                    RunTask(() =>
                     {
-                        cts.Token.WaitHandle.WaitOne();
-                        Sender.Tell("done");
-                    }, TaskCreationOptions.LongRunning);
+                        cts = new System.Threading.CancellationTokenSource();
+                        //long running task as side effect
+                        longRunning = Task.Factory.StartNew(() =>
+                        {
+                            cts.Token.WaitHandle.WaitOne();
+                            return "done";
+                        }, TaskCreationOptions.LongRunning)
+                        .PipeTo(Sender);
+                    });
                 }
                 else if (m.Equals("stop"))
                 {
@@ -270,8 +274,54 @@ namespace Akka.Tests.Dispatch
         }
     }
 
+    public class AsyncContextSupportForTaskActor : ReceiveActor
+    {
+        public AsyncContextSupportForTaskActor()
+        {
+            Receive<string>(m =>
+            {
+                if (m.Equals("start"))
+                {
+                    AsyncTask().PipeTo(Sender);
+                }
+                else if (m.Equals("run"))
+                {
+                    RunTask(() => AsyncTask().PipeTo(Sender));
+                }
+            });
+        }
+
+        private async Task<String> AsyncTask()
+        {
+            try
+            {
+                var sender1 = Context.Sender;
+                await Task.Delay(1);
+                var sender2 = Context.Sender;
+                if (sender1 != sender2)
+                    return "error";
+            }
+            catch (NotSupportedException)
+            {
+                return "notsupported";
+            }
+            return "done";
+        }
+    }
+
     public class ActorAsyncAwaitSpec : AkkaSpec
     {
+        [Fact]
+        public async Task Actors_should_not_be_able_to_use_context_in_async_task()
+        {
+            var actor = Sys.ActorOf(Props.Create<AsyncContextSupportForTaskActor>());
+            actor.Tell("start");
+            ExpectMsg("notsupported", TimeSpan.FromSeconds(5));
+
+            actor.Tell("run");
+            ExpectMsg("done", TimeSpan.FromSeconds(5));
+        }
+
         [Fact]
         public async Task Actors_should_be_able_to_start_longrunning_task()
         {
