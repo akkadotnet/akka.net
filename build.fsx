@@ -319,7 +319,6 @@ let createNugetPackages _ =
         let project = Path.GetFileNameWithoutExtension nuspec 
         
         let workingDir = workingDir </> project
-        let libDir = workingDir </> @"lib\net45\"
 
         CleanDir workingDir
 
