@@ -20,7 +20,7 @@ namespace Akka.Persistence.Sql.Common
         /// Connection string used to access a persistent SQL Server instance.
         /// </summary>
         public string ConnectionString { get; private set; }
-
+                
         /// <summary>
         /// Name of the connection string stored in &lt;connectionStrings&gt; section of *.config file.
         /// </summary>
@@ -69,6 +69,7 @@ namespace Akka.Persistence.Sql.Common
         /// </summary>
         public string ConnectionString { get; private set; }
 
+        
         /// <summary>
         /// Name of the connection string stored in &lt;connectionStrings&gt; section of *.config file.
         /// </summary>
