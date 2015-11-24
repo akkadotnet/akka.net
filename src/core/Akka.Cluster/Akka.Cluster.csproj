@@ -109,7 +109,7 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Configuration\Cluster.conf" />
-    <None Include="Akka.Cluster.nuspec" />
+    <None Include="Akka.Cluster.paket.template" />
     <None Include="paket.references" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

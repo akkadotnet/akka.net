@@ -57,7 +57,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Akka.DI.AutoFac.nuspec" />
+    <None Include="Akka.DI.AutoFac.paket.template" />
     <None Include="paket.references" />
     <None Include="Readme.md" />
   </ItemGroup>

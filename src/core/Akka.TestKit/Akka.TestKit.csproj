@@ -146,6 +146,7 @@
     <EmbeddedResource Include="Internal\Reference.conf" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Akka.TestKit.paket.template" />
     <None Include="EventFilter\EventFilterFactory_Generated.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>EventFilterFactory_Generated.cs</LastGenOutput>

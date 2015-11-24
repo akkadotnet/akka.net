@@ -93,7 +93,7 @@
     <Compile Include="PersistentView.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Akka.Persistence.nuspec" />
+    <None Include="Akka.Persistence.paket.template" />
     <None Include="paket.references" />
     <EmbeddedResource Include="persistence.conf" />
     <None Include="README.md" />

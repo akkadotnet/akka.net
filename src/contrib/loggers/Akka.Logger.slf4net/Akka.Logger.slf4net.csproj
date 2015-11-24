@@ -65,7 +65,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Akka.Logger.slf4net.nuspec" />
+    <None Include="Akka.Logger.slf4net.paket.template" />
     <None Include="paket.references" />
   </ItemGroup>
   <ItemGroup>
