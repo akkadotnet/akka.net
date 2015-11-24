@@ -26,7 +26,7 @@ namespace Akka.Persistence.Sql.Common.Tests
             exten.DropJournalTable();
 
             Initialize();
-        }
+        } 
 
         private static Config CreateSpecConfig(string connectionString, string tableName)
         {
