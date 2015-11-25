@@ -138,7 +138,7 @@ namespace Akka.IO
 
             public override string DecodeString(Encoding charset)
             {
-                return IsEmpty ? string.Empty : charset.GetString(_bytes);
+                return IsEmpty ? string.Empty : charset.GetString(_bytes, 0, _bytes.Length);
 
             }
         }
@@ -223,7 +223,8 @@ namespace Akka.IO
 
             public override string DecodeString(Encoding charset)
             {
-                return charset.GetString(_length == _bytes.Length ? _bytes : ToArray());
+                var b = _length == _bytes.Length ? _bytes : ToArray();
+                return charset.GetString(b, 0, b.Length);
             }
 
             public override IEnumerator<byte> GetEnumerator()

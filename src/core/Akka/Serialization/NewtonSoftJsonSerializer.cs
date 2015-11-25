@@ -110,7 +110,7 @@ namespace Akka.Serialization
         /// <returns>The object contained in the array</returns>
         public override object FromBinary(byte[] bytes, Type type)
         {
-            string data = Encoding.UTF8.GetString(bytes);
+            string data = Encoding.UTF8.GetString(bytes, 0, bytes.Length);
             object res = JsonConvert.DeserializeObject(data, _settings);
             return TranslateSurrogate(res, this, type);
         }

@@ -39,7 +39,7 @@ namespace Akka.Pattern
             : base(message, cause)
         {
         }
-
+#if !DNXCORE50
         /// <summary>
         /// Initializes a new instance of the <see cref="OpenCircuitException"/> class.
         /// </summary>
@@ -49,5 +49,6 @@ namespace Akka.Pattern
             : base(info, context)
         {
         }
+#endif
     }
 }
