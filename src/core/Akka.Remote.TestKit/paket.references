@@ -1,7 +1,0 @@
-Google.ProtocolBuffers
-Helios
-System.Collections.Immutable
-Newtonsoft.Json
-group Test
-xunit.core
-xunit.assert

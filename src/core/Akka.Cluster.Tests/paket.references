@@ -1,6 +1,0 @@
-Google.ProtocolBuffers
-System.Collections.Immutable
-group Test
-FluentAssertions
-xunit.core
-xunit.assert
