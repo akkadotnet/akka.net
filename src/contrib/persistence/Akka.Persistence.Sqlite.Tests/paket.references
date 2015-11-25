@@ -1,6 +1,0 @@
-System.Data.SQLite.Core
-
-group Test
-xunit.core
-xunit.assert
-xunit.abstractions

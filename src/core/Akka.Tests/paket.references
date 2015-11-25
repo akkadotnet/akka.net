@@ -1,7 +1,0 @@
-Newtonsoft.Json
-
-group Test
-FluentAssertions
-FsCheck
-xunit.core
-xunit.assert

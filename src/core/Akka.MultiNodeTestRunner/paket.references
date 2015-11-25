@@ -1,7 +1,0 @@
-group Test
-xunit.core
-xunit.assert
-xunit.extensions
-xunit.runner.console
-xunit.runner.utility
-xunit.runner.visualstudio
