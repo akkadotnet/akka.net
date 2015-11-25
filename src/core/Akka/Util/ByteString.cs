@@ -273,7 +273,12 @@ namespace Akka.IO
                         _byteStrings.Select(x => (ByteIterator.ByteArrayIterator) x.Iterator()).ToArray());
             }
 
-            public override ByteString Concat(ByteString that)
+			public override IEnumerator<byte> GetEnumerator()
+			{
+				return _byteStrings.SelectMany(byteString => byteString).GetEnumerator();
+			}
+
+			public override ByteString Concat(ByteString that)
             {
                 if (that.IsEmpty)
                 {

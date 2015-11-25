@@ -80,17 +80,19 @@ namespace Akka.Util.Internal
         /// <param name="items">The array of items to slice</param>
         /// <param name="startIndex">The starting position to begin the slice</param>
         /// <param name="count">The number of items to take</param>
-        /// <returns>A slice of size <see cref="count"/> beginning from position <see cref="startIndex"/> in <see cref="items"/>.</returns>
+        /// <returns>A slice of size <paramref name="count"/> beginning from position <sparamref name="startIndex"/> in <paramref name="items"/>.</returns>
         internal static IEnumerable<T> Slice<T>(this IEnumerable<T> items, int startIndex, int count)
         {
             return items.Skip(startIndex).Take(count);
         }
 
         /// <summary>
-        /// Select all the items in this array beginning with <see cref="startingItem"/> and up until the end of the array.
+        /// Select all the items in this array beginning with <paramref name="startingItem"/> and up until the end of the array.
         /// 
-        /// If <see cref="startingItem"/> is not found in the array, From will return an empty set.
-        /// If <see cref="startingItem"/> is found at the end of the array, From will return the entire original array.
+        /// <note>
+        /// If <paramref name="startingItem"/> is not found in the array, From will return an empty set.
+        /// If <paramref name="startingItem"/> is found at the end of the array, From will return the entire original array.
+        /// </note>
         /// </summary>
         internal static IEnumerable<T> From<T>(this IEnumerable<T> items, T startingItem)
         {
@@ -103,10 +105,11 @@ namespace Akka.Util.Internal
         }
 
         /// <summary>
-        /// Select all the items in this array from the beginning until (but not including) <see cref="startingItem"/>
-        /// 
-        /// If <see cref="startingItem"/> is not found in the array, Until will select all items.
-        /// If <see cref="startingItem"/> is the first item in the array, an empty array will be returned.
+        /// Select all the items in this array from the beginning until (but not including) <paramref name="startingItem"/>
+        /// <note>
+        /// If <paramref name="startingItem"/> is not found in the array, Until will select all items.
+        /// If <paramref name="startingItem"/> is the first item in the array, an empty array will be returned.
+        /// </note>
         /// </summary>
         internal static IEnumerable<T> Until<T>(this IEnumerable<T> items, T startingItem)
         {

@@ -160,9 +160,9 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class ShutDownAssociation : EndpointException, IAssociationProblem
+    internal sealed class ShutDownAssociationException : EndpointException, IAssociationProblem
     {
-        public ShutDownAssociation(Address localAddress, Address remoteAddress, Exception cause = null)
+        public ShutDownAssociationException(Address localAddress, Address remoteAddress, Exception cause = null)
             : base(string.Format("Shut down address: {0}", remoteAddress), cause)
         {
             RemoteAddress = remoteAddress;
@@ -174,9 +174,9 @@ namespace Akka.Remote
         public Address RemoteAddress { get; private set; }
     }
 
-    internal sealed class InvalidAssociation : EndpointException, IAssociationProblem
+    internal sealed class InvalidAddressAssociationException : EndpointException, IAssociationProblem
     {
-        public InvalidAssociation(Address localAddress, Address remoteAddress, Exception cause = null)
+        public InvalidAddressAssociationException(Address localAddress, Address remoteAddress, Exception cause = null)
             : base(string.Format("Invalid address: {0}", remoteAddress), cause)
         {
             RemoteAddress = remoteAddress;
@@ -191,9 +191,9 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class HopelessAssociation : EndpointException, IAssociationProblem
+    internal sealed class HopelessAssociationException : EndpointException, IAssociationProblem
     {
-        public HopelessAssociation(Address localAddress, Address remoteAddress, int? uid = null, Exception cause = null)
+        public HopelessAssociationException(Address localAddress, Address remoteAddress, int? uid = null, Exception cause = null)
             : base("Catastrophic association error.", cause)
         {
             RemoteAddress = remoteAddress;
@@ -488,7 +488,7 @@ namespace Akka.Remote
                         // In other words, this action is safe.
                         if (!UidConfirmed && BailoutAt.IsOverdue)
                         {
-                            throw new InvalidAssociation(_localAddress, _remoteAddress,
+                            throw new InvalidAddressAssociationException(_localAddress, _remoteAddress,
                                 new TimeoutException("Delivery of system messages timed out and they were dropped"));
                         }
 
@@ -628,7 +628,7 @@ namespace Akka.Remote
             }
             catch (Exception ex)
             {
-                throw new HopelessAssociation(_localAddress, _remoteAddress, Uid, ex);
+                throw new HopelessAssociationException(_localAddress, _remoteAddress, Uid, ex);
             }
         }
 
@@ -878,16 +878,19 @@ namespace Akka.Remote
         protected override void PostStop()
         {
             _ackIdleTimerCancelable.CancelIfNotNull();
-            while (_prioBuffer.Any())
+
+            foreach (var msg in _prioBuffer)
             {
-                _system.DeadLetters.Tell(_prioBuffer.First);
-                _prioBuffer.RemoveFirst();
+                _system.DeadLetters.Tell(msg);
             }
-            while (_buffer.Any())
+            _prioBuffer.Clear();
+
+            foreach (var msg in _buffer)
             {
-                _system.DeadLetters.Tell(_buffer.First);
-                _buffer.RemoveFirst();
+                _system.DeadLetters.Tell(msg);
             }
+            _buffer.Clear();
+
             if (_handle != null) _handle.Disassociate(_stopReason);
             EventPublisher.NotifyListeners(new DisassociatedEvent(LocalAddress, RemoteAddress, Inbound));
         }
@@ -913,7 +916,7 @@ namespace Akka.Remote
                 var failure = message as Status.Failure;
                 if (failure.Cause is InvalidAssociationException)
                 {
-                    PublishAndThrow(new InvalidAssociation(LocalAddress, RemoteAddress, failure.Cause),
+                    PublishAndThrow(new InvalidAddressAssociationException(LocalAddress, RemoteAddress, failure.Cause),
                         LogLevel.WarningLevel);
                 }
                 else
@@ -1685,10 +1688,10 @@ namespace Akka.Remote
             switch (info)
             {
                 case DisassociateInfo.Quarantined:
-                    throw new InvalidAssociation(LocalAddress, RemoteAddress, new InvalidAssociationException("The remote system has quarantined this system. No further associations " +
+                    throw new InvalidAddressAssociationException(LocalAddress, RemoteAddress, new InvalidAssociationException("The remote system has quarantined this system. No further associations " +
                                                                                                               "to the remote system are possible until this system is restarted."));
                 case DisassociateInfo.Shutdown:
-                    throw new ShutDownAssociation(LocalAddress, RemoteAddress, new InvalidAssociationException("The remote system terminated the association because it is shutting down."));
+                    throw new ShutDownAssociationException(LocalAddress, RemoteAddress, new InvalidAssociationException("The remote system terminated the association because it is shutting down."));
                 case DisassociateInfo.Unknown:
                 default:
                     Context.Stop(Self);

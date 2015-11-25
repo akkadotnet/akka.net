@@ -1,9 +1,9 @@
-﻿// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------	
 //  <copyright file="VisualizerRuntimeTemplate.Tree.cs" company="Akka.NET Project">
 //      Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
-//  </copyright>
-// -----------------------------------------------------------------------
-
+//  </copyright>		
+// -----------------------------------------------------------------------	
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.MultiNodeTestRunner.Shared.Reporting;
@@ -21,9 +21,10 @@ namespace Akka.MultiNodeTestRunner.Shared.Persistence
             set
             {
                 _tree = value;
-                Prefix = LongestCommonPrefix(value.Specs
-                    .Select(s => s.FactName)
-                    .ToArray());
+                Prefix = LongestCommonPrefix(
+                    value.Specs
+                        .Select(s => s.FactName)
+                        .ToArray());
             }
         }
 
@@ -34,18 +35,19 @@ namespace Akka.MultiNodeTestRunner.Shared.Persistence
 
         public string BuildTimelineItem(FactData spec)
         {
-            var messages =
-                spec.RunnerMessages
-                    .Select(m =>
-                        TimelineItem.CreateSpecMessage(m.Message, m.NodeIndex, m.TimeStamp));
+            var messages = spec.RunnerMessages
+                .Select(m => TimelineItemFactory.CreateSpecMessage(Prefix, m.Message, m.NodeIndex, m.TimeStamp));
 
             var facts =
-                spec.NodeFacts
-                    .SelectMany(m =>
-                        m.Value.EventStream
-                            .Select(e =>
-                                TimelineItem.CreateNodeFact(e.Message, e.NodeIndex, e.TimeStamp)));
-
+                spec.NodeFacts.SelectMany(
+                    nodeFact =>
+                        nodeFact.Value.EventStream.Select(
+                            nodeMessage =>
+                                TimelineItemFactory.CreateNodeFact(
+                                    Prefix,
+                                    nodeMessage.Message,
+                                    nodeMessage.NodeIndex,
+                                    nodeMessage.TimeStamp)));
 
             var itemStrings = messages.Concat(facts)
                 .Select(i => i.ToJavascriptString());
@@ -56,11 +58,50 @@ namespace Akka.MultiNodeTestRunner.Shared.Persistence
         public string BuildGroupItems(FactData spec)
         {
             var groups = spec.NodeFacts
-                .Select(nf =>
-                    string.Format("{{ id:{0}, content:'Node {0}' }}", nf.Value.NodeIndex))
+                .Select(
+                    nf =>
+                        string.Format("{{ id:{0}, content:'Node {0}' }}", nf.Value.NodeIndex))
                 .Concat(@"{ id:-1, content:'Misc' }");
 
             return string.Join(",\r\n", groups);
+        }
+
+        public string BuildOptions(FactData spec)
+        {
+            var events =
+                spec.NodeFacts.SelectMany(
+                    nodeFact =>
+                        nodeFact.Value.EventStream
+                            .Select(
+                                nodeMessage =>
+                                    nodeMessage.TimeStamp))
+                    .ToList();
+
+            var firstEventTimeStamp = events.Aggregate(
+                (aggregate, nextValue) =>
+                    aggregate > nextValue
+                        ? nextValue
+                        : aggregate);
+
+            var lastEventTimeStamp = events.Aggregate(
+                (aggregate, nextValue) =>
+                    aggregate < nextValue
+                        ? nextValue
+                        : aggregate);
+
+
+            var startEventTime = new DateTime(firstEventTimeStamp);
+            var endDisplayTime = new DateTime(lastEventTimeStamp);
+
+            // TODO: Find a better way of calculating additional time from message length
+            // The last message is the 3 second wait. Which is about half the delta from start to end in length.
+            var startEndDelta = (endDisplayTime - startEventTime).Ticks/2;
+            endDisplayTime = endDisplayTime.AddTicks(startEndDelta);
+
+            return string.Format(
+                "{{ start:'{0}', end:'{1}', align:'left', clickToUse:true }}",
+                startEventTime.ToString("o"),
+                endDisplayTime.ToString("o"));
         }
 
         private static string LongestCommonPrefix(IReadOnlyList<string> strings)

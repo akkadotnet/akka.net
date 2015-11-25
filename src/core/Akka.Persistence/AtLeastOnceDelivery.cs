@@ -25,37 +25,95 @@ namespace Akka.Persistence
     /// <see cref="AtLeastOnceDeliveryActor.SetDeliverySnapshot"/>.
     /// </summary>
     [Serializable]
-    public sealed class AtLeastOnceDeliverySnapshot : IMessage
+    public sealed class AtLeastOnceDeliverySnapshot : IMessage, IEquatable<AtLeastOnceDeliverySnapshot>
     {
         public AtLeastOnceDeliverySnapshot(long deliveryId, UnconfirmedDelivery[] unconfirmedDeliveries)
         {
+            if(unconfirmedDeliveries == null)
+                throw new ArgumentNullException("unconfirmedDeliveries", "AtLeastOnceDeliverySnapshot expects not null array of unconfirmed deliveries");
+
             DeliveryId = deliveryId;
             UnconfirmedDeliveries = unconfirmedDeliveries;
         }
 
-        public long DeliveryId { get; private set; }
-        public UnconfirmedDelivery[] UnconfirmedDeliveries { get; private set; }
+        public readonly long DeliveryId;
+        public readonly UnconfirmedDelivery[] UnconfirmedDeliveries;
+
+        public bool Equals(AtLeastOnceDeliverySnapshot other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(DeliveryId, other.DeliveryId)
+                   && Equals(UnconfirmedDeliveries, UnconfirmedDeliveries);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as AtLeastOnceDeliverySnapshot);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (DeliveryId.GetHashCode() * 397) ^ (UnconfirmedDeliveries != null ? UnconfirmedDeliveries.GetHashCode() : 0);
+            }
+        }
+
+        public override string ToString()
+        {
+            return string.Format("AtLeastOnceDeliverySnapshot<deliveryId: {0}, unconfirmedDeliveries: {1}>", DeliveryId, UnconfirmedDeliveries.Length);
+        }
     }
 
     /// <summary>
     /// <see cref="UnconfirmedWarning"/> message should be sent after 
     /// <see cref="AtLeastOnceDeliveryActor.UnconfirmedDeliveryAttemptsToWarn"/> limit will be reached.
     /// </summary>
-    public sealed class UnconfirmedWarning
+    [Serializable]
+    public sealed class UnconfirmedWarning : IEquatable<UnconfirmedWarning>
     {
         public UnconfirmedWarning(UnconfirmedDelivery[] unconfirmedDeliveries)
         {
+            if(unconfirmedDeliveries == null) 
+                throw new ArgumentNullException("unconfirmedDeliveries", "UnconfirmedWarning expects not null array of unconfirmed deliveries");
+
             UnconfirmedDeliveries = unconfirmedDeliveries;
         }
 
-        public UnconfirmedDelivery[] UnconfirmedDeliveries { get; set; }
+        public readonly UnconfirmedDelivery[] UnconfirmedDeliveries;
+
+        public bool Equals(UnconfirmedWarning other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(UnconfirmedDeliveries, other.UnconfirmedDeliveries);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as UnconfirmedWarning);
+        }
+
+        public override int GetHashCode()
+        {
+            return (UnconfirmedDeliveries != null ? UnconfirmedDeliveries.GetHashCode() : 0);
+        }
+
+        public override string ToString()
+        {
+            return string.Format("UnconfirmedWarning<unconfirmedDeliveries: {0}>", UnconfirmedDeliveries.Length);
+        }
     }
 
     /// <summary>
     /// <see cref="UnconfirmedDelivery"/> contains details about unconfirmed messages.
     /// It's included inside <see cref="UnconfirmedWarning"/> and <see cref="AtLeastOnceDeliverySnapshot"/>.
     /// </summary>
-    public sealed class UnconfirmedDelivery
+    [Serializable]
+    public sealed class UnconfirmedDelivery : IEquatable<UnconfirmedDelivery>
     {
         public UnconfirmedDelivery(long deliveryId, ActorPath destination, object message)
         {
@@ -64,12 +122,44 @@ namespace Akka.Persistence
             Message = message;
         }
 
-        public long DeliveryId { get; set; }
-        public ActorPath Destination { get; set; }
-        public object Message { get; set; }
+        public readonly long DeliveryId;
+        public readonly ActorPath Destination;
+        public readonly object Message;
+
+        public bool Equals(UnconfirmedDelivery other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(DeliveryId, other.DeliveryId)
+                   && Equals(Destination, other.Destination)
+                   && Equals(Message, other.Message);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as UnconfirmedDelivery);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = DeliveryId.GetHashCode();
+                hashCode = (hashCode * 397) ^ (Destination != null ? Destination.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Message != null ? Message.GetHashCode() : 0);
+                return hashCode;
+            }
+        }
+
+        public override string ToString()
+        {
+            return string.Format("UnconfirmedDelivery<deliveryId: {0}, dest: {1}, message: {2}>", DeliveryId, Destination, Message);
+        }
     }
 
-    internal sealed class Delivery
+    [Serializable]
+    internal sealed class Delivery : IEquatable<Delivery>
     {
         public Delivery(ActorPath destination, object message, DateTime timestamp, int attempt)
         {
@@ -79,17 +169,50 @@ namespace Akka.Persistence
             Attempt = attempt;
         }
 
-        public ActorPath Destination { get; private set; }
-        public object Message { get; private set; }
-        public DateTime Timestamp { get; private set; }
-        public int Attempt { get; private set; }
+        public readonly ActorPath Destination;
+        public readonly object Message;
+        public readonly DateTime Timestamp;
+        public readonly int Attempt;
 
         public Delivery IncrementedCopy()
         {
             return new Delivery(Destination, Message, Timestamp, Attempt + 1);
         }
-    }
 
+        public bool Equals(Delivery other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(Attempt, other.Attempt)
+                   && Equals(Timestamp, other.Timestamp)
+                   && Equals(Destination, other.Destination)
+                   && Equals(Message, other.Message);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as Delivery);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = (Destination != null ? Destination.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Message != null ? Message.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ Timestamp.GetHashCode();
+                hashCode = (hashCode * 397) ^ Attempt;
+                return hashCode;
+            }
+        }
+
+        public override string ToString()
+        {
+            return string.Format("Delivery<dest: {0}, attempt: {1}, timestamp: {2}, message: {3}", Destination, Attempt, Timestamp, Message);
+        }
+    }
+    
     internal sealed class RedeliveryTick
     {
         public static readonly RedeliveryTick Instance = new RedeliveryTick();
@@ -106,15 +229,25 @@ namespace Akka.Persistence
     #endregion
 
     /// <summary>
-    /// An exception thrown, when <see cref="AtLeastOnceDeliveryActor.MaxUnconfirmedMessages"/> threshold has been exceeded.
+    /// This exception is thrown when the <see cref="AtLeastOnceDeliveryActor.MaxUnconfirmedMessages"/> threshold has been exceeded.
     /// </summary>
     public class MaxUnconfirmedMessagesExceededException : AkkaException
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MaxUnconfirmedMessagesExceededException"/> class.
+        /// </summary>
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="cause">The exception that is the cause of the current exception.</param>
         public MaxUnconfirmedMessagesExceededException(string message, Exception cause = null)
             : base(message, cause)
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MaxUnconfirmedMessagesExceededException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
         protected MaxUnconfirmedMessagesExceededException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
@@ -190,9 +323,9 @@ namespace Akka.Persistence
         public int UnconfirmedCount { get { return _unconfirmed.Count; } }
 
         /// <summary>
-        /// Send the message created with <paramref name="deliveryMessageMapper"/> function to the <see cref="destination"/>
+        /// Send the message created with <paramref name="deliveryMessageMapper"/> function to the <paramref name="destination"/>
         /// actor. It will retry sending the message until the delivery is confirmed with <see cref="ConfirmDelivery"/>.
-        /// Correlation between these two methods is performed by delivery id - parameter of <see cref="deliveryMessageMapper"/>.
+        /// Correlation between these two methods is performed by delivery id - parameter of <paramref name="deliveryMessageMapper"/>.
         /// Usually it's passed inside the message to the destination, which replies with the message having the same id.
         /// 
         /// During recovery this method won't send out any message, but it will be sent later until corresponding 

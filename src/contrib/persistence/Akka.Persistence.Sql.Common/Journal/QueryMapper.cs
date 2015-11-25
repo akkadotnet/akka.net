@@ -29,6 +29,12 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// </summary>
     internal class DefaultJournalQueryMapper : IJournalQueryMapper
     {
+        public const int PersistenceIdIndex = 0;
+        public const int SequenceNrIndex = 1;
+        public const int IsDeletedIndex = 2;
+        public const int ManifestIndex = 3;
+        public const int PayloadIndex = 4;
+
         private readonly Akka.Serialization.Serialization _serialization;
 
         public DefaultJournalQueryMapper(Akka.Serialization.Serialization serialization)
@@ -38,19 +44,21 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         public IPersistentRepresentation Map(DbDataReader reader, IActorRef sender = null)
         {
-            var persistenceId = reader.GetString(0);
-            var sequenceNr = reader.GetInt64(1);
-            var isDeleted = reader.GetBoolean(2);
-            var payloadType = reader.GetString(3);
-            var payload = GetPayload(reader, payloadType);
+            var persistenceId = reader.GetString(PersistenceIdIndex);
+            var sequenceNr = reader.GetInt64(SequenceNrIndex);
+            var isDeleted = reader.GetBoolean(IsDeletedIndex);
+            var manifest = reader.GetString(ManifestIndex);
 
-            return new Persistent(payload, sequenceNr, payloadType, persistenceId, isDeleted, sender);
+            // timestamp is SQL-journal specific field, it's not a part of casual Persistent instance  
+            var payload = GetPayload(reader, manifest);
+
+            return new Persistent(payload, sequenceNr, manifest, persistenceId, isDeleted, sender);
         }
 
-        private object GetPayload(DbDataReader reader, string payloadType)
+        private object GetPayload(DbDataReader reader, string manifest)
         {
-            var type = Type.GetType(payloadType, true);
-            var binary = (byte[]) reader[4];
+            var type = Type.GetType(manifest, true);
+            var binary = (byte[]) reader[PayloadIndex];
 
             var serializer = _serialization.FindSerializerForType(type);
             return serializer.FromBinary(binary, type);

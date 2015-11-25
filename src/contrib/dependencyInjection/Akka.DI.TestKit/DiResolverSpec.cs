@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="DiResolverSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -270,19 +277,21 @@ namespace Akka.DI.TestKit
         }
 
         [Fact]
-        public async Task DependencyResolver_should_inject_new_instances_on_Restart()
+        public void DependencyResolver_should_inject_new_instances_on_Restart()
         {
             var disposableActorProps = Sys.DI().Props<DisposableActor>();
             var disposableActor = Sys.ActorOf(disposableActorProps);
 
-            var originalHashCode = await disposableActor.Ask<int>(new DisposableActor.GetHashCode(), TimeSpan.FromSeconds(1));
+            disposableActor.Tell(new DisposableActor.GetHashCode());
+            var originalHashCode = ExpectMsg<int>();
             disposableActor.Tell(new DisposableActor.Restart());
-            var nextHashCode = await disposableActor.Ask<int>(new DisposableActor.GetHashCode(), TimeSpan.FromSeconds(1));
+            disposableActor.Tell(new DisposableActor.GetHashCode());
+            var nextHashCode = ExpectMsg<int>();
             Assert.NotEqual(originalHashCode, nextHashCode);
         }
 
         [Fact]
-        public async Task DependencyResolver_should_inject_same_instance_into_DiSingletonActor()
+        public void DependencyResolver_should_inject_same_instance_into_DiSingletonActor()
         {
             var diActorProps = Sys.DI().Props<DiSingletonActor>();
             var diActor1 = Sys.ActorOf(diActorProps);
@@ -292,9 +301,10 @@ namespace Akka.DI.TestKit
             diActor1.Tell("increment 2");
             diActor2.Tell("increment 1");
 
-            var tasks = new[] { diActor1.Ask<ActorIdentity>(new Identify(null), TimeSpan.FromSeconds(1)), diActor2.Ask<ActorIdentity>(new Identify(null), TimeSpan.FromSeconds(1)) };
-
-            await Task.WhenAll(tasks);
+            diActor1.Tell(new Identify(null));
+            diActor2.Tell(new Identify(null));
+            ExpectMsg<ActorIdentity>();
+            ExpectMsg<ActorIdentity>();
 
             diActor1.Tell(new GetCallCount());
             Assert.Equal(3, ExpectMsg<int>());
@@ -351,13 +361,13 @@ namespace Akka.DI.TestKit
         }
 
         [Fact]
-        public async Task DependencyResolver_should_dispose_IDisposable_instances_on_Actor_Termination()
+        public void DependencyResolver_should_dispose_IDisposable_instances_on_Actor_Termination()
         {
             var disposableActorProps = Sys.DI().Props<DisposableActor>();
             var disposableActor = Sys.ActorOf(disposableActorProps);
 
             var currentDisposeCounter = _disposeCounter.Current;
-            Assert.True(await disposableActor.GracefulStop(TimeSpan.FromSeconds(1)));
+            Assert.True(disposableActor.GracefulStop(TimeSpan.FromSeconds(1)).Result);
             AwaitAssert(() => Assert.True(currentDisposeCounter + 1 == _disposeCounter.Current), TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(50));
         }
 

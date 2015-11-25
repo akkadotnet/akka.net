@@ -14,18 +14,33 @@ using System.Runtime.Serialization;
 
 namespace Akka.Persistence.Journal
 {
+    /// <summary>
+    /// This exception is thrown when the replay inactivity exceeds a specified timeout.
+    /// </summary>
     [Serializable]
     public class AsyncReplayTimeoutException : AkkaException
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AsyncReplayTimeoutException"/> class.
+        /// </summary>
         public AsyncReplayTimeoutException()
         {
         }
 
-        public AsyncReplayTimeoutException(string msg)
-            : base(msg)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AsyncReplayTimeoutException"/> class.
+        /// </summary>
+        /// <param name="message">The message that describes the error.</param>
+        public AsyncReplayTimeoutException(string message)
+            : base(message)
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AsyncReplayTimeoutException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
         protected AsyncReplayTimeoutException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
@@ -43,7 +58,7 @@ namespace Akka.Persistence.Journal
             Store = store;
         }
 
-        public IActorRef Store { get; private set; }
+        public readonly IActorRef Store;
     }
 
     public static class AsyncWriteTarget
@@ -106,7 +121,9 @@ namespace Akka.Persistence.Journal
             public long Max { get; private set; }
             public bool Equals(ReplayMessages other)
             {
-                if (other == null) return false;
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(this, other)) return true;
+
                 return PersistenceId == other.PersistenceId
                        && FromSequenceNr == other.FromSequenceNr
                        && ToSequenceNr == other.ToSequenceNr
@@ -127,7 +144,9 @@ namespace Akka.Persistence.Journal
             public long FromSequenceNr { get; private set; }
             public bool Equals(ReadHighestSequenceNr other)
             {
-                if (other == null) return false;
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(this, other)) return true;
+
                 return PersistenceId == other.PersistenceId
                        && FromSequenceNr == other.FromSequenceNr;
             }
@@ -148,7 +167,9 @@ namespace Akka.Persistence.Journal
             public bool IsPermanent { get; private set; }
             public bool Equals(DeleteMessagesTo other)
             {
-                if (other == null) return false;
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(this, other)) return true;
+
                 return PersistenceId == other.PersistenceId
                        && ToSequenceNr == other.ToSequenceNr
                        && IsPermanent == other.IsPermanent;

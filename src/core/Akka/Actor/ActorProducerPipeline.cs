@@ -68,7 +68,7 @@ namespace Akka.Actor
     public abstract class ActorProducerPluginBase<TActor> : IActorProducerPlugin where TActor : ActorBase
     {
         /// <summary>
-        /// By default derivatives of this plugin will be applied to all actors inheriting from <typeparam name="TActor">actor generic type</typeparam>.
+        /// By default derivatives of this plugin will be applied to all actors inheriting from <typeparamref name="TActor">actor generic type</typeparamref>.
         /// </summary>
         public virtual bool CanBeAppliedTo(Type actorType)
         {

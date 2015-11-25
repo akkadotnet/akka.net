@@ -81,7 +81,6 @@ namespace Akka.Actor
         ///     thrown. It will be restarted for other `Exception` types.
         ///     The error is escalated if it's a `Exception`, i.e. `Error`.
         /// </summary>
-        /// <param name="exception">The exception.</param>
         /// <returns>Directive.</returns>
         public static IDecider DefaultDecider = Decider.From(Directive.Restart,
             Directive.Stop.When<ActorInitializationException>(),

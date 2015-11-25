@@ -340,7 +340,7 @@ namespace Akka.Remote
                 var directive = Directive.Stop;
 
                 ex.Match()
-                    .With<InvalidAssociation>(ia =>
+                    .With<InvalidAddressAssociationException>(ia =>
                     {
                         log.Warning("Tried to associate with unreachable remote address [{0}]. Address is now gated for {1} ms, all messages to this address will be delivered to dead letters. Reason: [{2}]",
                                  ia.RemoteAddress, settings.RetryGateClosedFor.TotalMilliseconds, ia.Message);
@@ -348,7 +348,7 @@ namespace Akka.Remote
                         AddressTerminatedTopic.Get(Context.System).Publish(new AddressTerminated(ia.RemoteAddress));
                         directive = Directive.Stop;
                     })
-                    .With<ShutDownAssociation>(shutdown =>
+                    .With<ShutDownAssociationException>(shutdown =>
                     {
                         log.Debug("Remote system with address [{0}] has shut down. Address is now gated for {1}ms, all messages to this address will be delivered to dead letters.",
                                   shutdown.RemoteAddress, settings.RetryGateClosedFor.TotalMilliseconds);
@@ -356,7 +356,7 @@ namespace Akka.Remote
                         AddressTerminatedTopic.Get(Context.System).Publish(new AddressTerminated(shutdown.RemoteAddress));
                         directive = Directive.Stop;
                     })
-                    .With<HopelessAssociation>(hopeless =>
+                    .With<HopelessAssociationException>(hopeless =>
                     {
                         if (settings.QuarantineDuration.HasValue && hopeless.Uid.HasValue)
                         {

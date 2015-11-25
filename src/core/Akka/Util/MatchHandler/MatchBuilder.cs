@@ -125,9 +125,9 @@ namespace Akka.Tools.MatchHandler
 
 
         /// <summary>
-        /// Builds all added handlers and returns a <see cref="PartialAction{T}">PartialAction&lt;object&gt;</see>.
+        /// Builds all added handlers and returns a <see cref="PartialAction{TItem}"/>.
         /// </summary>
-        /// <returns>Returns a <see cref="PartialAction{T}">PartialAction&lt;object&gt;</see></returns>
+        /// <returns>Returns a <see cref="PartialAction{TItem}"/></returns>
         public PartialAction<TItem> Build()
         {
             var partialAction = _compiler.Compile(_typeHandlers, _arguments, new MatchBuilderSignature(_signature));

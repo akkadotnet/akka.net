@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Dispatch;
+using Akka.Dispatch.SysMsg;
 using Akka.TestKit.Internal;
 using Akka.Util;
 
@@ -139,6 +140,11 @@ namespace Akka.TestKit
             return _internalRef.GetHashCode();
         }
 
+        public int CompareTo(object obj)
+        {
+            return ((IComparable) _internalRef).CompareTo(obj);
+        }
+
         public bool Equals(IActorRef other)
         {
             return _internalRef.Equals(other);
@@ -232,6 +238,11 @@ namespace Akka.TestKit
         void IInternalActorRef.Suspend()
         {
             _internalRef.Suspend();
+        }
+
+        public void SendSystemMessage(ISystemMessage message, IActorRef sender)
+        {
+            _internalRef .SendSystemMessage(message, sender);
         }
     }
 }

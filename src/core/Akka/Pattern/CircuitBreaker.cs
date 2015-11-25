@@ -162,7 +162,7 @@ namespace Akka.Pattern
 
         /// <summary>
         /// Wraps invocations of asynchronous calls that need to be protected
-        /// If this does not complete within the time allotted, it should return default(<typeparam name="T"></typeparam>)
+        /// If this does not complete within the time allotted, it should return default(<typeparamref name="T"/>)
         /// 
         /// <code>
         ///  Await.result(
@@ -173,7 +173,7 @@ namespace Akka.Pattern
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="body"></param>
-        /// <returns><typeparam name="T"></typeparam> or default(<typeparam name="T"></typeparam>)</returns>
+        /// <returns><typeparamref name="T"/> or default(<typeparamref name="T"/>)</returns>
         public T WithSyncCircuitBreaker<T>( Func<T> body )
         {
             var cbTask = WithCircuitBreaker( () => Task.Factory.StartNew( body ) );

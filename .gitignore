@@ -214,8 +214,12 @@ FakesAssemblies/
 /src/.Akka.boltdata/TestResults.json
 resetdev.bat
 /src/packages/repositories.config
+/src/.nuget
 
 # FAKE build folder
 .fake/
 project.lock.json
 src/.vs/
+
+# Akka.Persistence Test Output
+target/

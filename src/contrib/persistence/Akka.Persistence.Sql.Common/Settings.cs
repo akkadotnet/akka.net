@@ -7,6 +7,7 @@
 
 using System;
 using Akka.Configuration;
+using Akka.Persistence.Sql.Common.Journal;
 
 namespace Akka.Persistence.Sql.Common
 {
@@ -40,6 +41,11 @@ namespace Akka.Persistence.Sql.Common
         /// </summary>
         public string TableName { get; private set; }
 
+        /// <summary>
+        /// Fully qualified type name for <see cref="ITimestampProvider"/> used to generate journal timestamps.
+        /// </summary>
+        public string TimestampProvider { get; set; }
+
         public JournalSettings(Config config)
         {
             if (config == null) throw new ArgumentNullException("config", "SqlServer journal settings cannot be initialized, because required HOCON section couldn't been found");
@@ -49,6 +55,7 @@ namespace Akka.Persistence.Sql.Common
             ConnectionTimeout = config.GetTimeSpan("connection-timeout");
             SchemaName = config.GetString("schema-name");
             TableName = config.GetString("table-name");
+            TimestampProvider = config.GetString("timestamp-provider");
         }
     }
 

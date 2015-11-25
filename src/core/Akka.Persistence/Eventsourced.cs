@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Util.Internal;
 
 namespace Akka.Persistence
@@ -73,6 +74,7 @@ namespace Akka.Persistence
         private LinkedList<IPendingHandlerInvocation> _pendingInvocations = new LinkedList<IPendingHandlerInvocation>();
 
         protected readonly PersistenceExtension Extension;
+        private readonly ILoggingAdapter _log;
 
         protected Eventsourced()
         {
@@ -83,8 +85,11 @@ namespace Akka.Persistence
             _maxMessageBatchSize = Extension.Settings.Journal.MaxMessageBatchSize;
             _currentState = RecoveryPending();
             _internalStash = CreateStash();
+            _log = Context.GetLogger();
         }
-        
+
+        protected virtual ILoggingAdapter Log { get { return _log; } }
+
         /// <summary>
         /// Id of the persistent entity for which messages should be replayed.
         /// </summary>
@@ -302,10 +307,22 @@ namespace Akka.Persistence
         protected virtual void OnReplaySuccess() { }
 
         /// <summary>
-        /// Called whenever a message replay fails.
+        /// Called whenever a message replay fails. By default it log the errors.
         /// </summary>
         /// <param name="reason">Reason of failure</param>
-        protected virtual void OnReplayFailure(Exception reason) { }
+        /// <param name="message">Message that caused a failure</param>
+        protected virtual void OnReplayFailure(Exception reason, object message = null)
+        {
+            if (message != null)
+            {
+               _log.Error(reason, "Exception in ReceiveRecover when replaying event type [{0}] with sequence number [{1}] for persistenceId [{2}]", 
+                   message.GetType(), LastSequenceNr, PersistenceId);
+            }
+            else
+            {
+                _log.Error(reason, "Persistence failure when replaying events for persistenceId [{0}]. Last known sequence number [{1}]", PersistenceId, LastSequenceNr);
+            }
+        }
 
         private void ChangeState(EventsourcedState state)
         {
@@ -332,11 +349,6 @@ namespace Akka.Persistence
         private IStash CreateStash()
         {
             return Context.CreateStash(GetType());
-        }
-
-        private static bool CanUnstashFilterPredicate(object message)
-        {
-            return !(message is WriteMessageSuccess || message is ReplayedMessage);
         }
     }
 }

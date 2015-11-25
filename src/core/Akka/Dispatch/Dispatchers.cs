@@ -229,7 +229,7 @@ namespace Akka.Dispatch
         /// </summary>
         /// <param name="cfg">The provided configuration section.</param>
         /// <returns>An instance of the <see cref="MessageDispatcher"/>, if valid.</returns>
-        /// <exception cref="ConfigurationException">if the `id` property is missing from <see cref="cfg"/></exception>
+        /// <exception cref="ConfigurationException">if the `id` property is missing from <paramref name="cfg"/></exception>
         /// <exception cref="NotSupportedException">thrown if the dispatcher path or type cannot be resolved.</exception>
         internal MessageDispatcher From(Config cfg)
         {

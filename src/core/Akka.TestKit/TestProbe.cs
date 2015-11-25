@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using Akka.Actor;
+using Akka.Dispatch.SysMsg;
 using Akka.Util;
 
 namespace Akka.TestKit
@@ -137,6 +138,16 @@ namespace Akka.TestKit
         void IInternalActorRef.Suspend()
         {
             ((IInternalActorRef)TestActor).Suspend();
+        }
+
+        public void SendSystemMessage(ISystemMessage message, IActorRef sender)
+        {
+            ((IInternalActorRef)TestActor).SendSystemMessage(message, sender);
+        }
+
+        public int CompareTo(object obj)
+        {
+            return TestActor.CompareTo(obj);
         }
     }
 }

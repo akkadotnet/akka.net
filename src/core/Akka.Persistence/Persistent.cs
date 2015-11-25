@@ -113,9 +113,9 @@ namespace Akka.Persistence
     }
 
     [Serializable]
-    public class Persistent : IPersistentRepresentation
+    public class Persistent : IPersistentRepresentation, IEquatable<IPersistentRepresentation>
     {
-        public readonly string Undefined = string.Empty;
+        public static readonly string Undefined = string.Empty;
 
         public Persistent(object payload, long sequenceNr = 0L, string manifest = null, string persistenceId = null, bool isDeleted = false, IActorRef sender = null)
         {
@@ -159,6 +159,48 @@ namespace Akka.Persistence
         public IPersistentRepresentation PrepareWrite(IActorContext context)
         {
             return PrepareWrite(Sender is FutureActorRef ? context.System.DeadLetters : Sender);
+        }
+
+        public bool Equals(IPersistentRepresentation other)
+        {
+            if (other == null) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(PersistenceId, other.PersistenceId)
+                   && Equals(SequenceNr, other.SequenceNr)
+                   && Equals(IsDeleted, other.IsDeleted)
+                   && Equals(Manifest, other.Manifest)
+                   && Equals(Sender, other.Sender)
+                   && Equals(Payload, other.Payload);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as IPersistentRepresentation);
+        }
+
+        protected bool Equals(Persistent other)
+        {
+            return Equals(Payload, other.Payload) && Equals(Sender, other.Sender) && string.Equals(PersistenceId, other.PersistenceId) && IsDeleted == other.IsDeleted && SequenceNr == other.SequenceNr && string.Equals(Manifest, other.Manifest);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = (Payload != null ? Payload.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Sender != null ? Sender.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (PersistenceId != null ? PersistenceId.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ IsDeleted.GetHashCode();
+                hashCode = (hashCode * 397) ^ SequenceNr.GetHashCode();
+                hashCode = (hashCode * 397) ^ (Manifest != null ? Manifest.GetHashCode() : 0);
+                return hashCode;
+            }
+        }
+
+        public override string ToString()
+        {
+            return string.Format("Persistent<pid: {0}, seqNr: {1}, deleted: {2}, manifest: {3}, sender: {4}, payload: {5}>", PersistenceId, SequenceNr, IsDeleted, Manifest, Sender, Payload);
         }
     }
 }

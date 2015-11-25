@@ -103,17 +103,17 @@ namespace Akka.Persistence.Snapshot
             _saving.Remove(metadata);
         }
 
-        protected override void Delete(SnapshotMetadata metadata)
+        protected override async Task DeleteAsync(SnapshotMetadata metadata)
         {
             _saving.Remove(metadata);
             GetSnapshotFile(metadata).Delete();
         }
 
-        protected override void Delete(string persistenceId, SnapshotSelectionCriteria criteria)
+        protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             foreach (var metadata in GetSnapshotMetadata(persistenceId, criteria))
             {
-                Delete(metadata);
+                await DeleteAsync(metadata);
             }
         }
 

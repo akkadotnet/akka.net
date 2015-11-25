@@ -26,10 +26,13 @@ namespace Akka.Remote.AkkaIOTransport
     }
     class Listen
     {
-        public Listen(int port)
+        public Listen(string hostname, int port)
         {
+            Hostname = hostname;
             Port = port;
         }
+
+        public string Hostname { get; private set; }
         public int Port { get; private set; }
     }
 
@@ -42,14 +45,14 @@ namespace Akka.Remote.AkkaIOTransport
             {
                 var associate = message as Associate;
                 Context.System.Tcp().Tell(new Tcp.Connect(associate.RemoteAddress.ToEndpoint()));
-                BecomeStacked(WaitingForConnected(Sender));
+                BecomeStacked(WaitingForConnected(Sender, associate));
             }
             else if (message is Listen)
             {
                 var listen = message as Listen;
                 var handler = Context.ActorOf(Props.Create(() => new TransportListener()));
-                Context.System.Tcp().Tell(new Tcp.Bind(handler, new IPEndPoint(IPAddress.Loopback, listen.Port)));
-                BecomeStacked(WaitingForBound(Sender, handler));
+                Context.System.Tcp().Tell(new Tcp.Bind(handler, new IPEndPoint(IPAddress.Any, listen.Port)));
+                BecomeStacked(WaitingForBound(Sender, handler, listen));
             }
             else
             {
@@ -57,7 +60,7 @@ namespace Akka.Remote.AkkaIOTransport
             }
         }
 
-        private Receive WaitingForBound(IActorRef replyTo, IActorRef handler)
+        private Receive WaitingForBound(IActorRef replyTo, IActorRef handler, Listen listen)
         {
             return message =>
             {
@@ -66,7 +69,7 @@ namespace Akka.Remote.AkkaIOTransport
                     var bound = message as Tcp.Bound;
                     var promise = new TaskCompletionSource<IAssociationEventListener>();
                     promise.Task.PipeTo(handler);
-                    replyTo.Tell(Tuple.Create(bound.LocalAddress.ToAddress(Context.System), promise));
+                    replyTo.Tell(Tuple.Create(new Address(AkkaIOTransport.Protocal, Context.System.Name, listen.Hostname, ((IPEndPoint) bound.LocalAddress).Port), promise));
                     UnbecomeStacked();
                     Stash.Unstash();
                     return true;
@@ -75,7 +78,7 @@ namespace Akka.Remote.AkkaIOTransport
             };
         }
 
-        private Receive WaitingForConnected(IActorRef replyTo)
+        private Receive WaitingForConnected(IActorRef replyTo, Associate associate)
         {
             return message =>
             {
@@ -84,7 +87,7 @@ namespace Akka.Remote.AkkaIOTransport
                     var connected = message as Tcp.Connected;
                     var handler = Context.ActorOf(Props.Create(() => new ConnectionAssociationActor(Sender)));
                     Sender.Tell(new Tcp.Register(handler));
-                    replyTo.Tell(new ConnectionAssociationHandle(handler, connected.LocalAddress.ToAddress(Context.System), connected.RemoteAddress.ToAddress(Context.System)));
+                    replyTo.Tell(new ConnectionAssociationHandle(handler, connected.LocalAddress.ToAddress(Context.System), associate.RemoteAddress));
                     UnbecomeStacked();
                     Stash.Unstash();
                     return true;

@@ -59,28 +59,31 @@ namespace Akka.Persistence.Snapshot
             else if (message is SaveSnapshotFailure)
             {
                 var msg = (SaveSnapshotFailure)message;
-                Delete(msg.Metadata);
-                Sender.Tell(message);       // Sender is PersistentActor
+                DeleteAsync(msg.Metadata)
+                    .ContinueWith(t => msg)
+                    .PipeTo(Sender);        // Sender is PersistentActor
             }
             else if (message is DeleteSnapshot)
             {
                 var msg = (DeleteSnapshot)message;
-                Delete(msg.Metadata);
-
-                if (_publish)
+                var eventStream = Context.System.EventStream;
+                DeleteAsync(msg.Metadata).ContinueWith(t =>
                 {
-                    Context.System.EventStream.Publish(message);
-                }
+                    if (_publish) eventStream.Publish(message);
+                },
+                TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+
             }
             else if (message is DeleteSnapshots)
             {
-                var msg = (DeleteSnapshots) message;
-                Delete(msg.PersistenceId, msg.Criteria);
-
-                if (_publish)
+                var msg = (DeleteSnapshots)message;
+                var eventStream = Context.System.EventStream;
+                DeleteAsync(msg.PersistenceId, msg.Criteria).ContinueWith(t =>
                 {
-                    Context.System.EventStream.Publish(message);
-                }
+                    if (_publish) eventStream.Publish(message);
+                },
+                TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+
             }
             else return false;
             return true;
@@ -104,12 +107,12 @@ namespace Akka.Persistence.Snapshot
         /// <summary>
         /// Deletes the snapshot identified by <paramref name="metadata"/>.
         /// </summary>
-        protected abstract void Delete(SnapshotMetadata metadata);
+        protected abstract Task DeleteAsync(SnapshotMetadata metadata);
 
         /// <summary>
         /// Deletes all snapshots matching provided <paramref name="criteria"/>.
         /// </summary>
-        protected abstract void Delete(string persistenceId, SnapshotSelectionCriteria criteria);
+        protected abstract Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria);
     }
 }
 

@@ -297,14 +297,10 @@ namespace Akka.Actor
             //This code corresponds to AddressFromURIString.unapply
             uri = null;
             address = null;
-            try
-            {
-                uri = new Uri(path);
-            }
-            catch (UriFormatException)
-            {
+
+            if (!Uri.TryCreate(path, UriKind.Absolute, out uri))
                 return false;
-            }
+
             var protocol = uri.Scheme; //Typically "akka"
             if (!protocol.StartsWith("akka", StringComparison.OrdinalIgnoreCase))
             {

@@ -100,19 +100,6 @@ namespace Akka.Actor
                 }
             }
         }
-
-        protected void SendSystemMessage(ISystemMessage message, IActorRef sender)
-        {
-            var d = message as DeathWatchNotification;
-            if (message is Terminate)
-            {
-                Stop();
-            }
-            else if (d != null)
-            {
-                this.Tell(new Terminated(d.Actor, d.ExistenceConfirmed, d.AddressTerminated));
-            }
-        }
     }
 
 
@@ -125,7 +112,7 @@ namespace Akka.Actor
             return actorCell != null ? actorCell.Self : ActorRefs.NoSender;
         }
     }
-    public interface IActorRef : ICanTell, IEquatable<IActorRef>, IComparable<IActorRef>, ISurrogated
+    public interface IActorRef : ICanTell, IEquatable<IActorRef>, IComparable<IActorRef>, ISurrogated, IComparable
     {
         ActorPath Path { get; }
     }
@@ -215,6 +202,13 @@ namespace Akka.Actor
             }
         }
 
+        public int CompareTo(object obj)
+        {
+            if (obj != null && !(obj is IActorRef))
+                throw new ArgumentException("Object must be of type IActorRef.");
+            return CompareTo((IActorRef) obj);
+        }
+
         public bool Equals(IActorRef other)
         {
             return Path.Uid == other.Path.Uid && Path.Equals(other.Path);
@@ -256,6 +250,7 @@ namespace Akka.Actor
         void Stop();
         void Restart(Exception cause);
         void Suspend();
+        void SendSystemMessage(ISystemMessage message, IActorRef sender);
     }
 
     public abstract class InternalActorRefBase : ActorRefBase, IInternalActorRef
@@ -280,6 +275,18 @@ namespace Akka.Actor
 
         public abstract bool IsTerminated { get; }
         public abstract bool IsLocal { get; }
+        public void SendSystemMessage(ISystemMessage message, IActorRef sender)
+        {
+            var d = message as DeathWatchNotification;
+            if (message is Terminate)
+            {
+                Stop();
+            }
+            else if (d != null)
+            {
+                this.Tell(new Terminated(d.Actor, d.ExistenceConfirmed, d.AddressTerminated));
+            }
+        }
     }
 
     public abstract class MinimalActorRef : InternalActorRefBase, ILocalRef
