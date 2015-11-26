@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Runtime.Remoting.Messaging;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Runtime.ExceptionServices;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
 
@@ -47,6 +48,8 @@ namespace Akka.Dispatch
 
         protected override void QueueTask(Task task)
         {
+            //we get here if the task needs to be marshalled back to the mailbox
+            //e.g. if previous task was an IO completion
             var s = CallContext.LogicalGetData(StateKey) as AmbientState;
             if (task.AsyncState == Outer || s == null)
             {
@@ -54,28 +57,34 @@ namespace Akka.Dispatch
                 return;
             }
 
-            //detached task types
-            if(task.CreationOptions.HasFlag(TaskCreationOptions.LongRunning) 
-                //|| task.CreationOptions.HasFlag(TaskCreationOptions.AttachedToParent)
-                )
+            //blocking task type
+            if(task.CreationOptions.HasFlag(TaskCreationOptions.AttachedToParent))
             {
-                var worker = new Task(() => {
-                    TryExecuteTask(task);
-                });
-                worker.Start(TaskScheduler.Default);
+                TryExecuteTask(task);
                 return;
             }
 
-            //we get here if the task needs to be marshalled back to the mailbox
-            //e.g. if previous task was an IO completion
-            s = CallContext.LogicalGetData(StateKey) as AmbientState;
+            //detached task type
+            if(task.CreationOptions.HasFlag(TaskCreationOptions.LongRunning))
+            {
+                var worker = Task.Factory.StartNew(t =>
+                {
+                    TryExecuteTask(t as Task);
+                }, 
+                task,
+                CancellationToken.None,
+                TaskCreationOptions.LongRunning,
+                TaskScheduler.Default);
+                return;
+            }
 
             s.Self.Tell(new CompleteTask(s, () =>
             {
-                SetCurrentState(s.Self,s.Sender,s.Message);
+                SetCurrentState(s.Self, s.Sender, s.Message);
                 TryExecuteTask(task);
-                if (task.IsFaulted || task.IsCanceled)
-                    Rethrow(task, null);
+
+                if (task.Exception != null)
+                    ExceptionDispatchInfo.Capture(task.Exception.InnerException).Throw();
 
             }), ActorRefs.NoSender);
         }
@@ -123,35 +132,21 @@ namespace Akka.Dispatch
 
             //wrap our action inside a task, so that everything executing 
             //directly or indirectly from the action is executed on our task scheduler
+            var worker = TaskFactory.StartNew(_ => action(), Outer, 
+                TaskCreationOptions.DenyChildAttach).Unwrap();
 
-            Task.Factory.StartNew(async _ =>
+            worker.ContinueWith(t =>
             {
-
-                //start executing our action and potential promise style
-                //tasks
-                await action()
-                    //we need to use ContinueWith so that any exception is
-                    //thrown inside the actor context.
-                    //this is needed for IO completion tasks that execute out of context                    
-                    .ContinueWith(
-                        Rethrow,
-                        Faulted,
-                        TaskContinuationOptions.None);
-
                 //if mailbox was suspended, make sure we re-enable message processing again
                 mailbox.Resume(MailboxSuspendStatus.AwaitingTask);
                 context.CheckReceiveTimeout();
-            },
-                Outer,
-                CancellationToken.None,
-                TaskCreationOptions.None,
-                Instance);
-        }
 
-        private static void Rethrow(Task x, object s)
-        {
-            //this just rethrows the exception the task contains
-            x.Wait();
+                if (t.Exception != null)
+                    ExceptionDispatchInfo.Capture(t.Exception.InnerException).Throw();
+            },
+            CancellationToken.None,
+            TaskContinuationOptions.None,
+            Instance);
         }
     }
 }

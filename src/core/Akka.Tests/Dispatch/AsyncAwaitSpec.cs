@@ -264,6 +264,8 @@ namespace Akka.Tests.Dispatch
                             return "done";
                         }, TaskCreationOptions.LongRunning)
                         .PipeTo(Sender);
+
+                        Sender.Tell("running");
                     });
                 }
                 else if (m.Equals("stop"))
@@ -296,7 +298,7 @@ namespace Akka.Tests.Dispatch
             try
             {
                 var sender1 = Context.Sender;
-                await Task.Delay(1);
+                await Task.Delay(TimeSpan.FromSeconds(1));
                 var sender2 = Context.Sender;
                 if (sender1 != sender2)
                     return "error";
@@ -309,7 +311,30 @@ namespace Akka.Tests.Dispatch
             {
                 return "notsupported";
             }
+
+            var currentSchduler = TaskScheduler.Current;
+            if (currentSchduler == TaskScheduler.Default)
+                return "invalid task scheduler";
+
+            var childScheduler = await Task.Run(() =>
+            {
+                return TaskScheduler.Current;
+            });
+            if (childScheduler != TaskScheduler.Default)
+                return "invalid child task scheduler 1";
+
+            //childScheduler = GetTaskSchdedulerAsync().Result;
+            //if (childScheduler != TaskScheduler.Default)
+            //    return "invalid child task scheduler 2";
+            
             return "done";
+        }
+
+        async Task<TaskScheduler> GetTaskSchdedulerAsync()
+        {
+            await Task.Delay(TimeSpan.FromSeconds(1));
+
+            return TaskScheduler.Current;
         }
     }
 
@@ -330,10 +355,10 @@ namespace Akka.Tests.Dispatch
         public async Task Actors_should_be_able_to_start_longrunning_task()
         {
             var actor = Sys.ActorOf(Props.Create<AsyncLongRunningActor>());
-            var task = actor.Ask<string>("start", TimeSpan.FromSeconds(5));
-            actor.Tell("stop", ActorRefs.NoSender);
-            var res = await task;
-            Assert.Equal("done", res);
+            actor.Tell("start");
+            ExpectMsg("running", TimeSpan.FromSeconds(5));
+            actor.Tell("stop");
+            ExpectMsg("done", TimeSpan.FromSeconds(15));
         }
 
         [Fact]
