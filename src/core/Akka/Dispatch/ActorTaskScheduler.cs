@@ -54,6 +54,18 @@ namespace Akka.Dispatch
                 return;
             }
 
+            //detached task types
+            if(task.CreationOptions.HasFlag(TaskCreationOptions.LongRunning) 
+                //|| task.CreationOptions.HasFlag(TaskCreationOptions.AttachedToParent)
+                )
+            {
+                var worker = new Task(() => {
+                    TryExecuteTask(task);
+                });
+                worker.Start(TaskScheduler.Default);
+                return;
+            }
+
             //we get here if the task needs to be marshalled back to the mailbox
             //e.g. if previous task was an IO completion
             s = CallContext.LogicalGetData(StateKey) as AmbientState;
@@ -62,7 +74,7 @@ namespace Akka.Dispatch
             {
                 SetCurrentState(s.Self,s.Sender,s.Message);
                 TryExecuteTask(task);
-                if (task.IsFaulted)
+                if (task.IsFaulted || task.IsCanceled)
                     Rethrow(task, null);
 
             }), ActorRefs.NoSender);
