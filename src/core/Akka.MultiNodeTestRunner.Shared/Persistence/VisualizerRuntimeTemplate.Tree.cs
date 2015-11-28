@@ -77,31 +77,41 @@ namespace Akka.MultiNodeTestRunner.Shared.Persistence
                                     nodeMessage.TimeStamp))
                     .ToList();
 
-            var firstEventTimeStamp = events.Aggregate(
-                (aggregate, nextValue) =>
-                    aggregate > nextValue
-                        ? nextValue
-                        : aggregate);
+            var startEventTimeParameter = "null";
+            var endEventTimeParameter = "null";
 
-            var lastEventTimeStamp = events.Aggregate(
-                (aggregate, nextValue) =>
-                    aggregate < nextValue
-                        ? nextValue
-                        : aggregate);
+            if (events.Count > 0)
+            {
+                var firstEventTimeStamp = events.Aggregate(
+                    (aggregate, nextValue) =>
+                        aggregate > nextValue
+                            ? nextValue
+                            : aggregate);
+
+                var lastEventTimeStamp = events.Aggregate(
+                    (aggregate, nextValue) =>
+                        aggregate < nextValue
+                            ? nextValue
+                            : aggregate);
 
 
-            var startEventTime = new DateTime(firstEventTimeStamp);
-            var endDisplayTime = new DateTime(lastEventTimeStamp);
+                var startEventTime = new DateTime(firstEventTimeStamp);
+                var endDisplayTime = new DateTime(lastEventTimeStamp);
 
-            // TODO: Find a better way of calculating additional time from message length
-            // The last message is the 3 second wait. Which is about half the delta from start to end in length.
-            var startEndDelta = (endDisplayTime - startEventTime).Ticks/2;
-            endDisplayTime = endDisplayTime.AddTicks(startEndDelta);
+                // TODO: Find a better way of calculating additional time from message length
+                // The last message is the 3 second wait. Which is about half the delta from start to end in length.
+                var startEndDelta = (endDisplayTime - startEventTime).Ticks / 2;
+                endDisplayTime = endDisplayTime.AddTicks(startEndDelta);
+
+                startEventTimeParameter = string.Format("'{0}'", startEventTime.ToString("o"));
+                endEventTimeParameter = string.Format("'{0}'", endDisplayTime.ToString("o"));
+            }
+
 
             return string.Format(
-                "{{ start:'{0}', end:'{1}', align:'left', clickToUse:true }}",
-                startEventTime.ToString("o"),
-                endDisplayTime.ToString("o"));
+                "{{ start:{0}, end:{1}, align:'left', clickToUse:true }}",
+                startEventTimeParameter,
+                endEventTimeParameter);
         }
 
         private static string LongestCommonPrefix(IReadOnlyList<string> strings)
