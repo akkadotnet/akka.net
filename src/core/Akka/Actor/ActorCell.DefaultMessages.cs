@@ -36,6 +36,12 @@ namespace Akka.Actor
             }
         }
 
+        private int _currentEnvelopeId;
+
+        public int CurrentEnvelopeId
+        {
+            get { return _currentEnvelopeId; }
+        }
         /// <summary>
         ///     Invokes the specified envelope.
         /// </summary>
@@ -44,6 +50,7 @@ namespace Akka.Actor
         {
             var message = envelope.Message;
             CurrentMessage = message;
+            _currentEnvelopeId ++;
             Sender = MatchSender(envelope);
 
             try
