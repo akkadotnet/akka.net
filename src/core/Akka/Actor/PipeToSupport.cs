@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Akka.Actor
@@ -33,7 +34,7 @@ namespace Akka.Actor
                     recipient.Tell(success != null
                         ? success(tresult.Result)
                         : tresult.Result, sender);
-            }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+            }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
 
         /// <summary>
@@ -47,7 +48,7 @@ namespace Akka.Actor
             {
                 if (tresult.IsCanceled || tresult.IsFaulted)
                     recipient.Tell(new Status.Failure(tresult.Exception), sender);
-            }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+            }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
     }
 }
