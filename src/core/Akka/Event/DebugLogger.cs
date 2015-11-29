@@ -15,9 +15,11 @@ namespace Akka.Event
     /// </summary>
     public class DebugLogger : ReceiveActor
     {
+        private const string CONFIGURATION_KEY = "akka.logger.debuglogger.break-on-error";
         private readonly ILoggingAdapter _log = Context.GetLogger();
+        private bool breakOnErrorMessage = false;
 
-        private static void Log(LogEvent logEvent)
+        private static void Log(LogEvent logEvent, bool breakOnError)
         {
             System.Diagnostics.Debug.WriteLine(
                 logEvent.ToString(),
@@ -33,7 +35,7 @@ namespace Akka.Event
                         logEvent.ToString());
                 }
 
-                if (logEvent.LogLevel() == LogLevel.ErrorLevel)
+                if (breakOnError && logEvent.LogLevel() == LogLevel.ErrorLevel)
                 {
                     Debugger.Break();
                 }
@@ -42,13 +44,16 @@ namespace Akka.Event
 
         public DebugLogger()
         {
-            Receive<Error>(m => Log(m));
-            Receive<Warning>(m => Log(m));
-            Receive<Info>(m => Log(m));
-            Receive<Akka.Event.Debug>(m => Log(m));
+            Receive<Error>(m => Log(m, breakOnErrorMessage));
+            Receive<Warning>(m => Log(m, breakOnErrorMessage));
+            Receive<Info>(m => Log(m, breakOnErrorMessage));
+            Receive<Akka.Event.Debug>(m => Log(m, breakOnErrorMessage));
             Receive<InitializeLogger>(m =>
             {
+                breakOnErrorMessage = Context.System.Settings.Config.GetBoolean(CONFIGURATION_KEY, true);
+
                 _log.Info("DebugLogger started");
+
                 Sender.Tell(new LoggerInitialized());
             });
         }
