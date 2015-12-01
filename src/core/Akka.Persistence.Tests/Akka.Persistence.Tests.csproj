@@ -76,6 +76,7 @@
   <ItemGroup>
     <Compile Include="AtLeastOnceDeliveryCrashSpec.cs" />
     <Compile Include="AtLeastOnceDeliveryFailureSpec.cs" />
+    <Compile Include="AtLeastOnceDeliveryReceiveActorSpec.cs" />
     <Compile Include="AtLeastOnceDeliverySpec.cs" />
     <Compile Include="EndToEndEventAdapterSpec.cs" />
     <Compile Include="Fsm\PersistentFSMSpec.cs" />

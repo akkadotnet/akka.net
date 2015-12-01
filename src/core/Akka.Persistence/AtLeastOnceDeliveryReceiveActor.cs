@@ -6,53 +6,45 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
+using Akka.Dispatch;
+using Akka.Tools.MatchHandler;
 
 namespace Akka.Persistence
 {
     /// <summary>
-    ///     Persistent actor type, that sends messages with at-least-once delivery semantics to it's destinations.
-    ///     It takes care of re-sending messages when they haven't been confirmed withing expected timeout. The same
-    ///     message may be send twice or more to the same destination as a result of possible resends.
-    ///     Use a <see cref="AtLeastOnceDeliverySemantic.Deliver" /> method to send a message to a destination. Call the
-    ///     <see cref="ConfirmDelivery" />
-    ///     method once destination has replied with a confirmation message. The interval between redelivery attempts
-    ///     can be defined with <see cref="RedeliverInterval" />. After a number of delivery attempts an
-    ///     <see cref="UnconfirmedWarning" /> message will be sent to <see cref="ActorBase.Self" />. The resending will
-    ///     continue,
-    ///     but you may choose <see cref="AtLeastOnceDeliverySemantic.ConfirmDelivery" /> to cancel resending.
-    ///     This actor type has state consisting of unconfirmed messages and a sequence number. It doesn't store it by
-    ///     itself, so you must persist corresponding events so that state can be restored by calling the same
-    ///     delivery-related methods during recovery phase of the persistent actor. During recovery calls to
-    ///     <see cref="AtLeastOnceDeliverySemantic.Deliver" /> won't send out a message, but it will be sent later if no
-    ///     <see cref="AtLeastOnceDeliverySemantic.ConfirmDelivery" />
-    ///     call was performed.
-    ///     Support for snapshot is provided by get and set delivery snapshot methods. These snapshots contains full
-    ///     delivery state including unconfirmed messages. For custom snapshots remember to include those delivery ones.
+    ///     Receive persistent actor type, that sends messages with at-least-once delivery semantics to it's destinations.
     /// </summary>
-    public abstract class AtLeastOnceDeliveryActor : PersistentActor, IInitializableActor
+    public abstract class AtLeastOnceDeliveryReceiveActor : ReceivePersistentActor
     {
         private readonly AtLeastOnceDeliverySemantic _atLeastOnceDeliverySemantic;
 
-        protected AtLeastOnceDeliveryActor()
+        protected AtLeastOnceDeliveryReceiveActor()
+            : base()
         {
             _atLeastOnceDeliverySemantic = new AtLeastOnceDeliverySemantic(Context, Extension.Settings.AtLeastOnceDelivery);
+            _atLeastOnceDeliverySemantic.Init();
+
         }
-
-
-        protected AtLeastOnceDeliveryActor(PersistenceSettings.AtLeastOnceDeliverySettings settings)
+        protected AtLeastOnceDeliveryReceiveActor(PersistenceSettings.AtLeastOnceDeliverySettings settings)
+            : base()
         {
             _atLeastOnceDeliverySemantic = new AtLeastOnceDeliverySemantic(Context, settings);
+            _atLeastOnceDeliverySemantic.Init();
+
         }
 
         /// <summary>
         ///     Interval between redelivery attempts.
         /// </summary>
-        public TimeSpan RedeliverInterval
+        public virtual TimeSpan RedeliverInterval
         {
-            get { return _atLeastOnceDeliverySemantic.RedeliverInterval; }
+            get { return _atLeastOnceDeliverySemantic.RedeliverInterval; ; }
         }
+
 
         /// <summary>
         ///     Maximum number of unconfirmed messages that will be sent at each redelivery burst. This is to help to
@@ -84,7 +76,6 @@ namespace Akka.Persistence
         {
             get { return _atLeastOnceDeliverySemantic.MaxUnconfirmedMessages; }
         }
-        
 
         /// <summary>
         ///     Number of messages, that have not been confirmed yet.
@@ -92,11 +83,6 @@ namespace Akka.Persistence
         public int UnconfirmedCount
         {
             get { return _atLeastOnceDeliverySemantic.UnconfirmedCount; }
-        }
-
-        public void Init()
-        {
-            _atLeastOnceDeliverySemantic.Init();
         }
 
 
@@ -172,5 +158,7 @@ namespace Akka.Persistence
         {
             _atLeastOnceDeliverySemantic.Deliver(destination, deliveryMessageMapper, IsRecovering);
         }
+
+
     }
 }
