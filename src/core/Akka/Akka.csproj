@@ -63,10 +63,6 @@
     <Reference Include="System.Core" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Xml" />
-    <Reference Include="Wire, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\Wire.0.0.4\lib\Wire.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\SharedAssemblyInfo.cs">
@@ -271,7 +267,6 @@
     <Compile Include="IO\TcpListener.cs" />
     <Compile Include="IO\TcpManager.cs" />
     <Compile Include="IO\TcpOutgoingConnection.cs" />
-    <Compile Include="Serialization\WireSerializer.cs" />
     <Compile Include="Util\ByteIterator.cs" />
     <Compile Include="Util\ByteString.cs" />
     <Compile Include="Util\ContinuousEnumerator.cs" />
