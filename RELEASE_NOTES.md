@@ -1,4 +1,74 @@
-#### 1.0.5 August 07 2015 ####
+#### 1.0.6 December 3 2015 ####
+
+#### 1.0.5 December 3 2015 ####
+**Maintenance release for Akka.NET v1.0.4**
+This release is a collection of bug fixes, performance enhancements, and general improvements contributed by 29 individual contributors.
+
+**Fixes & Changes - Akka.NET Core**
+* [Bugfix: Make the Put on the SimpleDnsCache idempotent](https://github.com/akkadotnet/akka.net/commit/2ed1d574f76491707deac236db3fd7c1e5af5757)
+* [Add CircuitBreaker Initial based on akka 2.0.5](https://github.com/akkadotnet/akka.net/commit/7e16834ef0ff8551cdd3530eacb1016d40cb1cb8)
+* [Fix for receive timeout in async await actor](https://github.com/akkadotnet/akka.net/commit/6474bd7dc3d27756e255d12ef21f331108d9922d)
+* [akka-io: fixed High CPU load using the Akka.IO TCP server](https://github.com/akkadotnet/akka.net/commit/4af2cfbcaafa33ea04a1a8b1aa6486e78bd6f821)
+* [akka-io: Stop select loop on idle](https://github.com/akkadotnet/akka.net/commit/e545780d36cfb805b2014746a2e97006894c2e00)
+* [Serialization fixes](https://github.com/akkadotnet/akka.net/commit/6385cc20a3d310efc0bb2f9e29710c5b7bceaa87)
+* [Fix issue #1301 - inprecise resizing of resizable routers](https://github.com/akkadotnet/akka.net/commit/cf714333b25190249f01d79bad606d4ce5863e47)
+* [Stashing now checks message equality by reference](https://github.com/akkadotnet/akka.net/commit/884330dfb5d69b523f25a59b98450322fe3b34f4)
+* [rewrote ActorPath.TryParseAddrss to now test Uris by try / catch and use Uri.TryCreate instead](https://github.com/akkadotnet/akka.net/commit/8eaf32147a08f213db818bf19d74ed9d1aadaed2)
+* [Port EventBusUnsubscribers](https://github.com/akkadotnet/akka.net/commit/bd91bcd50d918e5e8ee4b085e53d603cfd46c89a)
+* [Add optional PipeTo completion handlers](https://github.com/akkadotnet/akka.net/commit/dfb7f61026d5d0b2d23efe1dd73af820f70a1d1c)
+* [Akka context props output to Serilog](https://github.com/akkadotnet/akka.net/commit/409cd7f4ed0b285827b681685af59ec19c5a4b73)
+
+
+**Fixes & Changes - Akka.Remote, Akka.Cluster**
+* [MultiNode tests can now be skipped by specifying a SkipReason](https://github.com/akkadotnet/akka.net/commit/75f966cb7d2f2c0d859e0e3a90a38d251a10c5e5)
+* [Akka.Remote: Discard msg if payload size > max allowed.](https://github.com/akkadotnet/akka.net/commit/05f57b9b1ff256145bc085f94d49a591e51e1304)
+* [Throw `TypeLoadException` when an actor type or dependency cannot be found in a remote actor deploy scenario](https://github.com/akkadotnet/akka.net/commit/ffed3eb088bc00f90a5e4b7367d4598fda007401)
+* [MultiNode Test Visualizer](https://github.com/akkadotnet/akka.net/commit/7706bb242719b7f7197058e89f8579af5b82dfc3)
+* [Fix for Akka.Cluster.Routing.ClusterRouterGroupSettings Mono Linux issue](https://github.com/akkadotnet/akka.net/commit/dbbd2ac9b16772af8f8e35d3d1c8bf5dcf354f42)
+* [Added RemoteDeploymentWatcher](https://github.com/akkadotnet/akka.net/commit/44c29ccefaeca0abdc4fd1f81daf1dc27a285f66)
+* [Akka IO Transport: framing support](https://github.com/akkadotnet/akka.net/commit/60b5d2a318b485652e0888190aaa930fe43b1bbc)
+* [#1443 fix for cluster shutdown](https://github.com/akkadotnet/akka.net/commit/941688aead57266b454b76530a7fb5446f68e15d)
+
+**Fixes & Changes - Akka.Persistence**
+* [Fixes the NullReferenceException in #1235 and appears to adhere to the practice of including an addres with the serialized binary.](https://github.com/akkadotnet/akka.net/commit/3df119ff614c3298299f863e18efd6e0fa848858)
+* [Port Finite State Machine DSL to Akka.Persistence](https://github.com/akkadotnet/akka.net/commit/dce684d907df86f5039eb2ca20727ab48d4b218a)
+* [Become and BecomeStacked for ReceivePersistentActor](https://github.com/akkadotnet/akka.net/commit/b11dafc86eb9284c2d515fd9da3599fe463a5681)
+* [Persistent actor stops on recovery failures](https://github.com/akkadotnet/akka.net/commit/03105719a8866e8eadac268bc8f813e738f989b9)
+* [Fixed: data races inside sql journal engine](https://github.com/akkadotnet/akka.net/commit/f088f0c681fdc7ba1b4eaf7f823c2a9535d3045d)
+* [fix sqlite.conf and readme](https://github.com/akkadotnet/akka.net/commit/c7e925ba624eee7e386855251169aecbafd6ae7d)
+* [#1416 created ReceiveActor implementation of AtLeastOnceDeliveryActor base class](https://github.com/akkadotnet/akka.net/commit/4d1d79b568bdae6565423c3ed914f8a9606dc0e8)
+
+A special thanks to all of our contributors, organized below by the number of changes made:
+
+23369 5258  18111 Aaron Stannard
+18827 16329 2498  Bartosz Sypytkowski
+11994 9496  2498  Steffen Forkmann
+6031  4637  1394  maxim.salamatko
+1987  1667  320 Graeme Bradbury
+1556  1149  407 Sean Gilliam
+1118  1118  0 moliver
+706 370 336 rogeralsing
+616 576 40  Marek Kadek
+501 5 496 Alex Koshelev
+377 269 108 Jeff Cyr
+280 208 72  willieferguson
+150 98  52  Christian Palmstierna
+85  63  22  Willie Ferguson
+77  71  6 Emil Ingerslev
+66  61  5 Grover Jackson
+60  39  21  Alexander Pantyukhin
+56  33  23  Uladzimir Makarau
+55  54  1 rdavisau
+51  18  33  alex-kondrashov
+42  26  16  Silv3rcircl3
+36  30  6 evertmulder
+33  19  14  Filip Malachowicz
+13  11  2 Suhas Chatekar
+7 6 1 tintoy
+4 2 2 Jonathan
+2 1 1 neekgreen
+2 1 1 Christopher Martin
+2 1 1 Artem Borzilov 
 
 #### 1.0.4 August 07 2015 ####
 **Maintenance release for Akka.NET v1.0.3**
