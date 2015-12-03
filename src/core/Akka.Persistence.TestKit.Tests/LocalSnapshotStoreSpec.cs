@@ -10,18 +10,19 @@ using System.Linq;
 using Akka.Configuration;
 using Akka.Persistence.TestKit.Snapshot;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.TestKit.Tests
 {
     public class LocalSnapshotStoreSpec : SnapshotStoreSpec
     {
         private readonly string _path;
-        public LocalSnapshotStoreSpec() 
+        public LocalSnapshotStoreSpec(ITestOutputHelper output) 
             : base(ConfigurationFactory.ParseString(
                 @"akka.test.timefactor = 3
                   akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.local""
                   akka.persistence.snapshot-store.local.dir = ""target/snapshots-" + Guid.NewGuid() + @""""), 
-            "LocalSnapshotStoreSpec")
+            "LocalSnapshotStoreSpec", output)
         {
             _path = Sys.Settings.Config.GetString("akka.persistence.snapshot-store.local.dir");
             Sys.CreateStorageLocations(_path);

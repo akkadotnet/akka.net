@@ -160,9 +160,9 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class ShutDownAssociation : EndpointException, IAssociationProblem
+    internal sealed class ShutDownAssociationException : EndpointException, IAssociationProblem
     {
-        public ShutDownAssociation(Address localAddress, Address remoteAddress, Exception cause = null)
+        public ShutDownAssociationException(Address localAddress, Address remoteAddress, Exception cause = null)
             : base(string.Format("Shut down address: {0}", remoteAddress), cause)
         {
             RemoteAddress = remoteAddress;
@@ -174,9 +174,9 @@ namespace Akka.Remote
         public Address RemoteAddress { get; private set; }
     }
 
-    internal sealed class InvalidAssociation : EndpointException, IAssociationProblem
+    internal sealed class InvalidAddressAssociationException : EndpointException, IAssociationProblem
     {
-        public InvalidAssociation(Address localAddress, Address remoteAddress, Exception cause = null)
+        public InvalidAddressAssociationException(Address localAddress, Address remoteAddress, Exception cause = null)
             : base(string.Format("Invalid address: {0}", remoteAddress), cause)
         {
             RemoteAddress = remoteAddress;
@@ -191,9 +191,9 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class HopelessAssociation : EndpointException, IAssociationProblem
+    internal sealed class HopelessAssociationException : EndpointException, IAssociationProblem
     {
-        public HopelessAssociation(Address localAddress, Address remoteAddress, int? uid = null, Exception cause = null)
+        public HopelessAssociationException(Address localAddress, Address remoteAddress, int? uid = null, Exception cause = null)
             : base("Catastrophic association error.", cause)
         {
             RemoteAddress = remoteAddress;
@@ -488,7 +488,7 @@ namespace Akka.Remote
                         // In other words, this action is safe.
                         if (!UidConfirmed && BailoutAt.IsOverdue)
                         {
-                            throw new InvalidAssociation(_localAddress, _remoteAddress,
+                            throw new InvalidAddressAssociationException(_localAddress, _remoteAddress,
                                 new TimeoutException("Delivery of system messages timed out and they were dropped"));
                         }
 
@@ -628,7 +628,7 @@ namespace Akka.Remote
             }
             catch (Exception ex)
             {
-                throw new HopelessAssociation(_localAddress, _remoteAddress, Uid, ex);
+                throw new HopelessAssociationException(_localAddress, _remoteAddress, Uid, ex);
             }
         }
 
@@ -878,16 +878,19 @@ namespace Akka.Remote
         protected override void PostStop()
         {
             _ackIdleTimerCancelable.CancelIfNotNull();
-            while (_prioBuffer.Any())
+
+            foreach (var msg in _prioBuffer)
             {
-                _system.DeadLetters.Tell(_prioBuffer.First);
-                _prioBuffer.RemoveFirst();
+                _system.DeadLetters.Tell(msg);
             }
-            while (_buffer.Any())
+            _prioBuffer.Clear();
+
+            foreach (var msg in _buffer)
             {
-                _system.DeadLetters.Tell(_buffer.First);
-                _buffer.RemoveFirst();
+                _system.DeadLetters.Tell(msg);
             }
+            _buffer.Clear();
+
             if (_handle != null) _handle.Disassociate(_stopReason);
             EventPublisher.NotifyListeners(new DisassociatedEvent(LocalAddress, RemoteAddress, Inbound));
         }
@@ -913,7 +916,7 @@ namespace Akka.Remote
                 var failure = message as Status.Failure;
                 if (failure.Cause is InvalidAssociationException)
                 {
-                    PublishAndThrow(new InvalidAssociation(LocalAddress, RemoteAddress, failure.Cause),
+                    PublishAndThrow(new InvalidAddressAssociationException(LocalAddress, RemoteAddress, failure.Cause),
                         LogLevel.WarningLevel);
                 }
                 else
@@ -1234,17 +1237,28 @@ namespace Akka.Remote
 
                 //todo: RemoteMetrics https://github.com/akka/akka/blob/dc0547dd73b54b5de9c3e0b45a21aa865c5db8e2/akka-remote/src/main/scala/akka/remote/Endpoint.scala#L742
 
-                //todo: max payload size validation
-
-                var ok = _handle.Write(pdu);
-
-                if (ok)
+                if (pdu.Length > Transport.MaximumPayloadBytes)
                 {
-                    _ackDeadline = NewAckDeadline();
-                    _lastAck = null;
+                    var reason = new OversizedPayloadException(
+                        string.Format("Discarding oversized payload sent to {0}: max allowed size {1} bytes, actual size of encoded {2} was {3} bytes.",
+                            send.Recipient,
+                            Transport.MaximumPayloadBytes,
+                            send.Message.GetType(),
+                            pdu.Length));
+                    _log.Error(reason, "Transient association error (association remains live)");
                     return true;
                 }
+                else
+                {
+                    var ok = _handle.Write(pdu);
 
+                    if (ok)
+                    {
+                        _ackDeadline = NewAckDeadline();
+                        _lastAck = null;
+                        return true;
+                    }
+                }
                 return false;
             }
             catch (SerializationException ex)
@@ -1346,8 +1360,7 @@ namespace Akka.Remote
                     var now = MonotonicClock.GetNanos();
                     if (now - _largeBufferLogTimestamp >= LogBufferSizeInterval)
                     {
-                        _log.Warning("[{0}] buffered messages in EndpointWriter for [{1}]. " +
-                                     "You should probably implement flow control to avoid flooding the remote connection.", size, RemoteAddress);
+                        _log.Warning("[{0}] buffered messages in EndpointWriter for [{1}]. You should probably implement flow control to avoid flooding the remote connection.", size, RemoteAddress);
                         _largeBufferLogTimestamp = now;
                     }
                 }
@@ -1519,6 +1532,7 @@ namespace Akka.Remote
             _provider = RARP.For(Context.System).Provider;
         }
 
+        private readonly ILoggingAdapter _log = Context.GetLogger();
         private readonly AkkaPduCodec _codec;
         private readonly IActorRef _reliableDeliverySupervisor;
         private readonly ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> _receiveBuffers;
@@ -1553,23 +1567,34 @@ namespace Akka.Remote
             }
             else if (message is InboundPayload)
             {
-                var payload = message as InboundPayload;
-                var ackAndMessage = TryDecodeMessageAndAck(payload.Payload);
-                if (ackAndMessage.AckOption != null && _reliableDeliverySupervisor != null)
-                    _reliableDeliverySupervisor.Tell(ackAndMessage.AckOption);
-                if (ackAndMessage.MessageOption != null)
+                var payload = ((InboundPayload)message).Payload;
+                if (payload.Length > Transport.MaximumPayloadBytes)
                 {
-                    if (ackAndMessage.MessageOption.ReliableDeliveryEnabled)
+                    var reason = new OversizedPayloadException(
+                        string.Format("Discarding oversized payload received: max allowed size {0} bytes, actual size {1} bytes.",
+                            Transport.MaximumPayloadBytes,
+                            payload.Length));
+                    _log.Error(reason, "Transient error while reading from association (association remains live)");
+                }
+                else
+                {
+                    var ackAndMessage = TryDecodeMessageAndAck(payload);
+                    if (ackAndMessage.AckOption != null && _reliableDeliverySupervisor != null)
+                        _reliableDeliverySupervisor.Tell(ackAndMessage.AckOption);
+                    if (ackAndMessage.MessageOption != null)
                     {
-                        _ackedReceiveBuffer = _ackedReceiveBuffer.Receive(ackAndMessage.MessageOption);
-                        DeliverAndAck();
-                    }
-                    else
-                    {
-                        _msgDispatch.Dispatch(ackAndMessage.MessageOption.Recipient,
-                            ackAndMessage.MessageOption.RecipientAddress,
-                            ackAndMessage.MessageOption.SerializedMessage,
-                            ackAndMessage.MessageOption.SenderOptional);
+                        if (ackAndMessage.MessageOption.ReliableDeliveryEnabled)
+                        {
+                            _ackedReceiveBuffer = _ackedReceiveBuffer.Receive(ackAndMessage.MessageOption);
+                            DeliverAndAck();
+                        }
+                        else
+                        {
+                            _msgDispatch.Dispatch(ackAndMessage.MessageOption.Recipient,
+                                ackAndMessage.MessageOption.RecipientAddress,
+                                ackAndMessage.MessageOption.SerializedMessage,
+                                ackAndMessage.MessageOption.SenderOptional);
+                        }
                     }
                 }
             }
@@ -1663,10 +1688,10 @@ namespace Akka.Remote
             switch (info)
             {
                 case DisassociateInfo.Quarantined:
-                    throw new InvalidAssociation(LocalAddress, RemoteAddress, new InvalidAssociationException("The remote system has quarantined this system. No further associations " +
+                    throw new InvalidAddressAssociationException(LocalAddress, RemoteAddress, new InvalidAssociationException("The remote system has quarantined this system. No further associations " +
                                                                                                               "to the remote system are possible until this system is restarted."));
                 case DisassociateInfo.Shutdown:
-                    throw new ShutDownAssociation(LocalAddress, RemoteAddress, new InvalidAssociationException("The remote system terminated the association because it is shutting down."));
+                    throw new ShutDownAssociationException(LocalAddress, RemoteAddress, new InvalidAssociationException("The remote system terminated the association because it is shutting down."));
                 case DisassociateInfo.Unknown:
                 default:
                     Context.Stop(Self);

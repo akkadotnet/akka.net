@@ -12,7 +12,7 @@ namespace Akka.Tools.MatchHandler
     public interface IPartialActionBuilder
     {
         /// <summary>
-        /// Builds the specified delegate and arguments to a <see cref="PartialAction{T}">PartialAction&lt;<typeparamref name="T"/>&gt;</see>
+        /// Builds the specified delegate and arguments to a <see cref="PartialAction{T}"/>
         /// <para>If the number of arguments are 0, the delegate should be a <see cref="Func{T}">Func&lt;<typeparamref name="T"/>,bool&gt;</see></para>
         /// <para>If the number of arguments are 1, the delegate should be a <see cref="Func{T,T1}">Func&lt;<typeparamref name="T"/>,T1,bool&gt;</see></para>
         /// <para>...</para>

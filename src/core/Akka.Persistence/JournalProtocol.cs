@@ -11,7 +11,8 @@ using Akka.Actor;
 
 namespace Akka.Persistence
 {
-    public sealed class DeleteMessages
+    [Serializable]
+    public sealed class DeleteMessages : IEquatable<DeleteMessages>
     {
         public DeleteMessages(IEnumerable<IPersistentEnvelope> messageIds, bool isPermanent, IActorRef requestor)
         {
@@ -20,25 +21,81 @@ namespace Akka.Persistence
             Requestor = requestor;
         }
 
-        public IEnumerable<IPersistentEnvelope> MessageIds { get; private set; }
-        public bool IsPermanent { get; private set; }
-        public IActorRef Requestor { get; private set; }
+        public readonly IEnumerable<IPersistentEnvelope> MessageIds;
+        public readonly bool IsPermanent;
+        public readonly IActorRef Requestor;
+
+        public bool Equals(DeleteMessages other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(Requestor, other.Requestor)
+                   && Equals(IsPermanent, other.IsPermanent)
+                   && Equals(MessageIds, other.MessageIds);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as DeleteMessages);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = (MessageIds != null ? MessageIds.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ IsPermanent.GetHashCode();
+                hashCode = (hashCode * 397) ^ (Requestor != null ? Requestor.GetHashCode() : 0);
+                return hashCode;
+            }
+        }
+
+        public override string ToString()
+        {
+            return string.Format("DeleteMessages<requestor: {0}, permanent: {1}>", Requestor, IsPermanent);
+        }
     }
 
-    public sealed class DeleteMessagesSuccess
+    [Serializable]
+    public sealed class DeleteMessagesSuccess : IEquatable<DeleteMessagesSuccess>
     {
         public DeleteMessagesSuccess(IEnumerable<IPersistentEnvelope> messageIds)
         {
             MessageIds = messageIds;
         }
 
-        public IEnumerable<IPersistentEnvelope> MessageIds { get; private set; }
+        public readonly IEnumerable<IPersistentEnvelope> MessageIds;
+
+        public bool Equals(DeleteMessagesSuccess other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(MessageIds, other.MessageIds);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as DeleteMessagesSuccess);
+        }
+
+        public override int GetHashCode()
+        {
+            return (MessageIds != null ? MessageIds.GetHashCode() : 0);
+        }
+
+        public override string ToString()
+        {
+            return "DeleteMessagesSuccess<>";
+        }
     }
 
     /// <summary>
     /// Reply message to failed <see cref="DeleteMessages"/> request.
     /// </summary>
-    public sealed class DeleteMessagesFailure
+    [Serializable]
+    public sealed class DeleteMessagesFailure : IEquatable<DeleteMessagesFailure>
     {
         public DeleteMessagesFailure(Exception cause)
         {
@@ -48,40 +105,90 @@ namespace Akka.Persistence
             Cause = cause;
         }
 
-        public Exception Cause { get; private set; }
+        public readonly Exception Cause;
+
+        public bool Equals(DeleteMessagesFailure other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(Cause, other.Cause);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as DeleteMessagesFailure);
+        }
+
+        public override int GetHashCode()
+        {
+            return (Cause != null ? Cause.GetHashCode() : 0);
+        }
+
+        public override string ToString()
+        {
+            return string.Format("DeleteMessagesFailure<cause: {0}>", Cause);
+        }
     }
 
     /// <summary>
     /// Request to delete all persistent messages with sequence numbers up to `toSequenceNr` (inclusive).  
     /// </summary>
+    [Serializable]
     public sealed class DeleteMessagesTo : IEquatable<DeleteMessagesTo>
     {
         public DeleteMessagesTo(string persistenceId, long toSequenceNr, bool isPermanent)
         {
+            if (string.IsNullOrEmpty(persistenceId)) throw new ArgumentNullException("persistenceId", "DeleteMessagesTo requires persistence id to be provided");
+
             PersistenceId = persistenceId;
             ToSequenceNr = toSequenceNr;
             IsPermanent = isPermanent;
         }
 
-        public string PersistenceId { get; private set; }
-        public long ToSequenceNr { get; private set; }
+        public readonly string PersistenceId;
+        public readonly long ToSequenceNr;
 
         /// <summary>
         /// If false, the persistent messages are marked as deleted in the journal, 
         /// otherwise they are permanently deleted from the journal.
         /// </summary>
-        public bool IsPermanent { get; private set; }
+        public readonly bool IsPermanent;
 
         public bool Equals(DeleteMessagesTo other)
         {
-            if (other == null) return false;
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
             return PersistenceId == other.PersistenceId &&
                 ToSequenceNr == other.ToSequenceNr &&
                 IsPermanent == other.IsPermanent;
         }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as DeleteMessagesTo);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = (PersistenceId != null ? PersistenceId.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ ToSequenceNr.GetHashCode();
+                hashCode = (hashCode * 397) ^ IsPermanent.GetHashCode();
+                return hashCode;
+            }
+        }
+
+        public override string ToString()
+        {
+            return string.Format("DeleteMessagesTo<pid: {0}, seqNr: {1}, permanent: {2}>", PersistenceId, ToSequenceNr, IsPermanent);
+        }
     }
 
-    internal sealed class WriteConfirmationsFailure
+    [Serializable]
+    internal sealed class WriteConfirmationsFailure : IEquatable<WriteConfirmationsFailure>
     {
         public WriteConfirmationsFailure(Exception cause)
         {
@@ -91,10 +198,34 @@ namespace Akka.Persistence
             Cause = cause;
         }
 
-        public Exception Cause { get; private set; }
+        public readonly Exception Cause;
+
+        public bool Equals(WriteConfirmationsFailure other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(Cause, other.Cause);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as WriteConfirmationsFailure);
+        }
+
+        public override int GetHashCode()
+        {
+            return (Cause != null ? Cause.GetHashCode() : 0);
+        }
+
+        public override string ToString()
+        {
+            return string.Format("WriteConfirmationsFailure<cause: {0}>", Cause);
+        }
     }
 
-    public sealed class WriteMessages
+    [Serializable]
+    public sealed class WriteMessages : IEquatable<WriteMessages>
     {
         public WriteMessages(IEnumerable<IPersistentEnvelope> messages, IActorRef persistentActor,
             int actorInstanceId)
@@ -104,9 +235,40 @@ namespace Akka.Persistence
             ActorInstanceId = actorInstanceId;
         }
 
-        public IEnumerable<IPersistentEnvelope> Messages { get; private set; }
-        public IActorRef PersistentActor { get; private set; }
-        public int ActorInstanceId { get; private set; }
+        public readonly IEnumerable<IPersistentEnvelope> Messages;
+        public readonly IActorRef PersistentActor;
+        public readonly int ActorInstanceId;
+
+        public bool Equals(WriteMessages other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(ActorInstanceId, other.ActorInstanceId)
+                   && Equals(PersistentActor, other.PersistentActor)
+                   && Equals(Messages, other.Messages);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as WriteMessages);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = (Messages != null ? Messages.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (PersistentActor != null ? PersistentActor.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ ActorInstanceId;
+                return hashCode;
+            }
+        }
+
+        public override string ToString()
+        {
+            return string.Format("WriteMessages<actorInstanceId: {0}, actor: {1}>", ActorInstanceId, PersistentActor);
+        }
     }
 
     /// <summary>
@@ -122,7 +284,19 @@ namespace Akka.Persistence
 
         public bool Equals(WriteMessagesSuccessful other)
         {
+            if (ReferenceEquals(other, null)) return false;
+
             return true;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as WriteMessagesSuccessful);
+        }
+
+        public override string ToString()
+        {
+            return "WriteMessagesSuccessful<>";
         }
     }
 
@@ -130,7 +304,8 @@ namespace Akka.Persistence
     /// Reply message to a failed <see cref="WriteMessages"/> request. This reply is sent 
     /// to the requestor before all subsequent <see cref="WriteMessageFailure"/> replies.
     /// </summary>
-    public sealed class WriteMessagesFailed
+    [Serializable]
+    public sealed class WriteMessagesFailed : IEquatable<WriteMessagesFailed>
     {
         public WriteMessagesFailed(Exception cause)
         {
@@ -140,14 +315,38 @@ namespace Akka.Persistence
             Cause = cause;
         }
 
-        public Exception Cause { get; private set; }
+        public readonly Exception Cause;
+
+        public bool Equals(WriteMessagesFailed other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(Cause, other.Cause);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as WriteMessagesFailed);
+        }
+
+        public override int GetHashCode()
+        {
+            return (Cause != null ? Cause.GetHashCode() : 0);
+        }
+
+        public override string ToString()
+        {
+            return string.Format("WriteMessagesFailed<cause: {0}>", Cause);
+        }
     }
 
     /// <summary>
     /// Reply message to a successful <see cref="WriteMessages"/> request. For each contained 
     /// <see cref="IPersistentRepresentation"/> message in the request, a separate reply is sent to the requestor.
     /// </summary>
-    public sealed class WriteMessageSuccess
+    [Serializable]
+    public sealed class WriteMessageSuccess : IEquatable<WriteMessageSuccess>
     {
         public WriteMessageSuccess(IPersistentRepresentation persistent, int actorInstanceId)
         {
@@ -158,16 +357,43 @@ namespace Akka.Persistence
         /// <summary>
         /// Successfully written message.
         /// </summary>
-        public IPersistentRepresentation Persistent { get; private set; }
+        public readonly IPersistentRepresentation Persistent;
+        public readonly int ActorInstanceId;
 
-        public int ActorInstanceId { get; private set; }
+        public bool Equals(WriteMessageSuccess other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(ActorInstanceId, other.ActorInstanceId)
+                   && Equals(Persistent, other.Persistent);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as WriteMessageSuccess);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((Persistent != null ? Persistent.GetHashCode() : 0) * 397) ^ ActorInstanceId;
+            }
+        }
+
+        public override string ToString()
+        {
+            return string.Format("WriteMessageSuccess<actorInstanceId: {0}, message: {1}>", ActorInstanceId, Persistent);
+        }
     }
 
     /// <summary>
     /// Reply message to a failed <see cref="WriteMessages"/> request. For each contained 
     /// <see cref="IPersistentRepresentation"/> message in the request, a separate reply is sent to the requestor.
     /// </summary>
-    public sealed class WriteMessageFailure
+    [Serializable]
+    public sealed class WriteMessageFailure : IEquatable<WriteMessageFailure>
     {
         public WriteMessageFailure(IPersistentRepresentation persistent, Exception cause, int actorInstanceId)
         {
@@ -182,17 +408,49 @@ namespace Akka.Persistence
         /// <summary>
         /// Message failed to be written.
         /// </summary>
-        public IPersistentRepresentation Persistent { get; private set; }
+        public readonly IPersistentRepresentation Persistent;
 
         /// <summary>
         /// Failure cause.
         /// </summary>
-        public Exception Cause { get; private set; }
+        public readonly Exception Cause;
 
-        public int ActorInstanceId { get; private set; }
+        public readonly int ActorInstanceId;
+
+        public bool Equals(WriteMessageFailure other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(ActorInstanceId, other.ActorInstanceId)
+                   && Equals(Persistent, other.Persistent)
+                   && Equals(Cause, other.Cause);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as WriteMessageFailure);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = (Cause != null ? Cause.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ ActorInstanceId;
+                hashCode = (hashCode * 397) ^ (Persistent != null ? Persistent.GetHashCode() : 0);
+                return hashCode;
+            }
+        }
+
+        public override string ToString()
+        {
+            return string.Format("WriteMessageFailure<actorInstanceId: {0}, message: {1}, cause: {2}>", ActorInstanceId, Persistent, Cause);
+        }
     }
 
-    public sealed class LoopMessage
+    [Serializable]
+    public sealed class LoopMessage : IEquatable<LoopMessage>
     {
         public LoopMessage(object message, IActorRef persistentActor, int actorInstanceId)
         {
@@ -201,15 +459,47 @@ namespace Akka.Persistence
             ActorInstanceId = actorInstanceId;
         }
 
-        public object Message { get; private set; }
-        public IActorRef PersistentActor { get; private set; }
-        public int ActorInstanceId { get; private set; }
+        public readonly object Message;
+        public readonly IActorRef PersistentActor;
+        public readonly int ActorInstanceId;
+
+        public bool Equals(LoopMessage other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(ActorInstanceId, other.ActorInstanceId)
+                   && Equals(PersistentActor, other.PersistentActor)
+                   && Equals(Message, other.Message);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as LoopMessage);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = (Message != null ? Message.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (PersistentActor != null ? PersistentActor.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ ActorInstanceId;
+                return hashCode;
+            }
+        }
+
+        public override string ToString()
+        {
+            return string.Format("LoopMessage<actorInstanceId: {0}, actor: {1}, message: {2}>", ActorInstanceId, PersistentActor, Message);
+        }
     }
 
     /// <summary>
     /// Reply message to a <see cref="WriteMessages"/> with a non-persistent message.
     /// </summary>
-    public sealed class LoopMessageSuccess
+    [Serializable]
+    public sealed class LoopMessageSuccess : IEquatable<LoopMessageSuccess>
     {
         public LoopMessageSuccess(object message, int actorInstanceId)
         {
@@ -220,14 +510,41 @@ namespace Akka.Persistence
         /// <summary>
         /// A looped message.
         /// </summary>
-        public object Message { get; private set; }
+        public readonly object Message;
+        public readonly int ActorInstanceId;
 
-        public int ActorInstanceId { get; private set; }
+        public bool Equals(LoopMessageSuccess other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(ActorInstanceId, other.ActorInstanceId)
+                   && Equals(Message, other.Message);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as LoopMessageSuccess);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((Message != null ? Message.GetHashCode() : 0) * 397) ^ ActorInstanceId;
+            }
+        }
+
+        public override string ToString()
+        {
+            return string.Format("LoopMessageSuccess<actorInstanceId: {0}, message: {1}>", ActorInstanceId, Message);
+        }
     }
 
     /// <summary>
     /// Request to replay messages to the <see cref="PersistentActor"/>.
     /// </summary>
+    [Serializable]
     public sealed class ReplayMessages : IEquatable<ReplayMessages>
     {
         public ReplayMessages(long fromSequenceNr, long toSequenceNr, long max, string persistenceId,
@@ -244,62 +561,108 @@ namespace Akka.Persistence
         /// <summary>
         /// Inclusive lower sequence number bound where a replay should start.
         /// </summary>
-        public long FromSequenceNr { get; private set; }
+        public readonly long FromSequenceNr;
 
         /// <summary>
         /// Inclusive upper sequence number bound where a replay should end.
         /// </summary>
-        public long ToSequenceNr { get; private set; }
+        public readonly long ToSequenceNr;
 
         /// <summary>
         /// Maximum number of messages to be replayed.
         /// </summary>
-        public long Max { get; private set; }
+        public readonly long Max;
 
         /// <summary>
         /// Requesting persistent actor identifier.
         /// </summary>
-        public string PersistenceId { get; private set; }
+        public readonly string PersistenceId;
 
         /// <summary>
         /// Requesting persistent actor.
         /// </summary>
-        public IActorRef PersistentActor { get; private set; }
+        public readonly IActorRef PersistentActor;
 
         /// <summary>
         /// If true, message marked as deleted shall be replayed.
         /// </summary>
-        public bool ReplayDeleted { get; private set; }
+        public readonly bool ReplayDeleted;
 
         public bool Equals(ReplayMessages other)
         {
-            if (other == null) return false;
-            return PersistenceId == other.PersistenceId
-                   && PersistentActor == other.PersistentActor
-                   && FromSequenceNr == other.FromSequenceNr
-                   && ToSequenceNr == other.ToSequenceNr
-                   && Max == other.Max
-                   && ReplayDeleted == other.ReplayDeleted;
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(PersistenceId, other.PersistenceId)
+                   && Equals(PersistentActor, other.PersistentActor)
+                   && Equals(FromSequenceNr, other.FromSequenceNr)
+                   && Equals(ToSequenceNr, other.ToSequenceNr)
+                   && Equals(Max, other.Max)
+                   && Equals(ReplayDeleted, other.ReplayDeleted);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as ReplayMessages);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = FromSequenceNr.GetHashCode();
+                hashCode = (hashCode * 397) ^ ToSequenceNr.GetHashCode();
+                hashCode = (hashCode * 397) ^ Max.GetHashCode();
+                hashCode = (hashCode * 397) ^ (PersistenceId != null ? PersistenceId.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (PersistentActor != null ? PersistentActor.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ ReplayDeleted.GetHashCode();
+                return hashCode;
+            }
         }
     }
 
     /// <summary>
     /// Reply message to a <see cref="ReplayMessages"/> request. A separate reply is sent to the requestor for each replayed message.
     /// </summary>
-    public sealed class ReplayedMessage
+    [Serializable]
+    public sealed class ReplayedMessage : IEquatable<ReplayedMessage>
     {
         public ReplayedMessage(IPersistentRepresentation persistent)
         {
             Persistent = persistent;
         }
 
-        public IPersistentRepresentation Persistent { get; private set; }
+        public readonly IPersistentRepresentation Persistent;
+
+        public bool Equals(ReplayedMessage other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(Persistent, other.Persistent);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as ReplayedMessage);
+        }
+
+        public override int GetHashCode()
+        {
+            return (Persistent != null ? Persistent.GetHashCode() : 0);
+        }
+
+        public override string ToString()
+        {
+            return string.Format("ReplayedMessage<message: {0}>", Persistent);
+        }
     }
 
     /// <summary>
     /// Reply message to a successful <see cref="ReplayMessages"/> request. This reply is sent 
     /// to the requestor after all <see cref="ReplayedMessage"/> have been sent (if any).
     /// </summary>
+    [Serializable]
     public class ReplayMessagesSuccess : IEquatable<ReplayMessagesSuccess>
     {
         public static readonly ReplayMessagesSuccess Instance = new ReplayMessagesSuccess();
@@ -308,11 +671,23 @@ namespace Akka.Persistence
 
         public bool Equals(ReplayMessagesSuccess other)
         {
+            if (ReferenceEquals(other, null)) return false;
             return true;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as ReplayMessagesSuccess);
+        }
+
+        public override string ToString()
+        {
+            return "ReplayMessagesSuccess<>";
         }
     }
 
-    public sealed class ReplayMessagesFailure
+    [Serializable]
+    public sealed class ReplayMessagesFailure : IEquatable<ReplayMessagesFailure>
     {
         public ReplayMessagesFailure(Exception cause)
         {
@@ -322,9 +697,33 @@ namespace Akka.Persistence
             Cause = cause;
         }
 
-        public Exception Cause { get; private set; }
+        public readonly Exception Cause;
+
+        public bool Equals(ReplayMessagesFailure other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(Cause, other.Cause);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as ReplayMessagesFailure);
+        }
+
+        public override int GetHashCode()
+        {
+            return Cause.GetHashCode();
+        }
+        
+        public override string ToString()
+        {
+            return string.Format("ReplayMessagesFailure<cause: {0}>", Cause);
+        }
     }
 
+    [Serializable]
     public sealed class ReadHighestSequenceNr : IEquatable<ReadHighestSequenceNr>
     {
         public ReadHighestSequenceNr(long fromSequenceNr, string persistenceId, IActorRef persistentActor)
@@ -334,21 +733,45 @@ namespace Akka.Persistence
             PersistentActor = persistentActor;
         }
 
-        public long FromSequenceNr { get; private set; }
+        public readonly long FromSequenceNr;
 
-        public string PersistenceId { get; private set; }
+        public readonly string PersistenceId;
 
-        public IActorRef PersistentActor { get; private set; }
+        public readonly IActorRef PersistentActor;
 
         public bool Equals(ReadHighestSequenceNr other)
         {
-            if (other == null) return false;
-            return PersistenceId == other.PersistenceId
-                   && FromSequenceNr == other.FromSequenceNr
-                   && PersistentActor == other.PersistentActor;
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(PersistenceId, other.PersistenceId)
+                   && Equals(FromSequenceNr, other.FromSequenceNr)
+                   && Equals(PersistentActor, other.PersistentActor);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as ReadHighestSequenceNr);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = FromSequenceNr.GetHashCode();
+                hashCode = (hashCode * 397) ^ (PersistenceId != null ? PersistenceId.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (PersistentActor != null ? PersistentActor.GetHashCode() : 0);
+                return hashCode;
+            }
+        }
+
+        public override string ToString()
+        {
+            return string.Format("ReadHighestSequenceNr<pid: {0}, fromSeqNr: {1}, actor: {2}>", PersistenceId, FromSequenceNr, PersistentActor);
         }
     }
 
+    [Serializable]
     public sealed class ReadHighestSequenceNrSuccess : IEquatable<ReadHighestSequenceNrSuccess>, IComparable<ReadHighestSequenceNrSuccess>
     {
 
@@ -357,10 +780,13 @@ namespace Akka.Persistence
             HighestSequenceNr = highestSequenceNr;
         }
 
-        public long HighestSequenceNr { get; private set; }
+        public readonly long HighestSequenceNr;
 
         public bool Equals(ReadHighestSequenceNrSuccess other)
         {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
             return HighestSequenceNr == other.HighestSequenceNr;
         }
 
@@ -372,27 +798,55 @@ namespace Akka.Persistence
 
         public override bool Equals(object obj)
         {
-            var other = obj as ReadHighestSequenceNrSuccess;
-            return other != null && Equals(other);
+            return Equals(obj as ReadHighestSequenceNrSuccess);
         }
 
         public override int GetHashCode()
         {
             return HighestSequenceNr.GetHashCode();
         }
+
+        public override string ToString()
+        {
+            return string.Format("ReadHighestSequenceNrSuccess<nr: {0}>", HighestSequenceNr);
+        }
     }
 
-    public sealed class ReadHighestSequenceNrFailure
+    [Serializable]
+    public sealed class ReadHighestSequenceNrFailure : IEquatable<ReadHighestSequenceNrFailure>
     {
         public ReadHighestSequenceNrFailure(Exception cause)
         {
-            if (cause == null) 
+            if (cause == null)
                 throw new ArgumentNullException("cause", "ReadHighestSequenceNrFailure cause exception cannot be null");
 
             Cause = cause;
         }
 
-        public Exception Cause { get; private set; }
+        public readonly Exception Cause;
+
+        public bool Equals(ReadHighestSequenceNrFailure other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(Cause, other.Cause);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as ReadHighestSequenceNrFailure);
+        }
+
+        public override int GetHashCode()
+        {
+            return Cause.GetHashCode();
+        }
+
+        public override string ToString()
+        {
+            return string.Format("ReadHighestSequenceNrFailure<cause: {0}>", Cause);
+        }
     }
 }
 

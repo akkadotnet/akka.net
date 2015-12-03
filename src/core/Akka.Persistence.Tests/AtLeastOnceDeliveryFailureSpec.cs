@@ -185,7 +185,7 @@ namespace Akka.Persistence.Tests
                                 if (ChaosSupportExtensions.ShouldFail(failureRate))
                                     throw new TestException(DebugMessage("failed at payload " + sent.I));
                                 else
-                                    Log.Debug(DebugMessage("processed payload " + sent.I));
+                                    Log.Debug(DebugMessage(String.Format("processed payload {0}", sent.I)));
                             });
                     })
                     .With<Confirm>(confirm =>
@@ -351,4 +351,3 @@ namespace Akka.Persistence.Tests
     }
 
 }
-

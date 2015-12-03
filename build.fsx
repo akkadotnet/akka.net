@@ -51,7 +51,7 @@ printfn "Assembly version: %s\nNuget version; %s\n" release.AssemblyVersion rele
 // Directories
 
 let binDir = "bin"
-let testOutput = "TestResults"
+let testOutput = FullName "TestResults"
 
 let nugetDir = binDir @@ "nuget"
 let workingDir = binDir @@ "build"
@@ -213,7 +213,7 @@ Target "CleanTests" <| fun _ ->
 //--------------------------------------------------------------------------------
 // Run tests
 
-open XUnit2Helper
+open Fake.Testing
 Target "RunTests" <| fun _ ->  
     let msTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
     let nunitTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll"
@@ -233,7 +233,7 @@ Target "RunTests" <| fun _ ->
     let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
     xUnit2
-        (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
+        (fun p -> { p with XmlOutputPath = Some (testOutput + @"\XUnitTestResults.xml"); HtmlOutputPath = Some (testOutput + @"\XUnitTestResults.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization })
         xunitTestAssemblies
 
 Target "RunTestsMono" <| fun _ ->  
@@ -244,26 +244,37 @@ Target "RunTestsMono" <| fun _ ->
     let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
     xUnit2
-        (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
+        (fun p -> { p with XmlOutputPath = Some (testOutput + @"\XUnitTestResults.xml"); HtmlOutputPath = Some (testOutput + @"\XUnitTestResults.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization })
         xunitTestAssemblies
 
 Target "MultiNodeTests" <| fun _ ->
+    let testSearchPath =
+        let assemblyFilter = getBuildParamOrDefault "spec-assembly" String.Empty
+        sprintf "src/**/bin/Release/*%s*.Tests.MultiNode.dll" assemblyFilter
+
+    mkdir testOutput
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" "bin/core/Akka.MultiNodeTestRunner*"
+    let multiNodeTestAssemblies = !! testSearchPath
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
-    let spec = getBuildParam "spec"
+    let runMultiNodeSpec assembly =
+        let spec = getBuildParam "spec"
 
-    let args = new StringBuilder()
-                |> append "Akka.MultiNodeTests.dll"
+        let args = new StringBuilder()
+                |> append assembly
                 |> append "-Dmultinode.enable-filesink=on"
+                |> append (sprintf "-Dmultinode.output-directory=\"%s\"" testOutput)
                 |> appendIfNotNullOrEmpty spec "-Dmultinode.test-spec="
                 |> toText
 
-    let result = ExecProcess(fun info -> 
-        info.FileName <- multiNodeTestPath
-        info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
-        info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
-    if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
+        let result = ExecProcess(fun info -> 
+            info.FileName <- multiNodeTestPath
+            info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
+            info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
+        if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
+    
+    multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
+
 
 //--------------------------------------------------------------------------------
 // Nuget targets 
@@ -400,12 +411,18 @@ let publishNugetPackages _ =
                 !! (nugetDir @@ "*.nupkg") 
                 -- (nugetDir @@ "*.symbols.nupkg") |> Seq.sortBy(fun x -> x.ToLower())
             for package in normalPackages do
-                publishPackage (getBuildParamOrDefault "nugetpublishurl" "") (getBuildParam "nugetkey") 3 package
+                try
+                    publishPackage (getBuildParamOrDefault "nugetpublishurl" "") (getBuildParam "nugetkey") 3 package
+                with exn ->
+                    printfn "%s" exn.Message
 
         if shouldPushSymbolsPackages then
             let symbolPackages= !! (nugetDir @@ "*.symbols.nupkg") |> Seq.sortBy(fun x -> x.ToLower())
             for package in symbolPackages do
-                publishPackage (getBuildParam "symbolspublishurl") (getBuildParam "symbolskey") 3 package
+                try
+                    publishPackage (getBuildParam "symbolspublishurl") (getBuildParam "symbolskey") 3 package
+                with exn ->
+                    printfn "%s" exn.Message
 
 
 Target "Nuget" <| fun _ -> 
@@ -433,12 +450,14 @@ Target "Help" <| fun _ ->
       " * Build      Builds"
       " * Nuget      Create and optionally publish nugets packages"
       " * RunTests   Runs tests"
+      " * MultiNodeTests  Runs the slower multiple node specifications"
       " * All        Builds, run tests, creates and optionally publish nuget packages"
       ""
       " Other Targets"
       " * Help       Display this help" 
       " * HelpNuget  Display help about creating and pushing nuget packages" 
-      " * HelpDocs   Display help about creating and pushing API docs" 
+      " * HelpDocs   Display help about creating and pushing API docs"
+      " * HelpMultiNodeTests  Display help about running the multiple node specifications"
       ""]
 
 Target "HelpNuget" <| fun _ ->
@@ -517,6 +536,19 @@ Target "HelpDocs" <| fun _ ->
       "                                   Build and publish docs to http://fooaccount.blob.core.windows.net/docs/unstable"
       ""]
 
+Target "HelpMultiNodeTests" <| fun _ ->
+    List.iter printfn [
+      "usage: "
+      "build MultiNodeTests [spec-assembly=<filter>]"
+      "Just runs the MultiNodeTests. Does not build the projects."
+      ""
+      "Arguments for MultiNodeTests target:"
+      "   [spec-assembly=<filter>]  Restrict which spec projects are run."
+      ""
+      "       Alters the discovery filter to enable restricting which specs are run."
+      "       If not supplied the filter used is '*.Tests.Multinode.Dll'"
+      "       When supplied this is altered to '*<filter>*.Tests.Multinode.Dll'"
+      ""]
 //--------------------------------------------------------------------------------
 //  Target dependencies
 //--------------------------------------------------------------------------------
@@ -526,6 +558,7 @@ Target "HelpDocs" <| fun _ ->
 
 // tests dependencies
 "CleanTests" ==> "RunTests"
+"BuildRelease" ==> "CleanTests" ==> "MultiNodeTests"
 
 // nuget dependencies
 "CleanNuget" ==> "CreateNuget"

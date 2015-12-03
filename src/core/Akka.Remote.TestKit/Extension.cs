@@ -15,7 +15,7 @@ using Akka.Util.Internal;
 namespace Akka.Remote.TestKit
 {
     /// <summary>
-    /// Access to the <see cref="TestConductor"></see> extension:
+    /// Access to the <see cref="TestConductor"/> extension:
     /// 
     /// {{{
     /// var tc = TestConductor(system)

@@ -65,7 +65,8 @@ namespace Akka.MultiNodeTestRunner
                 Node = Convert.ToInt32(matches.Groups[2].Value),
                 TestName = matches.Groups[1].Value,
                 TypeName = nodeTest.TestClass.Class.Name,
-                MethodName = nodeTest.TestCase.TestMethod.Method.Name
+                MethodName = nodeTest.TestCase.TestMethod.Method.Name,
+                SkipReason = nodeTest.TestCase.SkipReason
             };
         }
 

@@ -102,8 +102,10 @@ namespace Akka.Actor.Internal
             if(_settings.LogDeadLetters > 0)
                 _logDeadLetterListener = SystemActorOf<DeadLetterListener>("deadLetterListener");
 
+            _eventStream.StartUnsubscriber(this);
 
-            if(_settings.LogConfigOnStart)
+
+            if (_settings.LogConfigOnStart)
             {
                 _log.Warning(Settings.ToString());
             }

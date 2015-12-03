@@ -47,7 +47,7 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// Used to determine if a given <see cref="deploy"/> is an instance of <see cref="RemoteRouterConfig"/>.
+        /// Used to determine if a given <paramref name="deploy"/> is an instance of <see cref="RemoteRouterConfig"/>.
         /// </summary>
         private static Deploy CheckRemoteRouterConfig(Deploy deploy)
         {

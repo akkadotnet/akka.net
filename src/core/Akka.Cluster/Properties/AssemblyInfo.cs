@@ -18,7 +18,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyProduct("Akka.Cluster")]
 [assembly: AssemblyCulture("")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Tests")]
-[assembly: InternalsVisibleTo("Akka.MultiNodeTests")]
+[assembly: InternalsVisibleTo("Akka.Cluster.Tests.MultiNode")]
 
 // Setting ComVisible to false makes the types in this assembly not visible 
 // to COM components.  If you need to access a type in this assembly from 

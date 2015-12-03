@@ -13,22 +13,42 @@ using Google.ProtocolBuffers;
 
 namespace Akka.Remote.Serialization
 {
+    /// <summary>
+    /// This is a special <see cref="Serializer"/> that serializes and deserializes <see cref="ActorSelectionMessage"/> only.
+    /// </summary>
     public class MessageContainerSerializer : Serializer
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MessageContainerSerializer"/> class.
+        /// </summary>
+        /// <param name="system">The actor system to associate with this serializer. </param>
         public MessageContainerSerializer(ExtendedActorSystem system) : base(system)
         {
         }
 
+        /// <summary>
+        /// Completely unique value to identify this implementation of Serializer, used to optimize network traffic
+        /// Values from 0 to 16 is reserved for Akka internal usage
+        /// </summary>
         public override int Identifier
         {
             get { return 6; }
         }
 
+        /// <summary>
+        /// Returns whether this serializer needs a manifest in the fromBinary method
+        /// </summary>
         public override bool IncludeManifest
         {
             get { return false; }
         }
 
+        /// <summary>
+        /// Serializes the given object into a byte array
+        /// </summary>
+        /// <param name="obj">The object to serialize </param>
+        /// <returns>A byte array containing the serialized object</returns>
+        /// <exception cref="ArgumentException">Object must be of type <see cref="ActorSelectionMessage"/></exception>
         public override byte[] ToBinary(object obj)
         {
             if (!(obj is ActorSelectionMessage))
@@ -84,6 +104,13 @@ namespace Akka.Remote.Serialization
             return builder.Build().ToByteArray();
         }
 
+        /// <summary>
+        /// Deserializes a byte array into an object of type <paramref name="type"/>.
+        /// </summary>
+        /// <param name="bytes">The array containing the serialized object</param>
+        /// <param name="type">The type of object contained in the array</param>
+        /// <returns>The object contained in the array</returns>
+        /// <exception cref="NotSupportedException">Unknown SelectionEnvelope.Elements.Type</exception>
         public override object FromBinary(byte[] bytes, Type type)
         {
             SelectionEnvelope selectionEnvelope = SelectionEnvelope.ParseFrom(bytes);
@@ -108,4 +135,3 @@ namespace Akka.Remote.Serialization
         }
     }
 }
-

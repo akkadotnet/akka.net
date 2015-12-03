@@ -5,8 +5,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Configuration.Hocon;
 using Akka.Dispatch;
 using Akka.Dispatch.MessageQueues;
 

@@ -199,7 +199,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Changes the actor's behavior and replaces the current receive handler with the specified handler.
+        /// Changes the actor's command behavior and replaces the current receive handler with the specified handler.
         /// </summary>
         /// <param name="receive">The new message handler.</param>
         protected void Become(Receive receive)

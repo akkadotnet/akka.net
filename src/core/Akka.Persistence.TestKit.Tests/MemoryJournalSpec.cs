@@ -6,13 +6,14 @@
 //-----------------------------------------------------------------------
 
 using Akka.Persistence.TestKit.Journal;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.TestKit.Tests
 {
     public class MemoryJournalSpec : JournalSpec
     {
-        public MemoryJournalSpec()
-            : base(actorSystemName: "MemoryJournalSpec")
+        public MemoryJournalSpec(ITestOutputHelper output)
+            : base(actorSystemName: "MemoryJournalSpec", output: output)
         {
             Initialize();
         }

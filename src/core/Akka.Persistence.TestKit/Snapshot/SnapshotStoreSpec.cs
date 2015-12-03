@@ -12,6 +12,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.TestKit.Snapshot
 {
@@ -37,8 +38,8 @@ namespace Akka.Persistence.TestKit.Snapshot
         private readonly TestProbe _senderProbe;
         protected List<SnapshotMetadata> Metadata;
         
-        protected SnapshotStoreSpec(Config config = null, string actorSystemName = null, string testActorName = null) 
-            : base(FromConfig(config).WithFallback(Config), actorSystemName ?? "SnapshotStoreSpec", testActorName)
+        protected SnapshotStoreSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null) 
+            : base(FromConfig(config).WithFallback(Config), actorSystemName ?? "SnapshotStoreSpec", output)
         {
             _senderProbe = CreateTestProbe();
         }

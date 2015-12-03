@@ -250,7 +250,7 @@ namespace Akka.Actor
 
             public Reason StopReason { get; private set; }
 
-            public List<object> Replies { get; private set; }
+            public List<object> Replies { get; protected set; }
 
             public State<TS, TD> Copy(TimeSpan? timeout, Reason stopReason = null, List<object> replies = null)
             {
@@ -729,8 +729,8 @@ namespace Akka.Actor
         /// See http://scalachina.com/api/scala/PartialFunction.html
         /// </summary>
         /// <param name="original">The original <see cref="StateFunction"/> to be called</param>
-        /// <param name="fallback">The <see cref="StateFunction"/> to be called if <see cref="original"/> returns null</param>
-        /// <returns>A <see cref="StateFunction"/> which combines both the results of <see cref="original"/> and <see cref="fallback"/></returns>
+        /// <param name="fallback">The <see cref="StateFunction"/> to be called if <paramref name="original"/> returns null</param>
+        /// <returns>A <see cref="StateFunction"/> which combines both the results of <paramref name="original"/> and <paramref name="fallback"/></returns>
         private static StateFunction OrElse(StateFunction original, StateFunction fallback)
         {
             StateFunction chained = delegate(Event<TData> @event)

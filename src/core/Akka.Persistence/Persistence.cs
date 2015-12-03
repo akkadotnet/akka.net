@@ -7,6 +7,8 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
+using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -14,6 +16,18 @@ using Akka.Persistence.Journal;
 
 namespace Akka.Persistence
 {
+    internal struct PluginHolder
+    {
+        public readonly IActorRef Ref;
+        public readonly EventAdapters Adapters;
+
+        public PluginHolder(IActorRef @ref, EventAdapters adapters)
+        {
+            Ref = @ref;
+            Adapters = adapters;
+        }
+    }
+
     public class PersistenceExtension : IExtension
     {
         private const string DefaultPluginDispatcherId = "akka.persistence.dispatchers.default-plugin-dispatcher";
@@ -25,8 +39,8 @@ namespace Akka.Persistence
         private readonly Lazy<string> _defaultJournalPluginId;
         private readonly Lazy<string> _defaultSnapshotPluginId;
 
-        private readonly ConcurrentDictionary<string, Lazy<IActorRef>> _journalPluginExtensionIds = new ConcurrentDictionary<string, Lazy<IActorRef>>();
-        private readonly ConcurrentDictionary<string, Lazy<IActorRef>> _snapshotPluginExtensionIds = new ConcurrentDictionary<string, Lazy<IActorRef>>();
+        private readonly ConcurrentDictionary<string, Lazy<PluginHolder>> _journalPluginExtensionIds = new ConcurrentDictionary<string, Lazy<PluginHolder>>();
+        private readonly ConcurrentDictionary<string, Lazy<PluginHolder>> _snapshotPluginExtensionIds = new ConcurrentDictionary<string, Lazy<PluginHolder>>();
 
         public PersistenceExtension(ExtendedActorSystem system)
         {
@@ -39,14 +53,14 @@ namespace Akka.Persistence
                 var configPath = _config.GetString("journal.plugin");
                 if (string.IsNullOrEmpty(configPath)) throw new NullReferenceException("Default journal plugin is not configured");
                 return configPath;
-            });
+            }, LazyThreadSafetyMode.ExecutionAndPublication);
 
             _defaultSnapshotPluginId = new Lazy<string>(() =>
             {
                 var configPath = _config.GetString("snapshot-store.plugin");
                 if (string.IsNullOrEmpty(configPath)) throw new NullReferenceException("Default snapshot-store plugin is not configured");
                 return configPath;
-            });
+            }, LazyThreadSafetyMode.ExecutionAndPublication);
 
             Settings = new PersistenceSettings(_system, _config);
         }
@@ -65,13 +79,14 @@ namespace Akka.Persistence
         public IActorRef SnapshotStoreFor(string snapshotPluginId)
         {
             var configPath = string.IsNullOrEmpty(snapshotPluginId) ? _defaultSnapshotPluginId.Value : snapshotPluginId;
-            Lazy<IActorRef> pluginContainer;
+            Lazy<PluginHolder> pluginContainer;
             if (!_snapshotPluginExtensionIds.TryGetValue(configPath, out pluginContainer))
             {
-                pluginContainer = _snapshotPluginExtensionIds.AddOrUpdate(configPath, new Lazy<IActorRef>(() => CreatePlugin(configPath, _ => DefaultPluginDispatcherId)), (key, old) => old);
+                var plugin = new Lazy<PluginHolder>(() => CreatePlugin(configPath, _ => DefaultPluginDispatcherId), LazyThreadSafetyMode.ExecutionAndPublication);
+                pluginContainer = _snapshotPluginExtensionIds.AddOrUpdate(configPath, plugin, (key, old) => plugin);
             }
 
-            return pluginContainer.Value;
+            return pluginContainer.Value.Ref;
         }
 
         /// <summary>
@@ -81,17 +96,58 @@ namespace Akka.Persistence
         public IActorRef JournalFor(string journalPluginId)
         {
             var configPath = string.IsNullOrEmpty(journalPluginId) ? _defaultJournalPluginId.Value : journalPluginId;
-            Lazy<IActorRef> pluginContainer;
+            Lazy<PluginHolder> pluginContainer;
             if (!_journalPluginExtensionIds.TryGetValue(configPath, out pluginContainer))
             {
-                pluginContainer = _journalPluginExtensionIds.AddOrUpdate(configPath, new Lazy<IActorRef>(() => CreatePlugin(configPath, type =>
-                    typeof(AsyncWriteJournal).IsAssignableFrom(type) ? Dispatchers.DefaultDispatcherId : DefaultPluginDispatcherId)), (key, old) => old);
+                var plugin = new Lazy<PluginHolder>(() => CreatePlugin(configPath, type =>
+                    typeof (AsyncWriteJournal).IsAssignableFrom(type)
+                        ? Dispatchers.DefaultDispatcherId
+                        : DefaultPluginDispatcherId), 
+                        LazyThreadSafetyMode.ExecutionAndPublication);
+                pluginContainer = _journalPluginExtensionIds.AddOrUpdate(configPath, plugin, (key, old) => plugin);
             }
 
-            return pluginContainer.Value;
+            return pluginContainer.Value.Ref;
         }
 
-        private IActorRef CreatePlugin(string configPath, Func<Type, string> dispatcherSelector)
+        /// <summary>
+        /// Returns an <see cref="EventAdapters"/> object which serves as a per-journal collection of bound event adapters. 
+        /// If no adapters are registered for a given journal the EventAdapters object will simply return the identity adapter for each 
+        /// class, otherwise the most specific adapter matching a given class will be returned.
+        /// </summary>
+        /// <param name="journalPluginId"></param>
+        /// <returns></returns>
+        public EventAdapters AdaptersFor(string journalPluginId)
+        {
+            var configPath = string.IsNullOrEmpty(journalPluginId) ? _defaultJournalPluginId.Value : journalPluginId;
+            Lazy<PluginHolder> pluginContainer;
+            if (!_journalPluginExtensionIds.TryGetValue(configPath, out pluginContainer))
+            {
+                var plugin = new Lazy<PluginHolder>(() =>
+                    CreatePlugin(configPath, type => typeof (AsyncWriteJournal).IsAssignableFrom(type)
+                        ? Dispatchers.DefaultDispatcherId
+                        : DefaultPluginDispatcherId), 
+                        LazyThreadSafetyMode.ExecutionAndPublication);
+                pluginContainer = _journalPluginExtensionIds.AddOrUpdate(configPath, plugin, (key, old) => plugin);
+            }
+
+            return pluginContainer.Value.Adapters;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="journalRef"></param>
+        /// <returns></returns>
+        internal EventAdapters AdaptersFor(IActorRef journalRef)
+        {
+            return _journalPluginExtensionIds.Values
+                .Select(ext => Equals(ext.Value.Ref, journalRef) ? ext.Value.Adapters : null)
+                .FirstOrDefault(r => r != null) 
+                ?? IdentityEventAdapters.Instance;
+        }
+
+        private PluginHolder CreatePlugin(string configPath, Func<Type, string> dispatcherSelector)
         {
             if (string.IsNullOrEmpty(configPath) || !_system.Settings.Config.HasPath(configPath))
             {
@@ -100,7 +156,7 @@ namespace Akka.Persistence
 
             var pluginConfig = _system.Settings.Config.GetConfig(configPath);
             var pluginTypeName = pluginConfig.GetString("class");
-            var pluginType = Type.GetType(pluginTypeName);
+            var pluginType = Type.GetType(pluginTypeName, true);
 
             var shouldInjectConfig = pluginConfig.HasPath("inject-config") && pluginConfig.GetBoolean("inject-config");
             var pluginDispatcherId = pluginConfig.HasPath("plugin-dispatcher")
@@ -110,7 +166,13 @@ namespace Akka.Persistence
             var pluginActorProps = new Props(pluginType, pluginActorArgs).WithDispatcher(pluginDispatcherId);
 
             var pluginRef = _system.SystemActorOf(pluginActorProps, configPath);
-            return pluginRef;
+            return new PluginHolder(pluginRef, CreateAdapters(configPath));
+        }
+
+        private EventAdapters CreateAdapters(string configPath)
+        {
+            var pluginConfig = _system.Settings.Config.GetConfig(configPath);
+            return EventAdapters.Create(_system, pluginConfig);
         }
     }
 
@@ -173,6 +235,15 @@ namespace Akka.Persistence
         public AtLeastOnceDeliverySettings AtLeastOnceDelivery { get; set; }
         public class AtLeastOnceDeliverySettings
         {
+            public AtLeastOnceDeliverySettings(TimeSpan redeliverInterval, int redeliveryBurstLimit,
+                int unconfirmedAttemptsToWarn, int maxUnconfirmedMessages)
+            {
+                RedeliverInterval = redeliverInterval;
+                RedeliveryBurstLimit = redeliveryBurstLimit;
+                UnconfirmedAttemptsToWarn = unconfirmedAttemptsToWarn;
+                MaxUnconfirmedMessages = maxUnconfirmedMessages;
+            }
+
             public AtLeastOnceDeliverySettings(Config config)
             {
                 RedeliverInterval = config.GetTimeSpan("at-least-once-delivery.redeliver-interval");
@@ -181,10 +252,60 @@ namespace Akka.Persistence
                 RedeliveryBurstLimit = config.GetInt("at-least-once-delivery.redelivery-burst-limit");
             }
 
+            /// <summary>
+            ///     Interval between redelivery attempts.
+            /// </summary>
             public TimeSpan RedeliverInterval { get; private set; }
+
+            /// <summary>
+            ///     Maximum number of unconfirmed messages, that this actor is allowed to hold in the memory. When this
+            ///     number is exceed, <see cref="AtLeastOnceDeliverySemantic.Deliver" /> will throw
+            ///     <see cref="AtLeastOnceDeliverySemantic.MaxUnconfirmedMessagesExceededException" />
+            ///     instead of accepting messages.
+            /// </summary>
             public int MaxUnconfirmedMessages { get; private set; }
+
+            /// <summary>
+            ///     After this number of delivery attempts a <see cref="UnconfirmedWarning" /> message will be sent to
+            ///     <see cref="ActorBase.Self" />.
+            ///     The count is reset after restart.
+            /// </summary>
             public int UnconfirmedAttemptsToWarn { get; private set; }
+            /// <summary>
+            ///     Maximum number of unconfirmed messages that will be sent at each redelivery burst. This is to help to
+            ///     prevent overflowing amount of messages to be sent at once, for eg. when destination cannot be reached for a long
+            ///     time.
+            /// </summary>
             public int RedeliveryBurstLimit { get; private set; }
+
+
+            public AtLeastOnceDeliverySettings WithRedeliverInterval(TimeSpan redeliverInterval)
+            {
+                return Copy(redeliverInterval);
+            }
+
+            public AtLeastOnceDeliverySettings WithMaxUnconfirmedMessages(int maxUnconfirmedMessages)
+            {
+                return Copy(null, null, null, maxUnconfirmedMessages);
+            }
+
+            public AtLeastOnceDeliverySettings WithRedeliveryBurstLimit(int redeliveryBurstLimit)
+            {
+                return Copy(null, redeliveryBurstLimit);
+            }
+
+            public AtLeastOnceDeliverySettings WithUnconfirmedAttemptsToWarn(int unconfirmedAttemptsToWarn)
+            {
+                return Copy(null, null, unconfirmedAttemptsToWarn);
+            }
+
+            private AtLeastOnceDeliverySettings Copy(TimeSpan? redeliverInterval = null, int? redeliveryBurstLimit = null,
+                int? unconfirmedAttemptsToWarn = null, int? maxUnconfirmedMessages = null)
+            {
+                return new AtLeastOnceDeliverySettings(redeliverInterval ?? RedeliverInterval,
+                    redeliveryBurstLimit ?? RedeliveryBurstLimit, unconfirmedAttemptsToWarn ?? UnconfirmedAttemptsToWarn,
+                    maxUnconfirmedMessages ?? MaxUnconfirmedMessages);
+            }
         }
 
         public InternalSettings Internal { get; private set; }

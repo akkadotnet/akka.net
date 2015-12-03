@@ -222,8 +222,7 @@ namespace Akka.Remote
                     {
                         if (!result.Result)
                         {
-                            log.Warning(
-                                "Shutdown finished, but flushing might not have been successful and some messages might have been dropped. " +
+                            log.Warning("Shutdown finished, but flushing might not have been successful and some messages might have been dropped. " +
                                 "Increase akka.remote.flush-wait-on-shutdown to a larger value to avoid this.");
                         }
                         finalize();

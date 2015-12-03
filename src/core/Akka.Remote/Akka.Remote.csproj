@@ -51,6 +51,24 @@
     <Optimize>false</Optimize>
   </PropertyGroup>
   <ItemGroup>
+    <Content Include="CHANGES.txt">
+      <Paket>True</Paket>
+    </Content>
+    <Content Include="licenses\license.txt">
+      <Paket>True</Paket>
+    </Content>
+    <Content Include="licenses\protoc-license.txt">
+      <Paket>True</Paket>
+    </Content>
+    <Content Include="protos\google\protobuf\csharp_options.proto">
+      <Paket>True</Paket>
+    </Content>
+    <Content Include="protos\google\protobuf\descriptor.proto">
+      <Paket>True</Paket>
+    </Content>
+    <Content Include="protos\tutorial\addressbook.proto">
+      <Paket>True</Paket>
+    </Content>
     <Reference Include="Google.ProtocolBuffers">
       <HintPath>..\..\packages\Google.ProtocolBuffers.2.4.1.521\lib\net40\Google.ProtocolBuffers.dll</HintPath>
     </Reference>
@@ -88,6 +106,7 @@
     <Compile Include="Proto\Containerformats.cs" />
     <Compile Include="Proto\Wireformats.cs" />
     <Compile Include="RemoteActorRef.cs" />
+    <Compile Include="RemoteDeploymentWatcher.cs" />
     <Compile Include="RemoteSystemDaemon.cs" />
     <Compile Include="RemoteDeployer.cs" />
     <Compile Include="RemoteSettings.cs" />

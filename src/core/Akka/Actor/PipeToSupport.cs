@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Threading.Tasks;
 
 namespace Akka.Actor
@@ -16,24 +17,28 @@ namespace Akka.Actor
     public static class PipeToSupport
     {
         /// <summary>
-        /// Pipes the output of a Task directly to the <see cref="recipient"/>'s mailbox once
+        /// Pipes the output of a Task directly to the <paramref name="recipient"/>'s mailbox once
         /// the task completes
         /// </summary>
-        public static Task PipeTo<T>(this Task<T> taskToPipe, ICanTell recipient, IActorRef sender = null)
+        public static Task PipeTo<T>(this Task<T> taskToPipe, ICanTell recipient, IActorRef sender = null, Func<T, object> success = null, Func<Exception, object> failure = null)
         {
             sender = sender ?? ActorRefs.NoSender;
             return taskToPipe.ContinueWith(tresult =>
             {
                 if (tresult.IsCanceled || tresult.IsFaulted)
-                    recipient.Tell(new Status.Failure(tresult.Exception), sender);
+                    recipient.Tell(failure != null
+                        ? failure((Exception)tresult.Exception)
+                        : new Status.Failure((Exception)tresult.Exception), sender);
                 else if (tresult.IsCompleted)
-                    recipient.Tell(tresult.Result, sender);
+                    recipient.Tell(success != null
+                        ? success(tresult.Result)
+                        : tresult.Result, sender);
             }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
         }
 
         /// <summary>
-        /// Pipes the output of a Task directly to the <see cref="recipient"/>'s mailbox once
-        /// the task completes.  As this task has no result, only exceptions will be piped to the <see cref="recipient"/>
+        /// Pipes the output of a Task directly to the <paramref name="recipient"/>'s mailbox once
+        /// the task completes.  As this task has no result, only exceptions will be piped to the <paramref name="recipient"/>
         /// </summary>
         public static Task PipeTo(this Task taskToPipe, ICanTell recipient, IActorRef sender = null)
         {

@@ -45,7 +45,6 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Runtime" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
@@ -54,11 +53,17 @@
     <Compile Include="..\..\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="AtLeastOnceDeliveryReceiveActor.cs" />
+    <Compile Include="AtLeastOnceDeliverySemantic.cs" />
     <Compile Include="Eventsourced.Lifecycle.cs" />
     <Compile Include="AtLeastOnceDelivery.cs" />
     <Compile Include="Eventsourced.cs" />
     <Compile Include="Eventsourced.Recovery.cs" />
+    <Compile Include="Fsm\PersistentFSM.cs" />
+    <Compile Include="Fsm\PersistentFSMBase.cs" />
     <Compile Include="InternalExtensions.cs" />
+    <Compile Include="Journal\EventAdapters.cs" />
+    <Compile Include="Journal\EventSequences.cs" />
     <Compile Include="PersistentActor.cs" />
     <Compile Include="PersistentView.Recovery.cs" />
     <Compile Include="PersistentView.Lifecycle.cs" />

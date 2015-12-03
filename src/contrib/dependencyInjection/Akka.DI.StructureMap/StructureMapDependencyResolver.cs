@@ -17,7 +17,7 @@ namespace Akka.DI.StructureMap
 {
     /// <summary>
     /// Provides services to the <see cref="ActorSystem "/> extension system
-    /// used to create actors using the AutoFac IoC container.
+    /// used to create actors using the StructureMap IoC container.
     /// </summary>
     public class StructureMapDependencyResolver : IDependencyResolver
     {
@@ -81,12 +81,21 @@ namespace Akka.DI.StructureMap
         /// <returns>The configuration object for the given actor type</returns>
         public Props Create<TActor>() where TActor : ActorBase
         {
-            return system.GetExtension<DIExt>().Props(typeof(TActor));
+            return Create(typeof(TActor));
         }
 
         /// <summary>
-        /// Signals the DI container to release it's reference to the actor.
-        /// <see href="http://www.amazon.com/Dependency-Injection-NET-Mark-Seemann/dp/1935182501/ref=sr_1_1?ie=UTF8&qid=1425861096&sr=8-1&keywords=mark+seemann">HERE</see> 
+        /// Used to register the configuration for an actor of the specified type <paramref name="actorType"/> 
+        /// </summary>
+        /// <param name="actorType">The <see cref="Type"/> of actor the configuration is based</param>
+        /// <returns>The configuration object for the given actor type</returns>
+        public virtual Props Create(Type actorType)
+        {
+            return system.GetExtension<DIExt>().Props(actorType);
+        }
+
+        /// <summary>
+        /// Signals the container to release it's reference to the actor.
         /// </summary>
         /// <param name="actor">The actor to remove from the container</param>
         public void Release(ActorBase actor)
