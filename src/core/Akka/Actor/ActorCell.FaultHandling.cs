@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using Akka.Actor.Internal;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -394,7 +395,7 @@ namespace Akka.Actor
                 {
                     var handled = _actor.SupervisorStrategyInternal.HandleFailure(this, f.Cause, childStats, ChildrenContainer.Stats);
                     if (!handled)
-                        throw f.Cause;
+                        ExceptionDispatchInfo.Capture(f.Cause).Throw();
                 }
                 else
                 {
