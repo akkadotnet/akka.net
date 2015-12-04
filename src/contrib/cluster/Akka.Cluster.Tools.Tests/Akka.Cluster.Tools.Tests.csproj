@@ -1,0 +1,402 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{9D8D62C7-7B4B-4CDF-8FE8-675DB71F6B21}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Akka.Cluster.Tools.Tests</RootNamespace>
+    <AssemblyName>Akka.Cluster.Tools.Tests</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="FluentAssertions, Version=4.1.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\FluentAssertions.4.1.0\lib\net45\FluentAssertions.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="FluentAssertions.Core, Version=4.1.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\FluentAssertions.4.1.0\lib\net45\FluentAssertions.Core.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Google.ProtocolBuffers, Version=2.4.1.555, Culture=neutral, PublicKeyToken=55f7125234beb589, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Google.ProtocolBuffers.2.4.1.555\lib\net40\Google.ProtocolBuffers.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Google.ProtocolBuffers.Serialization, Version=2.4.1.555, Culture=neutral, PublicKeyToken=55f7125234beb589, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Google.ProtocolBuffers.2.4.1.555\lib\net40\Google.ProtocolBuffers.Serialization.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Collections.Immutable, Version=1.1.37.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\System.Collections.Immutable.1.1.37\lib\dotnet\System.Collections.Immutable.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+    <Reference Include="xunit.abstractions, Version=2.0.0.0, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\xunit.abstractions.2.0.0\lib\net35\xunit.abstractions.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="xunit.assert, Version=2.1.0.3179, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\xunit.assert.2.1.0\lib\dotnet\xunit.assert.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="xunit.core, Version=2.1.0.3179, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\xunit.extensibility.core.2.1.0\lib\dotnet\xunit.core.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="xunit.execution.desktop, Version=2.1.0.3179, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\xunit.extensibility.execution.2.1.0\lib\net45\xunit.execution.desktop.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ClusterClient\ClusterClientSpec.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="PublishSubscribe\DistributedPubSubMediatorSpec.cs" />
+    <Compile Include="Singleton\ClusterSingletonManagerChaosSpec.cs" />
+    <Compile Include="Singleton\ClusterSingletonManagerLeaveSpec.cs" />
+    <Compile Include="Singleton\ClusterSingletonManagerSpec.cs" />
+    <Compile Include="Singleton\ClusterSingletonManagerStartupSpec.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\core\Akka.Cluster.Tests.MultiNode\Akka.Cluster.Tests.MultiNode.csproj">
+      <Project>{f0781bea-5ba0-4af0-bb15-e3f209b681f5}</Project>
+      <Name>Akka.Cluster.Tests.MultiNode</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj">
+      <Project>{6ab00f61-269a-4501-b06a-026707f000a7}</Project>
+      <Name>Akka.Cluster</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\core\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj">
+      <Project>{e5957c3e-2b1e-469f-a680-7953b4dea31b}</Project>
+      <Name>Akka.Remote.TestKit</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\core\Akka.Remote\Akka.Remote.csproj">
+      <Project>{ea4ff8fd-7c53-49c8-b9aa-02e458b3e6a7}</Project>
+      <Name>Akka.Remote</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\core\Akka.TestKit\Akka.TestKit.csproj">
+      <Project>{0d3cbad0-bbdb-43e5-afc4-ed1d3ecdc224}</Project>
+      <Name>Akka.TestKit</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\core\Akka\Akka.csproj">
+      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
+      <Name>Akka</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj">
+      <Project>{7dbd5c17-5e9d-40c4-9201-d092751532a7}</Project>
+      <Name>Akka.TestKit.Xunit2</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj">
+      <Project>{5cf8a8be-b634-473f-bb01-eba878746bd4}</Project>
+      <Name>Akka.Cluster.Tools</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v3.5'">
+      <ItemGroup>
+        <Reference Include="Google.ProtocolBuffers.Serialization">
+          <HintPath>..\..\..\..\packages\Google.ProtocolBuffers\lib\net35\Google.ProtocolBuffers.Serialization.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="Google.ProtocolBuffers">
+          <HintPath>..\..\..\..\packages\Google.ProtocolBuffers\lib\net35\Google.ProtocolBuffers.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v2.0' Or $(TargetFrameworkVersion) == 'v3.0')">
+      <ItemGroup>
+        <Reference Include="Google.ProtocolBuffers.Serialization">
+          <HintPath>..\..\..\..\packages\Google.ProtocolBuffers\lib\net20\Google.ProtocolBuffers.Serialization.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="Google.ProtocolBuffers">
+          <HintPath>..\..\..\..\packages\Google.ProtocolBuffers\lib\net20\Google.ProtocolBuffers.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.0' Or $(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6')" />
+    <When Condition="$(TargetFrameworkIdentifier) == 'Silverlight' And $(TargetFrameworkVersion) == 'v3.0'">
+      <ItemGroup>
+        <Reference Include="Google.ProtocolBuffers.Serialization">
+          <HintPath>..\..\..\..\packages\Google.ProtocolBuffers\lib\sl30\Google.ProtocolBuffers.Serialization.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="Google.ProtocolBuffers">
+          <HintPath>..\..\..\..\packages\Google.ProtocolBuffers\lib\sl30\Google.ProtocolBuffers.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="$(TargetFrameworkIdentifier) == 'Silverlight' And ($(TargetFrameworkVersion) == 'v4.0' Or $(TargetFrameworkVersion) == 'v5.0')">
+      <ItemGroup>
+        <Reference Include="Google.ProtocolBuffers.Serialization">
+          <HintPath>..\..\..\..\packages\Google.ProtocolBuffers\lib\sl40\Google.ProtocolBuffers.Serialization.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="Google.ProtocolBuffers">
+          <HintPath>..\..\..\..\packages\Google.ProtocolBuffers\lib\sl40\Google.ProtocolBuffers.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="($(TargetFrameworkIdentifier) == 'WindowsPhone') Or ($(TargetFrameworkIdentifier) == '.NETCore') Or ($(TargetFrameworkIdentifier) == 'MonoAndroid') Or ($(TargetFrameworkIdentifier) == 'MonoTouch') Or ($(TargetFrameworkIdentifier) == 'Xamarin.iOS') Or ($(TargetFrameworkIdentifier) == 'Xamarin.Mac') Or ($(TargetFrameworkProfile) == 'Profile2') Or ($(TargetFrameworkProfile) == 'Profile3') Or ($(TargetFrameworkProfile) == 'Profile4') Or ($(TargetFrameworkProfile) == 'Profile5') Or ($(TargetFrameworkProfile) == 'Profile6') Or ($(TargetFrameworkProfile) == 'Profile7') Or ($(TargetFrameworkProfile) == 'Profile14') Or ($(TargetFrameworkProfile) == 'Profile18') Or ($(TargetFrameworkProfile) == 'Profile19') Or ($(TargetFrameworkProfile) == 'Profile23') Or ($(TargetFrameworkProfile) == 'Profile24') Or ($(TargetFrameworkProfile) == 'Profile31') Or ($(TargetFrameworkProfile) == 'Profile36') Or ($(TargetFrameworkProfile) == 'Profile37') Or ($(TargetFrameworkProfile) == 'Profile41') Or ($(TargetFrameworkProfile) == 'Profile42') Or ($(TargetFrameworkProfile) == 'Profile44') Or ($(TargetFrameworkProfile) == 'Profile46') Or ($(TargetFrameworkProfile) == 'Profile47') Or ($(TargetFrameworkProfile) == 'Profile49') Or ($(TargetFrameworkProfile) == 'Profile78') Or ($(TargetFrameworkProfile) == 'Profile88') Or ($(TargetFrameworkProfile) == 'Profile95') Or ($(TargetFrameworkProfile) == 'Profile96') Or ($(TargetFrameworkProfile) == 'Profile104') Or ($(TargetFrameworkProfile) == 'Profile143') Or ($(TargetFrameworkProfile) == 'Profile147') Or ($(TargetFrameworkProfile) == 'Profile154') Or ($(TargetFrameworkProfile) == 'Profile158')">
+      <ItemGroup>
+        <Reference Include="Google.ProtocolBuffers.Serialization">
+          <HintPath>..\..\..\..\packages\Google.ProtocolBuffers\lib\portable-net40+sl4+sl5+wp7+wp8+win8\Google.ProtocolBuffers.Serialization.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="Google.ProtocolBuffers">
+          <HintPath>..\..\..\..\packages\Google.ProtocolBuffers\lib\portable-net40+sl4+sl5+wp7+wp8+win8\Google.ProtocolBuffers.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="($(TargetFrameworkIdentifier) == 'WindowsPhoneApp') Or ($(TargetFrameworkIdentifier) == '.NETCore') Or ($(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6')) Or ($(TargetFrameworkIdentifier) == 'WindowsPhone' And ($(TargetFrameworkVersion) == 'v8.0' Or $(TargetFrameworkVersion) == 'v8.1')) Or ($(TargetFrameworkIdentifier) == 'MonoAndroid') Or ($(TargetFrameworkIdentifier) == 'MonoTouch') Or ($(TargetFrameworkIdentifier) == 'Xamarin.iOS') Or ($(TargetFrameworkIdentifier) == 'Xamarin.Mac') Or ($(TargetFrameworkProfile) == 'Profile7') Or ($(TargetFrameworkProfile) == 'Profile31') Or ($(TargetFrameworkProfile) == 'Profile32') Or ($(TargetFrameworkProfile) == 'Profile44') Or ($(TargetFrameworkProfile) == 'Profile49') Or ($(TargetFrameworkProfile) == 'Profile78') Or ($(TargetFrameworkProfile) == 'Profile84') Or ($(TargetFrameworkProfile) == 'Profile111') Or ($(TargetFrameworkProfile) == 'Profile151') Or ($(TargetFrameworkProfile) == 'Profile157') Or ($(TargetFrameworkProfile) == 'Profile259')" />
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETCore'">
+      <ItemGroup>
+        <Reference Include="FluentAssertions.Core">
+          <HintPath>..\..\..\..\packages\test\FluentAssertions\lib\win8\FluentAssertions.Core.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="FluentAssertions">
+          <HintPath>..\..\..\..\packages\test\FluentAssertions\lib\win8\FluentAssertions.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.0')">
+      <ItemGroup>
+        <Reference Include="FluentAssertions.Core">
+          <HintPath>..\..\..\..\packages\test\FluentAssertions\lib\net40\FluentAssertions.Core.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="FluentAssertions">
+          <HintPath>..\..\..\..\packages\test\FluentAssertions\lib\net40\FluentAssertions.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6')" />
+    <When Condition="$(TargetFrameworkIdentifier) == 'Silverlight' And $(TargetFrameworkVersion) == 'v5.0'">
+      <ItemGroup>
+        <Reference Include="FluentAssertions.Core">
+          <HintPath>..\..\..\..\packages\test\FluentAssertions\lib\sl5\FluentAssertions.Core.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="FluentAssertions">
+          <HintPath>..\..\..\..\packages\test\FluentAssertions\lib\sl5\FluentAssertions.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTesting.Silverlight">
+          <HintPath>..\..\..\..\packages\test\FluentAssertions\lib\sl5\Microsoft.VisualStudio.QualityTools.UnitTesting.Silverlight.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="$(TargetFrameworkIdentifier) == 'WindowsPhone' And ($(TargetFrameworkVersion) == 'v8.0' Or $(TargetFrameworkVersion) == 'v8.1')">
+      <ItemGroup>
+        <Reference Include="FluentAssertions.Core">
+          <HintPath>..\..\..\..\packages\test\FluentAssertions\lib\wp8\FluentAssertions.Core.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="FluentAssertions">
+          <HintPath>..\..\..\..\packages\test\FluentAssertions\lib\wp8\FluentAssertions.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="($(TargetFrameworkIdentifier) == 'MonoAndroid') Or ($(TargetFrameworkIdentifier) == 'MonoTouch') Or ($(TargetFrameworkIdentifier) == 'Xamarin.iOS')">
+      <ItemGroup>
+        <Reference Include="FluentAssertions.Core">
+          <HintPath>..\..\..\..\packages\test\FluentAssertions\lib\portable-monotouch+monoandroid+xamarin.ios\FluentAssertions.Core.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="($(TargetFrameworkIdentifier) == 'WindowsPhoneApp') Or ($(TargetFrameworkProfile) == 'Profile32')">
+      <ItemGroup>
+        <Reference Include="FluentAssertions.Core">
+          <HintPath>..\..\..\..\packages\test\FluentAssertions\lib\portable-win81+wpa81\FluentAssertions.Core.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="FluentAssertions">
+          <HintPath>..\..\..\..\packages\test\FluentAssertions\lib\portable-win81+wpa81\FluentAssertions.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="($(TargetFrameworkIdentifier) == 'Xamarin.Mac') Or ($(TargetFrameworkProfile) == 'Profile5') Or ($(TargetFrameworkProfile) == 'Profile6') Or ($(TargetFrameworkProfile) == 'Profile7') Or ($(TargetFrameworkProfile) == 'Profile14') Or ($(TargetFrameworkProfile) == 'Profile19') Or ($(TargetFrameworkProfile) == 'Profile24') Or ($(TargetFrameworkProfile) == 'Profile31') Or ($(TargetFrameworkProfile) == 'Profile37') Or ($(TargetFrameworkProfile) == 'Profile42') Or ($(TargetFrameworkProfile) == 'Profile44') Or ($(TargetFrameworkProfile) == 'Profile47') Or ($(TargetFrameworkProfile) == 'Profile49') Or ($(TargetFrameworkProfile) == 'Profile78') Or ($(TargetFrameworkProfile) == 'Profile84') Or ($(TargetFrameworkProfile) == 'Profile92') Or ($(TargetFrameworkProfile) == 'Profile102') Or ($(TargetFrameworkProfile) == 'Profile111') Or ($(TargetFrameworkProfile) == 'Profile136') Or ($(TargetFrameworkProfile) == 'Profile147') Or ($(TargetFrameworkProfile) == 'Profile151') Or ($(TargetFrameworkProfile) == 'Profile157') Or ($(TargetFrameworkProfile) == 'Profile158') Or ($(TargetFrameworkProfile) == 'Profile225') Or ($(TargetFrameworkProfile) == 'Profile240') Or ($(TargetFrameworkProfile) == 'Profile255') Or ($(TargetFrameworkProfile) == 'Profile259') Or ($(TargetFrameworkProfile) == 'Profile328') Or ($(TargetFrameworkProfile) == 'Profile336') Or ($(TargetFrameworkProfile) == 'Profile344')">
+      <ItemGroup>
+        <Reference Include="FluentAssertions.Core">
+          <HintPath>..\..\..\..\packages\test\FluentAssertions\lib\portable-net40+sl5+win8+wp8+wpa81\FluentAssertions.Core.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="FluentAssertions">
+          <HintPath>..\..\..\..\packages\test\FluentAssertions\lib\portable-net40+sl5+win8+wp8+wpa81\FluentAssertions.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6')" />
+    <When Condition="($(TargetFrameworkIdentifier) == '.NETCore' And $(TargetFrameworkVersion) == 'v4.5') Or ($(TargetFrameworkIdentifier) == 'WindowsPhone' And $(TargetFrameworkVersion) == 'v8.0') Or ($(TargetFrameworkIdentifier) == 'MonoAndroid') Or ($(TargetFrameworkIdentifier) == 'MonoTouch') Or ($(TargetFrameworkIdentifier) == 'Xamarin.iOS') Or ($(TargetFrameworkProfile) == 'Profile7') Or ($(TargetFrameworkProfile) == 'Profile31') Or ($(TargetFrameworkProfile) == 'Profile32') Or ($(TargetFrameworkProfile) == 'Profile44') Or ($(TargetFrameworkProfile) == 'Profile49') Or ($(TargetFrameworkProfile) == 'Profile78') Or ($(TargetFrameworkProfile) == 'Profile84') Or ($(TargetFrameworkProfile) == 'Profile111') Or ($(TargetFrameworkProfile) == 'Profile151') Or ($(TargetFrameworkProfile) == 'Profile157') Or ($(TargetFrameworkProfile) == 'Profile259')">
+      <ItemGroup>
+        <Reference Include="xunit.abstractions">
+          <HintPath>..\..\..\..\packages\test\xunit.abstractions\lib\portable-net45+win+wpa81+wp80+monotouch+monoandroid+Xamarin.iOS\xunit.abstractions.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="($(TargetFrameworkIdentifier) == 'WindowsPhoneApp') Or ($(TargetFrameworkIdentifier) == '.NETCore') Or ($(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6')) Or ($(TargetFrameworkIdentifier) == 'WindowsPhone' And ($(TargetFrameworkVersion) == 'v8.0' Or $(TargetFrameworkVersion) == 'v8.1')) Or ($(TargetFrameworkIdentifier) == 'MonoAndroid') Or ($(TargetFrameworkIdentifier) == 'MonoTouch') Or ($(TargetFrameworkIdentifier) == 'Xamarin.iOS') Or ($(TargetFrameworkIdentifier) == 'Xamarin.Mac') Or ($(TargetFrameworkProfile) == 'Profile7') Or ($(TargetFrameworkProfile) == 'Profile31') Or ($(TargetFrameworkProfile) == 'Profile32') Or ($(TargetFrameworkProfile) == 'Profile44') Or ($(TargetFrameworkProfile) == 'Profile49') Or ($(TargetFrameworkProfile) == 'Profile78') Or ($(TargetFrameworkProfile) == 'Profile84') Or ($(TargetFrameworkProfile) == 'Profile111') Or ($(TargetFrameworkProfile) == 'Profile151') Or ($(TargetFrameworkProfile) == 'Profile157') Or ($(TargetFrameworkProfile) == 'Profile259')" />
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETCore' And $(TargetFrameworkVersion) == 'v4.5.1'">
+      <PropertyGroup>
+        <__paket__xunit_core_props>win81\xunit.core</__paket__xunit_core_props>
+      </PropertyGroup>
+    </When>
+    <When Condition="$(TargetFrameworkIdentifier) == 'WindowsPhoneApp'">
+      <PropertyGroup>
+        <__paket__xunit_core_props>wpa81\xunit.core</__paket__xunit_core_props>
+      </PropertyGroup>
+    </When>
+    <When Condition="($(TargetFrameworkIdentifier) == 'Xamarin.Mac') Or ($(TargetFrameworkProfile) == 'Profile7') Or ($(TargetFrameworkProfile) == 'Profile31') Or ($(TargetFrameworkProfile) == 'Profile32') Or ($(TargetFrameworkProfile) == 'Profile44') Or ($(TargetFrameworkProfile) == 'Profile49') Or ($(TargetFrameworkProfile) == 'Profile78') Or ($(TargetFrameworkProfile) == 'Profile84') Or ($(TargetFrameworkProfile) == 'Profile111') Or ($(TargetFrameworkProfile) == 'Profile151') Or ($(TargetFrameworkProfile) == 'Profile157') Or ($(TargetFrameworkProfile) == 'Profile259')">
+      <PropertyGroup>
+        <__paket__xunit_core_props>portable-net45+win8+wp8+wpa81\xunit.core</__paket__xunit_core_props>
+      </PropertyGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="($(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6')) Or ($(TargetFrameworkIdentifier) == '.NETCore' And $(TargetFrameworkVersion) == 'v4.5') Or ($(TargetFrameworkIdentifier) == 'WindowsPhone' And $(TargetFrameworkVersion) == 'v8.0') Or ($(TargetFrameworkIdentifier) == 'MonoAndroid') Or ($(TargetFrameworkIdentifier) == 'MonoTouch') Or ($(TargetFrameworkIdentifier) == 'Xamarin.iOS') Or ($(TargetFrameworkProfile) == 'Profile7') Or ($(TargetFrameworkProfile) == 'Profile31') Or ($(TargetFrameworkProfile) == 'Profile32') Or ($(TargetFrameworkProfile) == 'Profile44') Or ($(TargetFrameworkProfile) == 'Profile49') Or ($(TargetFrameworkProfile) == 'Profile78') Or ($(TargetFrameworkProfile) == 'Profile84') Or ($(TargetFrameworkProfile) == 'Profile111') Or ($(TargetFrameworkProfile) == 'Profile151') Or ($(TargetFrameworkProfile) == 'Profile157') Or ($(TargetFrameworkProfile) == 'Profile259')" />
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETCore' And $(TargetFrameworkVersion) == 'v4.5'">
+      <ItemGroup>
+        <Reference Include="xunit.execution.dotnet">
+          <HintPath>..\..\..\..\packages\test\xunit.extensibility.execution\lib\win8\xunit.execution.dotnet.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6')" />
+    <When Condition="$(TargetFrameworkIdentifier) == 'MonoAndroid'">
+      <ItemGroup>
+        <Reference Include="xunit.execution.dotnet">
+          <HintPath>..\..\..\..\packages\test\xunit.extensibility.execution\lib\monoandroid\xunit.execution.dotnet.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="$(TargetFrameworkIdentifier) == 'MonoTouch'">
+      <ItemGroup>
+        <Reference Include="xunit.execution.dotnet">
+          <HintPath>..\..\..\..\packages\test\xunit.extensibility.execution\lib\monotouch\xunit.execution.dotnet.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="$(TargetFrameworkIdentifier) == 'WindowsPhone' And $(TargetFrameworkVersion) == 'v8.0'">
+      <ItemGroup>
+        <Reference Include="xunit.execution.dotnet">
+          <HintPath>..\..\..\..\packages\test\xunit.extensibility.execution\lib\wp8\xunit.execution.dotnet.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="$(TargetFrameworkIdentifier) == 'Xamarin.iOS'">
+      <ItemGroup>
+        <Reference Include="xunit.execution.dotnet">
+          <HintPath>..\..\..\..\packages\test\xunit.extensibility.execution\lib\xamarinios\xunit.execution.dotnet.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="($(TargetFrameworkProfile) == 'Profile7') Or ($(TargetFrameworkProfile) == 'Profile31') Or ($(TargetFrameworkProfile) == 'Profile32') Or ($(TargetFrameworkProfile) == 'Profile44') Or ($(TargetFrameworkProfile) == 'Profile49') Or ($(TargetFrameworkProfile) == 'Profile78') Or ($(TargetFrameworkProfile) == 'Profile84') Or ($(TargetFrameworkProfile) == 'Profile111') Or ($(TargetFrameworkProfile) == 'Profile151') Or ($(TargetFrameworkProfile) == 'Profile157') Or ($(TargetFrameworkProfile) == 'Profile259')">
+      <ItemGroup>
+        <Reference Include="xunit.execution.dotnet">
+          <HintPath>..\..\..\..\packages\test\xunit.extensibility.execution\lib\portable-net45+win8+wp8+wpa81\xunit.execution.dotnet.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Import Project="..\..\..\..\packages\test\xunit.core\build\$(__paket__xunit_core_props).props" Condition="Exists('..\..\..\..\packages\test\xunit.core\build\$(__paket__xunit_core_props).props')" Label="Paket" />
+</Project>
