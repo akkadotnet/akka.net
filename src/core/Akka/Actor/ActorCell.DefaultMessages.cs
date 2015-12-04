@@ -165,7 +165,7 @@ namespace Akka.Actor
             {
                 var m = envelope.Message;
 
-                if (m is CompleteTask) HandleCompleteTask(m as CompleteTask);
+                if (m is ActorTaskSchedulerMessage) HandleActorTaskSchedulerMessage(m as ActorTaskSchedulerMessage);
                 else if (m is Failed) HandleFailed(m as Failed);
                 else if (m is DeathWatchNotification)
                 {
@@ -203,12 +203,17 @@ namespace Akka.Actor
             }
         }
 
-        private void HandleCompleteTask(CompleteTask task)
+        private void HandleActorTaskSchedulerMessage(ActorTaskSchedulerMessage m)
         {
-            CurrentMessage = task.State.Message;
-            Sender = task.State.Sender;
-            task.SetResult();
+            if (m.Exception != null)
+            {
+                HandleInvokeFailure(m.Exception);
+                return;
+            }
+
+            m.ExecuteTask();
         }
+
         public void SwapMailbox(DeadLetterMailbox mailbox)
         {
             Mailbox.DebugPrint("{0} Swapping mailbox to DeadLetterMailbox", Self);
