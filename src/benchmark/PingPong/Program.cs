@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -40,19 +39,12 @@ namespace PingPong
 
         private static void Main(params string[] args)
         {
-            uint timesToRun;
-            if (args.Length == 0 || !uint.TryParse(args[0], out timesToRun))
-            {
-                timesToRun = 1u;
-            }
-
-            bool testAsync = args.Contains("--async");
-
-            Start(timesToRun, testAsync);
+            uint timesToRun = args.Length == 1 ? uint.Parse(args[0]) : 1u;
+            Start(timesToRun);
             Console.ReadKey();
         }
 
-        private static async void Start(uint timesToRun, bool testAsync)
+        private static async void Start(uint timesToRun)
         {
             const int repeatFactor = 500;
             const long repeat = 30000L * repeatFactor;
@@ -85,38 +77,16 @@ namespace PingPong
             Console.Write("ReceiveActor first start time: ");
             await Benchmark<ClientReceiveActor>(1, 1, 1, PrintStats.StartTimeOnly, -1, -1);
             Console.WriteLine(" ms");
-
-            if (testAsync)
-            {
-                Console.Write("AsyncActor   first start time: ");
-                await Benchmark<ClientAsyncActor>(1, 1, 1, PrintStats.StartTimeOnly, -1, -1);
-                Console.WriteLine(" ms");
-            }
-
             Console.WriteLine();
 
-            Console.Write("            ActorBase                          ReceiveActor");
-            if (testAsync)
-            {
-                Console.Write("                       AsyncActor");
-            }
-            Console.WriteLine();
-
-            Console.Write("Throughput, Msgs/sec, Start [ms], Total [ms],  Msgs/sec, Start [ms], Total [ms]");
-            if (testAsync)
-            {
-                Console.Write(",  Msgs/sec, Start [ms], Total [ms]");
-            }
-            Console.WriteLine();
-
+            Console.WriteLine("            ActorBase                          ReceiveActor");
+            Console.WriteLine("Throughput, Msgs/sec, Start [ms], Total [ms],  Msgs/sec, Start [ms], Total [ms]");
             for(var i = 0; i < timesToRun; i++)
             {
                 var redCountActorBase=0;
                 var redCountReceiveActor=0;
-                var redCountAsyncActor = 0;
                 var bestThroughputActorBase=0L;
                 var bestThroughputReceiveActor=0L;
-                var bestThroughputAsyncActor = 0L;
                 foreach(var throughput in GetThroughputSettings())
                 {
                     var result1 = await Benchmark<ClientActorBase>(throughput, processorCount, repeat, PrintStats.LineStart | PrintStats.Stats, bestThroughputActorBase, redCountActorBase);
@@ -126,15 +96,6 @@ namespace PingPong
                     var result2 = await Benchmark<ClientReceiveActor>(throughput, processorCount, repeat, PrintStats.Stats, bestThroughputReceiveActor, redCountReceiveActor);
                     bestThroughputReceiveActor = result2.Item2;
                     redCountReceiveActor = result2.Item3;
-                    
-                    if (testAsync)
-                    {
-                        Console.Write(",  ");
-                        var result3 = await Benchmark<ClientAsyncActor>(throughput, processorCount, repeat, PrintStats.Stats, bestThroughputAsyncActor, redCountAsyncActor);
-                        bestThroughputAsyncActor = result3.Item2;
-                        redCountAsyncActor = result3.Item3;
-                    }
-
                     Console.WriteLine();
                 }
             }

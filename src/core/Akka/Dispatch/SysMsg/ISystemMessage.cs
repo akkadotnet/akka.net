@@ -243,39 +243,30 @@ namespace Akka.Dispatch.SysMsg
         public Task Task { get; private set; }
     }
 
-    internal sealed class ActorTaskSchedulerMessage : ISystemMessage
+    public sealed class CompleteTask : ISystemMessage
     {
-        private readonly ActorTaskScheduler _scheduler;
-        private readonly Task _task;
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="CompleteTask" /> class.
+        /// </summary>
+        /// <param name="state"></param>
+        /// <param name="action">The action.</param>
+        public CompleteTask(AmbientState state, Action action)
+        {
+            State = state;
+            SetResult = action;
+        }
+
+        public AmbientState State { get; private set; }
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="ActorTaskSchedulerMessage" /> class.
+        ///     Gets the set result.
         /// </summary>
-        public ActorTaskSchedulerMessage(ActorTaskScheduler scheduler, Task task)
-        {
-            _scheduler = scheduler;
-            _task = task;
-        }
-
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="ActorTaskSchedulerMessage" /> class.
-        /// </summary>
-        /// <param name="exception">The exception.</param>
-        public ActorTaskSchedulerMessage(Exception exception)
-        {
-            Exception = exception;
-        }
-
-        public Exception Exception { get; private set; }
-
-        public void ExecuteTask()
-        {
-            _scheduler.ExecuteTask(_task);
-        }
+        /// <value>The set result.</value>
+        public Action SetResult { get; private set; }
 
         public override string ToString()
         {
-            return "<ActorTaskSchedulerMessage>";
+            return "CompleteTask - AmbientState: " + State;
         }
     }
 
