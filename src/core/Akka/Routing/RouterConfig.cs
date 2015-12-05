@@ -129,7 +129,7 @@ namespace Akka.Routing
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Equals(_paths, other._paths);
+            return _paths.SequenceEqual(other._paths);
         }
 
         public override bool Equals(object obj)
