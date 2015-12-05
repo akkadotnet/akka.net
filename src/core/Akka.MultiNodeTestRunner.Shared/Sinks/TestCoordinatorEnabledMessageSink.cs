@@ -137,7 +137,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                         var testRunTree = tr.Result;
                         return new BeginSinkTerminate(testRunTree, sender);
                     }, TaskContinuationOptions.ExecuteSynchronously)
-                    .PipeTo(Self);
+                    .PipeTo(self);
             }
         }
 
