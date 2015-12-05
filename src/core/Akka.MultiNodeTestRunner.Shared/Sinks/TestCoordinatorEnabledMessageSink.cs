@@ -28,6 +28,8 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             {
                 if (UseTestCoordinator)
                 {
+                    var sender = Sender;
+                    var self = Self;
                     TestCoordinatorActorRef.Ask<TestRunTree>(new TestRunCoordinator.RequestTestRunState())
                         .ContinueWith(task =>
                         {
@@ -35,7 +37,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                                 ? 0
                                 : 1);
                         }, TaskContinuationOptions.ExecuteSynchronously)
-                            .PipeTo(Sender, Self);
+                            .PipeTo(sender, self);
                 }
             });
         }
@@ -128,6 +130,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             if (UseTestCoordinator)
             {
                 var sender = Sender;
+                var self = Self;
                 TestCoordinatorActorRef.Ask<TestRunTree>(endTestRun)
                     .ContinueWith(tr =>
                     {

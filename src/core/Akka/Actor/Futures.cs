@@ -64,7 +64,7 @@ namespace Akka.Actor
         private static Task<object> Ask(ICanTell self, object message, IActorRefProvider provider,
             TimeSpan? timeout)
         {
-            var result = new TaskCompletionSource<object>(TaskContinuationOptions.AttachedToParent);
+            var result = new TaskCompletionSource<object>();
 
             timeout = timeout ?? provider.Settings.AskTimeout;
 
