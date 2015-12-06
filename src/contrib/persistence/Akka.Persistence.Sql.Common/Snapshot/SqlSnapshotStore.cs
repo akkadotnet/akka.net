@@ -63,14 +63,17 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             base.PostStop();
 
             // stop all operations executed in the background
-            var node = PendingOperations.First;
-            while (node != null)
-            {
-                var curr = node;
-                node = node.Next;
+            lock(PendingOperations)
+            { 
+                var node = PendingOperations.First;
+                while (node != null)
+                {
+                    var curr = node;
+                    node = node.Next;
 
-                curr.Value.Cancel();
-                PendingOperations.Remove(curr);
+                    curr.Value.Cancel();
+                }
+                PendingOperations.Clear();
             }
         }
 
@@ -91,19 +94,22 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             {
                 await connection.OpenAsync();
 
-                var sqlCommand = QueryBuilder.SelectSnapshot(persistenceId, criteria.MaxSequenceNr, criteria.MaxTimeStamp);
-                CompleteCommand(sqlCommand, connection);
+                using(var sqlCommand = QueryBuilder.SelectSnapshot(persistenceId, criteria.MaxSequenceNr, criteria.MaxTimeStamp))
+                { 
+                    CompleteCommand(sqlCommand, connection);
 
-                var tokenSource = GetCancellationTokenSource();
-                var reader = await sqlCommand.ExecuteReaderAsync(tokenSource.Token);
-                try
-                {
-                    return reader.Read() ? QueryMapper.Map(reader) : null;
-                }
-                finally
-                {
-                    PendingOperations.Remove(tokenSource);
-                    reader.Close();
+                    var tokenSource = GetCancellationTokenSource();
+                    var reader = await sqlCommand.ExecuteReaderAsync(tokenSource.Token);
+                    try
+                    {
+                        return reader.Read() ? QueryMapper.Map(reader) : null;
+                    }
+                    finally
+                    {
+                        lock(PendingOperations)
+                            PendingOperations.Remove(tokenSource);
+                        reader.Close();
+                    }
                 }
             }
         }
@@ -111,26 +117,33 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <summary>
         /// Asynchronously stores a snapshot with metadata as record in SQL table.
         /// </summary>
-        protected override async Task SaveAsync(SnapshotMetadata metadata, object snapshot)
+        protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot)
         {
-            using (var connection = CreateDbConnection())
+            var entry = ToSnapshotEntry(metadata, snapshot);
+
+            return Task.Run(async () =>
             {
-                await connection.OpenAsync();
-
-                var entry = ToSnapshotEntry(metadata, snapshot);
-                var sqlCommand = QueryBuilder.InsertSnapshot(entry);
-                CompleteCommand(sqlCommand, connection);
-
-                var tokenSource = GetCancellationTokenSource();
-                try
+                using (var connection = CreateDbConnection())
                 {
-                    await sqlCommand.ExecuteNonQueryAsync(tokenSource.Token);
+                    await connection.OpenAsync();
+
+                    using (var sqlCommand = QueryBuilder.InsertSnapshot(entry))
+                    {
+                        CompleteCommand(sqlCommand, connection);
+
+                        var tokenSource = GetCancellationTokenSource();
+                        try
+                        {
+                            await sqlCommand.ExecuteNonQueryAsync(tokenSource.Token);
+                        }
+                        finally
+                        {
+                            lock(PendingOperations)
+                                PendingOperations.Remove(tokenSource);
+                        }
+                    }
                 }
-                finally
-                {
-                    PendingOperations.Remove(tokenSource);
-                }
-            }
+            });
         }
 
         protected override void Saved(SnapshotMetadata metadata) { }
@@ -140,10 +153,12 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             using (var connection = CreateDbConnection())
             {
                 await connection.OpenAsync();
-                var sqlCommand = QueryBuilder.DeleteOne(metadata.PersistenceId, metadata.SequenceNr, metadata.Timestamp);
-                CompleteCommand(sqlCommand, connection);
+                using(var sqlCommand = QueryBuilder.DeleteOne(metadata.PersistenceId, metadata.SequenceNr, metadata.Timestamp))
+                { 
+                    CompleteCommand(sqlCommand, connection);
 
-                await sqlCommand.ExecuteNonQueryAsync();
+                    await sqlCommand.ExecuteNonQueryAsync();
+                }
             }
         }
 
@@ -152,10 +167,12 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             using (var connection = CreateDbConnection())
             {
                 await connection.OpenAsync();
-                var sqlCommand = QueryBuilder.DeleteMany(persistenceId, criteria.MaxSequenceNr, criteria.MaxTimeStamp);
-                CompleteCommand(sqlCommand, connection);
+                using(var sqlCommand = QueryBuilder.DeleteMany(persistenceId, criteria.MaxSequenceNr, criteria.MaxTimeStamp))
+                { 
+                    CompleteCommand(sqlCommand, connection);
 
-                await sqlCommand.ExecuteNonQueryAsync();
+                    await sqlCommand.ExecuteNonQueryAsync();
+                }
             }
         }
 
@@ -168,7 +185,8 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         private CancellationTokenSource GetCancellationTokenSource()
         {
             var source = new CancellationTokenSource();
-            PendingOperations.AddLast(source);
+            lock(PendingOperations)
+                PendingOperations.AddLast(source);
             return source;
         }
 
