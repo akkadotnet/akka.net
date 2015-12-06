@@ -29,7 +29,7 @@ namespace Akka.Routing
         private readonly SortedDictionary<int, T> _nodes;
         private readonly int _virtualNodesFactor;
 
-        internal ConsistentHash(SortedDictionary<int, T> nodes, int virtualNodesFactor)
+        public ConsistentHash(SortedDictionary<int, T> nodes, int virtualNodesFactor)
         {
             _nodes = nodes;
 
