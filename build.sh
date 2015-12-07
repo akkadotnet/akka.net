@@ -13,7 +13,7 @@ if ! [ -f $SCRIPT_PATH/src/.nuget/nuget.exe ]
         wget "https://www.nuget.org/nuget.exe" -P $SCRIPT_PATH/src/.nuget/
 fi
 
-mono $SCRIPT_PATH/src/.nuget/nuget.exe update -self
+#mono $SCRIPT_PATH/src/.nuget/nuget.exe update -self
 
 
 SCRIPT_PATH="${BASH_SOURCE[0]}";
@@ -25,7 +25,7 @@ cd `dirname ${SCRIPT_PATH}` > /dev/null
 SCRIPT_PATH=`pwd`;
 popd  > /dev/null
 
-mono $SCRIPT_PATH/src/.nuget/NuGet.exe update -self
+#mono $SCRIPT_PATH/src/.nuget/NuGet.exe update -self
 
 mono $SCRIPT_PATH/src/.nuget/NuGet.exe install FAKE -OutputDirectory $SCRIPT_PATH/src/packages -ExcludeVersion -Version 3.28.8
 
