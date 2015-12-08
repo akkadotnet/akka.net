@@ -51,9 +51,6 @@
     <Optimize>false</Optimize>
   </PropertyGroup>
   <ItemGroup>
-    <Content Include="CHANGES.txt">
-      <Paket>True</Paket>
-    </Content>
     <Content Include="licenses\license.txt">
       <Paket>True</Paket>
     </Content>
