@@ -891,8 +891,9 @@ namespace Akka.Remote.Transport
 
         private void ListenForListenerRegistration(TaskCompletionSource<IHandleEventListener> readHandlerSource)
         {
+            var self = Self;
             readHandlerSource.Task.ContinueWith(rh => new HandleListenerRegistered(rh.Result),
-                TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent).PipeTo(Self);
+                TaskContinuationOptions.ExecuteSynchronously).PipeTo(self);
         }
 
         private Task<IHandleEventListener> NotifyOutboundHandler(AssociationHandle wrappedHandle,

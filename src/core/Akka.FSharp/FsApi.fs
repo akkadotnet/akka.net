@@ -84,7 +84,7 @@ module Actors =
     /// tracked by actorRef and awaits for response send back from corresponding actor. 
     /// </summary>
     let (<?) (tell : #ICanTell) (msg : obj) : Async<'Message> = 
-        tell.Ask(msg).ContinueWith(Func<_,'Message>(tryCast), TaskContinuationOptions.AttachedToParent|||TaskContinuationOptions.ExecuteSynchronously)
+        tell.Ask(msg).ContinueWith(Func<_,'Message>(tryCast), TaskContinuationOptions.ExecuteSynchronously)
         |> Async.AwaitTask
 
     /// Pipes an output of asynchronous expression directly to the recipients mailbox.
