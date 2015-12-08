@@ -17,12 +17,12 @@ copy %CACHED_NUGET% src\.nuget\nuget.exe > nul
 
 :restore
 
-REM src\.nuget\NuGet.exe update -self
+src\.nuget\NuGet.exe update -self
 
 
 pushd %~dp0
 
-REM src\.nuget\NuGet.exe update -self
+src\.nuget\NuGet.exe update -self
 
 src\.nuget\NuGet.exe install FAKE -ConfigFile src\.nuget\Nuget.Config -OutputDirectory src\packages -ExcludeVersion -Version 4.1.0
 
