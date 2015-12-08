@@ -1,5 +1,6 @@
 #### 1.0.6 December 3 2015 ####
 
+
 #### 1.0.5 December 3 2015 ####
 **Maintenance release for Akka.NET v1.0.4**
 This release is a collection of bug fixes, performance enhancements, and general improvements contributed by 29 individual contributors.
