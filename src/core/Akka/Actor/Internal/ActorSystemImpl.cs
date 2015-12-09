@@ -15,6 +15,7 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
+using Akka.Util;
 
 
 namespace Akka.Actor.Internal
@@ -37,6 +38,7 @@ namespace Akka.Actor.Internal
         private Mailboxes _mailboxes;
         private IScheduler _scheduler;
         private ActorProducerPipelineResolver _actorProducerPipelineResolver;
+        private TerminationCallbacks _terminationCallbacks;
 
         public ActorSystemImpl(string name)
             : this(name, ConfigurationFactory.Load())
@@ -55,6 +57,7 @@ namespace Akka.Actor.Internal
             ConfigureSettings(config);
             ConfigureEventStream();
             ConfigureProvider();
+            ConfigureTerminationCallbacks();
             ConfigureScheduler();
             ConfigureSerialization();
             ConfigureMailboxes();
@@ -297,6 +300,28 @@ namespace Akka.Actor.Internal
         }
 
         /// <summary>
+        /// Configures the termination callbacks.
+        /// </summary>
+        private void ConfigureTerminationCallbacks()
+        {
+            _terminationCallbacks = new TerminationCallbacks(Provider.TerminationTask);
+        }
+
+        /// <summary>
+        /// Register a block of code (callback) to run after ActorSystem.shutdown has been issued and
+        /// all actors in this actor system have been stopped.
+        /// Multiple code blocks may be registered by calling this method multiple times.
+        /// The callbacks will be run sequentially in reverse order of registration, i.e.
+        /// last registration is run first.
+        /// </summary>
+        /// <param name="code">The code to run</param>
+        /// <exception cref="Exception">Thrown if the System has already shut down or if shutdown has been initiated.</exception>
+        public override void RegisterOnTermination(Action code)
+        {
+            _terminationCallbacks.Add(code);
+        }
+
+        /// <summary>
         ///     Stop this actor system. This will stop the guardian actor, which in turn
         ///     will recursively stop all its child actors, then the system guardian
         ///     (below which the logging actors reside) and the execute all registered
@@ -308,7 +333,7 @@ namespace Akka.Actor.Internal
             _provider.Guardian.Stop();
         }
 
-        public override Task TerminationTask { get { return _provider.TerminationTask; } }
+        public override Task TerminationTask { get { return _terminationCallbacks.TerminationTask; } }
 
         public override void AwaitTermination()
         {
@@ -324,7 +349,7 @@ namespace Akka.Actor.Internal
         {
             try
             {
-                return _provider.TerminationTask.Wait((int) timeout.TotalMilliseconds, cancellationToken);
+                return _terminationCallbacks.TerminationTask.Wait((int) timeout.TotalMilliseconds, cancellationToken);
             }
             catch(OperationCanceledException)
             {
@@ -345,7 +370,43 @@ namespace Akka.Actor.Internal
                 ((IInternalActorRef)actor).Stop();
         }
 
+    }
 
+    class TerminationCallbacks
+    {
+        private Task _terminationTask;
+        private AtomicReference<Task> _atomicRef;
+
+        public TerminationCallbacks(Task upStreamTerminated)
+        {
+            _atomicRef = new AtomicReference<Task>(new Task(() => {}));
+
+            upStreamTerminated.ContinueWith(_ =>
+            {
+                _terminationTask = Interlocked.Exchange(ref _atomicRef, new AtomicReference<Task>(null)).Value;
+                _terminationTask.Start();
+            });
+        }
+        
+        public void Add(Action code)
+        {
+            var previous = _atomicRef.Value;
+
+            if (_atomicRef.Value == null)
+                throw new Exception("ActorSystem already terminated.");
+
+            var t = new Task(code);
+
+            if (_atomicRef.CompareAndSet(previous, t))
+            {
+                t.ContinueWith(_ => previous.Start());
+                return;
+            }
+
+            Add(code);
+        }
+
+        public Task TerminationTask { get { return _atomicRef.Value ?? _terminationTask; } }
     }
 }
 

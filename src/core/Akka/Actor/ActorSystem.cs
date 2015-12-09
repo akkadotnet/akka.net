@@ -96,7 +96,7 @@ namespace Akka.Actor
         /// <returns>ActorSystem.</returns>
         public static ActorSystem Create(string name)
         {
-            return CreateAndStartSystem(name,ConfigurationFactory.Load());
+            return CreateAndStartSystem(name, ConfigurationFactory.Load());
         }
 
         private static ActorSystem CreateAndStartSystem(string name, Config withFallback)
@@ -136,6 +136,16 @@ namespace Akka.Actor
         /// </summary>
         public abstract bool TryGetExtension<T>(out T extension) where T : class, IExtension;
 
+        /// <summary>
+        /// Register a block of code (callback) to run after ActorSystem.shutdown has been issued and
+        /// all actors in this actor system have been stopped.
+        /// Multiple code blocks may be registered by calling this method multiple times.
+        /// The callbacks will be run sequentially in reverse order of registration, i.e.
+        /// last registration is run first.
+        /// </summary>
+        /// <param name="code">The code to run</param>
+        /// <exception cref="Exception">Thrown if the System has already shut down or if shutdown has been initiated.</exception>
+        public abstract void RegisterOnTermination(Action code);
 
         /// <summary>
         ///     Stop this actor system. This will stop the guardian actor, which in turn
@@ -237,7 +247,7 @@ namespace Akka.Actor
         public abstract object RegisterExtension(IExtensionId extension);
 
         public abstract IActorRef ActorOf(Props props, string name = null);
-        
+
         public abstract ActorSelection ActorSelection(ActorPath actorPath);
         public abstract ActorSelection ActorSelection(string actorPath);
 

@@ -28,7 +28,7 @@ namespace Akka.Tests.Actor
         [Fact]
         public void AnActorSystemMustRejectInvalidNames()
         {
-            (new List<string> { 
+            new List<string> { 
                   "hallo_welt",
                   "-hallowelt",
                   "hallo*welt",
@@ -36,7 +36,7 @@ namespace Akka.Tests.Actor
                   "hallo#welt",
                   "hallo$welt",
                   "hallo%welt",
-                  "hallo/welt"}).ForEach(n =>
+                  "hallo/welt"}.ForEach(n =>
                   {
                       XAssert.Throws<ArgumentException>(() => ActorSystem.Create(n));
                   });
@@ -68,10 +68,72 @@ namespace Akka.Tests.Actor
             actorSystem.AwaitTermination(TimeSpan.FromMilliseconds(10)).ShouldBeFalse();
         }
 
+        [Fact]
+        public void Run_termination_callbacks_in_order()
+        {
+            var actorSystem = ActorSystem.Create(Guid.NewGuid().ToString());
+            var result = new List<int>();
+            var expected = new List<int>();
+            var count = 10;
+            var latch = new TestLatch(count);
+
+            for (int i = 0; i < count; i++)
+            {
+                expected.Add(i);
+
+                var value = i;
+                actorSystem.RegisterOnTermination(() =>
+                {
+                    Task.Delay(Dilated(TimeSpan.FromMilliseconds(value % 3))).Wait();
+                    result.Add(value);
+                    latch.CountDown();
+                });
+            }
+
+            actorSystem.Shutdown();
+            latch.Ready();
+
+            expected.Reverse();
+
+            Assert.Equal(expected, result);
+        }
+
+        [Fact]
+        public void AwaitTermination_after_termination_callbacks()
+        {
+            var actorSystem = ActorSystem.Create(Guid.NewGuid().ToString());
+            var callbackWasRun = false;
+
+            actorSystem.RegisterOnTermination(() =>
+            {
+                Task.Delay(Dilated(TimeSpan.FromMilliseconds(50))).Wait();
+                callbackWasRun = true;
+            });
+
+            new TaskFactory().StartNew(() =>
+            {
+                Task.Delay(Dilated(TimeSpan.FromMilliseconds(200))).Wait();
+                actorSystem.Shutdown();
+            });
+
+            actorSystem.AwaitTermination(TimeSpan.FromSeconds(5));
+            Assert.True(callbackWasRun);
+        }
+
+        [Fact]
+        public void Throw_exception_when_register_callback_after_shutdown()
+        {
+            var actorSystem = ActorSystem.Create(Guid.NewGuid().ToString());
+
+            actorSystem.Shutdown();
+            actorSystem.AwaitTermination(TimeSpan.FromSeconds(10));
+
+            var ex = Assert.Throws<Exception>(() => actorSystem.RegisterOnTermination(() => { }));
+            Assert.Equal("ActorSystem already terminated.", ex.Message);
+        }
+
         #region Extensions tests
-
         
-
         [Fact]
         public void AnActorSystem_Must_Support_Extensions()
         {
