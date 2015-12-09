@@ -43,6 +43,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ExitCodeContainer.cs" />
+    <Compile Include="Logging\SpecMessages.cs" />
+    <Compile Include="Logging\UdpLogCollector.cs" />
+    <Compile Include="Logging\UpdLogger.cs" />
     <Compile Include="NodeTest.cs" />
     <Compile Include="Persistence\EnumerableExtensions.cs" />
     <Compile Include="Persistence\FileNameGenerator.cs" />
@@ -91,6 +94,7 @@
       <LastGenOutput>VisualizerRuntimeTemplate.cs</LastGenOutput>
     </Content>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

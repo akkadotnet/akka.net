@@ -6,8 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+using Akka.MultiNodeTestRunner.Shared.Logging;
 using Akka.Remote.TestKit;
 using Xunit;
 
@@ -47,25 +49,32 @@ namespace Akka.NodeTestRunner
                         }
                         catch (AggregateException ex)
                         {
-                            var specFail = new SpecFail(nodeIndex, displayName);
-                            specFail.FailureExceptionTypes.Add(ex.GetType().ToString());
-                            specFail.FailureMessages.Add(ex.Message);
-                            specFail.FailureStackTraces.Add(ex.StackTrace);
+                           
+                            var failureMessages = new List<string>();
+                            var failureStackTraces = new List<string>();
+                            var failureExceptionTypes = new List<string>();
+                            failureExceptionTypes.Add(ex.GetType().ToString());
+                            failureMessages.Add(ex.Message);
+                            failureStackTraces.Add(ex.StackTrace);
                             foreach (var innerEx in ex.Flatten().InnerExceptions)
                             {
-                                specFail.FailureExceptionTypes.Add(innerEx.GetType().ToString());
-                                specFail.FailureMessages.Add(innerEx.Message);
-                                specFail.FailureStackTraces.Add(innerEx.StackTrace);
+                                failureExceptionTypes.Add(innerEx.GetType().ToString());
+                                failureMessages.Add(innerEx.Message);
+                                failureStackTraces.Add(innerEx.StackTrace);
                             }
+                            var specFail = new SpecFail(nodeIndex, displayName, failureMessages, failureStackTraces, failureExceptionTypes);
                             Console.WriteLine(specFail);
                             Environment.Exit(1); //signal failure
                         }
                         catch (Exception ex)
                         {
-                            var specFail = new SpecFail(nodeIndex, displayName);
-                            specFail.FailureExceptionTypes.Add(ex.GetType().ToString());
-                            specFail.FailureMessages.Add(ex.Message);
-                            specFail.FailureStackTraces.Add(ex.StackTrace);
+                            var failureMessages = new List<string>();
+                            var failureStackTraces = new List<string>();
+                            var failureExceptionTypes = new List<string>();
+                            failureExceptionTypes.Add(ex.GetType().ToString());
+                            failureMessages.Add(ex.Message);
+                            failureStackTraces.Add(ex.StackTrace);
+                            var specFail = new SpecFail(nodeIndex, displayName, failureMessages, failureStackTraces, failureExceptionTypes);
                             Console.WriteLine(specFail);
                             Environment.Exit(1); //signal failure
                         }

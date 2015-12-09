@@ -75,6 +75,10 @@
       <Project>{A8AA2D7E-3D35-44DF-AF92-80A2C39C1F4D}</Project>
       <Name>Akka.Logger.NLog</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Akka.MultiNodeTestRunner.Shared\Akka.MultiNodeTestRunner.Shared.csproj">
+      <Project>{964f0ec5-fbe6-47c5-8ae6-145114d5db8c}</Project>
+      <Name>Akka.MultiNodeTestRunner.Shared</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj">
       <Project>{E5957C3E-2B1E-469F-A680-7953B4DEA31B}</Project>
       <Name>Akka.Remote.TestKit</Name>
