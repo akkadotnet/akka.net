@@ -141,6 +141,7 @@
     <Compile Include="Actor\StashMailboxSpec.cs" />
     <Compile Include="Actor\Stash\ActorWithStashSpec.cs" />
     <Compile Include="Actor\SupervisorHierarchySpec.cs" />
+    <Compile Include="Actor\SupervisorStrategyConfiguratorSpec.cs" />
     <Compile Include="Actor\SupervisorStrategySpecs.cs" />
     <Compile Include="Actor\SystemGuardianTests.cs" />
     <Compile Include="Configuration\ConfigurationSpec.cs" />

@@ -7,11 +7,13 @@
 
 using System;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 using Xunit.Extensions;
 
 namespace Akka.Tests.Actor
@@ -123,6 +125,87 @@ namespace Akka.Tests.Actor
                     return true;
                 }
                 return false;
+            }
+        }
+
+        public class SupervisorStrategySpec : AkkaSpec
+        {
+            protected SupervisorStrategySpec()
+            {
+            }
+
+            protected SupervisorStrategySpec(string config, ITestOutputHelper output)
+                : base(config, output)
+            {
+            }
+
+            protected void TestSupervisionStrategy(SupervisorStrategy expectedStrategy)
+            {
+                var impl = (ActorSystemImpl)Sys;
+                var provider = impl.Provider;
+
+                // UserGuardianSupervisorStrategy is a private property
+                var strategy =
+                    (SupervisorStrategy)provider.GetType()
+                        .GetProperty("UserGuardianSupervisorStrategy", BindingFlags.Instance | BindingFlags.NonPublic)
+                        .GetValue(provider);
+
+                Assert.Equal(expectedStrategy, strategy);
+            }
+        }
+
+        public class EmptySupervisorStrategySpec : SupervisorStrategySpec
+        {
+            public EmptySupervisorStrategySpec(ITestOutputHelper output = null)
+            {
+            }
+
+            [Fact]
+            public void If_guardian_supervisor_strategy_is_not_defined_it_sets_to_default_strategy()
+            {
+                TestSupervisionStrategy(SupervisorStrategy.DefaultStrategy);
+            }
+        }
+
+        public class DefaultSupervisorStrategySpec : SupervisorStrategySpec
+        {
+            public DefaultSupervisorStrategySpec(ITestOutputHelper output = null)
+                : base(@"
+                  akka {
+                    loglevel = WARNING
+                    stdout-loglevel = WARNING
+                    serialize-messages = on
+                    actor {
+                      guardian-supervisor-strategy = ""Akka.Actor.DefaultSupervisorStrategy""
+                    }", output)
+            {
+            }
+
+            [Fact]
+            public void During_creation_it_sets_supervisor_strategy_to_default()
+            {
+                TestSupervisionStrategy(SupervisorStrategy.DefaultStrategy);
+            }
+        }
+
+        public class StoppingSupervisorStrategySpec : SupervisorStrategySpec
+        {
+            public StoppingSupervisorStrategySpec(ITestOutputHelper output = null)
+                : base(@"
+                  akka {
+                    loglevel = WARNING
+                    stdout-loglevel = WARNING
+                    serialize-messages = on
+                    actor {
+                      guardian-supervisor-strategy = ""Akka.Actor.StoppingSupervisorStrategy""
+                    }", output)
+            {
+            }
+
+            [Fact]
+            public void During_creation_it_sets_supervisor_strategy_to_stopping_strategy()
+            {
+                TestSupervisionStrategy(SupervisorStrategy.StoppingStrategy);
             }
         }
     }
