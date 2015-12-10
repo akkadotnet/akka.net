@@ -83,12 +83,14 @@
     <Compile Include="Actor\Cancellation\AlreadyCanceledCancelable.cs" />
     <Compile Include="Actor\Cancellation\CancelableExtensions.cs" />
     <Compile Include="Actor\Cancellation\Cancelable.cs" />
+    <Compile Include="Actor\DefaultSupervisorStrategy.cs" />
     <Compile Include="Actor\Dsl\Act.cs" />
     <Compile Include="Actor\Cancellation\ICancellable.cs" />
     <Compile Include="Actor\Inbox.Actor.cs" />
     <Compile Include="Actor\Internal\InternalCurrentActorCellKeeper.cs" />
     <Compile Include="Actor\Internal\InternalSupportsTestFSMRef.cs" />
     <Compile Include="Actor\Internal\InitializableActor.cs" />
+    <Compile Include="Actor\ISupervisorStrategyConfigurator.cs" />
     <Compile Include="Actor\Scheduler\DateTimeNowTimeProvider.cs" />
     <Compile Include="Actor\Scheduler\DedicatedThreadScheduler.cs" />
     <Compile Include="Actor\Scheduler\IDateTimeNowTimeProvider.cs" />
@@ -152,6 +154,7 @@
     <Compile Include="Actor\Stash\UntypedActorWithUnboundedStash.cs" />
     <Compile Include="Actor\Stash\IWithBoundedStash.cs" />
     <Compile Include="Actor\Stash\IWithUnboundedStash.cs" />
+    <Compile Include="Actor\StoppingSupervisorStrategy.cs" />
     <Compile Include="Configuration\ConfigurationException.cs" />
     <Compile Include="Configuration\ConfigurationFactory.cs" />
     <Compile Include="Configuration\Config.cs" />
