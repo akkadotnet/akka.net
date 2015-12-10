@@ -1,7 +1,9 @@
-﻿using Akka.Actor;
+﻿using System.Net;
+using Akka.Actor;
 using Akka.Event;
 using Akka.IO;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
+using Akka.Serialization;
 
 namespace Akka.MultiNodeTestRunner.Shared.Logging
 {
@@ -14,11 +16,14 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
         private IActorRef _server;
         private readonly IActorRef _messageSinkActor;
         private readonly ILoggingAdapter _log = Context.GetLogger();
+        private readonly Serializer _serializer;
         
 
         public UdpLogCollector(IActorRef messageSinkActor)
         {
             _messageSinkActor = messageSinkActor;
+            _serializer = Context.System.Serialization.FindSerializerForType(typeof(SpecPass));
+
             Unbound();
         }
 
@@ -46,7 +51,6 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
 
             });
         }
-
 
         public IStash Stash { get; set; }
     }
