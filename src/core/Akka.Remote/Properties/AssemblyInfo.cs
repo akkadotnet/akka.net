@@ -30,6 +30,7 @@ using System.Runtime.InteropServices;
 [assembly: InternalsVisibleTo("Akka.Remote.TestKit")]
 [assembly: InternalsVisibleTo("Akka.Remote.Tests")]
 [assembly: InternalsVisibleTo("Akka.Remote.Tests.MultiNode")]
+[assembly: InternalsVisibleTo("Akka.Remote.Tests.Performance")]
 [assembly: InternalsVisibleTo("Akka.Cluster")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Tests")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Tests.MultiNode")]
