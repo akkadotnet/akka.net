@@ -32,19 +32,19 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
 
         #endregion
 
-        private readonly IPEndPoint _remoteDestination;
+        private readonly EndPoint _remoteDestination;
         private IActorRef _server;
         private int timeoutCount = 0;
-        private readonly Serializer _serializer;
+        private readonly ByteStringSerializer _serializer;
         private readonly bool _connectAutomatically;
 
         public const int MaxAllowableTimeouts = 5;
 
-        public UdpLogger(IPEndPoint remoteDestination, bool connectAutomatically = true)
+        public UdpLogger(EndPoint remoteDestination, bool connectAutomatically = true)
         {
             _remoteDestination = remoteDestination;
             _connectAutomatically = connectAutomatically;
-            _serializer = Context.System.Serialization.FindSerializerForType(typeof (SpecPass));
+            _serializer = new ByteStringSerializer(Context.System.Serialization.FindSerializerForType(typeof (SpecPass)));
             
             Disconnected();
         }
@@ -61,7 +61,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
 
         private void Disconnected()
         {
-            Receive<UdpConnected.Connect>(connect =>
+            Receive<UdpConnected.Connected>(connect =>
             {
                 _server = Sender;
                 BecomeConnected();
@@ -106,7 +106,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
             Receive<IsConnected>(connected => Sender.Tell(true));
             ReceiveAny(o =>
             {
-                ByteString data = ToByteString(o);
+                ByteString data = _serializer.ToByteString(o);
                 _server.Tell(UdpConnected.Send.Create(data));
             });
         }
@@ -116,13 +116,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
         /// </summary>
         private void ConnectToServer()
         {
-            UdpConnected.Instance.Apply(Context.System).Manager.Tell(new UdpConnected.Connect(Self, _remoteDestination));
-        }
-
-        private ByteString ToByteString(object o)
-        {
-            var bytes = _serializer.ToBinary(o);
-            return ByteString.FromByteBuffer(ByteBuffer.Wrap(bytes));
+            UdpConnected.Instance.Apply(Context.System).Manager.Tell(new UdpConnected.Connect(Self, _remoteDestination), Self);
         }
 
         public IStash Stash { get; set; }

@@ -13,16 +13,26 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
     /// </summary>
     public class UdpLogCollector : ReceiveActor, IWithUnboundedStash
     {
-        private IActorRef _server;
+        #region Message classes
+
+        public class GetLocalAddress
+        {
+            public static readonly GetLocalAddress Instance = new GetLocalAddress();
+            private GetLocalAddress() { }
+        }
+
+        #endregion 
+
+        private EndPoint _localAddress;
         private readonly IActorRef _messageSinkActor;
         private readonly ILoggingAdapter _log = Context.GetLogger();
-        private readonly Serializer _serializer;
+        private readonly ByteStringSerializer _serializer;
         
 
         public UdpLogCollector(IActorRef messageSinkActor)
         {
             _messageSinkActor = messageSinkActor;
-            _serializer = Context.System.Serialization.FindSerializerForType(typeof(SpecPass));
+            _serializer = new ByteStringSerializer(Context.System.Serialization.FindSerializerForType(typeof(SpecPass)));
 
             Unbound();
         }
@@ -31,7 +41,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
         {
             Receive<Udp.Bound>(bound =>
             {
-                _server = Sender;
+                _localAddress = bound.LocalAddress;
                 _log.Info("connected and listening to inbound MultiNode messages on {0}", bound.LocalAddress);
                 BecomeBound();
             });
@@ -41,14 +51,18 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
 
         private void BecomeBound()
         {
+            Stash.UnstashAll();
             Become(Bound);
         }
 
         private void Bound()
         {
+            Receive<GetLocalAddress>(local => Sender.Tell(_localAddress));
+
             Receive<Udp.Received>(received =>
             {
-
+                var obj = _serializer.FromByteString(received.Data);
+                _messageSinkActor.Forward(obj);
             });
         }
 
