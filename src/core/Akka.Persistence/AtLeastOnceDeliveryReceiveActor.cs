@@ -148,8 +148,8 @@ namespace Akka.Persistence
         ///     Correlation between these two methods is performed by delivery id - parameter of
         ///     <paramref name="deliveryMessageMapper" />.
         ///     Usually it's passed inside the message to the destination, which replies with the message having the same id.
-        ///     During recovery this method won't send out any message, but it will be sent later until corresponding
-        ///     <see cref="ConfirmDelivery" /> method will be invoked.
+        ///     During recovery this method won't send out any message, but it will be sent later if no matching
+        ///     <see cref="ConfirmDelivery" /> call was performed.
         /// </summary>
         /// <exception cref="AtLeastOnceDeliverySemantic.MaxUnconfirmedMessagesExceededException">
         ///     Thrown when <see cref="UnconfirmedCount" /> is greater than or equal to <see cref="MaxUnconfirmedMessages" />.
