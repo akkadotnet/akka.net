@@ -251,6 +251,8 @@ namespace Akka.Actor
         public abstract ActorSelection ActorSelection(ActorPath actorPath);
         public abstract ActorSelection ActorSelection(string actorPath);
 
+        public abstract ActorSelection ActorSelection(IActorRef anchorRef, string actorPath);
+
         /// <summary>
         /// Block and prevent the main application thread from exiting unless
         /// the actor system is shut down.
