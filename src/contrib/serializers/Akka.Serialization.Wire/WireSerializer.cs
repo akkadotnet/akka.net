@@ -57,10 +57,8 @@ namespace Akka.Serialization
 
         public override object FromBinary(byte[] bytes, Type type)
         {
-            using (var ms = new MemoryStream())
-            {
-                ms.Write(bytes, 0, bytes.Length);
-                ms.Position = 0;
+            using (var ms = new MemoryStream(bytes))
+            { 
                 var res = _seralizer.Deserialize<object>(ms);
                 return res;
             }
