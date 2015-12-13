@@ -26,8 +26,7 @@ namespace Akka.Persistence
     ///     itself, so you must persist corresponding events so that state can be restored by calling the same
     ///     delivery-related methods during recovery phase of the persistent actor. During recovery calls to
     ///     <see cref="AtLeastOnceDeliverySemantic.Deliver" /> won't send out a message, but it will be sent later if no
-    ///     <see cref="AtLeastOnceDeliverySemantic.ConfirmDelivery" />
-    ///     call was performed.
+    ///     matching <see cref="AtLeastOnceDeliverySemantic.ConfirmDelivery" /> call was performed.
     ///     Support for snapshot is provided by get and set delivery snapshot methods. These snapshots contains full
     ///     delivery state including unconfirmed messages. For custom snapshots remember to include those delivery ones.
     /// </summary>
@@ -162,8 +161,8 @@ namespace Akka.Persistence
         ///     Correlation between these two methods is performed by delivery id - parameter of
         ///     <paramref name="deliveryMessageMapper" />.
         ///     Usually it's passed inside the message to the destination, which replies with the message having the same id.
-        ///     During recovery this method won't send out any message, but it will be sent later until corresponding
-        ///     <see cref="ConfirmDelivery" /> method will be invoked.
+        ///     During recovery this method won't send out any message, but it will be sent later if no matching
+        ///     <see cref="ConfirmDelivery" /> call was performed.
         /// </summary>
         /// <exception cref="AtLeastOnceDeliverySemantic.MaxUnconfirmedMessagesExceededException">
         ///     Thrown when <see cref="UnconfirmedCount" /> is greater than or equal to <see cref="MaxUnconfirmedMessages" />.
