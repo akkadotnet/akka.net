@@ -1300,22 +1300,24 @@ namespace Akka.Remote
                 return true;
             });
 
-            Func<int, bool> writeLoop = null;
-            writeLoop = new Func<int, bool>(count =>
+            Func<int, bool> writeLoop = count =>
             {
-                if (count > 0 && _buffer.Any())
+                while (count > 0 && _buffer.Any())
                 {
                     if (sendDelegate(_buffer.First.Value))
                     {
                         _buffer.RemoveFirst();
                         _writeCount += 1;
-                        return writeLoop(count - 1);
+                        count --;
                     }
-                    return false;
+                    else
+                    {
+                        return false;
+                    }
                 }
                 
                 return true;
-            });
+            };
 
             Func<bool> writePrioLoop = null;
             writePrioLoop = () =>
