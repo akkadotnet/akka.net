@@ -61,15 +61,18 @@ namespace Akka.Remote
             var sender = senderOption ?? system.DeadLetters;
             var originalReceiver = recipient.Path;
 
-            var msgLog = string.Format("RemoteMessage: {0} to {1}<+{2} from {3}", payload, recipient, originalReceiver,
-                sender);
+
             // message is intended for the RemoteDaemon, usually a command to create a remote actor
             if (recipient == remoteDaemon)
             {
                 if (settings.UntrustedMode) log.Debug("dropping daemon message in untrusted mode");
                 else
                 {
-                    if (settings.LogReceive) log.Debug("received daemon message [{0}]", msgLog);
+                    if (settings.LogReceive)
+                    {
+                        var msgLog = string.Format("RemoteMessage: {0} to {1}<+{2} from {3}", payload, recipient, originalReceiver,sender);
+                        log.Debug("received daemon message [{0}]", msgLog);
+                    }
                     remoteDaemon.Tell(payload);
                 }
             }
@@ -77,7 +80,11 @@ namespace Akka.Remote
             //message is intended for a local recipient
             else if ((recipient is ILocalRef || recipient is RepointableActorRef) && recipient.IsLocal)
             {
-                if (settings.LogReceive) log.Debug("received local message [{0}]", msgLog);
+                if (settings.LogReceive)
+                {
+                    var msgLog = string.Format("RemoteMessage: {0} to {1}<+{2} from {3}", payload, recipient, originalReceiver,sender);
+                    log.Debug("received local message [{0}]", msgLog);
+                }
                 payload.Match()
                     .With<ActorSelectionMessage>(sel =>
                     {
@@ -115,7 +122,11 @@ namespace Akka.Remote
             // message is intended for a remote-deployed recipient
             else if ((recipient is IRemoteRef || recipient is RepointableActorRef) && !recipient.IsLocal && !settings.UntrustedMode)
             {
-                if (settings.LogReceive) log.Debug("received remote-destined message {0}", msgLog);
+                if (settings.LogReceive)
+                {
+                    var msgLog = string.Format("RemoteMessage: {0} to {1}<+{2} from {3}", payload, recipient, originalReceiver, sender);
+                    log.Debug("received remote-destined message {0}", msgLog);
+                }
                 if (provider.Transport.Addresses.Contains(recipientAddress))
                 {
                     //if it was originally addressed to us but is in fact remote from our point of view (i.e. remote-deployed)
