@@ -32,6 +32,17 @@ namespace Akka.Actor
         }
 
         /// <summary>
+        ///     Construct an <see cref="Akka.Actor.ActorSelection"/> from the given string representing a path
+        ///     relative to the given target. This operation has to create all the
+        ///     matching magic, so it is preferable to cache its result if the
+        ///     intention is to send messages frequently.
+        /// </summary>
+        public static ActorSelection ActorSelection(IActorRef anchorActorRef, string path)
+        {
+            return new ActorSelection(anchorActorRef, path);
+        }
+
+        /// <summary>
         ///     Construct an <see cref="Akka.Actor.ActorSelection"/> from the given path, which is
         ///     parsed for wildcards (these are replaced by regular expressions
         ///     internally). No attempt is made to verify the existence of any part of

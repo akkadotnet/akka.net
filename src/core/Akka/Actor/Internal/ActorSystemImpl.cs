@@ -130,6 +130,11 @@ namespace Akka.Actor.Internal
             return ActorRefFactoryShared.ActorSelection(actorPath, this, _provider.RootGuardian);
         }
 
+        public override ActorSelection ActorSelection(IActorRef anchorActorRef, string path)
+        {
+            return ActorRefFactoryShared.ActorSelection(anchorActorRef, path);
+        }
+
         private void ConfigureScheduler()
         {
             var schedulerType = Type.GetType(_settings.SchedulerClass, true);
