@@ -130,11 +130,6 @@ namespace Akka.TestKit
             return Sys.ActorSelection(actorPath);
         }
 
-        public ActorSelection ActorSelection(IActorRef anchorActorRef, string path)
-        {
-            return Sys.ActorSelection(path);
-        }
-
 
         /// <summary>
         /// Create a new actor as child of specified supervisor and returns it as <see cref="TestActorRef{TActor}"/>
