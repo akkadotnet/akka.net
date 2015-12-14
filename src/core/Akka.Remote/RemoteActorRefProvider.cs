@@ -45,16 +45,13 @@ namespace Akka.Remote
 
         private Internals RemoteInternals
         {
-            get { return _internals ?? (_internals = CreateInternals()); }
-        }
-
-        private Internals CreateInternals()
-        {
-            var internals =
-                new Internals(new Remoting(_system, this), _system.Serialization,
-                    new RemoteSystemDaemon(_system, RootPath/"remote", SystemGuardian, _remotingTerminator, _log));
-            _local.RegisterExtraName("remote", internals.RemoteDaemon);
-            return internals;
+            get
+            {
+                return _internals ??
+                       (_internals =
+                           new Internals(new Remoting(_system, this), _system.Serialization,
+                               new RemoteSystemDaemon(_system, RootPath / "remote", SystemGuardian, _remotingTerminator, _log)));
+            }
         }
 
         public IInternalActorRef RemoteDaemon { get { return RemoteInternals.RemoteDaemon; } }

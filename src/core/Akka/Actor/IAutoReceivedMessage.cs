@@ -78,7 +78,7 @@ namespace Akka.Actor
     /// it processes the message, which gets handled using the normal supervisor mechanism, and
     /// <see cref="IActorContext.Stop"/> which causes the actor to stop without processing any more messages. </para>
     /// </summary>
-    public sealed class PoisonPill : IAutoReceivedMessage , IPossiblyHarmful
+    public sealed class PoisonPill : IAutoReceivedMessage
     {
         private PoisonPill() { }
         private static readonly PoisonPill _instance = new PoisonPill();
