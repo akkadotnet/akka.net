@@ -196,6 +196,7 @@ Target "CopyOutput" <| fun _ ->
       "contrib/testkits/Akka.TestKit.Xunit" 
       "contrib/testkits/Akka.TestKit.NUnit" 
       "contrib/testkits/Akka.TestKit.Xunit2" 
+      "contrib/serializers/Akka.Serialization.Wire" 
       ]
     |> List.iter copyOutput
 
@@ -335,6 +336,7 @@ module Nuget =
       match project with
       | "Akka.Cluster" -> preReleaseVersion
       | persistence when persistence.StartsWith("Akka.Persistence") -> preReleaseVersion
+      | "Akka.Serialization.Wire" -> preReleaseVersion
       | _ -> release.NugetVersion
 
 open Nuget
