@@ -29,29 +29,48 @@ namespace Akka.Routing
     }
 
     /// <summary>
-    /// Marks a given class as consistently hashable, for use with <see cref="ConsistentHashingGroup"/>
-    /// or <see cref="ConsistentHashingPool"/> routers.
+    /// This interface marks a given class as consistently hashable, for use with
+    /// <see cref="ConsistentHashingGroup"/> or <see cref="ConsistentHashingPool"/>
+    /// routers.
     /// </summary>
     public interface IConsistentHashable
     {
+        /// <summary>
+        /// The consistent hash key of the marked class.
+        /// </summary>
         object ConsistentHashKey { get; }
     }
 
 
     /// <summary>
-    /// Envelope you can wrap around a message in order to make it hashable for use with <see cref="ConsistentHashingGroup"/>
-    /// or <see cref="ConsistentHashingPool"/> routers.
+    /// This class represents a <see cref="RouterEnvelope"/> that can be wrapped around a message in order to make
+    /// it hashable for use with <see cref="ConsistentHashingGroup"/> or <see cref="ConsistentHashingPool"/> routers.
     /// </summary>
     public class ConsistentHashableEnvelope : RouterEnvelope, IConsistentHashable
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConsistentHashableEnvelope"/> class.
+        /// </summary>
+        /// <param name="message">The message that is being wrapped in the envelope.</param>
+        /// <param name="hashKey">The key used as the consistent hash key for the envelope.</param>
         public ConsistentHashableEnvelope(object message, object hashKey)
             : base(message)
         {
             HashKey = hashKey;
         }
 
+        /// <summary>
+        /// The key used as the consistent hash key.
+        /// 
+        /// <remarks>
+        /// This is the same as the <see cref="ConsistentHashKey"/>
+        /// </remarks>
+        /// </summary>
         public object HashKey { get; private set; }
 
+        /// <summary>
+        /// The consistent hash key of the envelope.
+        /// </summary>
         public object ConsistentHashKey
         {
             get { return HashKey; }
@@ -59,14 +78,11 @@ namespace Akka.Routing
     }
 
     /// <summary>
-    /// Delegate for computing the hashkey from any given
-    /// type of message. Extracts the property / data that is going
-    /// to be used for a given hash, but doesn't actually return
-    /// the hash values themselves.
+    /// Delegate for computing the hashkey from any given type of message. Extracts the property / data
+    /// that is going to be used for a given hash, but doesn't actually return the hash values themselves.
     /// 
-    /// If returning an byte[] or string it will be used as is,
-    /// otherwise the configured <see cref="Serializer"/> will be applied
-    /// to the returned data."/>
+    /// If returning a byte[] or string it will be used as is, otherwise the configured
+    /// <see cref="Serializer"/> will be applied to the returned data.
     /// </summary>
     public delegate object ConsistentHashMapping(object msg);
 
@@ -318,7 +334,7 @@ namespace Akka.Routing
         protected ConsistentHashMapping HashMapping;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="BroadcastGroup"/> class.
+        /// Initializes a new instance of the <see cref="ConsistentHashingGroup"/> class.
         /// </summary>
         /// <param name="config">
         /// The configuration to use to lookup paths used by the group router.
