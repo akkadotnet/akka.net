@@ -44,17 +44,15 @@ namespace Akka.Tests.Performance.Actor
                 _receiver.Tell(string.Empty);
                 ++i;
             }
-            _resetEvent.Wait(1000); //wait up to a second
+            _resetEvent.Wait(); //wait up to a second
         }
 
         [PerfCleanup]
         public void Cleanup()
         {
-            if (!_resetEvent.IsSet)
-                _resetEvent.Wait(); // wait indefinitely until the event is set
             _resetEvent.Dispose();
             System.Shutdown();
-            System.AwaitTermination(TimeSpan.FromSeconds(2));
+            System.TerminationTask.Wait();
         }
     }
 }
