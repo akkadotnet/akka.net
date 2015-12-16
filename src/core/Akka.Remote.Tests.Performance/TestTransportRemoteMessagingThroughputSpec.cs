@@ -1,3 +1,4 @@
+using System;
 using Akka.Configuration;
 
 namespace Akka.Remote.Tests.Performance
@@ -28,7 +29,7 @@ namespace Akka.Remote.Tests.Performance
             ");
 
             port = 10; //BUG: setting the port to 0 causes the DefaultAddress to report the port as -1
-            var remoteAddress = $"test://{actorSystemName}@{ipOrHostname}:{port}";
+            var remoteAddress = String.Format("test://{0}@{1}:{2}", actorSystemName, ipOrHostname, port);
             var bindingConfig =
                 ConfigurationFactory.ParseString(@"akka.remote.test.local-address = """+ remoteAddress +@"""");
 
