@@ -25,6 +25,7 @@ namespace Akka.Tests.Performance.Actor
         public void ParseLocalThroughput(BenchmarkContext context)
         {
             Address.Parse("akka.tcp://sys@localhost:9091");
+            _parseThroughput.Increment();
         }
 
         [PerfBenchmark(Description = "Tests how quickly `Address.Parse` can run on a REMOTE address", RunMode = RunMode.Throughput, NumberOfIterations = 13, RunTimeMilliseconds = 1000, TestMode = TestMode.Measurement)]
@@ -33,6 +34,7 @@ namespace Akka.Tests.Performance.Actor
         public void ParseRemoteThroughput(BenchmarkContext context)
         {
             Address.Parse("akka://sys");
+            _parseThroughput.Increment();
         }
 
         [PerfBenchmark(Description = "Tests how much memory 100,000 `Address` instances consume",
