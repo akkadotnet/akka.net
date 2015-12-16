@@ -30,6 +30,14 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Google.ProtocolBuffers, Version=2.4.1.521, Culture=neutral, PublicKeyToken=55f7125234beb589, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Google.ProtocolBuffers.2.4.1.521\lib\net40\Google.ProtocolBuffers.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Google.ProtocolBuffers.Serialization, Version=2.4.1.521, Culture=neutral, PublicKeyToken=55f7125234beb589, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Google.ProtocolBuffers.2.4.1.521\lib\net40\Google.ProtocolBuffers.Serialization.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="NBench, Version=0.1.5.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\..\packages\NBench.0.1.5\lib\net45\NBench.dll</HintPath>
       <Private>True</Private>
@@ -47,6 +55,7 @@
     <Compile Include="Transports\TestTransportAssociationStressSpec.cs" />
     <Compile Include="Transports\TestTransportRemoteMessagingThroughputSpec.cs" />
     <Compile Include="ThreadPoolDispatcherRemoteMessagingThroughputSpec.cs" />
+    <Compile Include="InboundMessageDispatcherSpec.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj">
