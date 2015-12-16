@@ -65,7 +65,6 @@
     <Compile Include="TestActorRefTests\WatchAndForwardActor.cs" />
     <Compile Include="TestActorRefTests\Logger.cs" />
     <Compile Include="TestActorRefTests\NestingActor.cs" />
-    <Compile Include="TestActorRefTests\ReceiveTimeoutActor.cs" />
     <Compile Include="TestActorRefTests\ReplyActor.cs" />
     <Compile Include="TestActorRefTests\SenderActor.cs" />
     <Compile Include="TestActorRefTests\TActorBase.cs" />
