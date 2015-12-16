@@ -447,12 +447,13 @@ namespace Akka.Remote.TestKit
                                 .Transport.ManagementCommand(new SetThrottle(throttleMsg.Target, throttleMsg.Direction,
                                     mode));
 
+                        var self = Self;
                         cmdTask.ContinueWith(t =>
                         {
                             if (t.IsFaulted)
                                 throw new ConfigurationException("Throttle was requested from the TestConductor, but no transport " +
                                     "adapters available that support throttling. Specify 'testTransport(on=true)' in your MultiNodeConfig");
-                            Self.Tell(new ToServer<Done>(Done.Instance));
+                            self.Tell(new ToServer<Done>(Done.Instance));
                         });
                         return Stay();
                     }
