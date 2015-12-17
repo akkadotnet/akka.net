@@ -20,6 +20,7 @@ using Akka.MultiNodeTestRunner.Shared.Logging;
 using Akka.MultiNodeTestRunner.Shared.Persistence;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
 using Akka.Remote.TestKit;
+using Akka.Util;
 using Xunit;
 
 namespace Akka.MultiNodeTestRunner
@@ -32,7 +33,7 @@ namespace Akka.MultiNodeTestRunner
         protected static ActorSystem TestRunSystem;
 
         protected static IActorRef SinkCoordinator;
-        protected static IActorRef UdpCollector;
+        protected static IActorRef TcpCollector;
 
 
         /// <summary>
@@ -96,8 +97,8 @@ namespace Akka.MultiNodeTestRunner
             var listenPort = CommandLine.GetInt32OrDefault("multinode.listen-port", 6577);
             var listenEndpoint = new IPEndPoint(listenAddress, listenPort);
 
-            UdpCollector = TestRunSystem.ActorOf(Props.Create(() => new UdpLogCollector(SinkCoordinator)), "udpLogger");
-            Udp.Instance.Apply(TestRunSystem).Manager.Tell(new Udp.Bind(UdpCollector, listenEndpoint), UdpCollector);
+            TcpCollector = TestRunSystem.ActorOf(Props.Create(() => new TcpLogCollector(SinkCoordinator)), "tcpLogger");
+            Tcp.Instance.Apply(TestRunSystem).Manager.Tell(new Tcp.Bind(TcpCollector, listenEndpoint), TcpCollector);
 
             var assemblyName = Path.GetFullPath(args[0]);
             EnableAllSinks(assemblyName);
@@ -145,7 +146,7 @@ namespace Akka.MultiNodeTestRunner
                                     {
                                         message = "[NODE" + nodeIndex + "]" + message;
                                     }
-                                    PublishToAllSinks(message);
+                                    StandardOutWriter.WriteLine("LOLDEBUG"+message);
                                 };
 
                             var closureTest = nodeTest;

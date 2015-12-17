@@ -11,7 +11,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
     /// Listens for incoming messages from all of the individual nodes participating in a spec
     /// and hands them off to the <see cref="MessageSinkActor"/> associated with this spec.
     /// </summary>
-    public class UdpLogCollector : ReceiveActor, IWithUnboundedStash
+    public class TcpLogCollector : ReceiveActor, IWithUnboundedStash
     {
         #region Message classes
 
@@ -28,7 +28,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
         private readonly ILoggingAdapter _log = Context.GetLogger();
         
 
-        public UdpLogCollector(IActorRef messageSinkActor)
+        public TcpLogCollector(IActorRef messageSinkActor)
         {
             _messageSinkActor = messageSinkActor;
             Unbound();
@@ -36,9 +36,10 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
 
         private void Unbound()
         {
-            Receive<Udp.Bound>(bound =>
+            Receive<Tcp.Bound>(bound =>
             {
                 _localAddress = bound.LocalAddress;
+                
                 _log.Info("connected and listening to inbound MultiNode messages on {0}", bound.LocalAddress);
                 BecomeBound();
             });
@@ -56,12 +57,19 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
         {
             Receive<GetLocalAddress>(local => Sender.Tell(_localAddress));
 
-            Receive<UdpConnected.CommandFailed>(failed =>
+
+            Receive<Tcp.Connected>(connected =>
+            {
+                Sender.Tell(new Tcp.Register(Self));
+                _log.Info("Received log connection from {0}", connected.RemoteAddress);
+            });
+
+            Receive<Tcp.CommandFailed>(failed =>
             {
                 _log.Error(failed.Cmd.FailureMessage.ToString());
             });
 
-            Receive<Udp.Received>(received =>
+            Receive<Tcp.Received>(received =>
             {
                 var obj = received.Data.DecodeString();
                 _log.Info(obj.ToString());

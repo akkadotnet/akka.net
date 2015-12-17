@@ -49,7 +49,7 @@
     <Compile Include="Logging\ActorRunnerLogger.cs" />
     <Compile Include="Logging\ITestRunnerLogger.cs" />
     <Compile Include="Logging\SpecMessages.cs" />
-    <Compile Include="Logging\UdpLogCollector.cs" />
+    <Compile Include="Logging\TcpLogCollector.cs" />
     <Compile Include="NodeTest.cs" />
     <Compile Include="Persistence\EnumerableExtensions.cs" />
     <Compile Include="Persistence\FileNameGenerator.cs" />

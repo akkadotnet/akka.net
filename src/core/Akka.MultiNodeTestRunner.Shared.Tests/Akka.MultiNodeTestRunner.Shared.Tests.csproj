@@ -56,7 +56,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Logging\UdpLoggerSpecs.cs" />
+    <Compile Include="Logging\TcpLoggerSpecs.cs" />
     <Compile Include="NodeDataActorSpec.cs" />
     <Compile Include="NodeMessageHelpers.cs" />
     <Compile Include="ParsingSpec.cs" />

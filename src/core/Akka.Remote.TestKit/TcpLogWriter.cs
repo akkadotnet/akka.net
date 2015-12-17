@@ -19,7 +19,7 @@ namespace Akka.Remote.TestKit
         /// <summary>
         /// Default constructor - takes no arguments.
         /// 
-        /// All of the real work is handled by <see cref="UdpLogWriter"/>
+        /// All of the real work is handled by <see cref="TcpLogWriter"/>
         /// internally.
         /// </summary>
         public UdpLogger()
@@ -35,7 +35,7 @@ namespace Akka.Remote.TestKit
         }
 
         /// <summary>
-        /// Initializes the <see cref="UdpLogWriter"/> using arguments passed into
+        /// Initializes the <see cref="TcpLogWriter"/> using arguments passed into
         /// the multi-node test runner via <see cref="CommandLine"/>
         /// </summary>
         protected override void PreStart()
@@ -44,12 +44,12 @@ namespace Akka.Remote.TestKit
         }
     }
 
-    internal class UdpLogWriter : ReceiveActor, IWithUnboundedStash
+    internal class TcpLogWriter : ReceiveActor, IWithUnboundedStash
     {
         #region Message classes
 
         /// <summary>
-        /// Used to poll <see cref="UdpLogWriter"/> to determine if it's connected
+        /// Used to poll <see cref="TcpLogWriter"/> to determine if it's connected
         /// to the server on the other end of the wire.
         /// </summary>
         public class IsConnected
@@ -59,7 +59,7 @@ namespace Akka.Remote.TestKit
         }
 
         /// <summary>
-        /// In situations where the <see cref="UdpLogWriter"/> is started without being told
+        /// In situations where the <see cref="TcpLogWriter"/> is started without being told
         /// to connect automatically, a user can send <see cref="ConnectNow"/> to force it to connect now.
         /// </summary>
         public class ConnectNow
@@ -87,17 +87,17 @@ namespace Akka.Remote.TestKit
         /// <summary>
         /// Constructor used when running inside the MultinodeTestRunner
         /// </summary>
-        public UdpLogWriter() : this(CommandLine.GetProperty("multinode.listen-address"), CommandLine.GetInt32("multinode.listen-port")) { }
+        public TcpLogWriter() : this(CommandLine.GetProperty("multinode.listen-address"), CommandLine.GetInt32("multinode.listen-port")) { }
 
-        public UdpLogWriter(string remoteAddress, int remotePort, bool connectAutomatically = true)
+        public TcpLogWriter(string remoteAddress, int remotePort, bool connectAutomatically = true)
             : this(IPAddress.Parse(remoteAddress), remotePort, connectAutomatically)
         { }
 
-        public UdpLogWriter(IPAddress remoteAddress, int remotePort, bool connectAutomatically = true) : 
+        public TcpLogWriter(IPAddress remoteAddress, int remotePort, bool connectAutomatically = true) : 
             this(new IPEndPoint(remoteAddress, remotePort), connectAutomatically)
         { }
 
-        public UdpLogWriter(EndPoint remoteDestination, bool connectAutomatically = true)
+        public TcpLogWriter(EndPoint remoteDestination, bool connectAutomatically = true)
         {
             _remoteDestination = remoteDestination;
             _connectAutomatically = connectAutomatically;
@@ -116,9 +116,10 @@ namespace Akka.Remote.TestKit
 
         private void Disconnected()
         {
-            Receive<UdpConnected.Connected>(connect =>
+            Receive<Tcp.Connected>(connect =>
             {
                 _server = Sender;
+                Sender.Tell(new Tcp.Register(Self));
                 BecomeConnected();
             });
 
@@ -161,7 +162,7 @@ namespace Akka.Remote.TestKit
             Receive<IsConnected>(connected => Sender.Tell(true));
             Receive<string>(o =>
             {
-                _server.Tell(UdpConnected.Send.Create(ByteString.FromString(o)));
+                _server.Tell(Tcp.Write.Create(ByteString.FromString(o)));
             });
         }
 
@@ -170,7 +171,7 @@ namespace Akka.Remote.TestKit
         /// </summary>
         private void ConnectToServer()
         {
-            UdpConnected.Instance.Apply(Context.System).Manager.Tell(new UdpConnected.Connect(Self, _remoteDestination), Self);
+           Tcp.Instance.Apply(Context.System).Manager.Tell(new Tcp.Connect(_remoteDestination), Self);
         }
 
         public IStash Stash { get; set; }

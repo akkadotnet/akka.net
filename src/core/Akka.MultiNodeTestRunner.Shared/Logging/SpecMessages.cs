@@ -28,7 +28,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
 
         public override string ToString()
         {
-            return string.Format("[Node{0}][PASS] {1}", NodeIndex, TestDisplayName);
+            return string.Format("[NODE{0}][PASS] {1}", NodeIndex, TestDisplayName);
         }
     }
 
@@ -59,20 +59,20 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
         public override string ToString()
         {
             var sb = new StringBuilder();
-            sb.AppendLine(string.Format("[Node{0}][FAIL] {1}", NodeIndex, TestDisplayName));
+            sb.AppendLine(string.Format("[NODE{0}][FAIL] {1}", NodeIndex, TestDisplayName));
             foreach (var exception in FailureExceptionTypes)
             {
-                sb.AppendFormat("[Node{0}][FAIL-EXCEPTION] Type: {1}", NodeIndex, exception);
+                sb.AppendFormat("[NODE{0}][FAIL-EXCEPTION] Type: {1}", NodeIndex, exception);
                 sb.AppendLine();
             }
             foreach (var exception in FailureMessages)
             {
-                sb.AppendFormat("--> [Node{0}][FAIL-EXCEPTION] Message: {1}", NodeIndex, exception);
+                sb.AppendFormat("--> [NODE{0}][FAIL-EXCEPTION] Message: {1}", NodeIndex, exception);
                 sb.AppendLine();
             }
             foreach (var exception in FailureStackTraces)
             {
-                sb.AppendFormat("--> [Node{0}][FAIL-EXCEPTION] StackTrace: {1}", NodeIndex, exception);
+                sb.AppendFormat("--> [NODE{0}][FAIL-EXCEPTION] StackTrace: {1}", NodeIndex, exception);
                 sb.AppendLine();
             }
             return sb.ToString();
