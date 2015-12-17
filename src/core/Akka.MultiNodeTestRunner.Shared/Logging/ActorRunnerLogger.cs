@@ -19,15 +19,15 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
 
         public void Write(object obj)
         {
-           WriteString(obj.ToString());
+           Write(obj.ToString());
         }
 
         public void WriteLine(string formatStr, params object[] args)
         {
-            WriteString(string.Format(formatStr, args));
+            Write(string.Format(formatStr, args));
         }
 
-        protected void WriteString(string message)
+        public void Write(string message)
         {
             if (!message.StartsWith("[NODE", true, CultureInfo.InvariantCulture))
             {

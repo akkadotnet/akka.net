@@ -1,4 +1,6 @@
-﻿namespace Akka.MultiNodeTestRunner.Shared.Logging
+﻿using System;
+
+namespace Akka.MultiNodeTestRunner.Shared.Logging
 {
     /// <summary>
     /// Logger implementation used inside the NodeTestRunner to write output to a semantic logging source
@@ -7,5 +9,6 @@
     {
         void Write(object obj);
         void WriteLine(string formatStr, params object[] args);
+        void Write(string message);
     }
 }
