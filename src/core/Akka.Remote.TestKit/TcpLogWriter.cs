@@ -4,6 +4,7 @@ using System.Text;
 using Akka.Actor;
 using Akka.Event;
 using Akka.IO;
+using Akka.Util;
 
 namespace Akka.Remote.TestKit
 {
@@ -30,6 +31,7 @@ namespace Akka.Remote.TestKit
             });
             ReceiveAny(o =>
             {
+                StandardOutWriter.Write("TCPLOGGER-DEBUG"+o.ToString());
                 _udpLogWriter.Tell(o.ToString());
             });
         }
