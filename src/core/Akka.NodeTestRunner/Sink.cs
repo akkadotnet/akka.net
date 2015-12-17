@@ -20,10 +20,12 @@ namespace Akka.NodeTestRunner
         public bool Passed { get; private set; }
         public ManualResetEvent Finished { get; private set; }
         readonly int _nodeIndex;
+        private readonly ITestRunnerLogger _logger;
 
-        public Sink(int nodeIndex)
+        public Sink(int nodeIndex, ITestRunnerLogger logger)
         {
             _nodeIndex = nodeIndex;
+            _logger = logger;
             Finished = new ManualResetEvent(false);
         }
 
@@ -32,14 +34,14 @@ namespace Akka.NodeTestRunner
             var resultMessage = message as ITestResultMessage;
             if (resultMessage != null)
             {
-                Console.WriteLine(resultMessage.Output);
+                _logger.WriteLine(resultMessage.Output);
             }
             var testPassed = message as ITestPassed;
             if (testPassed != null)
             {
                 //the MultiNodeTestRunner uses 1-based indexing, which is why we have to add 1 to the index.
                 var specPass = new SpecPass(_nodeIndex + 1, testPassed.TestCase.DisplayName);
-                Console.WriteLine(specPass);
+                _logger.Write(specPass);
                 Passed = true;
                 return true;
             }
@@ -54,8 +56,8 @@ namespace Akka.NodeTestRunner
                 foreach (var stackTrace in testFailed.StackTraces) failureStackTraces.Add(stackTrace);
                 foreach (var exceptionType in testFailed.ExceptionTypes) failureExceptionTypes.Add(exceptionType);
                 var specFail = new SpecFail(_nodeIndex + 1, testFailed.TestCase.DisplayName, failureMessages, failureStackTraces, failureExceptionTypes);
-                
-                Console.Write(specFail);
+
+                _logger.Write(specFail);
                 return true;
             }
             var errorMessage = message as ErrorMessage;
@@ -68,7 +70,7 @@ namespace Akka.NodeTestRunner
                 foreach (var stackTrace in errorMessage.StackTraces) failureStackTraces.Add(stackTrace);
                 foreach (var exceptionType in errorMessage.ExceptionTypes) failureExceptionTypes.Add(exceptionType);
                 var specFail = new SpecFail(_nodeIndex + 1, "ERRORED", failureMessages, failureStackTraces, failureExceptionTypes);
-                Console.Write(specFail);
+                _logger.Write(specFail);
             }
             if (message is ITestAssemblyFinished)
             {

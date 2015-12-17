@@ -44,8 +44,8 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests.Logging
             Udp.Instance.Apply(Sys).Manager.Tell(new Udp.Bind(udpCollector, new IPEndPoint(IPAddress.Loopback, 0)), udpCollector);
             Within(TimeSpan.FromSeconds(3.0), () =>
             {
-                var localAddress = udpCollector.AskAndWait<EndPoint>(UdpLogCollector.GetLocalAddress.Instance, RemainingOrDefault);
-                var udpLogger = Sys.ActorOf(Props.Create(() => new UdpLogger(localAddress, true)));
+                var remoteAddress = udpCollector.AskAndWait<EndPoint>(UdpLogCollector.GetLocalAddress.Instance, RemainingOrDefault);
+                var udpLogger = Sys.ActorOf(Props.Create(() => new UdpLogger(remoteAddress, true)));
                 udpLogger.Tell("foo");
                 ExpectMsg<string>().ShouldBe("foo");
             });
