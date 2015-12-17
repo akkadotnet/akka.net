@@ -26,14 +26,11 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
         private EndPoint _localAddress;
         private readonly IActorRef _messageSinkActor;
         private readonly ILoggingAdapter _log = Context.GetLogger();
-        private readonly ByteStringSerializer _serializer;
         
 
         public UdpLogCollector(IActorRef messageSinkActor)
         {
             _messageSinkActor = messageSinkActor;
-            _serializer = new ByteStringSerializer(Context.System.Serialization.FindSerializerForType(typeof(SpecPass)));
-
             Unbound();
         }
 
@@ -66,7 +63,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
 
             Receive<Udp.Received>(received =>
             {
-                var obj = _serializer.FromByteString(received.Data);
+                var obj = received.Data.DecodeString();
                 _log.Info(obj.ToString());
                 _messageSinkActor.Forward(obj);
             });

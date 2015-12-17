@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
 using Akka.MultiNodeTestRunner.Shared.Logging;
+using Akka.Remote.TestKit;
 using Akka.Serialization;
 using Akka.TestKit;
 using Xunit;
@@ -15,7 +11,7 @@ using Xunit;
 namespace Akka.MultiNodeTestRunner.Shared.Tests.Logging
 {
     /// <summary>
-    /// Specs to verify that the <see cref="UdpLogger"/> and <see cref="UdpLogCollector"/>
+    /// Specs to verify that the <see cref="Akka.Remote.TestKit.UdpLogger"/> and <see cref="UdpLogCollector"/>
     /// can communicate with eachother
     /// </summary>
     public class UdpLoggerSpecs : AkkaSpec

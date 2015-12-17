@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Net;
+using System.Text;
 using Akka.Actor;
 using Akka.IO;
-using Akka.Serialization;
 
-namespace Akka.MultiNodeTestRunner.Shared.Logging
+namespace Akka.Remote.TestKit
 {
-    public class UdpLogger : ReceiveActor, IWithUnboundedStash
+    internal class UdpLogger : ReceiveActor, IWithUnboundedStash
     {
         #region Message classes
 
@@ -35,17 +35,21 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
         private readonly EndPoint _remoteDestination;
         private IActorRef _server;
         private int timeoutCount = 0;
-        private readonly ByteStringSerializer _serializer;
         private readonly bool _connectAutomatically;
 
         public const int MaxAllowableTimeouts = 5;
+
+        /// <summary>
+        /// Append a 2-byte header to each message describing how long the FQN name is
+        /// </summary>
+        public const int LengthFrameLength = sizeof(int);
+
+        public static readonly byte[] StringTypeNameAsBytes = Encoding.Unicode.GetBytes(typeof (string).FullName);
 
         public UdpLogger(EndPoint remoteDestination, bool connectAutomatically = true)
         {
             _remoteDestination = remoteDestination;
             _connectAutomatically = connectAutomatically;
-            _serializer = new ByteStringSerializer(Context.System.Serialization.FindSerializerForType(typeof (SpecPass)));
-            
             Disconnected();
         }
 
@@ -106,8 +110,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
             Receive<IsConnected>(connected => Sender.Tell(true));
             Receive<string>(o =>
             {
-                ByteString data = _serializer.ToByteString(o);
-                _server.Tell(UdpConnected.Send.Create(data));
+                _server.Tell(UdpConnected.Send.Create(ByteString.FromString(o)));
             });
         }
 

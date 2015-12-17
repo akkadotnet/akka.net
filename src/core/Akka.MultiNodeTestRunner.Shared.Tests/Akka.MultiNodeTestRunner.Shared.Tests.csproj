@@ -80,6 +80,10 @@
       <Project>{28520F30-2868-4BD3-9CAE-AC27226C24E3}</Project>
       <Name>Akka.NodeTestRunner</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj">
+      <Project>{e5957c3e-2b1e-469f-a680-7953b4dea31b}</Project>
+      <Name>Akka.Remote.TestKit</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj">
       <Project>{0D3CBAD0-BBDB-43E5-AFC4-ED1D3ECDC224}</Project>
       <Name>Akka.TestKit</Name>

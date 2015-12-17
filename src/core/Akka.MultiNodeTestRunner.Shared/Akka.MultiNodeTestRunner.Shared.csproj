@@ -50,9 +50,7 @@
     <Compile Include="Logging\ByteStringSerializer.cs" />
     <Compile Include="Logging\ITestRunnerLogger.cs" />
     <Compile Include="Logging\SpecMessages.cs" />
-    <Compile Include="Logging\TestRunnerStringWriter.cs" />
     <Compile Include="Logging\UdpLogCollector.cs" />
-    <Compile Include="Logging\UdpLogger.cs" />
     <Compile Include="NodeTest.cs" />
     <Compile Include="Persistence\EnumerableExtensions.cs" />
     <Compile Include="Persistence\FileNameGenerator.cs" />

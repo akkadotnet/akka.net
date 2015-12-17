@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Threading;
@@ -25,7 +26,6 @@ namespace Akka.NodeTestRunner
         protected static ActorSystem TestActorSystem;
         protected static IActorRef UdpLogger;
         protected static ITestRunnerLogger Logger;
-        protected static StreamWriter Output;
 
         static void Main(string[] args)
         {
@@ -38,16 +38,6 @@ namespace Akka.NodeTestRunner
             var listenAddress = IPAddress.Parse(CommandLine.GetProperty("multinode.listen-address"));
             var listenPort = CommandLine.GetInt32("multinode.listen-port");
             var listenEndpoint = new IPEndPoint(listenAddress, listenPort);
-
-            // Redirect standard out to our UDP logger
-            //Console.SetOut(new TestRunnerStringWriter(Logger));
-            Output =
-                new StreamWriter(FileNameGenerator.GenerateFileName(typeof(Sink).Assembly.GetName().Name + nodeIndex, ".txt"))
-                {
-                    AutoFlush = true
-                };
-            Console.SetOut(Output);
-            Console.WriteLine("Test");
 
             TestActorSystem = ActorSystem.Create("NodeActorSystem");
             UdpLogger = TestActorSystem.ActorOf(Props.Create(() => new UdpLogger(listenEndpoint, true)));
@@ -120,8 +110,6 @@ namespace Akka.NodeTestRunner
 
         protected static async Task WaitForLogs()
         {
-            Output.Flush();
-            Output.Close();
             var runnerShutdown = await UdpLogger.GracefulStop(TimeSpan.FromSeconds(3));
             TestActorSystem.Shutdown();
             await TestActorSystem.TerminationTask;

@@ -25,7 +25,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
 
         public void WriteLine(string formatStr, params object[] args)
         {
-            Write(new Info("NodeTestRunner",typeof(UdpLogger), string.Format(formatStr, args)));
+            Write(new Info("NodeTestRunner",typeof(UdpLogCollector), string.Format(formatStr, args)));
         }
 
         public void Write(string message)
