@@ -39,6 +39,9 @@ namespace Akka.NodeTestRunner
             UdpLogger = TestActorSystem.ActorOf(Props.Create(() => new UdpLogger(listenEndpoint, true)));
             Logger = new ActorRunnerLogger(UdpLogger, nodeIndex);
 
+            // Redirect standard out to our UDP logger
+            Console.SetOut(new TestRunnerStringWriter(Logger));
+
             Thread.Sleep(TimeSpan.FromSeconds(10));
 
             using (var controller = new XunitFrontController(assemblyFileName))
