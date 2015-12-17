@@ -104,7 +104,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
         private void Connected()
         {
             Receive<IsConnected>(connected => Sender.Tell(true));
-            ReceiveAny(o =>
+            Receive<string>(o =>
             {
                 ByteString data = _serializer.ToByteString(o);
                 _server.Tell(UdpConnected.Send.Create(data));

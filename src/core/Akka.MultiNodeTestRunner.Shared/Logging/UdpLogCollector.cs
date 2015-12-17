@@ -59,9 +59,15 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
         {
             Receive<GetLocalAddress>(local => Sender.Tell(_localAddress));
 
+            Receive<UdpConnected.CommandFailed>(failed =>
+            {
+                _log.Error(failed.Cmd.FailureMessage.ToString());
+            });
+
             Receive<Udp.Received>(received =>
             {
                 var obj = _serializer.FromByteString(received.Data);
+                _log.Info(obj.ToString());
                 _messageSinkActor.Forward(obj);
             });
         }

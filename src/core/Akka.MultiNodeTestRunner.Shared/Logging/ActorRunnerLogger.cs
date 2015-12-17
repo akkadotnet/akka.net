@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using Akka.Actor;
+using Akka.Event;
 
 namespace Akka.MultiNodeTestRunner.Shared.Logging
 {
@@ -24,14 +25,17 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
 
         public void WriteLine(string formatStr, params object[] args)
         {
-            Write(string.Format(formatStr, args));
+            Write(new Info("NodeTestRunner",typeof(UdpLogger), string.Format(formatStr, args)));
         }
 
         public void Write(string message)
         {
+            if (string.IsNullOrEmpty(message) || string.IsNullOrWhiteSpace(message))
+                return;
+
             if (!message.StartsWith("[NODE", true, CultureInfo.InvariantCulture))
             {
-                message = "[NODE" + _nodeIndex + "]" + message;
+                message = "[Node" + _nodeIndex + "]" + message;
             }
             _actor.Tell(message);
         }

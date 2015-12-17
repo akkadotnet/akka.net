@@ -42,6 +42,9 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\SharedAssemblyInfo.cs">
+      <Link>Properties\SharedAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="ExitCodeContainer.cs" />
     <Compile Include="Logging\ActorRunnerLogger.cs" />
     <Compile Include="Logging\ByteStringSerializer.cs" />

@@ -13,7 +13,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.MultiNodeTestRunner.Shared.Logging;
+using Akka.MultiNodeTestRunner.Shared.Persistence;
 using Akka.Remote.TestKit;
+using Akka.Util;
 using Xunit;
 
 namespace Akka.NodeTestRunner
@@ -23,6 +25,7 @@ namespace Akka.NodeTestRunner
         protected static ActorSystem TestActorSystem;
         protected static IActorRef UdpLogger;
         protected static ITestRunnerLogger Logger;
+        protected static StreamWriter Output;
 
         static void Main(string[] args)
         {
@@ -36,11 +39,21 @@ namespace Akka.NodeTestRunner
             var listenPort = CommandLine.GetInt32("multinode.listen-port");
             var listenEndpoint = new IPEndPoint(listenAddress, listenPort);
 
-            UdpLogger = TestActorSystem.ActorOf(Props.Create(() => new UdpLogger(listenEndpoint, true)));
-            Logger = new ActorRunnerLogger(UdpLogger, nodeIndex);
-
             // Redirect standard out to our UDP logger
             //Console.SetOut(new TestRunnerStringWriter(Logger));
+            Output =
+                new StreamWriter(FileNameGenerator.GenerateFileName(typeof(Sink).Assembly.GetName().Name + nodeIndex, ".txt"))
+                {
+                    AutoFlush = true
+                };
+            Console.SetOut(Output);
+            Console.WriteLine("Test");
+
+            TestActorSystem = ActorSystem.Create("NodeActorSystem");
+            UdpLogger = TestActorSystem.ActorOf(Props.Create(() => new UdpLogger(listenEndpoint, true)));
+
+            //NodeIndex+1 because the reporting system uses 1-based indexing.
+            Logger = new ActorRunnerLogger(UdpLogger, nodeIndex+1);
 
             Thread.Sleep(TimeSpan.FromSeconds(10));
 
@@ -107,6 +120,8 @@ namespace Akka.NodeTestRunner
 
         protected static async Task WaitForLogs()
         {
+            Output.Flush();
+            Output.Close();
             var runnerShutdown = await UdpLogger.GracefulStop(TimeSpan.FromSeconds(3));
             TestActorSystem.Shutdown();
             await TestActorSystem.TerminationTask;
