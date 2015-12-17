@@ -47,6 +47,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -75,9 +76,17 @@
       <Project>{A8AA2D7E-3D35-44DF-AF92-80A2C39C1F4D}</Project>
       <Name>Akka.Logger.NLog</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Akka.MultiNodeTestRunner.Shared\Akka.MultiNodeTestRunner.Shared.csproj">
+      <Project>{964f0ec5-fbe6-47c5-8ae6-145114d5db8c}</Project>
+      <Name>Akka.MultiNodeTestRunner.Shared</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj">
       <Project>{E5957C3E-2B1E-469F-A680-7953B4DEA31B}</Project>
       <Name>Akka.Remote.TestKit</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka\Akka.csproj">
+      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
+      <Name>Akka</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

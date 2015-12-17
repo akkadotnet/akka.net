@@ -88,6 +88,7 @@
     <Compile Include="Proto\ProtobufDecoder.cs" />
     <Compile Include="Proto\ProtobufEncoder.cs" />
     <Compile Include="RemoteConnection.cs" />
+    <Compile Include="TcpLogWriter.cs" />
   </ItemGroup>
   <Choose>
     <When Condition="('$(VisualStudioVersion)' == '10.0' or '$(VisualStudioVersion)' == '') and '$(TargetFrameworkVersion)' == 'v3.5'">
@@ -131,6 +132,7 @@
     <None Include="app.config" />
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
       <ItemGroup>

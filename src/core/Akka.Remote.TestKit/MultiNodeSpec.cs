@@ -345,6 +345,9 @@ namespace Akka.Remote.TestKit
                       @"akka {
                         loglevel = ""WARNING""
                         stdout-loglevel = ""WARNING""
+                        log-config-on-start = on
+                         #need this in order to capture logs in MultiNodeTestRunner.exe
+                        loggers = [""Akka.TestKit.TestEventListener, Akka.TestKit"",""Akka.Remote.TestKit.UdpLogger, Akka.Remote.TestKit""]
                         actor {
                           default-dispatcher {
                             executor = ""fork-join-executor""

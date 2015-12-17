@@ -5,9 +5,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.MultiNodeTestRunner.Shared.Logging;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
 using Akka.NodeTestRunner;
 using Akka.TestKit;
@@ -54,7 +56,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
             var foundMessage = ExpectMsg<Debug>();
 
             //format the string as it would appear when reported by multinode test runner
-            var foundMessageStr = "[NODE1]" + foundMessage; 
+            var foundMessageStr = "[NODE1]" + foundMessage;
             LogMessageForNode nodeMessage;
             MessageSink.TryParseLogMessage(foundMessageStr, out nodeMessage).ShouldBeTrue("should have been able to parse log message");
 
@@ -79,7 +81,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
         [Fact]
         public void MessageSink_should_parse_Node_log_message_fragment_correctly()
         {
-           //format the a log fragment as would be recorded by the test runner
+            //format the a log fragment as would be recorded by the test runner
             var message = "this is some message";
             var foundMessageStr = "[NODE1]" + message;
             LogMessageFragmentForNode nodeMessage;
@@ -122,7 +124,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
         [Fact]
         public void MessageSink_should_parse_Node_SpecFail_message_correctly()
         {
-            var specFail = new SpecFail(1, GetType().Assembly.GetName().Name);
+            var specFail = new SpecFail(1, GetType().Assembly.GetName().Name, new List<string>(), new List<string>(), new List<string>());
             NodeCompletedSpecWithFail nodeCompletedSpecWithFail;
             MessageSink.TryParseFailureMessage(specFail.ToString(), out nodeCompletedSpecWithFail)
                 .ShouldBeTrue("should have been able to parse node failure message");
@@ -134,7 +136,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
         public void MessageSink_should_be_able_to_infer_message_type()
         {
             var specPass = new SpecPass(1, GetType().Assembly.GetName().Name);
-            var specFail = new SpecFail(1, GetType().Assembly.GetName().Name);
+            var specFail = new SpecFail(1, GetType().Assembly.GetName().Name, new List<string>(), new List<string>(), new List<string>());
 
             var loggingActor = Sys.ActorOf<LoggingActor>();
             Sys.EventStream.Subscribe(TestActor, typeof(Debug));

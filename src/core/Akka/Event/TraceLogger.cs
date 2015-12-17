@@ -21,9 +21,11 @@ namespace Akka.Event
         {
             message.Match()
                  .With<InitializeLogger>(m => Sender.Tell(new LoggerInitialized()))
+                 .With<Debug>(m => Trace.WriteLine(m.ToString()))
+                 .With<Info>(m => Trace.TraceInformation(m.ToString()))
                  .With<Error>(m => Trace.TraceError(m.ToString()))
-                  .With<Warning>(m => Trace.TraceWarning(m.ToString()))
-                 .With<DeadLetter>(m => Trace.TraceWarning(string.Format("Deadletter - unable to send message {0} from {1} to {2}", m.Message, m.Sender, m.Sender), typeof(DeadLetter).ToString()))
+                 .With<Warning>(m => Trace.TraceWarning(m.ToString()))
+                 .With<DeadLetter>(m => Trace.TraceInformation(string.Format("Deadletter - unable to send message {0} from {1} to {2}", m.Message, m.Sender, m.Sender), typeof(DeadLetter).ToString()))
                  .With<UnhandledMessage>(m => Trace.TraceWarning("Unhandled message!"))
                  .Default(m =>
                  {

@@ -42,7 +42,14 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\SharedAssemblyInfo.cs">
+      <Link>Properties\SharedAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="ExitCodeContainer.cs" />
+    <Compile Include="Logging\ActorRunnerLogger.cs" />
+    <Compile Include="Logging\ITestRunnerLogger.cs" />
+    <Compile Include="Logging\SpecMessages.cs" />
+    <Compile Include="Logging\TcpLogCollector.cs" />
     <Compile Include="NodeTest.cs" />
     <Compile Include="Persistence\EnumerableExtensions.cs" />
     <Compile Include="Persistence\FileNameGenerator.cs" />
@@ -91,6 +98,7 @@
       <LastGenOutput>VisualizerRuntimeTemplate.cs</LastGenOutput>
     </Content>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

@@ -66,7 +66,8 @@ Target "RestorePackages" (fun _ ->
      |> RestoreMSSolutionPackages (fun p ->
          { p with
              OutputPath = "./src/packages"
-             Retries = 4 })
+             Retries = 4
+             ToolPath = nugetExe })
  )
 
 //--------------------------------------------------------------------------------

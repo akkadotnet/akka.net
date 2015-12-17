@@ -11,12 +11,16 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using Akka.Actor;
+using Akka.IO;
 using Akka.MultiNodeTestRunner.Shared;
+using Akka.MultiNodeTestRunner.Shared.Logging;
 using Akka.MultiNodeTestRunner.Shared.Persistence;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
 using Akka.Remote.TestKit;
+using Akka.Util;
 using Xunit;
 
 namespace Akka.MultiNodeTestRunner
@@ -29,13 +33,13 @@ namespace Akka.MultiNodeTestRunner
         protected static ActorSystem TestRunSystem;
 
         protected static IActorRef SinkCoordinator;
-
+        protected static IActorRef TcpCollector;
 
 
         /// <summary>
         /// MultiNodeTestRunner takes the following <see cref="args"/>:
         /// 
-        /// C:\> Akka.MultiNodeTestRunner.exe [assembly name] [-Dmultinode.enable-filesink=on] [-Dmultinode.output-directory={dir path}]
+        /// C:\> Akka.MultiNodeTestRunner.exe [assembly name] [-Dmultinode.enable-filesink=on] [-Dmultinode.output-directory={dir path}] [-Dmultinode.listen-address={ip}] [-Dmultinode.listen-port={port}]
         /// 
         /// <list type="number">
         /// <listheader>
@@ -63,6 +67,24 @@ namespace Akka.MultiNodeTestRunner
         ///                  will be written to this directory instead of the default, which is the same folder
         ///                  as the test binary.
         ///     </description>
+        /// </item>        
+        /// <item>
+        ///     <term>-Dmultinode.listen-address={ip}</term>
+        ///     <description>
+        ///             Determines the address that this multi-node test runner will use to listen for log messages from
+        ///             individual NodeTestRunner.exe processes.
+        /// 
+        ///             Defaults to 127.0.0.1
+        ///     </description>
+        /// </item>
+        /// <item>
+        ///     <term>-Dmultinode.listen-port={port}</term>
+        ///     <description>
+        ///             Determines the port number that this multi-node test runner will use to listen for log messages from
+        ///             individual NodeTestRunner.exe processes.
+        /// 
+        ///             Defaults to 6577
+        ///     </description>
         /// </item>
         /// </list>
         /// </summary>
@@ -70,6 +92,13 @@ namespace Akka.MultiNodeTestRunner
         {
             TestRunSystem = ActorSystem.Create("TestRunnerLogging");
             SinkCoordinator = TestRunSystem.ActorOf(Props.Create<SinkCoordinator>(), "sinkCoordinator");
+
+            var listenAddress = IPAddress.Parse(CommandLine.GetPropertyOrDefault("multinode.listen-address", "127.0.0.1"));
+            var listenPort = CommandLine.GetInt32OrDefault("multinode.listen-port", 6577);
+            var listenEndpoint = new IPEndPoint(listenAddress, listenPort);
+
+            TcpCollector = TestRunSystem.ActorOf(Props.Create(() => new TcpLogCollector(SinkCoordinator)), "tcpLogger");
+            Tcp.Instance.Apply(TestRunSystem).Manager.Tell(new Tcp.Bind(TcpCollector, listenEndpoint), TcpCollector);
 
             var assemblyName = Path.GetFullPath(args[0]);
             EnableAllSinks(assemblyName);
@@ -104,8 +133,8 @@ namespace Akka.MultiNodeTestRunner
                             process.StartInfo.UseShellExecute = false;
                             process.StartInfo.RedirectStandardOutput = true;
                             process.StartInfo.FileName = "Akka.NodeTestRunner.exe";
-                            process.StartInfo.Arguments = String.Format(@"-Dmultinode.test-assembly=""{0}"" -Dmultinode.test-class=""{1}"" -Dmultinode.test-method=""{2}"" -Dmultinode.max-nodes={3} -Dmultinode.server-host=""{4}"" -Dmultinode.host=""{5}"" -Dmultinode.index={6}",
-                                assemblyName, nodeTest.TypeName, nodeTest.MethodName, test.Value.Count, "localhost", "localhost", nodeTest.Node - 1);
+                            process.StartInfo.Arguments = String.Format(@"-Dmultinode.test-assembly=""{0}"" -Dmultinode.test-class=""{1}"" -Dmultinode.test-method=""{2}"" -Dmultinode.max-nodes={3} -Dmultinode.server-host=""{4}"" -Dmultinode.host=""{5}"" -Dmultinode.index={6} -Dmultinode.listen-address={7} -Dmultinode.listen-port={8}",
+                                assemblyName, nodeTest.TypeName, nodeTest.MethodName, test.Value.Count, "localhost", "localhost", nodeTest.Node - 1, listenAddress, listenPort);
                             var nodeIndex = nodeTest.Node;
                             process.OutputDataReceived +=
                                 (sender, line) =>
@@ -117,7 +146,7 @@ namespace Akka.MultiNodeTestRunner
                                     {
                                         message = "[NODE" + nodeIndex + "]" + message;
                                     }
-                                    PublishToAllSinks(message);
+                                    StandardOutWriter.WriteLine("LOLDEBUG"+message);
                                 };
 
                             var closureTest = nodeTest;

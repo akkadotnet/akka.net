@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
+using Akka.MultiNodeTestRunner.Shared.Logging;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,10 +20,12 @@ namespace Akka.NodeTestRunner
         public bool Passed { get; private set; }
         public ManualResetEvent Finished { get; private set; }
         readonly int _nodeIndex;
+        private readonly ITestRunnerLogger _logger;
 
-        public Sink(int nodeIndex)
+        public Sink(int nodeIndex, ITestRunnerLogger logger)
         {
             _nodeIndex = nodeIndex;
+            _logger = logger;
             Finished = new ManualResetEvent(false);
         }
 
@@ -31,14 +34,14 @@ namespace Akka.NodeTestRunner
             var resultMessage = message as ITestResultMessage;
             if (resultMessage != null)
             {
-                Console.WriteLine(resultMessage.Output);
+                _logger.WriteLine(resultMessage.Output);
             }
             var testPassed = message as ITestPassed;
             if (testPassed != null)
             {
                 //the MultiNodeTestRunner uses 1-based indexing, which is why we have to add 1 to the index.
                 var specPass = new SpecPass(_nodeIndex + 1, testPassed.TestCase.DisplayName);
-                Console.WriteLine(specPass);
+                _logger.Write(specPass);
                 Passed = true;
                 return true;
             }
@@ -46,21 +49,28 @@ namespace Akka.NodeTestRunner
             if (testFailed != null)
             {
                 //the MultiNodeTestRunner uses 1-based indexing, which is why we have to add 1 to the index.
-                var specFail = new SpecFail(_nodeIndex + 1, testFailed.TestCase.DisplayName);
-                foreach (var failedMessage in testFailed.Messages) specFail.FailureMessages.Add(failedMessage);
-                foreach (var stackTrace in testFailed.StackTraces) specFail.FailureStackTraces.Add(stackTrace);
-                foreach(var exceptionType in testFailed.ExceptionTypes) specFail.FailureExceptionTypes.Add(exceptionType);
-                Console.Write(specFail);
+                var failureMessages = new List<string>();
+                var failureStackTraces = new List<string>();
+                var failureExceptionTypes = new List<string>();
+                foreach (var failedMessage in testFailed.Messages) failureMessages.Add(failedMessage);
+                foreach (var stackTrace in testFailed.StackTraces) failureStackTraces.Add(stackTrace);
+                foreach (var exceptionType in testFailed.ExceptionTypes) failureExceptionTypes.Add(exceptionType);
+                var specFail = new SpecFail(_nodeIndex + 1, testFailed.TestCase.DisplayName, failureMessages, failureStackTraces, failureExceptionTypes);
+
+                _logger.Write(specFail);
                 return true;
             }
             var errorMessage = message as ErrorMessage;
             if (errorMessage != null)
             {
-                var specFail = new SpecFail(_nodeIndex + 1, "ERRORED");
-                foreach (var failedMessage in errorMessage.Messages) specFail.FailureMessages.Add(failedMessage);
-                foreach (var stackTrace in errorMessage.StackTraces) specFail.FailureStackTraces.Add(stackTrace);
-                foreach (var exceptionType in errorMessage.ExceptionTypes) specFail.FailureExceptionTypes.Add(exceptionType);
-                Console.Write(specFail);
+                var failureMessages = new List<string>();
+                var failureStackTraces = new List<string>();
+                var failureExceptionTypes = new List<string>();
+                foreach (var failedMessage in errorMessage.Messages) failureMessages.Add(failedMessage);
+                foreach (var stackTrace in errorMessage.StackTraces) failureStackTraces.Add(stackTrace);
+                foreach (var exceptionType in errorMessage.ExceptionTypes) failureExceptionTypes.Add(exceptionType);
+                var specFail = new SpecFail(_nodeIndex + 1, "ERRORED", failureMessages, failureStackTraces, failureExceptionTypes);
+                _logger.Write(specFail);
             }
             if (message is ITestAssemblyFinished)
             {
@@ -73,76 +83,6 @@ namespace Akka.NodeTestRunner
         public void Dispose()
         {
             Finished.Dispose();
-        }
-    }
-
-    /// <summary>
-    /// Message class used for reporting a test pass.
-    /// 
-    /// <remarks>
-    /// The Akka.MultiNodeTestRunner.Shared.MessageSink depends on the format string
-    /// that this class produces, so do not remove or refactor it.
-    /// </remarks>
-    /// </summary>
-    public class SpecPass
-    {
-        public SpecPass(int nodeIndex, string testDisplayName)
-        {
-            TestDisplayName = testDisplayName;
-            NodeIndex = nodeIndex;
-        }
-
-        public int NodeIndex { get; private set; }
-
-        public string TestDisplayName { get; private set; }
-
-        public override string ToString()
-        {
-            return string.Format("[Node{0}][PASS] {1}", NodeIndex, TestDisplayName);
-        }
-    }
-
-    /// <summary>
-    /// Message class used for reporting a test fail.
-    /// 
-    /// <remarks>
-    /// The Akka.MultiNodeTestRunner.Shared.MessageSink depends on the format string
-    /// that this class produces, so do not remove or refactor it.
-    /// </remarks>
-    /// </summary>
-    public class SpecFail : SpecPass
-    {
-        public SpecFail(int nodeIndex, string testDisplayName) : base(nodeIndex, testDisplayName)
-        {
-            FailureMessages = new List<string>();
-            FailureStackTraces = new List<string>();
-            FailureExceptionTypes = new List<string>();
-        }
-
-        public IList<string> FailureMessages { get; private set; }
-        public IList<string> FailureStackTraces { get; private set; }
-        public IList<string> FailureExceptionTypes { get; private set; }
-
-        public override string ToString()
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine(string.Format("[Node{0}][FAIL] {1}", NodeIndex, TestDisplayName));
-            foreach (var exception in FailureExceptionTypes)
-            {
-                sb.AppendFormat("[Node{0}][FAIL-EXCEPTION] Type: {1}", NodeIndex, exception);
-                sb.AppendLine();
-            }
-            foreach (var exception in FailureMessages)
-            {
-                sb.AppendFormat("--> [Node{0}][FAIL-EXCEPTION] Message: {1}", NodeIndex, exception);
-                sb.AppendLine();
-            }
-            foreach (var exception in FailureStackTraces)
-            {
-                sb.AppendFormat("--> [Node{0}][FAIL-EXCEPTION] StackTrace: {1}", NodeIndex, exception);
-                sb.AppendLine();
-            }
-            return sb.ToString();
         }
     }
 }
