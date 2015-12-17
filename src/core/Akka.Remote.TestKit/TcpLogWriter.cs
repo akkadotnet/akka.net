@@ -27,6 +27,7 @@ namespace Akka.Remote.TestKit
         {
             Receive<InitializeLogger>(initialize =>
             {
+                StandardOutWriter.Write("TCPLOGGER-DEBUG" + " I AM INITIALIZED");
                 Sender.Tell(new LoggerInitialized());
             });
             ReceiveAny(o =>
@@ -42,7 +43,14 @@ namespace Akka.Remote.TestKit
         /// </summary>
         protected override void PreStart()
         {
-            _udpLogWriter = Context.ActorOf(Props.Create(() => new UdpLogger()), "udpLogWriter");
+            try
+            {
+                _udpLogWriter = Context.ActorOf(Props.Create(() => new UdpLogger()), "udpLogWriter");
+            }
+            catch (Exception ex)
+            {
+                StandardOutWriter.Write("TCPLOGGER-DEBUG" + ex);
+            }
         }
     }
 
