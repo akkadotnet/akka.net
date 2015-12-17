@@ -25,7 +25,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
 
         public void WriteLine(string formatStr, params object[] args)
         {
-            Write(new Info("NodeTestRunner",typeof(UdpLogCollector), string.Format(formatStr, args)));
+            Write(new Info("NodeTestRunner",typeof(TcpLogCollector), string.Format(formatStr, args)));
         }
 
         public void Write(string message)
@@ -35,7 +35,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Logging
 
             if (!message.StartsWith("[NODE", true, CultureInfo.InvariantCulture))
             {
-                message = "[Node" + _nodeIndex + "]" + message;
+                message = "[NODE" + _nodeIndex + "]" + message;
             }
             _actor.Tell(message);
         }

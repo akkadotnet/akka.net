@@ -135,18 +135,18 @@ namespace Akka.MultiNodeTestRunner
                             process.StartInfo.Arguments = String.Format(@"-Dmultinode.test-assembly=""{0}"" -Dmultinode.test-class=""{1}"" -Dmultinode.test-method=""{2}"" -Dmultinode.max-nodes={3} -Dmultinode.server-host=""{4}"" -Dmultinode.host=""{5}"" -Dmultinode.index={6} -Dmultinode.listen-address={7} -Dmultinode.listen-port={8}",
                                 assemblyName, nodeTest.TypeName, nodeTest.MethodName, test.Value.Count, "localhost", "localhost", nodeTest.Node - 1, listenAddress, listenPort);
                             var nodeIndex = nodeTest.Node;
-                            //process.OutputDataReceived +=
-                            //    (sender, line) =>
-                            //    {
-                            //        //ignore any trailing whitespace
-                            //        if (string.IsNullOrEmpty(line.Data) || string.IsNullOrWhiteSpace(line.Data)) return;
-                            //        string message = line.Data;
-                            //        if (!message.StartsWith("[NODE", true, CultureInfo.InvariantCulture))
-                            //        {
-                            //            message = "[NODE" + nodeIndex + "]" + message;
-                            //        }
-                            //        PublishToAllSinks(message);
-                            //    };
+                            process.OutputDataReceived +=
+                                (sender, line) =>
+                                {
+                                    //ignore any trailing whitespace
+                                    if (string.IsNullOrEmpty(line.Data) || string.IsNullOrWhiteSpace(line.Data)) return;
+                                    string message = line.Data;
+                                    if (!message.StartsWith("[NODE", true, CultureInfo.InvariantCulture))
+                                    {
+                                        message = "[NODE" + nodeIndex + "]" + message;
+                                    }
+                                    PublishToAllSinks(message);
+                                };
 
                             var closureTest = nodeTest;
                             process.Exited += (sender, eventArgs) =>

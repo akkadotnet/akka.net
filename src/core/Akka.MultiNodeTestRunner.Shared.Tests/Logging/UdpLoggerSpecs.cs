@@ -11,7 +11,7 @@ using Xunit;
 namespace Akka.MultiNodeTestRunner.Shared.Tests.Logging
 {
     /// <summary>
-    /// Specs to verify that the <see cref="UdpLogWriter"/> and <see cref="UdpLogCollector"/>
+    /// Specs to verify that the <see cref="UdpLogWriter"/> and <see cref="TcpLogCollector"/>
     /// can communicate with eachother
     /// </summary>
     public class UdpLoggerSpecs : AkkaSpec
@@ -19,7 +19,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests.Logging
         [Fact]
         public void UdpLogCollectorShouldBindAndReceiveMessages()
         {
-            var udpCollector = Sys.ActorOf(Props.Create(() => new UdpLogCollector(TestActor)));
+            var udpCollector = Sys.ActorOf(Props.Create(() => new TcpLogCollector(TestActor)));
 
             Udp.Instance.Apply(Sys).Manager.Tell(new Udp.Bind(udpCollector, new IPEndPoint(IPAddress.Loopback, 0)), udpCollector);
             var data = ByteString.FromString("foo");
@@ -30,11 +30,11 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests.Logging
         [Fact]
         public void UdpLoggerShouldConnectAndSendMessages()
         {
-            var udpCollector = Sys.ActorOf(Props.Create(() => new UdpLogCollector(TestActor)));
+            var udpCollector = Sys.ActorOf(Props.Create(() => new TcpLogCollector(TestActor)));
             Udp.Instance.Apply(Sys).Manager.Tell(new Udp.Bind(udpCollector, new IPEndPoint(IPAddress.Loopback, 0)), udpCollector);
             Within(TimeSpan.FromSeconds(3.0), () =>
             {
-                var remoteAddress = udpCollector.AskAndWait<EndPoint>(UdpLogCollector.GetLocalAddress.Instance, RemainingOrDefault);
+                var remoteAddress = udpCollector.AskAndWait<EndPoint>(TcpLogCollector.GetLocalAddress.Instance, RemainingOrDefault);
                 var udpLogger = Sys.ActorOf(Props.Create(() => new UdpLogWriter(remoteAddress, true)));
                 udpLogger.Tell("foo");
                 ExpectMsg<string>().ShouldBe("foo");
