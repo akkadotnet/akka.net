@@ -11,24 +11,18 @@ using Xunit;
 namespace Akka.MultiNodeTestRunner.Shared.Tests.Logging
 {
     /// <summary>
-    /// Specs to verify that the <see cref="Akka.Remote.TestKit.UdpLogger"/> and <see cref="UdpLogCollector"/>
+    /// Specs to verify that the <see cref="UdpLogWriter"/> and <see cref="UdpLogCollector"/>
     /// can communicate with eachother
     /// </summary>
     public class UdpLoggerSpecs : AkkaSpec
     {
-        private Serializer InternalSerializer => Sys.Serialization.FindSerializerFor(typeof(SpecPass));
-
-        private ByteStringSerializer _serializer;
-
-        protected ByteStringSerializer Serializer => _serializer ?? (_serializer = new ByteStringSerializer(InternalSerializer));
-
         [Fact]
         public void UdpLogCollectorShouldBindAndReceiveMessages()
         {
             var udpCollector = Sys.ActorOf(Props.Create(() => new UdpLogCollector(TestActor)));
 
             Udp.Instance.Apply(Sys).Manager.Tell(new Udp.Bind(udpCollector, new IPEndPoint(IPAddress.Loopback, 0)), udpCollector);
-            var data = Serializer.ToByteString("foo");
+            var data = ByteString.FromString("foo");
             udpCollector.Tell(new Udp.Received(data, new IPEndPoint(IPAddress.Loopback, 0)));
             ExpectMsg<string>().ShouldBe("foo");
         }
@@ -41,7 +35,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests.Logging
             Within(TimeSpan.FromSeconds(3.0), () =>
             {
                 var remoteAddress = udpCollector.AskAndWait<EndPoint>(UdpLogCollector.GetLocalAddress.Instance, RemainingOrDefault);
-                var udpLogger = Sys.ActorOf(Props.Create(() => new UdpLogger(remoteAddress, true)));
+                var udpLogger = Sys.ActorOf(Props.Create(() => new UdpLogWriter(remoteAddress, true)));
                 udpLogger.Tell("foo");
                 ExpectMsg<string>().ShouldBe("foo");
             });

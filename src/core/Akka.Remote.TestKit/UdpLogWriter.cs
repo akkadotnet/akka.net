@@ -2,16 +2,54 @@
 using System.Net;
 using System.Text;
 using Akka.Actor;
+using Akka.Event;
 using Akka.IO;
 
 namespace Akka.Remote.TestKit
 {
-    internal class UdpLogger : ReceiveActor, IWithUnboundedStash
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Used to send semantic log messages to the MultiNodeTestRunner.
+    /// </summary>
+    public class UdpLogger : ReceiveActor
+    {
+        private IActorRef _udpLogWriter;
+
+        /// <summary>
+        /// Default constructor - takes no arguments.
+        /// 
+        /// All of the real work is handled by <see cref="UdpLogWriter"/>
+        /// internally.
+        /// </summary>
+        public UdpLogger()
+        {
+            Receive<InitializeLogger>(initialize =>
+            {
+                Sender.Tell(new LoggerInitialized());
+            });
+            ReceiveAny(o =>
+            {
+                _udpLogWriter.Tell(o.ToString());
+            });
+        }
+
+        /// <summary>
+        /// Initializes the <see cref="UdpLogWriter"/> using arguments passed into
+        /// the multi-node test runner via <see cref="CommandLine"/>
+        /// </summary>
+        protected override void PreStart()
+        {
+            _udpLogWriter = Context.ActorOf(Props.Create(() => new UdpLogger()), "udpLogWriter");
+        }
+    }
+
+    internal class UdpLogWriter : ReceiveActor, IWithUnboundedStash
     {
         #region Message classes
 
         /// <summary>
-        /// Used to poll <see cref="UdpLogger"/> to determine if it's connected
+        /// Used to poll <see cref="UdpLogWriter"/> to determine if it's connected
         /// to the server on the other end of the wire.
         /// </summary>
         public class IsConnected
@@ -21,7 +59,7 @@ namespace Akka.Remote.TestKit
         }
 
         /// <summary>
-        /// In situations where the <see cref="UdpLogger"/> is started without being told
+        /// In situations where the <see cref="UdpLogWriter"/> is started without being told
         /// to connect automatically, a user can send <see cref="ConnectNow"/> to force it to connect now.
         /// </summary>
         public class ConnectNow
@@ -34,7 +72,7 @@ namespace Akka.Remote.TestKit
 
         private readonly EndPoint _remoteDestination;
         private IActorRef _server;
-        private int timeoutCount = 0;
+        private int _timeoutCount = 0;
         private readonly bool _connectAutomatically;
 
         public const int MaxAllowableTimeouts = 5;
@@ -46,7 +84,20 @@ namespace Akka.Remote.TestKit
 
         public static readonly byte[] StringTypeNameAsBytes = Encoding.Unicode.GetBytes(typeof (string).FullName);
 
-        public UdpLogger(EndPoint remoteDestination, bool connectAutomatically = true)
+        /// <summary>
+        /// Constructor used when running inside the MultinodeTestRunner
+        /// </summary>
+        public UdpLogWriter() : this(CommandLine.GetProperty("multinode.listen-address"), CommandLine.GetInt32("multinode.listen-port")) { }
+
+        public UdpLogWriter(string remoteAddress, int remotePort, bool connectAutomatically = true)
+            : this(IPAddress.Parse(remoteAddress), remotePort, connectAutomatically)
+        { }
+
+        public UdpLogWriter(IPAddress remoteAddress, int remotePort, bool connectAutomatically = true) : 
+            this(new IPEndPoint(remoteAddress, remotePort), connectAutomatically)
+        { }
+
+        public UdpLogWriter(EndPoint remoteDestination, bool connectAutomatically = true)
         {
             _remoteDestination = remoteDestination;
             _connectAutomatically = connectAutomatically;
@@ -81,7 +132,7 @@ namespace Akka.Remote.TestKit
 
             Receive<ReceiveTimeout>(timeout =>
             {
-                if (++timeoutCount < MaxAllowableTimeouts)
+                if (++_timeoutCount < MaxAllowableTimeouts)
                 {
                     ConnectToServer();
                 }

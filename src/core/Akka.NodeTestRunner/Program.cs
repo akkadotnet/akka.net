@@ -40,7 +40,7 @@ namespace Akka.NodeTestRunner
             var listenEndpoint = new IPEndPoint(listenAddress, listenPort);
 
             TestActorSystem = ActorSystem.Create("NodeActorSystem");
-            UdpLogger = TestActorSystem.ActorOf(Props.Create(() => new UdpLogger(listenEndpoint, true)));
+            UdpLogger = TestActorSystem.ActorOf(Props.Create(() => new UdpLogWriter(listenEndpoint, true)));
 
             //NodeIndex+1 because the reporting system uses 1-based indexing.
             Logger = new ActorRunnerLogger(UdpLogger, nodeIndex+1);

@@ -56,7 +56,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Logging\ByteStringSerializationTests.cs" />
     <Compile Include="Logging\UdpLoggerSpecs.cs" />
     <Compile Include="NodeDataActorSpec.cs" />
     <Compile Include="NodeMessageHelpers.cs" />

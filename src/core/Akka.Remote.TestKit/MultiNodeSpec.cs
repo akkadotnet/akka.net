@@ -347,7 +347,7 @@ namespace Akka.Remote.TestKit
                         stdout-loglevel = ""WARNING""
                         loggers = [
                                 ""Akka.TestKit.TestEventListener, Akka.TestKit"",
-                                ""Akka.Event.TraceLogger, Akka"" #need this in order to capture logs in MultiNodeTestRunner.exe
+                                ""Akka.Remote.TestKit.UdpLogger, Akka.Remote.TestKit"" #need this in order to capture logs in MultiNodeTestRunner.exe
                                   ]
                         actor {
                           default-dispatcher {

@@ -47,7 +47,6 @@
     </Compile>
     <Compile Include="ExitCodeContainer.cs" />
     <Compile Include="Logging\ActorRunnerLogger.cs" />
-    <Compile Include="Logging\ByteStringSerializer.cs" />
     <Compile Include="Logging\ITestRunnerLogger.cs" />
     <Compile Include="Logging\SpecMessages.cs" />
     <Compile Include="Logging\UdpLogCollector.cs" />
