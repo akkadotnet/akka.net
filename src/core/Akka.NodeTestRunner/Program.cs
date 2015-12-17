@@ -40,7 +40,7 @@ namespace Akka.NodeTestRunner
             Logger = new ActorRunnerLogger(UdpLogger, nodeIndex);
 
             // Redirect standard out to our UDP logger
-            Console.SetOut(new TestRunnerStringWriter(Logger));
+            //Console.SetOut(new TestRunnerStringWriter(Logger));
 
             Thread.Sleep(TimeSpan.FromSeconds(10));
 
