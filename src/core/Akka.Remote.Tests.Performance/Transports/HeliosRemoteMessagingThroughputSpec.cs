@@ -1,6 +1,4 @@
-using Akka.Configuration;
-
-namespace Akka.Remote.Tests.Performance
+namespace Akka.Remote.Tests.Performance.Transports
 {
     // todo: SKIP FOR NOW - BUGS
     //public class HeliosRemoteMessagingThroughputSpec : RemoteMessagingThroughputSpecBase

@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Util.Internal;
 using NBench;
 
-namespace Akka.Remote.Tests.Performance
+namespace Akka.Remote.Tests.Performance.Transports
 {
     /// <summary>
     /// Used to test the performance of remote messaging in Akka.Remote using various transports
@@ -21,7 +22,7 @@ namespace Akka.Remote.Tests.Performance
         private IActorRef _remoteEcho;
         private IActorRef _remoteReceiver;
 
-        private static readonly AtomicCounter Counter = new AtomicCounter(0);
+        private static readonly AtomicCounter ActorSystemNameCounter = new AtomicCounter(0);
         protected ActorSystem System1;
         protected ActorSystem System2;
 
@@ -70,10 +71,10 @@ namespace Akka.Remote.Tests.Performance
         public void Setup(BenchmarkContext context)
         {
             _remoteMessageThroughput = context.GetCounter(RemoteMessageCounterName);
-            System1 = ActorSystem.Create("SystemA" + Counter.Next(), CreateActorSystemConfig("SystemA" + Counter.Current, "127.0.0.1", 0));
+            System1 = ActorSystem.Create("SystemA" + ActorSystemNameCounter.Next(), CreateActorSystemConfig("SystemA" + ActorSystemNameCounter.Current, "127.0.0.1", 0));
             _echo = System1.ActorOf(Props.Create(() => new EchoActor()), "echo");
 
-            System2 = ActorSystem.Create("SystemB" + Counter.Next(), CreateActorSystemConfig("SystemB" + Counter.Current, "127.0.0.1", 0));
+            System2 = ActorSystem.Create("SystemB" + ActorSystemNameCounter.Next(), CreateActorSystemConfig("SystemB" + ActorSystemNameCounter.Current, "127.0.0.1", 0));
             _receiver =
                 System2.ActorOf(
                     Props.Create(() => new BenchmarkActor(_remoteMessageThroughput, RemoteMessageCount, _resetEvent)),
@@ -84,12 +85,10 @@ namespace Akka.Remote.Tests.Performance
 
             var system1EchoActorPath = new RootActorPath(system1Address) / "user" / "echo";
             var system2RemoteActorPath = new RootActorPath(system2Address) / "user" / "benchmark";
-            _remoteReceiver =
-                System1.ActorSelection(system2RemoteActorPath).Ask<ActorIdentity>(new Identify(null), TimeSpan.FromSeconds(2)).Result.Subject;
+
+            _remoteReceiver = System1.ActorSelection(system2RemoteActorPath).ResolveOne(TimeSpan.FromSeconds(2)).Result;
             _remoteEcho =
-                System2.ActorSelection(system1EchoActorPath)
-                    .Ask<ActorIdentity>(new Identify(null), TimeSpan.FromSeconds(2))
-                    .Result.Subject;
+                System2.ActorSelection(system1EchoActorPath).ResolveOne(TimeSpan.FromSeconds(2)).Result;
         }
 
         [PerfBenchmark(
@@ -106,7 +105,7 @@ namespace Akka.Remote.Tests.Performance
                 _remoteReceiver.Tell("foo"); // send a remote message
                 ++i;
             }
-            _resetEvent.Wait(1000); //wait up to a second
+            _resetEvent.Wait(); 
         }
 
         [PerfBenchmark(
@@ -123,19 +122,17 @@ namespace Akka.Remote.Tests.Performance
                 _remoteEcho.Tell("foo", _receiver); // send a remote message
                 ++i;
             }
-            _resetEvent.Wait(1000); //wait up to a second
+            _resetEvent.Wait();
         }
 
         [PerfCleanup]
-        public void Cleanup()
+        public virtual void Cleanup()
         {
-            if (!_resetEvent.IsSet)
-                _resetEvent.Wait(TimeSpan.FromSeconds(10)); // wait indefinitely until the event is set
             _resetEvent.Dispose();
-            System1.Shutdown();            
-            System1.AwaitTermination(TimeSpan.FromSeconds(2));
+            System1.Shutdown();
+            System1.TerminationTask.Wait();
             System2.Shutdown();
-            System2.AwaitTermination(TimeSpan.FromSeconds(2));
+            System2.TerminationTask.Wait();
         }
     }
 }

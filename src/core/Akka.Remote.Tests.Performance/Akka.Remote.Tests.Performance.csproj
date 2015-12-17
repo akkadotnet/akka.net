@@ -39,10 +39,14 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="HeliosRemoteMessagingThroughputSpec.cs" />
+    <Compile Include="Transports\AssociationStressSpecBase.cs" />
+    <Compile Include="ForkJoinDispatcherRemoteMessagingThroughputSpec.cs" />
+    <Compile Include="Transports\HeliosRemoteMessagingThroughputSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RemoteMessagingThroughputSpecBase.cs" />
-    <Compile Include="TestTransportRemoteMessagingThroughputSpec.cs" />
+    <Compile Include="Transports\RemoteMessagingThroughputSpecBase.cs" />
+    <Compile Include="Transports\TestTransportAssociationStressSpec.cs" />
+    <Compile Include="Transports\TestTransportRemoteMessagingThroughputSpec.cs" />
+    <Compile Include="ThreadPoolDispatcherRemoteMessagingThroughputSpec.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj">
