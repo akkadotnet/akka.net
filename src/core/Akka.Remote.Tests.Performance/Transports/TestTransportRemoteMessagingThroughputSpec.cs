@@ -12,22 +12,27 @@ namespace Akka.Remote.Tests.Performance.Transports
         {
             var baseConfig = ConfigurationFactory.ParseString(@"
                 akka {
-              actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
+                    loglevel = ""WARNING""
+                    stdout-loglevel = ""WARNING""
+                    actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
 
-              remote {
-                log-remote-lifecycle-events = off
+                  remote {
+                    log-received-messages = off
+                    log-sent-messages = off
+                    log-remote-lifecycle-events = off
 
-                enabled-transports = [
-                  ""akka.remote.test"",
-                ]
+                    enabled-transports = [
+                      ""akka.remote.test"",
+                    ]
 
-                test {
-                  transport-class = ""Akka.Remote.Transport.TestTransport,Akka.Remote""
-                  applied-adapters = []
-                  maximum-payload-bytes = 128000b
-                  scheme-identifier = test
+                    test {
+                      transport-class = ""Akka.Remote.Transport.TestTransport,Akka.Remote""
+                      applied-adapters = []
+                      maximum-payload-bytes = 128000b
+                      scheme-identifier = test
+                    }
+                  }
                 }
-              }
             ");
 
             port = 10; //BUG: setting the port to 0 causes the DefaultAddress to report the port as -1
