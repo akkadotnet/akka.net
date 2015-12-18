@@ -16,10 +16,9 @@ namespace Akka.Remote.Tests.Performance.Transports
             var baseConfig = ConfigurationFactory.ParseString(@"
                 akka {
               actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
-
+                
               remote {
                 log-remote-lifecycle-events = off
-
                 enabled-transports = [
                   ""akka.remote.test"",
                 ]

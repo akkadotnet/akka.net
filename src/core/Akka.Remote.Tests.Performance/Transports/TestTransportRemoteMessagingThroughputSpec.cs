@@ -12,9 +12,13 @@ namespace Akka.Remote.Tests.Performance.Transports
         {
             var baseConfig = ConfigurationFactory.ParseString(@"
                 akka {
+             loglevel = ""DEBUG""
+              stdout-loglevel = ""DEBUG""
               actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
 
               remote {
+                log-received-messages = on
+                log-send-messages = on
                 log-remote-lifecycle-events = off
 
                 enabled-transports = [
