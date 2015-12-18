@@ -394,7 +394,7 @@ akka.actor {
 
         //TODO: find out why this fails on build server
 
-        [Fact(Skip = "Fails on buildserver")]
+        [Fact]
         public void CanSerializeFutureActorRef()
         {
             Sys.EventStream.Subscribe(TestActor, typeof(object));
