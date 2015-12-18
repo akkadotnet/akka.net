@@ -194,7 +194,7 @@ namespace Akka.Tests.Actor
         /// <summary>
         /// receiveWhile is currently broken
         /// </summary>
-        [Fact(Skip = "receiveWhile is currently broken")]
+        [Fact]
         public void FSM_must_receive_and_cancel_a_repeated_timer()
         {
             fsm.Tell(State.TestRepeatedTimer, Self);
