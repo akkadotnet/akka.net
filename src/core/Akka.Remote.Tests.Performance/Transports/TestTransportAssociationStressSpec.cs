@@ -14,22 +14,23 @@ namespace Akka.Remote.Tests.Performance.Transports
         public override Config CreateActorSystemConfig(string actorSystemName, string ipOrHostname, int port, string registryKey = null)
         {
             var baseConfig = ConfigurationFactory.ParseString(@"
-                akka {
-              actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
+               akka {
+                  actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
                 
-              remote {
-                log-remote-lifecycle-events = off
-                enabled-transports = [
-                  ""akka.remote.test"",
-                ]
+                  remote {
+                    log-remote-lifecycle-events = off
+                    enabled-transports = [
+                      ""akka.remote.test"",
+                    ]
 
-                test {
-                  transport-class = ""Akka.Remote.Transport.TestTransport,Akka.Remote""
-                  applied-adapters = []
-                  maximum-payload-bytes = 128000b
-                  scheme-identifier = test
+                    test {
+                      transport-class = ""Akka.Remote.Transport.TestTransport,Akka.Remote""
+                      applied-adapters = []
+                      maximum-payload-bytes = 128000b
+                      scheme-identifier = test
+                    }
+                  }
                 }
-              }
             ");
 
             port = 10; //BUG: setting the port to 0 causes the DefaultAddress to report the port as -1
