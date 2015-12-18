@@ -143,11 +143,11 @@ namespace Akka.TestKit.Tests.TestActorRefTests
             Assert.Equal("Hejsan!", actor.ReceivedString);
         }
 
-        [Fact(Skip = "Context.ReceiveTimeout is not implemented. Test cannot run")]
+        [Fact]
         public void TestActorRef_must_set_ReceiveTimeout_to_None()
         {
             var a = new TestActorRef<WorkerActor>(Sys, Props.Create<WorkerActor>());
-            //TODO: When Context.ReceiveTimeout is implemented: Assert.Equal(((IInternalActor)a.UnderlyingActor).ActorContext.ReceiveTimeout, not sure what value to put here: null or Timeout.InfiniteTimeSpan);
+            ((IInternalActor)a.UnderlyingActor).ActorContext.ReceiveTimeout.ShouldBe(null);
         }
 
         [Fact]

@@ -135,6 +135,11 @@ namespace Akka.Actor
         /// <param name="timeout">The timeout. Pass in <c>null</c> to switch off this feature.</param>
         void SetReceiveTimeout(TimeSpan? timeout);
 
+        /// <summary>
+        /// Gets the inactivity deadline timeout set using <see cref="SetReceiveTimeout"/>.
+        /// </summary>
+        TimeSpan? ReceiveTimeout { get; }
+
         /*
   def self: ActorRef
   def props: Props
