@@ -58,9 +58,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
         {
             if (obj is Internal.Status) return Compress(StatusToProto(obj as Internal.Status));
             else if (obj is Internal.Delta) return Compress(DeltaToProto(obj as Internal.Delta));
-            else if (obj is Distributed.Send) return SendToProto(obj as Distributed.Send).ToByteArray();
-            else if (obj is Distributed.SendToAll) return SendToAllToProto(obj as Distributed.SendToAll).ToByteArray();
-            else if (obj is Distributed.Publish) return PublishToProto(obj as Distributed.Publish).ToByteArray();
+            else if (obj is Send) return SendToProto(obj as Send).ToByteArray();
+            else if (obj is SendToAll) return SendToAllToProto(obj as SendToAll).ToByteArray();
+            else if (obj is Publish) return PublishToProto(obj as Publish).ToByteArray();
             else throw new ArgumentException(string.Format("Can't serialize object of type {0} with {1}", obj.GetType(), GetType()));
         }
 
@@ -79,9 +79,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
         {
             if (o is Internal.Status) return StatusManifest;
             if (o is Internal.Delta) return DeltaManifest;
-            if (o is Distributed.Send) return SendManifest;
-            if (o is Distributed.SendToAll) return SendToAllManifest;
-            if (o is Distributed.Publish) return PublishManifest;
+            if (o is Send) return SendManifest;
+            if (o is SendToAll) return SendToAllManifest;
+            if (o is Publish) return PublishManifest;
 
             throw new ArgumentException(string.Format("Serializer {0} cannot serialize message of type {1}", this.GetType(), o.GetType()));
         }
@@ -197,60 +197,60 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
                     v => v.Timestamp));
         }
 
-        private Send SendToProto(Distributed.Send send)
+        private Akka.Cluster.PubSub.Serializers.Proto.Send SendToProto(Send send)
         {
-            return Send.CreateBuilder()
+            return Akka.Cluster.PubSub.Serializers.Proto.Send.CreateBuilder()
                 .SetPath(send.Path)
                 .SetLocalAffinity(send.LocalAffinity)
                 .SetPayload(PayloadToProto(send.Message))
                 .Build();
         }
 
-        private Distributed.Send SendFromBinary(byte[] binary)
+        private Send SendFromBinary(byte[] binary)
         {
-            return SendFromProto(Send.ParseFrom(binary));
+            return SendFromProto(Akka.Cluster.PubSub.Serializers.Proto.Send.ParseFrom(binary));
         }
 
-        private Distributed.Send SendFromProto(Send send)
+        private Send SendFromProto(Akka.Cluster.PubSub.Serializers.Proto.Send send)
         {
-            return new Distributed.Send(send.Path, PayloadFromProto(send.Payload), send.LocalAffinity);
+            return new Send(send.Path, PayloadFromProto(send.Payload), send.LocalAffinity);
         }
 
-        private SendToAll SendToAllToProto(Distributed.SendToAll sendToAll)
+        private Akka.Cluster.PubSub.Serializers.Proto.SendToAll SendToAllToProto(SendToAll sendToAll)
         {
-            return SendToAll.CreateBuilder()
+            return Akka.Cluster.PubSub.Serializers.Proto.SendToAll.CreateBuilder()
                 .SetPath(sendToAll.Path)
                 .SetAllButSelf(sendToAll.ExcludeSelf)
                 .SetPayload(PayloadToProto(sendToAll.Message))
                 .Build();
         }
 
-        private Distributed.SendToAll SendToAllFromBinary(byte[] binary)
+        private SendToAll SendToAllFromBinary(byte[] binary)
         {
-            return SendToAllFromProto(SendToAll.ParseFrom(binary));
+            return SendToAllFromProto(Akka.Cluster.PubSub.Serializers.Proto.SendToAll.ParseFrom(binary));
         }
 
-        private Distributed.SendToAll SendToAllFromProto(SendToAll send)
+        private SendToAll SendToAllFromProto(Akka.Cluster.PubSub.Serializers.Proto.SendToAll send)
         {
-            return new Distributed.SendToAll(send.Path, PayloadFromProto(send.Payload), send.AllButSelf);
+            return new SendToAll(send.Path, PayloadFromProto(send.Payload), send.AllButSelf);
         }
 
-        private Publish PublishToProto(Distributed.Publish publish)
+        private Akka.Cluster.PubSub.Serializers.Proto.Publish PublishToProto(Publish publish)
         {
-            return Publish.CreateBuilder()
+            return Akka.Cluster.PubSub.Serializers.Proto.Publish.CreateBuilder()
                 .SetTopic(publish.Topic)
                 .SetPayload(PayloadToProto(publish.Message))
                 .Build();
         }
 
-        private Distributed.Publish PublishFromBinary(byte[] binary)
+        private Publish PublishFromBinary(byte[] binary)
         {
-            return PublishFromProto(Publish.ParseFrom(binary));
+            return PublishFromProto(Akka.Cluster.PubSub.Serializers.Proto.Publish.ParseFrom(binary));
         }
 
-        private Distributed.Publish PublishFromProto(Publish publish)
+        private Publish PublishFromProto(Akka.Cluster.PubSub.Serializers.Proto.Publish publish)
         {
-            return new Distributed.Publish(publish.Topic, PayloadFromProto(publish.Payload));
+            return new Publish(publish.Topic, PayloadFromProto(publish.Payload));
         }
 
         private Payload PayloadToProto(object message)

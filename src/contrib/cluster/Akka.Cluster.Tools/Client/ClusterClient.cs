@@ -211,9 +211,9 @@ namespace Akka.Cluster.Tools.Client
                             break;
                     }
                 })
-               .With<Send>(send => Buffer(new Distributed.Send(send.Path, send.Message, send.LocalAffinity)))
-               .With<SendToAll>(send => Buffer(new Distributed.SendToAll(send.Path, send.Message)))
-               .With<Publish>(publish => Buffer(new Distributed.Publish(publish.Topic, publish.Message)))
+               .With<Send>(send => Buffer(new Send(send.Path, send.Message, send.LocalAffinity)))
+               .With<SendToAll>(send => Buffer(new SendToAll(send.Path, send.Message)))
+               .With<Publish>(publish => Buffer(new Publish(publish.Topic, publish.Message)))
                .WasHandled;
         }
 
@@ -222,11 +222,11 @@ namespace Akka.Cluster.Tools.Client
             return message =>
                 message.Match()
                 .With<Send>(send =>
-                    receptionist.Forward(new Distributed.Send(send.Path, send.Message, send.LocalAffinity)))
+                    receptionist.Forward(new Send(send.Path, send.Message, send.LocalAffinity)))
                 .With<SendToAll>(toAll =>
-                    receptionist.Forward(new Distributed.SendToAll(toAll.Path, toAll.Message)))
+                    receptionist.Forward(new SendToAll(toAll.Path, toAll.Message)))
                 .With<Publish>(publish =>
-                    receptionist.Forward(new Distributed.Publish(publish.Topic, publish.Message)))
+                    receptionist.Forward(new Publish(publish.Topic, publish.Message)))
                 .With<InternalMessage>(m =>
                 {
                     switch (m)

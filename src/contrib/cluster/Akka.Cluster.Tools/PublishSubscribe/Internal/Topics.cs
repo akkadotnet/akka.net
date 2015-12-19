@@ -14,7 +14,7 @@ using Akka.Routing;
 
 namespace Akka.Cluster.Tools.PublishSubscribe.Internal
 {
-    public abstract class TopicLike : ActorBase
+    internal abstract class TopicLike : ActorBase
     {
         protected readonly TimeSpan PruneInterval;
         protected readonly ICancelable PruneCancelable;
@@ -39,22 +39,22 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
 
         protected bool DefaultReceive(object message)
         {
-            if (message is Distributed.Subscribe)
+            if (message is Subscribe)
             {
-                var subscribe = (Distributed.Subscribe)message;
+                var subscribe = (Subscribe)message;
 
                 Context.Watch(subscribe.Ref);
                 Subscribers.Add(subscribe.Ref);
                 PruneDeadline = null;
-                Context.Parent.Tell(new Subscribed(new Distributed.SubscribeAck(subscribe), Sender));
+                Context.Parent.Tell(new Subscribed(new SubscribeAck(subscribe), Sender));
             }
-            else if (message is Distributed.Unsubscribe)
+            else if (message is Unsubscribe)
             {
-                var unsubscribe = (Distributed.Unsubscribe)message;
+                var unsubscribe = (Unsubscribe)message;
 
                 Context.Unwatch(unsubscribe.Ref);
                 Remove(unsubscribe.Ref);
-                Context.Parent.Tell(new Unsubscribed(new Distributed.UnsubscribeAck(unsubscribe), Sender));
+                Context.Parent.Tell(new Unsubscribed(new UnsubscribeAck(unsubscribe), Sender));
             }
             else if (message is Terminated)
             {
@@ -92,7 +92,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
     }
 
-    public class Topic : TopicLike
+    internal class Topic : TopicLike
     {
         private readonly RoutingLogic _routingLogic;
 
@@ -103,9 +103,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
 
         protected override bool Business(object message)
         {
-            Distributed.Subscribe subscribe;
-            Distributed.Unsubscribe unsubscribe;
-            if ((subscribe = message as Distributed.Subscribe) != null && subscribe.Group != null)
+            Subscribe subscribe;
+            Unsubscribe unsubscribe;
+            if ((subscribe = message as Subscribe) != null && subscribe.Group != null)
             {
                 var encodedGroup = Encode(subscribe.Group);
                 var child = encodedGroup == null ? ActorRefs.Nobody : Context.Child(encodedGroup);
@@ -124,7 +124,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
 
                 PruneDeadline = null;
             }
-            else if ((unsubscribe = message as Distributed.Unsubscribe) != null && unsubscribe.Group != null)
+            else if ((unsubscribe = message as Unsubscribe) != null && unsubscribe.Group != null)
             {
                 var encodedGroup = Encode(unsubscribe.Group);
                 var child = encodedGroup == null ? ActorRefs.Nobody : Context.Child(encodedGroup);
@@ -152,7 +152,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
     }
 
-    public class Group : TopicLike
+    internal class Group : TopicLike
     {
         private readonly RoutingLogic _routingLogic;
 
@@ -177,7 +177,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
     }
 
-    public static class Utils
+    internal static class Utils
     {
         /// <summary>
         /// <para>

@@ -23,14 +23,14 @@ namespace Akka.Cluster.Sharding
     {
         #region messages
 
-        public interface IShardCommand { }
+        protected interface IShardCommand { }
         public interface IShardQuery { }
 
         /// <summary>
         /// When a <see cref="StateChange"/> fails to write to the journal, we will retry it after a back off.
         /// </summary>
         [Serializable]
-        public class RetryPersistence : IShardCommand
+        internal protected class RetryPersistence : IShardCommand
         {
             public readonly StateChange Payload;
 
@@ -44,7 +44,7 @@ namespace Akka.Cluster.Sharding
         /// The Snapshot tick for the shards.
         /// </summary>
         [Serializable]
-        public sealed class SnapshotTick : IShardCommand
+        internal protected sealed class SnapshotTick : IShardCommand
         {
             public static readonly SnapshotTick Instance = new SnapshotTick();
 
@@ -54,11 +54,11 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// When an remembering entries and the entity stops without issuing a <see cref="Passivate"/>, 
+        /// When an remembering entries and the entity stops without issuing a <see cref="Shard.Passivate"/>, 
         /// we restart it after a back off using this message.
         /// </summary>
         [Serializable]
-        public sealed class RestartEntity : IShardCommand
+        internal protected sealed class RestartEntity : IShardCommand
         {
             public readonly EntityId EntityId;
 
@@ -68,7 +68,7 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        public abstract class StateChange
+        internal protected abstract class StateChange
         {
             public readonly EntityId EntityId;
 
@@ -82,7 +82,7 @@ namespace Akka.Cluster.Sharding
         /// <see cref="ShardState"/> change for starting an entity in this `Shard`
         /// </summary>
         [Serializable]
-        public sealed class EntityStarted : StateChange
+        internal protected sealed class EntityStarted : StateChange
         {
             public EntityStarted(string entityId) : base(entityId)
             {
@@ -93,7 +93,7 @@ namespace Akka.Cluster.Sharding
         /// <see cref="ShardState"/> change for an entity which has terminated.
         /// </summary>
         [Serializable]
-        public sealed class EntityStopped : StateChange
+        internal protected sealed class EntityStopped : StateChange
         {
             public EntityStopped(string entityId) : base(entityId)
             {
@@ -152,7 +152,7 @@ namespace Akka.Cluster.Sharding
         /// Persistent state of the Shard.
         /// </summary>
         [Serializable]
-        public struct ShardState : IClusterShardingSerializable
+        internal protected struct ShardState : IClusterShardingSerializable
         {
             public static readonly ShardState Empty = new ShardState(ImmutableHashSet<string>.Empty);
             public readonly IImmutableSet<EntityId> Entries;
@@ -216,7 +216,7 @@ namespace Akka.Cluster.Sharding
 
         protected virtual void Initialized()
         {
-            Context.Parent.Tell(new ShardRegion.ShardInitialized(ShardId));
+            Context.Parent.Tell(new ShardInitialized(ShardId));
         }
 
         protected virtual void ProcessChange<T>(T evt, Action<T> handler)
@@ -229,7 +229,7 @@ namespace Akka.Cluster.Sharding
             if (message is Terminated) HandleTerminated(((Terminated) message).ActorRef);
             else if (message is PersistentShardCoordinator.ICoordinatorMessage) HandleCoordinatorMessage(message as PersistentShardCoordinator.ICoordinatorMessage);
             else if (message is IShardCommand) HandleShardCommand(message as IShardCommand);
-            else if (message is ShardRegion.IShardRegionCommand) HandleShardRegionCommand(message as ShardRegion.IShardRegionCommand);
+            else if (message is IShardRegionCommand) HandleShardRegionCommand(message as IShardRegionCommand);
             else if (message is IShardQuery) HandleShardRegionQuery(message as IShardQuery);
             else if (ExtractEntityId(message) != null) DeliverMessage(message, Sender);
             else return false;
@@ -259,23 +259,23 @@ namespace Akka.Cluster.Sharding
             Passivating = Passivating.Remove(tref);
         }
 
-        protected void HandleShardCommand(IShardCommand message)
+        private void HandleShardCommand(IShardCommand message)
         {
             var restart = message as RestartEntity;
             if (restart != null)
                 GetEntity(restart.EntityId);
         }
 
-        protected void HandleShardRegionCommand(ShardRegion.IShardRegionCommand message)
+        private void HandleShardRegionCommand(IShardRegionCommand message)
         {
-            var passivate = message as ShardRegion.Passivate;
+            var passivate = message as Passivate;
             if (passivate != null)
                 Passivate(Sender, passivate.StopMessage);
             else
                 Unhandled(message);
         }
 
-        protected void HandleCoordinatorMessage(PersistentShardCoordinator.ICoordinatorMessage message)
+        private void HandleCoordinatorMessage(PersistentShardCoordinator.ICoordinatorMessage message)
         {
             var handOff = message as PersistentShardCoordinator.HandOff;
             if (handOff != null)
@@ -286,7 +286,7 @@ namespace Akka.Cluster.Sharding
             else Unhandled(message);
         }
 
-        protected void HandOff(IActorRef replyTo)
+        private void HandOff(IActorRef replyTo)
         {
             if (HandOffStopper != null) Log.Warning("HandOff shard [{0}] received during existing handOff", ShardId);
             else
@@ -320,7 +320,7 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        protected void HandleTerminated(IActorRef terminatedRef)
+        private void HandleTerminated(IActorRef terminatedRef)
         {
             if (Equals(HandOffStopper, terminatedRef))
                 Context.Stop(Self);
@@ -328,7 +328,7 @@ namespace Akka.Cluster.Sharding
                 EntityTerminated(terminatedRef);
         }
 
-        protected void Passivate(IActorRef entity, object stopMessage)
+        private void Passivate(IActorRef entity, object stopMessage)
         {
             ShardId id;
             if (IdByRef.TryGetValue(entity, out id) && !MessageBuffers.ContainsKey(id))
@@ -376,7 +376,7 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        protected void DeliverMessage(object message, IActorRef sender)
+        private void DeliverMessage(object message, IActorRef sender)
         {
             var t = ExtractEntityId(message);
             var id = t.Item1;

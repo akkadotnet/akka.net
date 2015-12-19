@@ -6,10 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Persistence;
@@ -29,7 +27,7 @@ namespace Akka.Cluster.Sharding
         /// Persistent state of the event sourced PersistentShardCoordinator.
         /// </summary>
         [Serializable]
-        public sealed class State
+        internal protected sealed class State
         {
             public static readonly State Empty = new State();
 
@@ -142,7 +140,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// Factory method for the <see cref="Actor.Props"/> of the <see cref="PersistentShardCoordinator"/> actor.
         /// </summary>
-        public static Props Props(string typeName, ClusterShardingSettings settings, IShardAllocationStrategy allocationStrategy)
+        internal static Props Props(string typeName, ClusterShardingSettings settings, IShardAllocationStrategy allocationStrategy)
         {
             return Actor.Props.Create(() => new PersistentShardCoordinator(typeName, settings, allocationStrategy)).WithDeploy(Deploy.Local);
         }
@@ -223,12 +221,12 @@ namespace Akka.Cluster.Sharding
                 // it will soon be stopped when singleton is stopped
                 Context.Become(ShuttingDown);
             }
-            else if (message is ShardRegion.GetCurrentRegions)
+            else if (message is GetCurrentRegions)
             {
                 var regions = _currentState.Regions.Keys
                     .Select(region => string.IsNullOrEmpty(region.Path.Address.Host) ? Cluster.SelfAddress : region.Path.Address)
                     .ToArray();
-                Sender.Tell(new ShardRegion.CurrentRegions(regions));
+                Sender.Tell(new CurrentRegions(regions));
             }
             else if (message is ClusterEvent.CurrentClusterState)
             {

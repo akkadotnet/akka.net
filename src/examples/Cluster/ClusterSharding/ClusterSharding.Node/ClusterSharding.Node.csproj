@@ -74,6 +74,7 @@
   <ItemGroup>
     <Compile Include="AutomaticJoin\AutomaticCluster.cs" />
     <Compile Include="AutomaticJoin\DBHelper.cs" />
+    <Compile Include="MessageExtractor.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Printer.cs" />

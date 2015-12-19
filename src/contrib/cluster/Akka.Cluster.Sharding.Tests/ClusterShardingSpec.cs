@@ -6,11 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using Akka.Cluster.Sharding;
 using Akka.Configuration;
 using Akka.Persistence;
 using Akka.Remote.TestKit;
@@ -189,7 +187,7 @@ namespace Akka.Cluster.Sharding.Tests
                 .With<Increment>(_ => Persist(new CounterChanged(1), UpdateState))
                 .With<Increment>(_ => Persist(new CounterChanged(-1), UpdateState))
                 .With<Get>(_ => Sender.Tell(_count))
-                .With<ReceiveTimeout>(_ => Context.Parent.Tell(new ShardRegion.Passivate(Stop.Instance)))
+                .With<ReceiveTimeout>(_ => Context.Parent.Tell(new Passivate(Stop.Instance)))
                 .With<Stop>(_ => Context.Stop(Self))
                 .WasHandled;
         }
@@ -383,8 +381,8 @@ namespace Akka.Cluster.Sharding.Tests
                     r.Tell(new Counter.Get(1));
 
                     ExpectMsg(2);
-                    r.Tell(ShardRegion.GetCurrentRegions.Instance);
-                    ExpectMsg<ShardRegion.CurrentRegions>(m => m.Regions.Length == 1 && m.Regions[0].Equals(Cluster.SelfAddress));
+                    r.Tell(GetCurrentRegions.Instance);
+                    ExpectMsg<CurrentRegions>(m => m.Regions.Length == 1 && m.Regions[0].Equals(Cluster.SelfAddress));
                 }, _first);
 
                 EnterBarrier("after-2");
@@ -445,8 +443,8 @@ namespace Akka.Cluster.Sharding.Tests
                     ExpectMsg(3);
                     Assert.Equal(r.Path / "2" / "2", LastSender.Path);
 
-                    r.Tell(ShardRegion.GetCurrentRegions.Instance);
-                    ExpectMsg<ShardRegion.CurrentRegions>(x => x.Regions.Length == 2
+                    r.Tell(GetCurrentRegions.Instance);
+                    ExpectMsg<CurrentRegions>(x => x.Regions.Length == 2
                                                    && x.Regions[0].Equals(Cluster.SelfAddress)
                                                    && x.Regions[1].Equals(Node(_first).Address));
                 }, _second);
@@ -906,7 +904,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                     //Send the shard the passivate message from the counter
                     Watch(counter1);
-                    shard.Tell(new ShardRegion.Passivate(Counter.Stop.Instance), counter1);
+                    shard.Tell(new Passivate(Counter.Stop.Instance), counter1);
 
                     // watch for the Terminated message
                     ExpectTerminated(counter1, TimeSpan.FromSeconds(5));

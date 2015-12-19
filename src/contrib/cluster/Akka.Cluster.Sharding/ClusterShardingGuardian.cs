@@ -15,7 +15,7 @@ namespace Akka.Cluster.Sharding
     /// <summary>
     /// INTERNAL API: <see cref="ShardRegion"/> and <see cref="PersistentShardCoordinator"/> actors are createad as children of this actor.
     /// </summary>
-    public sealed class ClusterShardingGuardian : ReceiveActor
+    internal sealed class ClusterShardingGuardian : ReceiveActor
     {
         #region messages
 
