@@ -121,7 +121,7 @@ namespace Akka.Persistence.Tests
         {
         }
 
-        [Fact(Skip = "FIXME")]
+        [Fact]
         public void AtLeastOnceDelivery_should_not_send_when_actor_crashes()
         {
             var testProbe = CreateTestProbe();
