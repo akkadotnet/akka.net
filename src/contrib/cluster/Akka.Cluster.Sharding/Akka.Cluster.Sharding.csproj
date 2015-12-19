@@ -92,6 +92,7 @@
     <EmbeddedResource Include="reference.conf" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Akka.Cluster.Sharding.nuspec" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup />
