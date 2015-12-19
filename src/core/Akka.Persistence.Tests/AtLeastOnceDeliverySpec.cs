@@ -477,7 +477,7 @@ namespace Akka.Persistence.Tests
             Sys.Stop(sender);
         }
 
-        [Fact(Skip = "FIXME")]
+        [Fact]
         public void AtLeastOnceDelivery_must_redeliver_many_lost_messages()
         {
             var probeA = CreateTestProbe();
@@ -517,13 +517,14 @@ namespace Akka.Persistence.Tests
                 sender.Tell(new Req(x));
             }
             var deliverWithin = TimeSpan.FromSeconds(20);
-            var resA = new SortedSet<string>(probeA.ReceiveN(n, deliverWithin).Cast<Action>().Select(x => x.Payload));
-            var resB = new SortedSet<string>(probeB.ReceiveN(n, deliverWithin).Cast<Action>().Select(x => x.Payload));
-            var resC = new SortedSet<string>(probeC.ReceiveN(n, deliverWithin).Cast<Action>().Select(x => x.Payload));
 
-            resA.ShouldOnlyContainInOrder(a);
-            resB.ShouldOnlyContainInOrder(b);
-            resC.ShouldOnlyContainInOrder(c);
+            var resAarr = probeA.ReceiveN(n, deliverWithin).Cast<Action>().Select(x => x.Payload).ToArray();
+            var resBarr = probeB.ReceiveN(n, deliverWithin).Cast<Action>().Select(x => x.Payload).ToArray();
+            var resCarr = probeC.ReceiveN(n, deliverWithin).Cast<Action>().Select(x => x.Payload).ToArray();
+
+            resAarr.Except(a).Any().ShouldBeFalse();
+            resBarr.Except(b).Any().ShouldBeFalse();
+            resCarr.Except(c).Any().ShouldBeFalse();
         }
     }
 }
