@@ -108,7 +108,7 @@ namespace Akka.Persistence.Tests
             _viewProbe.ExpectMsg("replicated-b-2");
         }
 
-        [Fact(Skip = "FIXME")]
+        [Fact]
         public void PersistentView_should_run_updates_again_on_failure_during_an_update_cycle()
         {
             _pref.Tell("c");
