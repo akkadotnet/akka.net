@@ -261,6 +261,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Tests.Performance", "c
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Remote.Tests.Performance", "core\Akka.Remote.Tests.Performance\Akka.Remote.Tests.Performance.csproj", "{453DD4B1-64B8-4B50-BFDA-3489E32D30D8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Logger.CommonLogging", "contrib\loggers\Akka.Logger.CommonLogging\Akka.Logger.CommonLogging.csproj", "{C84A7909-72A7-4164-B348-8D3E9D16F5A4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug Mono|Any CPU = Debug Mono|Any CPU
@@ -970,6 +972,14 @@ Global
 		{337A85B5-4A7C-4883-8634-46E7E52A765F}.Release Mono|Any CPU.Build.0 = Release|Any CPU
 		{337A85B5-4A7C-4883-8634-46E7E52A765F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{337A85B5-4A7C-4883-8634-46E7E52A765F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C84A7909-72A7-4164-B348-8D3E9D16F5A4}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
+		{C84A7909-72A7-4164-B348-8D3E9D16F5A4}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
+		{C84A7909-72A7-4164-B348-8D3E9D16F5A4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C84A7909-72A7-4164-B348-8D3E9D16F5A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C84A7909-72A7-4164-B348-8D3E9D16F5A4}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
+		{C84A7909-72A7-4164-B348-8D3E9D16F5A4}.Release Mono|Any CPU.Build.0 = Release|Any CPU
+		{C84A7909-72A7-4164-B348-8D3E9D16F5A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C84A7909-72A7-4164-B348-8D3E9D16F5A4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1087,5 +1097,6 @@ Global
 		{88D7D845-2F50-4D37-9026-B0A8353D0E8D} = {B1DDEC01-8525-4C38-B820-7C44F5A2930B}
 		{ED00E6F4-2B5C-4F16-ADE4-45E4A73C17B8} = {B1DDEC01-8525-4C38-B820-7C44F5A2930B}
 		{337A85B5-4A7C-4883-8634-46E7E52A765F} = {B1DDEC01-8525-4C38-B820-7C44F5A2930B}
+		{C84A7909-72A7-4164-B348-8D3E9D16F5A4} = {FFEC736B-EDA3-433C-8564-7C14676601A1}
 	EndGlobalSection
 EndGlobal
