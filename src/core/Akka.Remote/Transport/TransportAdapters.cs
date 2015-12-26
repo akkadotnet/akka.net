@@ -66,10 +66,15 @@ namespace Akka.Remote.Transport
             {
                 try
                 {
-                    var adapterTypeName = Type.GetType(adapter.Value);
+                    var adapterTypeName = Type.GetType(adapter.Value, true);
                     // ReSharper disable once AssignNullToNotNullAttribute
                     var newAdapter = (ITransportAdapterProvider)Activator.CreateInstance(adapterTypeName);
                     _adaptersTable.Add(adapter.Key, newAdapter);
+                }
+                catch (TypeLoadException ex)
+                {
+                    var msgException = string.Format("Could not find type '{0}'", adapter.Value);
+                    throw new TypeLoadException(msgException, ex);
                 }
                 catch (Exception ex)
                 {

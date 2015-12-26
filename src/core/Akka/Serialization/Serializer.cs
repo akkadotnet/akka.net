@@ -121,7 +121,17 @@ namespace Akka.Serialization
         {
             var config = system.Settings.Config.GetConfig(SerializationIdentifiers);
             var identifiers = config.AsEnumerable()
-                .ToDictionary(pair => Type.GetType(pair.Key, true), pair => pair.Value.GetInt());
+                .ToDictionary(pair => {
+                    try
+                    {
+                        return Type.GetType(pair.Key, true);
+                    }
+                    catch (TypeLoadException ex)
+                    {
+                        var msgException = string.Format("Could not find type '{0}'", pair.Key);
+                        throw new TypeLoadException(msgException, ex);
+                    }
+                }, pair => pair.Value.GetInt());
 
             int value;
             if (identifiers.TryGetValue(type, out value))

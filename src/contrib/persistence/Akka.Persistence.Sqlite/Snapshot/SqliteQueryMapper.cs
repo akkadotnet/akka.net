@@ -34,13 +34,21 @@ namespace Akka.Persistence.Sqlite.Snapshot
 
         private object GetSnapshot(DbDataReader reader)
         {
-            var type = Type.GetType(reader.GetString(3), true);
-            var serializer = _serialization.FindSerializerForType(type);
-            var binary = (byte[])reader[4];
+            try
+            {
+                var type = Type.GetType(reader.GetString(3), true);
+                var serializer = _serialization.FindSerializerForType(type);
+                var binary = (byte[])reader[4];
 
-            var obj = serializer.FromBinary(binary, type);
+                var obj = serializer.FromBinary(binary, type);
 
-            return obj;
+                return obj;
+            }
+            catch (TypeLoadException ex)
+            {
+                var msgException = string.Format("Could not find type '{0}'", reader.GetString(3));
+                throw new TypeLoadException(msgException, ex);
+            }
         }
     }
 }

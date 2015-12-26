@@ -100,11 +100,20 @@ namespace Akka.Actor
 
             var path = string.Format("akka.actor.router.type-mapping.{0}", routerTypeAlias);
             var routerTypeName = _settings.Config.GetString(path);
-            var routerType = Type.GetType(routerTypeName);
-            Debug.Assert(routerType != null, "routerType != null");
-            var routerConfig = (RouterConfig)Activator.CreateInstance(routerType, deployment);
 
-            return routerConfig;
+            try
+            {
+                var routerType = Type.GetType(routerTypeName, true);
+                Debug.Assert(routerType != null, "routerType != null");
+                var routerConfig = (RouterConfig)Activator.CreateInstance(routerType, deployment);
+
+                return routerConfig;
+            }
+            catch (TypeLoadException ex)
+            {
+                var msgException = string.Format("Could not find type '{0}'", routerTypeName);
+                throw new TypeLoadException(msgException, ex);
+            }
         }
     }
 }

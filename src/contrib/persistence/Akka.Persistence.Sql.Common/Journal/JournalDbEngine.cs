@@ -277,9 +277,17 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private ITimestampProvider CreateTimestampProvider()
         {
-            var type = Type.GetType(Settings.TimestampProvider, true);
-            var instance = Activator.CreateInstance(type);
-            return (ITimestampProvider) instance;
+            try
+            {
+                var type = Type.GetType(Settings.TimestampProvider, true);
+                var instance = Activator.CreateInstance(type);
+                return (ITimestampProvider)instance;
+            }
+            catch (TypeLoadException ex)
+            {
+                var msgException = string.Format("Could not find type '{0}'", Settings.TimestampProvider);
+                throw new TypeLoadException(msgException, ex);
+            }
         }
 
         private async Task InsertInTransactionAsync(DbCommand sqlCommand, IEnumerable<JournalEntry> journalEntries)

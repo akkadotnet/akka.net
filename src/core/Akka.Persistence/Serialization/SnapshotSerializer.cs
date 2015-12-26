@@ -87,11 +87,19 @@ namespace Akka.Persistence.Serialization
 
             var header = ParseSnapshotHeader(headerBytes);
 
-            var snapshotType = header.Manifest != null
-                ? Type.GetType(header.Manifest)
-                : null;
+            try
+            {
+                var snapshotType = header.Manifest != null
+                    ? Type.GetType(header.Manifest, true)
+                    : null;
+                return system.Serialization.Deserialize(snapshotBytes, header.SerializerId, snapshotType);
+            }
+            catch (TypeLoadException ex)
+            {
+                var msgException = string.Format("Could not find type '{0}'", header.Manifest);
+                throw new TypeLoadException(msgException, ex);
+            }
 
-            return system.Serialization.Deserialize(snapshotBytes, header.SerializerId, snapshotType);
         }
 
         private SnapshotHeader ParseSnapshotHeader(ArraySegment<byte> headerBytes)

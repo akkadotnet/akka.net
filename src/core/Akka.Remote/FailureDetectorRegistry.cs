@@ -65,13 +65,16 @@ namespace Akka.Remote
         /// <returns>A configured instance of the given <see cref="FailureDetector"/> implementation.</returns>
         public static FailureDetector Load(string fqcn, Config config, ActorSystem system)
         {
-            var failureDetectorClass = Type.GetType(fqcn);
-            if (failureDetectorClass == null)
+            try
+            {
+                var failureDetectorClass = Type.GetType(fqcn, true);
+                var failureDetector = (FailureDetector)Activator.CreateInstance(failureDetectorClass, config, system.EventStream);
+                return failureDetector;
+            }
+            catch (TypeLoadException)
             {
                 throw new ConfigurationException(string.Format("Could not create custom FailureDetector {0}", fqcn));
             }
-            var failureDetector = (FailureDetector) Activator.CreateInstance(failureDetectorClass, config, system.EventStream);
-            return failureDetector;
         }
 
         /// <summary>

@@ -132,8 +132,16 @@ namespace Akka.Actor.Internal
 
         private void ConfigureScheduler()
         {
-            var schedulerType = Type.GetType(_settings.SchedulerClass, true);
-            _scheduler = (IScheduler) Activator.CreateInstance(schedulerType, this);
+            try
+            {
+                var schedulerType = Type.GetType(_settings.SchedulerClass, true);
+                _scheduler = (IScheduler)Activator.CreateInstance(schedulerType, this);
+            }
+            catch (TypeLoadException ex)
+            {
+                var msgException = string.Format("Could not find type '{0}'", _settings.SchedulerClass);
+                throw new TypeLoadException(msgException, ex);
+            }
         }
 
         /// <summary>
@@ -268,10 +276,18 @@ namespace Akka.Actor.Internal
         /// </summary>
         private void ConfigureProvider()
         {
-            Type providerType = Type.GetType(_settings.ProviderClass);
-            global::System.Diagnostics.Debug.Assert(providerType != null, "providerType != null");
-            var provider = (IActorRefProvider)Activator.CreateInstance(providerType, _name, _settings, _eventStream);
-            _provider = provider;
+            try
+            {
+                Type providerType = Type.GetType(_settings.ProviderClass, true);
+                global::System.Diagnostics.Debug.Assert(providerType != null, "providerType != null");
+                var provider = (IActorRefProvider)Activator.CreateInstance(providerType, _name, _settings, _eventStream);
+                _provider = provider;
+            }
+            catch (TypeLoadException ex)
+            {
+                var msgException = string.Format("Could not find type '{0}'", _settings.ProviderClass);
+                throw new TypeLoadException(msgException, ex);
+            }
         }
 
         /// <summary>

@@ -87,8 +87,17 @@ namespace Akka.Dispatch
             {
                 var config = _requirementsMapping[interfaces.First()];
                 var mailbox = config.GetString("mailbox-type");
-                var mailboxType = Type.GetType(mailbox);
-                return mailboxType;
+
+                try
+                {
+                    var mailboxType = Type.GetType(mailbox, true);
+                    return mailboxType;
+                }
+                catch (TypeLoadException ex)
+                {
+                    var msgException = string.Format("Could not find type '{0}'", mailbox);
+                    throw new TypeLoadException(msgException, ex);
+                }
             }
 
 
@@ -111,8 +120,16 @@ namespace Akka.Dispatch
             var config = _system.Settings.Config.GetConfig(path);
             var type = config.GetString("mailbox-type");
 
-            var mailboxType = Type.GetType(type);
-            return mailboxType;
+            try
+            {
+                var mailboxType = Type.GetType(type, true);
+                return mailboxType;
+            }
+            catch (TypeLoadException ex)
+            {
+                var msgException = string.Format("Could not find type '{0}'", type);
+                throw new TypeLoadException(msgException, ex);
+            }
             /*
 mailbox-capacity = 1000
 mailbox-push-timeout-time = 10s

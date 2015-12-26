@@ -25,12 +25,20 @@ namespace Akka.Remote
         /// <returns>System.Object.</returns>
         public static object Deserialize(ActorSystem system, SerializedMessage messageProtocol)
         {
-            Type type = messageProtocol.HasMessageManifest
-                ? Type.GetType(messageProtocol.MessageManifest.ToStringUtf8())
-                : null;
-            var message = system.Serialization.Deserialize(messageProtocol.Message.ToByteArray(),
-                messageProtocol.SerializerId, type);
-            return message;
+            try
+            {
+                Type type = messageProtocol.HasMessageManifest
+                    ? Type.GetType(messageProtocol.MessageManifest.ToStringUtf8(), true)
+                    : null;
+                var message = system.Serialization.Deserialize(messageProtocol.Message.ToByteArray(),
+                    messageProtocol.SerializerId, type);
+                return message;
+            }
+            catch (TypeLoadException)
+            {
+                var msgException = string.Format("Could not find type '{0}'", messageProtocol.MessageManifest.ToStringUtf8());
+                throw;
+            }
         }
 
         /// <summary>
