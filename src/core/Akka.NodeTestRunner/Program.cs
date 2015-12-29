@@ -7,7 +7,12 @@
 
 using System;
 using System.IO;
+using System.Net;
+using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.IO;
 using Akka.Remote.TestKit;
 using Xunit;
 
@@ -22,6 +27,12 @@ namespace Akka.NodeTestRunner
             var typeName = CommandLine.GetProperty("multinode.test-class");
             var testName = CommandLine.GetProperty("multinode.test-method");
             var displayName = testName;
+
+            var system = ActorSystem.Create("NoteTestRunner-" + nodeIndex);
+            var tcpClient = system.ActorOf<RunnerTcpClient>();
+            system.Tcp().Tell(new Tcp.Connect(new DnsEndPoint("localhost", 5678)), tcpClient);
+            var tcpOut = new TcpConsole(tcpClient);
+            Console.SetOut(tcpOut);
 
             Thread.Sleep(TimeSpan.FromSeconds(10));
 
@@ -58,6 +69,9 @@ namespace Akka.NodeTestRunner
                                 specFail.FailureStackTraces.Add(innerEx.StackTrace);
                             }
                             Console.WriteLine(specFail);
+
+                            //make sure message is send over the wire
+                            Task.Delay(TimeSpan.FromSeconds(10)).Wait();
                             Environment.Exit(1); //signal failure
                         }
                         catch (Exception ex)
@@ -67,14 +81,79 @@ namespace Akka.NodeTestRunner
                             specFail.FailureMessages.Add(ex.Message);
                             specFail.FailureStackTraces.Add(ex.StackTrace);
                             Console.WriteLine(specFail);
+
+                            //make sure message is send over the wire
+                            Task.Delay(TimeSpan.FromSeconds(10)).Wait();
                             Environment.Exit(1); //signal failure
                         }
                         sink.Finished.WaitOne();
+
+                        //make sure alls messages are send over the wire
+                        Task.Delay(TimeSpan.FromSeconds(10)).Wait();
+                        system.Shutdown();
+                        system.AwaitTermination();
+
                         Environment.Exit(sink.Passed ? 0 : 1);
                     }
                 }
             }
         }
     }
+
+    class TcpConsole : TextWriter
+     {
+         private readonly IActorRef _tcpClient;
+ 
+         public TcpConsole(IActorRef tcpClient)
+         {
+             _tcpClient = tcpClient;
+             Encoding = Encoding.UTF8;
+         }
+ 
+         public override void Write(string value)
+         {
+             _tcpClient.Tell(value);
+         }
+ 
+         public override void WriteLine(string value)
+         {
+             _tcpClient.Tell(value);
+         }
+ 
+         public override Encoding Encoding { get; }
+     }
+ 
+     class RunnerTcpClient : ReceiveActor, IWithUnboundedStash
+     {
+         public RunnerTcpClient()
+         {
+             Become(WaitingForConnection);
+         }
+ 
+         private void WaitingForConnection()
+         {
+             Receive<Tcp.Connected>(connected =>
+             {
+                 Sender.Tell(new Tcp.Register(Self));
+                 Become(Connected(Sender));
+             });
+             Receive<string>(_ => Stash.Stash());
+         }
+ 
+         private Receive Connected(IActorRef connection)
+         {
+             Stash.UnstashAll();
+ 
+             return message =>
+             {
+                 var bytes = ByteString.FromString(message.ToString());
+                 connection.Tell(Tcp.Write.Create(bytes));
+ 
+                 return true;
+             };
+         }
+ 
+         public IStash Stash { get; set; }
+     }
 }
 
