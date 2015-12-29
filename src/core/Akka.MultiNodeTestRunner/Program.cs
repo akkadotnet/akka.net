@@ -11,8 +11,11 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Reflection;
 using System.Threading;
 using Akka.Actor;
+using Akka.IO;
 using Akka.MultiNodeTestRunner.Shared;
 using Akka.MultiNodeTestRunner.Shared.Persistence;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
@@ -70,6 +73,9 @@ namespace Akka.MultiNodeTestRunner
         {
             TestRunSystem = ActorSystem.Create("TestRunnerLogging");
             SinkCoordinator = TestRunSystem.ActorOf(Props.Create<SinkCoordinator>(), "sinkCoordinator");
+
+            var tcpLogger = TestRunSystem.ActorOf<TcpLoggingServer>();
+            TestRunSystem.Tcp().Tell(new Tcp.Bind(tcpLogger, new IPEndPoint(IPAddress.Any, 5678)));
 
             var assemblyName = Path.GetFullPath(args[0]);
             EnableAllSinks(assemblyName);
@@ -223,6 +229,30 @@ namespace Akka.MultiNodeTestRunner
         static void PublishToAllSinks(string message)
         {
             SinkCoordinator.Tell(message, ActorRefs.NoSender);
+        }
+    }
+
+    class TcpLoggingServer : ReceiveActor
+    {
+        public TcpLoggingServer()
+        {
+            var currentDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+            var logFilePath = Path.Combine(currentDirectory, "TcpLog.txt");
+
+            Receive<Tcp.Connected>(connected =>
+            {
+                File.AppendAllText(logFilePath, $"Node connected on {Sender}{Environment.NewLine}");
+                Sender.Tell(new Tcp.Register(Self));
+            });
+
+            Receive<Tcp.ConnectionClosed>(
+                closed => File.AppendAllText(logFilePath, $"Node disconnected on {Sender}{Environment.NewLine}"));
+
+            Receive<Tcp.Received>(received =>
+            {
+                var message = received.Data.DecodeString();
+                File.AppendAllText(logFilePath, message + Environment.NewLine);
+            });
         }
     }
 }
