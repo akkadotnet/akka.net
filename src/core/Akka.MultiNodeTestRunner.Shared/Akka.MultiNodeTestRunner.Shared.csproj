@@ -60,6 +60,7 @@
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Sinks\ConsoleMessageSinkActor.cs" />
+    <Compile Include="Sinks\FileSystemAppenderActor.cs" />
     <Compile Include="Sinks\FileSystemMessageSinkActor.cs" />
     <Compile Include="Sinks\IMessageSink.cs" />
     <Compile Include="Reporting\MultiNodeMessage.cs" />

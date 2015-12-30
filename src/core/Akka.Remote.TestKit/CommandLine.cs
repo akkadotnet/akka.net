@@ -43,9 +43,19 @@ namespace Akka.Remote.TestKit
             return Values.Value[key];
         }
 
+        public static string GetPropertyOrDefault(string key, string defaultStr)
+        {
+            return Values.Value.ContainsKey(key) ? Values.Value[key] : defaultStr;
+        }
+
         public static int GetInt32(string key)
         {
             return Convert.ToInt32(GetProperty(key));
+        }
+
+        public static int GetInt32OrDefault(string key, int defaultInt)
+        {
+            return Values.Value.ContainsKey(key) ? GetInt32(key) : defaultInt;
         }
     }
 }

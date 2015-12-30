@@ -20,7 +20,14 @@ namespace Akka.NodeTestRunner
 {
     class Program
     {
-        static void Main(string[] args)
+        /// <summary>
+        /// If it takes longer than this value for the <see cref="Sink"/> to get back to us
+        /// about a particular test passing or failing, throw loudly.
+        /// </summary>
+        private static readonly TimeSpan MaxProcessWaitTimeout = TimeSpan.FromMinutes(1.5);
+        private static IActorRef _logger;
+
+        static int Main(string[] args)
         {
             var nodeIndex = CommandLine.GetInt32("multinode.index");
             var assemblyFileName = CommandLine.GetProperty("multinode.test-assembly");
@@ -28,11 +35,13 @@ namespace Akka.NodeTestRunner
             var testName = CommandLine.GetProperty("multinode.test-method");
             var displayName = testName;
 
+            var listenAddress = IPAddress.Parse(CommandLine.GetProperty("multinode.listen-address"));
+            var listenPort = CommandLine.GetInt32("multinode.listen-port");
+            var listenEndpoint = new IPEndPoint(listenAddress, listenPort);
+
             var system = ActorSystem.Create("NoteTestRunner-" + nodeIndex);
-            var tcpClient = system.ActorOf<RunnerTcpClient>();
-            system.Tcp().Tell(new Tcp.Connect(new DnsEndPoint("localhost", 5678)), tcpClient);
-            var tcpOut = new TcpConsole(tcpClient);
-            Console.SetOut(tcpOut);
+            var tcpClient = _logger = system.ActorOf<RunnerTcpClient>();
+            system.Tcp().Tell(new Tcp.Connect(listenEndpoint), tcpClient);
 
             Thread.Sleep(TimeSpan.FromSeconds(10));
 
@@ -47,7 +56,7 @@ namespace Akka.NodeTestRunner
                 Console.WriteLine("Running specs for {0} [{1}]", assemblyName, assemblyFileName);
                 using (var discovery = new Discovery(assemblyName, typeName))
                 {
-                    using (var sink = new Sink(nodeIndex))
+                    using (var sink = new Sink(nodeIndex, tcpClient))
                     {
                         Thread.Sleep(10000);
                         try
@@ -68,11 +77,13 @@ namespace Akka.NodeTestRunner
                                 specFail.FailureMessages.Add(innerEx.Message);
                                 specFail.FailureStackTraces.Add(innerEx.StackTrace);
                             }
+                            _logger.Tell(specFail.ToString());
                             Console.WriteLine(specFail);
 
                             //make sure message is send over the wire
-                            Task.Delay(TimeSpan.FromSeconds(10)).Wait();
+                            FlushLogMessages();
                             Environment.Exit(1); //signal failure
+                            return 1;
                         }
                         catch (Exception ex)
                         {
@@ -80,49 +91,49 @@ namespace Akka.NodeTestRunner
                             specFail.FailureExceptionTypes.Add(ex.GetType().ToString());
                             specFail.FailureMessages.Add(ex.Message);
                             specFail.FailureStackTraces.Add(ex.StackTrace);
+                            _logger.Tell(specFail.ToString());
                             Console.WriteLine(specFail);
 
                             //make sure message is send over the wire
-                            Task.Delay(TimeSpan.FromSeconds(10)).Wait();
+                            FlushLogMessages();
                             Environment.Exit(1); //signal failure
+                            return 1;
                         }
-                        sink.Finished.WaitOne();
 
-                        //make sure alls messages are send over the wire
-                        Task.Delay(TimeSpan.FromSeconds(10)).Wait();
+                        var timedOut = false;
+                        if (!sink.Finished.WaitOne(MaxProcessWaitTimeout)) //timed out
+                        {
+                            var line = string.Format("Timed out while waiting for test to complete after {0} ms",
+                                MaxProcessWaitTimeout);
+                            _logger.Tell(line);
+                            Console.WriteLine(line);
+                            timedOut = true;
+                        }
+
+                        FlushLogMessages();
                         system.Shutdown();
                         system.AwaitTermination();
 
-                        Environment.Exit(sink.Passed ? 0 : 1);
+                        Environment.Exit(sink.Passed && !timedOut ? 0 : 1);
+                        return sink.Passed ? 0 : 1;
                     }
                 }
             }
         }
+
+        private static void FlushLogMessages()
+        {
+            try
+            {
+                _logger.GracefulStop(TimeSpan.FromSeconds(2)).Wait();
+            }
+            catch
+            {
+                Console.WriteLine("Exception thrown while waiting for TCP transport to flush - not all messages may have been logged.");
+            }
+        }
     }
 
-    class TcpConsole : TextWriter
-     {
-         private readonly IActorRef _tcpClient;
- 
-         public TcpConsole(IActorRef tcpClient)
-         {
-             _tcpClient = tcpClient;
-             Encoding = Encoding.UTF8;
-         }
- 
-         public override void Write(string value)
-         {
-             _tcpClient.Tell(value);
-         }
- 
-         public override void WriteLine(string value)
-         {
-             _tcpClient.Tell(value);
-         }
- 
-         public override Encoding Encoding { get; }
-     }
- 
      class RunnerTcpClient : ReceiveActor, IWithUnboundedStash
      {
          public RunnerTcpClient()
