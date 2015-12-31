@@ -41,6 +41,7 @@
   <ItemGroup>
     <Compile Include="Actor\ActorMemoryFootprintSpec.cs" />
     <Compile Include="Actor\ActorPathSpec.cs" />
+    <Compile Include="Actor\ActorSelectionSpecs.cs" />
     <Compile Include="Actor\AddressSpec.cs" />
     <Compile Include="Actor\MinimalActorRefThroughputSpec.cs" />
     <Compile Include="Actor\ReceiveActorThroughputSpec.cs" />
