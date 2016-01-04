@@ -3,10 +3,10 @@
 namespace Akka.Streams.Dsl
 {
 
-    /**
-     * Convenience functions for often-encountered purposes like keeping only the
-     * left (first) or only the right (second) of two input values.
-     */
+    /// <summary>
+    /// Convenience functions for often-encountered purposes like keeping only the
+    /// left (first) or only the right (second) of two input values.
+    /// </summary> 
     public static class Keep
     {
         public static TResult Left<TLeft, TRight, TResult>(TLeft left, TRight right) where TLeft : TResult

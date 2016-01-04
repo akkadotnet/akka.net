@@ -536,7 +536,7 @@ namespace Akka.Streams.Dsl
             void LinkFrom(Outlet<T> outlet);
         }
 
-        public class PortOps<TOut, TMat> : FlowOps<TOut, TMat>, ICombiner<TOut>
+        public class PortOps<TOut, TMat> : FlowBase<TOut, TMat>, ICombiner<TOut>
         {
 
         }

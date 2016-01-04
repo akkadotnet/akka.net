@@ -7,13 +7,13 @@ using Akka.Streams.Implementation.Stages;
 
 namespace Akka.Streams.Dsl
 {
-    /**
-     * A `Source` is a set of stream processing steps that has one open output. It can comprise
-     * any number of internal sources and transformations that are wired together, or it can be
-     * an “atomic” source, e.g. from a collection or a file. Materialization turns a Source into
-     * a Reactive Streams `Publisher` (at least conceptually).
-     */
-    public sealed class Source<TOut, TMat> : FlowOps<TOut, TMat>, IGraph<SourceShape<TOut>, TMat>
+    /// <summary>
+    /// A <see cref="Source{TOut,TMat}"/> is a set of stream processing steps that has one open output. It can comprise
+    /// any number of internal sources and transformations that are wired together, or it can be
+    /// an “atomic” source, e.g. from a collection or a file. Materialization turns a Source into
+    /// a Reactive Streams <see cref="IPublisher{T}"/> (at least conceptually).
+    /// </summary>
+    public sealed class Source<TOut, TMat> : IFlow<TOut, TMat>, IGraph<SourceShape<TOut>, TMat>
     {
         private readonly IModule _module;
 
@@ -95,6 +95,21 @@ namespace Akka.Streams.Dsl
         {
             throw new NotImplementedException();
         }
+
+        public Source<T2, TMat> Via<T2, TMat2>(IGraph<FlowShape<TOut, T2>, TMat2> flow)
+        {
+            throw new NotImplementedException();
+        }
+
+        IFlow<T2, TMat> IFlow<TOut,TMat>.Via<T2, TMat2>(IGraph<FlowShape<TOut, T2>, TMat2> flow)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IFlow<T2, TMat3> ViaMaterialized<T2, TMat2, TMat3>(IGraph<FlowShape<TOut, T2>, TMat2> flow, Func<TMat, TMat2, TMat3> combine)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public static class Source
@@ -135,6 +150,11 @@ namespace Akka.Streams.Dsl
         }
 
         public static Source<T, TMat> Empty<T, TMat>()
+        {
+            throw new NotImplementedException();
+        }
+
+        public static Source<T, ISubscriber<T>> AsSubscriber<T>()
         {
             throw new NotImplementedException();
         }

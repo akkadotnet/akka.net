@@ -220,5 +220,15 @@ namespace Akka.Streams.Dsl
             if(bufferSize < 0) throw new ArgumentException("Buffer size must be greater than or equal 0");
             return new Sink<TIn, ISinkQueue<TIn>>(new AcknowledgeSink<TIn>(bufferSize, timeout ?? TimeSpan.FromSeconds(5), DefaultAttributes.AcknowledgeSink, Shape<TIn>("AcknowledgeSink")));
         }
+
+        public static Sink<TIn, TMat> FromGraph<TIn, TMat>(IGraph<SinkShape<TIn>, TMat> graph)
+        {
+            throw new NotImplementedException();
+        }
+
+        public static Sink<T, IPublisher<T>>  AsPublisher<T>(bool fanout)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

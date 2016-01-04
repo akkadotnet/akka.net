@@ -9,7 +9,7 @@ namespace Akka.Streams.Dsl
     /// SubFlows cannot contribute to the super-flow’s materialized value since they
     /// are materialized later, during the runtime of the flow graph processing.
     /// </summary>
-    public abstract class SubFlow<TOut, TMat, TFun, TClosed> : FlowOps<TOut, TMat>
+    public abstract class SubFlow<TOut, TMat, TFun, TClosed> : FlowBase<TOut, TMat>
     {
         /// <summary>
         /// Attach a <see cref="Sink"/> to each sub-flow, closing the overall Graph that is being
