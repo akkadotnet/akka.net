@@ -6,31 +6,6 @@ namespace ClusterSharding.Node
 {
     public class Printer : ReceiveActor
     {
-        #region Message extractor
-
-        public sealed class MessageExtractor : IMessageExtractor
-        {
-            public string EntityId(object message)
-            {
-                var env = message as Env;
-                return env != null ? env.EntityId.ToString() : null;
-            }
-
-            public object EntityMessage(object message)
-            {
-                var env = message as Env;
-                return env != null ? env.Message : null;
-            }
-
-            public string ShardId(object message)
-            {
-                var env = message as Env;
-                return env != null ? env.ShardId.ToString() : null;
-            }
-        }
-
-        #endregion
-
         #region Messages
         
         public sealed class Env

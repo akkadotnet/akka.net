@@ -75,12 +75,12 @@ namespace Akka.Cluster.Tools.Client
 
         /// <summary>
         /// Register an actor that should be reachable for the clients. The clients can send messages to this actor with
-        /// <see cref="Distributed.Send"/> or <see cref="Distributed.SendToAll"/> using the path elements 
+        /// <see cref="Send"/> or <see cref="SendToAll"/> using the path elements 
         /// of the <see cref="IActorRef"/>, e.g. "/user/myservice".
         /// </summary>
         public void RegisterService(IActorRef actorRef)
         {
-            PubSubMediator.Tell(new Distributed.Put(actorRef));
+            PubSubMediator.Tell(new Put(actorRef));
         }
 
         /// <summary>
@@ -89,18 +89,18 @@ namespace Akka.Cluster.Tools.Client
         /// </summary>
         public void UnregisterService(IActorRef actorRef)
         {
-            PubSubMediator.Tell(new Distributed.Remove(actorRef.Path.ToStringWithoutAddress()));
+            PubSubMediator.Tell(new Remove(actorRef.Path.ToStringWithoutAddress()));
         }
 
         /// <summary>
         /// Register an actor that should be reachable for the clients to a named topic.
         /// Several actors can be registered to the same topic name, and all will receive
         /// published messages.
-        /// The client can publish messages to this topic with <see cref="Distributed.Publish"/>.
+        /// The client can publish messages to this topic with <see cref="Publish"/>.
         /// </summary>
         public void RegisterSubscriber(string topic, IActorRef actorRef)
         {
-            PubSubMediator.Tell(new Distributed.Subscribe(topic, actorRef));
+            PubSubMediator.Tell(new Subscribe(topic, actorRef));
         }
 
         /// <summary>
@@ -109,7 +109,7 @@ namespace Akka.Cluster.Tools.Client
         /// </summary>
         public void UnregisterSubscriber(string topic, IActorRef actorRef)
         {
-            PubSubMediator.Tell(new Distributed.Unsubscribe(topic, actorRef));
+            PubSubMediator.Tell(new Unsubscribe(topic, actorRef));
         }
 
         private IActorRef CreateReceptionist(Config config)

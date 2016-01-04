@@ -14,7 +14,6 @@ using Akka.Configuration;
 using Akka.Persistence.Journal;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
-using Xunit;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -276,7 +275,7 @@ namespace Akka.Cluster.Sharding.Tests
                     region.Tell(new Add("11", 1));
 
                     //Test the Shard passivate works during a journal failure
-                    shard2.Tell(new ShardRegion.Passivate(PoisonPill.Instance), entity21);
+                    shard2.Tell(new Passivate(PoisonPill.Instance), entity21);
                     region.Tell(new Add("21", 1));
 
                     region.Tell(new Get("21"));

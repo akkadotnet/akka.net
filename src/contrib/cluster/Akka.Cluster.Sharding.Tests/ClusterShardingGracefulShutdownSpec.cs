@@ -84,7 +84,7 @@ namespace Akka.Cluster.Sharding.Tests
                 if (message.Equals("leave"))
                 {
                     Context.Watch(_region);
-                    _region.Tell(ShardRegion.GracefulShutdown.Instance);
+                    _region.Tell(GracefulShutdown.Instance);
                 }
                 else if ((terminated = message as Terminated) != null && terminated.ActorRef.Equals(_region))
                 {
@@ -214,7 +214,7 @@ namespace Akka.Cluster.Sharding.Tests
 
             RunOn(() =>
             {
-                _region.Value.Tell(ShardRegion.GracefulShutdown.Instance);
+                _region.Value.Tell(GracefulShutdown.Instance);
             }, _second);
 
             RunOn(() =>

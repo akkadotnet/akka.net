@@ -14,21 +14,21 @@ using Akka.Routing;
 namespace Akka.Cluster.Tools.PublishSubscribe.Internal
 {
     [Serializable]
-    public sealed class Prune
+    internal sealed class Prune
     {
         public static readonly Prune Instance = new Prune();
         private Prune() { }
     }
 
     // Only for testing purposes, to poll/await replication
-    public sealed class Count
+    internal sealed class Count
     {
         public static readonly Count Instance = new Count();
         private Count() { }
     }
 
     [Serializable]
-    public struct Bucket
+    internal struct Bucket
     {
         public readonly Address Owner;
         public readonly long Version;
@@ -47,7 +47,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     [Serializable]
-    public sealed class ValueHolder
+    internal sealed class ValueHolder
     {
         public readonly long Version;
         public readonly IActorRef Ref;
@@ -65,7 +65,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     [Serializable]
-    public sealed class Status : IDistributedPubSubMessage
+    internal sealed class Status : IDistributedPubSubMessage
     {
         public readonly IDictionary<Address, long> Versions;
 
@@ -76,7 +76,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     [Serializable]
-    public sealed class Delta : IDistributedPubSubMessage
+    internal sealed class Delta : IDistributedPubSubMessage
     {
         public readonly Bucket[] Buckets;
 
@@ -87,7 +87,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     [Serializable]
-    public sealed class GossipTick
+    internal sealed class GossipTick
     {
         public static readonly GossipTick Instance = new GossipTick();
 
@@ -95,7 +95,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     [Serializable]
-    public sealed class RegisterTopic
+    internal sealed class RegisterTopic
     {
         public readonly IActorRef TopicRef;
 
@@ -106,12 +106,12 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     [Serializable]
-    public sealed class Subscribed
+    internal sealed class Subscribed
     {
-        public readonly Distributed.SubscribeAck Ack;
+        public readonly SubscribeAck Ack;
         public readonly IActorRef Subscriber;
 
-        public Subscribed(Distributed.SubscribeAck ack, IActorRef subscriber)
+        public Subscribed(SubscribeAck ack, IActorRef subscriber)
         {
             Ack = ack;
             Subscriber = subscriber;
@@ -119,12 +119,12 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     [Serializable]
-    public sealed class Unsubscribed
+    internal sealed class Unsubscribed
     {
-        public readonly Distributed.UnsubscribeAck Ack;
+        public readonly UnsubscribeAck Ack;
         public readonly IActorRef Subscriber;
 
-        public Unsubscribed(Distributed.UnsubscribeAck ack, IActorRef subscriber)
+        public Unsubscribed(UnsubscribeAck ack, IActorRef subscriber)
         {
             Ack = ack;
             Subscriber = subscriber;
@@ -132,7 +132,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     [Serializable]
-    public sealed class SendToOneSubscriber
+    internal sealed class SendToOneSubscriber
     {
         public readonly object Message;
 
@@ -143,7 +143,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     [Serializable]
-    public sealed class MediatorRouterEnvelope : RouterEnvelope
+    internal sealed class MediatorRouterEnvelope : RouterEnvelope
     {
         public MediatorRouterEnvelope(object message) : base(message) { }
     }

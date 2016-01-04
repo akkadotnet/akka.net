@@ -43,7 +43,7 @@ namespace ClusterToolsExample.Seed
             var mediator = DistributedPubSub.Get(system).Mediator;
 
             system.Scheduler.ScheduleTellRepeatedly(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5), mediator,
-                new Distributed.Publish("echo", new Echo("hello world")), ActorRefs.NoSender);
+                new Publish("echo", new Echo("hello world")), ActorRefs.NoSender);
         }
 
         /// <summary>

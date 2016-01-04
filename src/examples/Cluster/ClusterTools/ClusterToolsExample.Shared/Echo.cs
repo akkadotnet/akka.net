@@ -25,19 +25,19 @@ namespace ClusterToolsExample.Shared
         public EchoReceiver()
         {
             Receive<Echo>(echo => Console.WriteLine(echo.Message));
-            Receive<Distributed.SubscribeAck>(ack =>
+            Receive<SubscribeAck>(ack =>
                 Console.WriteLine("Actor [{0}] has subscribed to topic [{1}]", ack.Subscribe.Ref, ack.Subscribe.Topic));
         }
 
         protected override void PreStart()
         {
             base.PreStart();
-            Mediator.Tell(new Distributed.Subscribe(Topic, Self));
+            Mediator.Tell(new Subscribe(Topic, Self));
         }
 
         protected override void PostStop()
         {
-            Mediator.Tell(new Distributed.Unsubscribe(Topic, Self));
+            Mediator.Tell(new Unsubscribe(Topic, Self));
             base.PostStop();
         }
     }

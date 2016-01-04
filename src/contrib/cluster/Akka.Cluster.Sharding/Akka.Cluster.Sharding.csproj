@@ -59,9 +59,11 @@
     <Compile Include="PersistentShardCoordinator.cs" />
     <Compile Include="PersistentShardCoordinator.Messages.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Serialization\ClusterShardingMessageSerializer.cs" />
     <Compile Include="Serialization\Proto\ClusterShardingMessages.cs" />
     <Compile Include="Shard.cs" />
     <Compile Include="ShardAllocationStrategy.cs" />
+    <Compile Include="ShardingMessages.cs" />
     <Compile Include="ShardRegion.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -90,8 +92,10 @@
     <EmbeddedResource Include="reference.conf" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Akka.Cluster.Sharding.nuspec" />
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

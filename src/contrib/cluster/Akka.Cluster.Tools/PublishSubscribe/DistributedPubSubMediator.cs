@@ -43,7 +43,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// any other node. There is three modes of message delivery.
     /// </para>
     /// <para>
-    /// 1. <see cref="Distributed.Send"/> -
+    /// 1. <see cref="Send"/> -
     /// The message will be delivered to one recipient with a matching path, if any such
     /// exists in the registry. If several entries match the path the message will be sent
     /// via the supplied `routingLogic` (default random) to one destination. The sender of the
@@ -55,7 +55,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// can register themselves.
     /// </para>
     /// <para>
-    /// 2. <see cref="Distributed.SendToAll"/> -
+    /// 2. <see cref="SendToAll"/> -
     /// The message will be delivered to all recipients with a matching path. Actors with
     /// the same path, without address information, can be registered on different nodes.
     /// On each node there can only be one such actor, since the path is unique within one
@@ -64,7 +64,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// for redundancy.
     /// </para>
     /// <para>
-    /// 3. <see cref="Distributed.Publish"/> -
+    /// 3. <see cref="Publish"/> -
     /// Actors may be registered to a named topic instead of path. This enables many subscribers
     /// on each node. The message will be delivered to all subscribers of the topic. For
     /// efficiency the message is sent over the wire only once per node (that has a matching topic),
@@ -73,28 +73,28 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// application.
     /// </para>
     /// <para>
-    /// 4. <see cref="Distributed.Publish"/> with sendOneMessageToEachGroup -
+    /// 4. <see cref="Publish"/> with sendOneMessageToEachGroup -
     /// Actors may be subscribed to a named topic with an optional property `group`.
     /// If subscribing with a group name, each message published to a topic with the
     /// `sendOneMessageToEachGroup` flag is delivered via the supplied `routingLogic`
     /// (default random) to one actor within each subscribing group.
     /// If all the subscribed actors have the same group name, then this works just like
-    /// <see cref="Distributed.Send"/> and all messages are delivered to one subscribe.
+    /// <see cref="Send"/> and all messages are delivered to one subscribe.
     /// If all the subscribed actors have different group names, then this works like normal
-    /// <see cref="Distributed.Publish"/> and all messages are broadcast to all subscribers.
+    /// <see cref="Publish"/> and all messages are broadcast to all subscribers.
     /// </para>
     /// <para>
-    /// You register actors to the local mediator with <see cref="Distributed.Put"/> or
-    /// <see cref="Distributed.Subscribe"/>. `Put` is used together with `Send` and
+    /// You register actors to the local mediator with <see cref="Put"/> or
+    /// <see cref="Subscribe"/>. `Put` is used together with `Send` and
     /// `SendToAll` message delivery modes. The `ActorRef` in `Put` must belong to the same
     /// local actor system as the mediator. `Subscribe` is used together with `Publish`.
     /// Actors are automatically removed from the registry when they are terminated, or you
-    /// can explicitly remove entries with <see cref="Distributed.Remove"/> or
-    /// <see cref="Distributed.Unsubscribe"/>.
+    /// can explicitly remove entries with <see cref="Remove"/> or
+    /// <see cref="Unsubscribe"/>.
     /// </para>
     /// <para>
     /// Successful `Subscribe` and `Unsubscribe` is acknowledged with
-    /// <see cref="Distributed.SubscribeAck"/> and <see cref="Distributed.UnsubscribeAck"/>
+    /// <see cref="SubscribeAck"/> and <see cref="UnsubscribeAck"/>
     /// replies.
     /// </para>
     /// </summary>
@@ -142,7 +142,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             _pruneInterval = new TimeSpan(_settings.RemovedTimeToLive.Ticks / 2);
             _pruneCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_pruneInterval, _pruneInterval, Self, Prune.Instance, Self);
 
-            Receive<Distributed.Send>(send =>
+            Receive<Send>(send =>
             {
                 var routees = new List<Routee>();
 
@@ -173,11 +173,11 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     new Router(_settings.RoutingLogic, routees.ToArray()).Route(Utils.WrapIfNeeded(send.Message), Sender);
                 }
             });
-            Receive<Distributed.SendToAll>(sendToAll =>
+            Receive<SendToAll>(sendToAll =>
             {
                 PublishMessage(sendToAll.Path, sendToAll.Message, sendToAll.ExcludeSelf);
             });
-            Receive<Distributed.Publish>(publish =>
+            Receive<Publish>(publish =>
             {
                 var topic = Uri.EscapeDataString(publish.Topic);
                 var path = Self.Path / topic;
@@ -186,7 +186,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 else
                     PublishMessage(path.ToStringWithoutAddress(), publish.Message);
             });
-            Receive<Distributed.Put>(put =>
+            Receive<Put>(put =>
             {
                 if (!string.IsNullOrEmpty(put.Ref.Path.Address.Host))
                     Log.Warning("Registered actor must be local: [{0}]", put.Ref);
@@ -196,7 +196,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     Context.Watch(put.Ref);
                 }
             });
-            Receive<Distributed.Remove>(remove =>
+            Receive<Remove>(remove =>
             {
                 Bucket bucket;
                 if (_registry.TryGetValue(_cluster.SelfAddress, out bucket))
@@ -209,7 +209,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     }
                 }
             });
-            Receive<Distributed.Subscribe>(subscribe =>
+            Receive<Subscribe>(subscribe =>
             {
                 // each topic is managed by a child actor with the same name as the topic
                 var topic = Uri.EscapeDataString(subscribe.Topic);
@@ -230,15 +230,15 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             {
                 HandleRegisterTopic(register.TopicRef);
             });
-            Receive<Distributed.GetTopics>(getTopics =>
+            Receive<GetTopics>(getTopics =>
             {
-                Sender.Tell(new Distributed.CurrentTopics(GetCurrentTopics().ToArray()));
+                Sender.Tell(new CurrentTopics(GetCurrentTopics().ToArray()));
             });
             Receive<Subscribed>(subscribed =>
             {
                 subscribed.Subscriber.Tell(subscribed.Ack);
             });
-            Receive<Distributed.Unsubscribe>(unsubscribe =>
+            Receive<Unsubscribe>(unsubscribe =>
             {
                 var topic = Uri.EscapeDataString(unsubscribe.Topic);
                 var child = Context.Child(topic);

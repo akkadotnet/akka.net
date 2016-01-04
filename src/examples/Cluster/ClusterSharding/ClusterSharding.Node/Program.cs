@@ -41,10 +41,10 @@ namespace ClusterSharding.Node
                 typeName: "printer",
                 entityProps: Props.Create<Printer>(),
                 settings: ClusterShardingSettings.Create(system),
-                messageExtractor: new Printer.MessageExtractor());
+                messageExtractor: new MessageExtractor());
 
             Thread.Sleep(5000);
-            Console.Write("Press ENTER to start...");
+            Console.Write("Press ENTER to start producing messages...");
             Console.ReadLine();
 
             ProduceMessages(system, shardRegion);

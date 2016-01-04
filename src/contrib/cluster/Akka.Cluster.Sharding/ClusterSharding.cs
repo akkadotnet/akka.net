@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -68,12 +69,12 @@ namespace Akka.Cluster.Sharding
     /// several nodes in the cluster and you want to be able to interact with them using their
     /// logical identifier, but without having to care about their physical location in the cluster,
     /// which might also change over time. It could for example be actors representing Aggregate Roots in
-    /// Domain-Driven Design terminology. Here we call these actors "entries". These actors
+    /// Domain-Driven Design terminology. Here we call these actors "entities". These actors
     /// typically have persistent (durable) state, but this feature is not limited to
     /// actors with persistent state.
     /// </para>
     /// <para>
-    /// In this context sharding means that actors with an identifier, so called entries,
+    /// In this context sharding means that actors with an identifier, so called entities,
     /// can be automatically distributed across multiple nodes in the cluster. Each entity
     /// actor runs only at one place, and messages can be sent to the entity without requiring
     /// the sender to know the location of the destination actor. This is achieved by sending
@@ -84,7 +85,7 @@ namespace Akka.Cluster.Sharding
     /// This extension is supposed to be used by first, typically at system startup on each node
     /// in the cluster, registering the supported entity types with the <see cref="ClusterShardingGuardian.Start"/>
     /// method and then the <see cref="Sharding.ShardRegion"/> actor for a named entity type can be retrieved with
-    /// <see cref="ClusterSharding.ShardRegion"/>. Messages to the entries are always sent via the local
+    /// <see cref="ClusterSharding.ShardRegion"/>. Messages to the entities are always sent via the local
     /// <see cref="Sharding.ShardRegion"/>. Some settings can be configured as described in the `akka.contrib.cluster.sharding`
     /// section of the `reference.conf`.
     /// </para>
@@ -92,7 +93,7 @@ namespace Akka.Cluster.Sharding
     /// The <see cref="Sharding.ShardRegion"/> actor is started on each node in the cluster, or group of nodes
     /// tagged with a specific role. The <see cref="Sharding.ShardRegion"/> is created with two application specific
     /// functions to extract the entity identifier and the shard identifier from incoming messages.
-    /// A shard is a group of entries that will be managed together. For the first message in a
+    /// A shard is a group of entities that will be managed together. For the first message in a
     /// specific shard the <see cref="Sharding.ShardRegion"/> request the location of the shard from a central coordinator,
     /// the <see cref="PersistentShardCoordinator"/>. The <see cref="PersistentShardCoordinator"/> decides which <see cref="Sharding.ShardRegion"/> that
     /// owns the shard. The <see cref="Sharding.ShardRegion"/> receives the decided home of the shard
@@ -120,18 +121,18 @@ namespace Akka.Cluster.Sharding
     /// </para>
     /// <para>
     /// To be able to use newly added members in the cluster the coordinator facilitates rebalancing
-    /// of shards, i.e. migrate entries from one node to another. In the rebalance process the
+    /// of shards, i.e. migrate entities from one node to another. In the rebalance process the
     /// coordinator first notifies all <see cref="Sharding.ShardRegion"/> actors that a handoff for a shard has started.
     /// That means they will start buffering incoming messages for that shard, in the same way as if the
     /// shard location is unknown. During the rebalance process the coordinator will not answer any
     /// requests for the location of shards that are being rebalanced, i.e. local buffering will
     /// continue until the handoff is completed. The <see cref="Sharding.ShardRegion"/> responsible for the rebalanced shard
-    /// will stop all entries in that shard by sending `PoisonPill` to them. When all entries have
-    /// been terminated the <see cref="Sharding.ShardRegion"/> owning the entries will acknowledge the handoff as completed
+    /// will stop all entities in that shard by sending `PoisonPill` to them. When all entities have
+    /// been terminated the <see cref="Sharding.ShardRegion"/> owning the entities will acknowledge the handoff as completed
     /// to the coordinator. Thereafter the coordinator will reply to requests for the location of
     /// the shard and thereby allocate a new home for the shard and then buffered messages in the
-    /// <see cref="Sharding.ShardRegion"/> actors are delivered to the new location. This means that the state of the entries
-    /// are not transferred or migrated. If the state of the entries are of importance it should be
+    /// <see cref="Sharding.ShardRegion"/> actors are delivered to the new location. This means that the state of the entities
+    /// are not transferred or migrated. If the state of the entities are of importance it should be
     /// persistent (durable), e.g. with `Akka.Persistence`, so that it can be recovered at the new
     /// location.
     /// </para>
@@ -166,13 +167,13 @@ namespace Akka.Cluster.Sharding
     /// shard resolution, e.g. to avoid too fine grained shards.
     /// <para>
     /// The <see cref="Sharding.ShardRegion"/> actor can also be started in proxy only mode, i.e. it will not
-    /// host any entries itself, but knows how to delegate messages to the right location.
+    /// host any entities itself, but knows how to delegate messages to the right location.
     /// A <see cref="Sharding.ShardRegion"/> starts in proxy only mode if the roles of the node does not include
     /// the node role specified in `akka.contrib.cluster.sharding.role` config property
     /// or if the specified `EntityProps` is `null`.
     /// </para>
     /// <para>
-    /// If the state of the entries are persistent you may stop entries that are not used to
+    /// If the state of the entities are persistent you may stop entities that are not used to
     /// reduce memory consumption. This is done by the application specific implementation of
     /// the entity actors for example by defining receive timeout (<see cref="IActorContext.SetReceiveTimeout"/>).
     /// If a message is already enqueued to the entity when it stops itself the enqueued message
@@ -281,6 +282,50 @@ namespace Akka.Cluster.Sharding
         /// <param name="shardResolver">
         /// Function to determine the shard id for an incoming message, only messages that passed the `extractEntityId` will be used
         /// </param>
+        /// <param name="allocationStrategy">Possibility to use a custom shard allocation and rebalancing logic</param>
+        /// <param name="handOffStopMessage">
+        /// The message that will be sent to entities when they are to be stopped for a rebalance or 
+        /// graceful shutdown of a <see cref="Sharding.ShardRegion"/>, e.g. <see cref="PoisonPill"/>.
+        /// </param>
+        /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        public async Task<IActorRef> StartAsync(
+            string typeName, //TODO: change type name to type instance?
+            Props entityProps,
+            ClusterShardingSettings settings,
+            IdExtractor idExtractor,
+            ShardResolver shardResolver,
+            IShardAllocationStrategy allocationStrategy,
+            object handOffStopMessage)
+        {
+            RequireClusterRole(settings.Role);
+
+            var timeout = _system.Settings.CreationTimeout;
+            var startMsg = new ClusterShardingGuardian.Start(typeName, entityProps, settings, idExtractor, shardResolver, allocationStrategy, handOffStopMessage);
+
+            var started = await _guardian.Value.Ask<ClusterShardingGuardian.Started>(startMsg, timeout);
+            var shardRegion = started.ShardRegion;
+            _regions.TryAdd(typeName, shardRegion);
+            return shardRegion;
+        }
+
+        /// <summary>
+        /// Register a named entity type by defining the <see cref="Actor.Props"/> of the entity actor and 
+        /// functions to extract entity and shard identifier from messages. The <see cref="Sharding.ShardRegion"/> 
+        /// actor for this type can later be retrieved with the <see cref="ShardRegion"/> method.
+        /// </summary>
+        /// <param name="typeName">The name of the entity type</param>
+        /// <param name="entityProps">
+        /// The <see cref="Actor.Props"/> of the entity actors that will be created by the <see cref="Sharding.ShardRegion"/> 
+        /// </param>
+        /// <param name="settings">Configuration settings, see <see cref="ClusterShardingSettings"/></param>
+        /// <param name="idExtractor">
+        /// Partial function to extract the entity id and the message to send to the entity from the incoming message, 
+        /// if the partial function does not match the message will be `unhandled`, 
+        /// i.e.posted as `Unhandled` messages on the event stream
+        /// </param>
+        /// <param name="shardResolver">
+        /// Function to determine the shard id for an incoming message, only messages that passed the `extractEntityId` will be used
+        /// </param>
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
         public IActorRef Start(
             string typeName, //TODO: change type name to type instance?
@@ -293,6 +338,38 @@ namespace Akka.Cluster.Sharding
                 Settings.TunningParameters.LeastShardAllocationRebalanceThreshold,
                 Settings.TunningParameters.LeastShardAllocationMaxSimultaneousRebalance);
             return Start(typeName, entityProps, settings, idExtractor, shardResolver, allocationStrategy, PoisonPill.Instance);
+        }
+
+        /// <summary>
+        /// Register a named entity type by defining the <see cref="Actor.Props"/> of the entity actor and 
+        /// functions to extract entity and shard identifier from messages. The <see cref="Sharding.ShardRegion"/> 
+        /// actor for this type can later be retrieved with the <see cref="ShardRegion"/> method.
+        /// </summary>
+        /// <param name="typeName">The name of the entity type</param>
+        /// <param name="entityProps">
+        /// The <see cref="Actor.Props"/> of the entity actors that will be created by the <see cref="Sharding.ShardRegion"/> 
+        /// </param>
+        /// <param name="settings">Configuration settings, see <see cref="ClusterShardingSettings"/></param>
+        /// <param name="idExtractor">
+        /// Partial function to extract the entity id and the message to send to the entity from the incoming message, 
+        /// if the partial function does not match the message will be `unhandled`, 
+        /// i.e.posted as `Unhandled` messages on the event stream
+        /// </param>
+        /// <param name="shardResolver">
+        /// Function to determine the shard id for an incoming message, only messages that passed the `extractEntityId` will be used
+        /// </param>
+        /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        public Task<IActorRef> StartAsync(
+            string typeName, //TODO: change type name to type instance?
+            Props entityProps,
+            ClusterShardingSettings settings,
+            IdExtractor idExtractor,
+            ShardResolver shardResolver)
+        {
+            var allocationStrategy = new LeastShardAllocationStrategy(
+                Settings.TunningParameters.LeastShardAllocationRebalanceThreshold,
+                Settings.TunningParameters.LeastShardAllocationMaxSimultaneousRebalance);
+            return StartAsync(typeName, entityProps, settings, idExtractor, shardResolver, allocationStrategy, PoisonPill.Instance);
         }
 
         /// <summary>
@@ -336,11 +413,66 @@ namespace Akka.Cluster.Sharding
         /// <param name="messageExtractor">
         /// Functions to extract the entity id, shard id, and the message to send to the entity from the incoming message.
         /// </param>
+        /// <param name="allocationStrategy">Possibility to use a custom shard allocation and rebalancing logic</param>
+        /// <param name="handOffMessage">
+        /// The message that will be sent to entities when they are to be stopped for a rebalance or 
+        /// graceful shutdown of a <see cref="Sharding.ShardRegion"/>, e.g. <see cref="PoisonPill"/>.
+        /// </param>
+        /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        public Task<IActorRef> StartAsync(string typeName, Props entityProps, ClusterShardingSettings settings,
+            IMessageExtractor messageExtractor, IShardAllocationStrategy allocationStrategy, object handOffMessage)
+        {
+            IdExtractor idExtractor = messageExtractor.ToIdExtractor();
+            ShardResolver shardResolver = messageExtractor.ShardId;
+
+            return StartAsync(typeName, entityProps, settings, idExtractor, shardResolver, allocationStrategy, handOffMessage);
+        }
+
+        /// <summary>
+        /// Register a named entity type by defining the <see cref="Actor.Props"/> of the entity actor and 
+        /// functions to extract entity and shard identifier from messages. The <see cref="Sharding.ShardRegion"/> 
+        /// actor for this type can later be retrieved with the <see cref="ShardRegion"/> method.
+        /// </summary>
+        /// <param name="typeName">The name of the entity type</param>
+        /// <param name="entityProps">
+        /// The <see cref="Actor.Props"/> of the entity actors that will be created by the <see cref="Sharding.ShardRegion"/> 
+        /// </param>
+        /// <param name="settings">Configuration settings, see <see cref="ClusterShardingSettings"/></param>
+        /// <param name="messageExtractor">
+        /// Functions to extract the entity id, shard id, and the message to send to the entity from the incoming message.
+        /// </param>
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
         public IActorRef Start(string typeName, Props entityProps, ClusterShardingSettings settings,
             IMessageExtractor messageExtractor)
         {
             return Start(typeName,
+                entityProps,
+                settings,
+                messageExtractor,
+                new LeastShardAllocationStrategy(
+                    Settings.TunningParameters.LeastShardAllocationRebalanceThreshold,
+                    Settings.TunningParameters.LeastShardAllocationMaxSimultaneousRebalance),
+                PoisonPill.Instance);
+        }
+
+        /// <summary>
+        /// Register a named entity type by defining the <see cref="Actor.Props"/> of the entity actor and 
+        /// functions to extract entity and shard identifier from messages. The <see cref="Sharding.ShardRegion"/> 
+        /// actor for this type can later be retrieved with the <see cref="ShardRegion"/> method.
+        /// </summary>
+        /// <param name="typeName">The name of the entity type</param>
+        /// <param name="entityProps">
+        /// The <see cref="Actor.Props"/> of the entity actors that will be created by the <see cref="Sharding.ShardRegion"/> 
+        /// </param>
+        /// <param name="settings">Configuration settings, see <see cref="ClusterShardingSettings"/></param>
+        /// <param name="messageExtractor">
+        /// Functions to extract the entity id, shard id, and the message to send to the entity from the incoming message.
+        /// </param>
+        /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        public Task<IActorRef> StartAsync(string typeName, Props entityProps, ClusterShardingSettings settings,
+            IMessageExtractor messageExtractor)
+        {
+            return StartAsync(typeName,
                 entityProps,
                 settings,
                 messageExtractor,
@@ -391,6 +523,36 @@ namespace Akka.Cluster.Sharding
         /// Specifies that this entity type is located on cluster nodes with a specific role. 
         /// If the role is not specified all nodes in the cluster are used.
         /// </param>
+        /// <param name="idExtractor">
+        /// Partial function to extract the entity id and the message to send to the  entity from the incoming message, 
+        /// if the partial function does not match the message will  be `unhandled`, i.e.posted as `Unhandled` messages 
+        /// on the event stream
+        /// </param>
+        /// <param name="shardResolver">
+        /// Function to determine the shard id for an incoming message, only messages that passed the `extractEntityId` will be used
+        /// </param>
+        /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        public async Task<IActorRef> StartProxyAsync(string typeName, string role, IdExtractor idExtractor, ShardResolver shardResolver)
+        {
+            var timeout = _system.Settings.CreationTimeout;
+            var settings = ClusterShardingSettings.Create(_system).WithRole(role);
+            var startMsg = new ClusterShardingGuardian.StartProxy(typeName, settings, idExtractor, shardResolver);
+            var started = await _guardian.Value.Ask<ClusterShardingGuardian.Started>(startMsg, timeout);
+            _regions.TryAdd(typeName, started.ShardRegion);
+            return started.ShardRegion;
+        }
+
+        /// <summary>
+        /// Register a named entity type `ShardRegion` on this node that will run in proxy only mode, i.e.it will 
+        /// delegate messages to other `ShardRegion` actors on other nodes, but not host any entity actors itself.
+        /// The <see cref="Sharding.ShardRegion"/>  actor for this type can later be retrieved with the 
+        /// <see cref="ShardRegion"/>  method.
+        /// </summary>
+        /// <param name="typeName">The name of the entity type.</param>
+        /// <param name="role">
+        /// Specifies that this entity type is located on cluster nodes with a specific role. 
+        /// If the role is not specified all nodes in the cluster are used.
+        /// </param>
         /// <param name="messageExtractor">
         /// Functions to extract the entity id, shard id, and the message to send to the entity from the incoming message.
         /// </param>
@@ -405,6 +567,33 @@ namespace Akka.Cluster.Sharding
             };
 
             return StartProxy(typeName, role, extractEntityId, messageExtractor.ShardId);
+        }
+
+        /// <summary>
+        /// Register a named entity type `ShardRegion` on this node that will run in proxy only mode, i.e.it will 
+        /// delegate messages to other `ShardRegion` actors on other nodes, but not host any entity actors itself.
+        /// The <see cref="Sharding.ShardRegion"/>  actor for this type can later be retrieved with the 
+        /// <see cref="ShardRegion"/>  method.
+        /// </summary>
+        /// <param name="typeName">The name of the entity type.</param>
+        /// <param name="role">
+        /// Specifies that this entity type is located on cluster nodes with a specific role. 
+        /// If the role is not specified all nodes in the cluster are used.
+        /// </param>
+        /// <param name="messageExtractor">
+        /// Functions to extract the entity id, shard id, and the message to send to the entity from the incoming message.
+        /// </param>
+        /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        public Task<IActorRef> StartProxyAsync(string typeName, string role, IMessageExtractor messageExtractor)
+        {
+            IdExtractor extractEntityId = msg =>
+            {
+                var entityId = messageExtractor.EntityId(msg);
+                var entityMessage = messageExtractor.EntityMessage(msg);
+                return Tuple.Create(entityId, entityMessage);
+            };
+
+            return StartProxyAsync(typeName, role, extractEntityId, messageExtractor.ShardId);
         }
 
         /// <summary>
@@ -484,7 +673,7 @@ namespace Akka.Cluster.Sharding
         string ShardId(object message);
     }
 
-    public static class Extensions
+    internal static class Extensions
     {
         public static IdExtractor ToIdExtractor(this IMessageExtractor self)
         {
@@ -533,7 +722,7 @@ namespace Akka.Cluster.Sharding
     /// <see cref="PersistentShardCoordinator"/>. If the process takes longer than the `handOffTimeout` it 
     /// also sends <see cref="RebalanceDone"/>.
     /// </summary>
-    public class RebalanceWorker : ActorBase
+    internal class RebalanceWorker : ActorBase
     {
         public static Props Props(string shard, IActorRef @from, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions)
         {
@@ -595,7 +784,7 @@ namespace Akka.Cluster.Sharding
     /// Check if we've received a shard start request.
     /// </summary>
     [Serializable]
-    public sealed class ResendShardHost
+    internal sealed class ResendShardHost
     {
         public readonly ShardId Shard;
         public readonly IActorRef Region;
@@ -608,7 +797,7 @@ namespace Akka.Cluster.Sharding
     }
 
     [Serializable]
-    public sealed class DelayedShardRegionTerminated
+    internal sealed class DelayedShardRegionTerminated
     {
         public readonly IActorRef Region;
 

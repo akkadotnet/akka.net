@@ -198,6 +198,8 @@ Target "CopyOutput" <| fun _ ->
       "contrib/testkits/Akka.TestKit.NUnit" 
       "contrib/testkits/Akka.TestKit.Xunit2" 
       "contrib/serializers/Akka.Serialization.Wire" 
+      "contrib/cluster/Akka.Cluster.Tools"
+      "contrib/cluster/Akka.Cluster.Sharding"
       ]
     |> List.iter copyOutput
 

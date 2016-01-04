@@ -21,18 +21,16 @@ namespace Akka.Cluster.Tools.Client
 
     /// <summary>
     /// <para>
-    /// <see cref="ClusterClient"/> connects to this actor to retrieve. The `ClusterReceptionist` is
+    /// <see cref="ClusterClient"/> connects to this actor to retrieve. The <see cref="ClusterReceptionist"/> is
     /// supposed to be started on all nodes, or all nodes with specified role, in the cluster.
-    /// The receptionist can be started with the <see cref="ClusterClientReceptionist"/> or as an
+    /// The receptionist can be started with the <see cref="ClusterClientReceptionist.Get"/> or as an
     /// ordinary actor (use the factory method <see cref="ClusterReceptionist.Props"/>).
     /// </para>
     /// <para>
     /// The receptionist forwards messages from the client to the associated <see cref="DistributedPubSubMediator"/>,
     /// i.e. the client can send messages to any actor in the cluster that is registered in the
-    /// `DistributedPubSubMediator`. Messages from the client are wrapped in
-    /// <see cref="Distributed.Send"/>, <see cref="Distributed.SendToAll"/>
-    /// or <see cref="Distributed.Publish"/> with the semantics described in
-    /// <see cref="Distributed"/>.
+    /// <see cref="DistributedPubSubMediator"/>. Messages from the client are wrapped in <see cref="Send"/>, <see cref="SendToAll"/>
+    /// or <see cref="Publish"/> with the semantics described in distributed publish/subscribe.
     /// </para>
     /// <para>
     /// Response messages from the destination actor are tunneled via the receptionist
@@ -48,14 +46,14 @@ namespace Akka.Cluster.Tools.Client
         #region Messages
 
         [Serializable]
-        public sealed class GetContacts : IClusterClientMessage
+        internal sealed class GetContacts : IClusterClientMessage
         {
             public static readonly GetContacts Instance = new GetContacts();
             private GetContacts() { }
         }
 
         [Serializable]
-        public sealed class Contacts : IClusterClientMessage
+        internal sealed class Contacts : IClusterClientMessage
         {
             public readonly string[] ContactPoints;
 
@@ -66,21 +64,21 @@ namespace Akka.Cluster.Tools.Client
         }
 
         [Serializable]
-        public sealed class Heartbeat : IClusterClientMessage
+        internal sealed class Heartbeat : IClusterClientMessage
         {
             public static readonly Heartbeat Instance = new Heartbeat();
             private Heartbeat() { }
         }
 
         [Serializable]
-        public sealed class HeartbeatRsp : IClusterClientMessage
+        internal sealed class HeartbeatRsp : IClusterClientMessage
         {
             public static readonly HeartbeatRsp Instance = new HeartbeatRsp();
             private HeartbeatRsp() { }
         }
 
         [Serializable]
-        public sealed class Ping
+        internal sealed class Ping
         {
             public static readonly Ping Instance = new Ping();
             private Ping() { }
@@ -145,7 +143,7 @@ namespace Akka.Cluster.Tools.Client
 
         protected override bool Receive(object message)
         {
-            if (message is Distributed.Send || message is Distributed.SendToAll || message is Distributed.Publish)
+            if (message is Send || message is SendToAll || message is Publish)
             {
                 var tunnel = ResponseTunnel(Sender);
                 tunnel.Tell(Ping.Instance);
