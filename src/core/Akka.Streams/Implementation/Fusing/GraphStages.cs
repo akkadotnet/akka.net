@@ -191,7 +191,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly Outlet<T> Outlet;
 
-        public TickSource()
+        public TickSource(TimeSpan initialDelay, TimeSpan interval, T tick)
         {
             Outlet = new Outlet<T>("TimerSource.out");
             InitialAttributes = Attributes.CreateName("TickSource");

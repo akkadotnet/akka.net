@@ -18,10 +18,9 @@ namespace Akka.Streams.Dsl
         internal Flow(IModule module)
         {
             Module = module;
-            Shape = (FlowShape<TIn, TOut>)module.Shape;
         }
 
-        public FlowShape<TIn, TOut> Shape { get; }
+        public FlowShape<TIn, TOut> Shape { get { return (FlowShape<TIn, TOut>)Module.Shape; } }
         public IModule Module { get; }
 
         private bool IsIdentity { get { return Module == Identity<TIn>.Instance.Module; } }
@@ -76,7 +75,7 @@ namespace Akka.Streams.Dsl
             }
         }
 
-        IFlow<TOut2, TMat3> IFlow<TOut,TMat>.ViaMaterialized<TOut2, TMat2, TMat3>(IGraph<FlowShape<TOut, TOut2>, TMat2> flow, Func<TMat, TMat2, TMat3> combine)
+        IFlow<TOut2, TMat3> IFlow<TOut, TMat>.ViaMaterialized<TOut2, TMat2, TMat3>(IGraph<FlowShape<TOut, TOut2>, TMat2> flow, Func<TMat, TMat2, TMat3> combine)
         {
             return ViaMaterialized(flow, combine);
         }
@@ -187,7 +186,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Flow<TIn, TOut, TMat> FromProcessorMaterialized<TIn, TOut, TMat>(Func<Tuple<IProcessor<TIn, TOut>, TMat>> factory)
         {
-            throw new NotImplementedException();   
+            throw new NotImplementedException();
         }
 
         /// <summary>
@@ -242,5 +241,30 @@ namespace Akka.Streams.Dsl
         {
             _publisher.Subscribe(subscriber);
         }
+    }
+
+    /// <summary>
+    /// Operations offered by Sources and Flows with a free output side: the DSL flows left-to-right only.
+    /// </summary>
+    public interface IFlow<T, out TMat>
+    {
+        /// <summary>
+        /// Transform this <see cref="Flow{TIn,TOut,TMat}"/> by appending the given processing steps.
+        /// The materialized value of the combined <see cref="Flow{TIn,TOut,TMat}"/> will be the materialized
+        /// value of the current flow (ignoring the other Flow’s value), use
+        /// <see cref="ViaMaterialized{T2,TMat2,TMat3}"/> if a different strategy is needed.
+        /// </summary>
+        IFlow<T2, TMat> Via<T2, TMat2>(IGraph<FlowShape<T, T2>, TMat2> flow);
+
+        #region FlowOpsMat methods
+
+        /// <summary>
+        /// Transform this <see cref="IFlow{T,TMat}"/> by appending the given processing steps.
+        /// The <paramref name="combine"/> function is used to compose the materialized values of this flow and that
+        /// flow into the materialized value of the resulting Flow.
+        /// </summary>
+        IFlow<T2, TMat3> ViaMaterialized<T2, TMat2, TMat3>(IGraph<FlowShape<T, T2>, TMat2> flow, Func<TMat, TMat2, TMat3> combine);
+
+        #endregion
     }
 }

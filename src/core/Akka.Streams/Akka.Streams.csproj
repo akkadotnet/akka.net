@@ -53,6 +53,7 @@
     <Compile Include="Dsl\Graph.cs" />
     <Compile Include="Dsl\RunnableGraph.cs" />
     <Compile Include="Dsl\Sink.cs" />
+    <Compile Include="Dsl\SourceOperations.cs" />
     <Compile Include="Dsl\SubFlow.cs" />
     <Compile Include="Extra\Implicits.cs" />
     <Compile Include="Extra\Timed.cs" />
@@ -92,7 +93,7 @@
     <Compile Include="Queue.cs" />
     <Compile Include="Dsl\FlattenStrategy.cs" />
     <Compile Include="Dsl\Flow.cs" />
-    <Compile Include="Dsl\InternalFlowOperations.cs" />
+    <Compile Include="Dsl\Internal\InternalFlowOperations.cs" />
     <Compile Include="Dsl\Materialization.cs" />
     <Compile Include="Dsl\Source.cs" />
     <Compile Include="IMaterializer.cs" />

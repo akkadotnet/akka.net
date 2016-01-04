@@ -55,7 +55,7 @@ namespace Akka.Streams.Implementation.Stages
 
         public static readonly Attributes PublisherSource = Attributes.CreateName("publisherSource");
         public static readonly Attributes EnumerableSource = Attributes.CreateName("enumerableSource");
-        public static readonly Attributes FutureSource = Attributes.CreateName("futureSource");
+        public static readonly Attributes TaskSource = Attributes.CreateName("taskSource");
         public static readonly Attributes TickSource = Attributes.CreateName("tickSource");
         public static readonly Attributes SingleSource = Attributes.CreateName("singleSource");
         public static readonly Attributes EmptySource = Attributes.CreateName("emptySource");
