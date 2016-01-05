@@ -57,10 +57,14 @@ namespace Akka.Tests.Dispatch
             {
                 state = 1;
             });
-            Receive<string>(async _ =>
+            Receive<string>(async m_ =>
             {
                 Self.Tell("change");
                 await Task.Delay(TimeSpan.FromSeconds(1));
+                var cell = (ActorCell) Context;
+                var current = cell.CurrentMessage;
+                //ensure we have the correct current message here
+                Assert.Same(m_, current);
                 //we expect that state should not have changed due to an incoming message
                 Sender.Tell(state);
             });

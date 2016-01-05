@@ -251,22 +251,26 @@ namespace Akka.Dispatch.SysMsg
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorTaskSchedulerMessage" /> class.
         /// </summary>
-        public ActorTaskSchedulerMessage(ActorTaskScheduler scheduler, Task task)
+        public ActorTaskSchedulerMessage(ActorTaskScheduler scheduler, Task task, object message)
         {
             _scheduler = scheduler;
             _task = task;
+            Message = message;
         }
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorTaskSchedulerMessage" /> class.
         /// </summary>
         /// <param name="exception">The exception.</param>
-        public ActorTaskSchedulerMessage(Exception exception)
+        /// <param name="message">The message causing the exception</param>
+        public ActorTaskSchedulerMessage(Exception exception,object message)
         {
             Exception = exception;
+            Message = message;
         }
 
         public Exception Exception { get; private set; }
+        public object Message { get;private set; }
 
         public void ExecuteTask()
         {
