@@ -24,3 +24,6 @@
 
 # Needed for Mono build shell script
 *.sh	-text eol=lf
+
+# Needed for API Approvals
+*.txt text eol=crlf
