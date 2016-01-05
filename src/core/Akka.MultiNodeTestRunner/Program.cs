@@ -11,8 +11,12 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Reflection;
 using System.Threading;
 using Akka.Actor;
+using Akka.Event;
+using Akka.IO;
 using Akka.MultiNodeTestRunner.Shared;
 using Akka.MultiNodeTestRunner.Shared.Persistence;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
@@ -30,7 +34,10 @@ namespace Akka.MultiNodeTestRunner
 
         protected static IActorRef SinkCoordinator;
 
-
+        /// <summary>
+        /// file output directory
+        /// </summary>
+        protected static string OutputDirectory;
 
         /// <summary>
         /// MultiNodeTestRunner takes the following <see cref="args"/>:
@@ -64,12 +71,39 @@ namespace Akka.MultiNodeTestRunner
         ///                  as the test binary.
         ///     </description>
         /// </item>
+        /// <item>
+        ///     <term>-Dmultinode.listen-address={ip}</term>
+        ///     <description>
+        ///             Determines the address that this multi-node test runner will use to listen for log messages from
+        ///             individual NodeTestRunner.exe processes.
+        /// 
+        ///             Defaults to 127.0.0.1
+        ///     </description>
+        /// </item>
+        /// <item>
+        ///     <term>-Dmultinode.listen-port={port}</term>
+        ///     <description>
+        ///             Determines the port number that this multi-node test runner will use to listen for log messages from
+        ///             individual NodeTestRunner.exe processes.
+        /// 
+        ///             Defaults to 6577
+        ///     </description>
+        /// </item>
         /// </list>
         /// </summary>
         static void Main(string[] args)
         {
+            OutputDirectory = CommandLine.GetProperty("multinode.output-directory") ?? string.Empty;
             TestRunSystem = ActorSystem.Create("TestRunnerLogging");
             SinkCoordinator = TestRunSystem.ActorOf(Props.Create<SinkCoordinator>(), "sinkCoordinator");
+
+
+            var listenAddress = IPAddress.Parse(CommandLine.GetPropertyOrDefault("multinode.listen-address", "127.0.0.1"));
+            var listenPort = CommandLine.GetInt32OrDefault("multinode.listen-port", 6577);
+            var listenEndpoint = new IPEndPoint(listenAddress, listenPort);
+
+            var tcpLogger = TestRunSystem.ActorOf(Props.Create(() => new TcpLoggingServer(SinkCoordinator)), "TcpLogger");
+            TestRunSystem.Tcp().Tell(new Tcp.Bind(tcpLogger, listenEndpoint));
 
             var assemblyName = Path.GetFullPath(args[0]);
             EnableAllSinks(assemblyName);
@@ -95,7 +129,6 @@ namespace Akka.MultiNodeTestRunner
                         var processes = new List<Process>();
 
                         StartNewSpec(test.Value);
-
                         foreach (var nodeTest in test.Value)
                         {
                             //Loop through each test, work out number of nodes to run on and kick off process
@@ -104,22 +137,23 @@ namespace Akka.MultiNodeTestRunner
                             process.StartInfo.UseShellExecute = false;
                             process.StartInfo.RedirectStandardOutput = true;
                             process.StartInfo.FileName = "Akka.NodeTestRunner.exe";
-                            process.StartInfo.Arguments = String.Format(@"-Dmultinode.test-assembly=""{0}"" -Dmultinode.test-class=""{1}"" -Dmultinode.test-method=""{2}"" -Dmultinode.max-nodes={3} -Dmultinode.server-host=""{4}"" -Dmultinode.host=""{5}"" -Dmultinode.index={6}",
-                                assemblyName, nodeTest.TypeName, nodeTest.MethodName, test.Value.Count, "localhost", "localhost", nodeTest.Node - 1);
+                            process.StartInfo.Arguments =
+                                $@"-Dmultinode.test-assembly=""{assemblyName}"" -Dmultinode.test-class=""{
+                                    nodeTest.TypeName}"" -Dmultinode.test-method=""{nodeTest.MethodName
+                                    }"" -Dmultinode.max-nodes={test.Value.Count} -Dmultinode.server-host=""{"localhost"
+                                    }"" -Dmultinode.host=""{"localhost"}"" -Dmultinode.index={nodeTest.Node - 1
+                                    } -Dmultinode.listen-address={listenAddress} -Dmultinode.listen-port={listenPort}";
                             var nodeIndex = nodeTest.Node;
-                            process.OutputDataReceived +=
-                                (sender, line) =>
-                                {
-                                    //ignore any trailing whitespace
-                                    if (string.IsNullOrEmpty(line.Data) || string.IsNullOrWhiteSpace(line.Data)) return;
-                                    string message = line.Data;
-                                    if (!message.StartsWith("[NODE", true, CultureInfo.InvariantCulture))
-                                    {
-                                        message = "[NODE" + nodeIndex + "]" + message;
-                                    }
-                                    PublishToAllSinks(message);
-                                };
-
+                            //TODO: might need to do some validation here to avoid the 260 character max path error on Windows
+                            var folder = Directory.CreateDirectory(Path.Combine(OutputDirectory, nodeTest.MethodName));
+                            var logFilePath = Path.Combine(folder.FullName, "node" + nodeIndex + ".txt");
+                            var fileActor =
+                                TestRunSystem.ActorOf(Props.Create(() => new FileSystemAppenderActor(logFilePath)));
+                            process.OutputDataReceived += (sender, eventArgs) =>
+                            {
+                                if(eventArgs?.Data != null)
+                                    fileActor.Tell(eventArgs.Data);
+                            };
                             var closureTest = nodeTest;
                             process.Exited += (sender, eventArgs) =>
                             {
@@ -128,8 +162,8 @@ namespace Akka.MultiNodeTestRunner
                                     ReportSpecPassFromExitCode(nodeIndex, closureTest.TestName);
                                 }
                             };
+                            
                             process.Start();
-
                             process.BeginOutputReadLine();
                             PublishRunnerMessage(string.Format("Started node {0} on pid {1}", nodeTest.Node, process.Id));
                         }
@@ -165,7 +199,7 @@ namespace Akka.MultiNodeTestRunner
 
             // if multinode.output-directory wasn't specified, the results files will be written
             // to the same directory as the test assembly.
-            var outputDirectory = CommandLine.GetProperty("multinode.output-directory");
+            var outputDirectory = OutputDirectory;
 
             Func<MessageSink> createJsonFileSink = () =>
                 {
@@ -223,6 +257,32 @@ namespace Akka.MultiNodeTestRunner
         static void PublishToAllSinks(string message)
         {
             SinkCoordinator.Tell(message, ActorRefs.NoSender);
+        }
+    }
+
+    class TcpLoggingServer : ReceiveActor
+    {
+        private readonly IActorRef _sinkCoordinator;
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+
+        public TcpLoggingServer(IActorRef sinkCoordinator)
+        {
+            _sinkCoordinator = sinkCoordinator;
+
+            Receive<Tcp.Connected>(connected =>
+            {
+                _log.Info($"Node connected on {Sender}");
+                Sender.Tell(new Tcp.Register(Self));
+            });
+
+            Receive<Tcp.ConnectionClosed>(
+                closed => _log.Info($"Node disconnected on {Sender}{Environment.NewLine}"));
+
+            Receive<Tcp.Received>(received =>
+            {
+                var message = received.Data.DecodeString();
+                _sinkCoordinator.Tell(message);
+            });
         }
     }
 }
