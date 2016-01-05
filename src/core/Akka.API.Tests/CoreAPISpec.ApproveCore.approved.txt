@@ -4823,6 +4823,7 @@ namespace Akka.Util.Internal
         public static string Join(this System.Collections.Generic.IEnumerable<string> self, string separator) { }
         public static System.TimeSpan Max(this System.TimeSpan @this, System.TimeSpan other) { }
         public static System.TimeSpan Min(this System.TimeSpan @this, System.TimeSpan other) { }
+        public static System.Collections.Generic.IEnumerable<T> TakeRight<T>(this System.Collections.Generic.IEnumerable<T> self, int n) { }
     }
     public interface IAtomicCounter<T>
     {

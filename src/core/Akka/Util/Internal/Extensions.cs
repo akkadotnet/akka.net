@@ -100,6 +100,19 @@ namespace Akka.Util.Internal
             foreach (var item in enumerable)
                 action(item);
         }
+
+        /// <summary>
+        /// Selects last n elements.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="self"></param>
+        /// <param name="n"></param>
+        /// <returns></returns>
+        public static IEnumerable<T> TakeRight<T>(this IEnumerable<T> self, int n)
+        {
+            var enumerable = self as T[] ?? self.ToArray();
+            return enumerable.Skip(Math.Max(0, enumerable.Length - n));
+        }
     }
 }
 
