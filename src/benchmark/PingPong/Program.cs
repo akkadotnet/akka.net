@@ -78,7 +78,7 @@ namespace PingPong
             Console.WriteLine();
 
             //Warm up
-            ActorSystem.Create("WarmupSystem").Shutdown();
+            ActorSystem.Create("WarmupSystem").Terminate();
             Console.Write("ActorBase    first start time: ");
             await Benchmark<ClientActorBase>(1, 1, 1, PrintStats.StartTimeOnly, -1, -1);
             Console.WriteLine(" ms");
@@ -200,7 +200,7 @@ namespace PingPong
             await Task.WhenAll(tasks.ToArray());
             sw.Stop();
 
-            system.Shutdown();
+            system.Terminate();
             totalWatch.Stop();
 
             var elapsedMilliseconds = sw.ElapsedMilliseconds;

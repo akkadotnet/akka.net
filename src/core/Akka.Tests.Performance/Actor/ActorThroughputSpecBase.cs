@@ -51,8 +51,7 @@ namespace Akka.Tests.Performance.Actor
         public void Cleanup()
         {
             _resetEvent.Dispose();
-            System.Shutdown();
-            System.TerminationTask.Wait();
+            System.Terminate().Wait();
         }
     }
 }

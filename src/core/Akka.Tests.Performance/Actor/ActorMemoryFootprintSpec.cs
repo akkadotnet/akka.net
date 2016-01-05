@@ -74,8 +74,7 @@ namespace Akka.Tests.Performance.Actor
         [PerfCleanup]
         public void Teardown(BenchmarkContext context)
         {
-            _system.Shutdown();
-            _system.AwaitTermination(TimeSpan.FromSeconds(2.0d));
+            _system.Terminate().Wait(TimeSpan.FromSeconds(2.0d));
             _system = null;
         }
     }

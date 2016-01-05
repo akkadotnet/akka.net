@@ -148,22 +148,36 @@ namespace Akka.Actor
         public abstract void RegisterOnTermination(Action code);
 
         /// <summary>
-        ///     Stop this actor system. This will stop the guardian actor, which in turn
-        ///     will recursively stop all its child actors, then the system guardian
-        ///     (below which the logging actors reside) and the execute all registered
-        ///     termination handlers (<see cref="ActorSystem.RegisterOnTermination" />).
+        /// Stop this actor system. This will stop the guardian actor, which in turn
+        /// will recursively stop all its child actors, then the system guardian
+        /// (below which the logging actors reside) and the execute all registered
+        /// termination handlers (<see cref="ActorSystem.RegisterOnTermination" />).
         /// </summary>
+        [Obsolete("Use Terminate instead. This method will be removed in future versions")]
         public abstract void Shutdown();
+
+        /// <summary>
+        /// Terminates this actor system. This will stop the guardian actor, which in turn
+        /// will recursively stop all its child actors, then the system guardian
+        /// (below which the logging actors reside) and the execute all registered
+        /// termination handlers (<see cref="ActorSystem.RegisterOnTermination" />).
+        /// Be careful to not schedule any operations on completion of the returned task
+        /// using the `dispatcher` of this actor system as it will have been shut down before the
+        /// task completes.
+        /// </summary>
+        public abstract Task Terminate();
 
         /// <summary>
         /// Returns a task that will be completed when the system has terminated.
         /// </summary>
+        [Obsolete("Use WhenTerminated instead. This property will be removed in future versions")]
         public abstract Task TerminationTask { get; }
 
         /// <summary>
         /// Block current thread until the system has been shutdown.
         /// This will block until after all on termination callbacks have been run.
         /// </summary>
+        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
         public abstract void AwaitTermination();
 
         /// <summary>
@@ -176,6 +190,7 @@ namespace Akka.Actor
         /// <param name="timeout">The timeout.</param>
         /// <returns>Returns <c>true</c> if the system was shutdown during the specified time;
         /// <c>false</c> if it timed out.</returns>
+        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
         public abstract bool AwaitTermination(TimeSpan timeout);
 
         /// <summary>
@@ -189,8 +204,16 @@ namespace Akka.Actor
         /// <param name="cancellationToken">A cancellation token that cancels the wait operation.</param>
         /// <returns>Returns <c>true</c> if the system was shutdown during the specified time;
         /// <c>false</c> if it timed out, or the cancellationToken was canceled. </returns>
+        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
         public abstract bool AwaitTermination(TimeSpan timeout, CancellationToken cancellationToken);
 
+        /// <summary>
+        /// Returns a task which will be completed after the ActorSystem has been terminated
+        /// and termination hooks have been executed. Be careful to not schedule any operations
+        /// on the `dispatcher` of this actor system as it will have been shut down before this
+        /// task completes.
+        /// </summary>
+        public abstract Task WhenTerminated { get; }
 
         public abstract void Stop(IActorRef actor);
         private bool _isDisposed; //Automatically initialized to false;
@@ -226,12 +249,12 @@ namespace Akka.Actor
             try
             {
                 //Make sure Dispose does not get called more than once, by checking the disposed field
-                if(!_isDisposed)
+                if (!_isDisposed)
                 {
-                    if(disposing)
+                    if (disposing)
                     {
                         Log.Debug("Disposing system");
-                        Shutdown();
+                        Terminate();
                     }
                     //Clean up unmanaged resources
                 }

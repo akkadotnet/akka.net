@@ -289,7 +289,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     var timeout = RemainingOrDefault;
                     try
                     {
-                        Sys.AwaitTermination(timeout);
+                        Sys.WhenTerminated.Wait(timeout);
                     }
                     catch (TimeoutException)
                     {

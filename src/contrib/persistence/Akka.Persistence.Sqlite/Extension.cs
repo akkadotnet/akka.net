@@ -77,7 +77,7 @@ namespace Akka.Persistence.Sqlite
             if (!string.IsNullOrEmpty(JournalSettings.ConnectionString))
             {
                 ConnectionContext.Remember(JournalSettings.ConnectionString);
-                system.TerminationTask.ContinueWith(t => ConnectionContext.Forget(JournalSettings.ConnectionString));
+                system.WhenTerminated.ContinueWith(t => ConnectionContext.Forget(JournalSettings.ConnectionString));
 
                 if (JournalSettings.AutoInitialize)
                     DbHelper.CreateJournalTable(JournalSettings.ConnectionString, JournalSettings.TableName);
@@ -86,7 +86,7 @@ namespace Akka.Persistence.Sqlite
             if (!string.IsNullOrEmpty(SnapshotSettings.ConnectionString))
             {
                 ConnectionContext.Remember(SnapshotSettings.ConnectionString);
-                system.TerminationTask.ContinueWith(t => ConnectionContext.Forget(SnapshotSettings.ConnectionString));
+                system.WhenTerminated.ContinueWith(t => ConnectionContext.Forget(SnapshotSettings.ConnectionString));
 
                 if (SnapshotSettings.AutoInitialize)
                 {

@@ -116,8 +116,7 @@ namespace Akka.Tests.Performance.Actor
         [PerfCleanup]
         public void Cleanup()
         {
-            System.Shutdown();
-            System.TerminationTask.Wait();
+            System.Terminate().Wait();
             _resetEvent.Dispose();
         }
     }

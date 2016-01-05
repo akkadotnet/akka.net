@@ -327,29 +327,49 @@ namespace Akka.Actor.Internal
         ///     (below which the logging actors reside) and the execute all registered
         ///     termination handlers (<see cref="ActorSystem.RegisterOnTermination" />).
         /// </summary>
+        [Obsolete("Use Terminate instead. This method will be removed in future versions")]
         public override void Shutdown()
+        {
+            Terminate();
+        }
+
+        /// <summary>
+        /// Terminates this actor system. This will stop the guardian actor, which in turn
+        /// will recursively stop all its child actors, then the system guardian
+        /// (below which the logging actors reside) and the execute all registered
+        /// termination handlers (<see cref="ActorSystem.RegisterOnTermination" />).
+        /// Be careful to not schedule any operations on completion of the returned task
+        /// using the `dispatcher` of this actor system as it will have been shut down before the
+        /// task completes.
+        /// </summary>
+        public override Task Terminate()
         {
             Log.Debug("System shutdown initiated");
             _provider.Guardian.Stop();
+            return WhenTerminated;
         }
 
+        [Obsolete("Use WhenTerminated instead. This property will be removed in future versions")]
         public override Task TerminationTask { get { return _terminationCallbacks.TerminationTask; } }
 
+        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
         public override void AwaitTermination()
         {
             AwaitTermination(Timeout.InfiniteTimeSpan, CancellationToken.None);
         }
 
+        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
         public override bool AwaitTermination(TimeSpan timeout)
         {
             return AwaitTermination(timeout, CancellationToken.None);
         }
 
+        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
         public override bool AwaitTermination(TimeSpan timeout, CancellationToken cancellationToken)
         {
             try
             {
-                return _terminationCallbacks.TerminationTask.Wait((int) timeout.TotalMilliseconds, cancellationToken);
+                return WhenTerminated.Wait((int) timeout.TotalMilliseconds, cancellationToken);
             }
             catch(OperationCanceledException)
             {
@@ -357,6 +377,14 @@ namespace Akka.Actor.Internal
                 return false;
             }
         }
+
+        /// <summary>
+        /// Returns a task which will be completed after the ActorSystem has been terminated
+        /// and termination hooks have been executed. Be careful to not schedule any operations
+        /// on the `dispatcher` of this actor system as it will have been shut down before this
+        /// task completes.
+        /// </summary>
+        public override Task WhenTerminated { get { return _terminationCallbacks.TerminationTask; } }
 
         public override void Stop(IActorRef actor)
         {
