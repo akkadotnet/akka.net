@@ -12,6 +12,7 @@ using Akka.Remote.Transport.Helios;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
+using System.Net;
 
 namespace Akka.Remote.Tests
 {
@@ -113,6 +114,17 @@ namespace Akka.Remote.Tests
                 Assert.Equal(2, pool.GetInt("pool-size-max"));
             }
         }
-    }
+
+        [Fact]
+        public void Remoting_should_contain_correct_hostname_values_in_ReferenceConf()
+        {
+           var c = ((RemoteActorRefProvider)((ActorSystemImpl)Sys).Provider).RemoteSettings.Config.GetConfig("akka.remote.helios.tcp");
+           var s = new HeliosTransportSettings(c);
+
+           //Non-specified hostnames should default to IPAddress.Any
+           Assert.Equal(IPAddress.Any.ToString(), s.Hostname);
+           Assert.Equal(IPAddress.Any.ToString(), s.PublicHostname);
+      }
+   }
 }
 
