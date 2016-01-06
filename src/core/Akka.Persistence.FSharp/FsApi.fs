@@ -87,7 +87,7 @@ type Eventsourced<'Command, 'Event, 'State> =
     abstract SnapshotStore: unit -> IActorRef
     
     /// <summary>
-    /// Returns value determining if current persistent actor is actually recovering.
+    /// Returns value determining if current persistent view is actually recovering.
     /// </summary>
     abstract IsRecovering: unit -> bool
     
@@ -225,6 +225,11 @@ type View<'Event, 'State> =
     abstract PersistenceId: unit -> PersistenceId
     
     /// <summary>
+    /// Returns value determining if current persistent actor is actually recovering.
+    /// </summary>
+    abstract IsRecovering: unit -> bool
+
+    /// <summary>
     /// View's identifier that doesn't change across different view incarnations.
     /// </summary>
     abstract ViewId: unit -> PersistenceId
@@ -260,6 +265,7 @@ type FunPersistentView<'Event, 'State>(perspective: Perspective<'Event, 'State>,
             member __.Journal() = this.Journal
             member __.SnapshotStore() = this.SnapshotStore
             member __.PersistenceId() = this.PersistenceId
+            member __.IsRecovering() = this.IsRecovering
             member __.ViewId() = this.ViewId
             member __.LastSequenceNr() = this.LastSequenceNr
             member __.LoadSnapshot pid criteria seqNr = this.LoadSnapshot(pid, criteria, seqNr)

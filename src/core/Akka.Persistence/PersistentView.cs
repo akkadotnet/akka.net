@@ -138,6 +138,16 @@ namespace Akka.Persistence
         public string SnapshotterId { get { return ViewId; } }
 
         /// <summary>
+        /// Returns true if this persistent view is currently recovering.
+        /// </summary>
+        public bool IsRecovering { get { return _currentState.IsRecoveryRunning; } }
+
+        /// <summary>
+        /// Returns true if this persistent view has successfully finished recovery.
+        /// </summary>
+        public bool IsRecoveryFinished { get { return !IsRecovering; } }
+
+        /// <summary>
         /// If true, the currently processed message was persisted - it sent from the <see cref="Journal"/>.
         /// If false, the currently processed message comes from another actor ('/user/*' path).
         /// </summary>
