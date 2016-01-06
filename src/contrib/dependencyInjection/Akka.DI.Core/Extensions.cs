@@ -41,14 +41,22 @@ namespace Akka.DI.Core
 
         public static Type GetTypeValue(this string typeName)
         {
-            var firstTry = Type.GetType(typeName);
-            Func<Type> searchForType = () =>
-                AppDomain.CurrentDomain
-                    .GetAssemblies()
-                    .SelectMany(x => x.GetTypes())
-                    .FirstOrDefault(t => t.Name.Equals(typeName));
-            
-            return firstTry ?? searchForType();
+            try
+            {
+                var firstTry = Type.GetType(typeName, true);
+                Func<Type> searchForType = () =>
+                    AppDomain.CurrentDomain
+                        .GetAssemblies()
+                        .SelectMany(x => x.GetTypes())
+                        .FirstOrDefault(t => t.Name.Equals(typeName));
+
+                return firstTry ?? searchForType();
+            }
+            catch (TypeLoadException ex)
+            {
+                var msgException = string.Format("Could not find type '{0}'", typeName);
+                throw new TypeLoadException(msgException, ex);
+            }
         }
     }
 }

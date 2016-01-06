@@ -278,11 +278,19 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
 
         private object PayloadFromProto(Payload payload)
         {
-            var type = payload.HasMessageManifest ? Type.GetType(payload.MessageManifest.ToStringUtf8()) : null;
-            return system.Serialization.Deserialize(
-                payload.EnclosedMessage.ToByteArray(),
-                payload.SerializerId,
-                type);
+            try
+            {
+                var type = payload.HasMessageManifest ? Type.GetType(payload.MessageManifest.ToStringUtf8(), true) : null;
+                return system.Serialization.Deserialize(
+                    payload.EnclosedMessage.ToByteArray(),
+                    payload.SerializerId,
+                    type);
+            }
+            catch (TypeLoadException ex)
+            {
+                var msgException = string.Format("Could not find type '{0}'", payload.MessageManifest.ToStringUtf8());
+                throw new TypeLoadException(msgException, ex);
+            }
         }
     }
 }

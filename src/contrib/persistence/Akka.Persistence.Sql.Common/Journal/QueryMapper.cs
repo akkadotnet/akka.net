@@ -57,11 +57,19 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private object GetPayload(DbDataReader reader, string manifest)
         {
-            var type = Type.GetType(manifest, true);
-            var binary = (byte[]) reader[PayloadIndex];
+            try
+            {
+                var type = Type.GetType(manifest, true);
+                var binary = (byte[])reader[PayloadIndex];
 
-            var serializer = _serialization.FindSerializerForType(type);
-            return serializer.FromBinary(binary, type);
+                var serializer = _serialization.FindSerializerForType(type);
+                return serializer.FromBinary(binary, type);
+            }
+            catch (TypeLoadException ex)
+            {
+                var msgException = string.Format("Could not find type '{0}'", manifest);
+                throw new TypeLoadException(msgException, ex);
+            }
         }
     }
 }

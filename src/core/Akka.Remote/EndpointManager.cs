@@ -709,21 +709,23 @@ namespace Akka.Remote
                         Transport.Transport driver;
                         try
                         {
-                            var driverType = Type.GetType(transportSettings.TransportClass);
-                            if(driverType==null)
-                                throw new TypeLoadException(string.Format("Cannot instantiate transport [{0}]. Cannot find the type.",transportSettings.TransportClass));
+                            var driverType = Type.GetType(transportSettings.TransportClass, true);
 
-                            if(!typeof(Transport.Transport).IsAssignableFrom(driverType))
-                                throw new TypeLoadException(string.Format("Cannot instantiate transport [{0}]. It does not implement [{1}].",transportSettings.TransportClass,typeof(Transport.Transport).FullName));
+                            if (!typeof(Transport.Transport).IsAssignableFrom(driverType))
+                                throw new TypeLoadException(string.Format("Cannot instantiate transport [{0}]. It does not implement [{1}].", transportSettings.TransportClass, typeof(Transport.Transport).FullName));
 
-                            var constructorInfo = driverType.GetConstructor(new []{typeof(ActorSystem),typeof(Config)});
-                            if(constructorInfo==null)
+                            var constructorInfo = driverType.GetConstructor(new[] { typeof(ActorSystem), typeof(Config) });
+                            if (constructorInfo == null)
                                 throw new TypeLoadException(string.Format("Cannot instantiate transport [{0}]. " +
                                                                           "It has no public constructor with " +
-                                                                          "[{1}] and [{2}] parameters",transportSettings.TransportClass,typeof(ActorSystem).FullName,typeof(Config).FullName));
+                                                                          "[{1}] and [{2}] parameters", transportSettings.TransportClass, typeof(ActorSystem).FullName, typeof(Config).FullName));
 
                             // ReSharper disable once AssignNullToNotNullAttribute
                             driver = (Transport.Transport)Activator.CreateInstance(driverType, args);
+                        }
+                        catch (TypeLoadException)
+                        {
+                            throw new TypeLoadException(string.Format("Cannot instantiate transport [{0}]. Cannot find the type.", transportSettings.TransportClass));
                         }
                         catch (Exception ex)
                         {

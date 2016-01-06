@@ -856,17 +856,15 @@ namespace Akka.Cluster
         {
             var fqcn = settings.MetricsCollectorClass;
             if (fqcn == typeof (PerformanceCounterMetricsCollector).AssemblyQualifiedName) return new PerformanceCounterMetricsCollector(system);
-            
-            var metricsCollectorClass = Type.GetType(fqcn);
-            if (metricsCollectorClass == null)
-            {
-                throw new ConfigurationException(string.Format("Could not create custom metrics collector {0}", fqcn));
-            }
-
             try
             {
-                var metricsCollector = (IMetricsCollector) Activator.CreateInstance(metricsCollectorClass, system);
+                var metricsCollectorClass = Type.GetType(fqcn, true);
+                var metricsCollector = (IMetricsCollector)Activator.CreateInstance(metricsCollectorClass, system);
                 return metricsCollector;
+            }
+            catch (TypeLoadException ex)
+            {
+                throw new ConfigurationException(string.Format("Could not create custom metrics collector {0}", fqcn), ex);
             }
             catch (Exception ex)
             {

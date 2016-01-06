@@ -164,13 +164,22 @@ namespace Akka.Persistence.Journal
 
             // bindings is a enumerable of key-val representing the mapping from Type to handler.
             // It is primarily ordered by the most specific classes first, and secondly in the configured order.
+
             var bindings = Sort(adapterBindings.Select(kv =>
             {
-                var type = Type.GetType(kv.Key);
-                var adapter = kv.Value.Length == 1
-                    ? handlers[kv.Value[0]]
-                    : new CombinedReadEventAdapter(kv.Value.Select(h => handlers[h]));
-                return new KeyValuePair<Type, IEventAdapter>(type, adapter);
+                try
+                {
+                    var type = Type.GetType(kv.Key, true);
+                    var adapter = kv.Value.Length == 1
+                            ? handlers[kv.Value[0]]
+                            : new CombinedReadEventAdapter(kv.Value.Select(h => handlers[h]));
+                    return new KeyValuePair<Type, IEventAdapter>(type, adapter);
+                }
+                catch (Exception ex)
+                {
+                    var msgException = string.Format("Could not find type '{0}'", kv.Key);
+                    throw new TypeLoadException(msgException, ex);
+                }
             }).ToList());
 
             var backing = new ConcurrentDictionary<Type, IEventAdapter>();
@@ -235,18 +244,26 @@ namespace Akka.Persistence.Journal
 
         private static T Instantiate<T>(string qualifiedName, ExtendedActorSystem system)
         {
-            var instanceType = Type.GetType(qualifiedName);
-            if (!typeof(T).IsAssignableFrom(instanceType))
-                throw new ArgumentException(string.Format("Couldn't create instance of [{0}] from provided qualified type name [{1}], because it's not assignable from it",
-                    typeof(T), qualifiedName));
-
             try
             {
-                return (T)Activator.CreateInstance(instanceType, system);
+                var instanceType = Type.GetType(qualifiedName, true);
+                try
+                {
+                    if (!typeof(T).IsAssignableFrom(instanceType))
+                        throw new ArgumentException(string.Format("Couldn't create instance of [{0}] from provided qualified type name [{1}], because it's not assignable from it",
+                            typeof(T), qualifiedName));
+
+                    return (T)Activator.CreateInstance(instanceType, system);
+                }
+                catch (MissingMethodException)
+                {
+                    return (T)Activator.CreateInstance(instanceType);
+                }
             }
-            catch (MissingMethodException)
+            catch (TypeLoadException ex)
             {
-                return (T)Activator.CreateInstance(instanceType);
+                var msgException = string.Format("Could not find type '{0}'", qualifiedName);
+                throw new TypeLoadException(msgException, ex);
             }
         }
 

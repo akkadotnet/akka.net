@@ -160,17 +160,25 @@ namespace Akka.Persistence
 
             var pluginConfig = _system.Settings.Config.GetConfig(configPath);
             var pluginTypeName = pluginConfig.GetString("class");
-            var pluginType = Type.GetType(pluginTypeName, true);
 
-            var shouldInjectConfig = pluginConfig.HasPath("inject-config") && pluginConfig.GetBoolean("inject-config");
-            var pluginDispatcherId = pluginConfig.HasPath("plugin-dispatcher")
-                ? pluginConfig.GetString("plugin-dispatcher")
-                : dispatcherSelector(pluginType);
-            var pluginActorArgs = shouldInjectConfig ? new object[] { pluginConfig } : null;
-            var pluginActorProps = new Props(pluginType, pluginActorArgs).WithDispatcher(pluginDispatcherId);
+            try
+            {
+                var pluginType = Type.GetType(pluginTypeName, true);
+                var shouldInjectConfig = pluginConfig.HasPath("inject-config") && pluginConfig.GetBoolean("inject-config");
+                var pluginDispatcherId = pluginConfig.HasPath("plugin-dispatcher")
+                    ? pluginConfig.GetString("plugin-dispatcher")
+                    : dispatcherSelector(pluginType);
+                var pluginActorArgs = shouldInjectConfig ? new object[] { pluginConfig } : null;
+                var pluginActorProps = new Props(pluginType, pluginActorArgs).WithDispatcher(pluginDispatcherId);
 
-            var pluginRef = _system.SystemActorOf(pluginActorProps, configPath);
-            return new PluginHolder(pluginRef, CreateAdapters(configPath));
+                var pluginRef = _system.SystemActorOf(pluginActorProps, configPath);
+                return new PluginHolder(pluginRef, CreateAdapters(configPath));
+            }
+            catch (TypeLoadException ex)
+            {
+                var msgException = string.Format("Could not find type '{0}'", pluginTypeName);
+                throw new TypeLoadException(msgException, ex);
+            }   
         }
 
         private EventAdapters CreateAdapters(string configPath)

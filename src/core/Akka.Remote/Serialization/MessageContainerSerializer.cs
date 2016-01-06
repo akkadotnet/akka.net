@@ -114,24 +114,34 @@ namespace Akka.Remote.Serialization
         public override object FromBinary(byte[] bytes, Type type)
         {
             SelectionEnvelope selectionEnvelope = SelectionEnvelope.ParseFrom(bytes);
-            Type msgType = null;
-            if (selectionEnvelope.HasMessageManifest)
+
+            try
             {
-                msgType = Type.GetType(selectionEnvelope.MessageManifest.ToStringUtf8());
+                Type msgType = null;
+                if (selectionEnvelope.HasMessageManifest)
+                {
+                    msgType = Type.GetType(selectionEnvelope.MessageManifest.ToStringUtf8(), true);
+                }
+                int serializerId = selectionEnvelope.SerializerId;
+                object msg = Deserialize(selectionEnvelope.EnclosedMessage, msgType, serializerId);
+
+                SelectionPathElement[] elements = selectionEnvelope.PatternList.Select<Selection, SelectionPathElement>(p =>
+                {
+                    if (p.Type == PatternType.PARENT)
+                        return new SelectParent();
+                    if (p.Type == PatternType.CHILD_NAME)
+                        return new SelectChildName(p.Matcher);
+                    if (p.Type == PatternType.CHILD_PATTERN)
+                        return new SelectChildPattern(p.Matcher);
+                    throw new NotSupportedException("Unknown SelectionEnvelope.Elements.Type");
+                }).ToArray();
+                return new ActorSelectionMessage(msg, elements);
             }
-            int serializerId = selectionEnvelope.SerializerId;
-            object msg = Deserialize(selectionEnvelope.EnclosedMessage, msgType, serializerId);
-            SelectionPathElement[] elements = selectionEnvelope.PatternList.Select<Selection, SelectionPathElement>(p =>
+            catch (TypeLoadException ex)
             {
-                if (p.Type == PatternType.PARENT)
-                    return new SelectParent();
-                if (p.Type == PatternType.CHILD_NAME)
-                    return new SelectChildName(p.Matcher);
-                if (p.Type == PatternType.CHILD_PATTERN)
-                    return new SelectChildPattern(p.Matcher);
-                throw new NotSupportedException("Unknown SelectionEnvelope.Elements.Type");
-            }).ToArray();
-            return new ActorSelectionMessage(msg, elements);
+                var msgException = string.Format("Could not find type '{0}'", selectionEnvelope.MessageManifest.ToStringUtf8());
+                throw new TypeLoadException(msgException, ex);
+            }
         }
     }
 }

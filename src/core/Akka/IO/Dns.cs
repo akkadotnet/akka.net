@@ -124,11 +124,19 @@ namespace Akka.IO
 
         public DnsExt(ExtendedActorSystem system)
         {
-            _system = system;
-            Settings = new DnsSettings(system.Settings.Config.GetConfig("akka.io.dns"));
-            //TODO: system.dynamicAccess.getClassFor[DnsProvider](Settings.ProviderObjectName).get.newInstance()
-            Provider = (IDnsProvider) Activator.CreateInstance(Type.GetType(Settings.ProviderObjectName));
-            Cache = Provider.Cache;
+            try
+            {
+                _system = system;
+                Settings = new DnsSettings(system.Settings.Config.GetConfig("akka.io.dns"));
+                //TODO: system.dynamicAccess.getClassFor[DnsProvider](Settings.ProviderObjectName).get.newInstance()
+                Provider = (IDnsProvider)Activator.CreateInstance(Type.GetType(Settings.ProviderObjectName, true));
+                Cache = Provider.Cache;
+            }
+            catch (TypeLoadException ex)
+            {
+                var msgException = string.Format("Could not find type '{0}'", Settings.ProviderObjectName);
+                throw new TypeLoadException(msgException, ex);
+            }
         }
 
         public override IActorRef Manager

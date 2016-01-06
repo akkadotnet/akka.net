@@ -89,11 +89,19 @@ namespace Akka.Persistence.Serialization
 
         private object PayloadFromProto(PersistentPayload persistentPayload)
         {
-            var payloadType = persistentPayload.HasPayloadManifest
-                ? Type.GetType(persistentPayload.PayloadManifest.ToStringUtf8())
-                : null;
+            try
+            {
+                var payloadType = persistentPayload.HasPayloadManifest
+                    ? Type.GetType(persistentPayload.PayloadManifest.ToStringUtf8(), true)
+                    : null;
 
-            return system.Serialization.Deserialize(persistentPayload.Payload.ToByteArray(), persistentPayload.SerializerId, payloadType);
+                return system.Serialization.Deserialize(persistentPayload.Payload.ToByteArray(), persistentPayload.SerializerId, payloadType);
+            }
+            catch (TypeLoadException ex)
+            {
+                var msgException = string.Format("Could not find type '{0}'", persistentPayload.PayloadManifest.ToStringUtf8());
+                throw new TypeLoadException(msgException, ex);
+            }
         }
 
         private global::AtLeastOnceDeliverySnapshot.Builder SnapshotToProto(AtLeastOnceDeliverySnapshot snap)
