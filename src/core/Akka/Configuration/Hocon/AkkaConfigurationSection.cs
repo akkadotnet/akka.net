@@ -7,6 +7,7 @@
 
 using System.Configuration;
 
+#if !ANDROID
 namespace Akka.Configuration.Hocon
 {
     /// <summary>
@@ -64,4 +65,4 @@ namespace Akka.Configuration.Hocon
         }
     }
 }
-
+#endif

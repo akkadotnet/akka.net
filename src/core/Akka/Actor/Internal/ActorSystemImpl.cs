@@ -40,10 +40,13 @@ namespace Akka.Actor.Internal
         private ActorProducerPipelineResolver _actorProducerPipelineResolver;
         private TerminationCallbacks _terminationCallbacks;
 
+#if !ANDROID
         public ActorSystemImpl(string name)
             : this(name, ConfigurationFactory.Load())
         {
         }
+#endif
+
         public ActorSystemImpl(string name, Config config)
         {
             if(!Regex.Match(name, "^[a-zA-Z0-9][a-zA-Z0-9-]*$").Success)

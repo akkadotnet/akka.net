@@ -55,6 +55,7 @@ namespace Akka.Configuration
             return ParseString(hocon, null);
         }
 
+#if !ANDROID
         /// <summary>
         /// Loads a configuration defined in the current application's
         /// configuration file, e.g. app.config or web.config
@@ -67,6 +68,7 @@ namespace Akka.Configuration
 
             return config;
         }
+#endif
 
         /// <summary>
         /// Retrieves the default configuration that Akka.NET uses

@@ -46,6 +46,7 @@ namespace Akka.Util
         {
             lock(_lock)
             {
+#if !ANDROID
                 ConsoleColor? fg = null;
                 if(foregroundColor.HasValue)
                 {
@@ -58,7 +59,11 @@ namespace Akka.Util
                     bg = Console.BackgroundColor;
                     Console.BackgroundColor = backgroundColor.Value;
                 }
+#endif
+
                 write();
+
+#if !ANDROID
                 if(fg.HasValue)
                 {
                     Console.ForegroundColor = fg.Value;
@@ -67,6 +72,7 @@ namespace Akka.Util
                 {
                     Console.BackgroundColor = bg.Value;
                 }
+#endif
             }
         }
     }
