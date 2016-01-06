@@ -89,8 +89,7 @@ namespace Akka.Remote.Tests.Performance
         [PerfCleanup]
         public void Cleanup()
         {
-            _actorSystem.Shutdown();
-            _actorSystem.TerminationTask.Wait();
+            _actorSystem.Terminate().Wait();
             _actorSystem = null;
         }
     }

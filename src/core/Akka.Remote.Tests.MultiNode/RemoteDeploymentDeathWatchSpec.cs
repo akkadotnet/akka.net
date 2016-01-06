@@ -64,7 +64,7 @@ namespace Akka.Remote.Tests.MultiNode
                 var timeOut = RemainingOrDefault;
                 try
                 {
-                    Sys.AwaitTermination(timeOut);
+                    Sys.WhenTerminated.Wait(timeOut);
                 }
                 catch (TimeoutException ex)
                 {

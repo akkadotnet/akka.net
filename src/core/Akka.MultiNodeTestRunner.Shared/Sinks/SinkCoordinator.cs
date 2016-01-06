@@ -126,7 +126,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
                 //Shut down the ActorSystem if all confirmations have been received
                 if (ReceivedSinkCloseConfirmations >= TotalReceiveClosedConfirmations)
-                    Context.System.Shutdown();
+                    Context.System.Terminate();
             });
 
             Receive<RecommendedExitCode>(code =>

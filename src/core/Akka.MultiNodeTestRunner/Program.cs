@@ -187,7 +187,7 @@ namespace Akka.MultiNodeTestRunner
             CloseAllSinks();
             
             //Block until all Sinks have been terminated.
-            TestRunSystem.AwaitTermination(TimeSpan.FromMinutes(1));
+            TestRunSystem.WhenTerminated.Wait(TimeSpan.FromMinutes(1));
 
             //Return the proper exit code
             Environment.Exit(ExitCodeContainer.ExitCode);

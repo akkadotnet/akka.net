@@ -79,7 +79,7 @@ namespace SymbolLookup
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            ActorSystem.Shutdown();
+            ActorSystem.Terminate();
         }
 
         private void btn_Go_Click(object sender, EventArgs e)

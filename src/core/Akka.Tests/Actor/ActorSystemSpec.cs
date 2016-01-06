@@ -47,7 +47,7 @@ namespace Akka.Tests.Actor
         {
             ActorSystem
                 .Create("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-")
-                .Shutdown();
+                .Terminate();
         }
 
         [Fact]
@@ -56,8 +56,8 @@ namespace Akka.Tests.Actor
             var actorSystem = ActorSystem
                 .Create(Guid.NewGuid().ToString());
             var st = Stopwatch.StartNew();
-            var asyncShutdownTask = Task.Delay(TimeSpan.FromSeconds(1)).ContinueWith(_ => actorSystem.Shutdown());
-            actorSystem.AwaitTermination(TimeSpan.FromSeconds(2)).ShouldBeTrue();
+            var asyncShutdownTask = Task.Delay(TimeSpan.FromSeconds(1)).ContinueWith(_ => actorSystem.Terminate());
+            actorSystem.WhenTerminated.Wait(TimeSpan.FromSeconds(2)).ShouldBeTrue();
             Assert.True(st.Elapsed.TotalSeconds >= .9);
         }
 
@@ -65,7 +65,7 @@ namespace Akka.Tests.Actor
         public void Given_a_system_that_isnt_going_to_shutdown_When_waiting_for_system_shutdown_Then_it_times_out()
         {
             var actorSystem = ActorSystem.Create(Guid.NewGuid().ToString());
-            actorSystem.AwaitTermination(TimeSpan.FromMilliseconds(10)).ShouldBeFalse();
+            actorSystem.WhenTerminated.Wait(TimeSpan.FromMilliseconds(10)).ShouldBeFalse();
         }
 
         [Fact]
@@ -90,7 +90,7 @@ namespace Akka.Tests.Actor
                 });
             }
 
-            actorSystem.Shutdown();
+            actorSystem.Terminate();
             latch.Ready();
 
             expected.Reverse();
@@ -113,10 +113,10 @@ namespace Akka.Tests.Actor
             new TaskFactory().StartNew(() =>
             {
                 Task.Delay(Dilated(TimeSpan.FromMilliseconds(200))).Wait();
-                actorSystem.Shutdown();
+                actorSystem.Terminate();
             });
 
-            actorSystem.AwaitTermination(TimeSpan.FromSeconds(5));
+            actorSystem.WhenTerminated.Wait(TimeSpan.FromSeconds(5));
             Assert.True(callbackWasRun);
         }
 
@@ -125,9 +125,8 @@ namespace Akka.Tests.Actor
         {
             var actorSystem = ActorSystem.Create(Guid.NewGuid().ToString());
 
-            actorSystem.Shutdown();
-            actorSystem.AwaitTermination(TimeSpan.FromSeconds(10));
-
+            actorSystem.Terminate().Wait(TimeSpan.FromSeconds(10));
+            
             var ex = Assert.Throws<Exception>(() => actorSystem.RegisterOnTermination(() => { }));
             Assert.Equal("ActorSystem already terminated.", ex.Message);
         }

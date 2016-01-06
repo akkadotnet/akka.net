@@ -129,10 +129,8 @@ namespace Akka.Remote.Tests.Performance.Transports
         public virtual void Cleanup()
         {
             _resetEvent.Dispose();
-            System1.Shutdown();
-            System1.TerminationTask.Wait();
-            System2.Shutdown();
-            System2.TerminationTask.Wait();
+            System1.Terminate().Wait();
+            System2.Terminate().Wait();
         }
     }
 }
