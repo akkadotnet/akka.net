@@ -8,21 +8,19 @@ using Akka.Streams.Implementation.Stages;
 
 namespace Akka.Streams.Dsl
 {
-    /**
-     * A `Sink` is a set of stream processing steps that has one open input and an attached output.
-     * Can be used as a `Subscriber`
-     */
+    /// <summary>
+    /// A <see cref="Sink{TIn,TMat}"/> is a set of stream processing steps that has one open input and an attached output.
+    /// Can be used as a <see cref="ISubscriber{T}"/>
+    /// </summary>
     public sealed class Sink<TIn, TMat> : IGraph<SinkShape<TIn>, TMat>
     {
-        private readonly IModule _module;
-
         public Sink(IModule module)
         {
-            _module = module;
+            Module = module;
         }
 
-        public SinkShape<TIn> Shape { get { return (SinkShape<TIn>)_module.Shape; } }
-        public IModule Module { get { return _module; } }
+        public SinkShape<TIn> Shape { get { return (SinkShape<TIn>)Module.Shape; } }
+        public IModule Module { get; }
 
         /**
          * Connect this `Sink` to a `Source` and run it. The returned value is the materialized value
@@ -35,12 +33,12 @@ namespace Akka.Streams.Dsl
 
         public Sink<TIn, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> fn)
         {
-            return new Sink<TIn, TMat2>(_module.TransformMaterializedValue(o => fn((TMat)o)));
+            return new Sink<TIn, TMat2>(Module.TransformMaterializedValue(o => fn((TMat)o)));
         }
 
         public IGraph<SinkShape<TIn>, TMat> WithAttributes(Attributes attributes)
         {
-            return new Sink<TIn, TMat>(_module.WithAttributes(attributes).Nest());
+            return new Sink<TIn, TMat>(Module.WithAttributes(attributes).Nest());
         }
 
         public IGraph<SinkShape<TIn>, TMat> Named(string name)
