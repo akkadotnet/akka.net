@@ -7,12 +7,13 @@
 
 using Akka.Actor;
 using Akka.IO;
-using Akka.Remote.Transport;
 
-namespace Akka.Remote.AkkaIOTransport
+namespace Akka.Remote.Transport.AkkaIO
 {
     internal class TransportListener : UntypedActor, IWithUnboundedStash
     {
+        public IStash Stash { get; set; }
+
         protected override void OnReceive(object message)
         {
             if (message is IAssociationEventListener)
@@ -35,14 +36,13 @@ namespace Akka.Remote.AkkaIOTransport
                 if (connected != null)
                 {
                     var actor = Context.ActorOf(Props.Create(() => new ConnectionAssociationActor(Sender)));
-                    var association = new ConnectionAssociationHandle(actor, connected.LocalAddress.ToAddress(Context.System),
-                                                                             connected.RemoteAddress.ToAddress(Context.System));
+                    var association = new ConnectionAssociationHandle(actor,
+                        connected.LocalAddress.ToAddress(Context.System),
+                        connected.RemoteAddress.ToAddress(Context.System));
                     listener.Notify(new InboundAssociation(association));
                 }
                 return false;
             };
         }
-
-        public IStash Stash { get; set; }
     }
 }

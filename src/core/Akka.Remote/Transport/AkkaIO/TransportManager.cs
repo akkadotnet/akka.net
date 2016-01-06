@@ -10,21 +10,21 @@ using System.Net;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
-using Akka.Remote.Transport;
 
-namespace Akka.Remote.AkkaIOTransport
+namespace Akka.Remote.Transport.AkkaIO
 {
     //Commands
-    class Associate
+    internal class Associate
     {
-        public Address RemoteAddress { get; private set; }
-
         public Associate(Address remoteAddress)
         {
             RemoteAddress = remoteAddress;
         }
+
+        public Address RemoteAddress { get; private set; }
     }
-    class Listen
+
+    internal class Listen
     {
         public Listen(string hostname, int port)
         {
@@ -37,8 +37,10 @@ namespace Akka.Remote.AkkaIOTransport
     }
 
     //TODO: Supervision. Stopping Strategy is probably the only option. Do we need to signal remoting?
-    class TransportManager : UntypedActor, IWithUnboundedStash
+    internal class TransportManager : UntypedActor, IWithUnboundedStash
     {
+        public IStash Stash { get; set; }
+
         protected override void OnReceive(object message)
         {
             if (message is Associate)
@@ -69,7 +71,10 @@ namespace Akka.Remote.AkkaIOTransport
                     var bound = message as Tcp.Bound;
                     var promise = new TaskCompletionSource<IAssociationEventListener>();
                     promise.Task.PipeTo(handler);
-                    replyTo.Tell(Tuple.Create(new Address(AkkaIOTransport.Protocal, Context.System.Name, listen.Hostname, ((IPEndPoint) bound.LocalAddress).Port), promise));
+                    replyTo.Tell(
+                        Tuple.Create(
+                            new Address(AkkaIOTransport.Protocal, Context.System.Name, listen.Hostname,
+                                ((IPEndPoint) bound.LocalAddress).Port), promise));
                     UnbecomeStacked();
                     Stash.Unstash();
                     return true;
@@ -87,7 +92,8 @@ namespace Akka.Remote.AkkaIOTransport
                     var connected = message as Tcp.Connected;
                     var handler = Context.ActorOf(Props.Create(() => new ConnectionAssociationActor(Sender)));
                     Sender.Tell(new Tcp.Register(handler));
-                    replyTo.Tell(new ConnectionAssociationHandle(handler, connected.LocalAddress.ToAddress(Context.System), associate.RemoteAddress));
+                    replyTo.Tell(new ConnectionAssociationHandle(handler,
+                        connected.LocalAddress.ToAddress(Context.System), associate.RemoteAddress));
                     UnbecomeStacked();
                     Stash.Unstash();
                     return true;
@@ -112,7 +118,5 @@ namespace Akka.Remote.AkkaIOTransport
             }
             return false;
         }
-
-        public IStash Stash { get; set; }
     }
 }

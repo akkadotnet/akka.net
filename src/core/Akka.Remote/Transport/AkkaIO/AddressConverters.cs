@@ -10,9 +10,9 @@ using System.Net;
 using System.Net.Sockets;
 using Akka.Actor;
 
-namespace Akka.Remote.AkkaIOTransport
+namespace Akka.Remote.Transport.AkkaIO
 {
-    static class AddressConverters
+    internal static class AddressConverters
     {
         public static Address ToAddress(this EndPoint endpoint, ActorSystem system)
         {
