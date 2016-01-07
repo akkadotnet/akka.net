@@ -60,6 +60,7 @@ namespace Akka.Actor
                     AutoReceiveMessage(envelope);
                 else
                     ReceiveMessage(message);
+                CurrentMessage = null;
             }
             catch (Exception cause)
             {
@@ -212,6 +213,9 @@ namespace Akka.Actor
 
         private void HandleActorTaskSchedulerMessage(ActorTaskSchedulerMessage m)
         {
+            //set the current message captured in the async operation
+            //current message was cleared earlier when the async receive handler completed
+            CurrentMessage = m.Message;
             if (m.Exception != null)
             {
                 HandleInvokeFailure(m.Exception);
@@ -219,6 +223,7 @@ namespace Akka.Actor
             }
 
             m.ExecuteTask();
+            CurrentMessage = null;
         }
 
         public void SwapMailbox(DeadLetterMailbox mailbox)
