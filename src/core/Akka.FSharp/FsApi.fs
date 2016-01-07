@@ -192,7 +192,12 @@ module Actors =
     
         /// Binds the next message.
         member __.Bind(m : IO<'In>, f : 'In -> _) = Func(fun m -> f m)
-    
+
+        // handle async operations directly as let! operations
+        member __.Bind(m: Async<'In>, f : 'In -> _) =
+            let res = m |> Async.RunSynchronously
+            f res
+   
         /// Binds the result of another actor computation expression.
         member this.Bind(x : Cont<'In, 'Out1>, f : 'Out1 -> Cont<'In, 'Out2>) : Cont<'In, 'Out2> = 
             match x with
@@ -224,8 +229,7 @@ module Actors =
     
         member this.Using(d : #IDisposable, f : _ -> Cont<'In, 'Out>) : Cont<'In, 'Out> = 
             this.TryFinally((fun () -> f d), 
-                            fun () -> 
-                                if d <> null then d.Dispose())
+                            fun () -> d.Dispose())
     
         member this.While(condition : unit -> bool, f : unit -> Cont<'In, unit>) : Cont<'In, unit> = 
             if condition() then 
