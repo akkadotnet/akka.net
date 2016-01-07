@@ -38,14 +38,15 @@ namespace Akka.Remote.Tests
             Assert.Equal(TimeSpan.FromSeconds(2), remoteSettings.FlushWait);
             Assert.Equal(TimeSpan.FromSeconds(10), remoteSettings.StartupTimeout);
             Assert.Equal(TimeSpan.FromSeconds(5), remoteSettings.RetryGateClosedFor);
-            //Assert.Equal("akka.remote.default-remote-dispatcher", remoteSettings.Dispatcher); //TODO: add RemoteDispatcher support
+            Assert.Equal("akka.remote.default-remote-dispatcher", remoteSettings.Dispatcher);
             Assert.True(remoteSettings.UsePassiveConnections);
             Assert.Equal(TimeSpan.FromMilliseconds(50), remoteSettings.BackoffPeriod);
             Assert.Equal(TimeSpan.FromSeconds(0.3d), remoteSettings.SysMsgAckTimeout);
             Assert.Equal(TimeSpan.FromSeconds(2), remoteSettings.SysResendTimeout);
-            Assert.Equal(1000, remoteSettings.SysMsgBufferSize);
+            Assert.Equal(20000, remoteSettings.SysMsgBufferSize);
             Assert.Equal(TimeSpan.FromMinutes(3), remoteSettings.InitialSysMsgDeliveryTimeout);
             Assert.Equal(TimeSpan.FromDays(5), remoteSettings.QuarantineDuration);
+            Assert.Equal(TimeSpan.FromDays(5), remoteSettings.QuarantineSilentSystemTimeout);
             Assert.Equal(TimeSpan.FromSeconds(30), remoteSettings.CommandAckTimeout);
             Assert.Equal(1, remoteSettings.Transports.Length);
             Assert.Equal(typeof(HeliosTcpTransport), Type.GetType(remoteSettings.Transports.Head().TransportClass));
@@ -59,6 +60,10 @@ namespace Akka.Remote.Tests
             Assert.Equal(TimeSpan.FromMilliseconds(100), remoteSettings.WatchFailureDetectorConfig.GetTimeSpan("min-std-deviation"));
 
             //TODO add adapter support
+
+            // TODO add WatchFailureDetectorConfig assertions
+
+            remoteSettings.Config.GetString("akka.remote.log-frame-size-exceeding").ShouldBe("off");
         }
 
         [Fact]

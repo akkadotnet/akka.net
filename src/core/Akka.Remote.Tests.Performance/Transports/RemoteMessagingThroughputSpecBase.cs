@@ -86,7 +86,10 @@ namespace Akka.Remote.Tests.Performance.Transports
             var system1EchoActorPath = new RootActorPath(system1Address) / "user" / "echo";
             var system2RemoteActorPath = new RootActorPath(system2Address) / "user" / "benchmark";
 
-            _remoteReceiver = System1.ActorSelection(system2RemoteActorPath).ResolveOne(TimeSpan.FromSeconds(2)).Result;
+            // set the timeout high here to avoid timeouts
+            // TL;DR; - on slow machines it can take longer than 2 seconds to form the association, do the handshake, and reply back
+            // using the in-memory transport.
+            _remoteReceiver = System1.ActorSelection(system2RemoteActorPath).ResolveOne(TimeSpan.FromSeconds(30)).Result;
             _remoteEcho =
                 System2.ActorSelection(system1EchoActorPath).ResolveOne(TimeSpan.FromSeconds(2)).Result;
         }

@@ -233,7 +233,7 @@ namespace Akka.Remote.Transport
 
     internal sealed class HandshakeInfo
     {
-        public HandshakeInfo(Address origin, long uid)
+        public HandshakeInfo(Address origin, int uid)
         {
             Origin = origin;
             Uid = uid;
@@ -241,7 +241,7 @@ namespace Akka.Remote.Transport
 
         public Address Origin { get; private set; }
 
-        public long Uid { get; private set; }
+        public int Uid { get; private set; }
 
         public override bool Equals(object obj)
         {
