@@ -5,16 +5,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
-using Akka.Remote.Transport;
 using ByteString = Google.ProtocolBuffers.ByteString;
 
-namespace Akka.Remote.AkkaIOTransport
+namespace Akka.Remote.Transport.AkkaIO
 {
-    class ConnectionAssociationHandle : AssociationHandle
+    internal class ConnectionAssociationHandle : AssociationHandle
     {
         private readonly IActorRef _connection;
 
@@ -39,7 +37,7 @@ namespace Akka.Remote.AkkaIOTransport
         }
     }
 
-    class ConnectionAssociationActor : UntypedActor, IWithUnboundedStash
+    internal class ConnectionAssociationActor : UntypedActor, IWithUnboundedStash
     {
         private readonly IActorRef _connection;
 
@@ -48,6 +46,8 @@ namespace Akka.Remote.AkkaIOTransport
             _connection = connection;
             connection.Tell(new Tcp.Register(Self));
         }
+
+        public IStash Stash { get; set; }
 
         protected override void OnReceive(object message)
         {
@@ -113,7 +113,5 @@ namespace Akka.Remote.AkkaIOTransport
             }
             else Unhandled(message);
         }
-
-        public IStash Stash { get; set; }
     }
 }
