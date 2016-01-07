@@ -83,7 +83,6 @@ namespace Akka.Remote.Transport.Helios
             var configHost = Config.GetString("hostname");
             var publicConfigHost = Config.GetString("public-hostname");
             Hostname = string.IsNullOrEmpty(configHost) ? IPAddress.Any.ToString() : configHost;
-            PublicHostname = string.IsNullOrEmpty(publicConfigHost) ? configHost : publicConfigHost;
             PublicHostname = string.IsNullOrEmpty(publicConfigHost) ? Hostname : publicConfigHost;
             ServerSocketWorkerPoolSize = ComputeWps(Config.GetConfig("server-socket-worker-pool"));
             ClientSocketWorkerPoolSize = ComputeWps(Config.GetConfig("client-socket-worker-pool"));
