@@ -87,7 +87,6 @@ namespace Akka.Actor
             return CreateAndStartSystem(name, config);
         }
 
-#if !ANDROID
         /// <summary>
         ///     Creates the specified name.
         /// </summary>
@@ -99,7 +98,6 @@ namespace Akka.Actor
         {
             return CreateAndStartSystem(name, ConfigurationFactory.Load());
         }
-#endif
 
         private static ActorSystem CreateAndStartSystem(string name, Config withFallback)
         {

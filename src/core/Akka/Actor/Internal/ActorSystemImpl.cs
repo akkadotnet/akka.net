@@ -40,12 +40,10 @@ namespace Akka.Actor.Internal
         private ActorProducerPipelineResolver _actorProducerPipelineResolver;
         private TerminationCallbacks _terminationCallbacks;
 
-#if !ANDROID
         public ActorSystemImpl(string name)
             : this(name, ConfigurationFactory.Load())
         {
         }
-#endif
 
         public ActorSystemImpl(string name, Config config)
         {

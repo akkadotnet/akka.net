@@ -308,7 +308,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Util\WildcardTree.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)Configuration\Pigeon.conf" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Configuration\Pigeon.conf" />
     <None Include="$(MSBuildThisFileDirectory)Util\MatchHandler\README.md" />
   </ItemGroup>
 </Project>

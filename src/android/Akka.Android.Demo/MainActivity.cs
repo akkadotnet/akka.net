@@ -1,30 +1,38 @@
 ﻿using System;
+using Akka.Actor;
 using Android.App;
 using Android.Content;
 using Android.Runtime;
 using Android.Views;
 using Android.Widget;
 using Android.OS;
+using Android.Util;
 
 namespace Akka.Android.Demo
 {
     [Activity(Label = "Akka.Android.Demo", MainLauncher = true, Icon = "@drawable/icon")]
     public class MainActivity : Activity
     {
-        int count = 1;
-
         protected override void OnCreate(Bundle bundle)
         {
             base.OnCreate(bundle);
-
-            // Set our view from the "main" layout resource
             SetContentView(Resource.Layout.Main);
 
-            // Get our button from the layout resource,
-            // and attach an event to it
-            Button button = FindViewById<Button>(Resource.Id.MyButton);
+            var system = ActorSystem.Create("MySystem");
+            var bla = system.ActorOf<HelloActor>();
 
-            button.Click += delegate { button.Text = $"{count++} clicks!"; };
+            system.Scheduler.ScheduleTellRepeatedly(TimeSpan.Zero, TimeSpan.FromSeconds(10), bla, 1, ActorRefs.NoSender);
+        }
+    }
+
+    public class HelloActor : ReceiveActor
+    {
+        public HelloActor()
+        {
+            Receive<int>(_ =>
+            {
+                Log.Debug("tst", null, "hello");
+            });
         }
     }
 }
