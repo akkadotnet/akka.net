@@ -13,7 +13,7 @@ namespace Akka.Event
     /// Represents a message that could not be delivered to it's recipient. 
     /// This message wraps the original message, the sender and the intended recipient of the message.
     /// </summary>
-    public class DeadLetter
+    public class DeadLetter : INoSerializationVerificationNeeded
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="DeadLetter"/> class.
