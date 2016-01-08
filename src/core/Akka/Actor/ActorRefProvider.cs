@@ -135,6 +135,7 @@ namespace Akka.Actor
         private LocalActorRef _userGuardian;    //This is called guardian in Akka
         private Func<Mailbox> _defaultMailbox;  //TODO: switch to MailboxType
         private LocalActorRef _systemGuardian;
+        private ISupervisorStrategyConfigurator _guardianSupervisorStrategyConfigurator;
 
         public LocalActorRefProvider(string systemName, Settings settings, EventStream eventStream)
             : this(systemName, settings, eventStream, null, null)
@@ -155,7 +156,14 @@ namespace Akka.Actor
             _tempNumber = new AtomicCounterLong(1);
             _tempNode = _rootPath / "temp";
 
-            //TODO: _guardianSupervisorStrategyConfigurator = dynamicAccess.createInstanceFor[SupervisorStrategyConfigurator](settings.SupervisorStrategyClass, EmptyImmutableSeq).get
+            var supervisorStrategyType = Type.GetType(settings.SupervisorStrategyClass);
+            if (supervisorStrategyType == null)
+            {
+                // TODO: is it ok to throw exception here?
+                throw new ArgumentException(string.Format("Type \"{0}\" is not found.", settings.SupervisorStrategyClass));
+            }
+
+            _guardianSupervisorStrategyConfigurator = (ISupervisorStrategyConfigurator)Activator.CreateInstance(supervisorStrategyType);
             _systemGuardianStrategy = SupervisorStrategy.DefaultStrategy;
 
         }
@@ -180,7 +188,7 @@ namespace Akka.Actor
 
         private MessageDispatcher DefaultDispatcher { get { return _system.Dispatchers.DefaultGlobalDispatcher; } }
 
-        private SupervisorStrategy UserGuardianSupervisorStrategy { get { return SupervisorStrategy.DefaultStrategy; } }    //TODO: Implement Akka's _guardianSupervisorStrategyConfigurator.create()
+        private SupervisorStrategy UserGuardianSupervisorStrategy { get { return _guardianSupervisorStrategyConfigurator.Create(); } }
 
         public ActorPath TempPath()
         {
