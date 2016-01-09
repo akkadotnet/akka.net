@@ -59,6 +59,11 @@ namespace Akka.IO
 
         public bool Connect(EndPoint address)
         {
+#if DNXCORE50
+            _socket.Connect(address);
+            _connected = true;
+            return true;
+#else
             _connectResult = _socket.BeginConnect(address, ar => { }, null);
             if (_connectResult.CompletedSynchronously)
             {
@@ -67,9 +72,13 @@ namespace Akka.IO
                 return true;
             }
             return false;
+#endif
         }
         public bool FinishConnect()
         {
+#if DNXCORE50
+            return _connected;
+#else
             if (_connectResult.CompletedSynchronously)
                 return true;
             if (_connectResult.IsCompleted)
@@ -78,6 +87,7 @@ namespace Akka.IO
                 _connected = true;
             }
             return _connected;
+#endif
         }
 
         public SocketChannel Accept()
