@@ -24,31 +24,22 @@ namespace Akka.Persistence.Tests
         {
             private readonly IActorRef _testActor;
             private readonly string _name;
-            private readonly TimeSpan _redeliverInterval;
-            private readonly int _warn;
-            private readonly int _redeliveryBurstLimit;
             private readonly bool _isAsync;
             private readonly IDictionary<string, ActorPath> _destinations;
             private readonly ILoggingAdapter _log;
             private IActorRef _lastSnapshotAskedForBy;
 
             public Sender(IActorRef testActor, string name, TimeSpan redeliverInterval, int warn, int redeliveryBurstLimit, bool isAsync, IDictionary<string, ActorPath> destinations)
-                : base()
+                : base(new PersistenceSettings.AtLeastOnceDeliverySettings(redeliverInterval, redeliveryBurstLimit, warn, 100000))
             {
                 _testActor = testActor;
                 _name = name;
-                _redeliverInterval = redeliverInterval;
-                _warn = warn;
-                _redeliveryBurstLimit = redeliveryBurstLimit;
                 _isAsync = isAsync;
                 _destinations = destinations;
                 _log = Context.GetLogger();
             }
 
             public override string PersistenceId { get { return _name; } }
-            public override TimeSpan RedeliverInterval { get { return _redeliverInterval; } }
-            public override int UnconfirmedDeliveryAttemptsToWarn { get { return _warn; } }
-            public override int RedeliveryBurstLimit { get { return _redeliveryBurstLimit; } }
 
             protected override bool ReceiveRecover(object message)
             {
