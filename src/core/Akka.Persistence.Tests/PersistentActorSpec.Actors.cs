@@ -9,9 +9,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.Util.Internal;
+using Akka.Dispatch;
 
 namespace Akka.Persistence.Tests
 {
@@ -498,6 +500,46 @@ namespace Akka.Persistence.Tests
                 }
                 else return true;
                 return false;
+            }
+        }
+
+        internal class AsyncReceiveAndPersistActor : ExamplePersistentActor
+        {
+            private int _counter = 0;
+            public AsyncReceiveAndPersistActor(string name)
+                : base(name)
+            {
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (!CommonBehavior(message))
+                {
+                    var cmd = message as Cmd;
+                    if (cmd != null)
+                    {
+                        ActorTaskScheduler.RunTask(() => ReceiceAsync(cmd));
+                        return true;
+                    }
+                }
+                else return true;
+                return false;
+            }
+
+            async Task ReceiceAsync(Cmd cmd)
+            {
+                var data = await Task.Run(async () =>
+                {
+                    await Task.Delay(1000);
+                    return cmd.Data;
+                });
+
+                Sender.Tell(data);
+
+                Persist(new Evt(data.ToString() + "-" + (++_counter)), evt =>
+                {
+                    Sender.Tell(evt.Data);
+                });
             }
         }
 
