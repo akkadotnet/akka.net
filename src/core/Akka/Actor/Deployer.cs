@@ -104,14 +104,19 @@ namespace Akka.Actor
             try
             {
                 var routerType = Type.GetType(routerTypeName, true);
-                Debug.Assert(routerType != null, "routerType != null");
+
+                if (!typeof(RouterConfig).IsAssignableFrom(routerType))
+                {
+                    throw new ConfigurationException(string.Format("Provided type {0} is not a RouterConfig type", routerTypeName));
+                }
+
                 var routerConfig = (RouterConfig)Activator.CreateInstance(routerType, deployment);
 
                 return routerConfig;
             }
             catch (TypeLoadException ex)
             {
-                var msgException = string.Format("Could not find type '{0}'", routerTypeName);
+                var msgException = string.Format("Could not find the router config type '{0}'", routerTypeName);
                 throw new TypeLoadException(msgException, ex);
             }
         }

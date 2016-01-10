@@ -126,16 +126,24 @@ namespace Akka.IO
         {
             try
             {
+                Type type;
                 _system = system;
                 Settings = new DnsSettings(system.Settings.Config.GetConfig("akka.io.dns"));
                 //TODO: system.dynamicAccess.getClassFor[DnsProvider](Settings.ProviderObjectName).get.newInstance()
-                Provider = (IDnsProvider)Activator.CreateInstance(Type.GetType(Settings.ProviderObjectName, true));
+
+                type = Type.GetType(Settings.ProviderObjectName, true);
+                if (!type.GetInterfaces().Contains(typeof(IDnsProvider)))
+                {
+                    throw new ConfigurationException(string.Format("Provided type {0} is not a IDnsProvider", type));
+                }
+
+                Provider = (IDnsProvider)Activator.CreateInstance(type);
                 Cache = Provider.Cache;
             }
             catch (TypeLoadException ex)
             {
-                var msgException = string.Format("Could not find type '{0}'", Settings.ProviderObjectName);
-                throw new TypeLoadException(msgException, ex);
+                var msgException = string.Format("Could not find the IDnsProvider type '{0}'", Settings.ProviderObjectName);
+                throw new ConfigurationException(msgException, ex);
             }
         }
 

@@ -128,7 +128,7 @@ namespace Akka.Serialization
                     }
                     catch (TypeLoadException ex)
                     {
-                        var msgException = string.Format("Could not find type '{0}'", pair.Key);
+                        var msgException = string.Format("Could not find serialization identifier type '{0}'", pair.Key);
                         throw new TypeLoadException(msgException, ex);
                     }
                 }, pair => pair.Value.GetInt());

@@ -16,7 +16,7 @@ using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Util;
-
+using System.Linq;
 
 namespace Akka.Actor.Internal
 {
@@ -279,13 +279,19 @@ namespace Akka.Actor.Internal
             try
             {
                 Type providerType = Type.GetType(_settings.ProviderClass, true);
+
+                if (!providerType.GetInterfaces().Contains(typeof(IActorRefProvider)))
+                {
+                    throw new ConfigurationException(string.Format("Provided type {0} is not a IActorRefProvider", _settings.ProviderClass));
+                }
+
                 global::System.Diagnostics.Debug.Assert(providerType != null, "providerType != null");
                 var provider = (IActorRefProvider)Activator.CreateInstance(providerType, _name, _settings, _eventStream);
                 _provider = provider;
             }
             catch (TypeLoadException ex)
             {
-                var msgException = string.Format("Could not find type '{0}'", _settings.ProviderClass);
+                var msgException = string.Format("Could not find the actorref provider type '{0}'", _settings.ProviderClass);
                 throw new TypeLoadException(msgException, ex);
             }
         }

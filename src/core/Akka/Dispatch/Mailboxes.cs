@@ -123,17 +123,23 @@ namespace Akka.Dispatch
             try
             {
                 var mailboxType = Type.GetType(type, true);
+
+                if (!typeof(Mailbox).IsAssignableFrom(mailboxType))
+                {
+                    throw new ConfigurationException(string.Format("Provided type {0} is not a Mailbox type", type));
+                }
+
                 return mailboxType;
             }
             catch (TypeLoadException ex)
             {
-                var msgException = string.Format("Could not find type '{0}'", type);
+                var msgException = string.Format("Could not find the mailbox type '{0}' provided in the configuration path {1}", type, path);
                 throw new TypeLoadException(msgException, ex);
             }
             /*
-mailbox-capacity = 1000
-mailbox-push-timeout-time = 10s
-stash-capacity = -1
+                mailbox-capacity = 1000
+                mailbox-push-timeout-time = 10s
+                stash-capacity = -1
             */
         }
     }
