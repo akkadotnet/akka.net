@@ -33,7 +33,7 @@ namespace Akka.Remote.Tests.MultiNode
             Third = Role("third");
             Fourth = Role("fourth");
 
-            CommonConfig = DebugConfig(false);
+            CommonConfig = DebugConfig(true);
 
             DeployOnAll(@"
       /service-hello {
@@ -244,7 +244,7 @@ namespace Akka.Remote.Tests.MultiNode
             var runOnFourth = new Action(() =>
             {
                 EnterBarrier("start");
-                var actor = Sys.ActorOf(Props.Create<BlackHoleActor>().WithRouter(FromConfig.Instance), "service-hello3");
+                var actor = Sys.ActorOf(Props.Empty.WithRouter(FromConfig.Instance), "service-hello3");
 
                 Assert.IsType<RoutedActorRef>(actor);
 
@@ -271,6 +271,8 @@ namespace Akka.Remote.Tests.MultiNode
                         });
 
                 EnterBarrier("end");
+                Log.Debug("Counts for RemoteRoundRobinSpec nodes. First: {0}, Second: {1}, Third: {2}", replies[Node(_config.First).Address],
+                    replies[Node(_config.Second).Address], replies[Node(_config.Third).Address]);
                 replies.Values.ForEach(x => Assert.Equal(x, iterationCount));
                 Assert.False(replies.ContainsKey(Node(_config.Fourth).Address));
             });
