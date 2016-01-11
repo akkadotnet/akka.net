@@ -93,10 +93,14 @@ namespace Akka.Actor
                 var cancellationSource = new CancellationTokenSource();
                 cancellationSource.Token.Register(() => result.TrySetCanceled());
                 cancellationSource.CancelAfter(t);
+                result.Task.ContinueWith(_ => cancellationSource.Dispose());
             }
 
             if (cancellationToken.CanBeCanceled)
-                cancellationToken.Register(() => result.TrySetCanceled());
+            {
+                var ctr = cancellationToken.Register(() => result.TrySetCanceled());
+                result.Task.ContinueWith(_ => ctr.Dispose());
+            }                
         
             //create a new tempcontainer path
             ActorPath path = provider.TempPath();
