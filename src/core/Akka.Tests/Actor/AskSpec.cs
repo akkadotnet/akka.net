@@ -86,6 +86,15 @@ namespace Akka.Tests.Actor
             Assert.Throws<AggregateException>(() => { actor.Ask<string>("timeout", TimeSpan.FromSeconds(3)).Wait(); });
         }
 
+        [Fact]
+        public void CanCancelWhenAskingActor()
+        {            
+            var actor = Sys.ActorOf<SomeActor>();
+            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            Assert.Throws<AggregateException>(() => { actor.Ask<string>("timeout", Timeout.InfiniteTimeSpan, cts.Token).Wait(); });
+            Assert.True(cts.IsCancellationRequested);
+        }
+
         /// <summary>
         /// Tests to ensure that if we wait on the result of an Ask inside an actor's receive loop
         /// that we don't deadlock
