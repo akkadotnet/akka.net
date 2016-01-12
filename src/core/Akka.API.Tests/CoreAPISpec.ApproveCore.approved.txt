@@ -149,6 +149,7 @@ namespace Akka.Actor
     {
         public ActorNotFoundException() { }
         protected ActorNotFoundException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+        public ActorNotFoundException(string message, System.Exception innerException = null) { }
     }
     public abstract class ActorPath : Akka.Util.ISurrogated, System.IComparable<Akka.Actor.ActorPath>, System.IEquatable<Akka.Actor.ActorPath>
     {
@@ -314,12 +315,17 @@ namespace Akka.Actor
         public abstract Akka.Actor.IScheduler Scheduler { get; }
         public abstract Akka.Serialization.Serialization Serialization { get; }
         public abstract Akka.Actor.Settings Settings { get; }
+        [System.ObsoleteAttribute("Use WhenTerminated instead. This property will be removed in future versions")]
         public abstract System.Threading.Tasks.Task TerminationTask { get; }
+        public abstract System.Threading.Tasks.Task WhenTerminated { get; }
         public abstract Akka.Actor.IActorRef ActorOf(Akka.Actor.Props props, string name = null);
         public abstract Akka.Actor.ActorSelection ActorSelection(Akka.Actor.ActorPath actorPath);
         public abstract Akka.Actor.ActorSelection ActorSelection(string actorPath);
+        [System.ObsoleteAttribute("Use WhenTerminated instead. This method will be removed in future versions")]
         public abstract void AwaitTermination();
+        [System.ObsoleteAttribute("Use WhenTerminated instead. This method will be removed in future versions")]
         public abstract bool AwaitTermination(System.TimeSpan timeout);
+        [System.ObsoleteAttribute("Use WhenTerminated instead. This method will be removed in future versions")]
         public abstract bool AwaitTermination(System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken);
         public static Akka.Actor.ActorSystem Create(string name, Akka.Configuration.Config config) { }
         public static Akka.Actor.ActorSystem Create(string name) { }
@@ -332,8 +338,10 @@ namespace Akka.Actor
             where T :  class, Akka.Actor.IExtension;
         public abstract object RegisterExtension(Akka.Actor.IExtensionId extension);
         public abstract void RegisterOnTermination(System.Action code);
+        [System.ObsoleteAttribute("Use Terminate instead. This method will be removed in future versions")]
         public abstract void Shutdown();
         public abstract void Stop(Akka.Actor.IActorRef actor);
+        public abstract System.Threading.Tasks.Task Terminate();
         public abstract bool TryGetExtension(System.Type extensionType, out object extension);
         public abstract bool TryGetExtension<T>(out T extension)
             where T :  class, Akka.Actor.IExtension;
@@ -1697,12 +1705,17 @@ namespace Akka.Actor.Internal
         public override Akka.Serialization.Serialization Serialization { get; }
         public override Akka.Actor.Settings Settings { get; }
         public override Akka.Actor.IInternalActorRef SystemGuardian { get; }
+        [System.ObsoleteAttribute("Use WhenTerminated instead. This property will be removed in future versions")]
         public override System.Threading.Tasks.Task TerminationTask { get; }
+        public override System.Threading.Tasks.Task WhenTerminated { get; }
         public override Akka.Actor.IActorRef ActorOf(Akka.Actor.Props props, string name = null) { }
         public override Akka.Actor.ActorSelection ActorSelection(Akka.Actor.ActorPath actorPath) { }
         public override Akka.Actor.ActorSelection ActorSelection(string actorPath) { }
+        [System.ObsoleteAttribute("Use WhenTerminated instead. This method will be removed in future versions")]
         public override void AwaitTermination() { }
+        [System.ObsoleteAttribute("Use WhenTerminated instead. This method will be removed in future versions")]
         public override bool AwaitTermination(System.TimeSpan timeout) { }
+        [System.ObsoleteAttribute("Use WhenTerminated instead. This method will be removed in future versions")]
         public override bool AwaitTermination(System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken) { }
         public override object GetExtension(Akka.Actor.IExtensionId extensionId) { }
         public override T GetExtension<T>()
@@ -1712,12 +1725,14 @@ namespace Akka.Actor.Internal
             where T :  class, Akka.Actor.IExtension { }
         public override object RegisterExtension(Akka.Actor.IExtensionId extension) { }
         public override void RegisterOnTermination(System.Action code) { }
+        [System.ObsoleteAttribute("Use Terminate instead. This method will be removed in future versions")]
         public override void Shutdown() { }
         public void Start() { }
         public override void Stop(Akka.Actor.IActorRef actor) { }
         public override Akka.Actor.IActorRef SystemActorOf(Akka.Actor.Props props, string name = null) { }
         public override Akka.Actor.IActorRef SystemActorOf<TActor>(string name = null)
             where TActor : Akka.Actor.ActorBase, new () { }
+        public override System.Threading.Tasks.Task Terminate() { }
         public override bool TryGetExtension(System.Type extensionType, out object extension) { }
         public override bool TryGetExtension<T>(out T extension)
             where T :  class, Akka.Actor.IExtension { }
@@ -2174,6 +2189,7 @@ namespace Akka.Dispatch
 {
     public class ActorTaskScheduler : System.Threading.Tasks.TaskScheduler
     {
+        public object CurrentMessage { get; }
         public override int MaximumConcurrencyLevel { get; }
         protected override System.Collections.Generic.IEnumerable<System.Threading.Tasks.Task> GetScheduledTasks() { }
         protected override void QueueTask(System.Threading.Tasks.Task task) { }
@@ -3563,6 +3579,7 @@ namespace Akka.Pattern
     public class IllegalStateException : Akka.Actor.AkkaException
     {
         public IllegalStateException(string message) { }
+        public IllegalStateException(string message, System.Exception innerEx) { }
         protected IllegalStateException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class OpenCircuitException : Akka.Actor.AkkaException
@@ -3748,7 +3765,7 @@ namespace Akka.Routing
     }
     public class DefaultResizer : Akka.Routing.Resizer, System.IEquatable<Akka.Routing.DefaultResizer>
     {
-        public DefaultResizer(int lower, int upper, int pressureThreshold = 1, double rampupRate = 0,2, double backoffThreshold = 0,3, double backoffRate = 0,1, int messagesPerResize = 10) { }
+        public DefaultResizer(int lower, int upper, int pressureThreshold = 1, double rampupRate = 0.2, double backoffThreshold = 0.3, double backoffRate = 0.1, int messagesPerResize = 10) { }
         public double BackoffRate { get; }
         public double BackoffThreshold { get; }
         public int LowerBound { get; set; }
@@ -4779,6 +4796,7 @@ namespace Akka.Util.Internal
         public static T Head<T>(this System.Collections.Generic.IEnumerable<T> self) { }
         public static string Join(this System.Collections.Generic.IEnumerable<string> self, string separator) { }
         public static System.TimeSpan Max(this System.TimeSpan @this, System.TimeSpan other) { }
+        public static System.TimeSpan Min(this System.TimeSpan @this, System.TimeSpan other) { }
     }
     public interface IAtomicCounter<T>
     {
