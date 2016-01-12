@@ -168,6 +168,8 @@ namespace Akka.Remote.Tests.MultiNode
                 actor.Tell(new Broadcast(PoisonPill.Instance));
 
                 EnterBarrier("end");
+                Log.Debug("Counts for RemoteRoundRobinSpec nodes. First: {0}, Second: {1}, Third: {2}", replies[Node(_config.First).Address],
+                   replies[Node(_config.Second).Address], replies[Node(_config.Third).Address]);
                 replies.Values.ForEach(x => Assert.Equal(x, iterationCount));
                 Assert.False(replies.ContainsKey(Node(_config.Fourth).Address));
 
