@@ -23,6 +23,7 @@ namespace Akka.Remote.Tests.MultiNode.TestConductor
         {
             Master = Role("master");
             Slave = Role("slave");
+            CommonConfig = DebugConfig(true);
             TestTransport = true;
         }
     }
