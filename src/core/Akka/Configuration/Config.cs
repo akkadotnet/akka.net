@@ -483,6 +483,11 @@ namespace Akka.Configuration
                 current = current.Fallback;
             }
         }
+
+        /// <summary>
+        /// A static "Empty" configuration we can use instead of <c>null</c> in some key areas.
+        /// </summary>
+        public static readonly Config Empty = ConfigurationFactory.Empty;
     }
 
     /// <summary>

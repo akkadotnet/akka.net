@@ -114,7 +114,7 @@ namespace Akka.Remote.Tests.MultiNode
             }
         }
 
-        [MultiNodeFact]
+        [MultiNodeFact()]
         public void RemoteRoundRobinSpecs()
         {
             ARemoteRoundRobinMustBeLocallyInstantiatedOnARemoteNodeAndBeAbleToCommunicateThroughItsRemoteActorRef();
