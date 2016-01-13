@@ -52,6 +52,10 @@
     <DocumentationSources>
       <DocumentationSource sourceFile="..\src\core\Akka.Cluster\bin\Release\Akka.Cluster.dll" />
       <DocumentationSource sourceFile="..\src\core\Akka.Cluster\bin\Release\Akka.Cluster.xml" />
+      <DocumentationSource sourceFile="..\src\contrib\cluster\Akka.Cluster.Sharding\bin\Release\Akka.Cluster.Sharding.dll" />
+      <DocumentationSource sourceFile="..\src\contrib\cluster\Akka.Cluster.Sharding\bin\Release\Akka.Cluster.Sharding.xml" />
+      <DocumentationSource sourceFile="..\src\contrib\cluster\Akka.Cluster.Tools\bin\Release\Akka.Cluster.Tools.dll" />
+      <DocumentationSource sourceFile="..\src\contrib\cluster\Akka.Cluster.Tools\bin\Release\Akka.Cluster.Tools.xml" />
       <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.AutoFac\bin\Release\Akka.DI.AutoFac.dll" />
       <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.AutoFac\bin\Release\Akka.DI.AutoFac.xml" />
       <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.CastleWindsor\bin\Release\Akka.DI.CastleWindsor.dll" />
@@ -68,6 +72,8 @@
       <DocumentationSource sourceFile="..\src\core\Akka\bin\Release\Akka.ExternalAnnotations.xml" />
       <DocumentationSource sourceFile="..\src\core\Akka.FSharp\bin\Release\Akka.FSharp.dll" />
       <DocumentationSource sourceFile="..\src\core\Akka.FSharp\bin\Release\Akka.FSharp.xml" />
+      <DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.CommonLogging\bin\Release\Akka.Logger.CommonLogging.dll" />
+      <DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.CommonLogging\bin\Release\Akka.Logger.CommonLogging.xml" />
       <DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.log4net\bin\Release\Akka.Logger.log4net.dll" />
       <DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.log4net\bin\Release\Akka.Logger.log4net.xml" />
       <DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.NLog\bin\Release\Akka.Logger.NLog.dll" />
@@ -112,7 +118,7 @@
         The Akka.Actor namespace contains classes used to create and manage actors including lifecycle, message receiving and handling.
       </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Actor.Dsl" isDocumented="True">
-	    The Akka.Actor.Dsl namespace contains classes used to create and manage an actor using a custom domain specific language.
+        The Akka.Actor.Dsl namespace contains classes used to create and manage an actor using a custom domain specific language.
       </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Actor.Internal" isDocumented="True">
         The Akka.Actor.Internal namespace contains classes used to create and manage actors within the system. These classes are part
@@ -123,10 +129,36 @@
       </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Cluster.Proto.Msg" isDocumented="True">
         The Akka.Cluster.Proto.Msg namespace contains classes that provide for internal cluster messaging. These messages include items
-		like node member and reachability statuses.
+        like node member and reachability statuses.
       </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Cluster.Routing" isDocumented="True">
         The Akka.Cluster.Routing namespace contains classes that provide for routing messages within the cluster.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.Sharding" isDocumented="True">
+        The Akka.Cluster.Sharding namespace contains classes that provide for actor sharding functionality within the cluster.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.Sharding.Serialization" isDocumented="True">
+        The Akka.Cluster.Sharding.Serialization namespace contains classes used to (de-)serialize cluster sharding messages.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.Tools" isDocumented="False">
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.Tools.Client" isDocumented="True">
+        The Akka.Cluster.Tools.Client namespace contains classes that provide an interface for communicating with actors within the cluster.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.Tools.Client.Serialization" isDocumented="True">
+        The Akka.Cluster.Tools.Client.Serialization namespace contains classes used to (de-)serialize cluster client messages.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.Tools.PublishSubscribe" isDocumented="True">
+        The Akka.Cluster.Tools.PublishSubscribe namespace contains classes that provide for pub/sub functionality within the cluster.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.Tools.PublishSubscribe.Serialization" isDocumented="True">
+        The Akka.Cluster.Tools.PublishSubscribe.Serialization namespace contains classes used to (de-)serialize cluster pub/sub messages.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.Tools.Singleton" isDocumented="True">
+        The Akka.Cluster.Tools.Singleton namespace contains classes that provide for actor singleton functionality within a cluster.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Cluster.Tools.Singleton.Serialization" isDocumented="True">
+        The Akka.Cluster.Tools.Singleton.Serialization namespace contains classes used to (de-)serialize cluster singleton messages.
       </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Configuration" isDocumented="True">
         The Akka.Configuration namespace contains classes used to configure the system via a variety of means including configuration
@@ -185,6 +217,9 @@
       <NamespaceSummaryItem name="Akka.Logger.log4net" isDocumented="True">
         The Akka.Logger.log4net namespace contains classes used to log messages using the log4net library.
       </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Logger.CommonLogging" isDocumented="True">
+        The Akka.Logger.CommonLogging namespace contains classes used to log messages using the Common.Logging library.
+      </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Pattern" isDocumented="True">
         The Akka.Pattern namespace contains classes containing common usage patterns when interacting with actors.
       </NamespaceSummaryItem>
@@ -220,15 +255,15 @@
       </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Persistence.Sql.Common.Journal" isDocumented="True">
         The Akka.Persistence.Sql.Common.Journal namespace contains common classes used by the various SQL persistence extensions
-		when journalling.
+        when journalling.
       </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Persistence.Sql.Common.Queries" isDocumented="True">
         The Akka.Persistence.Sql.Common.Queries namespace contains common classes used by the various SQL persistence extensions
-		when performing queries.
+        when performing queries.
       </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Persistence.Sql.Common.Snapshot" isDocumented="True">
         The Akka.Persistence.Sql.Common.snapshot namespace contains common classes used by the various SQL persistence extensions
-		when snapshotting.
+        when snapshotting.
       </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Persistence.Sqlite" isDocumented="True">
         The Akka.Persistence namespace contains classes used to save/restore an actor's state into a Sqlite data store.
@@ -257,6 +292,9 @@
       </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Remote.Transport" isDocumented="True">
         The Akka.Remote.Transport namespace contains classes that provide for transporting messages over the network via TCP or UDP.
+      </NamespaceSummaryItem>
+      <NamespaceSummaryItem name="Akka.Remote.Transport.AkkaIO" isDocumented="True">
+        The Akka.Remote.Transport namespace contains classes that provide for transporting messages over the network via Akka.IO.
       </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Routing" isDocumented="True">
         The Akka.Routing namespace contains classes that provide for routing messages within the system.
