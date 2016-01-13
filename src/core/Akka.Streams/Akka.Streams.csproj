@@ -47,6 +47,21 @@
     <Compile Include="Actors\ActorPublisher.cs" />
     <Compile Include="Actors\ActorSubscriber.cs" />
     <Compile Include="Actors\RequestStrategies.cs" />
+    <Compile Include="CodeGen\Dsl\GraphApply.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>GraphApply.tt</DependentUpon>
+    </Compile>
+    <Compile Include="CodeGen\FanInShape.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>FanInShape.tt</DependentUpon>
+    </Compile>
+    <Compile Include="CodeGen\FanOutShape.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>FanOutShape.tt</DependentUpon>
+    </Compile>
     <Compile Include="Dsl\BidiFlow.cs" />
     <Compile Include="Dsl\FlexiMerge.cs" />
     <Compile Include="Dsl\FlowOperations.cs" />
@@ -140,6 +155,23 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="CodeGen\Dsl\GraphApply.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>GraphApply.cs</LastGenOutput>
+    </Content>
+    <Content Include="CodeGen\FanInShape.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>FanInShape.cs</LastGenOutput>
+    </Content>
+    <Content Include="CodeGen\FanOutShape.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>FanOutShape.cs</LastGenOutput>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

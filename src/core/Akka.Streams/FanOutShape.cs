@@ -4,122 +4,116 @@ using System.Linq;
 
 namespace Akka.Streams
 {
-    public abstract class FanOutShape<TOut> : Shape
+    public abstract class FanOutShape<TIn> : Shape
     {
         #region internal classes
 
         public interface IInit
         {
-            Outlet<TOut> Outlet { get; }
-            IEnumerable<Inlet> Inlets { get; }
+            Inlet<TIn> Inlet { get; }
+            IEnumerable<Outlet> Outlets { get; }
             string Name { get; }
         }
 
         [Serializable]
         public sealed class InitName : IInit
         {
-            private readonly string _name;
-            private readonly Outlet<TOut> _outlet;
-
             public InitName(string name)
             {
                 if (string.IsNullOrEmpty(name)) throw new ArgumentNullException("name");
 
-                _name = name;
-                _outlet = new Outlet<TOut>(name + ".out");
+                Name = name;
+                Inlet = new Inlet<TIn>(name + ".in");
+                Outlets = Enumerable.Empty<Outlet>();
             }
 
-            public Outlet<TOut> Outlet { get { return _outlet; } }
-            public IEnumerable<Inlet> Inlets { get { return Enumerable.Empty<Inlet>(); } }
-            public string Name { get { return _name; } }
+            public Inlet<TIn> Inlet { get; }
+            public IEnumerable<Outlet> Outlets { get; }
+            public string Name { get; }
         }
 
         [Serializable]
         public sealed class InitPorts : IInit
         {
-            private readonly Outlet<TOut> _outlet;
-            private readonly IEnumerable<Inlet> _inlets;
-
-            public InitPorts(Outlet<TOut> outlet, IEnumerable<Inlet> inlets)
+            public InitPorts(Inlet<TIn> inlet, IEnumerable<Outlet> outlets)
             {
-                if (outlet == null) throw new ArgumentNullException("outlet");
-                if (inlets == null) throw new ArgumentNullException("inlets");
+                if (outlets == null) throw new ArgumentNullException("outlets");
+                if (inlet == null) throw new ArgumentNullException("inlet");
 
-                _outlet = outlet;
-                _inlets = inlets;
+                Inlet = inlet;
+                Outlets = outlets;
+                Name = "FanOut";
             }
 
-            public Outlet<TOut> Outlet { get { return _outlet; } }
-            public IEnumerable<Inlet> Inlets { get { return _inlets; } }
-            public string Name { get { return "FanOut"; } }
+            public Inlet<TIn> Inlet { get; }
+            public IEnumerable<Outlet> Outlets { get; }
+            public string Name { get; }
         }
 
         #endregion
 
-        private readonly Outlet<TOut> _outlet;
-        private readonly Outlet[] _outlets;
-        private readonly List<Inlet> _inlets;
-        private readonly IEnumerator<Inlet> _registered;
         private readonly string _name;
+        private readonly List<Outlet> _outlets = new List<Outlet>();
+        private readonly IEnumerator<Outlet> _registered;
 
-        protected FanOutShape(Outlet<TOut> outlet, IEnumerable<Inlet> registered, string name)
+        protected FanOutShape(Inlet<TIn> inlet, IEnumerable<Outlet> registered, string name)
         {
-            _outlet = outlet;
-            _inlets = registered.ToList();
+            In = inlet;
             _name = name;
-
-            _registered = ((IEnumerable<Inlet>)_inlets).GetEnumerator();
-            _outlets = new Outlet[] { _outlet };
+            _registered = registered.GetEnumerator();
         }
 
-        protected FanOutShape(IInit init) : this(init.Outlet, init.Inlets, init.Name) { }
+        protected FanOutShape(IInit init) : this(init.Inlet, init.Outlets, init.Name) { }
 
-        protected abstract FanOutShape<TOut> Construct(IInit init);
+        public Inlet<TIn> In { get; }
+        public override IEnumerable<Outlet> Outlets { get { return _outlets; } }
+        public override IEnumerable<Inlet> Inlets { get { return new[] { In }; } }
 
-        protected Inlet<T> NewInlet<T>(string name)
+        protected abstract FanOutShape<TIn> Construct(IInit init);
+
+        protected Outlet<T> NewOutlet<T>(string name)
         {
-            var p = _registered.MoveNext() ? Inlet.Create<T>(_registered.Current) : new Inlet<T>(_name + "." + name);
-            _inlets.Add(p);
+            var p = _registered.MoveNext() ? Outlet.Create<T>(_registered.Current) : new Outlet<T>(_name + "." + name);
+            _outlets.Add(p);
             return p;
         }
-
-        public override Inlet[] Inlets { get { return _inlets.ToArray(); } }
-        public override Outlet[] Outlets { get { return _outlets; } }
         public override Shape DeepCopy()
         {
-            return Construct(new InitPorts(Outlet.Create<TOut>(_outlet), _inlets.Select(Inlet.Create<TOut>)));
+            return Construct(new InitPorts(Inlet.Create<TIn>(In), _outlets));
         }
 
-        public sealed override Shape CopyFromPorts(Inlet[] inlets, Outlet[] outlets)
+        public sealed override Shape CopyFromPorts(IEnumerable<Inlet> inlets, IEnumerable<Outlet> outlets)
         {
-            if (outlets.Length != 1) throw new ArgumentException(string.Format("Proposed outlets [{0}] do not fit FanOutShape", string.Join(", ", outlets as IEnumerable<Outlet>)));
-            if (inlets.Length != _inlets.Count) throw new ArgumentException(string.Format("Proposed inlets [{0}] do not fit FanOutShape", string.Join(", ", inlets as IEnumerable<Inlet>)));
+            var o = outlets.ToArray();
+            var i = inlets.ToArray();
+            if (i.Length != 1) throw new ArgumentException(string.Format("Proposed inlets [{0}] do not fit FanOutShape", string.Join(", ", i as IEnumerable<Inlet>)));
+            if (o.Length != _outlets.Count) throw new ArgumentException(string.Format("Proposed outlets [{0}] do not fit FanOutShape", string.Join(", ", o as IEnumerable<Outlet>)));
 
-            return Construct(new InitPorts(Outlet.Create<TOut>(outlets[0]), inlets));
+            return Construct(new InitPorts(Inlet.Create<TIn>(i[0]), o));
         }
     }
 
-    public class UniformFanOutShape<TIn, TOut> : FanOutShape<TOut>
+    public class UniformFanOutShape<TIn, TOut> : FanOutShape<TIn>
     {
         private readonly int _n;
-        private readonly Inlet<TIn>[] _inSeq;
+        private readonly Outlet<TOut>[] _outSeq;
 
         public UniformFanOutShape(int n, IInit init) : base(init)
         {
             _n = n;
-            _inSeq = Enumerable.Range(0, n).Select(i => new Inlet<TIn>("in" + i)).ToArray();
+            _outSeq = Enumerable.Range(0, n).Select(i => new Outlet<TOut>("out" + i)).ToArray();
         }
 
         public UniformFanOutShape(int n) : this(n, new InitName("UniformFanOut")) { }
         public UniformFanOutShape(int n, string name) : this(n, new InitName(name)) { }
-        public UniformFanOutShape(Outlet<TOut> outlet, params Inlet<TIn>[] inlets) : this(inlets.Length, new InitPorts(outlet, inlets)) { }
+        public UniformFanOutShape(Inlet<TIn> inlet, params Outlet<TOut>[] outlets) : this(outlets.Length, new InitPorts(inlet, outlets)) { }
 
-        public Inlet<TIn> In(int n)
+        public Outlet<TOut> Out(int n)
         {
-            return _inSeq[n];
+            return _outSeq[n];
         }
 
-        protected override FanOutShape<TOut> Construct(IInit init)
+        protected override FanOutShape<TIn> Construct(IInit init)
         {
             return new UniformFanOutShape<TIn, TOut>(_n, init);
         }

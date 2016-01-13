@@ -1,0 +1,69 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".cs" #>
+// --- auto generated: <#= System.DateTime.UtcNow.ToString() #> --- //
+using System;
+using System.Linq;
+
+namespace Akka.Streams
+{
+	public class FanInShapeN<T0, T1, TOut> : FanInShape<TOut>
+	{
+		public readonly int N;
+		public readonly Inlet<T0> In0;
+		public readonly Inlet<T1>[] In1s;
+		public FanInShapeN(int n, IInit init) : base(init)
+		{
+			N = n;
+			In0 = NewInlet<T0>("in0");
+			In1s = new Inlet<T1>[n];
+			for (int i = 0; i < n; i++) In1s[i] = new Inlet<T1>("in" + i);
+		}
+
+        public FanInShapeN(int n) : this(n, new InitName("FanInShape1N")) { }
+        public FanInShapeN(int n, string name) : this(n, new InitName(name)) { }
+        public FanInShapeN(Outlet<TOut> outlet, Inlet<T0> in0, params Inlet<T1>[] inlets) : this(inlets.Length, new InitPorts(outlet, new Inlet[]{in0}.Union(inlets))) { }
+
+		public Inlet<T1> In(int n)
+		{
+			if (n <= 0) throw new ArgumentException("n must be > 0", "n");
+			return In1s[n-1];
+		}
+		
+        protected override FanInShape<TOut> Construct(IInit init)
+        {
+            return new FanInShapeN<T0, T1, TOut>(N, init);
+        }
+	}
+
+	<# for (int i = 2; i < 10; i++)
+	   { #>
+	   
+	public class FanInShape<<#= string.Join(", ", Enumerable.Range(0, i).Select(x => "T"+(x))) #>, TOut> : FanInShape<TOut>
+	{
+		<# for (int t = 0; t < i; t++) {  #>
+public readonly Inlet<T<#= t #>> In<#= t #>;
+		<# } #>
+
+		public FanInShape(IInit init) : base(init)
+		{
+		<# for (int t = 0; t < i; t++) {  #>
+	In<#= t #> = NewInlet<T<#= t #>>("in<#= t #>");
+		<# } #>
+}
+
+        public FanInShape(string name) : this(new InitName(name)) { }
+        public FanInShape(Outlet<TOut> outlet, <#= string.Join(", ", Enumerable.Range(0, i).Select(x => string.Format("Inlet<T{0}> in{0}", x))) #>) 
+			: this(new InitPorts(outlet, new Inlet[] { <#= string.Join(", ", Enumerable.Range(0, i).Select(x => "in"+x)) #> })) { }
+
+        protected override FanInShape<TOut> Construct(IInit init)
+        {
+            return new FanInShape<<#= string.Join(", ", Enumerable.Range(0, i).Select(x => "T"+(x))) #>, TOut>(init);
+        }
+	}
+	<# } #>
+
+}

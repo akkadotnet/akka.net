@@ -430,7 +430,7 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// '''Cancels when''' downstream cancels
     /// </summary>
-    public sealed class MergeSorted<T> : GraphStage<FanInShape2<T, T, T>> where T : IComparable<T>
+    public sealed class MergeSorted<T> : GraphStage<FanInShape<T, T, T>> where T : IComparable<T>
     {
         #region stage logic
         private sealed class MergeSortedStageLogic : GraphStageLogic
@@ -506,10 +506,10 @@ namespace Akka.Streams.Dsl
 
         public MergeSorted()
         {
-            Shape = new FanInShape2<T, T, T>(Left, Right, Out);
+            Shape = new FanInShape<T, T, T>(Left, Right, Out);
         }
 
-        public override FanInShape2<T, T, T> Shape { get; }
+        public override FanInShape<T, T, T> Shape { get; }
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new MergeSortedStageLogic(Shape, this);
@@ -645,7 +645,7 @@ namespace Akka.Streams.Dsl
      *
      * '''Cancels when''' downstream cancels
      */
-    public sealed class ZipWith
+    public sealed partial class ZipWith
     {
         public static readonly ZipWith Instance = new ZipWith();
         private ZipWith() { }
@@ -680,10 +680,10 @@ namespace Akka.Streams.Dsl
      *
      * '''Cancels when''' any downstream cancels
      */
-    public sealed class UnZipWith
+    public sealed partial class UnzipWith
     {
-        public static readonly UnZipWith Instance = new UnZipWith();
-        private UnZipWith() { }
+        public static readonly UnzipWith Instance = new UnzipWith();
+        private UnzipWith() { }
     }
 
     /**
@@ -734,7 +734,7 @@ namespace Akka.Streams.Dsl
         }
     }
 
-    public static class FlowGraph
+    public static class GraphDsl
     {
         public class Builder<T>
         {
