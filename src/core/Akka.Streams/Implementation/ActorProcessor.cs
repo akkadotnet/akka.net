@@ -243,7 +243,7 @@ namespace Akka.Streams.Implementation
         public long DemandCount { get { return DownstreamDemand; } }
         public bool IsDemandAvailable { get { return DownstreamDemand > 0; } }
 
-        public void EnqueueOutputElement(object element)
+        public void EnqueueOutputElement(TIn element)
         {
             ReactiveStreamsCompliance.RequireNonNullElement(element);
             DownstreamDemand--;

@@ -56,20 +56,17 @@ namespace Akka.Streams
 
         #endregion
 
-        private readonly Outlet<TOut> _outlet;
-        private readonly Outlet[] _outlets;
-        private readonly List<Inlet> _inlets;
+        private readonly List<Inlet> _inlets = new List<Inlet>();
         private readonly IEnumerator<Inlet> _registered;
         private readonly string _name;
 
         protected FanInShape(Outlet<TOut> outlet, IEnumerable<Inlet> registered, string name)
         {
-            _outlet = outlet;
-            _inlets = registered.ToList();
+            Out = outlet;
+            Outlets = new Outlet[] { Out };
             _name = name;
 
-            _registered = ((IEnumerable<Inlet>)_inlets).GetEnumerator();
-            _outlets = new Outlet[] { _outlet };
+            _registered = registered.GetEnumerator();
         }
 
         protected FanInShape(IInit init) : this(init.Outlet, init.Inlets, init.Name) { }
@@ -83,19 +80,22 @@ namespace Akka.Streams
             return p;
         }
 
-        public override Inlet[] Inlets { get { return _inlets.ToArray(); } }
-        public override Outlet[] Outlets { get { return _outlets; } }
+        public override IEnumerable<Inlet> Inlets { get { return _inlets; } }
+        public override IEnumerable<Outlet> Outlets { get; }
+        public Outlet<TOut> Out { get; }
         public override Shape DeepCopy()
         {
-            return Construct(new InitPorts(Outlet.Create<TOut>(_outlet), _inlets.Select(Inlet.Create<TOut>)));
+            return Construct(new InitPorts(Out, _inlets.Select(Inlet.Create<TOut>)));
         }
 
-        public sealed override Shape CopyFromPorts(Inlet[] inlets, Outlet[] outlets)
+        public sealed override Shape CopyFromPorts(IEnumerable<Inlet> inlets, IEnumerable<Outlet> outlets)
         {
-            if (outlets.Length != 1) throw new ArgumentException(string.Format("Proposed outlets [{0}] do not fit FanInShape", string.Join(", ", outlets as IEnumerable<Outlet>)));
-            if (inlets.Length != _inlets.Count) throw new ArgumentException(string.Format("Proposed inlets [{0}] do not fit FanInShape", string.Join(", ", inlets as IEnumerable<Inlet>)));
+            var i = inlets.ToList();
+            var o = outlets.ToList();
+            if (o.Count != 1) throw new ArgumentException(string.Format("Proposed outlets [{0}] do not fit FanInShape", string.Join(", ", o)));
+            if (i.Count != _inlets.Count) throw new ArgumentException(string.Format("Proposed inlets [{0}] do not fit FanInShape", string.Join(", ", i)));
 
-            return Construct(new InitPorts(Outlet.Create<TOut>(outlets[0]), inlets));
+            return Construct(new InitPorts(Outlet.Create<TOut>(o[0]), i));
         }
     }
 
@@ -113,7 +113,7 @@ namespace Akka.Streams
         public UniformFanInShape(int n) : this(n, new InitName("UniformFanIn")) { }
         public UniformFanInShape(int n, string name) : this(n, new InitName(name)) { }
         public UniformFanInShape(Outlet<TOut> outlet, params Inlet<TIn>[] inlets) : this(inlets.Length, new InitPorts(outlet, inlets)) { }
-        
+
         public Inlet<TIn> In(int n)
         {
             return _inSeq[n];

@@ -2,178 +2,560 @@
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Streams.Implementation;
+using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
+using Akka.Streams.Stage;
 
 namespace Akka.Streams.Dsl
 {
-    /**
-     * Merge several streams, taking elements as they arrive from input streams
-     * (picking randomly when several have elements ready).
-     *
-     * '''Emits when''' one of the inputs has an element available
-     *
-     * '''Backpressures when''' downstream backpressures
-     *
-     * '''Completes when''' all upstreams complete
-     *
-     * '''Cancels when''' downstream cancels
-     */
-    public class Merge<T> : IGraph<UniformFanInShape<T, T>, object>
+    /// <summary>
+    /// Merge several streams, taking elements as they arrive from input streams
+    /// (picking randomly when several have elements ready).
+    /// <para>
+    /// '''Emits when''' one of the inputs has an element available
+    /// </para>
+    /// '''Backpressures when''' downstream backpressures
+    /// <para>
+    /// '''Completes when''' all upstreams complete
+    /// </para>
+    /// '''Cancels when''' downstream cancels
+    /// </summary>
+    public sealed class Merge<T> : GraphStage<UniformFanInShape<T, T>>
     {
-        /**
-         * Create a new `Merge` with the specified number of input ports.
-         *
-         * @param inputPorts number of input ports
-         */
-        public static Merge<T> Create(int inputPorts)
+        #region graph stage logic
+
+        private sealed class MergeStageLogic : GraphStageLogic
         {
-            var shape = new UniformFanInShape<T,T>(inputPorts);
-            return new Merge<T>(inputPorts, shape, new Junctions.MergeModule<T>(shape, Attributes.CreateName("Merge")));
+            private readonly Merge<T> _stage;
+            private readonly Inlet<T>[] _pendingQueue;
+
+            private int _runningUpstreams;
+            private int _pendingHead = 0;
+            private int _pendingTail = 0;
+            private bool _initialized = false;
+
+            public MergeStageLogic(Shape shape, Merge<T> stage) : base(shape)
+            {
+                _stage = stage;
+                _runningUpstreams = _stage._inputPorts;
+                _pendingQueue = new Inlet<T>[_stage._ins.Length];
+
+                var outlet = _stage._out;
+                foreach (var inlet in _stage._ins)
+                {
+                    SetHandler(inlet, onPush: () =>
+                    {
+                        if (IsAvailable(outlet))
+                        {
+                            if (!IsPending)
+                            {
+                                Push(outlet, Grab(inlet));
+                                TryPull(inlet);
+                            }
+                        }
+                        else Enqeue(inlet);
+                    },
+                    onUpstreamFinish: () =>
+                    {
+                        if (_stage._eagerClose)
+                        {
+                            foreach (var i in _stage._ins) Cancel(i);
+                            _runningUpstreams = 0;
+                            if (!IsPending) CompleteStage<T>();
+                        }
+                        else
+                        {
+                            _runningUpstreams--;
+                            if (IsUpstreamClosed && !IsPending) CompleteStage<T>();
+                        }
+                    });
+                }
+
+                SetHandler(outlet, onPull: () =>
+                {
+                    if (IsPending) DequeueAndDispatch();
+                });
+            }
+
+            private bool IsUpstreamClosed { get { return _runningUpstreams == 0; } }
+            private bool IsPending { get { return _pendingHead != _pendingTail; } }
+
+            public override void PreStart()
+            {
+                foreach (var inlet in _stage._ins) TryPull(inlet);
+            }
+
+            private void Enqeue(Inlet<T> inlet)
+            {
+                _pendingQueue[_pendingTail % _stage._inputPorts] = inlet;
+                _pendingTail++;
+            }
+
+            private void DequeueAndDispatch()
+            {
+                var inlet = _pendingQueue[_pendingHead % _stage._inputPorts];
+                _pendingHead++;
+                Push(_stage._out, Grab(inlet));
+                if (IsUpstreamClosed && !IsPending) CompleteStage<T>();
+                else TryPull(inlet);
+            }
         }
 
-        public readonly int InputPorts;
-        private readonly UniformFanInShape<T, T> _shape;
-        private readonly IModule _module;
+        #endregion
 
-        public Merge(int inputPorts, UniformFanInShape<T, T> shape, IModule module)
+        private readonly int _inputPorts;
+        private readonly bool _eagerClose;
+
+        private readonly Inlet<T>[] _ins;
+        private readonly Outlet<T> _out = new Outlet<T>("Merge.out");
+
+        public Merge(int inputPorts, bool eagerClose = false)
         {
-            InputPorts = inputPorts;
-            _shape = shape;
-            _module = module;
+            if (inputPorts <= 1) throw new ArgumentException("Merge must have more than 1 input port");
+            _inputPorts = inputPorts;
+            _eagerClose = eagerClose;
+
+            _ins = new Inlet<T>[inputPorts];
+            for (int i = 0; i < inputPorts; i++)
+                _ins[i] = new Inlet<T>("Merge.in" + i);
+
+            Shape = new UniformFanInShape<T, T>(_out, _ins);
+            InitialAttributes = Attributes.CreateName("Merge");
         }
 
-        public UniformFanInShape<T, T> Shape { get { return _shape; } }
-        public IModule Module { get { return _module; } }
-        public IGraph<UniformFanInShape<T, T>, object> WithAttributes(Attributes attributes)
+        protected override Attributes InitialAttributes { get; }
+        public override UniformFanInShape<T, T> Shape { get; }
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new Merge<T>(InputPorts, _shape, _module.WithAttributes(attributes).Nest());
-        }
-
-        public IGraph<UniformFanInShape<T, T>, object> Named(string name)
-        {
-            return WithAttributes(Attributes.CreateName(name));
+            return new MergeStageLogic(Shape, this);
         }
     }
 
-    /**
-     * Merge several streams, taking elements as they arrive from input streams
-     * (picking from preferred when several have elements ready).
-     *
-     * A `MergePreferred` has one `out` port, one `preferred` input port and 0 or more secondary `in` ports.
-     *
-     * '''Emits when''' one of the inputs has an element available, preferring
-     * a specified input if multiple have elements available
-     *
-     * '''Backpressures when''' downstream backpressures
-     *
-     * '''Completes when''' all upstreams complete
-     *
-     * '''Cancels when''' downstream cancels
-     *
-     * A `Broadcast` has one `in` port and 2 or more `out` ports.
-     */
-    public class MergePreffered<T> : IGraph<MergePreffered<T>.MergePrefferedShape, object>
+    /// <summary>
+    /// Merge several streams, taking elements as they arrive from input streams
+    /// (picking from preferred when several have elements ready).
+    /// 
+    /// A <see cref="MergePreferred{T}"/> has one `out` port, one `preferred` input port and 0 or more secondary `in` ports.
+    /// <para>
+    /// '''Emits when''' one of the inputs has an element available, preferring
+    /// a specified input if multiple have elements available
+    /// </para>
+    /// '''Backpressures when''' downstream backpressures
+    /// <para>
+    /// '''Completes when''' all upstreams complete (eagerClose=false) or one upstream completes (eagerClose=true)
+    /// </para>
+    /// '''Cancels when''' downstream cancels
+    /// <para>
+    /// A `Broadcast` has one `in` port and 2 or more `out` ports.
+    /// </para>
+    /// </summary>
+    public sealed class MergePreferred<T> : GraphStage<MergePreferred<T>.MergePreferredShape>
     {
-        /**
-         * Create a new `MergePreferred` with the specified number of secondary input ports.
-         *
-         * @param secondaryPorts number of secondary input ports
-         */
-        public static MergePreffered<T> Create(int secondaryPorts)
-        {
-            var shape = new MergePrefferedShape(secondaryPorts, "MergePreferred");
-            return new MergePreffered<T>(secondaryPorts, shape, new Junctions.MergePreferredModule<T>(shape, Attributes.CreateName("MergePreferred")));
-        }
+        #region internal classes
 
-        public class MergePrefferedShape : UniformFanInShape<T, T>
+        public sealed class MergePreferredShape : UniformFanInShape<T, T>
         {
-            public readonly Inlet<T> Preferred;
+            private readonly int _secondaryPorts;
+            private readonly IInit _init;
 
-            public MergePrefferedShape(int n, IInit init) : base(n, init)
+            public MergePreferredShape(int secondaryPorts, IInit init) : base(secondaryPorts, init)
             {
+                _secondaryPorts = secondaryPorts;
+                _init = init;
+
                 Preferred = NewInlet<T>("preferred");
             }
-            public MergePrefferedShape(int n, string name) : this(n, new InitName(name)) { }
+
+            public MergePreferredShape(int secondaryPorts, string name) : this(secondaryPorts, new InitName(name)) { }
 
             protected override FanInShape<T> Construct(IInit init)
             {
-                return new MergePrefferedShape(N, init);
+                return new MergePreferredShape(_secondaryPorts, init);
+            }
+
+            public Inlet<T> Preferred { get; }
+        }
+
+        private sealed class MergePreferredStageLogic : GraphStageLogic
+        {
+            /// <summary>
+            /// This determines the unfairness of the merge:
+            /// - at 1 the preferred will grab 40% of the bandwidth against three equally fast secondaries
+            /// - at 2 the preferred will grab almost all bandwidth against three equally fast secondaries
+            /// (measured with eventLimit=1 in the GraphInterpreter, so may not be accurate)
+            /// </summary>
+            public const int MaxEmitting = 2;
+            private readonly MergePreferred<T> _stage;
+            private readonly Action[] _pullMe;
+            private int _openInputs;
+            private int _preferredEmitting = 0;
+            private bool _isFirst = true;
+
+            public MergePreferredStageLogic(Shape shape, MergePreferred<T> stage) : base(shape)
+            {
+                _stage = stage;
+                _openInputs = stage._secondaryPorts + 1;
+                _pullMe = new Action[stage._secondaryPorts];
+                for (int i = 0; i < stage._secondaryPorts; i++)
+                {
+                    var inlet = stage.In(i);
+                    _pullMe[i] = () => TryPull(inlet);
+                }
+
+                SetHandler(_stage.Out, onPull: () =>
+                {
+                    if (_isFirst)
+                    {
+                        _isFirst = false;
+                        TryPull(_stage.Preferred);
+                        foreach (var inlet in _stage.Shape.Inlets.Cast<Inlet<T>>())
+                            TryPull(inlet);
+                    }
+                });
+
+                SetHandler(_stage.Preferred,
+                    onUpstreamFinish: OnComplete,
+                    onPush: () =>
+                    {
+                        if (_preferredEmitting == MaxEmitting) { /* blocked */ }
+                        else EmitPreferred();
+                    });
+
+                for (int i = 0; i < stage._secondaryPorts; i++)
+                {
+                    var port = stage.In(i);
+                    var pullPort = _pullMe[i];
+
+                    SetHandler(port, onPush: () =>
+                    {
+                        if (_preferredEmitting > 0) { /* blocked */ }
+                        else Emit(_stage.Out, Grab(port), pullPort);
+                    },
+                    onUpstreamFinish: OnComplete);
+                }
+            }
+
+            private void OnComplete()
+            {
+                _openInputs--;
+                if (_stage._eagerClose || _openInputs == 0) CompleteStage<T>();
+            }
+
+            private void EmitPreferred()
+            {
+                _preferredEmitting++;
+                Emit(_stage.Out, Grab(_stage.Preferred), Emitted);
+                TryPull(_stage.Preferred);
+            }
+
+            private void Emitted()
+            {
+                _preferredEmitting--;
+                if (IsAvailable(_stage.Preferred)) EmitPreferred();
+                else if (_preferredEmitting == 0) EmitSecondary();
+            }
+
+            private void EmitSecondary()
+            {
+                for (int i = 0; i < _stage._secondaryPorts; i++)
+                {
+                    var port = _stage.In(i);
+                    if (IsAvailable(port)) Emit(_stage.Out, Grab(port), _pullMe[i]);
+                }
             }
         }
 
-        public readonly int SecondaryPorts;
-        private readonly MergePrefferedShape _shape;
-        private readonly IModule _module;
+        #endregion
 
-        public MergePreffered(int secondaryPorts, MergePrefferedShape shape, IModule module)
+        private readonly int _secondaryPorts;
+        private readonly bool _eagerClose;
+
+        public MergePreferred(int secondaryPorts, bool eagerClose = false)
         {
-            SecondaryPorts = secondaryPorts;
-            _shape = shape;
-            _module = module;
+            if (secondaryPorts < 1) throw new ArgumentException("A MergePreferred must have at least one secondary port");
+            _secondaryPorts = secondaryPorts;
+            _eagerClose = eagerClose;
+
+            Shape = new MergePreferredShape(_secondaryPorts, "MergePreferred");
+            InitialAttributes = Attributes.CreateName("MergePreferred");
         }
 
-        public MergePrefferedShape Shape { get { return _shape; } }
-        public IModule Module { get { return _module; } }
-        public IGraph<MergePrefferedShape, object> WithAttributes(Attributes attributes)
+        protected override Attributes InitialAttributes { get; }
+        public override MergePreferredShape Shape { get; }
+
+        public Inlet<T> In(int id)
         {
-            return new MergePreffered<T>(SecondaryPorts, _shape, _module.WithAttributes(attributes).Nest());
+            return Inlet.Create<T>(Shape.Inlets.ElementAt(id));
         }
 
-        public IGraph<MergePrefferedShape, object> Named(string name)
+        public Outlet<T> Out { get { return Shape.Out; } }
+        public Inlet<T> Preferred { get { return Shape.Preferred; } }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return WithAttributes(Attributes.CreateName(name));
+            return new MergePreferredStageLogic(Shape, this);
         }
     }
 
-    /**
-     * Fan-out the stream to several streams emitting each incoming upstream element to all downstream consumers.
-     * It will not shut down until the subscriptions for at least two downstream subscribers have been established.
-     *
-     * '''Emits when''' all of the outputs stops backpressuring and there is an input element available
-     *
-     * '''Backpressures when''' any of the outputs backpressure
-     *
-     * '''Completes when''' upstream completes
-     *
-     * '''Cancels when'''
-     *   If eagerCancel is enabled: when any downstream cancels; otherwise: when all downstreams cancel
-     *
-     */
-    public class Broadcast<T> : IGraph<UniformFanOutShape<T, T>, object>
+    /// <summary>
+    /// Interleave represents deterministic merge which takes N elements per input stream,
+    /// in-order of inputs, emits them downstream and then cycles/"wraps-around" the inputs.
+    /// <para>
+    /// '''Emits when''' element is available from current input (depending on phase)
+    /// </para>
+    /// '''Backpressures when''' downstream backpressures
+    /// <para>
+    /// '''Completes when''' all upstreams complete (eagerClose=false) or one upstream completes (eagerClose=true)
+    /// </para>
+    /// '''Cancels when''' downstream cancels
+    /// </summary> 
+    public sealed class Interleave<T> : GraphStage<UniformFanInShape<T, T>>
     {
-        /**
-         * Create a new `Broadcast` with the specified number of output ports.
-         *
-         * @param outputPorts number of output ports
-         * @param eagerCancel if true, broadcast cancels upstream if any of its downstreams cancel.
-         */
-        public static Broadcast<T> Create(int outputPorts, bool eagerCancel = false)
+        #region stage logic
+        private sealed class InterleaveStageLogic : GraphStageLogic
         {
-            var shape = new UniformFanOutShape<T, T>(outputPorts);
-            return new Broadcast<T>(outputPorts, shape, new Junctions.BroadcastModule<T>(shape, eagerCancel, Attributes.CreateName("Broadcast")));
+            private readonly Interleave<T> _stage;
+            private int _counter = 0;
+            private int _currentUpstreamIndex = 0;
+            private int _runningUpstreams;
+
+            public InterleaveStageLogic(Shape shape, Interleave<T> stage) : base(shape)
+            {
+                _stage = stage;
+                _runningUpstreams = _stage._inputPorts;
+
+                foreach (var inlet in _stage.Inlets)
+                {
+                    SetHandler(inlet, onPush: () =>
+                    {
+                        Push(_stage.Out, Grab(inlet));
+                        _counter++;
+                        if (_counter == _stage._segmentSize) SwitchToNextInput();
+                    },
+                    onUpstreamFinish: () =>
+                    {
+                        if (!_stage._eagerClose)
+                        {
+                            _runningUpstreams--;
+                            if (!IsUpstreamClosed)
+                            {
+                                if (Equals(inlet, CurrentUpstream))
+                                {
+                                    SwitchToNextInput();
+                                    if (IsAvailable(_stage.Out)) Pull(CurrentUpstream);
+                                }
+                            }
+                            else CompleteStage<T>();
+                        }
+                        else CompleteStage<T>();
+                    });
+                }
+
+                SetHandler(_stage.Out, onPull: () =>
+                {
+                    if (!HasBeenPulled(CurrentUpstream)) TryPull(CurrentUpstream);
+                });
+            }
+
+            private bool IsUpstreamClosed { get { return _runningUpstreams == 0; } }
+            private Inlet<T> CurrentUpstream { get { return _stage.Inlets[_currentUpstreamIndex]; } }
+
+            private void SwitchToNextInput()
+            {
+                _counter = 0;
+                var index = _currentUpstreamIndex;
+                while (true)
+                {
+                    var successor = (index + 1) % _stage._inputPorts;
+                    if (!IsClosed(_stage.Inlets[successor])) _currentUpstreamIndex = successor;
+                    else
+                    {
+                        if (successor != _currentUpstreamIndex)
+                        {
+                            index = successor;
+                            continue;
+                        }
+                        else
+                        {
+                            CompleteStage<T>();
+                            _currentUpstreamIndex = 0;
+                        }
+                    }
+
+                    break;
+                }
+            }
+        }
+        #endregion
+
+        private readonly int _inputPorts;
+        private readonly int _segmentSize;
+        private readonly bool _eagerClose;
+
+        public Interleave(int inputPorts, int segmentSize, bool eagerClose = false)
+        {
+            if (inputPorts <= 1) throw new ArgumentException("Interleave input ports count must be greater than 1", "inputPorts");
+            if (segmentSize <= 0) throw new ArgumentException("Interleave segment size must be greater than 0", "segmentSize");
+
+            _inputPorts = inputPorts;
+            _segmentSize = segmentSize;
+            _eagerClose = eagerClose;
+
+            Out = new Outlet<T>("Interleave.out");
+            Inlets = new Inlet<T>[inputPorts];
+            for (int i = 0; i < inputPorts; i++)
+                Inlets[i] = new Inlet<T>("Interleave.in" + i);
+
+            Shape = new UniformFanInShape<T, T>(Out, Inlets);
         }
 
-        public readonly int OutputPorts;
-        private readonly UniformFanOutShape<T, T> _shape;
-        private readonly IModule _module;
+        public Outlet<T> Out { get; }
+        public Inlet<T>[] Inlets { get; }
 
-        private Broadcast(int outputPorts, UniformFanOutShape<T, T> shape, IModule module)
+        public override UniformFanInShape<T, T> Shape { get; }
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            OutputPorts = outputPorts;
-            _shape = shape;
-            _module = module;
+            return new InterleaveStageLogic(Shape, this);
+        }
+    }
+
+    /// <summary>
+    /// Merge two pre-sorted streams such that the resulting stream is sorted.
+    /// <para>
+    /// '''Emits when''' both inputs have an element available
+    /// </para>
+    /// '''Backpressures when''' downstream backpressures
+    /// <para>
+    /// '''Completes when''' all upstreams complete
+    /// </para>
+    /// '''Cancels when''' downstream cancels
+    /// </summary>
+    public sealed class MergeSorted<T> : GraphStage<FanInShape2<T, T, T>> where T : IComparable<T>
+    {
+        #region stage logic
+        private sealed class MergeSortedStageLogic : GraphStageLogic
+        {
+            private readonly MergeSorted<T> _stage;
+            private T _other;
+
+            readonly Action<T> DispatchRight;
+            readonly Action<T> DispatchLeft;
+            readonly Action PassRight;
+            readonly Action PassLeft;
+            readonly Action ReadRight;
+            readonly Action ReadLeft;
+
+            public MergeSortedStageLogic(Shape shape, MergeSorted<T> stage) : base(shape)
+            {
+                _stage = stage;
+                DispatchRight = right => Dispatch(_other, right);
+                DispatchLeft = left => Dispatch(left, _other);
+                PassRight = () => Emit(_stage.Out, _other, () =>
+                {
+                    NullOut();
+                    PassAlong(_stage.Right, _stage.Out, doPull: true);
+                });
+                PassLeft = () => Emit(_stage.Out, _other, () =>
+                {
+                    NullOut();
+                    PassAlong(_stage.Left, _stage.Out, doPull: true);
+                });
+                ReadRight = () => Read(_stage.Right, DispatchRight, PassLeft);
+                ReadLeft = () => Read(_stage.Left, DispatchLeft, PassRight);
+
+                SetHandler(_stage.Left, IgnoreTerminateInput);
+                SetHandler(_stage.Right, IgnoreTerminateInput);
+                SetHandler(_stage.Out, EagerTerminateOutput);
+            }
+
+            public override void PreStart()
+            {
+                // all fan-in stages need to eagerly pull all inputs to get cycles started
+                Pull(_stage.Right);
+                Read(_stage.Left, left =>
+                {
+                    _other = left;
+                },
+                () => PassAlong(_stage.Right, _stage.Out));
+            }
+
+            private void NullOut()
+            {
+                _other = default(T);
+            }
+
+            private void Dispatch(T left, T right)
+            {
+                if (left.CompareTo(right) == -1)
+                {
+                    _other = right;
+                    Emit(_stage.Out, left, ReadLeft);
+                }
+                else
+                {
+                    _other = left;
+                    Emit(_stage.Out, right, ReadRight);
+                }
+            }
+        }
+        #endregion
+
+        public readonly Inlet<T> Left = new Inlet<T>("left");
+        public readonly Inlet<T> Right = new Inlet<T>("right");
+        public readonly Outlet<T> Out = new Outlet<T>("out");
+
+        public MergeSorted()
+        {
+            Shape = new FanInShape2<T, T, T>(Left, Right, Out);
         }
 
-        public UniformFanOutShape<T, T> Shape { get { return _shape; } }
-        public IModule Module { get { return _module; } }
-        public IGraph<UniformFanOutShape<T, T>, object> WithAttributes(Attributes attributes)
+        public override FanInShape2<T, T, T> Shape { get; }
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new Broadcast<T>(OutputPorts, _shape, _module.WithAttributes(attributes).Nest());
+            return new MergeSortedStageLogic(Shape, this);
+        }
+    }
+
+    /// <summary>
+    /// Fan-out the stream to several streams emitting each incoming upstream element to all downstream consumers.
+    /// It will not shut down until the subscriptions for at least two downstream subscribers have been established.
+    /// <para>
+    /// '''Emits when''' all of the outputs stops backpressuring and there is an input element available
+    /// </para>
+    /// '''Backpressures when''' any of the outputs backpressure
+    /// <para>
+    /// '''Completes when''' upstream completes
+    /// </para>
+    /// '''Cancels when''' If eagerCancel is enabled: when any downstream cancels; otherwise: when all downstreams cancel
+    /// </summary>
+    public sealed class Broadcast<T> : GraphStage<UniformFanOutShape<T, T>>
+    {
+        private readonly int _outputPorts;
+        private readonly bool _eagerCancel;
+
+        public readonly Inlet<T> In = new Inlet<T>("Broadcast.in");
+        public readonly Outlet<T>[] Out;
+
+        public Broadcast(int outputPorts, bool eagerCancel = false)
+        {
+            if (outputPorts <= 1) throw new ArgumentException("Broadcast require more than 1 output port", "outputPorts");
+            _outputPorts = outputPorts;
+            _eagerCancel = eagerCancel;
+
+            Out = new Outlet<T>[outputPorts];
+            for (int i = 0; i < outputPorts; i++)
+                Out[i] = new Outlet<T>("Broadcast.out" + i);
+
+            Shape = new UniformFanOutShape<T, T>();
+
+            InitialAttributes = Attributes.CreateName("Broadcast");
         }
 
-        public IGraph<UniformFanOutShape<T, T>, object> Named(string name)
+        protected override Attributes InitialAttributes { get; }
+        public override UniformFanOutShape<T, T> Shape { get; }
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return WithAttributes(Attributes.CreateName(name));
+            throw new NotImplementedException();
         }
     }
 
@@ -204,7 +586,7 @@ namespace Akka.Streams.Dsl
          */
         public static Balance<T> Create(int outputPorts, bool waitForAllDownstreams = false)
         {
-            var shape = new UniformFanOutShape<T,T>(outputPorts);
+            var shape = new UniformFanOutShape<T, T>(outputPorts);
             return new Balance<T>(outputPorts, waitForAllDownstreams, shape, new Junctions.BalanceModule<T>(shape, waitForAllDownstreams, Attributes.CreateName("Balance")));
         }
 
@@ -326,7 +708,7 @@ namespace Akka.Streams.Dsl
          */
         public static Concat<T> Create()
         {
-            var shape = new UniformFanInShape<T, T>(2);   
+            var shape = new UniformFanInShape<T, T>(2);
             return new Concat<T>(shape, new Junctions.ConcatModule<T>(shape, Attributes.CreateName("Concat")));
         }
 
@@ -496,7 +878,7 @@ namespace Akka.Streams.Dsl
                 BidiShape<TIn1, TOut1, TIn2, TOut2> shape)
             {
                 if (!_moduleInProgress.IsBidiFlow)
-                    throw new ArgumentException(string.Format("Cannot build BidiFlow with open inputs [{0}] and outputs [{1}]", 
+                    throw new ArgumentException(string.Format("Cannot build BidiFlow with open inputs [{0}] and outputs [{1}]",
                         string.Join(", ", _moduleInProgress.InPorts), string.Join(", ", _moduleInProgress.OutPorts)));
 
                 var i1 = new SortedSet<InPort>(_moduleInProgress.InPorts);

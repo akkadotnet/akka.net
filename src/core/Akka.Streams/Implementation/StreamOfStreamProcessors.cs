@@ -1,17 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reactive.Streams;
 using Akka.Actor;
 using Akka.Pattern;
 using Akka.Util;
 
 namespace Akka.Streams.Implementation
 {
-    public abstract class MultiStreamOutputProcessor : ActorProcessorImpl, IMultiStreamOutputProcessorLike
+    internal abstract class MultiStreamOutputProcessor : ActorProcessorImpl, IPump, IStreamSubscriptionTimeoutSupport
     {
         #region Internal classes
 
         [Serializable]
-        public sealed class SubstreamKey
+        public struct SubstreamKey
         {
             public readonly long Id;
 
@@ -22,7 +23,7 @@ namespace Akka.Streams.Implementation
         }
 
         [Serializable]
-        public sealed class SubstreamRequestMore : INoSerializationVerificationNeeded
+        public struct SubstreamRequestMore : INoSerializationVerificationNeeded
         {
             public readonly SubstreamKey Substream;
             public readonly long Demand;
@@ -35,7 +36,7 @@ namespace Akka.Streams.Implementation
         }
 
         [Serializable]
-        public sealed class SubstreamCancel : INoSerializationVerificationNeeded
+        public struct SubstreamCancel : INoSerializationVerificationNeeded
         {
             public readonly SubstreamKey Substream;
 
@@ -46,12 +47,12 @@ namespace Akka.Streams.Implementation
         }
 
         [Serializable]
-        public sealed class SubstreamSubscribe : INoSerializationVerificationNeeded
+        public struct SubstreamSubscribe<T> : INoSerializationVerificationNeeded
         {
             public readonly SubstreamKey Substream;
-            public readonly ISubscriber Subscriber;
+            public readonly ISubscriber<T> Subscriber;
 
-            public SubstreamSubscribe(SubstreamKey substream, ISubscriber subscriber)
+            public SubstreamSubscribe(SubstreamKey substream, ISubscriber<T> subscriber)
             {
                 Substream = substream;
                 Subscriber = subscriber;
@@ -59,7 +60,7 @@ namespace Akka.Streams.Implementation
         }
 
         [Serializable]
-        public sealed class SubstreamSubscriptionTimeout : INoSerializationVerificationNeeded
+        public struct SubstreamSubscriptionTimeout : INoSerializationVerificationNeeded
         {
             public readonly SubstreamKey Substream;
 
@@ -100,10 +101,24 @@ namespace Akka.Streams.Implementation
 
         protected MultiStreamOutputProcessor(ActorMaterializerSettings settings) : base(settings) { }
 
-        public abstract long NextId();
+        public StreamSubscriptionTimeoutSettings SubscriptionTimeoutSettings { get; }
+        public ICancelable ScheduleSubscriptionTimeout(IActorRef actorRef, object message)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void SubscriptionTimedOut<T>(IPublisher<T> target)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void HandleSubscriptionTimeout<T>(IPublisher<T> target, Exception cause)
+        {
+            throw new NotImplementedException();
+        }
     }
 
-    public class SubstreamOutput : SimpleOutputs, IPublisher
+    internal class SubstreamOutput<T> : SimpleOutputs, IPublisher<T>
     {
         #region Internal classes
 
@@ -256,18 +271,13 @@ namespace Akka.Streams.Implementation
             else if (f != null && !(f.Reason is ISpecViolation)) ReactiveStreamsCompliance.TryOnError(subscriber, f.Reason);
         }
     }
-
-    public interface IMultiStreamOutputProcessorLike : IPump, IStreamSubscriptionTimeoutSupport
-    {
-        long NextId();
-    }
-
-    public static class MultiStreamOutputProcessorLike
+    
+    internal static class MultiStreamOutputProcessorLike
     {
 
     }
 
-    public sealed class TwoStreamInputProcessor : ActorProcessorImpl
+    internal sealed class TwoStreamInputProcessor : ActorProcessorImpl
     {
         #region Internal classes
 
@@ -342,12 +352,12 @@ namespace Akka.Streams.Implementation
         }
     }
 
-    public interface IMultiStreamInputProcessorLike : IPump
+    internal interface IMultiStreamInputProcessorLike : IPump
     {
         void InvalidateSubstreamInput(MultiStreamInputProcessor.SubstreamKey key, Exception exception);
     }
 
-    public abstract class MultiStreamInputProcessor : ActorProcessorImpl, IMultiStreamInputProcessorLike
+    internal abstract class MultiStreamInputProcessor : ActorProcessorImpl, IMultiStreamInputProcessorLike
     {
         #region Internal classes
 

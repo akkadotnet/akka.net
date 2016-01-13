@@ -280,11 +280,11 @@ namespace Akka.Streams.Implementation
      * INTERNAL API
      * A sink that immediately cancels its upstream upon materialization.
      */
-    public sealed class CancelSink : SinkModule<object, object>
+    public sealed class CancelSink<T> : SinkModule<T, Unit>
     {
         private readonly Attributes _attributes;
 
-        public CancelSink(Attributes attributes, SinkShape<object> shape)
+        public CancelSink(Attributes attributes, SinkShape<T> shape)
             : base(shape)
         {
             _attributes = attributes;
@@ -292,20 +292,22 @@ namespace Akka.Streams.Implementation
 
         public override Attributes Attributes { get { return _attributes; } }
 
-        public override IModule CarbonCopy()
+        protected override SinkModule<T, Unit> NewInstance(SinkShape<T> shape)
         {
-            return new CancelSink(Attributes, (SinkShape<object>)Shape);
+            return new CancelSink<T>(Attributes, shape);
         }
 
+        public override ISubscriber<T> Create(MaterializationContext context, out Unit materializer)
+        {
+            materializer = Unit.Instance;
+            return new CancellingSubscriber<T>();
+        }
+        
         public override IModule WithAttributes(Attributes attributes)
         {
-            return new CancelSink(attributes, (SinkShape<object>)Shape);
+            return new CancelSink<T>(attributes, (SinkShape<T>)Shape);
         }
-
-        public override Tuple<ISubscriber<object>, object> Create(MaterializationContext context)
-        {
-            return new Tuple<ISubscriber<object>, object>(new CancellingSubscriber<object>(), null);
-        }
+        
     }
 
     /**

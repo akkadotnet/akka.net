@@ -22,18 +22,18 @@ namespace Akka.Streams.Dsl
         public SinkShape<TIn> Shape { get { return (SinkShape<TIn>)Module.Shape; } }
         public IModule Module { get; }
 
-        /**
-         * Connect this `Sink` to a `Source` and run it. The returned value is the materialized value
-         * of the `Source`, e.g. the `Subscriber` of a [[Source#subscriber]].
-         */
+        /// <summary>
+        /// Connect this <see cref="Sink{TIn,TMat}"/> to a <see cref="Source{T,TMat}"/> and run it. The returned value is the materialized value
+        /// of the <see cref="Source{T,TMat}"/>, e.g. the <see cref="ISubscriber{T}"/>.
+        /// </summary>
         public TMat2 RunWith<TMat2>(IGraph<SourceShape<TIn>, TMat2> source, IMaterializer materializer)
         {
-            return Source.Wrap(source).To(this).Run();
+            return Source.FromGraph(source).To(this).Run(materializer);
         }
 
         public Sink<TIn, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> fn)
         {
-            return new Sink<TIn, TMat2>(Module.TransformMaterializedValue(o => fn((TMat)o)));
+            return new Sink<TIn, TMat2>(Module.TransformMaterializedValue(fn));
         }
 
         public IGraph<SinkShape<TIn>, TMat> WithAttributes(Attributes attributes)
@@ -73,20 +73,45 @@ namespace Akka.Streams.Dsl
             return new Sink<TIn, object>(new SubscriberSink<TIn>(subscriber, DefaultAttributes.SubscriberSink, Shape<TIn>("SubscriberSink")));
         }
 
-        /**
-         * A `Sink` that immediately cancels its upstream after materialization.
-         */
-        public static Sink<TIn, object> Cancelled<TIn>()
+        /// <summary>
+        /// A <see cref="Sink{TIn,TMat}"/> that materializes into a <see cref="Task{T}"/> of the first value received.
+        /// If the stream completes before signaling at least a single element, the Task will be failed with a <see cref="NoSuchElementException"/>.
+        /// If the stream signals an error errors before signaling at least a single element, the Task will be failed with the streams exception.
+        /// </summary>
+        public static Sink<TIn, Task<TIn>> First<TIn>()
         {
-            return new Sink<TIn, object>(new CancelSink(DefaultAttributes.CancelledSink, Shape<object>("CancelledSink")));
+            throw new NotImplementedException();
+            //return new Sink<TIn, Task<TIn>>(new HeadSink<TIn>(DefaultAttributes.HeadSink, Shape<TIn>("HeadSink")));
         }
 
-        /**
-         * A `Sink` that materializes into a `Future` of the first value received.
-         */
-        public static Sink<TIn, Task<TIn>> Head<TIn>()
+        /// <summary>
+        /// A <see cref="Sink{TIn,TMat}"/> that materializes into a <see cref="Task{T}"/> of the first value received.
+        /// If the stream completes before signaling at least a single element, the Task will return default value.
+        /// If the stream signals an error errors before signaling at least a single element, the Task will be failed with the streams exception.
+        /// </summary>
+        public static Sink<TIn, Task<TIn>> FirstOrDefault<TIn>()
         {
-            return new Sink<TIn, Task<TIn>>(new HeadSink<TIn>(DefaultAttributes.HeadSink, Shape<TIn>("HeadSink")));
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// A <see cref="Sink{TIn,TMat}"/> that materializes into a <see cref="Task{T}"/> of the last value received.
+        /// If the stream completes before signaling at least a single element, the Task will be failed with a <see cref="NoSuchElementException"/>.
+        /// If the stream signals an error errors before signaling at least a single element, the Task will be failed with the streams exception.
+        /// </summary>
+        public static Sink<TIn, Task<TIn>> Last<TIn>()
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// A <see cref="Sink{TIn,TMat}"/> that materializes into a <see cref="Task{T}"/> of the last value received.
+        /// If the stream completes before signaling at least a single element, the Task will be return a default value.
+        /// If the stream signals an error errors before signaling at least a single element, the Task will be failed with the streams exception.
+        /// </summary>
+        public static Sink<TIn, Task<TIn>> LastOrDefault<TIn>()
+        {
+            throw new NotImplementedException();
         }
 
         /**
@@ -215,16 +240,38 @@ namespace Akka.Streams.Dsl
          */
         public static Sink<TIn, ISinkQueue<TIn>> Queue<TIn>(int bufferSize, TimeSpan? timeout = null)
         {
-            if(bufferSize < 0) throw new ArgumentException("Buffer size must be greater than or equal 0");
+            if (bufferSize < 0) throw new ArgumentException("Buffer size must be greater than or equal 0");
             return new Sink<TIn, ISinkQueue<TIn>>(new AcknowledgeSink<TIn>(bufferSize, timeout ?? TimeSpan.FromSeconds(5), DefaultAttributes.AcknowledgeSink, Shape<TIn>("AcknowledgeSink")));
         }
 
+        /// <summary>
+        /// A graph with the shape of a sink logically is a sink, this method makes
+        /// it so also in type.
+        /// </summary>
         public static Sink<TIn, TMat> FromGraph<TIn, TMat>(IGraph<SinkShape<TIn>, TMat> graph)
         {
-            throw new NotImplementedException();
+            return graph is Sink<TIn, TMat>
+                ? graph as Sink<TIn, TMat>
+                : new Sink<TIn, TMat>(graph.Module);
         }
 
-        public static Sink<T, IPublisher<T>>  AsPublisher<T>(bool fanout)
+        /// <summary>
+        /// Helper to create <see cref="Sink{TIn,TMat}"/> from <see cref="ISubscriber{T}"/>.
+        /// </summary>
+        public static Sink<T, Unit> FromSubscriber<T>(ISubscriber<T> subscriber)
+        {
+            return new Sink<T, Unit>(new SubscriberSink<T>(subscriber, DefaultAttributes.SubscriberSink, Shape<T>("SubscriberSink")));
+        }
+
+        /// <summary>
+        /// A <see cref="Sink{TIn,TMat}"/> that immediately cancels its upstream after materialization.
+        /// </summary>
+        public static Sink<T, Unit> Cancelled<T>()
+        {
+            return new Sink<T, Unit>(new CancelSink<T>(DefaultAttributes.CancelledSink, Shape<T>("CancelledSink")));
+        }
+
+        public static Sink<T, IPublisher<T>> AsPublisher<T>(bool fanout)
         {
             throw new NotImplementedException();
         }
