@@ -28,7 +28,7 @@ namespace Akka.Streams.Dsl
 	}
 	<# } #>
 
-	public static partial class UnzipWith 
+	public partial class UnzipWith 
 	{
 		<# for (int i = 2; i < count; i++) { 
 		   var typeParams = string.Join(", ", Enumerable.Range(0, i).Select(x => "TOut" + x));
@@ -45,7 +45,7 @@ namespace Akka.Streams.Dsl
 	   var typeParams = string.Join(", ", Enumerable.Range(0, i).Select(x => "T" + x));
 	#>
 
-	public sealed class UnzipWith<TIn, <#= typeParams #>> : GraphStage<FanOutShape<TIn, <#= typeParams #>>>
+	public class UnzipWith<TIn, <#= typeParams #>> : GraphStage<FanOutShape<TIn, <#= typeParams #>>>
 	{
 		private sealed class UnzipWithStageLogic : GraphStageLogic 
 		{
@@ -106,9 +106,9 @@ Out<#=t#> = Shape.Out<#=t#>;
 public Outlet<T<#=t#>> Out<#=t#> { get; }
 		<# } #>
 
-        protected override Attributes InitialAttributes { get; }
-		public override FanOutShape<TIn, <#= typeParams #>> Shape { get; }
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+        protected sealed override Attributes InitialAttributes { get; }
+		public sealed override FanOutShape<TIn, <#= typeParams #>> Shape { get; }
+        protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new UnzipWithStageLogic(Shape, this);
         }

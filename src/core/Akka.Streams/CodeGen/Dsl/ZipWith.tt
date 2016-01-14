@@ -39,7 +39,7 @@ namespace Akka.Streams.Dsl
 	   var fanInShape = "FanInShape<" + typeParams + ", TOut>";
 	#>
 
-	public sealed class ZipWith<<#= typeParams #>, TOut> : GraphStage<<#= fanInShape #>>
+	public class ZipWith<<#= typeParams #>, TOut> : GraphStage<<#= fanInShape #>>
 	{
 		private sealed class ZipWithStageLogic : GraphStageLogic
 		{
@@ -102,9 +102,9 @@ Pull(_stage.In<#=t#>);
 public Inlet<TIn<#= t #>> In<#= t #> { get; }
 		<# } #>
 
-        protected override Attributes InitialAttributes { get; }
-		public override <#= fanInShape #> Shape { get; }
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+        protected sealed override Attributes InitialAttributes { get; }
+		public sealed override <#= fanInShape #> Shape { get; }
+        protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new ZipWithStageLogic(Shape, this);
         }

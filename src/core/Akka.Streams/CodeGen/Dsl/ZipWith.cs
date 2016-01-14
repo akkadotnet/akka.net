@@ -1,5 +1,5 @@
 ﻿
-// --- auto generated: 2016-01-13 11:51:30 --- //
+// --- auto generated: 2016-01-13 15:07:58 --- //
 using System;
 using System.Linq;
 using System.Reactive.Streams;
@@ -87,7 +87,7 @@ namespace Akka.Streams.Dsl
 	}
 	
 	
-	public sealed class ZipWith<TIn0, TIn1, TOut> : GraphStage<FanInShape<TIn0, TIn1, TOut>>
+	public class ZipWith<TIn0, TIn1, TOut> : GraphStage<FanInShape<TIn0, TIn1, TOut>>
 	{
 		private sealed class ZipWithStageLogic : GraphStageLogic
 		{
@@ -154,15 +154,15 @@ namespace Akka.Streams.Dsl
 		public Inlet<TIn0> In0 { get; }
 		public Inlet<TIn1> In1 { get; }
 		
-        protected override Attributes InitialAttributes { get; }
-		public override FanInShape<TIn0, TIn1, TOut> Shape { get; }
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+        protected sealed override Attributes InitialAttributes { get; }
+		public sealed override FanInShape<TIn0, TIn1, TOut> Shape { get; }
+        protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new ZipWithStageLogic(Shape, this);
         }
 	}
 	
-	public sealed class ZipWith<TIn0, TIn1, TIn2, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TOut>>
+	public class ZipWith<TIn0, TIn1, TIn2, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TOut>>
 	{
 		private sealed class ZipWithStageLogic : GraphStageLogic
 		{
@@ -241,15 +241,15 @@ namespace Akka.Streams.Dsl
 		public Inlet<TIn1> In1 { get; }
 		public Inlet<TIn2> In2 { get; }
 		
-        protected override Attributes InitialAttributes { get; }
-		public override FanInShape<TIn0, TIn1, TIn2, TOut> Shape { get; }
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+        protected sealed override Attributes InitialAttributes { get; }
+		public sealed override FanInShape<TIn0, TIn1, TIn2, TOut> Shape { get; }
+        protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new ZipWithStageLogic(Shape, this);
         }
 	}
 	
-	public sealed class ZipWith<TIn0, TIn1, TIn2, TIn3, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TOut>>
+	public class ZipWith<TIn0, TIn1, TIn2, TIn3, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TOut>>
 	{
 		private sealed class ZipWithStageLogic : GraphStageLogic
 		{
@@ -340,15 +340,15 @@ namespace Akka.Streams.Dsl
 		public Inlet<TIn2> In2 { get; }
 		public Inlet<TIn3> In3 { get; }
 		
-        protected override Attributes InitialAttributes { get; }
-		public override FanInShape<TIn0, TIn1, TIn2, TIn3, TOut> Shape { get; }
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+        protected sealed override Attributes InitialAttributes { get; }
+		public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TOut> Shape { get; }
+        protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new ZipWithStageLogic(Shape, this);
         }
 	}
 	
-	public sealed class ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TOut>>
+	public class ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TOut>>
 	{
 		private sealed class ZipWithStageLogic : GraphStageLogic
 		{
@@ -451,15 +451,15 @@ namespace Akka.Streams.Dsl
 		public Inlet<TIn3> In3 { get; }
 		public Inlet<TIn4> In4 { get; }
 		
-        protected override Attributes InitialAttributes { get; }
-		public override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TOut> Shape { get; }
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+        protected sealed override Attributes InitialAttributes { get; }
+		public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TOut> Shape { get; }
+        protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new ZipWithStageLogic(Shape, this);
         }
 	}
 	
-	public sealed class ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut>>
+	public class ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut>>
 	{
 		private sealed class ZipWithStageLogic : GraphStageLogic
 		{
@@ -574,15 +574,15 @@ namespace Akka.Streams.Dsl
 		public Inlet<TIn4> In4 { get; }
 		public Inlet<TIn5> In5 { get; }
 		
-        protected override Attributes InitialAttributes { get; }
-		public override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut> Shape { get; }
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+        protected sealed override Attributes InitialAttributes { get; }
+		public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut> Shape { get; }
+        protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new ZipWithStageLogic(Shape, this);
         }
 	}
 	
-	public sealed class ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut>>
+	public class ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut>>
 	{
 		private sealed class ZipWithStageLogic : GraphStageLogic
 		{
@@ -709,15 +709,15 @@ namespace Akka.Streams.Dsl
 		public Inlet<TIn5> In5 { get; }
 		public Inlet<TIn6> In6 { get; }
 		
-        protected override Attributes InitialAttributes { get; }
-		public override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut> Shape { get; }
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+        protected sealed override Attributes InitialAttributes { get; }
+		public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut> Shape { get; }
+        protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new ZipWithStageLogic(Shape, this);
         }
 	}
 	
-	public sealed class ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut>>
+	public class ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut>>
 	{
 		private sealed class ZipWithStageLogic : GraphStageLogic
 		{
@@ -856,15 +856,15 @@ namespace Akka.Streams.Dsl
 		public Inlet<TIn6> In6 { get; }
 		public Inlet<TIn7> In7 { get; }
 		
-        protected override Attributes InitialAttributes { get; }
-		public override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut> Shape { get; }
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+        protected sealed override Attributes InitialAttributes { get; }
+		public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut> Shape { get; }
+        protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new ZipWithStageLogic(Shape, this);
         }
 	}
 	
-	public sealed class ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut>>
+	public class ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut>>
 	{
 		private sealed class ZipWithStageLogic : GraphStageLogic
 		{
@@ -1015,9 +1015,9 @@ namespace Akka.Streams.Dsl
 		public Inlet<TIn7> In7 { get; }
 		public Inlet<TIn8> In8 { get; }
 		
-        protected override Attributes InitialAttributes { get; }
-		public override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut> Shape { get; }
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+        protected sealed override Attributes InitialAttributes { get; }
+		public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut> Shape { get; }
+        protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new ZipWithStageLogic(Shape, this);
         }

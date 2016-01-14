@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Akka.Streams.Implementation;
-using Akka.Streams.Implementation.Fusing;
-using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 
 namespace Akka.Streams.Dsl
@@ -506,7 +503,7 @@ namespace Akka.Streams.Dsl
 
         public MergeSorted()
         {
-            Shape = new FanInShape<T, T, T>(Left, Right, Out);
+            Shape = new FanInShape<T, T, T>(Out, Left, Right);
         }
 
         public override FanInShape<T, T, T> Shape { get; }
@@ -530,6 +527,77 @@ namespace Akka.Streams.Dsl
     /// </summary>
     public sealed class Broadcast<T> : GraphStage<UniformFanOutShape<T, T>>
     {
+        #region stage logic
+        private sealed class BroadcastStageLogic : GraphStageLogic
+        {
+            private readonly Broadcast<T> _stage;
+            private readonly bool[] _pending;
+            private int _pendingCount;
+            private int _downstreamRunning;
+
+            public BroadcastStageLogic(Shape shape, Broadcast<T> stage) : base(shape)
+            {
+                _stage = stage;
+                _pendingCount = _downstreamRunning = stage._outputPorts;
+                _pending = new bool[stage._outputPorts];
+                for (int i = 0; i < stage._outputPorts; i++) _pending[i] = true;
+
+                SetHandler(_stage.In, onPush: () =>
+                {
+                    _pendingCount = _downstreamRunning;
+                    var element = Grab(stage.In);
+                    var idx = 0;
+                    var enumerator = (stage.Out as IEnumerable<Outlet>).GetEnumerator();
+                    while (enumerator.MoveNext())
+                    {
+                        var o = (Outlet<T>)enumerator.Current;
+                        if (!IsClosed(o))
+                        {
+                            Push(o, element);
+                            _pending[idx] = true;
+                        }
+                        idx++;
+                    }
+                });
+
+                var outIdx = 0;
+                var outEnumerator = (stage.Out as IEnumerable<Outlet>).GetEnumerator();
+                while (outEnumerator.MoveNext())
+                {
+                    var o = (Outlet<T>)outEnumerator.Current;
+                    var i = outIdx;
+                    SetHandler(o, onPull: () =>
+                    {
+                        _pending[i] = false;
+                        _pendingCount--;
+                        TryPull();
+                    },
+                    onDownstreamFinish: () =>
+                    {
+                        if (stage._eagerCancel) CompleteStage<T>();
+                        else
+                        {
+                            _downstreamRunning--;
+                            if (_downstreamRunning == 0) CompleteStage<T>();
+                            else if (_pending[i])
+                            {
+                                _pending[i] = false;
+                                _pendingCount--;
+                                TryPull();
+                            }
+                        }
+                    });
+                    outIdx++;
+                }
+            }
+
+            private void TryPull()
+            {
+                if (_pendingCount == 0 && !HasBeenPulled(_stage.In)) Pull(_stage.In);
+            }
+        }
+        #endregion
+
         private readonly int _outputPorts;
         private readonly bool _eagerCancel;
 
@@ -546,8 +614,7 @@ namespace Akka.Streams.Dsl
             for (int i = 0; i < outputPorts; i++)
                 Out[i] = new Outlet<T>("Broadcast.out" + i);
 
-            Shape = new UniformFanOutShape<T, T>();
-
+            Shape = new UniformFanOutShape<T, T>(In, Out);
             InitialAttributes = Attributes.CreateName("Broadcast");
         }
 
@@ -555,421 +622,272 @@ namespace Akka.Streams.Dsl
         public override UniformFanOutShape<T, T> Shape { get; }
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            throw new NotImplementedException();
+            return new BroadcastStageLogic(Shape, this);
         }
     }
 
-    /**
-     * Fan-out the stream to several streams. Each upstream element is emitted to the first available downstream consumer.
-     * It will not shut down until the subscriptions
-     * for at least two downstream subscribers have been established.
-     *
-     * A `Balance` has one `in` port and 2 or more `out` ports.
-     *
-     * '''Emits when''' any of the outputs stops backpressuring; emits the element to the first available output
-     *
-     * '''Backpressures when''' all of the outputs backpressure
-     *
-     * '''Completes when''' upstream completes
-     *
-     * '''Cancels when''' all downstreams cancel
-     */
-    public class Balance<T> : IGraph<UniformFanOutShape<T, T>, object>
+    /// <summary>
+    /// Fan-out the stream to several streams. Each upstream element is emitted to the first available downstream consumer.
+    /// It will not shut down until the subscriptions
+    /// for at least two downstream subscribers have been established.
+    /// 
+    /// A <see cref="Balance{T}"/> has one <see cref="In"/> port and 2 or more <see cref="Outs"/> ports.
+    /// <para>
+    /// '''Emits when''' any of the outputs stops backpressuring; emits the element to the first available output
+    /// </para>
+    /// '''Backpressures when''' all of the outputs backpressure
+    /// <para>
+    /// '''Completes when''' upstream completes
+    /// </para>
+    /// '''Cancels when''' all downstreams cancel
+    /// </summary>
+    public sealed class Balance<T> : GraphStage<UniformFanOutShape<T, T>>
     {
-        /**
-         * Create a new `Balance` with the specified number of output ports.
-         *
-         * @param outputPorts number of output ports
-         * @param waitForAllDownstreams if you use `waitForAllDownstreams = true` it will not start emitting
-         *   elements to downstream outputs until all of them have requested at least one element,
-         *   default value is `false`
-         */
-        public static Balance<T> Create(int outputPorts, bool waitForAllDownstreams = false)
+        #region stage logic
+        private sealed class BalanceStageLogic : GraphStageLogic
         {
-            var shape = new UniformFanOutShape<T, T>(outputPorts);
-            return new Balance<T>(outputPorts, waitForAllDownstreams, shape, new Junctions.BalanceModule<T>(shape, waitForAllDownstreams, Attributes.CreateName("Balance")));
+            private readonly Balance<T> _stage;
+            private readonly Outlet<T>[] _pendingQueue;
+            private int _pendingHead = 0;
+            private int _pendingTail = 0;
+            private int _needDownstreamPulls = 0;
+            private int _downstreamsRunning;
+            public BalanceStageLogic(Shape shape, Balance<T> stage) : base(shape)
+            {
+                _stage = stage;
+                _pendingQueue = new Outlet<T>[_stage._outputPorts];
+                _downstreamsRunning = _stage._outputPorts;
+
+                if (_stage._waitForAllDownstreams) _needDownstreamPulls = _stage._outputPorts;
+
+                SetHandler(_stage.In, onPush: DequeueAndDispatch);
+
+                foreach (var outlet in _stage.Outs)
+                {
+                    var hasPulled = false;
+                    SetHandler(outlet, onPull: () =>
+                    {
+                        if (!hasPulled)
+                        {
+                            hasPulled = false;
+                            if (_needDownstreamPulls > 0) _needDownstreamPulls--;
+                        }
+
+                        if (_needDownstreamPulls == 0)
+                        {
+                            if (IsAvailable(_stage.In))
+                            {
+                                if (NoPending) Push(outlet, Grab(_stage.In));
+                            }
+                            else
+                            {
+                                if (!HasBeenPulled(_stage.In)) Pull(_stage.In);
+                                Enqueue(outlet);
+                            }
+                        }
+                        else Enqueue(outlet);
+                    },
+                    onDownstreamFinish: () =>
+                    {
+                        _downstreamsRunning--;
+                        if (_downstreamsRunning == 0) CompleteStage<T>();
+                        else if (!hasPulled && _needDownstreamPulls > 0)
+                        {
+                            _needDownstreamPulls--;
+                            if (_needDownstreamPulls == 0 && !HasBeenPulled(_stage.In)) Pull(_stage.In);
+                        }
+                    });
+                }
+            }
+
+            private bool NoPending { get { return _pendingHead == _pendingTail; } }
+
+            private void Enqueue(Outlet<T> outlet)
+            {
+                _pendingQueue[_pendingTail % _stage._outputPorts] = outlet;
+                _pendingTail++;
+            }
+
+            private void DequeueAndDispatch()
+            {
+                var outlet = _pendingQueue[_pendingHead % _stage._outputPorts];
+                _pendingHead++;
+                Push(outlet, Grab(_stage.In));
+                if (!NoPending) Pull(_stage.In);
+            }
+        }
+        #endregion
+
+        private readonly int _outputPorts;
+        private readonly bool _waitForAllDownstreams;
+
+        public Balance(int outputPorts, bool waitForAllDownstreams = false)
+        {
+            if (outputPorts <= 1) throw new ArgumentException("A Balance must have more than 1 output ports");
+            _outputPorts = outputPorts;
+            _waitForAllDownstreams = waitForAllDownstreams;
+
+            Outs = new Outlet<T>[outputPorts];
+            for (int i = 0; i < outputPorts; i++) Outs[i] = new Outlet<T>("Balance.out" + i);
+
+            InitialAttributes = Attributes.CreateName("Balance");
+            Shape = new UniformFanOutShape<T, T>(In, Outs);
         }
 
-        public readonly int OutputPorts;
-        public readonly bool WaitForAllDownstreams;
-        private readonly UniformFanOutShape<T, T> _shape;
-        private readonly IModule _module;
+        public Inlet<T> In { get; } = new Inlet<T>("Balance.in");
+        public Outlet<T>[] Outs { get; }
 
-        public Balance(int outputPorts, bool waitForAllDownstreams, UniformFanOutShape<T, T> shape, IModule module)
-        {
-            OutputPorts = outputPorts;
-            WaitForAllDownstreams = waitForAllDownstreams;
-            _shape = shape;
-            _module = module;
-        }
+        protected override Attributes InitialAttributes { get; }
+        public override UniformFanOutShape<T, T> Shape { get; }
 
-        public UniformFanOutShape<T, T> Shape { get { return _shape; } }
-        public IModule Module { get { return _module; } }
-        public IGraph<UniformFanOutShape<T, T>, object> WithAttributes(Attributes attributes)
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new Balance<T>(OutputPorts, WaitForAllDownstreams, _shape, _module.WithAttributes(attributes).Nest());
-        }
-
-        public IGraph<UniformFanOutShape<T, T>, object> Named(string name)
-        {
-            return WithAttributes(Attributes.CreateName(name));
+            return new BalanceStageLogic(Shape, this);
         }
     }
 
-    /**
-     * Combine the elements of 2 streams into a stream of tuples.
-     *
-     * A `Zip` has a `left` and a `right` input port and one `out` port
-     *
-     * '''Emits when''' all of the inputs has an element available
-     *
-     * '''Backpressures when''' downstream backpressures
-     *
-     * '''Completes when''' any upstream completes
-     *
-     * '''Cancels when''' downstream cancels
-     */
-    public class Zip<T1, T2>
+    /// <summary>
+    /// Combine the elements of 2 streams into a stream of tuples.
+    /// 
+    /// A <see cref="Zip{T1,T2}"/> has a `left` and a `right` input port and one `out` port
+    /// <para>
+    /// '''Emits when''' all of the inputs has an element available
+    /// </para>
+    /// '''Backpressures when''' downstream backpressures
+    /// <para>
+    /// '''Completes when''' any upstream completes
+    /// </para>
+    /// '''Cancels when''' downstream cancels
+    /// </summary>
+    public sealed class Zip<T1, T2> : ZipWith<T1, T2, KeyValuePair<T1, T2>>
     {
-
+        public Zip() : base((a, b) => new KeyValuePair<T1, T2>(a, b)) { }
     }
 
-    /**
-     * Combine the elements of multiple streams into a stream of combined elements using a combiner function.
-     *
-     * '''Emits when''' all of the inputs has an element available
-     *
-     * '''Backpressures when''' downstream backpressures
-     *
-     * '''Completes when''' any upstream completes
-     *
-     * '''Cancels when''' downstream cancels
-     */
+    /// <summary>
+    /// Combine the elements of multiple streams into a stream of combined elements using a combiner function.
+    /// <para>
+    /// '''Emits when''' all of the inputs has an element available
+    /// </para>
+    /// '''Backpressures when''' downstream backpressures
+    /// <para>
+    /// '''Completes when''' any upstream completes
+    /// </para>
+    /// '''Cancels when''' downstream cancels
+    /// </summary>
     public sealed partial class ZipWith
     {
         public static readonly ZipWith Instance = new ZipWith();
         private ZipWith() { }
     }
 
-    /**
-     * Takes a stream of pair elements and splits each pair to two output streams.
-     *
-     * An `Unzip` has one `in` port and one `left` and one `right` output port.
-     *
-     * '''Emits when''' all of the outputs stops backpressuring and there is an input element available
-     *
-     * '''Backpressures when''' any of the outputs backpressures
-     *
-     * '''Completes when''' upstream completes
-     *
-     * '''Cancels when''' any downstream cancels
-     */
-    public class UnZip<T1, T2>
+    /// <summary>
+    /// Takes a stream of pair elements and splits each pair to two output streams.
+    /// 
+    /// An <see cref="UnZip{T1,T2}"/> has one `in` port and one `left` and one `right` output port.
+    /// <para>
+    /// '''Emits when''' all of the outputs stops backpressuring and there is an input element available
+    /// </para>
+    /// '''Backpressures when''' any of the outputs backpressures
+    /// <para>
+    /// '''Completes when''' upstream completes
+    /// </para>
+    /// '''Cancels when''' any downstream cancels
+    /// </summary>
+    public sealed class UnZip<T1, T2> : UnzipWith<KeyValuePair<T1, T2>, T1, T2>
     {
-
+        public UnZip() : base(kv => Tuple.Create(kv.Key, kv.Value)) { }
     }
 
-    /**
-     * Transforms each element of input stream into multiple streams using a splitter function.
-     *
-     * '''Emits when''' all of the outputs stops backpressuring and there is an input element available
-     *
-     * '''Backpressures when''' any of the outputs backpressures
-     *
-     * '''Completes when''' upstream completes
-     *
-     * '''Cancels when''' any downstream cancels
-     */
-    public sealed partial class UnzipWith
+    /// <summary>
+    /// Transforms each element of input stream into multiple streams using a splitter function.
+    /// <para>
+    /// '''Emits when''' all of the outputs stops backpressuring and there is an input element available
+    /// </para>
+    /// '''Backpressures when''' any of the outputs backpressures
+    /// <para>
+    /// '''Completes when''' upstream completes
+    /// </para>
+    /// '''Cancels when''' any downstream cancels
+    /// </summary>
+    public partial class UnzipWith
     {
         public static readonly UnzipWith Instance = new UnzipWith();
         private UnzipWith() { }
     }
 
-    /**
-     * Takes two streams and outputs one stream formed from the two input streams
-     * by first emitting all of the elements from the first stream and then emitting
-     * all of the elements from the second stream.
-     *
-     * A `Concat` has one `first` port, one `second` port and one `out` port.
-     *
-     * '''Emits when''' the current stream has an element available; if the current input completes, it tries the next one
-     *
-     * '''Backpressures when''' downstream backpressures
-     *
-     * '''Completes when''' all upstreams complete
-     *
-     * '''Cancels when''' downstream cancels
-     */
-    public class Concat<T> : IGraph<UniformFanInShape<T, T>, object>
+    /// <summary>
+    /// Takes two streams and outputs one stream formed from the two input streams
+    /// by first emitting all of the elements from the first stream and then emitting
+    /// all of the elements from the second stream.
+    /// 
+    /// A <see cref="Concat{T,TMat}"/> has one `first` port, one `second` port and one `out` port.
+    /// <para>
+    /// '''Emits when''' the current stream has an element available; if the current input completes, it tries the next one
+    /// </para>
+    /// '''Backpressures when''' downstream backpressures
+    /// <para>
+    /// '''Completes when''' all upstreams complete
+    /// </para>
+    /// '''Cancels when''' downstream cancels
+    /// </summary>
+    public class Concat<T> : GraphStage<UniformFanInShape<T, T>>
     {
-        /**
-         * Create a new `Concat`.
-         */
-        public static Concat<T> Create()
+        #region stage logic
+        private sealed class ConcatStageLogic : GraphStageLogic
         {
-            var shape = new UniformFanInShape<T, T>(2);
-            return new Concat<T>(shape, new Junctions.ConcatModule<T>(shape, Attributes.CreateName("Concat")));
-        }
-
-        private readonly UniformFanInShape<T, T> _shape;
-        private readonly IModule _module;
-
-        private Concat(UniformFanInShape<T, T> shape, IModule module)
-        {
-            _shape = shape;
-            _module = module;
-        }
-
-        public UniformFanInShape<T, T> Shape { get { return _shape; } }
-        public IModule Module { get { return _module; } }
-        public IGraph<UniformFanInShape<T, T>, object> WithAttributes(Attributes attributes)
-        {
-            return new Concat<T>(_shape, _module.WithAttributes(attributes).Nest());
-        }
-
-        public IGraph<UniformFanInShape<T, T>, object> Named(string name)
-        {
-            return WithAttributes(Attributes.CreateName(name));
-        }
-    }
-
-    public static class GraphDsl
-    {
-        public class Builder<T>
-        {
-            private IModule _moduleInProgress = EmptyModule.Instance;
-
-            internal protected IModule Module { get { return _moduleInProgress; } }
-
-            public void AddEdge<T1, T2, TMat2>(Outlet<T1> from, IGraph<FlowShape<T1, T2>, TMat2> via, Inlet<T2> to)
+            public ConcatStageLogic(Shape shape, Concat<T> stage) : base(shape)
             {
-                throw new NotImplementedException();
-            }
-
-            public void AddEdge<T>(Outlet<T> from, Inlet<T> to)
-            {
-                _moduleInProgress = _moduleInProgress.Wire(from, to);
-            }
-
-            /**
-             * Import a graph into this module, performing a deep copy, discarding its
-             * materialized value and returning the copied Ports that are now to be
-             * connected.
-             */
-            public TShape Add<TShape, TMat>(IGraph<TShape, TMat> graph)
-                where TShape : Shape
-            {
-                throw new NotImplementedException();
-            }
-
-            public Outlet<TOut> Add<TOut, TMat>(Source<TOut, TMat> source)
-            {
-                return Add(source as IGraph<SourceShape<TOut>, TMat>).Outlets[0] as Outlet<TOut>;
-            }
-
-            public Inlet<TIn> Add<TIn, TMat>(Sink<TIn, TMat> source)
-            {
-                return Add(source as IGraph<SinkShape<TIn>, TMat>).Inlets[0] as Inlet<TIn>;
-            }
-
-            /**
-             * Returns an [[Outlet]] that gives access to the materialized value of this graph. Once the graph is materialized
-             * this outlet will emit exactly one element which is the materialized value. It is possible to expose this
-             * outlet as an externally accessible outlet of a [[Source]], [[Sink]], [[Flow]] or [[BidiFlow]].
-             *
-             * It is possible to call this method multiple times to get multiple [[Outlet]] instances if necessary. All of
-             * the outlets will emit the materialized value.
-             *
-             * Be careful to not to feed the result of this outlet to a stage that produces the materialized value itself (for
-             * example to a [[Sink#fold]] that contributes to the materialized value) since that might lead to an unresolvable
-             * dependency cycle.
-             *
-             * @return The outlet that will emit the materialized value.
-             */
-            public Outlet<T> MaterializedValue
-            {
-                get
+                var activeStream = 0;
+                var iidx = 0;
+                var inEnumerator = (stage.Ins as IEnumerable<Inlet>).GetEnumerator();
+                while (inEnumerator.MoveNext())
                 {
-                    var module = new MaterializedValueSource<object>();
-                    _moduleInProgress = _moduleInProgress.Compose(module);
-                    return Outlet.Create<T>(module.Shape.Outlets[0]);
+                    var i = (Inlet<T>)inEnumerator.Current;
+                    var idx = iidx;
+                    SetHandler(i,
+                        onPush: () => Push(stage.Out, Grab(i)),
+                        onUpstreamFinish: () =>
+                        {
+                            if (idx == activeStream)
+                            {
+                                activeStream++;
+                                // skip closed inputs
+                                while (activeStream < stage._inputPorts && IsClosed(stage.Ins[activeStream])) activeStream++;
+                                if (activeStream == stage._inputPorts) CompleteStage<T>();
+                                else if (IsAvailable(stage.Out)) Pull(stage.Ins[activeStream]);
+                            }
+                        });
+                    iidx++;
                 }
-            }
 
-            /**
-             * INTERNAL API.
-             *
-             * This is only used by the materialization-importing apply methods of Source,
-             * Flow, Sink and Graph.
-             */
-            internal TShape Add<TShape, T1, TMat>(IGraph<TShape, TMat> graph, Func<T1, object> transform)
-                where TShape : Shape
-            {
-                throw new NotImplementedException();
-            }
-
-            /**
-             * INTERNAL API.
-             *
-             * This is only used by the materialization-importing apply methods of Source,
-             * Flow, Sink and Graph.
-             */
-            internal TShape Add<TShape, T1, T2, TMat>(IGraph<TShape, TMat> graph, Func<T1, T2, object> combine)
-                where TShape : Shape
-            {
-                throw new NotImplementedException();
-            }
-
-            internal void AndThen(OutPort port, StageModule op)
-            {
-                _moduleInProgress = _moduleInProgress.Compose(op).Wire(port, op.InPorts.First());
-            }
-
-            internal IRunnableGraph<TMat> BuildRunnable<TMat>()
-            {
-                if (!_moduleInProgress.IsRunnable)
-                    throw new ArgumentException(string.Format("Cannot build the RunnableGraph because there are unconnected ports: " +
-                        string.Join(", ", _moduleInProgress.InPorts.Cast<object>().Union(_moduleInProgress.OutPorts))));
-
-                return new RunnableGraph<TMat>(_moduleInProgress.Nest());
-            }
-
-            internal Source<TOut, TMat> BuildSource<TOut, TMat>(Outlet<TOut> outlet)
-            {
-                if (_moduleInProgress.IsRunnable)
-                    throw new ArgumentException("Cannot build the Source since no ports remain open");
-                if (!_moduleInProgress.IsSource)
-                    throw new ArgumentException(string.Format("Cannot build Source with open inputs [{0}] and outputs [{1}]",
-                        string.Join(", ", _moduleInProgress.InPorts), string.Join(", ", _moduleInProgress.OutPorts)));
-                if (_moduleInProgress.OutPorts.First() != outlet)
-                    throw new ArgumentException(string.Format("Provided Outlet [{0}] does not equal the module’s open Outlet [{1}]", outlet, _moduleInProgress.OutPorts.First()));
-
-                return new Source<TOut, TMat>(_moduleInProgress.ReplaceShape(new SourceShape<TOut>(outlet)).Nest());
-            }
-
-            internal Sink<TIn, TMat> BuildSink<TIn, TMat>(Inlet<TIn> inlet)
-            {
-                if (_moduleInProgress.IsRunnable)
-                    throw new ArgumentException("Cannot build the Sink since no ports remain open");
-                if (!_moduleInProgress.IsSink)
-                    throw new ArgumentException(string.Format("Cannot build Sink with open inputs [{0}] and outputs [{1}]",
-                        string.Join(", ", _moduleInProgress.InPorts), string.Join(", ", _moduleInProgress.OutPorts)));
-                if (_moduleInProgress.InPorts.First() != inlet)
-                    throw new ArgumentException(string.Format("Provided Inlet [{0}] does not equal the module’s open Inlet [{1}]", inlet, _moduleInProgress.InPorts.First()));
-
-                return new Sink<TIn, TMat>(_moduleInProgress.ReplaceShape(new SinkShape<TIn>(inlet)).Nest());
-            }
-
-            internal Flow<TIn, TOut, TMat> BuildFlow<TIn, TOut, TMat>(Inlet<TIn> inlet, Outlet<TOut> outlet)
-            {
-                if (!_moduleInProgress.IsFlow)
-                    throw new ArgumentException(string.Format(
-                        "Cannot build Flow with open inputs [{0}] and outputs [{1}]", string.Join(", ", _moduleInProgress.InPorts), string.Join(", ", _moduleInProgress.OutPorts)));
-                if (_moduleInProgress.OutPorts.First() != outlet)
-                    throw new ArgumentException(string.Format("provided Outlet {0} does not equal the module’s open Outlet {1}", outlet, _moduleInProgress.OutPorts.First()));
-                if (_moduleInProgress.InPorts.First() != inlet)
-                    throw new ArgumentException(string.Format("provided Inlet {0} does not equal the module’s open Inlet {1}", inlet, _moduleInProgress.InPorts.First()));
-
-                return new Flow<TIn, TOut, TMat>(_moduleInProgress.ReplaceShape(new FlowShape<TIn, TOut>(inlet, outlet)).Nest());
-            }
-
-            internal BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat> BuildBidiFlow<TIn1, TOut1, TIn2, TOut2, TMat>(
-                BidiShape<TIn1, TOut1, TIn2, TOut2> shape)
-            {
-                if (!_moduleInProgress.IsBidiFlow)
-                    throw new ArgumentException(string.Format("Cannot build BidiFlow with open inputs [{0}] and outputs [{1}]",
-                        string.Join(", ", _moduleInProgress.InPorts), string.Join(", ", _moduleInProgress.OutPorts)));
-
-                var i1 = new SortedSet<InPort>(_moduleInProgress.InPorts);
-                var i2 = new SortedSet<InPort>(shape.Inlets);
-                var o1 = new SortedSet<OutPort>(_moduleInProgress.OutPorts);
-                var o2 = new SortedSet<OutPort>(shape.Outlets);
-
-                if (!i1.SetEquals(i2))
-                    throw new ArgumentException(string.Format("Provided inlets [{0}] does not equal the module’s open Inlets [{1}]", string.Join(", ", i2), string.Join(", ", i1)));
-
-                if (!o1.SetEquals(o2))
-                    throw new ArgumentException(string.Format("Provided outlets [{0}] does not equal the module’s open Outlets [{1}]", string.Join(", ", o2), string.Join(", ", o1)));
-
-                return new BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat>(_moduleInProgress.ReplaceShape(shape).Nest());
+                SetHandler(stage.Out, onPull: () => Pull(stage.Ins[activeStream]));
             }
         }
+        #endregion
 
-        internal static Outlet<TOut> FindOut<TIn, TOut, T>(Builder<T> builder, UniformFanOutShape<TIn, TOut> junction, int n)
+        private readonly int _inputPorts;
+
+        public Concat(int inputPorts = 2)
         {
-            throw new NotImplementedException();
+            if (inputPorts <= 1) throw new ArgumentException("A Concat must have more than 1 input port");
+            _inputPorts = inputPorts;
+
+            Ins = new Inlet<T>[inputPorts];
+            for (int i = 0; i < inputPorts; i++) Ins[i] = new Inlet<T>("Concat.in" + i);
+
+            Shape = new UniformFanInShape<T, T>(Out, Ins);
+            InitialAttributes = Attributes.CreateName("Concat");
         }
 
-        internal static Inlet<TIn> FindIn<TIn, TOut, T>(Builder<T> builder, UniformFanInShape<TIn, TOut> junction, int n)
+        public Inlet<T>[] Ins { get; }
+        public Outlet<T> Out { get; } = new Outlet<T>("Concat.out");
+
+        protected override Attributes InitialAttributes { get; }
+        public override UniformFanInShape<T, T> Shape { get; }
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            throw new NotImplementedException();
-        }
-
-        public interface ICombiner<T>
-        {
-            Outlet<T> ImportAndGetPort<TBuilder>(Builder<TBuilder> builder);
-            void LinkTo(Inlet<T> inlet);
-        }
-
-        public interface IReverseCombiner<T>
-        {
-            Inlet<T> ImportAndGetPortReverse<TBuilder>(Builder<TBuilder> builder);
-            void LinkFrom(Outlet<T> outlet);
-        }
-
-        public class PortOps<TOut, TMat> : FlowBase<TOut, TMat>, ICombiner<TOut>
-        {
-
-        }
-
-        public class DisabledPortOps<TOut, TMat> : PortOps<TOut, TMat>
-        {
-
-        }
-
-        public class ReversePortOps<TIn> : IReverseCombiner<TIn>
-        {
-
-        }
-
-        public class DisabledReversePortOps<TIn> : ReversePortOps<TIn>
-        {
-
-        }
-
-        public class FanInOps<TIn, TOut> : ICombiner<TOut>, IReverseCombiner<TIn>
-        {
-
-        }
-
-        public class FanOutOps<TIn, TOut> : IReverseCombiner<TIn>
-        {
-
-        }
-
-        public class SinkArrow<T> : IReverseCombiner<T>
-        {
-        }
-
-        public class SinkShapeArrow<T> : IReverseCombiner<T>
-        {
-
-        }
-
-        public class FlowShapeArrow<TIn, TOut> : IReverseCombiner<TIn>
-        {
-
-        }
-
-        public class FlowArrow<TIn, TOut, TMat>
-        {
-
-        }
-
-        public class BidiFlowShapeArrow<TIn1, TOut1, TIn2, TOut2>
-        {
-
+            return new ConcatStageLogic(Shape, this);
         }
     }
 }

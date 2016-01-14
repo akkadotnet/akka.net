@@ -244,6 +244,8 @@ namespace Akka.Streams.Implementation.Fusing
             Shape = new SourceShape<T>(Outlet);
         }
 
+        public MaterializedValueSource(StreamLayout.IMaterializedValueNode computation) : this(computation, new Outlet<T>("MaterializedValue.out")) { }
+
         protected override Attributes InitialAttributes { get { return Name; } }
         public override SourceShape<T> Shape { get; }
 

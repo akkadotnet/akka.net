@@ -1,4 +1,4 @@
-﻿// --- auto generated: 2016-01-13 12:34:41 --- //
+﻿// --- auto generated: 2016-01-13 15:07:28 --- //
 using System;
 using Akka.Streams.Stage;
 
@@ -57,7 +57,7 @@ namespace Akka.Streams.Dsl
 		}
 	}
 	
-	public static partial class UnzipWith 
+	public partial class UnzipWith 
 	{
 		
 		public static UnzipWith<TIn, TOut0, TOut1> Apply<TIn, TOut0, TOut1>(Func<TIn, Tuple<TOut0, TOut1>> unzipper, UnzipWithCreator<TIn, TOut0, TOut1> creator)
@@ -92,7 +92,7 @@ namespace Akka.Streams.Dsl
 		
 	}	
 	
-	public sealed class UnzipWith<TIn, T0, T1> : GraphStage<FanOutShape<TIn, T0, T1>>
+	public class UnzipWith<TIn, T0, T1> : GraphStage<FanOutShape<TIn, T0, T1>>
 	{
 		private sealed class UnzipWithStageLogic : GraphStageLogic 
 		{
@@ -161,15 +161,15 @@ namespace Akka.Streams.Dsl
 		public Outlet<T0> Out0 { get; }
 		public Outlet<T1> Out1 { get; }
 		
-        protected override Attributes InitialAttributes { get; }
-		public override FanOutShape<TIn, T0, T1> Shape { get; }
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+        protected sealed override Attributes InitialAttributes { get; }
+		public sealed override FanOutShape<TIn, T0, T1> Shape { get; }
+        protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new UnzipWithStageLogic(Shape, this);
         }
 	}
 	
-	public sealed class UnzipWith<TIn, T0, T1, T2> : GraphStage<FanOutShape<TIn, T0, T1, T2>>
+	public class UnzipWith<TIn, T0, T1, T2> : GraphStage<FanOutShape<TIn, T0, T1, T2>>
 	{
 		private sealed class UnzipWithStageLogic : GraphStageLogic 
 		{
@@ -256,15 +256,15 @@ namespace Akka.Streams.Dsl
 		public Outlet<T1> Out1 { get; }
 		public Outlet<T2> Out2 { get; }
 		
-        protected override Attributes InitialAttributes { get; }
-		public override FanOutShape<TIn, T0, T1, T2> Shape { get; }
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+        protected sealed override Attributes InitialAttributes { get; }
+		public sealed override FanOutShape<TIn, T0, T1, T2> Shape { get; }
+        protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new UnzipWithStageLogic(Shape, this);
         }
 	}
 	
-	public sealed class UnzipWith<TIn, T0, T1, T2, T3> : GraphStage<FanOutShape<TIn, T0, T1, T2, T3>>
+	public class UnzipWith<TIn, T0, T1, T2, T3> : GraphStage<FanOutShape<TIn, T0, T1, T2, T3>>
 	{
 		private sealed class UnzipWithStageLogic : GraphStageLogic 
 		{
@@ -369,15 +369,15 @@ namespace Akka.Streams.Dsl
 		public Outlet<T2> Out2 { get; }
 		public Outlet<T3> Out3 { get; }
 		
-        protected override Attributes InitialAttributes { get; }
-		public override FanOutShape<TIn, T0, T1, T2, T3> Shape { get; }
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+        protected sealed override Attributes InitialAttributes { get; }
+		public sealed override FanOutShape<TIn, T0, T1, T2, T3> Shape { get; }
+        protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new UnzipWithStageLogic(Shape, this);
         }
 	}
 	
-	public sealed class UnzipWith<TIn, T0, T1, T2, T3, T4> : GraphStage<FanOutShape<TIn, T0, T1, T2, T3, T4>>
+	public class UnzipWith<TIn, T0, T1, T2, T3, T4> : GraphStage<FanOutShape<TIn, T0, T1, T2, T3, T4>>
 	{
 		private sealed class UnzipWithStageLogic : GraphStageLogic 
 		{
@@ -500,15 +500,15 @@ namespace Akka.Streams.Dsl
 		public Outlet<T3> Out3 { get; }
 		public Outlet<T4> Out4 { get; }
 		
-        protected override Attributes InitialAttributes { get; }
-		public override FanOutShape<TIn, T0, T1, T2, T3, T4> Shape { get; }
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+        protected sealed override Attributes InitialAttributes { get; }
+		public sealed override FanOutShape<TIn, T0, T1, T2, T3, T4> Shape { get; }
+        protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new UnzipWithStageLogic(Shape, this);
         }
 	}
 	
-	public sealed class UnzipWith<TIn, T0, T1, T2, T3, T4, T5> : GraphStage<FanOutShape<TIn, T0, T1, T2, T3, T4, T5>>
+	public class UnzipWith<TIn, T0, T1, T2, T3, T4, T5> : GraphStage<FanOutShape<TIn, T0, T1, T2, T3, T4, T5>>
 	{
 		private sealed class UnzipWithStageLogic : GraphStageLogic 
 		{
@@ -649,15 +649,15 @@ namespace Akka.Streams.Dsl
 		public Outlet<T4> Out4 { get; }
 		public Outlet<T5> Out5 { get; }
 		
-        protected override Attributes InitialAttributes { get; }
-		public override FanOutShape<TIn, T0, T1, T2, T3, T4, T5> Shape { get; }
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+        protected sealed override Attributes InitialAttributes { get; }
+		public sealed override FanOutShape<TIn, T0, T1, T2, T3, T4, T5> Shape { get; }
+        protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new UnzipWithStageLogic(Shape, this);
         }
 	}
 	
-	public sealed class UnzipWith<TIn, T0, T1, T2, T3, T4, T5, T6> : GraphStage<FanOutShape<TIn, T0, T1, T2, T3, T4, T5, T6>>
+	public class UnzipWith<TIn, T0, T1, T2, T3, T4, T5, T6> : GraphStage<FanOutShape<TIn, T0, T1, T2, T3, T4, T5, T6>>
 	{
 		private sealed class UnzipWithStageLogic : GraphStageLogic 
 		{
@@ -816,9 +816,9 @@ namespace Akka.Streams.Dsl
 		public Outlet<T5> Out5 { get; }
 		public Outlet<T6> Out6 { get; }
 		
-        protected override Attributes InitialAttributes { get; }
-		public override FanOutShape<TIn, T0, T1, T2, T3, T4, T5, T6> Shape { get; }
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+        protected sealed override Attributes InitialAttributes { get; }
+		public sealed override FanOutShape<TIn, T0, T1, T2, T3, T4, T5, T6> Shape { get; }
+        protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new UnzipWithStageLogic(Shape, this);
         }

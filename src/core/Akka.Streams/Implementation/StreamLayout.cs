@@ -247,6 +247,20 @@ namespace Akka.Streams.Implementation
         IModule Compose<T1, T2, T3>(IModule that, Func<T1, T2, T3> matFunc);
 
         /// <summary>
+        /// Creates a new Module which is `this` Module composed with <paramref name="that"/> Module.
+        /// 
+        /// The difference to compose(that) is that this version completely ignores the materialized value
+        /// computation of <paramref name="that"/> while the normal version executes the computation and discards its result.
+        /// This means that this version must not be used for user-provided <paramref name="that"/> modules because users may
+        /// transform materialized values only to achieve some side-effect; it can only be
+        /// used where we know that there is no meaningful computation to be done (like for
+        /// MaterializedValueSource).
+        /// </summary>
+        /// <param name="that">a Module to be composed with (cannot be itself)</param>
+        /// <returns>a Module that represents the composition of `this` and <paramref name="that"/></returns>
+        IModule ComposeNoMaterialized(IModule that);
+
+        /// <summary>
         /// Creates a new Module which contains `this` Module
         /// </summary>
         IModule Nest();
@@ -364,6 +378,25 @@ namespace Akka.Streams.Implementation
                 upstreams: Upstreams.AddRange(other.Upstreams),
                 materializedValueComputation: new StreamLayout.Combine((x, y) => matFunc((T1)x, (T2)y), matComputation1, matComputation2),
                 attributes: Attributes);
+        }
+
+        public IModule ComposeNoMaterialized(IModule that)
+        {
+            if (ReferenceEquals(this, that)) throw new ArgumentException("A module cannot be added to itself. You should pass a separate instance to Compose().");
+            if (SubModules.Contains(that)) throw new ArgumentException("An existing submodule cannot be added again. All contained modules must be unique.");
+
+            var module1 = IsSealed ? ImmutableHashSet.Create <IModule>(this) : SubModules;
+            var module2 = that.IsSealed ? ImmutableHashSet.Create<IModule>(that) : that.SubModules;
+
+            var matComputation = IsSealed ? new StreamLayout.Atomic(this) : MaterializedValueComputation;
+
+            return new CompositeModule(
+                subModules: module1.Union(module2),
+                shape: new AmorphousShape(Shape.Inlets.Union(that.Shape.Inlets), Shape.Outlets.Union(that.Shape.Outlets)),
+                downstreams: Downstreams.AddRange(that.Downstreams),
+                upstreams: Upstreams.AddRange(that.Upstreams),
+                materializedValueComputation: matComputation,
+                attributes: Attributes.None);
         }
 
         public virtual IModule Nest()
@@ -888,9 +921,9 @@ namespace Akka.Streams.Implementation
             LinkedList<MaterializedValueSource<object>> sources;
             if (_materializedValueSources.TryGetValue(materializedSource.Computation, out sources))
                 sources.AddFirst(materializedSource);
-            else _materializedValueSources.Add(materializedSource.Computation, new LinkedList<MaterializedValueSource<object>>(new[] {materializedSource}));
+            else _materializedValueSources.Add(materializedSource.Computation, new LinkedList<MaterializedValueSource<object>>(new[] { materializedSource }));
         }
-        
+
         protected TMat MaterializeModule<TMat>(IModule module, Attributes effectiveAttributes)
         {
             var materializedValues = new Dictionary<IModule, object>();
@@ -926,7 +959,7 @@ namespace Akka.Streams.Implementation
         }
 
         protected abstract object MaterializeAtomic(IModule atomic, Attributes effectiveAttributes, IDictionary<IModule, object> materializedValues);
-        
+
         private object ResolveMaterialized(StreamLayout.IMaterializedValueNode node, IDictionary<IModule, object> values, string indent)
         {
             object result;
@@ -934,7 +967,7 @@ namespace Akka.Streams.Implementation
             else if (node is StreamLayout.Combine)
             {
                 var combine = node as StreamLayout.Combine;
-                result = combine.Combinator(ResolveMaterialized(combine.Left, values, indent + "  "), ResolveMaterialized(combine.Right, values, indent +"  "));
+                result = combine.Combinator(ResolveMaterialized(combine.Left, values, indent + "  "), ResolveMaterialized(combine.Right, values, indent + "  "));
             }
             else if (node is StreamLayout.Transform)
             {

@@ -1,4 +1,4 @@
-﻿// --- auto generated: 2016-01-13 11:02:38 --- //
+﻿// --- auto generated: 2016-01-14 07:53:21 --- //
 using System;
 using System.Linq;
 using System.Reactive.Streams;
@@ -7,7 +7,7 @@ using Akka.Streams.Dsl.Internal;
 
 namespace Akka.Streams.Dsl
 {
-	public abstract class GraphApply
+	public partial class GraphDsl
 	{
 		/// <summary>
 		/// Creates a new <see cref="IGraph{TShape, TMat}"/> by passing a <see cref="GraphDsl.Builder{TMat}"/> to the given create function.

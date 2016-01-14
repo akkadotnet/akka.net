@@ -52,6 +52,16 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>GraphApply.tt</DependentUpon>
     </Compile>
+    <Compile Include="CodeGen\Dsl\UnzipWith.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>UnzipWith.tt</DependentUpon>
+    </Compile>
+    <Compile Include="CodeGen\Dsl\ZipWith.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>ZipWith.tt</DependentUpon>
+    </Compile>
     <Compile Include="CodeGen\FanInShape.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -66,6 +76,8 @@
     <Compile Include="Dsl\FlexiMerge.cs" />
     <Compile Include="Dsl\FlowOperations.cs" />
     <Compile Include="Dsl\Graph.cs" />
+    <Compile Include="Dsl\GraphDsl.cs" />
+    <Compile Include="Dsl\Internal\GraphImpl.cs" />
     <Compile Include="Dsl\RunnableGraph.cs" />
     <Compile Include="Dsl\Sink.cs" />
     <Compile Include="Dsl\SourceOperations.cs" />
@@ -160,6 +172,14 @@
     <Content Include="CodeGen\Dsl\GraphApply.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>GraphApply.cs</LastGenOutput>
+    </Content>
+    <Content Include="CodeGen\Dsl\UnzipWith.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>UnzipWith.cs</LastGenOutput>
+    </Content>
+    <Content Include="CodeGen\Dsl\ZipWith.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>ZipWith.cs</LastGenOutput>
     </Content>
     <Content Include="CodeGen\FanInShape.tt">
       <Generator>TextTemplatingFileGenerator</Generator>

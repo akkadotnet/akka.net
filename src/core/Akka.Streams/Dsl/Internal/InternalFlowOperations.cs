@@ -1228,8 +1228,16 @@ namespace Akka.Streams.Dsl.Internal
             return flow.Via(ConcatGraph<TIn, TOut, TMat>(other));
         }
 
-        private static IGraph<FlowShape<TIn,TOut>,object> ConcatGraph<TIn, TOut, TMat>(IGraph<SourceShape<TOut>, TMat> other)
+        private static IGraph<FlowShape<TIn,TOut>, TMat> ConcatGraph<TIn, TOut, TMat>(IGraph<SourceShape<TOut>, TMat> other)
         {
+            return GraphDsl.Create(other, (builder, shape) =>
+            {
+                var merge = builder.Add(new Concat<TIn>());
+                
+
+                return new FlowShape<TIn, TOut>(merge.In(0), merge.Out);
+            });
+
             //GraphDSL.create(that) { implicit b ⇒
             //  r ⇒
             //    val merge = b.add(Concat[U]())
