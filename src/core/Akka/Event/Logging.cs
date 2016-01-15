@@ -143,6 +143,11 @@ namespace Akka.Event
         /// <exception cref="System.ArgumentException">Unknown LogLevel;logLevel</exception>
         public static LogLevel LogLevelFor(string logLevel)
         {
+            if (!string.IsNullOrEmpty(logLevel))
+            {
+                logLevel = logLevel.ToUpper();
+            }
+
             switch (logLevel)
             {
                 case Debug:
