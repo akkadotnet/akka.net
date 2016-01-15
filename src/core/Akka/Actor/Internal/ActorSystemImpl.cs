@@ -177,10 +177,8 @@ namespace Akka.Actor.Internal
         public override object RegisterExtension(IExtensionId extension)
         {
             if(extension == null) return null;
-            if(!_extensions.ContainsKey(extension.ExtensionType))
-            {
-                _extensions.TryAdd(extension.ExtensionType, new Lazy<object>(() => extension.CreateExtension(this)));
-            }
+
+            _extensions.GetOrAdd(extension.ExtensionType, t => new Lazy<object>(() => extension.CreateExtension(this), LazyThreadSafetyMode.ExecutionAndPublication));
 
             return extension.Get(this);
         }

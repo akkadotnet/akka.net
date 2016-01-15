@@ -79,12 +79,11 @@ namespace Akka.Persistence
         public IActorRef SnapshotStoreFor(string snapshotPluginId)
         {
             var configPath = string.IsNullOrEmpty(snapshotPluginId) ? _defaultSnapshotPluginId.Value : snapshotPluginId;
-            Lazy<PluginHolder> pluginContainer;
-            if (!_snapshotPluginExtensionIds.TryGetValue(configPath, out pluginContainer))
-            {
-                var plugin = new Lazy<PluginHolder>(() => CreatePlugin(configPath, _ => DefaultPluginDispatcherId), LazyThreadSafetyMode.ExecutionAndPublication);
-                pluginContainer = _snapshotPluginExtensionIds.AddOrUpdate(configPath, plugin, (key, old) => plugin);
-            }
+
+            var pluginContainer = _snapshotPluginExtensionIds.GetOrAdd(configPath,
+                cp =>
+                    new Lazy<PluginHolder>(() => CreatePlugin(cp, _ => DefaultPluginDispatcherId),
+                        LazyThreadSafetyMode.ExecutionAndPublication));
 
             return pluginContainer.Value.Ref;
         }
@@ -96,16 +95,15 @@ namespace Akka.Persistence
         public IActorRef JournalFor(string journalPluginId)
         {
             var configPath = string.IsNullOrEmpty(journalPluginId) ? _defaultJournalPluginId.Value : journalPluginId;
-            Lazy<PluginHolder> pluginContainer;
-            if (!_journalPluginExtensionIds.TryGetValue(configPath, out pluginContainer))
-            {
-                var plugin = new Lazy<PluginHolder>(() => CreatePlugin(configPath, type =>
-                    typeof (AsyncWriteJournal).IsAssignableFrom(type)
-                        ? Dispatchers.DefaultDispatcherId
-                        : DefaultPluginDispatcherId), 
-                        LazyThreadSafetyMode.ExecutionAndPublication);
-                pluginContainer = _journalPluginExtensionIds.AddOrUpdate(configPath, plugin, (key, old) => plugin);
-            }
+            var pluginContainer = _journalPluginExtensionIds.GetOrAdd(configPath,
+                cp =>
+                    new Lazy<PluginHolder>(
+                        () =>
+                            CreatePlugin(cp,
+                                type =>
+                                    typeof (AsyncWriteJournal).IsAssignableFrom(type)
+                                        ? Dispatchers.DefaultDispatcherId
+                                        : DefaultPluginDispatcherId), LazyThreadSafetyMode.ExecutionAndPublication));
 
             return pluginContainer.Value.Ref;
         }
@@ -120,16 +118,15 @@ namespace Akka.Persistence
         public EventAdapters AdaptersFor(string journalPluginId)
         {
             var configPath = string.IsNullOrEmpty(journalPluginId) ? _defaultJournalPluginId.Value : journalPluginId;
-            Lazy<PluginHolder> pluginContainer;
-            if (!_journalPluginExtensionIds.TryGetValue(configPath, out pluginContainer))
-            {
-                var plugin = new Lazy<PluginHolder>(() =>
-                    CreatePlugin(configPath, type => typeof (AsyncWriteJournal).IsAssignableFrom(type)
-                        ? Dispatchers.DefaultDispatcherId
-                        : DefaultPluginDispatcherId), 
-                        LazyThreadSafetyMode.ExecutionAndPublication);
-                pluginContainer = _journalPluginExtensionIds.AddOrUpdate(configPath, plugin, (key, old) => plugin);
-            }
+            var pluginContainer = _journalPluginExtensionIds.GetOrAdd(configPath,
+                cp =>
+                    new Lazy<PluginHolder>(
+                        () =>
+                            CreatePlugin(cp,
+                                type =>
+                                    typeof (AsyncWriteJournal).IsAssignableFrom(type)
+                                        ? Dispatchers.DefaultDispatcherId
+                                        : DefaultPluginDispatcherId), LazyThreadSafetyMode.ExecutionAndPublication));
 
             return pluginContainer.Value.Adapters;
         }
