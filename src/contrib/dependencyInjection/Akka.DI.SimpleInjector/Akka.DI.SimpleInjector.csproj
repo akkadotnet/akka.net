@@ -33,11 +33,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="SimpleInjector, Version=3.1.2.0, Culture=neutral, PublicKeyToken=984cb50dea722e99, processorArchitecture=MSIL">
-      <HintPath>..\packages\SimpleInjector.3.1.2\lib\net45\SimpleInjector.dll</HintPath>
+      <HintPath>..\..\..\packages\SimpleInjector.3.1.2\lib\net45\SimpleInjector.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="SimpleInjector.Extensions.ExecutionContextScoping, Version=3.1.2.0, Culture=neutral, PublicKeyToken=984cb50dea722e99, processorArchitecture=MSIL">
-      <HintPath>..\packages\SimpleInjector.Extensions.ExecutionContextScoping.3.1.2\lib\net45\SimpleInjector.Extensions.ExecutionContextScoping.dll</HintPath>
+      <HintPath>..\..\..\packages\SimpleInjector.Extensions.ExecutionContextScoping.3.1.2\lib\net45\SimpleInjector.Extensions.ExecutionContextScoping.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -53,11 +53,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config">
-      <SubType>Designer</SubType>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\Akka.DI.Core\Akka.DI.Core.csproj">
       <Project>{fdf09d18-b68e-4b95-b1f6-b89d9c6c3ae9}</Project>
       <Name>Akka.DI.Core</Name>
@@ -66,6 +61,9 @@
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Name>Akka</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
