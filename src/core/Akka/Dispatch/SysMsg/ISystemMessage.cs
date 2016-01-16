@@ -451,7 +451,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class Terminate.
     /// </summary>
-    public sealed class Terminate : ISystemMessage
+    public sealed class Terminate : ISystemMessage, IPossiblyHarmful
     {
         private Terminate() { }
         private static readonly Terminate _instance = new Terminate();
