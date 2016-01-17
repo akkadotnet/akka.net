@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.TestKit;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Persistence.Tests
@@ -26,10 +27,25 @@ namespace Akka.Persistence.Tests
             }
         }
 
+        [Serializable]
+        internal class SnapshotTestState
+        {
+            private static readonly AtomicCounter InstanceCounter = new AtomicCounter(1);
+
+            public readonly int InstanceId;
+
+            public LinkedList<string> Items = new LinkedList<string>();
+
+            public SnapshotTestState()
+            {
+                InstanceId = InstanceCounter.GetAndIncrement();
+            }
+        }
+
         internal class SaveSnapshotTestActor : NamedPersistentActor
         {
             private readonly IActorRef _probe;
-            protected LinkedList<string> _state = new LinkedList<string>();
+            protected SnapshotTestState _state = new SnapshotTestState();
 
             public SaveSnapshotTestActor(string name, IActorRef probe)
                 : base(name)
@@ -40,18 +56,18 @@ namespace Akka.Persistence.Tests
             protected override bool ReceiveRecover(object message)
             {
                 return message.Match()
-                    .With<SnapshotOffer>(offer => _state = offer.Snapshot as LinkedList<string>)
-                    .With<string>(m => _state.AddFirst(m + "-" + LastSequenceNr))
+                    .With<SnapshotOffer>(offer => _state = offer.Snapshot as SnapshotTestState)
+                    .With<string>(m => _state.Items.AddFirst(m + "-" + LastSequenceNr))
                     .WasHandled;
             }
 
             protected override bool ReceiveCommand(object message)
             {
                 return message.Match()
-                    .With<string>(payload => Persist(payload, _ => _state.AddFirst(payload + "-" + LastSequenceNr)))
+                    .With<string>(payload => Persist(payload, _ => _state.Items.AddFirst(payload + "-" + LastSequenceNr)))
                     .With<TakeSnapshot>(_ => SaveSnapshot(_state))
                     .With<SaveSnapshotSuccess>(s => _probe.Tell(s.Metadata.SequenceNr))
-                    .With<GetState>(_ => _probe.Tell(_state.Reverse().ToArray()))
+                    .With<GetState>(_ => _probe.Tell(_state.Items.Reverse().ToArray()))
                     .WasHandled;
             }
         }
@@ -153,6 +169,35 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
+        public void PersistentActor_should_only_deserialze_request_snapshot()
+        {
+            SnapshotTestState state1 = null;
+            SnapshotTestState state2 = null;
+
+            { 
+                var pref = ActorOf(() => new LoadSnapshotTestActor(Name, TestActor));
+                var persistenceId = Name;
+
+                pref.Tell(Recover.Default);
+
+                var offer = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 4);
+                state1 = offer.Snapshot as SnapshotTestState;
+            }
+
+            {
+                var pref = ActorOf(() => new LoadSnapshotTestActor(Name, TestActor));
+                var persistenceId = Name;
+
+                pref.Tell(Recover.Default);
+
+                var offer = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 4);
+                state2 = offer.Snapshot as SnapshotTestState;
+            }
+
+            Assert.True(state1.InstanceId + 1 == state2.InstanceId);
+        }
+
+        [Fact]
         public void PersistentActor_should_recover_state_starting_from_the_most_recent_snapshot()
         {
             var pref = ActorOf(() => new LoadSnapshotTestActor(Name, TestActor));
@@ -161,7 +206,8 @@ namespace Akka.Persistence.Tests
             pref.Tell(Recover.Default);
 
             var offer = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 4);
-            (offer.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
+            var state = offer.Snapshot as SnapshotTestState;
+            state.Items.Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
             (offer.Metadata.Timestamp > DateTime.MinValue).ShouldBeTrue();
 
             ExpectMsg("e-5");
@@ -177,7 +223,8 @@ namespace Akka.Persistence.Tests
 
             pref.Tell(new Recover(SnapshotSelectionCriteria.Latest, toSequenceNr: 3));
             var offer = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 2);
-            (offer.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
+            var state = offer.Snapshot as SnapshotTestState;
+            state.Items.Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
             (offer.Metadata.Timestamp > DateTime.MinValue).ShouldBeTrue();
 
             ExpectMsg("c-3");
@@ -194,7 +241,8 @@ namespace Akka.Persistence.Tests
             pref.Tell("done");
 
             var offer = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 4);
-            (offer.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
+            var state = offer.Snapshot as SnapshotTestState;
+            state.Items.Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
             (offer.Metadata.Timestamp > DateTime.MinValue).ShouldBeTrue();
 
             ExpectMsg<RecoveryCompleted>();
@@ -210,7 +258,8 @@ namespace Akka.Persistence.Tests
             pref.Tell(new Recover(new SnapshotSelectionCriteria(maxSequenceNr: 2)));
 
             var offer = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 2);
-            (offer.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
+            var state = offer.Snapshot as SnapshotTestState;
+            state.Items.Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
             (offer.Metadata.Timestamp > DateTime.MinValue).ShouldBeTrue();
 
             ExpectMsg("c-3");
@@ -229,7 +278,8 @@ namespace Akka.Persistence.Tests
             pref.Tell(new Recover(new SnapshotSelectionCriteria(maxSequenceNr: 2), toSequenceNr: 3));
 
             var offer = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 2);
-            (offer.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
+            var state = offer.Snapshot as SnapshotTestState;
+            state.Items.Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
             (offer.Metadata.Timestamp > DateTime.MinValue).ShouldBeTrue();
 
             ExpectMsg("c-3");
@@ -262,7 +312,8 @@ namespace Akka.Persistence.Tests
             pref.Tell("done");
 
             var offer = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 4);
-            (offer.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
+            var state = offer.Snapshot as SnapshotTestState;
+            state.Items.Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
 
             ExpectMsg<RecoveryCompleted>();
             ExpectMsg("done");
@@ -274,7 +325,8 @@ namespace Akka.Persistence.Tests
             pref2.Tell(new Recover(SnapshotSelectionCriteria.Latest, toSequenceNr: 4));
 
             var offer2 = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 2);
-            (offer2.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
+            var state2 = offer2.Snapshot as SnapshotTestState;
+            state2.Items.Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
 
             ExpectMsg("c-3");
             ExpectMsg("d-4");
@@ -299,8 +351,8 @@ namespace Akka.Persistence.Tests
                 var offer = o as SnapshotOffer;
                 if (offer != null)
                 {
-                    var snapshot = offer.Snapshot as IEnumerable<string>;
-                    snapshot.Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
+                    var state = offer.Snapshot as SnapshotTestState;
+                    state.Items.Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
 
                     Assert.Equal(persistenceId, offer.Metadata.PersistenceId);
                     Assert.Equal(4, offer.Metadata.SequenceNr);
