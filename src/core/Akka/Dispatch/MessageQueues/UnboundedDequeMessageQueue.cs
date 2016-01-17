@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+
 namespace Akka.Dispatch.MessageQueues
 {
     public class UnboundedDequeMessageQueue : DequeWrapperMessageQueue, IUnboundedDequeBasedMessageQueueSemantics
@@ -19,6 +21,8 @@ namespace Akka.Dispatch.MessageQueues
             : base(new BoundedMessageQueue())
         {
         }
+
+        public TimeSpan PushTimeOut { get; set; }
     }
 }
 

@@ -16,8 +16,7 @@ namespace Akka.Actor
     /// You need to add the property:
     /// <code>public IStash Stash { get; set; }</code>
     /// </summary>
-    // ReSharper disable once InconsistentNaming
-    [Obsolete("Bounded stashing is not yet implemented. Unbounded stashing will be used instead")]
+    // ReSharper disable once InconsistentNaming    
     public interface IWithBoundedStash : IActorStash, IRequiresMessageQueue<IBoundedDequeBasedMessageQueueSemantics>
     { }
 }
