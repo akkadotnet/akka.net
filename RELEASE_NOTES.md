@@ -1,3 +1,5 @@
+#### 1.0.7 January 18 2016 ####
+
 #### 1.0.6 January 18 2016 ####
 **Maintenance release for Akka.NET v1.0.5**
 This patch consists of many bug fixes, performance improvements, as well as the addition of two brand new alpha modules for Akka.Cluster users.
