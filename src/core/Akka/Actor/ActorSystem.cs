@@ -12,6 +12,7 @@ using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
+using Akka.Util;
 
 namespace Akka.Actor
 {
@@ -72,6 +73,16 @@ namespace Akka.Actor
 
         /// <summary>Gets the log</summary>
         public abstract ILoggingAdapter Log { get; }
+
+        /// <summary>
+        /// Start-up time since the epoch.
+        /// </summary>
+        public TimeSpan StartTime { get; } = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        /// <summary>
+        /// Up-time of this actor system.
+        /// </summary>
+        public TimeSpan Uptime => MonotonicClock.ElapsedHighRes;
 
         /// <summary>
         ///     Creates a new ActorSystem with the specified name, and the specified Config

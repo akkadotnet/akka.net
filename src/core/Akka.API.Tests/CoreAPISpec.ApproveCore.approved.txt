@@ -315,8 +315,10 @@ namespace Akka.Actor
         public abstract Akka.Actor.IScheduler Scheduler { get; }
         public abstract Akka.Serialization.Serialization Serialization { get; }
         public abstract Akka.Actor.Settings Settings { get; }
+        public System.TimeSpan StartTime { get; }
         [System.ObsoleteAttribute("Use WhenTerminated instead. This property will be removed in future versions")]
         public abstract System.Threading.Tasks.Task TerminationTask { get; }
+        public System.TimeSpan Uptime { get; }
         public abstract System.Threading.Tasks.Task WhenTerminated { get; }
         public abstract Akka.Actor.IActorRef ActorOf(Akka.Actor.Props props, string name = null);
         public abstract Akka.Actor.ActorSelection ActorSelection(Akka.Actor.ActorPath actorPath);
