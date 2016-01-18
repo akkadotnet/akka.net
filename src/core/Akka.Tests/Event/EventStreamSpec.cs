@@ -239,7 +239,7 @@ namespace Akka.Tests.Event
             }
         }
 
-        [Fact(Skip = "TODO: this test hangs, why?")]
+        [Fact]
         public void ManageLogLevels()
         {
             var bus = new EventStream(false);

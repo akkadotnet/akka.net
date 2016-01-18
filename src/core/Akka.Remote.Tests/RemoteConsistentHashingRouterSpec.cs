@@ -43,7 +43,7 @@ namespace Akka.Remote.Tests
             var keys = new List<string>(new [] { "A", "B", "C", "D", "E", "F", "G"});
             var result1 = keys.Select(k => consistentHash1.NodeFor(k).Routee);
             var result2 = keys.Select(k => consistentHash2.NodeFor(k).Routee);
-            result1.ShouldBeEquivalentTo(result2);
+            Assert.Equal(result2,result1);
         }
     }
 }

@@ -30,7 +30,9 @@ namespace Akka.Remote.Tests.Transport
             {
                 return ConfigurationFactory.ParseString(@"
                 akka {
-                  akka.test.single-expect-default = 6s #to help overcome issues with gated connections
+                  loglevel = ""DEBUG""
+                  stdout-loglevel = ""DEBUG""
+                  test.single-expect-default = 6s #to help overcome issues with gated connections
                   actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
                   remote.helios.tcp.hostname = ""localhost""
                   remote.log-remote-lifecycle-events = off
@@ -90,7 +92,7 @@ namespace Akka.Remote.Tests.Transport
                     Msg = msg;
                 }
 
-                public string Msg { get; private set; }
+                public string Msg { get; }
 
                 public bool Equals(Lost other)
                 {
@@ -108,7 +110,12 @@ namespace Akka.Remote.Tests.Transport
 
                 public override int GetHashCode()
                 {
-                    return (Msg != null ? Msg.GetHashCode() : 0);
+                    return Msg?.GetHashCode() ?? 0;
+                }
+
+                public override string ToString()
+                {
+                    return GetType() + ": " + Msg;
                 }
             }
         }
@@ -200,7 +207,7 @@ namespace Akka.Remote.Tests.Transport
             here.Tell(new ThrottlingTester.Lost("BlackHole 2"));
             ExpectNoMsg(TimeSpan.FromSeconds(1));
             Disassociate().ShouldBeTrue();
-            ExpectNoMsg(TimeSpan.FromSeconds(3));
+            ExpectNoMsg(TimeSpan.FromSeconds(1));
 
             Throttle(ThrottleTransportAdapter.Direction.Both, Unthrottled.Instance).ShouldBeTrue();
 

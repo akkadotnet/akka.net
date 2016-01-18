@@ -1,0 +1,138 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{B369F314-4D37-4AC1-B4FB-64FF671AF0BC}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Akka.Cluster.Sharding.Tests</RootNamespace>
+    <AssemblyName>Akka.Cluster.Sharding.Tests</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Collections.Immutable, Version=1.1.37.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\System.Collections.Immutable.1.1.37\lib\dotnet\System.Collections.Immutable.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+    <Reference Include="xunit.abstractions, Version=2.0.0.0, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\xunit.abstractions.2.0.0\lib\net35\xunit.abstractions.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="xunit.assert, Version=2.1.0.3179, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\xunit.assert.2.1.0\lib\dotnet\xunit.assert.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="xunit.core, Version=2.1.0.3179, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\xunit.extensibility.core.2.1.0\lib\dotnet\xunit.core.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="xunit.execution.desktop, Version=2.1.0.3179, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\xunit.extensibility.execution.2.1.0\lib\net45\xunit.execution.desktop.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ClusterShardingFailureSpec.cs" />
+    <Compile Include="ClusterShardingGracefulShutdownSpec.cs" />
+    <Compile Include="ClusterShardingLeavingSpec.cs" />
+    <Compile Include="ClusterShardingSpec.cs" />
+    <Compile Include="LeastShardAllocationStrategySpec.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Akka.Cluster.Sharding\Akka.Cluster.Sharding.csproj">
+      <Project>{a05c31e8-0246-46a1-b3bc-4d6fe7a9aa49}</Project>
+      <Name>Akka.Cluster.Sharding</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj">
+      <Project>{5CF8A8BE-B634-473F-BB01-EBA878746BD4}</Project>
+      <Name>Akka.Cluster.Tools</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\persistence\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj">
+      <Project>{3b9e6211-9488-4db5-b714-24248693b38f}</Project>
+      <Name>Akka.Persistence.Sql.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\persistence\Akka.Persistence.Sqlite\Akka.Persistence.Sqlite.csproj">
+      <Project>{453efd22-7c53-4887-9dbf-fcfc9172e909}</Project>
+      <Name>Akka.Persistence.Sqlite</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj">
+      <Project>{7dbd5c17-5e9d-40c4-9201-d092751532a7}</Project>
+      <Name>Akka.TestKit.Xunit2</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\core\Akka.Cluster.Tests.MultiNode\Akka.Cluster.Tests.MultiNode.csproj">
+      <Project>{f0781bea-5ba0-4af0-bb15-e3f209b681f5}</Project>
+      <Name>Akka.Cluster.Tests.MultiNode</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj">
+      <Project>{6ab00f61-269a-4501-b06a-026707f000a7}</Project>
+      <Name>Akka.Cluster</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj">
+      <Project>{fca84dea-c118-424b-9eb8-34375dfef18a}</Project>
+      <Name>Akka.Persistence</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\core\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj">
+      <Project>{e5957c3e-2b1e-469f-a680-7953b4dea31b}</Project>
+      <Name>Akka.Remote.TestKit</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\core\Akka.Remote.Tests.MultiNode\Akka.Remote.Tests.MultiNode.csproj">
+      <Project>{c9105c76-b084-4da1-9348-1c74a8f22f6b}</Project>
+      <Name>Akka.Remote.Tests.MultiNode</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\core\Akka.Remote\Akka.Remote.csproj">
+      <Project>{ea4ff8fd-7c53-49c8-b9aa-02e458b3e6a7}</Project>
+      <Name>Akka.Remote</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\core\Akka.TestKit\Akka.TestKit.csproj">
+      <Project>{0d3cbad0-bbdb-43e5-afc4-ed1d3ecdc224}</Project>
+      <Name>Akka.TestKit</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\core\Akka\Akka.csproj">
+      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
+      <Name>Akka</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

@@ -17,6 +17,7 @@ namespace Akka.Remote
     {
         public RemoteSettings(Config config)
         {
+            //TODO: need to add value validation for each field
             Config = config;
             LogReceive = config.GetBoolean("akka.remote.log-received-messages");
             LogSend = config.GetBoolean("akka.remote.log-sent-messages");
@@ -36,8 +37,7 @@ namespace Akka.Remote
             TrustedSelectionPaths = new HashSet<string>(config.GetStringList("akka.remote.trusted-selection-paths"));
             RemoteLifecycleEventsLogLevel = config.GetString("akka.remote.log-remote-lifecycle-events") ?? "DEBUG";
             Dispatcher = config.GetString("akka.remote.use-dispatcher");
-            if (RemoteLifecycleEventsLogLevel.Equals("on")) RemoteLifecycleEventsLogLevel = "DEBUG";
-            if (RemoteLifecycleEventsLogLevel.Equals("off")) RemoteLifecycleEventsLogLevel = "WARNING";
+            if (RemoteLifecycleEventsLogLevel.Equals("on", StringComparison.OrdinalIgnoreCase)) RemoteLifecycleEventsLogLevel = "DEBUG";
             FlushWait = config.GetTimeSpan("akka.remote.flush-wait-on-shutdown");
             ShutdownTimeout = config.GetTimeSpan("akka.remote.shutdown-timeout");
             TransportNames = config.GetStringList("akka.remote.enabled-transports");
@@ -50,9 +50,12 @@ namespace Akka.Remote
             UsePassiveConnections = config.GetBoolean("akka.remote.use-passive-connections");
             SysMsgBufferSize = config.GetInt("akka.remote.system-message-buffer-size");
             SysResendTimeout = config.GetTimeSpan("akka.remote.resend-interval");
+            SysResendLimit = config.GetInt("akka.remote.resend-limit");
             InitialSysMsgDeliveryTimeout = config.GetTimeSpan("akka.remote.initial-system-message-delivery-timeout");
+            QuarantineSilentSystemTimeout = config.GetTimeSpan("akka.remote.quarantine-after-silence");
             SysMsgAckTimeout = config.GetTimeSpan("akka.remote.system-message-ack-piggyback-timeout");
             QuarantineDuration = config.GetTimeSpan("akka.remote.prune-quarantine-marker-after");
+
             StartupTimeout = config.GetTimeSpan("akka.remote.startup-timeout");
             CommandAckTimeout = config.GetTimeSpan("akka.remote.command-ack-timeout");
 
@@ -97,8 +100,10 @@ namespace Akka.Remote
         public TimeSpan RetryGateClosedFor { get; set; }
         public bool UsePassiveConnections { get; set; }
         public int SysMsgBufferSize { get; set; }
+        public int SysResendLimit { get; set; }
         public TimeSpan SysResendTimeout { get; set; }
         public TimeSpan InitialSysMsgDeliveryTimeout { get; set; }
+        public TimeSpan QuarantineSilentSystemTimeout { get; set; }
         public TimeSpan SysMsgAckTimeout { get; set; }
         public TimeSpan? QuarantineDuration { get; set; }
         public TimeSpan StartupTimeout { get; set; }

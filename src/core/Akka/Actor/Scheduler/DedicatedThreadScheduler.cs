@@ -31,7 +31,7 @@ namespace Akka.Actor
                 var allWork = new List<ScheduledWork>();
                 while (true)
                 {
-                    if (system.TerminationTask.IsCompleted)
+                    if (system.WhenTerminated.IsCompleted)
                     {
                         return;
                     }

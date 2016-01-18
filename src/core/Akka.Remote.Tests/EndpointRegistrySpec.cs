@@ -34,7 +34,7 @@ namespace Akka.Remote.Tests
             var reg = new EndpointRegistry();
             Assert.Null(reg.WritableEndpointWithPolicyFor(address1));
 
-            Assert.Equal(actorA, reg.RegisterWritableEndpoint(address1, actorA));
+            Assert.Equal(actorA, reg.RegisterWritableEndpoint(address1, actorA,null,null));
 
             Assert.IsType<EndpointManager.Pass>(reg.WritableEndpointWithPolicyFor(address1));
             Assert.Equal(actorA, reg.WritableEndpointWithPolicyFor(address1).AsInstanceOf<EndpointManager.Pass>().Endpoint);
@@ -52,8 +52,8 @@ namespace Akka.Remote.Tests
             var reg = new EndpointRegistry();
             Assert.Null(reg.ReadOnlyEndpointFor(address1));
 
-            Assert.Equal(actorA, reg.RegisterReadOnlyEndpoint(address1, actorA));
-            Assert.Equal(actorA, reg.ReadOnlyEndpointFor(address1));
+            Assert.Equal(actorA, reg.RegisterReadOnlyEndpoint(address1, actorA, 0));
+            Assert.Equal(Tuple.Create(actorA, 0), reg.ReadOnlyEndpointFor(address1));
             Assert.Null(reg.WritableEndpointWithPolicyFor(address1));
             Assert.False(reg.IsWritable(actorA));
             Assert.True(reg.IsReadOnly(actorA));
@@ -67,10 +67,10 @@ namespace Akka.Remote.Tests
             Assert.Null(reg.ReadOnlyEndpointFor(address1));
             Assert.Null(reg.WritableEndpointWithPolicyFor(address1));
 
-            Assert.Equal(actorA, reg.RegisterReadOnlyEndpoint(address1, actorA));
-            Assert.Equal(actorB, reg.RegisterWritableEndpoint(address1, actorB));
+            Assert.Equal(actorA, reg.RegisterReadOnlyEndpoint(address1, actorA, 1));
+            Assert.Equal(actorB, reg.RegisterWritableEndpoint(address1, actorB, null,null));
 
-            Assert.Equal(actorA, reg.ReadOnlyEndpointFor(address1));
+            Assert.Equal(Tuple.Create(actorA,1), reg.ReadOnlyEndpointFor(address1));
             Assert.Equal(actorB, reg.WritableEndpointWithPolicyFor(address1).AsInstanceOf<EndpointManager.Pass>().Endpoint);
 
             Assert.False(reg.IsWritable(actorA));
@@ -85,7 +85,7 @@ namespace Akka.Remote.Tests
         {
             var reg = new EndpointRegistry();
             Assert.Null(reg.WritableEndpointWithPolicyFor(address1));
-            reg.RegisterWritableEndpoint(address1, actorA);
+            reg.RegisterWritableEndpoint(address1, actorA, null, null);
             var deadline = Deadline.Now;
             reg.MarkAsFailed(actorA, deadline);
             Assert.Equal(deadline, reg.WritableEndpointWithPolicyFor(address1).AsInstanceOf<EndpointManager.Gated>().TimeOfRelease);
@@ -97,7 +97,7 @@ namespace Akka.Remote.Tests
         public void EndpointRegistry_must_remove_readonly_endpoints_if_marked_as_failed()
         {
             var reg = new EndpointRegistry();
-            reg.RegisterReadOnlyEndpoint(address1, actorA);
+            reg.RegisterReadOnlyEndpoint(address1, actorA, 2);
             reg.MarkAsFailed(actorA, Deadline.Now);
             Assert.Null(reg.ReadOnlyEndpointFor(address1));
         }
@@ -106,8 +106,8 @@ namespace Akka.Remote.Tests
         public void EndpointRegistry_must_keep_tombstones_when_removing_an_endpoint()
         {
             var reg = new EndpointRegistry();
-            reg.RegisterWritableEndpoint(address1, actorA);
-            reg.RegisterWritableEndpoint(address2, actorB);
+            reg.RegisterWritableEndpoint(address1, actorA, null, null);
+            reg.RegisterWritableEndpoint(address2, actorB, null, null);
             var deadline = Deadline.Now;
             reg.MarkAsFailed(actorA, deadline);
             reg.MarkAsQuarantined(address2, 42, deadline);
@@ -124,8 +124,8 @@ namespace Akka.Remote.Tests
         public void EndpointRegistry_should_prune_outdated_Gated_directives_properly()
         {
             var reg = new EndpointRegistry();
-            reg.RegisterWritableEndpoint(address1, actorA);
-            reg.RegisterWritableEndpoint(address2, actorB);
+            reg.RegisterWritableEndpoint(address1, actorA, null, null);
+            reg.RegisterWritableEndpoint(address2, actorB, null, null);
             reg.MarkAsFailed(actorA, Deadline.Now);
             var farIntheFuture = Deadline.Now + TimeSpan.FromSeconds(60);
             reg.MarkAsFailed(actorB, farIntheFuture);

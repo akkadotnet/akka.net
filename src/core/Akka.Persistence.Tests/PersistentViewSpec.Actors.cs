@@ -67,6 +67,11 @@ namespace Akka.Persistence.Tests
             {
                 if (message.ToString() == "get") _probe.Tell(_last);
                 else if (message.ToString() == "boom") throw new TestException("boom");
+                else if (message is RecoveryFailure)
+                {
+                    var failure = message as RecoveryFailure;
+                    throw failure.Cause;
+                }
                 else if (IsPersistent && ShouldFail(message)) throw new TestException("boom");
                 else if (IsPersistent)
                 {

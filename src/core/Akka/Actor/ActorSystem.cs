@@ -12,6 +12,7 @@ using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
+using Akka.Util;
 
 namespace Akka.Actor
 {
@@ -74,6 +75,18 @@ namespace Akka.Actor
         public abstract ILoggingAdapter Log { get; }
 
         /// <summary>
+        /// Start-up time since the epoch.
+        /// </summary>
+        public TimeSpan StartTime { get; } = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        /// <summary>
+        /// Up-time of this actor system.
+        /// </summary>
+        public TimeSpan Uptime => MonotonicClock.ElapsedHighRes - _creationTime;
+
+        private readonly TimeSpan _creationTime = MonotonicClock.ElapsedHighRes;
+
+        /// <summary>
         ///     Creates a new ActorSystem with the specified name, and the specified Config
         /// </summary>
         /// <param name="name">Name of the ActorSystem
@@ -96,7 +109,7 @@ namespace Akka.Actor
         /// <returns>ActorSystem.</returns>
         public static ActorSystem Create(string name)
         {
-            return CreateAndStartSystem(name,ConfigurationFactory.Load());
+            return CreateAndStartSystem(name, ConfigurationFactory.Load());
         }
 
         private static ActorSystem CreateAndStartSystem(string name, Config withFallback)
@@ -136,24 +149,48 @@ namespace Akka.Actor
         /// </summary>
         public abstract bool TryGetExtension<T>(out T extension) where T : class, IExtension;
 
+        /// <summary>
+        /// Register a block of code (callback) to run after ActorSystem.shutdown has been issued and
+        /// all actors in this actor system have been stopped.
+        /// Multiple code blocks may be registered by calling this method multiple times.
+        /// The callbacks will be run sequentially in reverse order of registration, i.e.
+        /// last registration is run first.
+        /// </summary>
+        /// <param name="code">The code to run</param>
+        /// <exception cref="Exception">Thrown if the System has already shut down or if shutdown has been initiated.</exception>
+        public abstract void RegisterOnTermination(Action code);
 
         /// <summary>
-        ///     Stop this actor system. This will stop the guardian actor, which in turn
-        ///     will recursively stop all its child actors, then the system guardian
-        ///     (below which the logging actors reside) and the execute all registered
-        ///     termination handlers (<see cref="ActorSystem.RegisterOnTermination" />).
+        /// Stop this actor system. This will stop the guardian actor, which in turn
+        /// will recursively stop all its child actors, then the system guardian
+        /// (below which the logging actors reside) and the execute all registered
+        /// termination handlers (<see cref="ActorSystem.RegisterOnTermination" />).
         /// </summary>
+        [Obsolete("Use Terminate instead. This method will be removed in future versions")]
         public abstract void Shutdown();
+
+        /// <summary>
+        /// Terminates this actor system. This will stop the guardian actor, which in turn
+        /// will recursively stop all its child actors, then the system guardian
+        /// (below which the logging actors reside) and the execute all registered
+        /// termination handlers (<see cref="ActorSystem.RegisterOnTermination" />).
+        /// Be careful to not schedule any operations on completion of the returned task
+        /// using the `dispatcher` of this actor system as it will have been shut down before the
+        /// task completes.
+        /// </summary>
+        public abstract Task Terminate();
 
         /// <summary>
         /// Returns a task that will be completed when the system has terminated.
         /// </summary>
+        [Obsolete("Use WhenTerminated instead. This property will be removed in future versions")]
         public abstract Task TerminationTask { get; }
 
         /// <summary>
         /// Block current thread until the system has been shutdown.
         /// This will block until after all on termination callbacks have been run.
         /// </summary>
+        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
         public abstract void AwaitTermination();
 
         /// <summary>
@@ -166,6 +203,7 @@ namespace Akka.Actor
         /// <param name="timeout">The timeout.</param>
         /// <returns>Returns <c>true</c> if the system was shutdown during the specified time;
         /// <c>false</c> if it timed out.</returns>
+        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
         public abstract bool AwaitTermination(TimeSpan timeout);
 
         /// <summary>
@@ -179,8 +217,16 @@ namespace Akka.Actor
         /// <param name="cancellationToken">A cancellation token that cancels the wait operation.</param>
         /// <returns>Returns <c>true</c> if the system was shutdown during the specified time;
         /// <c>false</c> if it timed out, or the cancellationToken was canceled. </returns>
+        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
         public abstract bool AwaitTermination(TimeSpan timeout, CancellationToken cancellationToken);
 
+        /// <summary>
+        /// Returns a task which will be completed after the ActorSystem has been terminated
+        /// and termination hooks have been executed. Be careful to not schedule any operations
+        /// on the `dispatcher` of this actor system as it will have been shut down before this
+        /// task completes.
+        /// </summary>
+        public abstract Task WhenTerminated { get; }
 
         public abstract void Stop(IActorRef actor);
         private bool _isDisposed; //Automatically initialized to false;
@@ -216,12 +262,12 @@ namespace Akka.Actor
             try
             {
                 //Make sure Dispose does not get called more than once, by checking the disposed field
-                if(!_isDisposed)
+                if (!_isDisposed)
                 {
-                    if(disposing)
+                    if (disposing)
                     {
                         Log.Debug("Disposing system");
-                        Shutdown();
+                        Terminate();
                     }
                     //Clean up unmanaged resources
                 }
@@ -237,7 +283,7 @@ namespace Akka.Actor
         public abstract object RegisterExtension(IExtensionId extension);
 
         public abstract IActorRef ActorOf(Props props, string name = null);
-        
+
         public abstract ActorSelection ActorSelection(ActorPath actorPath);
         public abstract ActorSelection ActorSelection(string actorPath);
 

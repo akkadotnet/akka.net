@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Akka.Actor.Internal;
-using Akka.Actor.Internal;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Serialization;
@@ -30,6 +29,7 @@ namespace Akka.Actor
         private bool _actorHasBeenCleared;
         private Mailbox _mailbox;
         private readonly ActorSystemImpl _systemImpl;
+        private ActorTaskScheduler _taskScheduler;
 
 
         public ActorCell(ActorSystemImpl system, IInternalActorRef self, Props props, MessageDispatcher dispatcher, IInternalActorRef parent)
@@ -65,6 +65,20 @@ namespace Akka.Actor
         public int NumberOfMessages { get { return Mailbox.NumberOfMessages; } }
         internal bool ActorHasBeenCleared { get { return _actorHasBeenCleared; } }
         internal static Props TerminatedProps { get { return terminatedProps; } }
+
+        public ActorTaskScheduler TaskScheduler
+        {
+            get
+            {
+                var taskScheduler = Volatile.Read(ref _taskScheduler);
+
+                if (taskScheduler != null)
+                    return taskScheduler;
+
+                taskScheduler = new ActorTaskScheduler(this);
+                return Interlocked.CompareExchange(ref _taskScheduler, taskScheduler, null) ?? taskScheduler;
+            }
+        }
 
         public void Init(bool sendSupervise, Func<Mailbox> createMailbox /*, MailboxType mailboxType*/) //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType
         {

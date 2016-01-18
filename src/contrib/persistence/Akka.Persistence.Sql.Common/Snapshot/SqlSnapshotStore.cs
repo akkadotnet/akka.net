@@ -22,12 +22,12 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <summary>
         /// List of cancellation tokens for all pending asynchronous database operations.
         /// </summary>
-        protected readonly LinkedList<CancellationTokenSource> PendingOperations;
-        
+        private readonly CancellationTokenSource _pendingRequestsCancellation;
+
         protected SqlSnapshotStore()
         {
             QueryMapper = new DefaultSnapshotQueryMapper(Context.System.Serialization);
-            PendingOperations = new LinkedList<CancellationTokenSource>();
+            _pendingRequestsCancellation = new CancellationTokenSource();
         }
 
         /// <summary>
@@ -57,21 +57,13 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// Query mapper used to map SQL query results into snapshots.
         /// </summary>
         public ISnapshotQueryMapper QueryMapper { get; set; }
-        
+
         protected override void PostStop()
         {
             base.PostStop();
 
             // stop all operations executed in the background
-            var node = PendingOperations.First;
-            while (node != null)
-            {
-                var curr = node;
-                node = node.Next;
-
-                curr.Value.Cancel();
-                PendingOperations.Remove(curr);
-            }
+            _pendingRequestsCancellation.Cancel();
         }
 
         protected virtual string GetConnectionString()
@@ -93,16 +85,14 @@ namespace Akka.Persistence.Sql.Common.Snapshot
 
                 var sqlCommand = QueryBuilder.SelectSnapshot(persistenceId, criteria.MaxSequenceNr, criteria.MaxTimeStamp);
                 CompleteCommand(sqlCommand, connection);
-
-                var tokenSource = GetCancellationTokenSource();
-                var reader = await sqlCommand.ExecuteReaderAsync(tokenSource.Token);
+                
+                var reader = await sqlCommand.ExecuteReaderAsync(_pendingRequestsCancellation.Token);
                 try
                 {
                     return reader.Read() ? QueryMapper.Map(reader) : null;
                 }
                 finally
                 {
-                    PendingOperations.Remove(tokenSource);
                     reader.Close();
                 }
             }
@@ -120,16 +110,8 @@ namespace Akka.Persistence.Sql.Common.Snapshot
                 var entry = ToSnapshotEntry(metadata, snapshot);
                 var sqlCommand = QueryBuilder.InsertSnapshot(entry);
                 CompleteCommand(sqlCommand, connection);
-
-                var tokenSource = GetCancellationTokenSource();
-                try
-                {
-                    await sqlCommand.ExecuteNonQueryAsync(tokenSource.Token);
-                }
-                finally
-                {
-                    PendingOperations.Remove(tokenSource);
-                }
+                
+                await sqlCommand.ExecuteNonQueryAsync(_pendingRequestsCancellation.Token);
             }
         }
 
@@ -165,13 +147,6 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             command.CommandTimeout = (int)Settings.ConnectionTimeout.TotalMilliseconds;
         }
 
-        private CancellationTokenSource GetCancellationTokenSource()
-        {
-            var source = new CancellationTokenSource();
-            PendingOperations.AddLast(source);
-            return source;
-        }
-
         private SnapshotEntry ToSnapshotEntry(SnapshotMetadata metadata, object snapshot)
         {
             var snapshotType = snapshot.GetType();
@@ -180,7 +155,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             var binary = serializer.ToBinary(snapshot);
 
             return new SnapshotEntry(
-                persistenceId: metadata.PersistenceId, 
+                persistenceId: metadata.PersistenceId,
                 sequenceNr: metadata.SequenceNr,
                 timestamp: metadata.Timestamp,
                 snapshotType: snapshotType.QualifiedTypeName(),

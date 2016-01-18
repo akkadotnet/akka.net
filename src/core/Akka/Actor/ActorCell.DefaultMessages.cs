@@ -36,6 +36,12 @@ namespace Akka.Actor
             }
         }
 
+        private int _currentEnvelopeId;
+
+        public int CurrentEnvelopeId
+        {
+            get { return _currentEnvelopeId; }
+        }
         /// <summary>
         ///     Invokes the specified envelope.
         /// </summary>
@@ -44,6 +50,7 @@ namespace Akka.Actor
         {
             var message = envelope.Message;
             CurrentMessage = message;
+            _currentEnvelopeId ++;
             Sender = MatchSender(envelope);
 
             try
@@ -53,6 +60,7 @@ namespace Akka.Actor
                     AutoReceiveMessage(envelope);
                 else
                     ReceiveMessage(message);
+                CurrentMessage = null;
             }
             catch (Exception cause)
             {
@@ -165,7 +173,7 @@ namespace Akka.Actor
             {
                 var m = envelope.Message;
 
-                if (m is CompleteTask) HandleCompleteTask(m as CompleteTask);
+                if (m is ActorTaskSchedulerMessage) HandleActorTaskSchedulerMessage(m as ActorTaskSchedulerMessage);
                 else if (m is Failed) HandleFailed(m as Failed);
                 else if (m is DeathWatchNotification)
                 {
@@ -203,12 +211,21 @@ namespace Akka.Actor
             }
         }
 
-        private void HandleCompleteTask(CompleteTask task)
+        private void HandleActorTaskSchedulerMessage(ActorTaskSchedulerMessage m)
         {
-            CurrentMessage = task.State.Message;
-            Sender = task.State.Sender;
-            task.SetResult();
+            //set the current message captured in the async operation
+            //current message was cleared earlier when the async receive handler completed
+            CurrentMessage = m.Message;
+            if (m.Exception != null)
+            {
+                HandleInvokeFailure(m.Exception);
+                return;
+            }
+
+            m.ExecuteTask();
+            CurrentMessage = null;
         }
+
         public void SwapMailbox(DeadLetterMailbox mailbox)
         {
             Mailbox.DebugPrint("{0} Swapping mailbox to DeadLetterMailbox", Self);

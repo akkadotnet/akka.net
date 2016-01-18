@@ -39,7 +39,7 @@ namespace Akka.Persistence.Tests
             ExpectMsg<UnhandledMessage>(m => ((int)m.Message) == 4711 && m.Recipient == actor);
         }
 
-        [Fact(Skip = "FIXME: stash dedupes based on reference equality causes this to fail")]
+        [Fact]
         public void Given_persistent_actor_that_has_called_Become_When_it_calls_Unbecome_Then_it_switches_back_command_handler()
         {
             //Given

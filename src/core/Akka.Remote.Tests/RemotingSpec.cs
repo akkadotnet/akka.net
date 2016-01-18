@@ -139,7 +139,7 @@ namespace Akka.Remote.Tests
 
         protected override void AfterAll()
         {
-            remoteSystem.Shutdown();
+            remoteSystem.Terminate();
             AssociationRegistry.Clear();
             base.AfterAll();
         }

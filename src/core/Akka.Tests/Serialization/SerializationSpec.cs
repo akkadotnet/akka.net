@@ -294,7 +294,7 @@ namespace Akka.Tests.Serialization
             AssertEqual(message);
         }
 
-        [Fact(Skip = "What am I doing wrong??")]
+        [Fact]
         public void CanSerializeRoundRobinGroup()
         {
             var message = new RoundRobinGroup("abc");
@@ -315,7 +315,7 @@ namespace Akka.Tests.Serialization
             AssertEqual(message);
         }
 
-        [Fact(Skip = "What am I doing wrong??")]
+        [Fact]
         public void CanSerializeRandomGroup()
         {
             var message = new RandomGroup("abc");
@@ -511,7 +511,7 @@ namespace Akka.Tests.Serialization
 
         //TODO: find out why this fails on build server
 
-        [Fact(Skip="Fails on buildserver")]
+        [Fact]
         public void CanSerializeFutureActorRef()
         {
             Sys.EventStream.Subscribe(TestActor, typeof(object));

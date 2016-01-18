@@ -12,6 +12,7 @@ using Akka.Remote.Transport.Helios;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
+using System.Net;
 
 namespace Akka.Remote.Tests
 {
@@ -37,14 +38,15 @@ namespace Akka.Remote.Tests
             Assert.Equal(TimeSpan.FromSeconds(2), remoteSettings.FlushWait);
             Assert.Equal(TimeSpan.FromSeconds(10), remoteSettings.StartupTimeout);
             Assert.Equal(TimeSpan.FromSeconds(5), remoteSettings.RetryGateClosedFor);
-            //Assert.Equal("akka.remote.default-remote-dispatcher", remoteSettings.Dispatcher); //TODO: add RemoteDispatcher support
+            Assert.Equal("akka.remote.default-remote-dispatcher", remoteSettings.Dispatcher);
             Assert.True(remoteSettings.UsePassiveConnections);
             Assert.Equal(TimeSpan.FromMilliseconds(50), remoteSettings.BackoffPeriod);
             Assert.Equal(TimeSpan.FromSeconds(0.3d), remoteSettings.SysMsgAckTimeout);
             Assert.Equal(TimeSpan.FromSeconds(2), remoteSettings.SysResendTimeout);
-            Assert.Equal(1000, remoteSettings.SysMsgBufferSize);
+            Assert.Equal(20000, remoteSettings.SysMsgBufferSize);
             Assert.Equal(TimeSpan.FromMinutes(3), remoteSettings.InitialSysMsgDeliveryTimeout);
             Assert.Equal(TimeSpan.FromDays(5), remoteSettings.QuarantineDuration);
+            Assert.Equal(TimeSpan.FromDays(5), remoteSettings.QuarantineSilentSystemTimeout);
             Assert.Equal(TimeSpan.FromSeconds(30), remoteSettings.CommandAckTimeout);
             Assert.Equal(1, remoteSettings.Transports.Length);
             Assert.Equal(typeof(HeliosTcpTransport), Type.GetType(remoteSettings.Transports.Head().TransportClass));
@@ -58,6 +60,10 @@ namespace Akka.Remote.Tests
             Assert.Equal(TimeSpan.FromMilliseconds(100), remoteSettings.WatchFailureDetectorConfig.GetTimeSpan("min-std-deviation"));
 
             //TODO add adapter support
+
+            // TODO add WatchFailureDetectorConfig assertions
+
+            remoteSettings.Config.GetString("akka.remote.log-frame-size-exceeding").ShouldBe("off");
         }
 
         [Fact]
@@ -88,8 +94,8 @@ namespace Akka.Remote.Tests
             Assert.True(s.TcpKeepAlive);
             Assert.True(s.TcpReuseAddr);
             Assert.True(string.IsNullOrEmpty(c.GetString("hostname")));
-            Assert.Equal(2, s.ServerSocketWorkerPoolSize);
-            Assert.Equal(2, s.ClientSocketWorkerPoolSize);
+            Assert.Equal(1, s.ServerSocketWorkerPoolSize);
+            Assert.Equal(1, s.ClientSocketWorkerPoolSize);
         }
 
         [Fact]
@@ -100,19 +106,30 @@ namespace Akka.Remote.Tests
             // server-socket-worker-pool
             {
                 var pool = c.GetConfig("server-socket-worker-pool");
-                Assert.Equal(2, pool.GetInt("pool-size-min"));
+                Assert.Equal(1, pool.GetInt("pool-size-min"));
                 Assert.Equal(1.0d, pool.GetDouble("pool-size-factor"));
-                Assert.Equal(2, pool.GetInt("pool-size-max"));
+                Assert.Equal(1, pool.GetInt("pool-size-max"));
             }
 
             //client-socket-worker-pool
             {
                 var pool = c.GetConfig("client-socket-worker-pool");
-                Assert.Equal(2, pool.GetInt("pool-size-min"));
+                Assert.Equal(1, pool.GetInt("pool-size-min"));
                 Assert.Equal(1.0d, pool.GetDouble("pool-size-factor"));
-                Assert.Equal(2, pool.GetInt("pool-size-max"));
+                Assert.Equal(1, pool.GetInt("pool-size-max"));
             }
         }
-    }
+
+        [Fact]
+        public void Remoting_should_contain_correct_hostname_values_in_ReferenceConf()
+        {
+           var c = ((RemoteActorRefProvider)((ActorSystemImpl)Sys).Provider).RemoteSettings.Config.GetConfig("akka.remote.helios.tcp");
+           var s = new HeliosTransportSettings(c);
+
+           //Non-specified hostnames should default to IPAddress.Any
+           Assert.Equal(IPAddress.Any.ToString(), s.Hostname);
+           Assert.Equal(IPAddress.Any.ToString(), s.PublicHostname);
+      }
+   }
 }
 
