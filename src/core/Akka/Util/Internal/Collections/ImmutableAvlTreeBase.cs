@@ -439,11 +439,11 @@ namespace Akka.Util.Internal.Collections
 		private Node MakeBalanced(Node tree)
 		{
 			Node result;
-			if (IsRightHeavy(tree))
+			if (IsRightHeavyAndUnbalanced(tree))
 			{
 				result = IsLeftHeavy(tree.Right) ? DoubleLeftRotation(tree) : RotateLeft(tree);
 			}
-			else if (IsLeftHeavy(tree))
+			else if (IsLeftHeavyAndUnbalanced(tree))
 			{
 				result = IsRightHeavy(tree.Left) ? DoubleRightRotation(tree) : RotateRight(tree);
 			}
@@ -452,8 +452,10 @@ namespace Akka.Util.Internal.Collections
 			return result;
 		}
 
-		private bool IsRightHeavy(Node tree) { return Balance(tree) >= 2; }
-		private bool IsLeftHeavy(Node tree) { return Balance(tree) <= -2; }
+		private bool IsRightHeavyAndUnbalanced(Node tree) { return Balance(tree) >= 2; }
+		private bool IsLeftHeavyAndUnbalanced(Node tree) { return Balance(tree) <= -2; }
+		private bool IsRightHeavy(Node tree) { return Balance(tree) >= 1; }
+		private bool IsLeftHeavy(Node tree) { return Balance(tree) <= -1; }
 
 		private int Balance(Node tree)
 		{
