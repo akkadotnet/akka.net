@@ -17,25 +17,25 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// '''Cancels when''' downstream cancels
     /// </summary>
-    public sealed class Merge<T> : GraphStage<UniformFanInShape<T, T>>
+    public sealed class Merge<TIn, TOut> : GraphStage<UniformFanInShape<TIn, TOut>> where TIn : TOut
     {
         #region graph stage logic
 
         private sealed class MergeStageLogic : GraphStageLogic
         {
-            private readonly Merge<T> _stage;
-            private readonly Inlet<T>[] _pendingQueue;
+            private readonly Merge<TIn, TOut> _stage;
+            private readonly Inlet<TIn>[] _pendingQueue;
 
             private int _runningUpstreams;
             private int _pendingHead = 0;
             private int _pendingTail = 0;
             private bool _initialized = false;
 
-            public MergeStageLogic(Shape shape, Merge<T> stage) : base(shape)
+            public MergeStageLogic(Shape shape, Merge<TIn, TOut> stage) : base(shape)
             {
                 _stage = stage;
                 _runningUpstreams = _stage._inputPorts;
-                _pendingQueue = new Inlet<T>[_stage._ins.Length];
+                _pendingQueue = new Inlet<TIn>[_stage._ins.Length];
 
                 var outlet = _stage._out;
                 foreach (var inlet in _stage._ins)
@@ -58,12 +58,12 @@ namespace Akka.Streams.Dsl
                         {
                             foreach (var i in _stage._ins) Cancel(i);
                             _runningUpstreams = 0;
-                            if (!IsPending) CompleteStage<T>();
+                            if (!IsPending) CompleteStage<TOut>();
                         }
                         else
                         {
                             _runningUpstreams--;
-                            if (IsUpstreamClosed && !IsPending) CompleteStage<T>();
+                            if (IsUpstreamClosed && !IsPending) CompleteStage<TOut>();
                         }
                     });
                 }
@@ -82,7 +82,7 @@ namespace Akka.Streams.Dsl
                 foreach (var inlet in _stage._ins) TryPull(inlet);
             }
 
-            private void Enqeue(Inlet<T> inlet)
+            private void Enqeue(Inlet<TIn> inlet)
             {
                 _pendingQueue[_pendingTail % _stage._inputPorts] = inlet;
                 _pendingTail++;
@@ -93,7 +93,7 @@ namespace Akka.Streams.Dsl
                 var inlet = _pendingQueue[_pendingHead % _stage._inputPorts];
                 _pendingHead++;
                 Push(_stage._out, Grab(inlet));
-                if (IsUpstreamClosed && !IsPending) CompleteStage<T>();
+                if (IsUpstreamClosed && !IsPending) CompleteStage<TOut>();
                 else TryPull(inlet);
             }
         }
@@ -103,8 +103,8 @@ namespace Akka.Streams.Dsl
         private readonly int _inputPorts;
         private readonly bool _eagerClose;
 
-        private readonly Inlet<T>[] _ins;
-        private readonly Outlet<T> _out = new Outlet<T>("Merge.out");
+        private readonly Inlet<TIn>[] _ins;
+        private readonly Outlet<TOut> _out = new Outlet<TOut>("Merge.out");
 
         public Merge(int inputPorts, bool eagerClose = false)
         {
@@ -112,16 +112,16 @@ namespace Akka.Streams.Dsl
             _inputPorts = inputPorts;
             _eagerClose = eagerClose;
 
-            _ins = new Inlet<T>[inputPorts];
+            _ins = new Inlet<TIn>[inputPorts];
             for (int i = 0; i < inputPorts; i++)
-                _ins[i] = new Inlet<T>("Merge.in" + i);
+                _ins[i] = new Inlet<TIn>("Merge.in" + i);
 
-            Shape = new UniformFanInShape<T, T>(_out, _ins);
+            Shape = new UniformFanInShape<TIn, TOut>(_out, _ins);
             InitialAttributes = Attributes.CreateName("Merge");
         }
 
         protected override Attributes InitialAttributes { get; }
-        public override UniformFanInShape<T, T> Shape { get; }
+        public override UniformFanInShape<TIn, TOut> Shape { get; }
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new MergeStageLogic(Shape, this);
@@ -306,17 +306,17 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// '''Cancels when''' downstream cancels
     /// </summary> 
-    public sealed class Interleave<T> : GraphStage<UniformFanInShape<T, T>>
+    public sealed class Interleave<TIn, TOut> : GraphStage<UniformFanInShape<TIn, TOut>> where TIn : TOut
     {
         #region stage logic
         private sealed class InterleaveStageLogic : GraphStageLogic
         {
-            private readonly Interleave<T> _stage;
+            private readonly Interleave<TIn, TOut> _stage;
             private int _counter = 0;
             private int _currentUpstreamIndex = 0;
             private int _runningUpstreams;
 
-            public InterleaveStageLogic(Shape shape, Interleave<T> stage) : base(shape)
+            public InterleaveStageLogic(Shape shape, Interleave<TIn, TOut> stage) : base(shape)
             {
                 _stage = stage;
                 _runningUpstreams = _stage._inputPorts;
@@ -342,9 +342,9 @@ namespace Akka.Streams.Dsl
                                     if (IsAvailable(_stage.Out)) Pull(CurrentUpstream);
                                 }
                             }
-                            else CompleteStage<T>();
+                            else CompleteStage<TOut>();
                         }
-                        else CompleteStage<T>();
+                        else CompleteStage<TOut>();
                     });
                 }
 
@@ -355,7 +355,7 @@ namespace Akka.Streams.Dsl
             }
 
             private bool IsUpstreamClosed { get { return _runningUpstreams == 0; } }
-            private Inlet<T> CurrentUpstream { get { return _stage.Inlets[_currentUpstreamIndex]; } }
+            private Inlet<TIn> CurrentUpstream { get { return _stage.Inlets[_currentUpstreamIndex]; } }
 
             private void SwitchToNextInput()
             {
@@ -374,7 +374,7 @@ namespace Akka.Streams.Dsl
                         }
                         else
                         {
-                            CompleteStage<T>();
+                            CompleteStage<TOut>();
                             _currentUpstreamIndex = 0;
                         }
                     }
@@ -398,18 +398,18 @@ namespace Akka.Streams.Dsl
             _segmentSize = segmentSize;
             _eagerClose = eagerClose;
 
-            Out = new Outlet<T>("Interleave.out");
-            Inlets = new Inlet<T>[inputPorts];
+            Out = new Outlet<TOut>("Interleave.out");
+            Inlets = new Inlet<TIn>[inputPorts];
             for (int i = 0; i < inputPorts; i++)
-                Inlets[i] = new Inlet<T>("Interleave.in" + i);
+                Inlets[i] = new Inlet<TIn>("Interleave.in" + i);
 
-            Shape = new UniformFanInShape<T, T>(Out, Inlets);
+            Shape = new UniformFanInShape<TIn, TOut>(Out, Inlets);
         }
 
-        public Outlet<T> Out { get; }
-        public Inlet<T>[] Inlets { get; }
+        public Outlet<TOut> Out { get; }
+        public Inlet<TIn>[] Inlets { get; }
 
-        public override UniformFanInShape<T, T> Shape { get; }
+        public override UniformFanInShape<TIn, TOut> Shape { get; }
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new InterleaveStageLogic(Shape, this);
@@ -427,7 +427,7 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// '''Cancels when''' downstream cancels
     /// </summary>
-    public sealed class MergeSorted<T> : GraphStage<FanInShape<T, T, T>> where T : IComparable<T>
+    public sealed class MergeSorted<T> : GraphStage<FanInShape<T, T, T>>
     {
         #region stage logic
         private sealed class MergeSortedStageLogic : GraphStageLogic
@@ -483,7 +483,7 @@ namespace Akka.Streams.Dsl
 
             private void Dispatch(T left, T right)
             {
-                if (left.CompareTo(right) == -1)
+                if (_stage._compare(left, right) == -1)
                 {
                     _other = right;
                     Emit(_stage.Out, left, ReadLeft);
@@ -497,12 +497,15 @@ namespace Akka.Streams.Dsl
         }
         #endregion
 
+        private readonly Func<T, T, int> _compare;
+
         public readonly Inlet<T> Left = new Inlet<T>("left");
         public readonly Inlet<T> Right = new Inlet<T>("right");
         public readonly Outlet<T> Out = new Outlet<T>("out");
 
-        public MergeSorted()
+        public MergeSorted(Func<T, T, int> compare)
         {
+            _compare = compare;
             Shape = new FanInShape<T, T, T>(Out, Left, Right);
         }
 
@@ -831,19 +834,19 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// '''Cancels when''' downstream cancels
     /// </summary>
-    public class Concat<T> : GraphStage<UniformFanInShape<T, T>>
+    public class Concat<TIn, TOut> : GraphStage<UniformFanInShape<TIn, TOut>> where TIn : TOut
     {
         #region stage logic
         private sealed class ConcatStageLogic : GraphStageLogic
         {
-            public ConcatStageLogic(Shape shape, Concat<T> stage) : base(shape)
+            public ConcatStageLogic(Shape shape, Concat<TIn, TOut> stage) : base(shape)
             {
                 var activeStream = 0;
                 var iidx = 0;
                 var inEnumerator = (stage.Ins as IEnumerable<Inlet>).GetEnumerator();
                 while (inEnumerator.MoveNext())
                 {
-                    var i = (Inlet<T>)inEnumerator.Current;
+                    var i = (Inlet<TIn>)inEnumerator.Current;
                     var idx = iidx;
                     SetHandler(i,
                         onPush: () => Push(stage.Out, Grab(i)),
@@ -854,7 +857,7 @@ namespace Akka.Streams.Dsl
                                 activeStream++;
                                 // skip closed inputs
                                 while (activeStream < stage._inputPorts && IsClosed(stage.Ins[activeStream])) activeStream++;
-                                if (activeStream == stage._inputPorts) CompleteStage<T>();
+                                if (activeStream == stage._inputPorts) CompleteStage<TOut>();
                                 else if (IsAvailable(stage.Out)) Pull(stage.Ins[activeStream]);
                             }
                         });
@@ -873,18 +876,18 @@ namespace Akka.Streams.Dsl
             if (inputPorts <= 1) throw new ArgumentException("A Concat must have more than 1 input port");
             _inputPorts = inputPorts;
 
-            Ins = new Inlet<T>[inputPorts];
-            for (int i = 0; i < inputPorts; i++) Ins[i] = new Inlet<T>("Concat.in" + i);
+            Ins = new Inlet<TIn>[inputPorts];
+            for (int i = 0; i < inputPorts; i++) Ins[i] = new Inlet<TIn>("Concat.in" + i);
 
-            Shape = new UniformFanInShape<T, T>(Out, Ins);
+            Shape = new UniformFanInShape<TIn, TOut>(Out, Ins);
             InitialAttributes = Attributes.CreateName("Concat");
         }
 
-        public Inlet<T>[] Ins { get; }
-        public Outlet<T> Out { get; } = new Outlet<T>("Concat.out");
+        public Inlet<TIn>[] Ins { get; }
+        public Outlet<TOut> Out { get; } = new Outlet<TOut>("Concat.out");
 
         protected override Attributes InitialAttributes { get; }
-        public override UniformFanInShape<T, T> Shape { get; }
+        public override UniformFanInShape<TIn, TOut> Shape { get; }
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new ConcatStageLogic(Shape, this);

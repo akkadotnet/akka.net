@@ -4,6 +4,7 @@ using System.Linq;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
+using Akka.Streams.Stage;
 
 namespace Akka.Streams.Dsl
 {
@@ -17,7 +18,7 @@ namespace Akka.Streams.Dsl
 
             private IModule _moduleInProgress = EmptyModule.Instance;
 
-            internal void AddEdge<T1, T2>(Outlet<T1> from, Inlet<T2> to) where T1 : T2
+            internal void AddEdge<T1, T2>(Outlet<T1> from, Inlet<T2> to) where T2 : T1
             {
                 _moduleInProgress = _moduleInProgress.Wire(from, to);
             }
@@ -184,14 +185,14 @@ namespace Akka.Streams.Dsl
     public static class ForwardOps
     {
         public static GraphDsl.Builder<TMat> To<TIn, TOut, TMat>(this GraphDsl.ForwardOps<TOut, TMat> ops, Inlet<TIn> inlet)
-            where TOut : TIn
+            where TIn : TOut
         {
             ops.Builder.AddEdge(ops.Out, inlet);
             return ops.Builder;
         }
 
         public static GraphDsl.Builder<TMat> To<TIn, TOut, TMat>(this GraphDsl.ForwardOps<TOut, TMat> ops, SinkShape<TIn> sink)
-            where TOut : TIn
+            where TIn : TOut
         {
             var b = ops.Builder;
             b.AddEdge(ops.Out, sink.Inlet);
@@ -199,7 +200,7 @@ namespace Akka.Streams.Dsl
         }
 
         public static GraphDsl.Builder<TMat> To<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, UniformFanInShape<TIn, TOut2> junction)
-            where TOut1 : TIn
+            where TIn : TOut1
         {
             var b = ops.Builder;
             var count = junction.Inlets.Count();
@@ -217,13 +218,13 @@ namespace Akka.Streams.Dsl
         }
 
         public static GraphDsl.Builder<TMat> To<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, UniformFanOutShape<TIn, TOut2> junction)
-            where TOut1 : TIn
+            where TIn : TOut1
         {
             Bind(ops, junction);
             return ops.Builder;
         }
 
-        private static Outlet<TOut2> Bind<TIn, TOut1, TOut2, TMat>(GraphDsl.ForwardOps<TOut1, TMat> ops, UniformFanOutShape<TIn, TOut2> junction) where TOut1 : TIn
+        private static Outlet<TOut2> Bind<TIn, TOut1, TOut2, TMat>(GraphDsl.ForwardOps<TOut1, TMat> ops, UniformFanOutShape<TIn, TOut2> junction) where TIn : TOut1
         {
             var b = ops.Builder;
             b.AddEdge(ops.Out, junction.In);
@@ -231,7 +232,7 @@ namespace Akka.Streams.Dsl
         }
 
         public static GraphDsl.ForwardOps<TOut2, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, FlowShape<TIn, TOut2> flow)
-            where TOut1 : TIn
+            where TIn : TOut1
         {
             var b = ops.Builder;
             b.AddEdge(ops.Out, flow.Inlet);
@@ -239,14 +240,14 @@ namespace Akka.Streams.Dsl
         }
 
         public static GraphDsl.ForwardOps<TOut2, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, UniformFanInShape<TIn, TOut2> junction)
-            where TOut1 : TIn
+            where TIn : TOut1
         {
             var b = To(ops, junction);
             return b.From(junction.Out);
         }
 
         public static GraphDsl.ForwardOps<TOut2, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, UniformFanOutShape<TIn, TOut2> junction)
-            where TOut1 : TIn
+            where TIn : TOut1
         {
             var outlet = Bind(ops, junction);
             return ops.Builder.From(outlet);
@@ -256,7 +257,7 @@ namespace Akka.Streams.Dsl
     public static class ReverseOps
     {
         public static GraphDsl.Builder<TMat> From<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, Outlet<TOut> outlet)
-            where TOut : TIn
+            where TIn : TOut
         {
             var b = ops.Builder;
             b.AddEdge(outlet, ops.In);
@@ -264,7 +265,7 @@ namespace Akka.Streams.Dsl
         }
 
         public static GraphDsl.Builder<TMat> From<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, SourceShape<TOut> source)
-            where TOut : TIn
+            where TIn : TOut
         {
             var b = ops.Builder;
             b.AddEdge(source.Outlet, ops.In);
@@ -272,13 +273,14 @@ namespace Akka.Streams.Dsl
         }
 
         public static GraphDsl.Builder<TMat> From<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, UniformFanInShape<TIn, TOut> junction)
-            where TOut : TIn
+            where TIn : TOut
         {
             Bind(ops, junction);
             return ops.Builder;
         }
 
-        private static Inlet<TIn> Bind<TIn, TOut, TMat>(GraphDsl.ReverseOps<TIn, TMat> ops, UniformFanInShape<TIn, TOut> junction) where TOut : TIn
+        private static Inlet<TIn> Bind<TIn, TOut, TMat>(GraphDsl.ReverseOps<TIn, TMat> ops, UniformFanInShape<TIn, TOut> junction)
+            where TIn : TOut
         {
             var b = ops.Builder;
             b.AddEdge(junction.Out, ops.In);
@@ -286,7 +288,7 @@ namespace Akka.Streams.Dsl
         }
 
         public static GraphDsl.Builder<TMat> From<TIn, TOut1, TOut2, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, UniformFanOutShape<TOut1, TOut2> junction)
-            where TOut2 : TIn
+            where TIn : TOut2
         {
             var b = ops.Builder;
             var count = junction.Outlets.Count();
@@ -304,7 +306,7 @@ namespace Akka.Streams.Dsl
         }
 
         public static GraphDsl.ReverseOps<TIn, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, FlowShape<TOut1, TOut2> flow)
-            where TOut2 : TIn
+            where TIn : TOut2
         {
             var b = ops.Builder;
             b.AddEdge(flow.Outlet, ops.In);
@@ -312,14 +314,14 @@ namespace Akka.Streams.Dsl
         }
 
         public static GraphDsl.ReverseOps<TIn, TMat> Via<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, UniformFanInShape<TIn, TOut> junction)
-            where TOut : TIn
+            where TIn : TOut
         {
             var inlet = Bind(ops, junction);
             return ops.Builder.To(inlet);
         }
 
         public static GraphDsl.ReverseOps<TIn, TMat> Via<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, UniformFanOutShape<TIn, TOut> junction)
-            where TOut : TIn
+            where TIn : TOut
         {
             var b = From(ops, junction);
             return b.To(junction.In);

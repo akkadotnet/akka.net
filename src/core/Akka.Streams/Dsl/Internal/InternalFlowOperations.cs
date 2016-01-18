@@ -9,6 +9,7 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
+using Microsoft.Win32;
 
 namespace Akka.Streams.Dsl.Internal
 {
@@ -1027,13 +1028,13 @@ namespace Akka.Streams.Dsl.Internal
 
         private static IGraph<FlowShape<T1, KeyValuePair<T1, T2>>, TMat> ZipGraph<T1, T2, TMat>(IGraph<SourceShape<T2>, TMat> other)
         {
-            //GraphDSL.create(that) { implicit b ⇒
-            //  r ⇒
-            //    val zip = b.add(Zip[Out, U]())
-            //    r ~> zip.in1
-            //    FlowShape(zip.in0, zip.out)
-            //}
-            throw new NotImplementedException();
+            return GraphDsl.Create(other, (builder, shape) =>
+            {
+                var zip = builder.Add(new Zip<T1, T2>());
+                var r = builder.From(shape);
+                r.To(zip.In1);
+                return new FlowShape<T1, KeyValuePair<T1, T2>>(zip.In0, zip.Out);
+            });
         }
 
         /// <summary>
@@ -1055,13 +1056,13 @@ namespace Akka.Streams.Dsl.Internal
 
         private static IGraph<FlowShape<T1, T3>, TMat> ZipWithGraph<T1, T2, T3, TMat>(IGraph<SourceShape<T2>, TMat> other, Func<T1, T2, T3> combine)
         {
-            //GraphDSL.create(that) { implicit b ⇒
-            //  r ⇒
-            //    val zip = b.add(ZipWith[Out, Out2, Out3](combine))
-            //    r ~> zip.in1
-            //    FlowShape(zip.in0, zip.out)
-            //}
-            throw new NotImplementedException();
+            return GraphDsl.Create(other, (builder, shape) =>
+            {
+                var zip = builder.Add(new ZipWith<T1, T2, T3>(combine));
+                var r = builder.From(shape);
+                r.To(zip.In1);
+                return new FlowShape<T1, T3>(zip.In0, zip.Out);
+            });
         }
 
         /// <summary>
@@ -1087,20 +1088,20 @@ namespace Akka.Streams.Dsl.Internal
         /// Source(List(1, 2, 3)).Interleave(List(4, 5, 6, 7), 2) // 1, 2, 4, 5, 3, 6, 7
         /// </code>
         /// </example>
-        public static IFlow<T2, TMat> Interleave<T1, T2, TMat, TMat2>(this IFlow<T1, TMat> flow, IGraph<SourceShape<T2>, TMat2> graph, int segmentSize) where T1 : T2
+        public static IFlow<T2, TMat> Interleave<T1, T2, TMat>(this IFlow<T1, TMat> flow, IGraph<SourceShape<T2>, TMat> graph, int segmentSize) where T1 : T2
         {
-            return flow.Via(InterleaveGraph<T1, T2, TMat, TMat2>(graph, segmentSize));
+            return flow.Via(InterleaveGraph<T1, T2, TMat>(graph, segmentSize));
         }
 
-        private static IGraph<FlowShape<T1, T2>, TMat1> InterleaveGraph<T1, T2, TMat1, TMat2>(IGraph<SourceShape<T2>, TMat2> graph, int segmentSize)
+        private static IGraph<FlowShape<T1, T2>, TMat> InterleaveGraph<T1, T2, TMat>(IGraph<SourceShape<T2>, TMat> graph, int segmentSize) where T1 : T2
         {
-            //GraphDSL.create(that) { implicit b ⇒
-            //  r ⇒
-            //    val interleave = b.add(Interleave[U](2, segmentSize))
-            //    r ~> interleave.in(1)
-            //    FlowShape(interleave.in(0), interleave.out)
-            //}
-            throw new NotImplementedException();
+            return GraphDsl.Create(graph, (builder, shape) =>
+            {
+                var interleave = builder.Add(new Interleave<T1, T2>(2, segmentSize));
+                var r = builder.From(shape);
+                r.To(interleave.In(1));
+                return new FlowShape<T1, T2>(interleave.In(0), interleave.Out);
+            });
         }
 
         /// <summary>
@@ -1115,40 +1116,20 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<TOut, TMat> Merge<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, IGraph<SourceShape<TOut>, TMat> other) where TIn : TOut
+        public static IFlow<TOut, TMat> Merge<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, IGraph<SourceShape<TOut>, TMat> other, bool eagerComplete = false) where TIn : TOut
         {
-            return flow.Via(MergeGraph<TIn, TOut, TMat>(other));
+            return flow.Via(MergeGraph<TIn, TOut, TMat>(other, eagerComplete));
         }
 
-        private static IGraph<FlowShape<TIn, TOut>, TMat> MergeGraph<TIn, TOut, TMat>(IGraph<SourceShape<TOut>, TMat> other) where TIn : TOut
+        private static IGraph<FlowShape<TIn, TOut>, TMat> MergeGraph<TIn, TOut, TMat>(IGraph<SourceShape<TOut>, TMat> other, bool eagerComplete = false) where TIn : TOut
         {
-            //GraphDSL.create(that) { implicit b ⇒
-            //  r ⇒
-            //    val merge = b.add(Merge[U](2))
-            //    r ~> merge.in(1)
-            //    FlowShape(merge.in(0), merge.out)
-            //}
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Merge the given [[Source]] to this [[Flow]], taking elements as they arrive from input streams,
-        /// picking always the smallest of the available elements(waiting for one element from each side
-        /// to be available). This means that possible contiguity of the input streams is not exploited to avoid
-        /// waiting for elements, this merge will block when one of the inputs does not have more elements(and
-        /// does not complete).
-        /// <para>
-        /// '''Emits when''' one of the inputs has an element available
-        /// </para>
-        /// '''Backpressures when''' downstream backpressures
-        /// <para>
-        /// '''Completes when''' all upstreams complete
-        /// </para>
-        /// '''Cancels when''' downstream cancels
-        /// </summary>
-        public static IFlow<TOut, TMat> MergeOrdered<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, IGraph<SourceShape<TOut>, TMat> other, Func<TOut, TOut, int> orderFunc) where TIn : TOut
-        {
-            return flow.Via(MergeOrderedGraph<TIn, TOut, TMat>(other, orderFunc));
+            return GraphDsl.Create(other, (builder, shape) =>
+            {
+                var merge = builder.Add(new Merge<TIn, TOut>(2, eagerComplete));
+                var r = builder.From(shape);
+                r.To(merge.In(1));
+                return new FlowShape<TIn, TOut>(merge.In(0), merge.Out);
+            });
         }
 
         /// <summary>
@@ -1166,13 +1147,11 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<TOut, TMat> MergeOrdered<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, IGraph<SourceShape<TOut>, TMat> other) 
-            where TIn : TOut
-            where TOut : IComparable<TOut>
+        public static IFlow<T, TMat> MergeOrdered<T, TMat>(this IFlow<T, TMat> flow, IGraph<SourceShape<T>, TMat> other, Func<T, T, int> orderFunc)
         {
-            return flow.Via(MergeOrderedGraph<TIn, TOut, TMat>(other, (x, y) => x.CompareTo(y)));
+            return flow.Via(MergeOrderedGraph<T, TMat>(other, orderFunc));
         }
-        
+
         /// <summary>
         /// Merge the given [[Source]] to this [[Flow]], taking elements as they arrive from input streams,
         /// picking always the smallest of the available elements(waiting for one element from each side
@@ -1188,21 +1167,41 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<TOut, TMat> MergeOrdered<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, IGraph<SourceShape<TOut>, TMat> other, IComparer<TOut> comparer)
-            where TIn : TOut
+        public static IFlow<T, TMat> MergeOrdered<T, TMat>(this IFlow<T, TMat> flow, IGraph<SourceShape<T>, TMat> other)
+            where T : IComparable<T>
         {
-            return flow.Via(MergeOrderedGraph<TIn, TOut, TMat>(other, comparer.Compare));
+            return flow.Via(MergeOrderedGraph<T, TMat>(other, (x, y) => x.CompareTo(y)));
         }
 
-        private static IGraph<FlowShape<TIn, TOut>, TMat> MergeOrderedGraph<TIn, TOut, TMat>(IGraph<SourceShape<TOut>, TMat> other, Func<TOut, TOut, int> orderFunc)
+        /// <summary>
+        /// Merge the given [[Source]] to this [[Flow]], taking elements as they arrive from input streams,
+        /// picking always the smallest of the available elements(waiting for one element from each side
+        /// to be available). This means that possible contiguity of the input streams is not exploited to avoid
+        /// waiting for elements, this merge will block when one of the inputs does not have more elements(and
+        /// does not complete).
+        /// <para>
+        /// '''Emits when''' one of the inputs has an element available
+        /// </para>
+        /// '''Backpressures when''' downstream backpressures
+        /// <para>
+        /// '''Completes when''' all upstreams complete
+        /// </para>
+        /// '''Cancels when''' downstream cancels
+        /// </summary>
+        public static IFlow<T, TMat> MergeOrdered<T, TMat>(this IFlow<T, TMat> flow, IGraph<SourceShape<T>, TMat> other, IComparer<T> comparer)
         {
-            //GraphDSL.create(that) { implicit b ⇒
-            //  r ⇒
-            //    val merge = b.add(new MergeSorted[U])
-            //    r ~> merge.in1
-            //    FlowShape(merge.in0, merge.out)
-            //}
-            throw new NotImplementedException();
+            return flow.Via(MergeOrderedGraph<T, TMat>(other, comparer.Compare));
+        }
+
+        private static IGraph<FlowShape<T, T>, TMat> MergeOrderedGraph<T, TMat>(IGraph<SourceShape<T>, TMat> other, Func<T, T, int> compare)
+        {
+            return GraphDsl.Create(other, (builder, shape) =>
+            {
+                var merge = builder.Add(new MergeSorted<T>(compare));
+                var r = builder.From(shape);
+                r.To(merge.In1);
+                return new FlowShape<T, T>(merge.In0, merge.Out);
+            });
         }
 
         /// <summary>
@@ -1228,26 +1227,17 @@ namespace Akka.Streams.Dsl.Internal
             return flow.Via(ConcatGraph<TIn, TOut, TMat>(other));
         }
 
-        private static IGraph<FlowShape<TIn,TOut>, TMat> ConcatGraph<TIn, TOut, TMat>(IGraph<SourceShape<TOut>, TMat> other)
+        private static IGraph<FlowShape<TIn, TOut>, TMat> ConcatGraph<TIn, TOut, TMat>(IGraph<SourceShape<TOut>, TMat> other) where TIn : TOut
         {
             return GraphDsl.Create(other, (builder, shape) =>
             {
-                var merge = builder.Add(new Concat<TIn>());
-                
-
+                var merge = builder.Add(new Concat<TIn, TOut>());
+                var r = builder.From(shape);
+                r.To(merge.In(1));
                 return new FlowShape<TIn, TOut>(merge.In(0), merge.Out);
             });
-
-            //GraphDSL.create(that) { implicit b ⇒
-            //  r ⇒
-            //    val merge = b.add(Concat[U]())
-
-            //   r ~> merge.in(1)
-            //    FlowShape(merge.in(0), merge.out)
-            //}
-            throw new NotImplementedException();
         }
-        
+
         //TODO: there is no HKT in .NET, so we cannot simply do `to` method, which evaluates to either Source ⇒ IRunnableGraph, or Flow ⇒ Sink
     }
 }
