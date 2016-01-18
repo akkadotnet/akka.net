@@ -4518,12 +4518,14 @@ namespace Akka.Util
         public Akka.Util.ILinearSeq<T> Tail() { }
     }
     public class AtomicReference<T>
+        where T :  class
     {
         protected T atomicValue;
         public AtomicReference(T originalValue) { }
         public AtomicReference() { }
         public T Value { get; set; }
         public bool CompareAndSet(T expected, T newValue) { }
+        public T GetAndSet(T newValue) { }
     }
     public class static Base64Encoding
     {

@@ -403,7 +403,7 @@ namespace Akka.Actor.Internal
     class TerminationCallbacks
     {
         private Task _terminationTask;
-        private AtomicReference<Task> _atomicRef;
+        private readonly AtomicReference<Task> _atomicRef;
 
         public TerminationCallbacks(Task upStreamTerminated)
         {
@@ -411,7 +411,7 @@ namespace Akka.Actor.Internal
 
             upStreamTerminated.ContinueWith(_ =>
             {
-                _terminationTask = Interlocked.Exchange(ref _atomicRef, new AtomicReference<Task>(null)).Value;
+                _terminationTask = _atomicRef.GetAndSet(null);
                 _terminationTask.Start();
             });
         }
