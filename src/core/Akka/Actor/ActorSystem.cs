@@ -82,7 +82,9 @@ namespace Akka.Actor
         /// <summary>
         /// Up-time of this actor system.
         /// </summary>
-        public TimeSpan Uptime => MonotonicClock.ElapsedHighRes;
+        public TimeSpan Uptime => MonotonicClock.ElapsedHighRes - _creationTime;
+
+        private readonly TimeSpan _creationTime = MonotonicClock.ElapsedHighRes;
 
         /// <summary>
         ///     Creates a new ActorSystem with the specified name, and the specified Config
