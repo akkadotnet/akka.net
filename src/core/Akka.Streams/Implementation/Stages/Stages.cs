@@ -22,6 +22,8 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes MapAsync = Attributes.CreateName("mapAsync");
         public static readonly Attributes MapAsyncUnordered = Attributes.CreateName("mapAsyncUnordered");
         public static readonly Attributes Grouped = Attributes.CreateName("grouped");
+        public static readonly Attributes Limit = Attributes.CreateName("limit");
+        public static readonly Attributes LimitWeighted = Attributes.CreateName("limitWeighted");
         public static readonly Attributes Sliding = Attributes.CreateName("sliding");
         public static readonly Attributes Take = Attributes.CreateName("take");
         public static readonly Attributes Drop = Attributes.CreateName("drop");
@@ -216,6 +218,23 @@ namespace Akka.Streams.Implementation.Stages
         public override IStage<T, IEnumerable<T>> Create(Attributes effectiveAttributes)
         {
             return new Fusing.Grouped<T>(_count);
+        }
+    }
+
+    internal sealed class LimitWeighted<T> : SymbolicStage<T, T>
+    {
+        private readonly long _max;
+        private readonly Func<T, long> _costFunc;
+
+        public LimitWeighted(long max, Func<T, long> costFunc, Attributes attributes = null) : base(attributes ?? DefaultAttributes.LimitWeighted)
+        {
+            _max = max;
+            _costFunc = costFunc;
+        }
+
+        public override IStage<T, T> Create(Attributes effectiveAttributes)
+        {
+            return new Fusing.LimitWeighted<T>(_max, _costFunc);
         }
     }
 

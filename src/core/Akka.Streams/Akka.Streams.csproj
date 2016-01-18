@@ -118,7 +118,6 @@
     <Compile Include="Implementation\Timers.cs" />
     <Compile Include="Implementation\Unfold.cs" />
     <Compile Include="Queue.cs" />
-    <Compile Include="Dsl\FlattenStrategy.cs" />
     <Compile Include="Dsl\Flow.cs" />
     <Compile Include="Dsl\Internal\InternalFlowOperations.cs" />
     <Compile Include="Dsl\Materialization.cs" />
@@ -145,6 +144,7 @@
     <Compile Include="Stage\Context.cs" />
     <Compile Include="Stage\GraphStage.cs" />
     <Compile Include="Stage\Stage.cs" />
+    <Compile Include="StreamLimitReachedException.cs" />
     <Compile Include="StreamTcpException.cs" />
     <Compile Include="Supervision\Supervision.cs" />
     <Compile Include="ThrottleMode.cs" />

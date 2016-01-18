@@ -489,6 +489,26 @@ namespace Akka.Streams.Implementation.Fusing
         }
     }
 
+    internal sealed class LimitWeighted<T> : PushStage<T, T>
+    {
+        private readonly long _max;
+        private readonly Func<T, long> _costFunc;
+        private long _left;
+
+        public LimitWeighted(long max, Func<T, long> costFunc)
+        {
+            _left = _max = max;
+            _costFunc = costFunc;
+        }
+
+        public override ISyncDirective OnPush(T element, IContext<T> context)
+        {
+            _left -= _costFunc(element);
+            if (_left >= 0) return context.Push(element);
+            else return context.Fail(new StreamLimitReachedException(_max));
+        }
+    }
+
     internal sealed class Sliding<T> : PushPullStage<T, IEnumerable<T>>
     {
         private readonly int _count;
