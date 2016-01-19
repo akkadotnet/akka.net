@@ -85,7 +85,7 @@ namespace Akka.Streams.Implementation
     /// 
     /// See `akka.stream.materializer.subscription-timeout` for configuration options.
     /// </summary>
-    public interface IStreamSubscriptionTimeoutSupport
+    public interface IStreamSubscriptionTimeoutSupport<T>
     {
         /// <summary>
         /// Default settings for subscription timeouts.
@@ -101,11 +101,11 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// Called by the actor when a subscription has timed out. Expects the actual <see cref="IPublisher{T}"/> or <see cref="IProcessor{T1,T2}"/> target.
         /// </summary>
-        void SubscriptionTimedOut<T>(IPublisher<T> target);
+        void SubscriptionTimedOut(IPublisher<T> target);
 
         /// <summary>
         /// Callback that should ensure that the target is canceled with the given cause.
         /// </summary>
-        void HandleSubscriptionTimeout<T>(IPublisher<T> target, Exception cause);
+        void HandleSubscriptionTimeout(IPublisher<T> target, Exception cause);
     }
 }

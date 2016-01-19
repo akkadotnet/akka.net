@@ -9,7 +9,7 @@ using Akka.Streams.Actors;
 
 namespace Akka.Streams.Implementation
 {
-    public static class ActorProcessor
+    internal static class ActorProcessor
     {
         public static ActorProcessor<TIn, TOut> Create<TIn, TOut>(IActorRef impl)
         {
@@ -20,7 +20,7 @@ namespace Akka.Streams.Implementation
         }
     }
 
-    public class ActorProcessor<TIn, TOut> : ActorPublisher<TOut>, IProcessor<TIn, TOut>
+    internal class ActorProcessor<TIn, TOut> : ActorPublisher<TOut>, IProcessor<TIn, TOut>
     {
         public ActorProcessor(IActorRef impl) : base(impl)
         {
@@ -55,12 +55,12 @@ namespace Akka.Streams.Implementation
         }
     }
 
-    public abstract class BatchingInputBuffer : IInputs
+    internal abstract class BatchingInputBuffer : IInputs
     {
-        public readonly int Size;
+        public readonly int Count;
         public readonly IPump Pump;
 
-        private readonly IActorRef[] _inputBuffer;
+        private readonly object[] _inputBuffer;
         private readonly int _indexMask;
         private ISubscription _upstream;
         private int _inputBufferElements = 0;
@@ -68,17 +68,17 @@ namespace Akka.Streams.Implementation
         private bool _isUpstreamCompleted = false;
         private int _batchRemaining;
 
-        protected BatchingInputBuffer(int size, IPump pump)
+        protected BatchingInputBuffer(int count, IPump pump)
         {
-            if (size <= 0) throw new ArgumentException("Buffer size must be > 0");
-            if ((size & (size - 1)) != 0) throw new ArgumentException("Buffer size must be power of two");
+            if (count <= 0) throw new ArgumentException("Buffer Count must be > 0");
+            if ((count & (count - 1)) != 0) throw new ArgumentException("Buffer Count must be power of two");
             // TODO: buffer and batch sizing heuristics
 
-            Size = size;
+            Count = count;
             Pump = pump;
 
-            _indexMask = size - 1;
-            _inputBuffer = new IActorRef[size];
+            _indexMask = count - 1;
+            _inputBuffer = new object[count];
             _batchRemaining = RequestBatchSize;
             _subReceive = new SubReceive(WaitingForUpstream);
 
@@ -90,13 +90,13 @@ namespace Akka.Streams.Implementation
 
         public override string ToString()
         {
-            return string.Format("BatchingInputBuffer(size={0}, elems={1}, completed={2}, remaining={3})", Size, _inputBufferElements, _isUpstreamCompleted, _batchRemaining);
+            return string.Format("BatchingInputBuffer(Count={0}, elems={1}, completed={2}, remaining={3})", Count, _inputBufferElements, _isUpstreamCompleted, _batchRemaining);
         }
 
         private readonly SubReceive _subReceive;
         public virtual SubReceive SubReceive { get { return _subReceive; } }
 
-        public object DequeueInputElement()
+        public virtual object DequeueInputElement()
         {
             var elem = _inputBuffer[_nextInputElementCursor];
             _inputBuffer[_nextInputElementCursor] = null;
@@ -114,24 +114,24 @@ namespace Akka.Streams.Implementation
             return elem;
         }
 
-        protected void EnqueueInputElement(object element)
+        protected virtual void EnqueueInputElement(object element)
         {
             if (IsOpen)
             {
-                if (_inputBufferElements == Size) throw new IllegalStateException("Input buffer overrun");
-                _inputBuffer[(_nextInputElementCursor + _inputBufferElements) & _indexMask] = element as IActorRef;
+                if (_inputBufferElements == Count) throw new IllegalStateException("Input buffer overrun");
+                _inputBuffer[(_nextInputElementCursor + _inputBufferElements) & _indexMask] = element;
                 _inputBufferElements++;
             }
 
             Pump.Pump();
         }
 
-        public void Cancel()
+        public virtual void Cancel()
         {
             if (!_isUpstreamCompleted)
             {
                 _isUpstreamCompleted = true;
-                if (_upstream != null) _upstream.Cancel();
+                if (!ReferenceEquals(_upstream, null)) _upstream.Cancel();
                 Clear();
             }
         }
@@ -153,14 +153,14 @@ namespace Akka.Streams.Implementation
         public bool AreInputsDepleted { get { return _isUpstreamCompleted && _inputBufferElements == 0; } }
         public bool AreInputsAvailable { get { return _inputBufferElements > 0; } }
 
-        protected void OnComplete()
+        protected virtual void OnComplete()
         {
             _isUpstreamCompleted = true;
             SubReceive.Become(Completed);
             Pump.Pump();
         }
 
-        protected void OnSubscribe(ISubscription subscription)
+        protected virtual void OnSubscribe(ISubscription subscription)
         {
             if (subscription == null) throw new ArgumentException("OnSubscribe require subscription not to be null");
 
@@ -176,14 +176,14 @@ namespace Akka.Streams.Implementation
             Pump.GotUpstreamSubscription();
         }
 
-        protected void OnError(Exception e)
+        protected virtual void OnError(Exception e)
         {
             _isUpstreamCompleted = true;
             SubReceive.Become(Completed);
             InputOnError(e);
         }
 
-        protected bool WaitingForUpstream(object message)
+        protected virtual bool WaitingForUpstream(object message)
         {
             if (message is OnComplete) OnComplete();
             else if (message is OnSubscribe) OnSubscribe(((OnSubscribe)message).Subscription);
@@ -192,7 +192,7 @@ namespace Akka.Streams.Implementation
             return true;
         }
 
-        protected bool UpstreamRunning(object message)
+        protected virtual bool UpstreamRunning(object message)
         {
             if (message is OnNext) EnqueueInputElement(((OnNext)message).Element);
             else if (message is OnComplete) OnComplete();
@@ -202,7 +202,7 @@ namespace Akka.Streams.Implementation
             return true;
         }
 
-        protected bool Completed(object message)
+        protected virtual bool Completed(object message)
         {
             if (message is OnSubscribe)
                 throw new IllegalStateException("OnSubscribe called after OnError or OnComplete");
@@ -215,13 +215,13 @@ namespace Akka.Streams.Implementation
         }
     }
 
-    internal class SimpleOutputs<TIn, TOut> : IOutputs
+    internal class SimpleOutputs<TOut> : IOutputs
     {
         public readonly IActorRef Actor;
         public readonly IPump Pump;
 
         protected ActorPublisher<TOut> ExposedPublisher;
-        protected ISubscriber<TIn> Subscriber;
+        protected ISubscriber<TOut> Subscriber;
         protected long DownstreamDemand = 0L;
         protected bool IsDownstreamCompleted = false;
 
@@ -233,6 +233,8 @@ namespace Akka.Streams.Implementation
             Pump = pump;
 
             _subReceive = new SubReceive(WaitingExposedPublisher);
+            NeedsDemand = DefaultOutputTransferStates.NeedsDemand(this);
+            NeedsDemandOrCancel = DefaultOutputTransferStates.NeedsDemandOrCancel(this);
         }
 
         public bool IsSubscribed { get { return Subscriber != null; } }
@@ -243,11 +245,16 @@ namespace Akka.Streams.Implementation
         public long DemandCount { get { return DownstreamDemand; } }
         public bool IsDemandAvailable { get { return DownstreamDemand > 0; } }
 
-        public void EnqueueOutputElement(TIn element)
+        public void EnqueueOutputElement(TOut element)
         {
             ReactiveStreamsCompliance.RequireNonNullElement(element);
             DownstreamDemand--;
             ReactiveStreamsCompliance.TryOnNext(Subscriber, element);
+        }
+
+        public void EnqueueOutputElement(object element)
+        {
+            EnqueueOutputElement((TOut)element);
         }
 
         public virtual void Complete()
@@ -255,8 +262,8 @@ namespace Akka.Streams.Implementation
             if (!IsDownstreamCompleted)
             {
                 IsDownstreamCompleted = true;
-                if (ExposedPublisher != null) ExposedPublisher.Shutdown(null);
-                if (Subscriber != null) ReactiveStreamsCompliance.TryOnComplete(Subscriber);
+                if (!ReferenceEquals(ExposedPublisher, null)) ExposedPublisher.Shutdown(null);
+                if (!ReferenceEquals(Subscriber, null)) ReactiveStreamsCompliance.TryOnComplete(Subscriber);
             }
         }
 
@@ -265,7 +272,7 @@ namespace Akka.Streams.Implementation
             if (!IsDownstreamCompleted)
             {
                 IsDownstreamCompleted = true;
-                if (ExposedPublisher != null) ExposedPublisher.Shutdown(null);
+                if (!ReferenceEquals(ExposedPublisher, null)) ExposedPublisher.Shutdown(null);
             }
         }
 
@@ -274,17 +281,30 @@ namespace Akka.Streams.Implementation
             if (!IsDownstreamCompleted)
             {
                 IsDownstreamCompleted = true;
-                if (ExposedPublisher != null) ExposedPublisher.Shutdown(e);
-                if ((Subscriber != null) && !(e is ISpecViolation)) ReactiveStreamsCompliance.TryOnError(Subscriber, e);
+                if (!ReferenceEquals(ExposedPublisher, null)) ExposedPublisher.Shutdown(e);
+                if (!ReferenceEquals(Subscriber, null) && !(e is ISpecViolation)) ReactiveStreamsCompliance.TryOnError(Subscriber, e);
             }
         }
 
-        public bool IsClosed { get { return IsDownstreamCompleted && Subscriber != null; } }
+        public bool IsClosed { get { return IsDownstreamCompleted && !ReferenceEquals(Subscriber, null); } }
         public bool IsOpen { get { return !IsClosed; } }
 
         protected ISubscription CreateSubscription()
         {
-            return new ActorSubscription<TIn>(Actor, Subscriber);
+            return new ActorSubscription<TOut>(Actor, Subscriber);
+        }
+
+        private void SubscribePending(IEnumerable<ISubscriber<TOut>> subscribers)
+        {
+            foreach (var subscriber in subscribers)
+            {
+                if (ReferenceEquals(Subscriber, null))
+                {
+                    Subscriber = subscriber;
+                    ReactiveStreamsCompliance.TryOnSubscribe(subscriber, CreateSubscription());
+                }
+                else ReactiveStreamsCompliance.RejectAdditionalSubscriber(subscriber, GetType().Name);
+            }
         }
 
         protected bool WaitingExposedPublisher(object message)
@@ -295,15 +315,15 @@ namespace Akka.Streams.Implementation
                 SubReceive.Become(DownstreamRunning);
                 return true;
             }
-            else throw new IllegalStateException(string.Format("The first message must be ExposedPublisher but was [{0}]", message));
+            else throw new IllegalStateException(string.Format("The first message must be [{0}] but was [{1}]", typeof(ExposedPublisher<TOut>), message));
         }
 
         protected bool DownstreamRunning(object message)
         {
             if (message is SubscribePending) SubscribePending(ExposedPublisher.TakePendingSubscribers());
-            else if (message is TickPublisherSubscription.RequestMore)
+            else if (message is RequestMore<TOut>)
             {
-                var requestMore = (TickPublisherSubscription.RequestMore)message;
+                var requestMore = (RequestMore<TOut>)message;
                 if (requestMore.Demand < 1)
                     Error(ReactiveStreamsCompliance.NumberOfElementsInRequestMustBePositiveException);
                 else
@@ -323,29 +343,16 @@ namespace Akka.Streams.Implementation
             else return false;
             return true;
         }
-
-        private void SubscribePending(IEnumerable<ISubscriber<TIn>> subscribers)
-        {
-            foreach (var subscriber in subscribers)
-            {
-                if (Subscriber == null)
-                {
-                    Subscriber = subscriber;
-                    ReactiveStreamsCompliance.TryOnSubscribe(subscriber, CreateSubscription());
-                }
-                else ReactiveStreamsCompliance.RejectAdditionalSubscriber(subscriber, GetType().Name);
-            }
-        }
     }
 
-    public abstract class ActorProcessorImpl : ActorBase, IPump
+    internal abstract class ActorProcessorImpl<T> : ActorBase, IPump
     {
         #region Internal classes
 
         private sealed class InternalBatchingInputBuffer : BatchingInputBuffer
         {
-            private readonly ActorProcessorImpl _impl;
-            public InternalBatchingInputBuffer(int size, ActorProcessorImpl impl) : base(size, impl)
+            private readonly ActorProcessorImpl<T> _impl;
+            public InternalBatchingInputBuffer(int count, ActorProcessorImpl<T> impl) : base(count, impl)
             {
                 _impl = impl;
             }
@@ -356,15 +363,15 @@ namespace Akka.Streams.Implementation
             }
         }
 
-        private sealed class InternalExposedPublisherReceive : ExposedPublisherReceive
+        private sealed class InternalExposedPublisherReceive : ExposedPublisherReceive<T>
         {
-            private readonly ActorProcessorImpl _self;
-            public InternalExposedPublisherReceive(Receive activeReceive, Action<object> unhandled, ActorProcessorImpl self) : base(activeReceive, unhandled)
+            private readonly ActorProcessorImpl<T> _self;
+            public InternalExposedPublisherReceive(Receive activeReceive, Action<object> unhandled, ActorProcessorImpl<T> self) : base(activeReceive, unhandled)
             {
                 _self = self;
             }
 
-            public override void ReceiveExposedPublisher(ExposedPublisher publisher)
+            public override void ReceiveExposedPublisher(ExposedPublisher<T> publisher)
             {
                 _self.PrimaryOutputs.SubReceive.CurrentReceive(publisher);
                 Context.Become(ActiveReceive);
@@ -385,7 +392,7 @@ namespace Akka.Streams.Implementation
             Settings = settings;
 
             PrimaryInputs = new InternalBatchingInputBuffer(settings.InitialInputBufferSize, this);
-            PrimaryOutputs = new SimpleOutputs(Self, this);
+            PrimaryOutputs = new SimpleOutputs<T>(Self, this);
 
             _receive = new InternalExposedPublisherReceive(ActiveReceive, Unhandled, this);
         }
@@ -396,7 +403,7 @@ namespace Akka.Streams.Implementation
         public Action CurrentAction { get; set; }
         public bool IsPumpFinished { get; }
 
-        private readonly ExposedPublisherReceive _receive;
+        private readonly ExposedPublisherReceive<T> _receive;
         /**
          * Subclass may override [[#activeReceive]]
          */
@@ -440,19 +447,19 @@ namespace Akka.Streams.Implementation
             Fail(e);
         }
 
-        public void PumpFinished()
+        public virtual void PumpFinished()
         {
             PrimaryInputs.Cancel();
             PrimaryOutputs.Complete();
             Context.Stop(Self);
         }
-        
-        protected void OnError(Exception e)
+
+        protected virtual void OnError(Exception e)
         {
             Fail(e);
         }
 
-        protected void Fail(Exception e)
+        protected virtual void Fail(Exception e)
         {
             if (Settings.IsDebugLogging)
                 Log.Debug("Failed due to: {0}", e.Message);

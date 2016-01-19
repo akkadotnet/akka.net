@@ -106,6 +106,7 @@
     <Compile Include="Implementation\Fusing\GraphStages.cs" />
     <Compile Include="Implementation\Fusing\Ops.cs" />
     <Compile Include="Implementation\Fusing\StreamOfStreams.cs" />
+    <Compile Include="Implementation\GroupByProcessorImpl.cs" />
     <Compile Include="Implementation\Junctions.cs" />
     <Compile Include="Implementation\Modules.cs" />
     <Compile Include="Implementation\ResizableMultiReaderRingBuffer.cs" />
@@ -128,7 +129,6 @@
     <Compile Include="Implementation\ActorProcessor.cs" />
     <Compile Include="Implementation\ActorPublisher.cs" />
     <Compile Include="Implementation\CompletedPublishers.cs" />
-    <Compile Include="Implementation\Flows.cs" />
     <Compile Include="Implementation\Fusing\Interpreter.cs" />
     <Compile Include="Implementation\ReactiveStreamsCompliance.cs" />
     <Compile Include="Implementation\Stages\Stages.cs" />

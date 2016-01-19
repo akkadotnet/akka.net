@@ -421,25 +421,25 @@ namespace Akka.Streams.Implementation.Stages
 
     internal sealed class GroupBy<TIn, TOut, TMat> : StageModule<TIn, TOut, TMat>
     {
-        private readonly int _maxSubstreams;
-        private readonly Func<TIn, TOut> _groupFunc;
+        public readonly int MaxSubstreams;
+        public readonly Func<TIn, TOut> Extractor;
 
-        public GroupBy(int maxSubstreams, Func<TIn, TOut> groupFunc, Attributes attributes = null)
+        public GroupBy(int maxSubstreams, Func<TIn, TOut> extractor, Attributes attributes = null)
         {
-            _maxSubstreams = maxSubstreams;
-            _groupFunc = groupFunc;
+            MaxSubstreams = maxSubstreams;
+            Extractor = extractor;
             Attributes = attributes ?? DefaultAttributes.GroupBy;
         }
 
         public override IModule CarbonCopy()
         {
-            return new GroupBy<TIn, TOut, TMat>(_maxSubstreams, _groupFunc, Attributes);
+            return new GroupBy<TIn, TOut, TMat>(MaxSubstreams, Extractor, Attributes);
         }
 
         public override Attributes Attributes { get; }
         public override IModule WithAttributes(Attributes attributes)
         {
-            return new GroupBy<TIn, TOut, TMat>(_maxSubstreams, _groupFunc, attributes);
+            return new GroupBy<TIn, TOut, TMat>(MaxSubstreams, Extractor, attributes);
         }
     }
 

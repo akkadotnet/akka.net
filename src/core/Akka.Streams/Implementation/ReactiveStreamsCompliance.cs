@@ -56,7 +56,7 @@ namespace Akka.Streams.Implementation
 
         public static void TryOnNext<T>(ISubscriber<T> subscriber, T element)
         {
-            if (element == null) throw new ArgumentNullException("element", "Element passed to subscriber must not be null");
+            RequireNonNullElement(element);
             try
             {
                 subscriber.OnNext(element);
@@ -118,22 +118,22 @@ namespace Akka.Streams.Implementation
 
         public static void RequireNonNullSubscriber<T>(ISubscriber<T> subscriber)
         {
-            if (subscriber == null) throw SubscriberMustNotBeNullException;
+            if (ReferenceEquals(subscriber, null)) throw SubscriberMustNotBeNullException;
         }
 
         public static void RequireNonNullSubscription(ISubscription subscription)
         {
-            if (subscription == null) throw SubscriptionMustNotBeNullException;
+            if (ReferenceEquals(subscription, null)) throw SubscriptionMustNotBeNullException;
         }
 
         public static void RequireNonNullException(Exception e)
         {
-            if (e == null) throw ExceptionMustNotBeNullException;
+            if (ReferenceEquals(e, null)) throw ExceptionMustNotBeNullException;
         }
 
         public static void RequireNonNullElement(object element)
         {
-            if (element == null) throw ElementMustNotBeNullException;
+            if (ReferenceEquals(element, null)) throw ElementMustNotBeNullException;
         }
 
         public static void TryCancel(ISubscription subscription)
