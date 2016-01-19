@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reactive.Streams;
 using System.Threading.Tasks;
 
 namespace Akka.Streams.Implementation

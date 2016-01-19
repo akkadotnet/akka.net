@@ -480,23 +480,23 @@ namespace Akka.Streams.Implementation.Stages
 
     internal sealed class DirectProcessor<TIn, TOut, TMat> : StageModule<TIn, TOut, TMat>
     {
-        private readonly Func<Tuple<IProcessor<TIn, TOut>, TMat>> _factory;
+        public readonly Func<Tuple<IProcessor<TIn, TOut>, TMat>> ProcessorFactory;
 
-        public DirectProcessor(Func<Tuple<IProcessor<TIn, TOut>, TMat>> factory, Attributes attributes = null)
+        public DirectProcessor(Func<Tuple<IProcessor<TIn, TOut>, TMat>> processorFactory, Attributes attributes = null)
         {
-            _factory = factory;
+            ProcessorFactory = processorFactory;
             Attributes = attributes ?? DefaultAttributes.Processor;
         }
 
         public override IModule CarbonCopy()
         {
-            return new DirectProcessor<TIn, TOut, TMat>(_factory, Attributes);
+            return new DirectProcessor<TIn, TOut, TMat>(ProcessorFactory, Attributes);
         }
 
         public override Attributes Attributes { get; }
         public override IModule WithAttributes(Attributes attributes)
         {
-            return new DirectProcessor<TIn, TOut, TMat>(_factory, attributes);
+            return new DirectProcessor<TIn, TOut, TMat>(ProcessorFactory, attributes);
         }
     }
 }

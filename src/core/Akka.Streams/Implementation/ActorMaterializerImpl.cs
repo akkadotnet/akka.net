@@ -35,23 +35,23 @@ namespace Akka.Streams.Implementation
             protected override object MaterializeAtomic<TIn, TOut, TMat>(IModule atomic, Attributes effectiveAttributes, IDictionary<IModule, object> materializedValues)
             {
                 atomic.Match()
-                    .With<SinkModule<object, object>>(sink =>
+                    .With<SinkModule<TIn, TMat>>(sink =>
                     {
-                        object materialized;
+                        TMat materialized;
                         var subscriber = sink.Create(CreateMaterializationContext(effectiveAttributes), out materialized);
                         AssignPort(sink.Shape.Inlets.First(), subscriber);
                         materializedValues.Add(atomic, materialized);
                     })
-                    .With<SourceModule<object, object>>(source =>
+                    .With<SourceModule<TOut, TMat>>(source =>
                     {
-                        object materialized;
+                        TMat materialized;
                         var publisher = source.Create(CreateMaterializationContext(effectiveAttributes), out materialized);
                         AssignPort(source.Shape.Outlets.First(), publisher);
                         materializedValues.Add(atomic, materialized);
                     })
-                    .With<StageModule>(stage =>
+                    .With<StageModule<TIn, TOut, TMat>>(stage =>
                     {
-                        object materialized;
+                        TMat materialized;
                         var processor = ProcessorFor(stage, effectiveAttributes, _materializer.EffectiveSettings(effectiveAttributes), out materialized);
                         AssignPort(stage.In, processor);
                         AssignPort(stage.Out, processor);
@@ -67,6 +67,8 @@ namespace Akka.Streams.Implementation
                         var graph = new GraphModule(GraphAssembly.Create(stage.Shape.Inlets, stage.Shape.Outlets, new[] { stage.Stage }), stage.Shape, stage.Attributes, new IModule[] { stage });
                         MaterializeGraph(graph, effectiveAttributes, materializedValues);
                     });
+
+                return Unit.Instance;
             }
 
             private string StageName(Attributes attr)
@@ -112,12 +114,12 @@ namespace Akka.Streams.Implementation
                 }
             }
 
-            private IProcessor<TIn, TOut> ProcessorFor<TIn, TOut, TMat>(StageModule op, Attributes effectiveAttributes, ActorMaterializerSettings settings, out TMat materialized)
+            private IProcessor<TIn, TOut> ProcessorFor<TIn, TOut, TMat>(StageModule<TIn, TOut, TMat> op, Attributes effectiveAttributes, ActorMaterializerSettings settings, out TMat materialized)
             {
                 DirectProcessor<TIn, TOut, TMat> processor;
                 if ((processor = op as DirectProcessor<TIn, TOut, TMat>) != null)
                 {
-                    var t = processor.ProcessorProducer();
+                    var t = processor.ProcessorFactory();
                     materialized = t.Item2;
                     return t.Item1;
                 }
@@ -153,7 +155,7 @@ namespace Akka.Streams.Implementation
                 : _settings.Dispatcher));
 
             if (_settings.IsFuzzingMode)
-                Logger.Warning("Fuzzing mode is enabled on this system. If you see this warning on your production system then set akka.materializer.debug.fuzzing-mode to off.");
+                Logger.Warning("Fuzzing mode is enabled on this system. If you see this warning on your production system then set 'akka.materializer.debug.fuzzing-mode' to off.");
         }
 
         public override bool IsShutdown { get { return _haveShutDown.Value; } }
@@ -411,7 +413,7 @@ namespace Akka.Streams.Implementation
 
     internal static class ActorProcessorFactory
     {
-        public static Props Props<TIn, TOut, TMat>(ActorMaterializer materializer, StageModule op, Attributes parentAttributes, out TMat materialized)
+        public static Props Props<TIn, TOut, TMat>(ActorMaterializer materializer, StageModule<TIn, TOut, TMat> op, Attributes parentAttributes, out TMat materialized)
         {
             var attr = parentAttributes.And(op.Attributes);
             // USE THIS TO AVOID CLOSING OVER THE MATERIALIZER BELOW
@@ -423,11 +425,7 @@ namespace Akka.Streams.Implementation
             op.Match()
                 .With<GroupBy<TIn, TOut, TMat>>(groupBy =>
                 {
-                    result = GroupByProcessorImpl.Props(settings, groupBy.MaxSubstreams, groupBy.Extractor);
-                })
-                .With<Split<TIn, TOut, TMat>>(split =>
-                {
-                    result = SplitWhereProcessorImpl.Props(settings, split.Predicate);
+                    result = GroupByProcessorImpl<TIn, TOut>.Props(settings, groupBy.MaxSubstreams, groupBy.Extractor);
                 })
                 .With<DirectProcessor<TIn, TOut, TMat>>(processor =>
                 {

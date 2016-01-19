@@ -96,6 +96,7 @@
     <Compile Include="Implementation\ConcatAllImpl.cs" />
     <Compile Include="Implementation\EnumerableActorName.cs" />
     <Compile Include="Implementation\ExposedPublisherReceive.cs" />
+    <Compile Include="Implementation\FanIn.cs" />
     <Compile Include="Implementation\FixedSizeBuffer.cs" />
     <Compile Include="Implementation\FlowModule.cs" />
     <Compile Include="Implementation\Fusing\ActorGraphInterpreter.cs" />

@@ -916,7 +916,7 @@ namespace Akka.Streams.Implementation
             return parent.And(current);
         }
 
-        protected void RegisterSource(MaterializedValueSource<object> materializedSource)
+        protected void RegisterSource<TMat>(MaterializedValueSource<TMat> materializedSource)
         {
             LinkedList<MaterializedValueSource<object>> sources;
             if (_materializedValueSources.TryGetValue(materializedSource.Computation, out sources))
@@ -958,7 +958,7 @@ namespace Akka.Streams.Implementation
             return MaterializeModule<TMat>(composite, effectiveAttributes);
         }
 
-        protected abstract object MaterializeAtomic(IModule atomic, Attributes effectiveAttributes, IDictionary<IModule, object> materializedValues);
+        protected abstract object MaterializeAtomic<TIn, TOut, TMat>(IModule atomic, Attributes effectiveAttributes, IDictionary<IModule, object> materializedValues);
 
         private object ResolveMaterialized(StreamLayout.IMaterializedValueNode node, IDictionary<IModule, object> values, string indent)
         {
@@ -987,7 +987,7 @@ namespace Akka.Streams.Implementation
             return result;
         }
 
-        protected void AssignPort(InPort inPort, ISubscriber<object> subscriber)
+        protected void AssignPort<T>(InPort inPort, ISubscriber<T> subscriber)
         {
             Subscribers[inPort] = subscriber;
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
@@ -999,7 +999,7 @@ namespace Akka.Streams.Implementation
             }
         }
 
-        protected void AssignPort(OutPort outPort, IPublisher<object> publisher)
+        protected void AssignPort<T>(OutPort outPort, IPublisher<T> publisher)
         {
             Publishers[outPort] = publisher;
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
