@@ -24,10 +24,6 @@ namespace Akka.Pattern
         {
         }
 
-        public IllegalStateException(string message, Exception reason) : base(message, reason)
-        {
-        }
-
         /// <summary>
         /// Initializes a new instance of the <see cref="IllegalStateException"/> class.
         /// </summary>
