@@ -1001,7 +1001,7 @@ namespace Akka.Streams.Dsl
         /// Source(List(1, 2, 3)).Interleave(List(4, 5, 6, 7), 2) // 1, 2, 4, 5, 3, 6, 7
         /// </code>
         /// </example>
-        public static Source<T2, TMat> Interleave<TIn, T1, T2, TMat, TMat2>(this Source<T1, TMat> flow, IGraph<SourceShape<T2>, TMat2> other, int segmentSize) where T1 : T2
+        public static Source<T2, TMat> Interleave<TIn, T1, T2, TMat>(this Source<T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other, int segmentSize) where T1 : T2
         {
             return (Source<T2, TMat>)InternalFlowOperations.Interleave(flow, other, segmentSize);
         }

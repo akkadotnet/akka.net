@@ -78,6 +78,7 @@
     <Compile Include="Dsl\Graph.cs" />
     <Compile Include="Dsl\GraphDsl.cs" />
     <Compile Include="Dsl\Internal\GraphImpl.cs" />
+    <Compile Include="Dsl\One2OneBidiFlow.cs" />
     <Compile Include="Dsl\RunnableGraph.cs" />
     <Compile Include="Dsl\Sink.cs" />
     <Compile Include="Dsl\SourceOperations.cs" />
@@ -92,11 +93,13 @@
     <Compile Include="Implementation\ActorMaterializerImpl.cs" />
     <Compile Include="Implementation\ActorRefSinkActor.cs" />
     <Compile Include="Implementation\ActorRefSourceActor.cs" />
-    <Compile Include="Implementation\BlackholeSubscriber.cs" />
+    <Compile Include="Implementation\BoundedBuffer.cs" />
     <Compile Include="Implementation\ConcatAllImpl.cs" />
     <Compile Include="Implementation\EnumerableActorName.cs" />
     <Compile Include="Implementation\ExposedPublisherReceive.cs" />
     <Compile Include="Implementation\FanIn.cs" />
+    <Compile Include="Implementation\FanOut.cs" />
+    <Compile Include="Implementation\FanoutProcessorImpl.cs" />
     <Compile Include="Implementation\FixedSizeBuffer.cs" />
     <Compile Include="Implementation\FlowModule.cs" />
     <Compile Include="Implementation\Fusing\ActorGraphInterpreter.cs" />
@@ -111,6 +114,7 @@
     <Compile Include="Implementation\Junctions.cs" />
     <Compile Include="Implementation\Modules.cs" />
     <Compile Include="Implementation\ResizableMultiReaderRingBuffer.cs" />
+    <Compile Include="Implementation\SinkholeSubscriber.cs" />
     <Compile Include="Implementation\Sinks.cs" />
     <Compile Include="Implementation\SplitDecisionWhereImpl.cs" />
     <Compile Include="Implementation\StreamOfStreamProcessors.cs" />
@@ -141,6 +145,7 @@
     <Compile Include="OverflowStrategy.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Shape.cs" />
+    <Compile Include="StageException.cs" />
     <Compile Include="Stage\AbstractStage.cs" />
     <Compile Include="Stage\Context.cs" />
     <Compile Include="Stage\GraphStage.cs" />

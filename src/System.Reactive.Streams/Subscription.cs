@@ -12,7 +12,7 @@
         /// <para>
         /// It can be called however often and whenever needed—but the outstanding cumulative demand must never exceed <see cref="long.MaxValue"/>.
         /// An outstanding cumulative demand of <see cref="long.MaxValue"/> may be treated by the <see cref="IPublisher{T}"/> as "effectively unbounded".
-        /// Whatever has been requested can be sent by the {@link Publisher} so only signal demand for what can be safely handled.
+        /// Whatever has been requested can be sent by the <see cref="IPublisher{T}"/> so only signal demand for what can be safely handled.
         /// </para>
         /// A <see cref="IPublisher{T}"/> can send less than is requested if the stream ends but
         /// then must emit either <see cref="ISubscriber{T}.OnError"/> or <see cref="ISubscriber{T}.OnComplete"/>.

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Event;
 using Akka.Pattern;
@@ -648,6 +649,32 @@ namespace Akka.Streams.Implementation.Fusing
 
         public override ISyncDirective OnPull(IContext<T> context)
         {
+            return context.Finish();
+        }
+    }
+
+    internal sealed class OnCompleted<TIn, TOut> : PushStage<TIn, TOut>
+    {
+        private readonly Action _success;
+        private readonly Action<Exception> _failure;
+
+        public OnCompleted(Action success, Action<Exception> failure)
+        {
+            _success = success;
+            _failure = failure;
+        }
+
+        public override ISyncDirective OnPush(TIn element, IContext<TOut> context) => context.Pull();
+
+        public override ITerminationDirective OnUpstreamFailure(Exception cause, IContext<TOut> context)
+        {
+            _failure(cause);
+            return context.Fail(cause);
+        }
+
+        public override ITerminationDirective OnUpstreamFinish(IContext<TOut> context)
+        {
+            _success();
             return context.Finish();
         }
     }

@@ -344,7 +344,7 @@ namespace Akka.Streams.Implementation
             return true;
         }
     }
-
+    
     internal abstract class ActorProcessorImpl<T> : ActorBase, IPump
     {
         #region Internal classes
@@ -382,8 +382,8 @@ namespace Akka.Streams.Implementation
 
         public readonly ActorMaterializerSettings Settings;
 
-        protected readonly IInputs PrimaryInputs;
-        protected readonly IOutputs PrimaryOutputs;
+        protected virtual IInputs PrimaryInputs { get; }
+        protected virtual IOutputs PrimaryOutputs { get; }
 
         private ILoggingAdapter _log;
 

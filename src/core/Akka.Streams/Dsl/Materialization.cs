@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reactive.Streams;
 
 namespace Akka.Streams.Dsl
 {
@@ -24,6 +25,9 @@ namespace Akka.Streams.Dsl
             return Tuple.Create(left, right);
         }
 
-        public static void None<TLeft, TRight>(TLeft left, TRight right) { }
+        public static Unit None<TLeft, TRight>(TLeft left, TRight right)
+        {
+            return Unit.Instance;
+        }
     }
 }

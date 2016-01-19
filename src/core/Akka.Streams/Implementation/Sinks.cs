@@ -84,203 +84,106 @@ namespace Akka.Streams.Implementation
         }
     }
 
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
     internal sealed class FanoutPublisherSink<TIn> : SinkModule<TIn, IPublisher<TIn>>
     {
-        public readonly int InitialBufferSize;
-        public readonly int MaxBufferSize;
         private readonly Attributes _attributes;
-        public FanoutPublisherSink(int initialBufferSize, int maxBufferSize, Attributes attributes, SinkShape<TIn> shape)
-            : base(shape)
+
+        public FanoutPublisherSink(Attributes attributes, SinkShape<TIn> shape) : base(shape)
         {
-            InitialBufferSize = initialBufferSize;
-            MaxBufferSize = maxBufferSize;
             _attributes = attributes;
         }
 
-        public override Attributes Attributes { get { return _attributes; } }
-        
+        public override Attributes Attributes => _attributes;
+
         public override IModule WithAttributes(Attributes attributes)
-        {
-            return new FanoutPublisherSink<TIn>(InitialBufferSize, MaxBufferSize, attributes, AmendShape(attributes));
-        }
+            => new FanoutPublisherSink<TIn>(attributes, AmendShape(attributes));
 
         protected override SinkModule<TIn, IPublisher<TIn>> NewInstance(SinkShape<TIn> shape)
-        {
-            return new FanoutPublisherSink<TIn>(InitialBufferSize, MaxBufferSize, Attributes, shape);
-        }
+            => new FanoutPublisherSink<TIn>(Attributes, shape);
 
         public override ISubscriber<TIn> Create(MaterializationContext context, out IPublisher<TIn> materializer)
         {
             var actorMaterializer = ActorMaterializer.Downcast(context.Materializer);
-            var fanoutRef = actorMaterializer.ActorOf(context, Props.Create(() =>
-                new FanoutProcessorImpl(actorMaterializer.EffectiveSettings(context.EffectiveAttributes),
-                    InitialBufferSize, MaxBufferSize)).WithDeploy(Deploy.Local));
+            var settings = actorMaterializer.EffectiveSettings(context.EffectiveAttributes);
+            var fanoutRef = actorMaterializer.ActorOf(context, FanoutProcessorImpl<TIn>.Props(settings));
             var fanoutProcessor = ActorProcessorFactory.Create<TIn, TIn>(fanoutRef);
             materializer = fanoutProcessor;
             return fanoutProcessor;
         }
     }
 
-    /**
-     * INTERNAL API
-     * Holds a [[scala.concurrent.Future]] that will be fulfilled with the first
-     * thing that is signaled to this stream, which can be either an element (after
-     * which the upstream subscription is canceled), an error condition (putting
-     * the Future into the corresponding failed state) or the end-of-stream
-     * (failing the Future with a NoSuchElementException).
-     */
-    public sealed class HeadSink<TIn> : SinkModule<TIn, Task<TIn>>
+    /// <summary>
+    /// INTERNAL API
+    /// Attaches a subscriber to this stream which will just discard all received elements.
+    /// </summary>
+    internal sealed class SinkholeSink<TIn> : SinkModule<TIn, Task>
     {
-        #region subscriber
-
-        private sealed class HeadSinkSubscriber : ISubscriber<TIn>
-        {
-            private readonly TaskCompletionSource<TIn> _promise = new TaskCompletionSource<TIn>();
-            private ISubscription _subscription = null;
-
-            public Task<TIn> Task { get { return _promise.Task; } }
-
-            public void OnSubscribe(ISubscription subscription)
-            {
-                ReactiveStreamsCompliance.RequireNonNullSubscription(subscription);
-                if (_subscription != null) subscription.Cancel();
-                else
-                {
-                    _subscription = subscription;
-                    _subscription.Request(1);
-                }
-            }
-
-            public void OnNext(TIn element)
-            {
-                ReactiveStreamsCompliance.RequireNonNullElement(element);
-                _promise.TrySetResult(element);
-                _subscription.Cancel();
-                _subscription = null;
-            }
-
-            public void OnNext(object element)
-            {
-                OnNext((TIn)element);
-            }
-
-            public void OnError(Exception cause)
-            {
-                ReactiveStreamsCompliance.RequireNonNullException(cause);
-                _promise.TrySetException(cause);
-            }
-
-            public void OnComplete()
-            {
-                _promise.TrySetException(new Exception("empty stream"));
-            }
-        }
-
-        #endregion
-
         private readonly Attributes _attributes;
 
-        public HeadSink(Attributes attributes, SinkShape<TIn> shape)
-            : base(shape)
+        public SinkholeSink(SinkShape<TIn> shape, Attributes attributes) : base(shape)
         {
             _attributes = attributes;
         }
 
-        public override IModule CarbonCopy()
-        {
-            return new HeadSink<TIn>(Attributes, (SinkShape<TIn>)Shape);
-        }
-
-        public override Attributes Attributes { get { return _attributes; } }
+        public override Attributes Attributes => _attributes;
 
         public override IModule WithAttributes(Attributes attributes)
+            => new SinkholeSink<TIn>(AmendShape(attributes), attributes);
+
+        protected override SinkModule<TIn, Task> NewInstance(SinkShape<TIn> shape)
+            => new SinkholeSink<TIn>(shape, Attributes);
+
+        public override ISubscriber<TIn> Create(MaterializationContext context, out Task materializer)
         {
-            return new HeadSink<TIn>(attributes, (SinkShape<TIn>)Shape);
+            var effectiveSettings = ActorMaterializer.Downcast(context.Materializer).EffectiveSettings(context.EffectiveAttributes);
+            var p = new TaskCompletionSource<Unit>();
+            materializer = p.Task;
+            return new SinkholeSubscriber<TIn>(p);
         }
 
-        public override Tuple<ISubscriber<TIn>, Task<TIn>> Create(MaterializationContext context)
-        {
-            var sub = new HeadSinkSubscriber();
-            return new Tuple<ISubscriber<TIn>, Task<TIn>>(sub, sub.Task);
-        }
+        public override string ToString() => "SinkholeSink";
     }
 
-    /**
-     * INTERNAL API
-     * Attaches a subscriber to this stream which will just discard all received
-     * elements.
-     */
-    public sealed class BlackholeSink : SinkModule<object, Task>
+    /// <summary>
+    /// INTERNAL API
+    /// Attaches a subscriber to this stream.
+    /// </summary>
+    internal sealed class SubscriberSink<TIn> : SinkModule<TIn, Unit>
     {
         private readonly Attributes _attributes;
+        private readonly ISubscriber<TIn> _subscriber;
 
-        public BlackholeSink(Attributes attributes, SinkShape<object> shape)
-            : base(shape)
+        public SubscriberSink(SinkShape<TIn> shape, Attributes attributes, ISubscriber<TIn> subscriber) : base(shape)
         {
             _attributes = attributes;
+            _subscriber = subscriber;
         }
 
-        public override IModule CarbonCopy()
-        {
-            return new BlackholeSink(Attributes, (SinkShape<object>)Shape);
-        }
-
-        public override Attributes Attributes { get { return _attributes; } }
+        public override Attributes Attributes => _attributes;
 
         public override IModule WithAttributes(Attributes attributes)
+            => new SubscriberSink<TIn>(AmendShape(attributes), attributes, _subscriber);
+
+        protected override SinkModule<TIn, Unit> NewInstance(SinkShape<TIn> shape)
+            => new SubscriberSink<TIn>(shape, Attributes, _subscriber);
+
+        public override ISubscriber<TIn> Create(MaterializationContext context, out Unit materializer)
         {
-            return new BlackholeSink(attributes, (SinkShape<object>)Shape);
+            materializer = Unit.Instance;
+            return _subscriber;
         }
 
-        public override Tuple<ISubscriber<object>, Task> Create(MaterializationContext context)
-        {
-            var effectiveSettings =
-                ActorMaterializer.Downcast(context.Materializer).EffectiveSettings(context.EffectiveAttributes);
-
-            var promise = new TaskCompletionSource<object>();
-            return new Tuple<ISubscriber<object>, Task>(new BlackholeSubscriber<object>(effectiveSettings.MaxInputBufferSize, promise), promise.Task);
-        }
+        public override string ToString() => "SubscriberSink";
     }
 
-    /**
-     * INTERNAL API
-     * Attaches a subscriber to this stream.
-     */
-    public sealed class SubscriberSink<TIn> : SinkModule<TIn, object>
-    {
-        public readonly ISubscriber<TIn> Subscriber;
-        private readonly Attributes _attributes;
-
-        public SubscriberSink(ISubscriber<TIn> subscriber, Attributes attributes, SinkShape<TIn> shape)
-            : base(shape)
-        {
-            Subscriber = subscriber;
-            _attributes = attributes;
-        }
-
-        public override IModule CarbonCopy()
-        {
-            return new SubscriberSink<TIn>(Subscriber, Attributes, (SinkShape<TIn>)Shape);
-        }
-
-        public override Attributes Attributes { get { return _attributes; } }
-
-        public override IModule WithAttributes(Attributes attributes)
-        {
-            return new SubscriberSink<TIn>(Subscriber, attributes, (SinkShape<TIn>)Shape);
-        }
-
-        public override Tuple<ISubscriber<TIn>, object> Create(MaterializationContext context)
-        {
-            return new Tuple<ISubscriber<TIn>, object>(Subscriber, null);
-        }
-    }
-
-    /**
-     * INTERNAL API
-     * A sink that immediately cancels its upstream upon materialization.
-     */
-    public sealed class CancelSink<T> : SinkModule<T, Unit>
+    /// <summary>
+    /// INTERNAL API
+    /// A sink that immediately cancels its upstream upon materialization.
+    /// </summary>
+    internal sealed class CancelSink<T> : SinkModule<T, Unit>
     {
         private readonly Attributes _attributes;
 
@@ -290,146 +193,94 @@ namespace Akka.Streams.Implementation
             _attributes = attributes;
         }
 
-        public override Attributes Attributes { get { return _attributes; } }
+        public override Attributes Attributes => _attributes;
 
-        protected override SinkModule<T, Unit> NewInstance(SinkShape<T> shape)
-        {
-            return new CancelSink<T>(Attributes, shape);
-        }
+        protected override SinkModule<T, Unit> NewInstance(SinkShape<T> shape) => new CancelSink<T>(Attributes, shape);
 
         public override ISubscriber<T> Create(MaterializationContext context, out Unit materializer)
         {
             materializer = Unit.Instance;
             return new CancellingSubscriber<T>();
         }
-        
+
         public override IModule WithAttributes(Attributes attributes)
-        {
-            return new CancelSink<T>(attributes, (SinkShape<T>)Shape);
-        }
-        
+            => new CancelSink<T>(attributes, AmendShape(attributes));
+
+        public override string ToString() => "CancelSink";
     }
 
-    /**
-     * INTERNAL API
-     * Creates and wraps an actor into [[org.reactivestreams.Subscriber]] from the given `props`,
-     * which should be [[akka.actor.Props]] for an [[akka.stream.actor.ActorSubscriber]].
-     */
-    public sealed class ActorSubscriberSink<TIn> : SinkModule<TIn, IActorRef>
+    /// <summary>
+    /// INTERNAL API
+    /// Creates and wraps an actor into <see cref="ISubscriber{T}"/> from the given <see cref="Actor.Props"/>,
+    /// which should be <see cref="Actor.Props"/> for an <see cref="ActorSubscriber"/>.
+    /// </summary>
+    internal sealed class ActorSubscriberSink<TIn> : SinkModule<TIn, IActorRef>
     {
-        public readonly Props Props;
+        private readonly Props _props;
         private readonly Attributes _attributes;
 
         public ActorSubscriberSink(Props props, Attributes attributes, SinkShape<TIn> shape)
             : base(shape)
         {
-            Props = props;
+            _props = props;
             _attributes = attributes;
         }
 
-        public override IModule CarbonCopy()
-        {
-            return new ActorSubscriberSink<TIn>(Props, Attributes, (SinkShape<TIn>)Shape);
-        }
-
-        public override Attributes Attributes { get { return _attributes; } }
+        public override Attributes Attributes => _attributes;
 
         public override IModule WithAttributes(Attributes attributes)
+            => new ActorSubscriberSink<TIn>(_props, attributes, AmendShape(attributes));
+
+        protected override SinkModule<TIn, IActorRef> NewInstance(SinkShape<TIn> shape)
+            => new ActorSubscriberSink<TIn>(_props, _attributes, shape);
+
+        public override ISubscriber<TIn> Create(MaterializationContext context, out IActorRef materializer)
         {
-            return new ActorSubscriberSink<TIn>(Props, attributes, (SinkShape<TIn>)Shape);
+            var subscriberRef = ActorMaterializer.Downcast(context.Materializer).ActorOf(context, _props);
+            materializer = subscriberRef;
+            return new ActorSubscriberImpl<TIn>(subscriberRef);
         }
 
-        public override Tuple<ISubscriber<TIn>, IActorRef> Create(MaterializationContext context)
-        {
-            var subscriberRef = ActorMaterializer.Downcast(context.Materializer).ActorOf(context, Props);
-            return new Tuple<ISubscriber<TIn>, IActorRef>(new ActorSubscriberImpl<TIn>(subscriberRef), subscriberRef);
-        }
+        public override string ToString() => "ActorSubscriberSink";
     }
-
-    public sealed class ActorRefSink<TIn> : SinkModule<TIn, object>
+    
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal sealed class ActorRefSink<TIn> : SinkModule<TIn, IActorRef>
     {
-        public readonly IActorRef Ref;
-        public readonly object OnCompleteMessage;
+        private readonly IActorRef _ref;
+        private readonly object _onCompleteMessage;
         private readonly Attributes _attributes;
 
         public ActorRefSink(IActorRef @ref, object onCompleteMessage, Attributes attributes, SinkShape<TIn> shape)
             : base(shape)
         {
-            Ref = @ref;
-            OnCompleteMessage = onCompleteMessage;
+            _ref = @ref;
+            _onCompleteMessage = onCompleteMessage;
             _attributes = attributes;
         }
 
-        public override IModule CarbonCopy()
-        {
-            return new ActorRefSink<TIn>(Ref, OnCompleteMessage, Attributes, (SinkShape<TIn>)Shape);
-        }
-
-        public override Attributes Attributes { get { return _attributes; } }
+        public override Attributes Attributes => _attributes;
 
         public override IModule WithAttributes(Attributes attributes)
-        {
-            return new ActorRefSink<TIn>(Ref, OnCompleteMessage, attributes, (SinkShape<TIn>)Shape);
-        }
+            => new ActorRefSink<TIn>(_ref, _onCompleteMessage, attributes, AmendShape(attributes));
 
-        public override Tuple<ISubscriber<TIn>, object> Create(MaterializationContext context)
+        protected override SinkModule<TIn, IActorRef> NewInstance(SinkShape<TIn> shape)
+            => new ActorRefSink<TIn>(_ref, _onCompleteMessage, _attributes, shape);
+
+        public override ISubscriber<TIn> Create(MaterializationContext context, out IActorRef materializer)
         {
             var actorMaterializer = ActorMaterializer.Downcast(context.Materializer);
             var effectiveSettings = actorMaterializer.EffectiveSettings(context.EffectiveAttributes);
             var subscriberRef = actorMaterializer.ActorOf(context,
-                ActorRefSinkActor.Props(Ref, effectiveSettings.MaxInputBufferSize, OnCompleteMessage));
+                ActorRefSinkActor.Props(_ref, effectiveSettings.MaxInputBufferSize, _onCompleteMessage));
 
-            return new Tuple<ISubscriber<TIn>, object>(new ActorSubscriberImpl<TIn>(subscriberRef), null);
+            materializer = subscriberRef;
+            return new ActorSubscriberImpl<TIn>(subscriberRef);
         }
+
+        public override string ToString() => "ActorRefSink";
     }
 
-    public sealed class AcknowledgeSink<TIn> : SinkModule<TIn, ISinkQueue<TIn>>
-    {
-        private sealed class SinkQueue : ISinkQueue<TIn>
-        {
-            private readonly IActorRef _subscriberRef;
-
-            public SinkQueue(IActorRef subscriberRef)
-            {
-                _subscriberRef = subscriberRef;
-            }
-
-            public Task<TIn> Pull()
-            {
-                return _subscriberRef.Ask<TIn>(new Request(1));
-            }
-        }
-
-        public readonly int BufferSize;
-        public readonly TimeSpan Timeout;
-        private readonly Attributes _attributes;
-
-        public AcknowledgeSink(int bufferSize, TimeSpan timeout, Attributes attributes, SinkShape<TIn> shape)
-            : base(shape)
-        {
-            BufferSize = bufferSize;
-            Timeout = timeout;
-            _attributes = attributes;
-        }
-
-        public override IModule CarbonCopy()
-        {
-            return new AcknowledgeSink<TIn>(BufferSize, Timeout, Attributes, (SinkShape<TIn>)Shape);
-        }
-
-        public override Attributes Attributes { get { return _attributes; } }
-
-        public override IModule WithAttributes(Attributes attributes)
-        {
-            return new AcknowledgeSink<TIn>(BufferSize, Timeout, attributes, (SinkShape<TIn>)Shape);
-        }
-
-        public override Tuple<ISubscriber<TIn>, ISinkQueue<TIn>> Create(MaterializationContext context)
-        {
-            var actorMaterializer = ActorMaterializer.Downcast(context.Materializer);
-            var subscriberRef = actorMaterializer.ActorOf(context, AcknowledgeSubscriber.Props(BufferSize));
-
-            return new Tuple<ISubscriber<TIn>, ISinkQueue<TIn>>(new ActorSubscriberImpl<TIn>(subscriberRef), new SinkQueue(subscriberRef));
-        }
-    }
 }

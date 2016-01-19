@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Akka.Event;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
-using Akka.Util.Internal.Collections;
 
 namespace Akka.Streams.Implementation.Stages
 {
@@ -415,6 +414,139 @@ namespace Akka.Streams.Implementation.Stages
         {
             return new Fusing.MapConcat<TIn, TOut>(_func, Supervision(effectiveAttributes));
         }
+    }
+
+    internal sealed class HeadOrDefault<TIn> : GraphStageWithMaterializedValue<SinkShape<TIn>, Task<TIn>>
+    {
+        #region internal classes
+        
+        private sealed class HeadOrDefaultGraphStateLogic<TIn> : GraphStageLogic
+        {
+            private readonly Inlet<TIn> _inlet;
+            private readonly TaskCompletionSource<TIn> _promise = new TaskCompletionSource<TIn>();
+
+            public Task<TIn> Task => _promise.Task;
+
+            public HeadOrDefaultGraphStateLogic(Shape shape, Inlet<TIn> inlet, bool throwOnDefault) : base(shape)
+            {
+                _inlet = inlet;
+
+                Action onPush = () =>
+                {
+                    _promise.TrySetResult(Grab(_inlet));
+                    CompleteStage<TIn>();
+                };
+
+                Action onUpstreamFinish = () =>
+                {
+                    if (throwOnDefault)
+                        _promise.TrySetException(new NoSuchElementException("First of empty stream"));
+                    else
+                        _promise.TrySetResult(default(TIn));
+
+                    CompleteStage<TIn>();
+                };
+
+                Action<Exception> onUpstreamFailure = e =>
+                {
+                    _promise.TrySetException(e);
+                    FailStage<TIn>(e);
+                };
+
+                SetHandler(inlet, onPush, onUpstreamFinish, onUpstreamFailure);
+            }
+
+            public override void PreStart() => Pull(_inlet);
+        }
+
+        #endregion
+        
+        private readonly bool _throwOnDefault;
+        private readonly Inlet<TIn> _in = new Inlet<TIn>("headOption.in");
+
+        public HeadOrDefault(bool throwOnDefault = false)
+        {
+            _throwOnDefault = throwOnDefault;
+        }
+        
+        public override SinkShape<TIn> Shape => new SinkShape<TIn>(_in);
+
+        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Task<TIn> materialized)
+        {
+            var logic = new HeadOrDefaultGraphStateLogic<TIn>(Shape, _in, _throwOnDefault);
+            materialized = logic.Task;
+            return logic;
+        }
+
+        public override string ToString() => "HeadOrDefaultStage";
+    }
+
+    internal sealed class LastOrDefault<TIn> : GraphStageWithMaterializedValue<SinkShape<TIn>, Task<TIn>>
+    {
+        #region internal classes
+
+        private sealed class LastOrDefaultGraphStateLogic<TIn> : GraphStageLogic
+        {
+            private readonly Inlet<TIn> _inlet;
+            private readonly TaskCompletionSource<TIn> _promise = new TaskCompletionSource<TIn>();
+            private TIn _prev;
+            private bool _foundAtLeastOne;
+
+            public Task<TIn> Task => _promise.Task;
+
+            public LastOrDefaultGraphStateLogic(Shape shape, Inlet<TIn> inlet, bool throwOnDefault) : base(shape)
+            {
+                _inlet = inlet;
+
+                Action onPush = () =>
+                {
+                    _prev = Grab(_inlet);
+                    _foundAtLeastOne = true;
+                    Pull(_inlet);
+                };
+
+                Action onUpstreamFinish = () =>
+                {
+                    if (throwOnDefault && !_foundAtLeastOne)
+                        _promise.TrySetException(new NoSuchElementException("Last of empty stream"));
+                    else
+                        _promise.TrySetResult(_prev);
+
+                    CompleteStage<TIn>();
+                };
+
+                Action<Exception> onUpstreamFailure = e =>
+                {
+                    _promise.TrySetException(e);
+                    FailStage<TIn>(e);
+                };
+
+                SetHandler(inlet, onPush, onUpstreamFinish, onUpstreamFailure);
+            }
+
+            public override void PreStart() => Pull(_inlet);
+        }
+
+        #endregion
+
+        private readonly bool _throwOnDefault;
+        private readonly Inlet<TIn> _in = new Inlet<TIn>("lastOption.in");
+
+        public LastOrDefault(bool throwOnDefault = false)
+        {
+            _throwOnDefault = throwOnDefault;
+        }
+
+        public override SinkShape<TIn> Shape => new SinkShape<TIn>(_in);
+
+        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Task<TIn> materialized)
+        {
+            var logic = new LastOrDefaultGraphStateLogic<TIn>(Shape, _in, _throwOnDefault);
+            materialized = logic.Task;
+            return logic;
+        }
+
+        public override string ToString() => "LastOrDefaultStage";
     }
 
     // FIXME: These are not yet proper stages, therefore they use the deprecated StageModule infrastructure
