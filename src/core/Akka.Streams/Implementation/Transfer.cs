@@ -114,6 +114,21 @@ namespace Akka.Streams.Implementation
         }
     }
 
+    internal sealed class LambdaTransferState : TransferState
+    {
+        private readonly Func<bool> _isReady;
+        private readonly Func<bool> _isCompleted;
+
+        public override bool IsReady { get { return _isReady(); } }
+        public override bool IsCompleted { get { return _isCompleted(); } }
+
+        public LambdaTransferState(Func<bool> isReady, Func<bool> isCompleted)
+        {
+            _isReady = isReady;
+            _isCompleted = isCompleted;
+        }
+    }
+
     internal sealed class Completed : TransferState
     {
         public static readonly Completed Instance = new Completed();
