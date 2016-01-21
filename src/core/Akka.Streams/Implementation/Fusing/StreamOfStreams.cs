@@ -492,7 +492,7 @@ namespace Akka.Streams.Implementation.Fusing
                 if (!IsPrefixComplete)
                 {
                     // This handles the unpulled out case as well
-                    Emit(_stage.Out, Tuple.Create(_builder as IEnumerable<T>, Source.Empty<T, Unit>()), CompleteStage<T>);
+                    Emit(_stage.Out, Tuple.Create(_builder as IEnumerable<T>, Source.Empty<T>()), CompleteStage<T>);
                 }
                 else
                 {

@@ -32,97 +32,97 @@ namespace Akka.Streams.Dsl
         private sealed class One2OneBidiGraphStateLogic<TIn, TOut> : GraphStageLogic
         {
             private readonly int _maxPending;
-            private readonly Inlet<TIn> _inletIn;
-            private readonly Outlet<TIn> _inletOut;
-            private readonly Inlet<TOut> _outletIn;
-            private readonly Outlet<TOut> _outletOut;
+            private readonly Inlet<TIn> _inInlet;
+            private readonly Outlet<TIn> _inOutlet;
+            private readonly Inlet<TOut> _outInlet;
+            private readonly Outlet<TOut> _outOutlet;
             private int _pending;
             private bool _pullSuppressed;
 
-            public One2OneBidiGraphStateLogic(Shape shape, int maxPending, Inlet<TIn> inletIn, Outlet<TIn> inletOut,
-                Inlet<TOut> outletIn, Outlet<TOut> outletOut) : base(shape)
+            public One2OneBidiGraphStateLogic(Shape shape, int maxPending, Inlet<TIn> inInlet, Outlet<TIn> inOutlet,
+                Inlet<TOut> outInlet, Outlet<TOut> outOutlet) : base(shape)
             {
                 _maxPending = maxPending;
-                _inletIn = inletIn;
-                _inletOut = inletOut;
-                _outletIn = outletIn;
-                _outletOut = outletOut;
+                _inInlet = inInlet;
+                _inOutlet = inOutlet;
+                _outInlet = outInlet;
+                _outOutlet = outOutlet;
 
-                SetInletInHandler();
-                SetInletOutHandler();
-                SetOutletInHandler();
-                SetOutletOutHandler();
+                SetInInletHandler();
+                SetInOutletHandler();
+                SetOutInletHandler();
+                SetOutOutletHandler();
             }
 
-            private void SetInletInHandler()
+            private void SetInInletHandler()
             {
-                SetHandler(_inletIn, onPush: () =>
+                SetHandler(_inInlet, onPush: () =>
                 {
                     _pending += 1;
-                    Push(_inletOut, Grab(_inletIn));
+                    Push(_inOutlet, Grab(_inInlet));
                 },
-                    onUpstreamFinish: () => Complete(_inletOut));
+                    onUpstreamFinish: () => Complete(_inOutlet));
             }
 
-            private void SetInletOutHandler()
+            private void SetInOutletHandler()
             {
-                SetHandler(_inletOut, onPull: () =>
+                SetHandler(_inOutlet, onPull: () =>
                 {
                     if (_pending < _maxPending || _maxPending == -1)
-                        Pull(_inletIn);
+                        Pull(_inInlet);
                     else
                         _pullSuppressed = true;
                 },
-                    onDownstreamFinish: () => Cancel(_inletIn));
+                    onDownstreamFinish: () => Cancel(_inInlet));
             }
 
-            private void SetOutletInHandler()
+            private void SetOutInletHandler()
             {
-                SetHandler(_outletIn, onPush: () =>
+                SetHandler(_outInlet, onPush: () =>
                 {
-                    var element = Grab(_outletIn);
+                    var element = Grab(_outInlet);
 
                     if (_pending <= 0)
                         throw new UnexpectedOutputException(element);
 
                     _pending -= 1;
 
-                    Push(_outletOut, element);
+                    Push(_outOutlet, element);
 
                     if (_pullSuppressed)
                     {
                         _pullSuppressed = false;
-                        Pull(_inletIn);
+                        Pull(_inInlet);
                     }
                 }, onUpstreamFinish: () =>
                 {
                     if (_pending != 0)
                         throw new OutputTruncationException();
 
-                    Complete(_outletOut);
+                    Complete(_outOutlet);
                 });
             }
 
-            private void SetOutletOutHandler()
+            private void SetOutOutletHandler()
             {
-                SetHandler(_outletOut, onPull: () => Pull(_outletIn), onDownstreamFinish: () => Cancel(_outletIn));
+                SetHandler(_outOutlet, onPull: () => Pull(_outInlet), onDownstreamFinish: () => Cancel(_outInlet));
             }
         }
 
         #endregion
 
         private readonly int _maxPending;
-        private readonly Inlet<TIn> _inletIn = new Inlet<TIn>("inIn");
-        private readonly Outlet<TIn> _inletOut = new Outlet<TIn>("inOut");
-        private readonly Inlet<TOut> _outletIn = new Inlet<TOut>("outIn");
-        private readonly Outlet<TOut> _outletOut = new Outlet<TOut>("outOut");
+        private readonly Inlet<TIn> _inInlet = new Inlet<TIn>("inIn");
+        private readonly Outlet<TIn> _inOutlet = new Outlet<TIn>("inOut");
+        private readonly Inlet<TOut> _outInlet = new Inlet<TOut>("outIn");
+        private readonly Outlet<TOut> _outOutlet = new Outlet<TOut>("outOut");
         private readonly BidiShape<TIn, TIn, TOut, TOut> _shape;
         private readonly Attributes _initialAttributes = Attributes.CreateName("One2OneBidi");
 
         public One2OneBidi(int maxPending)
         {
             _maxPending = maxPending;
-            _shape = new BidiShape<TIn, TIn, TOut, TOut>(_inletIn, _inletOut, _outletIn, _outletOut);
+            _shape = new BidiShape<TIn, TIn, TOut, TOut>(_inInlet, _inOutlet, _outInlet, _outOutlet);
         }
 
         public override BidiShape<TIn, TIn, TOut, TOut> Shape => _shape;
@@ -130,7 +130,7 @@ namespace Akka.Streams.Dsl
         protected override Attributes InitialAttributes => _initialAttributes;
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
-            => new One2OneBidiGraphStateLogic<TIn, TOut>(Shape, _maxPending, _inletIn, _inletOut, _outletIn, _outletOut);
+            => new One2OneBidiGraphStateLogic<TIn, TOut>(Shape, _maxPending, _inInlet, _inOutlet, _outInlet, _outOutlet);
         
         public override string ToString() => "One2OneBidi";
     }
