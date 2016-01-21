@@ -196,6 +196,7 @@ Target "CopyOutput" <| fun _ ->
       "contrib/dependencyinjection/Akka.DI.TestKit"
       "contrib/testkits/Akka.TestKit.Xunit" 
       "contrib/testkits/Akka.TestKit.NUnit" 
+      "contrib/testkits/Akka.TestKit.NUnit3" 
       "contrib/testkits/Akka.TestKit.Xunit2" 
       "contrib/serializers/Akka.Serialization.Wire" 
       "contrib/cluster/Akka.Cluster.Tools"
@@ -223,9 +224,11 @@ open Fake.Testing
 Target "RunTests" <| fun _ ->  
     let msTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
     let nunitTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll"
+    let nunit3TestAssemblies = !! "src/**/bin/Release/Akka.TestKit.NUnit3.Tests.dll"
     let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- 
                                     "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll" -- 
-                                    "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll" 
+                                    "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll" -- 
+                                    "src/**/bin/Release/Akka.TestKit.NUnit3.Tests.dll" 
 
     mkdir testOutput
 
@@ -235,6 +238,12 @@ Target "RunTests" <| fun _ ->
         {p with
             DisableShadowCopy = true; 
             OutputFile = testOutput + @"\NUnitTestResults.xml"})
+
+    nunit3TestAssemblies
+    |> NUnit3 (fun p -> 
+        {p with
+            ShadowCopy = false;
+            ResultSpecs = [(testOutput + @"\NUnit3TestResults.xml")]})
 
     let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
