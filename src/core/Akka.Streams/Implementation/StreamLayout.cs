@@ -798,7 +798,7 @@ namespace Akka.Streams.Implementation
         }
     }
 
-    internal abstract class MaterializerSession
+    internal abstract class MaterializerSession<TMat>
     {
         public class MaterializationPanicException : Exception
         {
@@ -816,17 +816,17 @@ namespace Akka.Streams.Implementation
 
         private readonly LinkedList<IDictionary<InPort, ISubscriber<object>>> _subscribersStack = new LinkedList<IDictionary<InPort, ISubscriber<object>>>();
         private readonly LinkedList<IDictionary<OutPort, IPublisher<object>>> _publishersStack = new LinkedList<IDictionary<OutPort, IPublisher<object>>>();
-        private readonly IDictionary<StreamLayout.IMaterializedValueNode, LinkedList<MaterializedValueSource<object>>> _materializedValueSources =
-            new Dictionary<StreamLayout.IMaterializedValueNode, LinkedList<MaterializedValueSource<object>>>();
+        private readonly IDictionary<StreamLayout.IMaterializedValueNode, LinkedList<MaterializedValueSource<TMat>>> _materializedValueSources =
+            new Dictionary<StreamLayout.IMaterializedValueNode, LinkedList<MaterializedValueSource<TMat>>>();
 
-        /*
-         * Please note that this stack keeps track of the scoped modules wrapped in CopiedModule but not the CopiedModule
-         * itself. The reason is that the CopiedModule itself is only needed for the enterScope and exitScope methods but
-         * not elsewhere. For this reason they are just simply passed as parameters to those methods.
-         *
-         * The reason why the encapsulated (copied) modules are stored as mutable state to save subclasses of this class
-         * from passing the current scope around or even knowing about it.
-         */
+        /// <summary>
+        /// Please note that this stack keeps track of the scoped modules wrapped in CopiedModule but not the CopiedModule
+        /// itself. The reason is that the CopiedModule itself is only needed for the enterScope and exitScope methods but
+        /// not elsewhere. For this reason they are just simply passed as parameters to those methods.
+        /// 
+        /// The reason why the encapsulated (copied) modules are stored as mutable state to save subclasses of this class
+        /// from passing the current scope around or even knowing about it.
+        /// </summary>
         private readonly LinkedList<IModule> _moduleStack = new LinkedList<IModule>();
 
         protected MaterializerSession(IModule topLevel, Attributes initialAttributes)
@@ -881,7 +881,7 @@ namespace Akka.Streams.Implementation
                 AssignPort(kv.Value, scopePublishers[kv.Key]);
         }
 
-        public TMat Materialize<TMat>()
+        public TMat Materialize()
         {
             if (TopLevel is EmptyModule)
                 throw new InvalidOperationException("An empty module cannot be materialized (EmptyModule was given)");
@@ -916,15 +916,15 @@ namespace Akka.Streams.Implementation
             return parent.And(current);
         }
 
-        protected void RegisterSource<TMat>(MaterializedValueSource<TMat> materializedSource)
+        protected void RegisterSource(MaterializedValueSource<TMat> materializedSource)
         {
-            LinkedList<MaterializedValueSource<object>> sources;
+            LinkedList<MaterializedValueSource<TMat>> sources;
             if (_materializedValueSources.TryGetValue(materializedSource.Computation, out sources))
                 sources.AddFirst(materializedSource);
-            else _materializedValueSources.Add(materializedSource.Computation, new LinkedList<MaterializedValueSource<object>>(new[] { materializedSource }));
+            else _materializedValueSources.Add(materializedSource.Computation, new LinkedList<MaterializedValueSource<TMat>>(new[] { materializedSource }));
         }
 
-        protected TMat MaterializeModule<TMat>(IModule module, Attributes effectiveAttributes)
+        protected TMat MaterializeModule(IModule module, Attributes effectiveAttributes)
         {
             var materializedValues = new Dictionary<IModule, object>();
 
@@ -943,22 +943,22 @@ namespace Akka.Streams.Implementation
                 {
                     var copied = submodule as CopiedModule;
                     EnterScope(copied);
-                    materializedValues.Add(copied, MaterializeModule<TMat>(copied, subEffectiveAttributes));
+                    materializedValues.Add(copied, MaterializeModule(copied, subEffectiveAttributes));
                     ExitScope(copied);
                 }
-                else materializedValues.Add(submodule, MaterializeComposite<TMat>(submodule, subEffectiveAttributes));
+                else materializedValues.Add(submodule, MaterializeComposite(submodule, subEffectiveAttributes));
             }
 
             var mat = ResolveMaterialized(module.MaterializedValueComputation, materializedValues, string.Empty);
             return (TMat)mat;
         }
 
-        protected virtual object MaterializeComposite<TMat>(IModule composite, Attributes effectiveAttributes)
+        protected virtual object MaterializeComposite(IModule composite, Attributes effectiveAttributes)
         {
-            return MaterializeModule<TMat>(composite, effectiveAttributes);
+            return MaterializeModule(composite, effectiveAttributes);
         }
 
-        protected abstract object MaterializeAtomic<TIn, TOut, TMat>(IModule atomic, Attributes effectiveAttributes, IDictionary<IModule, object> materializedValues);
+        protected abstract object MaterializeAtomic<TIn, TOut>(IModule atomic, Attributes effectiveAttributes, IDictionary<IModule, object> materializedValues);
 
         private object ResolveMaterialized(StreamLayout.IMaterializedValueNode node, IDictionary<IModule, object> values, string indent)
         {
@@ -1011,150 +1011,4 @@ namespace Akka.Streams.Implementation
             }
         }
     }
-
-    //public class MaterializedValuePublisher : IPublisher<object>
-    //{
-    //    private class Subscription : ISubscription
-    //    {
-    //        private readonly MaterializedValuePublisher _publisher;
-    //        private readonly ISubscriber<object> _subscriber;
-
-    //        public Subscription(MaterializedValuePublisher publisher, ISubscriber<object> subscriber)
-    //        {
-    //            _publisher = publisher;
-    //            _subscriber = subscriber;
-    //        }
-
-    //        public void Request(long n)
-    //        {
-    //            if (n <= 0)
-    //            {
-    //                ReactiveStreamsCompliance.TryOnError(_subscriber,
-    //                    ReactiveStreamsCompliance.NumberOfElementsInRequestMustBePositiveException);
-    //            }
-    //            else
-    //            {
-    //                if (_publisher._requestState.CompareAndSet(NotRequested, Requested))
-    //                {
-    //                    var m = _publisher._value.Value;
-    //                    if (!Equals(m, NoValue)) _publisher.PushAndClose(m);
-    //                }
-    //            }
-    //        }
-
-    //        public void Cancel()
-    //        {
-    //            _publisher.Close();
-    //        }
-    //    }
-
-    //    public const int NotRequested = 0;
-    //    public const int Requested = 1;
-    //    public const int Completed = 2;
-
-    //    public static readonly object NoValue = new object();
-
-    //    private readonly AtomicReference<object> _value = new AtomicReference<object>(NoValue);
-    //    private readonly AtomicReference<ISubscriber<object>> _registeredSubscriber = new AtomicReference<ISubscriber<object>>(null);
-    //    private readonly AtomicReference<int> _requestState = new AtomicReference<int>(NotRequested);
-
-
-    //    public void Subscribe(ISubscriber<object> subscriber)
-    //    {
-    //        TryOrClose(() =>
-    //        {
-    //            ReactiveStreamsCompliance.RequireNonNullSubscriber(subscriber);
-    //            if (_registeredSubscriber.CompareAndSet(null, subscriber))
-    //            {
-    //                ReactiveStreamsCompliance.TryOnSubscribe(subscriber, new Subscription(this, subscriber));
-    //            }
-    //            else
-    //            {
-    //                if (subscriber == _registeredSubscriber.Value)
-    //                    ReactiveStreamsCompliance.RejectDuplicateSubscriber(subscriber);
-    //                else
-    //                    ReactiveStreamsCompliance.RejectAdditionalSubscriber(subscriber, "MaterializedValuePublisher");
-    //            }
-    //        });
-    //    }
-
-    //    private void Close()
-    //    {
-    //        _requestState.Value = Completed;
-    //        _value.Value = NoValue;
-    //        _registeredSubscriber.Value = null;
-    //    }
-
-    //    private void TryOrClose(Action block)
-    //    {
-    //        try
-    //        {
-    //            block();
-    //        }
-    //        catch (Exception e)
-    //        {
-    //            if (e is ISpecViolation) Close();
-    //            else
-    //            {
-    //                var sub = _registeredSubscriber.Value;
-    //                if (sub != null && (_requestState.CompareAndSet(NotRequested, Completed) ||
-    //                    _requestState.CompareAndSet(Requested, Completed)))
-    //                {
-    //                    sub.OnError(e);
-    //                }
-
-    //                Close();
-    //                throw;
-    //            }
-    //        }
-    //    }
-
-    //    public void SetValue(object m)
-    //    {
-    //        TryOrClose(() =>
-    //        {
-    //            if (_value.CompareAndSet(NoValue, m) && _requestState.Value == Requested)
-    //                PushAndClose(m);
-    //        });
-    //    }
-
-    //    /*
-    //     * Both call-sites do a CAS on their "own" side and a GET on the other side. The possible overlaps
-    //     * are (removing symmetric cases where you can relabel A->B, B->A):
-    //     *
-    //     * A-CAS
-    //     * A-GET
-    //     * B-CAS
-    //     * B-GET - pushAndClose fires here
-    //     *
-    //     * A-CAS
-    //     * B-CAS
-    //     * A-GET - pushAndClose fires here
-    //     * B-GET - pushAndClose fires here
-    //     *
-    //     * A-CAS
-    //     * B-CAS
-    //     * B-GET - pushAndClose fires here
-    //     * A-GET - pushAndClose fires here
-    //     *
-    //     * The proof that there are no other cases:
-    //     *
-    //     * - all permutations of 4 operations are 4! = 24
-    //     * - the operations of A and B are cannot be reordered, so there are 24 / (2 * 2) = 6 actual orderings
-    //     * - if we don't count cases which are a simple relabeling A->B, B->A, we get 6 / 2 = 3 reorderings
-    //     *   which are all enumerated above.
-    //     *
-    //     * pushAndClose protects against double onNext by doing a CAS itself.
-    //     */
-    //    private void PushAndClose(object m)
-    //    {
-    //        if (_requestState.CompareAndSet(Requested, Completed))
-    //        {
-    //            var sub = _registeredSubscriber.Value;
-    //            ReactiveStreamsCompliance.TryOnNext(sub, m);
-    //            ReactiveStreamsCompliance.TryOnComplete(sub);
-    //            Close();
-    //        }
-    //    }
-    //}
 }

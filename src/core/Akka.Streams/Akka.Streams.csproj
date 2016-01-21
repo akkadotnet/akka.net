@@ -73,7 +73,6 @@
       <DependentUpon>FanOutShape.tt</DependentUpon>
     </Compile>
     <Compile Include="Dsl\BidiFlow.cs" />
-    <Compile Include="Dsl\FlexiMerge.cs" />
     <Compile Include="Dsl\FlowOperations.cs" />
     <Compile Include="Dsl\Graph.cs" />
     <Compile Include="Dsl\GraphDsl.cs" />
@@ -94,7 +93,6 @@
     <Compile Include="Implementation\ActorRefSinkActor.cs" />
     <Compile Include="Implementation\ActorRefSourceActor.cs" />
     <Compile Include="Implementation\BoundedBuffer.cs" />
-    <Compile Include="Implementation\ConcatAllImpl.cs" />
     <Compile Include="Implementation\EnumerableActorName.cs" />
     <Compile Include="Implementation\ExposedPublisherReceive.cs" />
     <Compile Include="Implementation\FanIn.cs" />
@@ -111,7 +109,6 @@
     <Compile Include="Implementation\Fusing\Ops.cs" />
     <Compile Include="Implementation\Fusing\StreamOfStreams.cs" />
     <Compile Include="Implementation\GroupByProcessorImpl.cs" />
-    <Compile Include="Implementation\Junctions.cs" />
     <Compile Include="Implementation\Modules.cs" />
     <Compile Include="Implementation\ResizableMultiReaderRingBuffer.cs" />
     <Compile Include="Implementation\SinkholeSubscriber.cs" />
@@ -120,7 +117,6 @@
     <Compile Include="Implementation\StreamOfStreamProcessors.cs" />
     <Compile Include="Implementation\SubFlowImpl.cs" />
     <Compile Include="Implementation\Throttle.cs" />
-    <Compile Include="Implementation\TickPublisher.cs" />
     <Compile Include="Implementation\Timers.cs" />
     <Compile Include="Implementation\Unfold.cs" />
     <Compile Include="Queue.cs" />
@@ -130,11 +126,9 @@
     <Compile Include="Dsl\Source.cs" />
     <Compile Include="IMaterializer.cs" />
     <Compile Include="Graph.cs" />
-    <Compile Include="Implementation\ActorMaterializer.cs" />
     <Compile Include="Implementation\ActorProcessor.cs" />
     <Compile Include="Implementation\ActorPublisher.cs" />
     <Compile Include="Implementation\CompletedPublishers.cs" />
-    <Compile Include="Implementation\Fusing\Interpreter.cs" />
     <Compile Include="Implementation\ReactiveStreamsCompliance.cs" />
     <Compile Include="Implementation\Stages\Stages.cs" />
     <Compile Include="Implementation\StreamLayout.cs" />

@@ -17,7 +17,7 @@ namespace Akka.Streams.Implementation
     {
         #region Materializer session implementation
 
-        private sealed class ActorMaterializerSession : MaterializerSession
+        private sealed class ActorMaterializerSession<TMat> : MaterializerSession<TMat>
         {
             private readonly ActorMaterializerImpl _materializer;
             private readonly Func<GraphInterpreterShell, IActorRef> _subflowFuser;
@@ -32,7 +32,7 @@ namespace Akka.Streams.Implementation
                 _flowName = _materializer.CreateFlowName();
             }
 
-            protected override object MaterializeAtomic<TIn, TOut, TMat>(IModule atomic, Attributes effectiveAttributes, IDictionary<IModule, object> materializedValues)
+            protected override object MaterializeAtomic<TIn, TOut>(IModule atomic, Attributes effectiveAttributes, IDictionary<IModule, object> materializedValues)
             {
                 atomic.Match()
                     .With<SinkModule<TIn, TMat>>(sink =>
@@ -225,9 +225,9 @@ namespace Akka.Streams.Implementation
 
             if (StreamLayout.IsDebug) StreamLayout.Validate(runnable.Module);
 
-            var session = new ActorMaterializerSession(this, runnable.Module, InitialAttributes, subFlowFuser);
+            var session = new ActorMaterializerSession<TMat>(this, runnable.Module, InitialAttributes, subFlowFuser);
 
-            return session.Materialize<TMat>();
+            return session.Materialize();
         }
 
         private readonly Lazy<MessageDispatcher> _executionContext;
