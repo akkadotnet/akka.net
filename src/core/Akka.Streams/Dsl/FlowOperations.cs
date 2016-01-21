@@ -1003,7 +1003,7 @@ namespace Akka.Streams.Dsl
         /// Source(List(1, 2, 3)).Interleave(List(4, 5, 6, 7), 2) // 1, 2, 4, 5, 3, 6, 7
         /// </code>
         /// </example>
-        public static Flow<TIn, T2, TMat> Interleave<TIn, T1, T2, TMat, TMat2>(this Flow<TIn, T1, TMat> flow, IGraph<SourceShape<T2>, TMat2> other, int segmentSize) where T1 : T2
+        public static Flow<TIn, T2, TMat> Interleave<TIn, T1, T2, TMat>(this Flow<TIn, T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other, int segmentSize) where T1 : T2
         {
             return (Flow<TIn, T2, TMat>)InternalFlowOperations.Interleave(flow, other, segmentSize);
         }
@@ -1040,9 +1040,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Flow<TIn, TOut2, TMat> MergeOrdered<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow, IGraph<SourceShape<TOut2>, TMat> other, Func<TOut2, TOut2, int> orderFunc) where TOut1 : TOut2
+        public static Flow<TIn, TOut, TMat> MergeOrdered<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other, Func<TOut, TOut, int> orderFunc)
         {
-            return (Flow<TIn, TOut2, TMat>)InternalFlowOperations.MergeOrdered(flow, other, orderFunc);
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.MergeOrdered(flow, other, orderFunc);
         }
 
         /// <summary>
@@ -1060,11 +1060,10 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Flow<TIn,TOut2, TMat> MergeOrdered<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow, IGraph<SourceShape<TOut2>, TMat> other)
-            where TOut1 : TOut2
-            where TOut2 : IComparable<TOut2>
+        public static Flow<TIn,TOut, TMat> MergeOrdered<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other)
+            where TOut : IComparable<TOut>
         {
-            return (Flow<TIn, TOut2, TMat>)InternalFlowOperations.MergeOrdered(flow, other);
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.MergeOrdered(flow, other);
         }
 
         /// <summary>
@@ -1082,10 +1081,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Flow<TIn, TOut2, TMat> MergeOrdered<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow, IGraph<SourceShape<TOut2>, TMat> other, IComparer<TOut2> comparer)
-            where TOut1 : TOut2
+        public static Flow<TIn, TOut, TMat> MergeOrdered<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other, IComparer<TOut> comparer)
         {
-            return (Flow<TIn, TOut2, TMat>)InternalFlowOperations.MergeOrdered(flow, other, comparer);
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.MergeOrdered(flow, other, comparer);
         }
 
         /// <summary>

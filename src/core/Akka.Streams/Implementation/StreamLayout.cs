@@ -891,7 +891,7 @@ namespace Akka.Streams.Implementation
 
             try
             {
-                return MaterializeModule<TMat>(TopLevel, InitialAttributes.And(TopLevel.Attributes));
+                return MaterializeModule(TopLevel, InitialAttributes.And(TopLevel.Attributes));
             }
             catch (Exception cause)
             {

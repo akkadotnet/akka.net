@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Reactive.Streams;
+using System.Security.Policy;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
@@ -141,7 +142,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Connect the <see cref="Source{TOut,TMat1}"/> to this <see cref="Flow{TIn,TOut,TMat}"/> and then connect it to the <see cref="Sink{TIn,TMat2}"/> and run it. 
         /// The returned tuple contains the materialized values of the <paramref name="source"/> and <paramref name="sink"/>, e.g. the <see cref="ISubscriber{T}"/> 
-        /// of a of a <see cref="Source{TOut,TMat}.Subscriber"/> and <see cref="IPublisher{T}"/> of a <see cref="Sink{TIn,TMat}.Publisher"/>.
+        /// of a of a <see cref="Source{TOut,TMat}.Subscriber"/> and <see cref="IPublisher{T}"/> of a <see cref="Publisher"/>.
         /// </summary>
         public Tuple<TMat1, TMat2> RunWith<TMat1, TMat2>(IGraph<SourceShape<TIn>, TMat1> source, IGraph<SinkShape<TOut>, TMat2> sink, IMaterializer materializer)
         {
@@ -156,10 +157,12 @@ namespace Akka.Streams.Dsl
         /// <returns>A <see cref="IRunnableGraph{TMat}"/> that materializes to a <see cref="IProcessor{T1,T2}"/> when Run() is called on it.</returns>
         public IRunnableGraph<IProcessor<TIn, TOut>> ToProcessor()
         {
-            return Source.AsSubscriber<TIn>()
+            var result = Source.AsSubscriber<TIn>()
                 .Via(this)
-                .ToMaterialized(Sink.AsPublisher<TOut>(false), Keep.Both<ISubscriber<TIn>, IPublisher<TOut>>())
-                .MapMaterializedValue(t => new FlowProcessor<TIn, TOut>(t.Item1, t.Item2));
+                .ToMaterialized(Sink.AsPublisher<TOut>(false), Keep.Both)
+                .MapMaterializedValue(t => new FlowProcessor<TIn, TOut>(t.Item1, t.Item2) as IProcessor<TIn, TOut>);
+
+            return result;
         }
     }
 

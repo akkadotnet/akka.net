@@ -114,7 +114,7 @@ namespace Akka.Streams.Implementation
                 }
             }
 
-            private IProcessor<TIn, TOut> ProcessorFor<TIn, TOut, TMat>(StageModule<TIn, TOut, TMat> op, Attributes effectiveAttributes, ActorMaterializerSettings settings, out TMat materialized)
+            private IProcessor<TIn, TOut> ProcessorFor<TIn, TOut>(StageModule<TIn, TOut, TMat> op, Attributes effectiveAttributes, ActorMaterializerSettings settings, out TMat materialized)
             {
                 DirectProcessor<TIn, TOut, TMat> processor;
                 if ((processor = op as DirectProcessor<TIn, TOut, TMat>) != null)

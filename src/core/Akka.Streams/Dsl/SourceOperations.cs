@@ -1038,9 +1038,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut2, TMat> MergeOrdered<TIn, TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, IGraph<SourceShape<TOut2>, TMat> other, Func<TOut2, TOut2, int> orderFunc) where TOut1 : TOut2
+        public static Source<TOut, TMat> MergeOrdered<TOut, TMat>(this Source<TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other, Func<TOut, TOut, int> orderFunc)
         {
-            return (Source<TOut2, TMat>)InternalFlowOperations.MergeOrdered(flow, other, orderFunc);
+            return (Source<TOut, TMat>)InternalFlowOperations.MergeOrdered(flow, other, orderFunc);
         }
 
         /// <summary>
@@ -1058,11 +1058,10 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut2, TMat> MergeOrdered<TIn, TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, IGraph<SourceShape<TOut2>, TMat> other)
-            where TOut1 : TOut2
-            where TOut2 : IComparable<TOut2>
+        public static Source<TOut, TMat> MergeOrdered<TOut, TMat>(this Source<TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other)
+            where TOut : IComparable<TOut>
         {
-            return (Source<TOut2, TMat>)InternalFlowOperations.MergeOrdered(flow, other);
+            return (Source<TOut, TMat>)InternalFlowOperations.MergeOrdered(flow, other);
         }
 
         /// <summary>
@@ -1080,10 +1079,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut2, TMat> MergeOrdered<TIn, TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, IGraph<SourceShape<TOut2>, TMat> other, IComparer<TOut2> comparer)
-            where TOut1 : TOut2
+        public static Source<TOut, TMat> MergeOrdered<TOut, TMat>(this Source<TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other, IComparer<TOut> comparer)
         {
-            return (Source<TOut2, TMat>)InternalFlowOperations.MergeOrdered(flow, other, comparer);
+            return (Source<TOut, TMat>)InternalFlowOperations.MergeOrdered(flow, other, comparer);
         }
 
         /// <summary>
@@ -1104,7 +1102,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut2, TMat> Concat<TIn, TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, IGraph<SourceShape<TOut2>, TMat> other) where TOut1 : TOut2
+        public static Source<TOut2, TMat> Concat<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, IGraph<SourceShape<TOut2>, TMat> other) where TOut1 : TOut2
         {
             return (Source<TOut2, TMat>)InternalFlowOperations.Concat(flow, other);
         }

@@ -3,6 +3,7 @@ using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch;
+using Akka.Dispatch.MessageQueues;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
@@ -137,7 +138,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Sink<TIn, Task> Ignore<TIn>()
         {
-            return new Sink<TIn, Task>(new BlackholeSink(DefaultAttributes.IgnoreSink, Shape<object>("BlackholeSink"))); ;
+            return new Sink<TIn, Task>(new SinkholeSink<TIn>(Shape<TIn>("BlackholeSink"), DefaultAttributes.IgnoreSink)); ;
         }
 
         /// <summary>
@@ -282,7 +283,7 @@ namespace Akka.Streams.Dsl
         public static Sink<TIn, ISinkQueue<TIn>> Queue<TIn>(int bufferSize, TimeSpan? timeout = null)
         {
             if (bufferSize < 0) throw new ArgumentException("Buffer size must be greater than or equal 0");
-            return new Sink<TIn, ISinkQueue<TIn>>(new AcknowledgeSink<TIn>(bufferSize, timeout ?? TimeSpan.FromSeconds(5), DefaultAttributes.AcknowledgeSink, Shape<TIn>("AcknowledgeSink")));
+            return new Sink<TIn, ISinkQueue<TIn>>(new AcknowledgeSink<TIn>(bufferSize, timeout ?? TimeSpan.FromSeconds(5), DefaultAttributes.QueueSink, Shape<TIn>("AcknowledgeSink")));
         }
 
         /// <summary>

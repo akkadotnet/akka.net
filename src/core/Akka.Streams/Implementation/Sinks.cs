@@ -156,7 +156,7 @@ namespace Akka.Streams.Implementation
         private readonly Attributes _attributes;
         private readonly ISubscriber<TIn> _subscriber;
 
-        public SubscriberSink(SinkShape<TIn> shape, Attributes attributes, ISubscriber<TIn> subscriber) : base(shape)
+        public SubscriberSink(ISubscriber<TIn> subscriber, Attributes attributes, SinkShape<TIn> shape) : base(shape)
         {
             _attributes = attributes;
             _subscriber = subscriber;
@@ -165,10 +165,10 @@ namespace Akka.Streams.Implementation
         public override Attributes Attributes => _attributes;
 
         public override IModule WithAttributes(Attributes attributes)
-            => new SubscriberSink<TIn>(AmendShape(attributes), attributes, _subscriber);
+            => new SubscriberSink<TIn>(_subscriber, attributes, AmendShape(attributes));
 
         protected override SinkModule<TIn, Unit> NewInstance(SinkShape<TIn> shape)
-            => new SubscriberSink<TIn>(shape, Attributes, _subscriber);
+            => new SubscriberSink<TIn>(_subscriber, Attributes, shape);
 
         public override ISubscriber<TIn> Create(MaterializationContext context, out Unit materializer)
         {

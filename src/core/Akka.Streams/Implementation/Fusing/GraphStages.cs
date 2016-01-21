@@ -157,12 +157,12 @@ namespace Akka.Streams.Implementation.Fusing
         #region internal classes
         private sealed class TickSourceCancellable : ICancelable
         {
-            private readonly AtomicBoolean _cancelled;
+            internal readonly AtomicBoolean Cancelled;
             private readonly TaskCompletionSource<Unit> _cancelPromise = new TaskCompletionSource<Unit>();
 
             public TickSourceCancellable(AtomicBoolean cancelled)
             {
-                _cancelled = cancelled;
+                Cancelled = cancelled;
             }
 
             public void Cancel()
@@ -170,29 +170,70 @@ namespace Akka.Streams.Implementation.Fusing
                 if (!IsCancellationRequested) _cancelPromise.SetResult(Unit.Instance);
             }
 
-            public bool IsCancellationRequested { get { return _cancelled.Value; } }
+            public bool IsCancellationRequested { get { return Cancelled.Value; } }
             public CancellationToken Token { get; }
+
+            public Task CancelTask { get { return _cancelPromise.Task; } }
+
             public void CancelAfter(TimeSpan delay)
             {
-                throw new NotImplementedException();
+                Task.Delay(delay).ContinueWith(_ => Cancel(true));
             }
 
             public void CancelAfter(int millisecondsDelay)
             {
-                throw new NotImplementedException();
+                Task.Delay(millisecondsDelay).ContinueWith(_ => Cancel(true));
             }
 
             public void Cancel(bool throwOnFirstException)
             {
+                if (!IsCancellationRequested) _cancelPromise.SetResult(Unit.Instance);
+            }
+        }
 
+        private sealed class TickStageLogic : TimerGraphStageLogic
+        {
+            private readonly TickSourceCancellable _cancelable;
+            private readonly TickSource<T> _stage;
+
+            public TickStageLogic(Shape shape, TickSourceCancellable cancelable, TickSource<T> stage) : base(shape)
+            {
+                _cancelable = cancelable;
+                _stage = stage;
+
+                SetHandler(_stage.Outlet, EagerTerminateOutput);
+            }
+
+            public override void PreStart()
+            {
+                ScheduleRepeatedly("TickTimer", _stage._initialDelay, _stage._interval);
+                var callback = GetAsyncCallback<Unit>(_ =>
+                {
+                    CompleteStage<T>();
+                    _cancelable.Cancelled.Value = true;
+                });
+
+                _cancelable.CancelTask.ContinueWith(t => callback(Unit.Instance), TaskContinuationOptions.AttachedToParent | TaskContinuationOptions.ExecuteSynchronously);
+            }
+
+            protected internal override void OnTimer(object timerKey)
+            {
+                if (IsAvailable(_stage.Outlet)) Push(_stage.Outlet, _stage._tick);
             }
         }
         #endregion
+
+        private readonly TimeSpan _initialDelay;
+        private readonly TimeSpan _interval;
+        private readonly T _tick;
 
         private readonly Outlet<T> Outlet;
 
         public TickSource(TimeSpan initialDelay, TimeSpan interval, T tick)
         {
+            _initialDelay = initialDelay;
+            _interval = interval;
+            _tick = tick;
             Outlet = new Outlet<T>("TimerSource.out");
             InitialAttributes = Attributes.CreateName("TickSource");
             Shape = new SourceShape<T>(Outlet);
@@ -203,8 +244,9 @@ namespace Akka.Streams.Implementation.Fusing
         public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out ICancelable cancellable)
         {
             var cancelled = new AtomicBoolean(false);
-            cancellable = new TickSourceCancellable(cancelled);
-            var logic = new TimerGraphStageLogic(Shape, cancellable, this);
+            var c = new TickSourceCancellable(cancelled);
+            var logic = new TickStageLogic(Shape, c, this);
+            cancellable = c;
             return logic;
         }
     }
@@ -287,7 +329,7 @@ namespace Akka.Streams.Implementation.Fusing
         #endregion
 
         private readonly T _element;
-        public readonly Outlet<T> Outlet = new Outlet<T>("single.out"); 
+        public readonly Outlet<T> Outlet = new Outlet<T>("single.out");
 
         public SingleSource(T element)
         {
