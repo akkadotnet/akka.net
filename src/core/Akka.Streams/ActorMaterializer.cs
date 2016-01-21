@@ -6,6 +6,7 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Pattern;
+using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
 using Akka.Util;
@@ -15,7 +16,7 @@ namespace Akka.Streams
 {
     /// <summary>
     /// A ActorMaterializer takes the list of transformations comprising a
-    /// <see cref="IFlow"/> and materializes them in the form of
+    /// <see cref="IFlow{T,TMat}"/> and materializes them in the form of
     /// <see cref="IProcessor{T1,T2}"/> instances. How transformation
     /// steps are split up into asynchronous regions is implementation
     /// dependent.
@@ -53,7 +54,7 @@ namespace Akka.Streams
                 dispatchers: system.Dispatchers,
                 supervisor: context.ActorOf(StreamSupervisor.Props(settings, haveShutDown).WithDispatcher(settings.Dispatcher), StreamSupervisor.NextName()),
                 haveShutDown: haveShutDown,
-                flowNames: FlowNames.Get(system).Name.Copy(namePrefix ?? "flow"));
+                flowNames: EnumerableActorName.Create(namePrefix ?? "Flow"));
         }
 
         internal static ActorMaterializer Downcast(IMaterializer materializer)

@@ -63,7 +63,7 @@ namespace Akka.Streams.Implementation
             public override string ToString() => "SubstreamSubscription" + GetHashCode();
         }
 
-        public class FanoutOutputs<TIn, TOut> : SimpleOutputs<TIn, TOut>
+        public class FanoutOutputs<T> : SimpleOutputs<T>
         {
             private readonly int _id;
 
@@ -86,11 +86,11 @@ namespace Akka.Streams.Implementation
             }
         }
 
-        public class OutputBunch<TIn, TOut>
+        public class OutputBunch<T>
         {
             private readonly int _outputCount;
             private bool _bunchCancelled;
-            private readonly FanoutOutputs<TIn, TOut>[] _outputs;
+            private readonly FanoutOutputs<T>[] _outputs;
             private readonly bool[] _marked;
             private int _markedCount;
             private readonly bool[] _pending;
@@ -105,9 +105,9 @@ namespace Akka.Streams.Implementation
             public OutputBunch(int outputCount, IActorRef impl, IPump pump)
             {
                 _outputCount = outputCount;
-                _outputs = new FanoutOutputs<TIn, TOut>[outputCount];
+                _outputs = new FanoutOutputs<T>[outputCount];
                 for (var i = 0; i < outputCount; i++)
-                    _outputs[i] = new FanoutOutputs<TIn, TOut>(i, impl, pump);
+                    _outputs[i] = new FanoutOutputs<T>(i, impl, pump);
 
                 _marked = new bool[outputCount];
                 _pending = new bool[outputCount];
@@ -224,7 +224,7 @@ namespace Akka.Streams.Implementation
                 return id;
             }
 
-            public void Enqueue(int id, TIn element)
+            public void Enqueue(int id, T element)
             {
                 var output = _outputs[id];
                 output.EnqueueOutputElement(element);
@@ -238,7 +238,7 @@ namespace Akka.Streams.Implementation
                 }
             }
 
-            public void EnqueueMarked(TIn element)
+            public void EnqueueMarked(T element)
             {
                 for (var id = 0; id < _outputCount; id++)
                 {
@@ -260,9 +260,9 @@ namespace Akka.Streams.Implementation
                 return id;
             }
 
-            public void EnqueueAndYield(TIn element) => Enqueue(IdToEnqueueAndYield(), element);
+            public void EnqueueAndYield(T element) => Enqueue(IdToEnqueueAndYield(), element);
 
-            public void EnqueueAndPrefer(TIn element, int preferred)
+            public void EnqueueAndPrefer(T element, int preferred)
             {
                 var id = IdToEnqueue();
                 _preferredId = preferred;
