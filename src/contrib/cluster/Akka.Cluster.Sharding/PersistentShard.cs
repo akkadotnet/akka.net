@@ -47,12 +47,12 @@ namespace Akka.Cluster.Sharding
             if (message is EntityStarted)
             {
                 var started = (EntityStarted)message;
-                State = new ShardState(State.Entries.Add(started.EntityId));
+                State = new ShardState(State.Entries?.Add(started.EntityId));
             }
             else if (message is EntityStopped)
             {
                 var stopped = (EntityStopped)message;
-                State = new ShardState(State.Entries.Remove(stopped.EntityId));
+                State = new ShardState(State.Entries?.Remove(stopped.EntityId));
             }
             else if ((offer = message as SnapshotOffer) != null && offer.Snapshot is ShardState)
             {
@@ -79,10 +79,11 @@ namespace Akka.Cluster.Sharding
         protected void SaveSnapshotIfNeeded()
         {
             PersistCount++;
-            if ((PersistCount & Settings.TunningParameters.SnapshotAfter) == 0)
+            if (PersistCount >= Settings.TunningParameters.SnapshotAfter)
             {
                 Log.Debug("Saving snapshot, sequence number [{0}]", SnapshotSequenceNr);
                 SaveSnapshot(State);
+                PersistCount = 0;
             }
         }
 
