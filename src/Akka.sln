@@ -266,6 +266,7 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DI.SimpleInjector", "contrib\dependencyInjection\Akka.DI.SimpleInjector\Akka.DI.SimpleInjector.csproj", "{04B9F175-43C7-4274-A81C-D0FCFFBB062C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DI.SimpleInjector.Tests", "contrib\dependencyInjection\Akka.DI.SimpleInjector.tests\Akka.DI.SimpleInjector.Tests.csproj", "{53A69B26-14F4-4B57-A672-370E6AE3628A}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.NUnit3", "contrib\testkits\Akka.TestKit.NUnit3\Akka.TestKit.NUnit3.csproj", "{62A7BBA3-2AA6-4F9B-8ACA-15C3863C026E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.NUnit3.Tests", "contrib\testkits\Akka.TestKit.NUnit3.Tests\Akka.TestKit.NUnit3.Tests.csproj", "{FF91B397-1E60-4B94-99A1-B534C7BB91A5}"
