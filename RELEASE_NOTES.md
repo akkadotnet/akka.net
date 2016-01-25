@@ -1,4 +1,89 @@
-#### 1.0.6 December 3 2015 ####
+#### 1.0.7 January 18 2016 ####
+
+#### 1.0.6 January 18 2016 ####
+**Maintenance release for Akka.NET v1.0.5**
+This patch consists of many bug fixes, performance improvements, as well as the addition of two brand new alpha modules for Akka.Cluster users.
+
+**Akka.Cluster.Tools** and **Akka.Cluster.Sharding**
+The biggest part of this release is the addition of [Akka.Cluster.Tools](http://getakka.net/docs/clustering/cluster-tools) and [Akka.Cluster.Sharding](http://getakka.net/docs/clustering/cluster-sharding), both of which are available now as pre-release packages on NuGet.
+
+```
+PM> Install-Package Akka.Cluster.Tools -pre
+```
+and
+
+```
+PM> Install-Package Akka.Cluster.Sharding -pre
+```
+
+Respectively, these two packages extend Akka.Cluster to do the following:
+
+1. Distributed pub/sub (Akka.Cluster.Tools)
+2. `ClusterClient` - subscribe to changes in cluster availability without actually being part of the cluster itself. (Akka.Cluster.Tools)
+3. `ClusterSingleton` - guarantee a single instance of a specific actor throughout the cluster. (Akka.Cluster.Tools)
+4. Sharding - partition data into durable stores (built on top of Akka.Persistence) in a manner that is fault-tolerant and recoverable across thecluster. (Akka.Cluster.Sharding)
+
+Check out the documentation for more details!
+* http://getakka.net/docs/clustering/cluster-tools
+* http://getakka.net/docs/clustering/cluster-sharding
+
+**Fixes & Changes - Akka.NET Core**
+* [Fix incorrect serialization of Unicode characters in NewtonSoftJsonSerializer](https://github.com/akkadotnet/akka.net/pull/1508)
+* [Fixed: Supervisorstrategy does not preserve stacktrace](https://github.com/akkadotnet/akka.net/issues/1499)
+* [added initial performance specs using NBench](https://github.com/akkadotnet/akka.net/pull/1520)
+* [Add wire back as contrib package + Serialization TestKit](https://github.com/akkadotnet/akka.net/pull/1503)
+* [Implemented the RegisterOnTermination feature.](https://github.com/akkadotnet/akka.net/pull/1523)
+* [Increased performance of DedicatedThreadPool](https://github.com/akkadotnet/akka.net/pull/1569)
+* [#1605 updated Google.ProtocolBuffers to 2.4.1.555](https://github.com/akkadotnet/akka.net/pull/1634)
+* [Clear current message - fixes #1609](https://github.com/akkadotnet/akka.net/pull/1613)
+* [Rewrite of the AtomicReference ](https://github.com/akkadotnet/akka.net/pull/1615)
+* [Implemented WhenTerminated and Terminate](https://github.com/akkadotnet/akka.net/pull/1614)
+* [Implemented StartTime and Uptime](https://github.com/akkadotnet/akka.net/pull/1617)
+* [API Diff with fixed Approval file](https://github.com/akkadotnet/akka.net/pull/1639)
+* [Fixed: NullReferenceException in Akka.Util.Internal.Collections.ImmutableAvlTreeBase`2.RotateLeft](https://github.com/akkadotnet/akka.net/issues/1202)
+
+
+
+**Fixes & Changes - Akka.Remote & Akka.Cluster**
+It should be noted that we've improved the throughput from Akka.NET v1.0.5 to 1.0.6 by a factor of 8
+
+* [Akka.Cluster.Tools & Akka.Cluster.Sharding with tests and examples](https://github.com/akkadotnet/akka.net/pull/1530)
+* [Added UntrustedSpec](https://github.com/akkadotnet/akka.net/pull/1535)
+* [Akka.Remote Performance - String.Format logging perf fix](https://github.com/akkadotnet/akka.net/pull/1540)
+* [Remoting system upgrade](https://github.com/akkadotnet/akka.net/pull/1596)
+* [PublicHostname defaults to IPAddress.Any when hostname is blank](https://github.com/akkadotnet/akka.net/pull/1621)
+* [Removes code that overrides OFF log level with WARNING.](https://github.com/akkadotnet/akka.net/pull/1644)
+* [fixes issue with Helios message ordering](https://github.com/akkadotnet/akka.net/pull/1638)
+* [Fixed: Actor does not receive "Terminated" message if remoting is used and it is not monitored actor's parent](https://github.com/akkadotnet/akka.net/issues/1646)
+
+**Fixes & Changes - Akka.Persistence**
+* [Fixed racing conditions on sql-based snapshot stores](https://github.com/akkadotnet/akka.net/pull/1507)
+* [Fix for race conditions in presistence plugins](https://github.com/akkadotnet/akka.net/pull/1543)
+* [Fix #1522 Ensure extensions and persistence plugins are only registered/created once](https://github.com/akkadotnet/akka.net/pull/1648)
+
+A special thanks to all of our contributors for making this happen!
+18 contributors since release v1.0.5
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 22 | 3564 | 28087 | Aaron Stannard |
+| 15 | 1710 | 1303 | rogeralsing |
+| 6 | 569 | 95 | Silv3rcircl3 |
+| 6 | 53594 | 4417 | Bartosz Sypytkowski |
+| 5 | 1786 | 345 | Sean Gilliam |
+| 3 | 786 | 159 | maxim.salamatko |
+| 2 | 765 | 277 | JeffCyr |
+| 2 | 44 | 53 | Chris Constantin |
+| 2 | 14 | 2 | Simon Anderson |
+| 1 | 84 | 4 | Bart de Boer |
+| 1 | 6051 | 27 | danielmarbach |
+| 1 | 6 | 2 | tstojecki |
+| 1 | 3 | 5 | Ralf1108 |
+| 1 | 27 | 0 | Andrew Skotzko |
+| 1 | 2 | 2 | easuter |
+| 1 | 2 | 1 | Danthar |
+| 1 | 182 | 0 | derwasp |
+| 1 | 179 | 0 | Onat Yiğit Mercan |
 
 #### 1.0.5 December 3 2015 ####
 **Maintenance release for Akka.NET v1.0.4**

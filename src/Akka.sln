@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.40629.0
+# Visual Studio 14
+VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{69279534-1DBA-4115-BF8B-03F77FC8125E}"
 EndProject
@@ -264,6 +266,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DI.SimpleInjector", "contrib\dependencyInjection\Akka.DI.SimpleInjector\Akka.DI.SimpleInjector.csproj", "{04B9F175-43C7-4274-A81C-D0FCFFBB062C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DI.SimpleInjector.Tests", "contrib\dependencyInjection\Akka.DI.SimpleInjector.tests\Akka.DI.SimpleInjector.Tests.csproj", "{53A69B26-14F4-4B57-A672-370E6AE3628A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.NUnit3", "contrib\testkits\Akka.TestKit.NUnit3\Akka.TestKit.NUnit3.csproj", "{62A7BBA3-2AA6-4F9B-8ACA-15C3863C026E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.NUnit3.Tests", "contrib\testkits\Akka.TestKit.NUnit3.Tests\Akka.TestKit.NUnit3.Tests.csproj", "{FF91B397-1E60-4B94-99A1-B534C7BB91A5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -998,6 +1003,22 @@ Global
 		{53A69B26-14F4-4B57-A672-370E6AE3628A}.Release Mono|Any CPU.Build.0 = Release|Any CPU
 		{53A69B26-14F4-4B57-A672-370E6AE3628A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{53A69B26-14F4-4B57-A672-370E6AE3628A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{62A7BBA3-2AA6-4F9B-8ACA-15C3863C026E}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
+		{62A7BBA3-2AA6-4F9B-8ACA-15C3863C026E}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
+		{62A7BBA3-2AA6-4F9B-8ACA-15C3863C026E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{62A7BBA3-2AA6-4F9B-8ACA-15C3863C026E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{62A7BBA3-2AA6-4F9B-8ACA-15C3863C026E}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
+		{62A7BBA3-2AA6-4F9B-8ACA-15C3863C026E}.Release Mono|Any CPU.Build.0 = Release|Any CPU
+		{62A7BBA3-2AA6-4F9B-8ACA-15C3863C026E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{62A7BBA3-2AA6-4F9B-8ACA-15C3863C026E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FF91B397-1E60-4B94-99A1-B534C7BB91A5}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
+		{FF91B397-1E60-4B94-99A1-B534C7BB91A5}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
+		{FF91B397-1E60-4B94-99A1-B534C7BB91A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FF91B397-1E60-4B94-99A1-B534C7BB91A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FF91B397-1E60-4B94-99A1-B534C7BB91A5}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
+		{FF91B397-1E60-4B94-99A1-B534C7BB91A5}.Release Mono|Any CPU.Build.0 = Release|Any CPU
+		{FF91B397-1E60-4B94-99A1-B534C7BB91A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FF91B397-1E60-4B94-99A1-B534C7BB91A5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1117,5 +1138,7 @@ Global
 		{F72BE71A-2BE3-413D-A3D9-C7FDBB4E5F08} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
 		{04B9F175-43C7-4274-A81C-D0FCFFBB062C} = {B1D10183-8FAE-4506-B935-403FCED89BDB}
 		{53A69B26-14F4-4B57-A672-370E6AE3628A} = {B1D10183-8FAE-4506-B935-403FCED89BDB}
+		{62A7BBA3-2AA6-4F9B-8ACA-15C3863C026E} = {7625FD95-4B2C-4A5B-BDD5-94B1493FAC8E}
+		{FF91B397-1E60-4B94-99A1-B534C7BB91A5} = {7625FD95-4B2C-4A5B-BDD5-94B1493FAC8E}
 	EndGlobalSection
 EndGlobal
