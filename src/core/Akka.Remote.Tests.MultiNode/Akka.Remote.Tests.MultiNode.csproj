@@ -61,6 +61,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="LookupRemoteActorMultiNetSpec.cs" />
+    <Compile Include="AttemptSysMsgRedeliverySpec.cs" />
     <Compile Include="NewRemoteActorSpec.cs" />
     <Compile Include="PiercingShouldKeepQuarantineSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -68,6 +69,7 @@
     <Compile Include="RemoteDeploymentDeathWatchSpec.cs" />
     <Compile Include="RemoteRoundRobinSpec.cs" />
     <Compile Include="RemoteRandomSpec.cs" />
+    <Compile Include="TestConductor\TestConductorSpec.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj">

@@ -74,11 +74,14 @@ namespace Akka.Remote.TestKit
                                 .SetOp(BarrierOp.Fail)))
                     .With<ThrottleMsg>(
                         throttle =>
+                        {
                             w.SetFailure(
                                 InjectFailure.CreateBuilder()
                                     .SetAddress(Address2Proto(throttle.Target))
+                                    .SetFailure(TCP.FailType.Throttle)
                                     .SetDirection(Direction2Proto(throttle.Direction))
-                                    .SetRateMBit(throttle.RateMBit)))
+                                    .SetRateMBit(throttle.RateMBit));
+                        })
                     .With<DisconnectMsg>(
                         disconnect =>
                             w.SetFailure(

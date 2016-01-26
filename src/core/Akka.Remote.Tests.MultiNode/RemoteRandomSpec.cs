@@ -91,7 +91,7 @@ namespace Akka.Remote.Tests.MultiNode
             }
         }
 
-        [MultiNodeFact]
+        [MultiNodeFact()]
         public void RemoteRandomSpecs()
         {
             ARemoteRandomPoolMustBeLocallyInstantiatedOnARemoteNodeAndBeAbleToCommunicateThroughItsRemoteActorRef();
