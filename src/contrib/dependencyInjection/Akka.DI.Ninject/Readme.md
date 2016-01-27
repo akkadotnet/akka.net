@@ -18,7 +18,7 @@ Start by creating your ```StandardKernel```, registering your actors and depende
 // Setup Ninject
 IKernel container = new StandardKernel();
 container.Bind<TypedWorker>().To(typeof(TypedWorker));
-container.Bind<IWorkerService>()To(typeof)WorkerService));
+container.Bind<IWorkerService>().To(typeof(WorkerService));
 ```
 
 Next you have to create your ```ActorSystem``` and inject that system reference along with the container reference into a new instance of the ```NinjectDependencyResolver```.
