@@ -65,7 +65,7 @@ The resulting code should look similar to the the following:
 // Setup Ninject
 IKernel container = new StandardKernel();
 container.Bind<TypedWorker>().To(typeof(TypedWorker));
-container.Bind<IWorkerService>()To(typeof)WorkerService));
+container.Bind<IWorkerService>().To(typeof(WorkerService));
 
 // Create the ActorSystem
 using (var system = ActorSystem.Create("MySystem"))
