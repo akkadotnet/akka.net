@@ -86,7 +86,7 @@ namespace Akka.Cluster.Sharding
         protected void SaveSnapshotIfNeeded()
         {
             PersistCount++;
-            if ((PersistCount & Settings.TunningParameters.SnapshotAfter) == 0)
+            if ((PersistCount % Settings.TunningParameters.SnapshotAfter) == 0)
             {
                 Log.Debug("Saving snapshot, sequence number [{0}]", SnapshotSequenceNr);
                 SaveSnapshot(State);
