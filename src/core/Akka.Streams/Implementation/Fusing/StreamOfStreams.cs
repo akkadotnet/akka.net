@@ -85,7 +85,7 @@ namespace Akka.Streams.Implementation.Fusing
                                 localSource.Deactivate();
                                 if (localSource.Element == null) RemoveSource(localSource);
                             })
-                            .With<OnError>(err => FailStage<T>(err.Cause));
+                            .With<OnError>(err => FailStage(err.Cause));
                     })), Interpreter.SubFusingMaterializer);
 
                 localSource.Activate(subFlow);
@@ -320,7 +320,7 @@ namespace Akka.Streams.Implementation.Fusing
                     _stage = stage;
                     _onParentPush = GetAsyncCallback<T>(element => Push(stage.Out, element));
                     _onParentFinish = GetAsyncCallback<Unit>(_ => CompleteStage<T>());
-                    _onParentFailure = GetAsyncCallback<Exception>(FailStage<T>);
+                    _onParentFailure = GetAsyncCallback<Exception>(FailStage);
 
                     SetHandler(stage.Out,
                         onPull: stage.PullParent,
@@ -333,16 +333,16 @@ namespace Akka.Streams.Implementation.Fusing
                     switch (materializedStae)
                     {
                         case AlreadyMaterialized:
-                            FailStage<T>(new IllegalStateException("Tail source cannot be materialized more than once"));
+                            FailStage(new IllegalStateException("Tail source cannot be materialized more than once"));
                             break;
                         case TimedOut:  // already detached from the parent
-                            FailStage<T>(new SubscriptionTimeoutException(string.Format("Tail source has not been materialized in {0}", _stage.Timeout)));
+                            FailStage(new SubscriptionTimeoutException(string.Format("Tail source has not been materialized in {0}", _stage.Timeout)));
                             break;
                         case NormalCompletion:  // already detached from parent
                             CompleteStage<T>();
                             break;
                         case FailureCompletion: // already detached from parent
-                            FailStage<T>(_stage.MaterializationFailure);
+                            FailStage(_stage.MaterializationFailure);
                             break;
                         case NotMaterialized:
                             _stage.Register(this);
@@ -529,7 +529,7 @@ namespace Akka.Streams.Implementation.Fusing
                         if (_tailSource.MaterializationState.CompareAndSet(NotMaterialized, FailureCompletion))
                         {
                             _tailSource.MaterializationFailure = cause;
-                            FailStage<T>(cause);
+                            FailStage(cause);
                         }
                         else
                         {
@@ -543,7 +543,7 @@ namespace Akka.Streams.Implementation.Fusing
                         CompleteStage<T>();
                     }
                 }
-                else FailStage<T>(cause);
+                else FailStage(cause);
             }
 
             private void OnDownstreamFinish()

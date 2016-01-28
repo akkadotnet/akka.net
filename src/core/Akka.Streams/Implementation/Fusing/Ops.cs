@@ -855,7 +855,7 @@ namespace Akka.Streams.Implementation.Fusing
                     }
                     catch (Exception e)
                     {
-                        if (_decider(e) == Directive.Stop) FailStage<TOut>(e);
+                        if (_decider(e) == Directive.Stop) FailStage(e);
                     }
                     if (Todo < _stage.Parallelism) TryPull(_stage.In);
                 }, onUpstreamFinish: () => { if (Todo == 0) CompleteStage<TOut>(); });
@@ -866,7 +866,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             private void FailOrPull(int index, Exception failure)
             {
-                if (_decider(failure) == Directive.Stop) FailStage<TOut>(failure);
+                if (_decider(failure) == Directive.Stop) FailStage(failure);
                 else
                 {
                     _buffer.Put(index, Result.Failure<TOut>(failure));
@@ -970,7 +970,7 @@ namespace Akka.Streams.Implementation.Fusing
                     }
                     catch (Exception e)
                     {
-                        if (_decider(e) == Directive.Stop) FailStage<TOut>(e);
+                        if (_decider(e) == Directive.Stop) FailStage(e);
                     }
 
                     if (Todo < _stage.Parallelism) TryPull(_stage.In);
@@ -991,7 +991,7 @@ namespace Akka.Streams.Implementation.Fusing
             private void FailOrPull(Exception failure)
             {
                 var inlet = _stage.In;
-                if (_decider(failure) == Directive.Stop) FailStage<TOut>(failure);
+                if (_decider(failure) == Directive.Stop) FailStage(failure);
                 else if (IsClosed(inlet) && Todo == 0) CompleteStage<TOut>();
                 else if (!HasBeenPulled(inlet)) TryPull(inlet);
             }
@@ -1144,7 +1144,7 @@ namespace Akka.Streams.Implementation.Fusing
                     if (!_groupClosed && _elements > 0) CloseGroup();
                     else CompleteStage<T>();
                 },
-                onUpstreamFailure: FailStage<T>);
+                onUpstreamFailure: FailStage);
             }
 
             public override void PreStart()
@@ -1325,7 +1325,7 @@ namespace Akka.Streams.Implementation.Fusing
                     case DelayOverflowStrategy.Fail:
                         return () =>
                         {
-                            FailStage<T>(new BufferOverflowException("Buffer overflow for Delay combinator"));
+                            FailStage(new BufferOverflowException("Buffer overflow for Delay combinator"));
                         };
                     default:
                         return () =>

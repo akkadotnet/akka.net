@@ -70,6 +70,15 @@ namespace Akka.Util.Internal
         }
 
         /// <summary>
+        /// Atomically descrements the counter by one
+        /// </summary>
+        /// <returns>The new value</returns>
+        public long DecrementAndGet()
+        {
+            return Interlocked.Decrement(ref _value);
+        }
+
+        /// <summary>
         /// Gets the current value of the counter and adds an amount to it.
         /// </summary>
         /// <remarks>This uses a CAS loop as Interlocked.Increment is not atomic for longs on 32bit systems.</remarks>

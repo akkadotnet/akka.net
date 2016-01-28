@@ -182,7 +182,7 @@ namespace Akka.Streams.Implementation.Fusing
                             }
                             catch (Exception cause)
                             {
-                                asyncInput.Logic.FailStage<object>(cause);
+                                asyncInput.Logic.FailStage(cause);
                             }
                             _interpreter.AfterStageHasRun(asyncInput.Logic);
                         }

@@ -450,7 +450,7 @@ namespace Akka.Streams.Implementation.Stages
                 Action<Exception> onUpstreamFailure = e =>
                 {
                     _promise.TrySetException(e);
-                    FailStage<TIn>(e);
+                    FailStage(e);
                 };
 
                 SetHandler(inlet, onPush, onUpstreamFinish, onUpstreamFailure);
@@ -518,7 +518,7 @@ namespace Akka.Streams.Implementation.Stages
                 Action<Exception> onUpstreamFailure = e =>
                 {
                     _promise.TrySetException(e);
-                    FailStage<TIn>(e);
+                    FailStage(e);
                 };
 
                 SetHandler(inlet, onPush, onUpstreamFinish, onUpstreamFailure);

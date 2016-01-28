@@ -82,6 +82,7 @@
     <Compile Include="Dsl\Sink.cs" />
     <Compile Include="Dsl\SourceOperations.cs" />
     <Compile Include="Dsl\SubFlow.cs" />
+    <Compile Include="Dsl\Tcp.cs" />
     <Compile Include="Extra\Implicits.cs" />
     <Compile Include="Extra\Timed.cs" />
     <Compile Include="FanInShape.cs" />
@@ -109,6 +110,15 @@
     <Compile Include="Implementation\Fusing\Ops.cs" />
     <Compile Include="Implementation\Fusing\StreamOfStreams.cs" />
     <Compile Include="Implementation\GroupByProcessorImpl.cs" />
+    <Compile Include="Implementation\IO\FilePublisher.cs" />
+    <Compile Include="Implementation\IO\FileSubscriber.cs" />
+    <Compile Include="Implementation\IO\InputStreamPublisher.cs" />
+    <Compile Include="Implementation\IO\InputStreamSinkStage.cs" />
+    <Compile Include="Implementation\IO\IOSinks.cs" />
+    <Compile Include="Implementation\IO\IOSources.cs" />
+    <Compile Include="Implementation\IO\OutputStreamSourceStage.cs" />
+    <Compile Include="Implementation\IO\OutputStreamSubscriber.cs" />
+    <Compile Include="Implementation\IO\TcpStages.cs" />
     <Compile Include="Implementation\Modules.cs" />
     <Compile Include="Implementation\ResizableMultiReaderRingBuffer.cs" />
     <Compile Include="Implementation\SinkholeSubscriber.cs" />
@@ -119,6 +129,7 @@
     <Compile Include="Implementation\Throttle.cs" />
     <Compile Include="Implementation\Timers.cs" />
     <Compile Include="Implementation\Unfold.cs" />
+    <Compile Include="IO\IOResult.cs" />
     <Compile Include="Queue.cs" />
     <Compile Include="Dsl\Flow.cs" />
     <Compile Include="Dsl\Internal\InternalFlowOperations.cs" />
@@ -161,8 +172,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Implementation\IO\" />
-    <Folder Include="IO\" />
     <Folder Include="Linq\" />
   </ItemGroup>
   <ItemGroup>

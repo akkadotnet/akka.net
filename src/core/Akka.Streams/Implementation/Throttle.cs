@@ -40,7 +40,7 @@ namespace Akka.Streams.Implementation
                                 ScheduleOnce(TimerName, TimeSpan.FromMilliseconds((elementCost - currentTokens) / _speed));
                                 break;
                             case ThrottleMode.Enforcing:
-                                FailStage<T>(new OverflowException("Maximum throttle throughtput exceeded"));
+                                FailStage(new OverflowException("Maximum throttle throughtput exceeded"));
                                 break;
                         }
                     }

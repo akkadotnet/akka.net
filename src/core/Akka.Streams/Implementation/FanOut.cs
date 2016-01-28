@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Reactive.Streams;
 using Akka.Actor;
 using Akka.Event;
@@ -64,9 +65,11 @@ namespace Akka.Streams.Implementation
             SubReceive = new SubReceive(message => message.Match()
                 .With<FanOut.ExposedPublishers<T>>(exposed =>
                 {
-                    var publishers = exposed.Publishers;
-                    for (var i = 0; i < publishers.Count; i++)
-                        _outputs[i].SubReceive.CurrentReceive(new ExposedPublisher<T>(publishers[i]));
+                    var publishers = exposed.Publishers.GetEnumerator();
+                    var outputs = _outputs.AsEnumerable().GetEnumerator();
+
+                    while (publishers.MoveNext() && outputs.MoveNext())
+                        outputs.Current.SubReceive.CurrentReceive(new ExposedPublisher<T>(publishers.Current));
                 })
                 .With<FanOut.SubstreamRequestMore>(more =>
                 {
@@ -467,6 +470,8 @@ namespace Akka.Streams.Implementation
 
     /// <summary>
     /// INTERNAL API
+    /// TODO Find out where this class will be used and check if the type parameter fit
+    /// since we need to cast messages into a tuple and therefore maybe need aditional type parameters
     /// </summary>
     internal class Unzip<T> : FanOut<T>
     {

@@ -47,7 +47,7 @@ namespace Akka.Streams.Implementation
             protected internal override void OnTimer(object timerKey)
             {
                 if (!InitialHasPassed)
-                    FailStage<T>(new TimeoutException("The first element has not yet passed through " + _stage.Timeout));
+                    FailStage(new TimeoutException("The first element has not yet passed through " + _stage.Timeout));
             }
 
             public override void PreStart()
@@ -86,7 +86,7 @@ namespace Akka.Streams.Implementation
 
             protected internal override void OnTimer(object timerKey)
             {
-                FailStage<T>(new TimeoutException("The stream has not been completed in " + _stage.Timeout));
+                FailStage(new TimeoutException("The stream has not been completed in " + _stage.Timeout));
             }
 
             public override void PreStart()
@@ -131,7 +131,7 @@ namespace Akka.Streams.Implementation
             protected internal override void OnTimer(object timerKey)
             {
                 if (_nextDeadline <= DateTime.UtcNow)
-                    FailStage<T>(new TimeoutException("No elements passed in the last " + _stage.Timeout));
+                    FailStage(new TimeoutException("No elements passed in the last " + _stage.Timeout));
             }
 
             public override void PreStart()
@@ -193,7 +193,7 @@ namespace Akka.Streams.Implementation
             protected internal override void OnTimer(object timerKey)
             {
                 if (_nextDeadline <= DateTime.UtcNow)
-                    FailStage<TIn>(new TimeoutException("No elements passed in the last " + _stage.Timeout));
+                    FailStage(new TimeoutException("No elements passed in the last " + _stage.Timeout));
             }
 
             public override void PreStart()

@@ -454,7 +454,7 @@ namespace Akka.Streams.Stage
 
             public override void OnUpstreamFailure<T>(Exception e)
             {
-                if (_doFail) _logic.FailStage<T>(e);
+                if (_doFail) _logic.FailStage(e);
             }
         }
 
@@ -601,7 +601,7 @@ namespace Akka.Streams.Stage
         public virtual bool KeepGoingAfterAllPortsClosed { get { return false; } }
 
         private StageActorRef _stageActorRef;
-        public IActorRef StageActorRef
+        public StageActorRef StageActorRef
         {
             get
             {
@@ -862,9 +862,9 @@ namespace Akka.Streams.Stage
         /// Automatically invokes [[cancel()]] or [[fail()]] on all the input or output ports that have been called,
         /// then stops the stage, then [[postStop()]] is called.
         /// </summary>
-        public void FailStage<T>(Exception reason)
+        public void FailStage(Exception reason)
         {
-            FailStage<T>(reason, isInternal: false);
+            FailStage(reason, isInternal: false);
         }
 
         /// <summary>
@@ -873,7 +873,7 @@ namespace Akka.Streams.Stage
         /// Used to signal errors caught by the interpreter itself. This method logs failures if the stage has been
         /// already closed if <paramref name="isInternal"/> is set to true.
         /// </summary>
-        internal void FailStage<T>(Exception reason, bool isInternal)
+        internal void FailStage(Exception reason, bool isInternal)
         {
             for (int i = 0; i < PortToConn.Length; i++)
             {
@@ -1216,7 +1216,7 @@ namespace Akka.Streams.Stage
         /// </summary>
         public virtual void OnUpstreamFailure<T>(Exception e)
         {
-            GraphInterpreter.Current.ActiveStage.FailStage<T>(e);
+            GraphInterpreter.Current.ActiveStage.FailStage(e);
         }
     }
 
