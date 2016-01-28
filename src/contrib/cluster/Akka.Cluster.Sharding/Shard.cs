@@ -152,12 +152,12 @@ namespace Akka.Cluster.Sharding
         /// Persistent state of the Shard.
         /// </summary>
         [Serializable]
-        internal protected struct ShardState : IClusterShardingSerializable
+        internal protected class ShardState : IClusterShardingSerializable
         {
             public static readonly ShardState Empty = new ShardState(ImmutableHashSet<string>.Empty);
             public readonly IImmutableSet<EntityId> Entries;
 
-            public ShardState(IImmutableSet<EntityId> entries) : this()
+            public ShardState(IImmutableSet<EntityId> entries)
             {
                 Entries = entries;
             }
