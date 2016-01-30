@@ -3794,6 +3794,7 @@ namespace Akka.Routing
         public static Akka.Routing.FromConfig Instance { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
         public override System.Collections.Generic.IEnumerable<Akka.Routing.Routee> GetRoutees(Akka.Routing.RoutedActorCell routedActorCell) { }
+        public static Akka.Actor.Props Props(Akka.Actor.Props props) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
         public class FromConfigSurrogate : Akka.Util.ISurrogate
         {
