@@ -1482,11 +1482,13 @@ namespace Akka.Actor
         public System.Collections.Generic.IList<string> Loggers { get; }
         public System.TimeSpan LoggerStartTimeout { get; }
         public string LogLevel { get; }
+        public string LogTemplate { get; }
         public string ProviderClass { get; }
         public string SchedulerClass { get; }
         public bool SerializeAllCreators { get; }
         public bool SerializeAllMessages { get; }
         public string StdoutLogLevel { get; }
+        public string StdoutLogTemplate { get; }
         public string SupervisorStrategyClass { get; }
         public Akka.Actor.ActorSystem System { get; }
         public System.TimeSpan UnstartedPushTimeout { get; }
@@ -2664,6 +2666,7 @@ namespace Akka.Event
         public System.Exception Cause { get; }
         public override Akka.Event.LogLevel LogLevel() { }
         public override string ToString() { }
+        public new string ToString(string template) { }
     }
     public abstract class EventBus<TEvent, TClassifier, TSubscriber>
     {
@@ -2731,8 +2734,10 @@ namespace Akka.Event
         public object Message { get; set; }
         public System.Threading.Thread Thread { get; }
         public System.DateTime Timestamp { get; }
+        protected static string GetOrAddTemplate(string template, System.Func<string, string> body) { }
         public abstract Akka.Event.LogLevel LogLevel();
         public override string ToString() { }
+        public string ToString(string template) { }
     }
     public class LoggerInitialized : Akka.Actor.INoSerializationVerificationNeeded
     {
@@ -2803,6 +2808,7 @@ namespace Akka.Event
         public static System.ConsoleColor DebugColor { get; set; }
         public static System.ConsoleColor ErrorColor { get; set; }
         public static System.ConsoleColor InfoColor { get; set; }
+        public static string LogTemplate { get; set; }
         public override Akka.Actor.ActorPath Path { get; }
         public override Akka.Actor.IActorRefProvider Provider { get; }
         public static bool UseColors { get; set; }
