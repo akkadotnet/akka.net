@@ -28,6 +28,11 @@ namespace Akka.Streams.Implementation
         {
             return "already-completed-publisher";
         }
+
+        void IPublisher.Subscribe(ISubscriber subscriber)
+        {
+            Subscribe((ISubscriber<T>)subscriber);
+        }
     }
 
     internal sealed class ErrorPublisher<T> : IPublisher<T>
@@ -59,6 +64,11 @@ namespace Akka.Streams.Implementation
         public override string ToString()
         {
             return Name;
+        }
+
+        void IPublisher.Subscribe(ISubscriber subscriber)
+        {
+            Subscribe((ISubscriber<T>)subscriber);
         }
     }
 
@@ -128,6 +138,11 @@ namespace Akka.Streams.Implementation
                 throw;
             }
         }
+
+        void IPublisher.Subscribe(ISubscriber subscriber)
+        {
+            Subscribe((ISubscriber<T>)subscriber);
+        }
     }
 
     internal sealed class CancelledSubscription : ISubscription
@@ -147,6 +162,7 @@ namespace Akka.Streams.Implementation
             subscription.Cancel();
         }
         public void OnNext(T element) { }
+        public void OnNext(object element) { }
         public void OnError(Exception cause) { }
         public void OnComplete() { }
     }
@@ -167,6 +183,11 @@ namespace Akka.Streams.Implementation
                 if (!(e is ISpecViolation))
                     throw;
             }
+        }
+
+        void IPublisher.Subscribe(ISubscriber subscriber)
+        {
+            Subscribe((ISubscriber<T>)subscriber);
         }
 
         public override string ToString()

@@ -82,6 +82,11 @@ namespace Akka.Streams.TestKit
                 _probe.Ref.Tell(TestSubscriber.OnComplete.Instance);
             }
 
+            void ISubscriber.OnNext(object element)
+            {
+                OnNext((T)element);
+            }
+
             public void OnNext(T element)
             {
                 _probe.Ref.Tell(new TestSubscriber.OnNext<T>(element));

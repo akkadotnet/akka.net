@@ -40,6 +40,11 @@ namespace Akka.Streams.Implementation
             ReactiveStreamsCompliance.RequireNonNullElement(element);
         }
 
+        void ISubscriber.OnNext(object element)
+        {
+            OnNext((T)element);
+        }
+
         public void OnError(Exception cause)
         {
             ReactiveStreamsCompliance.RequireNonNullException(cause);

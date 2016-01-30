@@ -479,6 +479,11 @@ namespace Akka.Streams.Implementation.Fusing
                 _parent.Tell(new OnComplete(_shell, _id));
             }
 
+            void ISubscriber.OnNext(object element)
+            {
+                OnNext((T)element);
+            }
+
             public void OnNext(T element)
             {
                 ReactiveStreamsCompliance.RequireNonNullElement(element);

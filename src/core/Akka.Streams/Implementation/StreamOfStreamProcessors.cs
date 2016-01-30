@@ -242,6 +242,11 @@ namespace Akka.Streams.Implementation
                 }
             }
 
+            void IPublisher.Subscribe(ISubscriber subscriber)
+            {
+                Subscribe((ISubscriber<T>)subscriber);    
+            }
+
             public void Subscribe(ISubscriber<T> subscriber)
             {
                 ReactiveStreamsCompliance.RequireNonNullSubscriber(subscriber);
@@ -539,6 +544,11 @@ namespace Akka.Streams.Implementation
                 Impl.Tell(new OtherStreamOnNext(element));
             }
 
+            void ISubscriber.OnNext(object element)
+            {
+                OnNext((T)element);
+            }
+
             public void OnSubscribe(ISubscription subscription)
             {
                 ReactiveStreamsCompliance.RequireNonNullSubscription(subscription);
@@ -752,6 +762,11 @@ namespace Akka.Streams.Implementation
             public void OnComplete()
             {
                 Impl.Tell(new SubstreamOnComplete(Key));
+            }
+
+            void ISubscriber.OnNext(object element)
+            {
+                OnNext((T)element);
             }
         }
         

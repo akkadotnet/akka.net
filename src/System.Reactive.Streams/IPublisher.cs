@@ -7,7 +7,7 @@
     /// at various points in time.
     /// </summary>
     /// <typeparam name="T">The type of element signaled.</typeparam>
-    public interface IPublisher<out T>
+    public interface IPublisher<out T> : IPublisher
     {
         /// <summary>
         /// Request <see cref="IPublisher{T}"/> to start streaming data.
@@ -21,5 +21,10 @@
         /// </summary>
         /// <param name="subscriber">the <see cref="ISubscriber{T}"/> that will consume signals from this <see cref="IPublisher{T}"/></param>
         void Subscribe(ISubscriber<T> subscriber);
+    }
+
+    public interface IPublisher
+    {
+        void Subscribe(ISubscriber subscriber);
     }
 }

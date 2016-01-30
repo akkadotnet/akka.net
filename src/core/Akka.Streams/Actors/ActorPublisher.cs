@@ -481,6 +481,11 @@ namespace Akka.Streams.Actors
             if (subscriber == null) throw new ArgumentNullException("subscriber", "Subscriber must not be null");
             _ref.Tell(new Subscribe<T>(subscriber));
         }
+
+        void IPublisher.Subscribe(ISubscriber subscriber)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public sealed class ActorPublisherSubscription<T> : ISubscription

@@ -120,6 +120,11 @@ namespace Akka.Streams.TestKit
             {
                 return _probe.ReceiveWhile(max, idle, filter, msgs);
             }
+
+            void IPublisher.Subscribe(ISubscriber subscriber)
+            {
+                Subscribe((ISubscriber<T>)subscriber);
+            }
         }
 
         /// <summary>

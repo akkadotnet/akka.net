@@ -244,6 +244,16 @@ namespace Akka.Streams.Dsl
         {
             _publisher.Subscribe(subscriber);
         }
+
+        void ISubscriber.OnNext(object element)
+        {
+            _subscriber.OnNext(element);
+        }
+
+        void IPublisher.Subscribe(ISubscriber subscriber)
+        {
+            _publisher.Subscribe(subscriber);
+        }
     }
 
     /// <summary>

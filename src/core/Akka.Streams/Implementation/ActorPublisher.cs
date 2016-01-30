@@ -107,6 +107,11 @@ namespace Akka.Streams.Implementation
             }
         }
 
+        void IPublisher.Subscribe(ISubscriber subscriber)
+        {
+            Subscribe((ISubscriber<TOut>)subscriber);
+        }
+
         public IEnumerable<ISubscriber<TOut>> TakePendingSubscribers()
         {
             return _pendingSubscribers.Reverse().ToArray();

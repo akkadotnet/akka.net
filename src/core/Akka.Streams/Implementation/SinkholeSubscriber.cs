@@ -39,5 +39,10 @@ namespace Akka.Streams.Implementation
         public void OnComplete() => _whenCompleted.TrySetResult(Unit.Instance);
 
         public void OnNext(TIn element) => ReactiveStreamsCompliance.RequireNonNullElement(element);
+
+        void ISubscriber.OnNext(object element)
+        {
+            OnNext((TIn)element);
+        }
     }
 }

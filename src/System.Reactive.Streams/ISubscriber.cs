@@ -10,34 +10,20 @@
     /// <para>Demand can be signaled via <see cref="ISubscription.Request"/> whenever the <see cref="ISubscriber{T}"/> instance is capable of handling more.</para>
     ///  </summary>
     /// <typeparam name="T">The type of element signaled.</typeparam>
-    public interface ISubscriber<in T>
+    public interface ISubscriber<in T> : ISubscriber
     {
-        /// <summary>
-        /// Invoked after calling <see cref="IPublisher{T}.Subscribe"/>.
-        /// No data will start flowing until <see cref="ISubscription.Request"/> is invoked.
-        /// It is the responsibility of this <see cref="ISubscriber{T}"/> instance to call <see cref="ISubscription.Request"/> whenever more data is wanted.
-        /// The <see cref="IPublisher{T}"/> will send notifications only in response to <see cref="ISubscription.Request"/>.
-        /// </summary>
-        /// <param name="subscription"><see cref="ISubscription"/> that allows requesting data via <see cref="ISubscription.Request"/></param>
-        void OnSubscribe(ISubscription subscription);
-
-        /// <summary>
-        /// Failed terminal state.
-        /// No further events will be sent even if <see cref="ISubscription.Request"/> is invoked again.
-        /// </summary>
-        /// <param name="cause">The exception signaled</param>
-        void OnError(Exception cause);
-
-        /// <summary>
-        /// Successful terminal state.
-        /// No further events will be sent even if <see cref="ISubscription.Request"/> is invoked again.
-        /// </summary>
-        void OnComplete();
-
         /// <summary>
         /// Data notification sent by the <see cref="IPublisher{T}"/> in response to requests to <see cref="ISubscription.Request"/>.
         /// </summary>
         /// <param name="element">The element signaled</param>
         void OnNext(T element);
+    }
+
+    public interface ISubscriber
+    {
+        void OnSubscribe(ISubscription subscription);
+        void OnError(Exception cause);
+        void OnComplete();
+        void OnNext(object element);
     }
 }

@@ -796,6 +796,16 @@ namespace Akka.Streams.Implementation
             if (_terminationStatus.CompareAndSet(null, Completed.Instance)) /* let it be picked up by Subscribe() */ ;
             else ReactiveStreamsCompliance.TryOnComplete(_subscriptionStatus.Value as ISubscriber<T>);
         }
+
+        void ISubscriber.OnNext(object element)
+        {
+            OnNext((T)element);
+        }
+
+        void IPublisher.Subscribe(ISubscriber subscriber)
+        {
+            Subscribe((ISubscriber<T>)subscriber);
+        }
     }
 
     internal abstract class MaterializerSession<TMat>
@@ -814,8 +824,8 @@ namespace Akka.Streams.Implementation
         protected readonly IModule TopLevel;
         protected readonly Attributes InitialAttributes;
 
-        private readonly LinkedList<IDictionary<InPort, ISubscriber<object>>> _subscribersStack = new LinkedList<IDictionary<InPort, ISubscriber<object>>>();
-        private readonly LinkedList<IDictionary<OutPort, IPublisher<object>>> _publishersStack = new LinkedList<IDictionary<OutPort, IPublisher<object>>>();
+        private readonly LinkedList<IDictionary<InPort, ISubscriber>> _subscribersStack = new LinkedList<IDictionary<InPort, ISubscriber>>();
+        private readonly LinkedList<IDictionary<OutPort, IPublisher>> _publishersStack = new LinkedList<IDictionary<OutPort, IPublisher>>();
         private readonly IDictionary<StreamLayout.IMaterializedValueNode, LinkedList<MaterializedValueSource<TMat>>> _materializedValueSources =
             new Dictionary<StreamLayout.IMaterializedValueNode, LinkedList<MaterializedValueSource<TMat>>>();
 
@@ -835,8 +845,8 @@ namespace Akka.Streams.Implementation
             InitialAttributes = initialAttributes;
         }
 
-        private IDictionary<InPort, ISubscriber<object>> Subscribers { get { return _subscribersStack.First.Value; } }
-        private IDictionary<OutPort, IPublisher<object>> Publishers { get { return _publishersStack.First.Value; } }
+        private IDictionary<InPort, ISubscriber> Subscribers { get { return _subscribersStack.First.Value; } }
+        private IDictionary<OutPort, IPublisher> Publishers { get { return _publishersStack.First.Value; } }
         private IModule CurrentLayout { get { return _moduleStack.First.Value; } }
 
         ///<summary>
@@ -846,8 +856,8 @@ namespace Akka.Streams.Implementation
         /// </summary>
         private void EnterScope(CopiedModule enclosing)
         {
-            _subscribersStack.AddFirst(new Dictionary<InPort, ISubscriber<object>>());
-            _publishersStack.AddFirst(new Dictionary<OutPort, IPublisher<object>>());
+            _subscribersStack.AddFirst(new Dictionary<InPort, ISubscriber>());
+            _publishersStack.AddFirst(new Dictionary<OutPort, IPublisher>());
             _moduleStack.AddFirst(enclosing.CopyOf);
         }
 
@@ -987,7 +997,7 @@ namespace Akka.Streams.Implementation
             return result;
         }
 
-        protected void AssignPort<T>(InPort inPort, ISubscriber<T> subscriber)
+        protected void AssignPort(InPort inPort, ISubscriber subscriber)
         {
             Subscribers[inPort] = subscriber;
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
@@ -999,7 +1009,7 @@ namespace Akka.Streams.Implementation
             }
         }
 
-        protected void AssignPort<T>(OutPort outPort, IPublisher<T> publisher)
+        protected void AssignPort(OutPort outPort, IPublisher publisher)
         {
             Publishers[outPort] = publisher;
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
