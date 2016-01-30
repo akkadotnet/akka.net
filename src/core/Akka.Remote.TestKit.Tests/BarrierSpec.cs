@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BarrierSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -93,7 +93,7 @@ namespace Akka.Remote.TestKit.Tests
             //EventFilter<BarrierCoordinator.BarrierEmpty>(1, () => b.Tell(new BarrierCoordinator.RemoveClient(A), TestActor)); //appears to be a bug in the testfilter
             b.Tell(new BarrierCoordinator.RemoveClient(A));
             ExpectMsg(new Failed(b,
-                new BarrierCoordinator.BarrierEmpty(
+                new BarrierCoordinator.BarrierEmptyException(
                     new BarrierCoordinator.Data(ImmutableHashSet.Create<Controller.NodeInfo>(), "", null, null),
                     "cannot remove RoleName(a): no client to remove")));
         }
@@ -208,12 +208,12 @@ namespace Akka.Remote.TestKit.Tests
             //TODO: EventFilter?
             barrier.Tell(new Controller.ClientDisconnected(B));
             var msg = ExpectMsg<Failed>();
-            Assert.Equal(new BarrierCoordinator.ClientLost(
+            Assert.Equal(new BarrierCoordinator.ClientLostException(
                 new BarrierCoordinator.Data(
                     ImmutableHashSet.Create(nodeA),
                     "bar6", 
                     ImmutableHashSet.Create(a.Ref),
-                    ((BarrierCoordinator.ClientLost) msg.Exception).BarrierData.Deadline)
+                    ((BarrierCoordinator.ClientLostException) msg.Exception).BarrierData.Deadline)
                 , B), msg.Exception);
         }
 
@@ -234,12 +234,12 @@ namespace Akka.Remote.TestKit.Tests
             //TODO: Event filter?
             barrier.Tell(new Controller.ClientDisconnected(B));
             var msg = ExpectMsg<Failed>();
-            Assert.Equal(new BarrierCoordinator.ClientLost(
+            Assert.Equal(new BarrierCoordinator.ClientLostException(
                 new BarrierCoordinator.Data(
                     ImmutableHashSet.Create(nodeA, nodeC),
                     "bar7", 
                     ImmutableHashSet.Create(a.Ref),
-                    ((BarrierCoordinator.ClientLost)msg.Exception).BarrierData.Deadline)
+                    ((BarrierCoordinator.ClientLostException)msg.Exception).BarrierData.Deadline)
                 , B), msg.Exception);
 
         }
@@ -258,14 +258,14 @@ namespace Akka.Remote.TestKit.Tests
             //TODO: Event filter
             b.Send(barrier, new EnterBarrier("foo", null));
             var msg = ExpectMsg<Failed>();
-            Assert.Equal(new BarrierCoordinator.WrongBarrier(
+            Assert.Equal(new BarrierCoordinator.WrongBarrierException(
                 "foo",
                 b.Ref,
                 new BarrierCoordinator.Data(
                     ImmutableHashSet.Create(nodeA, nodeB),
                     "bar8",
                     ImmutableHashSet.Create(a.Ref),
-                    ((BarrierCoordinator.WrongBarrier)msg.Exception).BarrierData.Deadline)
+                    ((BarrierCoordinator.WrongBarrierException)msg.Exception).BarrierData.Deadline)
                 ), msg.Exception);
         }
         
@@ -277,12 +277,12 @@ namespace Akka.Remote.TestKit.Tests
             //TODO: EventFilter
             barrier.Tell(new BarrierCoordinator.RemoveClient(A));
             var msg = ExpectMsg<Failed>();
-            Assert.Equal(new BarrierCoordinator.BarrierEmpty(
+            Assert.Equal(new BarrierCoordinator.BarrierEmptyException(
                 new BarrierCoordinator.Data(
                     ImmutableHashSet.Create<Controller.NodeInfo>(),
                     "",
                     ImmutableHashSet.Create<IActorRef>(),
-                    ((BarrierCoordinator.BarrierEmpty)msg.Exception).BarrierData.Deadline)
+                    ((BarrierCoordinator.BarrierEmptyException)msg.Exception).BarrierData.Deadline)
                 , "cannot remove RoleName(a): no client to remove"), msg.Exception);
             barrier.Tell(new Controller.NodeInfo(A, Address.Parse("akka://sys"), a.Ref));
             a.Send(barrier, new EnterBarrier("bar9", null));
@@ -300,15 +300,15 @@ namespace Akka.Remote.TestKit.Tests
             barrier.Tell(nodeA);
             barrier.Tell(nodeB);
             a.Send(barrier, new EnterBarrier("bar10", null));
-            EventFilter.Exception<BarrierCoordinator.BarrierTimeout>().ExpectOne(() =>
+            EventFilter.Exception<BarrierCoordinator.BarrierTimeoutException>().ExpectOne(() =>
             {
                 var msg = ExpectMsg<Failed>(TimeSpan.FromSeconds(7));
-                Assert.Equal(new BarrierCoordinator.BarrierTimeout(
+                Assert.Equal(new BarrierCoordinator.BarrierTimeoutException(
                     new BarrierCoordinator.Data(
                         ImmutableHashSet.Create(nodeA, nodeB),
                         "bar10",
                         ImmutableHashSet.Create(a.Ref),
-                        ((BarrierCoordinator.BarrierTimeout)msg.Exception).BarrierData.Deadline)
+                        ((BarrierCoordinator.BarrierTimeoutException)msg.Exception).BarrierData.Deadline)
                     ), msg.Exception);
             });
         }
@@ -325,12 +325,12 @@ namespace Akka.Remote.TestKit.Tests
             //TODO: Event filter
             barrier.Tell(nodeB);
             var msg = ExpectMsg<Failed>();
-            Assert.Equal(new BarrierCoordinator.DuplicateNode(
+            Assert.Equal(new BarrierCoordinator.DuplicateNodeException(
                 new BarrierCoordinator.Data(
                     ImmutableHashSet.Create(nodeA),
                     "",
                     ImmutableHashSet.Create<IActorRef>(),
-                    ((BarrierCoordinator.DuplicateNode)msg.Exception).BarrierData.Deadline)
+                    ((BarrierCoordinator.DuplicateNodeException)msg.Exception).BarrierData.Deadline)
                 , nodeB), msg.Exception);
         }
 

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MemoryJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -34,13 +34,27 @@ namespace Akka.Persistence.Journal
         protected override void PreStart()
         {
             base.PreStart();
-            Self.Tell(new SetStore(Context.ActorOf(Props.Create<MemoryStore>())));
+            var config = Context.System.Settings.Config;
+            var storeProps = config.HasPath("akka.persistence.journal.inmem.shared") &&
+                             config.GetBoolean("akka.persistence.journal.inmem.shared")
+                ? Props.Create<SharedMemoryStore>()
+                : Props.Create<MemoryStore>();
+            Self.Tell(new SetStore(Context.ActorOf(storeProps)));
         }
     }
 
-    public class MemoryStore : ActorBase, IMemoryMessages
+    public class SharedMemoryStore : MemoryStore
+    {
+        private static readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> SharedMessages = new ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>>();
+
+        protected override ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> Messages { get { return SharedMessages; } }
+    }
+
+    public class MemoryStore : WriteJournalBase, IMemoryMessages
     {
         private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _messages = new ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>>();
+
+        protected virtual ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> Messages { get { return _messages; } }
 
         protected override bool Receive(object message)
         {
@@ -55,7 +69,7 @@ namespace Akka.Persistence.Journal
         private void GetHighestSequenceNumber(AsyncWriteTarget.ReadHighestSequenceNr rhsn)
         {
             LinkedList<IPersistentRepresentation> list;
-            Sender.Tell(_messages.TryGetValue(rhsn.PersistenceId, out list)
+            Sender.Tell(Messages.TryGetValue(rhsn.PersistenceId, out list)
                 ? list.Last.Value.SequenceNr
                 : 0L);
         }
@@ -63,7 +77,7 @@ namespace Akka.Persistence.Journal
         private void Read(AsyncWriteTarget.ReplayMessages replay)
         {
             LinkedList<IPersistentRepresentation> list;
-            if (_messages.TryGetValue(replay.PersistenceId, out list))
+            if (Messages.TryGetValue(replay.PersistenceId, out list))
             {
                 var filtered = list
                     .Where(x => x.SequenceNr >= replay.FromSequenceNr && x.SequenceNr <= replay.ToSequenceNr)
@@ -81,7 +95,7 @@ namespace Akka.Persistence.Journal
         private void Delete(AsyncWriteTarget.DeleteMessagesTo deleteCommand)
         {
             LinkedList<IPersistentRepresentation> list;
-            if (_messages.TryGetValue(deleteCommand.PersistenceId, out list))
+            if (Messages.TryGetValue(deleteCommand.PersistenceId, out list))
             {
                 var node = list.First;
                 if (deleteCommand.IsPermanent)
@@ -134,7 +148,7 @@ namespace Akka.Persistence.Journal
         {
             foreach (var persistent in writeMessages.Messages)
             {
-                var list = _messages.GetOrAdd(persistent.PersistenceId, new LinkedList<IPersistentRepresentation>());
+                var list = Messages.GetOrAdd(persistent.PersistenceId, new LinkedList<IPersistentRepresentation>());
                 list.AddLast(persistent);
             }
 
@@ -145,15 +159,15 @@ namespace Akka.Persistence.Journal
 
         public Messages Add(IPersistentRepresentation persistent)
         {
-            var list = _messages.GetOrAdd(persistent.PersistenceId, new LinkedList<IPersistentRepresentation>());
+            var list = Messages.GetOrAdd(persistent.PersistenceId, new LinkedList<IPersistentRepresentation>());
             list.AddLast(persistent);
-            return _messages;
+            return Messages;
         }
 
         public Messages Update(string pid, long seqNr, Func<IPersistentRepresentation, IPersistentRepresentation> updater)
         {
             LinkedList<IPersistentRepresentation> persistents;
-            if (_messages.TryGetValue(pid, out persistents))
+            if (Messages.TryGetValue(pid, out persistents))
             {
                 var node = persistents.First;
                 while (node != null)
@@ -171,7 +185,7 @@ namespace Akka.Persistence.Journal
         public Messages Delete(string pid, long seqNr)
         {
             LinkedList<IPersistentRepresentation> persistents;
-            if (_messages.TryGetValue(pid, out persistents))
+            if (Messages.TryGetValue(pid, out persistents))
             {
                 var node = persistents.First;
                 while (node != null)
@@ -183,17 +197,17 @@ namespace Akka.Persistence.Journal
                 }
             }
 
-            return _messages;
+            return Messages;
         }
 
         public IEnumerable<IPersistentRepresentation> Read(string pid, long fromSeqNr, long toSeqNr, long max)
         {
             LinkedList<IPersistentRepresentation> persistents;
-            if (_messages.TryGetValue(pid, out persistents))
+            if (Messages.TryGetValue(pid, out persistents))
             {
                 return persistents
                     .Where(x => x.SequenceNr >= fromSeqNr && x.SequenceNr <= toSeqNr)
-                    .Take(max > int.MaxValue ? int.MaxValue : (int) max);
+                    .Take(max > int.MaxValue ? int.MaxValue : (int)max);
             }
 
             return Enumerable.Empty<IPersistentRepresentation>();
@@ -202,7 +216,7 @@ namespace Akka.Persistence.Journal
         public long HighestSequenceNr(string pid)
         {
             LinkedList<IPersistentRepresentation> persistents;
-            if (_messages.TryGetValue(pid, out persistents))
+            if (Messages.TryGetValue(pid, out persistents))
             {
                 var last = persistents.LastOrDefault();
                 return last != null ? last.SequenceNr : 0L;

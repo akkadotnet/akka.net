@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SerializationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -283,11 +283,18 @@ namespace Akka.Tests.Serialization
         [Fact]
         public void CanSerializeRoundRobinPool()
         {
-            var message = new RoundRobinPool(10, new DefaultResizer(0,1));
+            var decider = Decider.From(
+             Directive.Restart,
+             Directive.Stop.When<ArgumentException>(),
+             Directive.Stop.When<NullReferenceException>());
+
+            var supervisor = new OneForOneStrategy(decider);
+
+            var message = new RoundRobinPool(10, new DefaultResizer(0,1),supervisor,"abc");
             AssertEqual(message);
         }
 
-        [Fact(Skip = "What am I doing wrong??")]
+        [Fact]
         public void CanSerializeRoundRobinGroup()
         {
             var message = new RoundRobinGroup("abc");
@@ -297,11 +304,18 @@ namespace Akka.Tests.Serialization
         [Fact]
         public void CanSerializeRandomPool()
         {
-            var message = new RandomPool(10, new DefaultResizer(0, 1));
+            var decider = Decider.From(
+             Directive.Restart,
+             Directive.Stop.When<ArgumentException>(),
+             Directive.Stop.When<NullReferenceException>());
+
+            var supervisor = new OneForOneStrategy(decider);
+
+            var message = new RandomPool(10, new DefaultResizer(0, 1),supervisor,"abc");
             AssertEqual(message);
         }
 
-        [Fact(Skip = "What am I doing wrong??")]
+        [Fact]
         public void CanSerializeRandomGroup()
         {
             var message = new RandomGroup("abc");
@@ -311,29 +325,57 @@ namespace Akka.Tests.Serialization
         [Fact]
         public void CanSerializeConsistentHashPool()
         {
-            var message = new ConsistentHashingPool(10);
+            var decider = Decider.From(
+               Directive.Restart,
+               Directive.Stop.When<ArgumentException>(),
+               Directive.Stop.When<NullReferenceException>());
+
+            var supervisor = new OneForOneStrategy(decider);
+
+            var message = new ConsistentHashingPool(10,null,supervisor,"abc");
             AssertEqual(message);
         }
 
 
         [Fact]
         public void CanSerializeTailChoppingPool()
-        {            
-            var message = new TailChoppingPool(10,TimeSpan.FromSeconds(10),TimeSpan.FromSeconds(2));
+        {
+            var decider = Decider.From(
+             Directive.Restart,
+             Directive.Stop.When<ArgumentException>(),
+             Directive.Stop.When<NullReferenceException>());
+
+            var supervisor = new OneForOneStrategy(decider);
+
+            var message = new TailChoppingPool(10,null,supervisor,"abc",TimeSpan.FromSeconds(10),TimeSpan.FromSeconds(2));
             AssertEqual(message);
         }
 
         [Fact]
         public void CanSerializeScatterGatherFirstCompletedPool()
         {
-            var message = new ScatterGatherFirstCompletedPool(10);
+            var decider = Decider.From(
+             Directive.Restart,
+             Directive.Stop.When<ArgumentException>(),
+             Directive.Stop.When<NullReferenceException>());
+
+            var supervisor = new OneForOneStrategy(decider);
+
+            var message = new ScatterGatherFirstCompletedPool(10,null,supervisor,"abc",TimeSpan.MaxValue);
             AssertEqual(message);
         }
 
         [Fact]
         public void CanSerializeSmallestMailboxPool()
         {
-            var message = new SmallestMailboxPool(10);
+            var decider = Decider.From(
+             Directive.Restart,
+             Directive.Stop.When<ArgumentException>(),
+             Directive.Stop.When<NullReferenceException>());
+
+            var supervisor = new OneForOneStrategy(decider);
+
+            var message = new SmallestMailboxPool(10,null,supervisor,"abc");
             AssertEqual(message);
         }
 
@@ -348,7 +390,8 @@ namespace Akka.Tests.Serialization
         {
             var serializer = Sys.Serialization.FindSerializerFor(message);
             var serialized = serializer.ToBinary(message);
-            var deserialized = (T)serializer.FromBinary(serialized, typeof(T));
+            var result = serializer.FromBinary(serialized, typeof(T));
+            var deserialized = (T) result;
 
        //     Assert.True(message.Equals(deserialized));
             Assert.Equal(message, deserialized);
@@ -468,7 +511,7 @@ namespace Akka.Tests.Serialization
 
         //TODO: find out why this fails on build server
 
-        [Fact(Skip="Fails on buildserver")]
+        [Fact]
         public void CanSerializeFutureActorRef()
         {
             Sys.EventStream.Subscribe(TestActor, typeof(object));

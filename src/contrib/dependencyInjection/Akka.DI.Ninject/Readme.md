@@ -4,7 +4,7 @@
 
 #What is it?
 
-**Akka.DI.Ninject** is an **ActorSystem extension** for the Akka.NET framework that provides an alternative to the basic capabilities of [Props](http://akkadotnet.github.io/wiki/Props) when you have Actors with multiple dependencies.  
+**Akka.DI.Ninject** is an **ActorSystem extension** for the Akka.NET framework that provides an alternative to the basic capabilities of [Props](http://getakka.net/docs/Props) when you have Actors with multiple dependencies.  
 
 If Ninject is your IoC container of choice and your actors have dependencies that make using the factory method provided by Props prohibitive  and code maintenance is an important concern then this is the extension for you.
 
@@ -18,7 +18,7 @@ Start by creating your ```StandardKernel```, registering your actors and depende
 // Setup Ninject
 IKernel container = new StandardKernel();
 container.Bind<TypedWorker>().To(typeof(TypedWorker));
-container.Bind<IWorkerService>()To(typeof)WorkerService));
+container.Bind<IWorkerService>().To(typeof(WorkerService));
 ```
 
 Next you have to create your ```ActorSystem``` and inject that system reference along with the container reference into a new instance of the ```NinjectDependencyResolver```.
@@ -65,7 +65,7 @@ The resulting code should look similar to the the following:
 // Setup Ninject
 IKernel container = new StandardKernel();
 container.Bind<TypedWorker>().To(typeof(TypedWorker));
-container.Bind<IWorkerService>()To(typeof)WorkerService));
+container.Bind<IWorkerService>().To(typeof(WorkerService));
 
 // Create the ActorSystem
 using (var system = ActorSystem.Create("MySystem"))

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystemImpl.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,6 +15,7 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
+using Akka.Util;
 
 
 namespace Akka.Actor.Internal
@@ -37,6 +38,7 @@ namespace Akka.Actor.Internal
         private Mailboxes _mailboxes;
         private IScheduler _scheduler;
         private ActorProducerPipelineResolver _actorProducerPipelineResolver;
+        private TerminationCallbacks _terminationCallbacks;
 
         public ActorSystemImpl(string name)
             : this(name, ConfigurationFactory.Load())
@@ -55,6 +57,7 @@ namespace Akka.Actor.Internal
             ConfigureSettings(config);
             ConfigureEventStream();
             ConfigureProvider();
+            ConfigureTerminationCallbacks();
             ConfigureScheduler();
             ConfigureSerialization();
             ConfigureMailboxes();
@@ -102,8 +105,10 @@ namespace Akka.Actor.Internal
             if(_settings.LogDeadLetters > 0)
                 _logDeadLetterListener = SystemActorOf<DeadLetterListener>("deadLetterListener");
 
+            _eventStream.StartUnsubscriber(this);
 
-            if(_settings.LogConfigOnStart)
+
+            if (_settings.LogConfigOnStart)
             {
                 _log.Warning(Settings.ToString());
             }
@@ -172,10 +177,8 @@ namespace Akka.Actor.Internal
         public override object RegisterExtension(IExtensionId extension)
         {
             if(extension == null) return null;
-            if(!_extensions.ContainsKey(extension.ExtensionType))
-            {
-                _extensions.TryAdd(extension.ExtensionType, new Lazy<object>(() => extension.CreateExtension(this)));
-            }
+
+            _extensions.GetOrAdd(extension.ExtensionType, t => new Lazy<object>(() => extension.CreateExtension(this), LazyThreadSafetyMode.ExecutionAndPublication));
 
             return extension.Get(this);
         }
@@ -295,34 +298,76 @@ namespace Akka.Actor.Internal
         }
 
         /// <summary>
+        /// Configures the termination callbacks.
+        /// </summary>
+        private void ConfigureTerminationCallbacks()
+        {
+            _terminationCallbacks = new TerminationCallbacks(Provider.TerminationTask);
+        }
+
+        /// <summary>
+        /// Register a block of code (callback) to run after ActorSystem.shutdown has been issued and
+        /// all actors in this actor system have been stopped.
+        /// Multiple code blocks may be registered by calling this method multiple times.
+        /// The callbacks will be run sequentially in reverse order of registration, i.e.
+        /// last registration is run first.
+        /// </summary>
+        /// <param name="code">The code to run</param>
+        /// <exception cref="Exception">Thrown if the System has already shut down or if shutdown has been initiated.</exception>
+        public override void RegisterOnTermination(Action code)
+        {
+            _terminationCallbacks.Add(code);
+        }
+
+        /// <summary>
         ///     Stop this actor system. This will stop the guardian actor, which in turn
         ///     will recursively stop all its child actors, then the system guardian
         ///     (below which the logging actors reside) and the execute all registered
         ///     termination handlers (<see cref="ActorSystem.RegisterOnTermination" />).
         /// </summary>
+        [Obsolete("Use Terminate instead. This method will be removed in future versions")]
         public override void Shutdown()
+        {
+            Terminate();
+        }
+
+        /// <summary>
+        /// Terminates this actor system. This will stop the guardian actor, which in turn
+        /// will recursively stop all its child actors, then the system guardian
+        /// (below which the logging actors reside) and the execute all registered
+        /// termination handlers (<see cref="ActorSystem.RegisterOnTermination" />).
+        /// Be careful to not schedule any operations on completion of the returned task
+        /// using the `dispatcher` of this actor system as it will have been shut down before the
+        /// task completes.
+        /// </summary>
+        public override Task Terminate()
         {
             Log.Debug("System shutdown initiated");
             _provider.Guardian.Stop();
+            return WhenTerminated;
         }
 
-        public override Task TerminationTask { get { return _provider.TerminationTask; } }
+        [Obsolete("Use WhenTerminated instead. This property will be removed in future versions")]
+        public override Task TerminationTask { get { return _terminationCallbacks.TerminationTask; } }
 
+        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
         public override void AwaitTermination()
         {
             AwaitTermination(Timeout.InfiniteTimeSpan, CancellationToken.None);
         }
 
+        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
         public override bool AwaitTermination(TimeSpan timeout)
         {
             return AwaitTermination(timeout, CancellationToken.None);
         }
 
+        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
         public override bool AwaitTermination(TimeSpan timeout, CancellationToken cancellationToken)
         {
             try
             {
-                return _provider.TerminationTask.Wait((int) timeout.TotalMilliseconds, cancellationToken);
+                return WhenTerminated.Wait((int) timeout.TotalMilliseconds, cancellationToken);
             }
             catch(OperationCanceledException)
             {
@@ -330,6 +375,14 @@ namespace Akka.Actor.Internal
                 return false;
             }
         }
+
+        /// <summary>
+        /// Returns a task which will be completed after the ActorSystem has been terminated
+        /// and termination hooks have been executed. Be careful to not schedule any operations
+        /// on the `dispatcher` of this actor system as it will have been shut down before this
+        /// task completes.
+        /// </summary>
+        public override Task WhenTerminated { get { return _terminationCallbacks.TerminationTask; } }
 
         public override void Stop(IActorRef actor)
         {
@@ -343,7 +396,43 @@ namespace Akka.Actor.Internal
                 ((IInternalActorRef)actor).Stop();
         }
 
+    }
 
+    class TerminationCallbacks
+    {
+        private Task _terminationTask;
+        private readonly AtomicReference<Task> _atomicRef;
+
+        public TerminationCallbacks(Task upStreamTerminated)
+        {
+            _atomicRef = new AtomicReference<Task>(new Task(() => {}));
+
+            upStreamTerminated.ContinueWith(_ =>
+            {
+                _terminationTask = _atomicRef.GetAndSet(null);
+                _terminationTask.Start();
+            });
+        }
+        
+        public void Add(Action code)
+        {
+            var previous = _atomicRef.Value;
+
+            if (_atomicRef.Value == null)
+                throw new Exception("ActorSystem already terminated.");
+
+            var t = new Task(code);
+
+            if (_atomicRef.CompareAndSet(previous, t))
+            {
+                t.ContinueWith(_ => previous.Start());
+                return;
+            }
+
+            Add(code);
+        }
+
+        public Task TerminationTask { get { return _atomicRef.Value ?? _terminationTask; } }
     }
 }
 

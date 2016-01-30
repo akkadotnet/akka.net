@@ -1,0 +1,111 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="JoinSeedNodeSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Collections.Immutable;
+using System.Threading;
+using Akka.Actor;
+using Akka.Configuration;
+using Akka.Remote.TestKit;
+
+namespace Akka.Cluster.Tests.MultiNode
+{
+    public class JoinSeedNodeConfig : MultiNodeConfig
+    {
+        private readonly RoleName _seed1;
+        public RoleName Seed1 { get { return _seed1; } }
+
+        private readonly RoleName _seed2;
+        public RoleName Seed2 { get { return _seed2; } }
+
+        private readonly RoleName _seed3;
+        public RoleName Seed3 { get { return _seed3; } }
+
+        private readonly RoleName _ordinary1;
+        public RoleName Ordinary1 { get { return _ordinary1; } }
+
+        private readonly RoleName _ordinary2;
+        public RoleName Ordinary2 { get { return _ordinary2; } }
+
+        public JoinSeedNodeConfig()
+        {
+            _seed1 = Role("seed1");
+            _seed2 = Role("seed2");
+            _seed3 = Role("seed3");
+            _ordinary1 = Role("ordinary1");
+            _ordinary2 = Role("ordinary2");
+
+            CommonConfig = MultiNodeLoggingConfig.LoggingConfig.WithFallback(DebugConfig(true))
+                .WithFallback(ConfigurationFactory.ParseString(@"akka.cluster.publish-stats-interval = 25s"))
+                .WithFallback(MultiNodeClusterSpec.ClusterConfig());
+        }
+    }
+
+    public class JoinSeedNodeMultiNode1 : JoinSeedNodeSpec { }
+    public class JoinSeedNodeMultiNode2 : JoinSeedNodeSpec { }
+    public class JoinSeedNodeMultiNode3 : JoinSeedNodeSpec { }
+    public class JoinSeedNodeMultiNode4 : JoinSeedNodeSpec { }
+    public class JoinSeedNodeMultiNode5 : JoinSeedNodeSpec { }
+
+    public abstract class JoinSeedNodeSpec : MultiNodeClusterSpec
+    {
+        private readonly JoinSeedNodeConfig _config;
+
+        protected JoinSeedNodeSpec() : this(new JoinSeedNodeConfig()) { }
+
+        protected JoinSeedNodeSpec(JoinSeedNodeConfig config) : base(config)
+        {
+            _config = config;
+        }
+
+        private ImmutableList<Address> _seedNodes;
+            
+        [MultiNodeFact]
+        public void JoinSeedNodeSpecs()
+        {
+            _seedNodes = ImmutableList.Create(GetAddress(_config.Seed1), GetAddress(_config.Seed2),
+                GetAddress(_config.Seed3));
+            AClusterWithSeedNodesMustBeAbleToStartTheSeedNodesConcurrently();
+            AClusterWithSeedNodesMustBeAbleToJoinTheSeedNodes();
+        }
+
+        public void AClusterWithSeedNodesMustBeAbleToStartTheSeedNodesConcurrently()
+        {
+            
+
+            RunOn(() =>
+            {
+                // test that first seed doesn't have to be started first
+                Thread.Sleep(3000);
+            }, _config.Seed1);
+
+            RunOn(() =>
+            {
+                Cluster.JoinSeedNodes(_seedNodes);
+                RunOn(() =>
+                {
+                    //verify that we can call this multiple times with no issue                    
+                    Cluster.JoinSeedNodes(_seedNodes);
+                }, _config.Seed3);
+                AwaitMembersUp(3);
+            }, _config.Seed1, _config.Seed2, _config.Seed3);
+
+            EnterBarrier("after-1");
+        }
+
+        public void AClusterWithSeedNodesMustBeAbleToJoinTheSeedNodes()
+        {
+            RunOn(() =>
+            {
+                Cluster.JoinSeedNodes(_seedNodes);
+            }, _config.Ordinary1, _config.Ordinary2);
+
+            AwaitMembersUp(Roles.Count);
+            EnterBarrier("after-2");
+        }
+    }
+}
+

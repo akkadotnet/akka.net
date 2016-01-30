@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ImmutableAvlTreeBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -439,11 +439,11 @@ namespace Akka.Util.Internal.Collections
 		private Node MakeBalanced(Node tree)
 		{
 			Node result;
-			if (IsRightHeavy(tree))
+			if (IsRightHeavyAndUnbalanced(tree))
 			{
 				result = IsLeftHeavy(tree.Right) ? DoubleLeftRotation(tree) : RotateLeft(tree);
 			}
-			else if (IsLeftHeavy(tree))
+			else if (IsLeftHeavyAndUnbalanced(tree))
 			{
 				result = IsRightHeavy(tree.Left) ? DoubleRightRotation(tree) : RotateRight(tree);
 			}
@@ -452,8 +452,10 @@ namespace Akka.Util.Internal.Collections
 			return result;
 		}
 
-		private bool IsRightHeavy(Node tree) { return Balance(tree) >= 2; }
-		private bool IsLeftHeavy(Node tree) { return Balance(tree) <= -2; }
+		private bool IsRightHeavyAndUnbalanced(Node tree) { return Balance(tree) >= 2; }
+		private bool IsLeftHeavyAndUnbalanced(Node tree) { return Balance(tree) <= -2; }
+		private bool IsRightHeavy(Node tree) { return Balance(tree) >= 1; }
+		private bool IsLeftHeavy(Node tree) { return Balance(tree) <= -1; }
 
 		private int Balance(Node tree)
 		{

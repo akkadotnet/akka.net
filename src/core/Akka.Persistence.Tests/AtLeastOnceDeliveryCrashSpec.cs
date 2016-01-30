@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AtLeastOnceDeliveryCrashSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -38,7 +38,7 @@ namespace Akka.Persistence.Tests
                 return new OneForOneStrategy(10, TimeSpan.FromSeconds(10), reason =>
                 {
                     if (reason is IllegalActorStateException) return Directive.Stop;
-                    return Actor.SupervisorStrategy.DefaultDecider(reason);
+                    return Actor.SupervisorStrategy.DefaultDecider.Decide(reason);
                 });
             }
         }
@@ -94,7 +94,7 @@ namespace Akka.Persistence.Tests
                 }
                 else
                 {
-                    Log.Debug("Recover message: " + message);
+                    Log.Debug("Recover message: {0}", message);
                 }
 
                 return true;
@@ -121,7 +121,7 @@ namespace Akka.Persistence.Tests
         {
         }
 
-        [Fact(Skip = "FIXME")]
+        [Fact]
         public void AtLeastOnceDelivery_should_not_send_when_actor_crashes()
         {
             var testProbe = CreateTestProbe();
@@ -142,4 +142,3 @@ namespace Akka.Persistence.Tests
         }
     }
 }
-

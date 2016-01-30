@@ -1,15 +1,17 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="NinjectDependencyResolver.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using Akka.Actor;
 using Akka.DI.Core;
 using Ninject;
+using Ninject.Activation.Blocks;
 
 namespace Akka.DI.Ninject
 {
@@ -19,10 +21,11 @@ namespace Akka.DI.Ninject
     /// </summary>
     public class NinjectDependencyResolver : IDependencyResolver
     {
-       IKernel container;
+        IKernel container;
 
         private ConcurrentDictionary<string, Type> typeCache;
         private ActorSystem system;
+        private ConditionalWeakTable<ActorBase, IActivationBlock> references;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NinjectDependencyResolver"/> class.
@@ -40,6 +43,7 @@ namespace Akka.DI.Ninject
             typeCache = new ConcurrentDictionary<string, Type>(StringComparer.InvariantCultureIgnoreCase);
             this.system = system;
             this.system.AddDependencyResolver(this);
+            this.references = new ConditionalWeakTable<ActorBase, IActivationBlock>();
         }
 
         /// <summary>
@@ -49,9 +53,7 @@ namespace Akka.DI.Ninject
         /// <returns>The type with the specified actor name</returns>
         public Type GetType(string actorName)
         {
-            typeCache.TryAdd(actorName, actorName.GetTypeValue());
-
-            return typeCache[actorName];
+            return typeCache.GetOrAdd(actorName, key => key.GetTypeValue());
         }
 
         /// <summary>
@@ -61,27 +63,48 @@ namespace Akka.DI.Ninject
         /// <returns>A delegate factory used to create actors</returns>
         public Func<ActorBase> CreateActorFactory(Type actorType)
         {
-            return () => (ActorBase)container.GetService(actorType);
+            return () =>
+            {
+                var block = container.BeginBlock();
+                var actor = (ActorBase)block.Get(actorType);
+                references.Add(actor, block);
+                return actor;
+            };
         }
 
         /// <summary>
-        /// Used to register the configuration for an actor of the specified type <typeparam name="TActor"/>
+        /// Used to register the configuration for an actor of the specified type <typeparamref name="TActor"/>
         /// </summary>
         /// <typeparam name="TActor">The type of actor the configuration is based</typeparam>
         /// <returns>The configuration object for the given actor type</returns>
         public Props Create<TActor>() where TActor : ActorBase
         {
-            return system.GetExtension<DIExt>().Props(typeof(TActor));
+            return Create(typeof(TActor));
         }
 
         /// <summary>
-        /// Signals the DI container to release it's reference to the actor.
-        /// <see href="http://www.amazon.com/Dependency-Injection-NET-Mark-Seemann/dp/1935182501/ref=sr_1_1?ie=UTF8&qid=1425861096&sr=8-1&keywords=mark+seemann">HERE</see> 
+        /// Used to register the configuration for an actor of the specified type <paramref name="actorType"/> 
+        /// </summary>
+        /// <param name="actorType">The <see cref="Type"/> of actor the configuration is based</param>
+        /// <returns>The configuration object for the given actor type</returns>
+        public virtual Props Create(Type actorType)
+        {
+            return system.GetExtension<DIExt>().Props(actorType);
+        }
+
+        /// <summary>
+        /// Signals the container to release it's reference to the actor.
         /// </summary>
         /// <param name="actor">The actor to remove from the container</param>
         public void Release(ActorBase actor)
         {
-            container.Release(actor);
+            IActivationBlock block;
+
+            if (references.TryGetValue(actor, out block))
+            {
+                block.Dispose();
+                references.Remove(actor);
+            }
         }
     }
 }

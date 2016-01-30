@@ -1,10 +1,11 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ImmutableAvlTreeTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using Akka.TestKit;
 using Akka.Util.Internal.Collections;
@@ -167,6 +168,83 @@ namespace Akka.Tests.Util.Internal.Collections
             Assert.Equal(62, newTree.Root.Right.Left.Key);
             Assert.Equal(88, newTree.Root.Right.Right.Key);
 
+        }
+
+        private static int TreeImbalance(ImmutableAvlTree<int, int> tree)
+        {
+            var lh = NodeHeight(tree.Root.Left);
+            var rh = NodeHeight(tree.Root.Right);
+            return lh - rh;
+        }
+
+        private static int NodeHeight(IBinaryTreeNode<int, int> tree)
+        {
+            if (tree == null) return 0;
+            return Math.Max(NodeHeight(tree.Left), NodeHeight(tree.Right)) + 1;
+        }
+
+        [Fact]
+        public void WhenRemovingNodeThatCausesLeftThenRightHeavyUnbalanceTheTreeIsRebalanced()
+        {
+            var tree = ImmutableAvlTree<int, int>.Empty
+                .Add(60, 6)
+                .Add(20, 2)
+                .Add(80, 8)
+                .Add(10, 1)
+                .Add(70, 7)
+                .Add(40, 4)
+                .Add(30, 3)
+                .Add(50, 5);
+            Assert.Equal(60, tree.Root.Key);
+            Assert.Equal(20, tree.Root.Left.Key);
+            Assert.Equal(10, tree.Root.Left.Left.Key);
+            Assert.Equal(40, tree.Root.Left.Right.Key);
+            Assert.Equal(80, tree.Root.Right.Key);
+            Assert.Equal(70, tree.Root.Right.Left.Key);
+            Assert.Null(tree.Root.Right.Right);
+            tree = tree.Remove(70);
+
+            Assert.InRange(TreeImbalance(tree), -1, 1);
+
+            Assert.Equal(40, tree.Root.Key);
+            Assert.Equal(20, tree.Root.Left.Key);
+            Assert.Equal(60, tree.Root.Right.Key);
+            Assert.Equal(10, tree.Root.Left.Left.Key);
+            Assert.Equal(30, tree.Root.Left.Right.Key);
+            Assert.Equal(50, tree.Root.Right.Left.Key);
+            Assert.Equal(80, tree.Root.Right.Right.Key);
+        }
+
+        [Fact]
+        public void WhenRemovingNodeThatCausesRightThenLeftHeavyUnbalanceTheTreeIsRebalanced()
+        {
+            var tree = ImmutableAvlTree<int, int>.Empty
+                .Add(-60, 6)
+                .Add(-20, 2)
+                .Add(-80, 8)
+                .Add(-10, 1)
+                .Add(-70, 7)
+                .Add(-40, 4)
+                .Add(-30, 3)
+                .Add(-50, 5);
+            Assert.Equal(-60, tree.Root.Key);
+            Assert.Equal(-20, tree.Root.Right.Key);
+            Assert.Equal(-10, tree.Root.Right.Right.Key);
+            Assert.Equal(-40, tree.Root.Right.Left.Key);
+            Assert.Equal(-80, tree.Root.Left.Key);
+            Assert.Equal(-70, tree.Root.Left.Right.Key);
+            Assert.Null(tree.Root.Left.Left);
+            tree = tree.Remove(-70);
+
+            Assert.InRange(TreeImbalance(tree), -1, 1);
+
+            Assert.Equal(-40, tree.Root.Key);
+            Assert.Equal(-20, tree.Root.Right.Key);
+            Assert.Equal(-60, tree.Root.Left.Key);
+            Assert.Equal(-10, tree.Root.Right.Right.Key);
+            Assert.Equal(-30, tree.Root.Right.Left.Key);
+            Assert.Equal(-50, tree.Root.Left.Right.Key);
+            Assert.Equal(-80, tree.Root.Left.Left.Key);
         }
 
         [Fact]

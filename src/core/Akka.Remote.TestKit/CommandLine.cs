@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CommandLine.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -43,9 +43,19 @@ namespace Akka.Remote.TestKit
             return Values.Value[key];
         }
 
+        public static string GetPropertyOrDefault(string key, string defaultStr)
+        {
+            return Values.Value.ContainsKey(key) ? Values.Value[key] : defaultStr;
+        }
+
         public static int GetInt32(string key)
         {
             return Convert.ToInt32(GetProperty(key));
+        }
+
+        public static int GetInt32OrDefault(string key, int defaultInt)
+        {
+            return Values.Value.ContainsKey(key) ? GetInt32(key) : defaultInt;
         }
     }
 }

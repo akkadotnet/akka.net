@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TimeSpanExtensions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -117,17 +117,6 @@ namespace Akka.TestKit.Internal
         {
             if(!IsPositiveFinite(timeSpan))
                 throw new ArgumentException("The timespan must be >0. Actual value: " + timeSpan, parameterName);
-        }
-
-        /// <summary>
-        /// Returns the smallest value.
-        /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
-        /// </summary>
-        public static TimeSpan Min(this TimeSpan a, TimeSpan b)
-        {
-            if(b.IsInfinite()) return a;
-            if(a.IsInfinite()) return b;
-            return a < b ? a : b;
         }
 
         /// <summary>

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="DedicatedThreadScheduler_TellScheduler_Schedule_Tests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// <copyright file="TaskBasedScheduler_TellScheduler_Schedule_Tests.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,7 +17,7 @@ namespace Akka.Tests.Actor.Scheduler
     // ReSharper disable once InconsistentNaming
     public class DedicatedThreadScheduler_TellScheduler_Schedule_Tests : AkkaSpec
     {
-      //  [Theory(Skip = "Tests that messages are sent with the specified interval, however due to inaccuracy of Task.Dely this often fails. Run this manually if you've made changes to DedicatedThreadScheduler")]
+      //  [Theory(Skip = "Tests that messages are sent with the specified interval, however due to inaccuracy of Task.Delay this often fails. Run this manually if you've made changes to DedicatedThreadScheduler")]
         [InlineData(10, 1000)]
         public void ScheduleTellRepeatedly_in_milliseconds_Tests(int initialDelay, int interval)
         {

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterMetricsCollector.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -223,7 +223,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// Only the nodes that are in the <see cref="includeNodes"/> set.
+        /// Only the nodes that are in the <paramref name="includeNodes"/> set.
         /// </summary>
         public MetricsGossip Filter(ImmutableHashSet<Address> includeNodes)
         {
@@ -355,7 +355,7 @@ namespace Akka.Cluster
         public NodeMetrics(Address address, long timestamp) : this(address, timestamp, ImmutableHashSet.Create<Metric>()) { }
 
         /// <summary>
-        /// Return the metric that matches <see cref="key"/>. Returns null if not found.
+        /// Return the metric that matches <paramref name="key"/>. Returns null if not found.
         /// </summary>
         public Metric Metric(string key)
         {
@@ -478,7 +478,7 @@ namespace Akka.Cluster
         #region Static methods
 
         /// <summary>
-        /// Creates a new <see cref="Metric"/> instance if <see cref="value"/> is valid, otherwise
+        /// Creates a new <see cref="Metric"/> instance if <paramref name="value"/> is valid, otherwise
         /// returns null. Invalid numeric values are negative and NaN/Infinite.
         /// </summary>
         public static Metric Create(string name, double value, double? decayFactor = null)
@@ -662,7 +662,7 @@ namespace Akka.Cluster
         }
 
         /**
-        * @param address [[akka.actor.Address]] of the node the metrics are gathered at
+        * @param address <see cref="Akka.Actor.Address"/> of the node the metrics are gathered at
         * @param timestamp the time of sampling, in milliseconds since midnight, January 1, 1970 UTC
         * @param systemLoadAverage OS-specific average load on the CPUs in the system, for the past 1 minute,
         *    The system is possibly nearing a bottleneck if the system load average is nearing number of cpus/cores.
@@ -747,17 +747,17 @@ namespace Akka.Cluster
         private PerformanceCounter _systemLoadAverageCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total", true);
         private PerformanceCounter _systemAvailableMemory = new PerformanceCounter("Memory", "Available MBytes", true);
 
-	    private static readonly bool IsRunningOnMono = Type.GetType("Mono.Runtime") != null;
+        private static readonly bool IsRunningOnMono = Type.GetType("Mono.Runtime") != null;
 
 
-		// Mono doesn't support Microsoft.VisualBasic, so need an alternative way of sampling this value
-		// see http://stackoverflow.com/questions/105031/how-do-you-get-total-amount-of-ram-the-computer-has
-	    private PerformanceCounter _monoSystemMaxMemory = IsRunningOnMono
-		    ? new PerformanceCounter("Mono Memory", "Total Physical Memory")
-		    : null;
+        // Mono doesn't support Microsoft.VisualBasic, so need an alternative way of sampling this value
+        // see http://stackoverflow.com/questions/105031/how-do-you-get-total-amount-of-ram-the-computer-has
+        private PerformanceCounter _monoSystemMaxMemory = IsRunningOnMono
+            ? new PerformanceCounter("Mono Memory", "Total Physical Memory")
+            : null;
 
 
-		#endregion
+        #endregion
 
         public Address Address { get; private set; }
 
@@ -817,20 +817,20 @@ namespace Akka.Cluster
         /// </summary>
         public Metric SystemMaxMemory()
         {
-	        return Metric.Create(StandardMetrics.SystemMemoryMax,
-		        IsRunningOnMono
-			        ? _monoSystemMaxMemory.RawValue
-			        : GetVbTotalPhysicalMemory());
+            return Metric.Create(StandardMetrics.SystemMemoryMax,
+                IsRunningOnMono
+                    ? _monoSystemMaxMemory.RawValue
+                    : GetVbTotalPhysicalMemory());
         }
 
-	    double GetVbTotalPhysicalMemory()
-	    {
+        double GetVbTotalPhysicalMemory()
+        {
 #if __MonoCS__
-			throw new NotImplementedException();
+            throw new NotImplementedException();
 #else
-		    return new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory;
+            return new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory;
 #endif
-	    }
+        }
 
         #endregion
 

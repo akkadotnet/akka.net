@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Futures.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -65,7 +65,10 @@ namespace Akka.Actor
             TimeSpan? timeout)
         {
             var result = new TaskCompletionSource<object>(TaskContinuationOptions.AttachedToParent);
-            if (timeout.HasValue)
+
+            timeout = timeout ?? provider.Settings.AskTimeout;
+
+            if (timeout != Timeout.InfiniteTimeSpan && timeout.Value > default(TimeSpan))
             {
                 var cancellationSource = new CancellationTokenSource();
                 cancellationSource.Token.Register(() => result.TrySetCanceled());
@@ -203,7 +206,7 @@ namespace Akka.Actor
                 {
                     c.Cancel(false);
                 }
-            }, TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously);
+            }, TaskContinuationOptions.ExecuteSynchronously);
 
             return a;
         }

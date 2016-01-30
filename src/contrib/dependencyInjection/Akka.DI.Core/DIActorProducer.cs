@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DIActorProducer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -47,17 +47,13 @@ namespace Akka.DI.Core
         }
 
         /// <summary>
-        /// This method is used to signal the DI Container that it can
-        /// release it's reference to the actor.  <see href="http://www.amazon.com/Dependency-Injection-NET-Mark-Seemann/dp/1935182501/ref=sr_1_1?ie=UTF8&qid=1425861096&sr=8-1&keywords=mark+seemann">HERE</see> 
+        /// This method is used to signal the container that it can release it's reference to the actor.
         /// </summary>
-        /// <param name="actor"></param>
-
+        /// <param name="actor">The actor to remove from the container</param>
         public void Release(ActorBase actor)
         {
             dependencyResolver.Release(actor);
         }
-
-        
     }
 }
 

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FsApi.fs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -142,17 +142,25 @@ type FunPersistentActor<'Command, 'Event, 'State>(aggregate: Aggregate<'Command,
             member __.SaveSnapshot state = this.SaveSnapshot(state)
             member __.DeleteSnapshot seqNr timestamp = this.DeleteSnapshot(seqNr, timestamp)
             member __.DeleteSnapshots criteria = this.DeleteSnapshots(criteria) }
-      
+            
     member __.Sender() : IActorRef = base.Sender
     member __.Unhandled msg = base.Unhandled msg
     override x.OnCommand (msg: obj) = 
         match msg with
         | :? 'Command as cmd -> aggregate.exec mailbox state cmd
-        | _ -> ()   // ignore?
+        | _ -> 
+            let serializer = UntypedActor.Context.System.Serialization.FindSerializerForType typeof<obj> :?> Akka.Serialization.NewtonSoftJsonSerializer
+            match Serialization.tryDeserializeJObject serializer.Serializer msg with
+            | Some(cmd) -> aggregate.exec mailbox state cmd
+            | None -> x.Unhandled msg
     override x.OnRecover (msg: obj) = 
         match msg with
         | :? 'Event as e -> state <- aggregate.apply mailbox state e
-        | _ -> ()   // ignore?        
+        | _ -> 
+            let serializer = UntypedActor.Context.System.Serialization.FindSerializerForType typeof<obj> :?> Akka.Serialization.NewtonSoftJsonSerializer
+            match Serialization.tryDeserializeJObject serializer.Serializer msg with
+            | Some(e) -> state <- aggregate.apply mailbox state e
+            | None -> x.Unhandled msg
     override x.PostStop () =
         base.PostStop ()
         List.iter (fun fn -> fn()) deferables
@@ -265,8 +273,14 @@ type FunPersistentView<'Event, 'State>(perspective: Perspective<'Event, 'State>,
         match msg with
         | :? 'Event as e -> 
             state <- perspective.apply mailbox state e
-            true
-        | _ -> false   // ignore?        
+            true            
+        | _ -> 
+            let serializer = UntypedActor.Context.System.Serialization.FindSerializerForType typeof<obj> :?> Akka.Serialization.NewtonSoftJsonSerializer
+            match Serialization.tryDeserializeJObject serializer.Serializer msg with
+            | Some(e) -> 
+                state <- perspective.apply mailbox state e
+                true
+            | None -> false     
     override x.PostStop () =
         base.PostStop ()
         List.iter (fun fn -> fn()) deferables
@@ -335,12 +349,20 @@ type Deliverer<'Command, 'Event, 'State>(aggregate: DeliveryAggregate<'Command, 
     override x.ReceiveCommand (msg: obj) = 
         match msg with
         | :? 'Command as cmd -> aggregate.exec mailbox state cmd
-        | _ -> ()   // ignore?
+        | _ -> 
+            let serializer = UntypedActor.Context.System.Serialization.FindSerializerForType typeof<obj> :?> Akka.Serialization.NewtonSoftJsonSerializer
+            match Serialization.tryDeserializeJObject serializer.Serializer msg with
+            | Some(cmd) -> aggregate.exec mailbox state cmd
+            | None -> x.Unhandled msg
         true
     override x.ReceiveRecover (msg: obj) = 
         match msg with
         | :? 'Event as e -> state <- aggregate.apply mailbox state e
-        | _ -> ()   // ignore?        
+        | _ -> 
+            let serializer = UntypedActor.Context.System.Serialization.FindSerializerForType typeof<obj> :?> Akka.Serialization.NewtonSoftJsonSerializer
+            match Serialization.tryDeserializeJObject serializer.Serializer msg with
+            | Some(e) -> state <- aggregate.apply mailbox state e
+            | None -> x.Unhandled msg
         true
     override x.PostStop () =
         base.PostStop ()

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventStreamSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using Akka.TestKit;
 using Akka.Tests.TestUtils;
 using System;
 using System.Linq;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Tests.Event
@@ -62,7 +63,9 @@ namespace Akka.Tests.Event
         [Fact]
         public void ManageSubscriptions()
         {
+
             var bus = new EventStream(true);
+            bus.StartUnsubscriber(Sys.AsInstanceOf<ActorSystemImpl>());
             bus.Subscribe(TestActor, typeof(M));
 
             bus.Publish(new M { Value = 42 });
@@ -236,7 +239,7 @@ namespace Akka.Tests.Event
             }
         }
 
-        [Fact(Skip = "TODO: this test hangs, why?")]
+        [Fact]
         public void ManageLogLevels()
         {
             var bus = new EventStream(false);

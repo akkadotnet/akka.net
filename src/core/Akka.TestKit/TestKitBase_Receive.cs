@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestKitBase_Receive.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -246,7 +246,7 @@ namespace Akka.TestKit
 
         /// <summary>
         /// Receive a series of messages.
-        /// It will continue to receive messages until the <see cref="shouldIgnore"/> predicate returns <c>false</c> or the idle 
+        /// It will continue to receive messages until the <paramref name="shouldIgnore"/> predicate returns <c>false</c> or the idle 
         /// timeout is met (disabled by default) or the overall
         /// maximum duration is elapsed or expected messages count is reached.
         /// If a message that isn't of type <typeparamref name="T"/> the parameter <paramref name="shouldIgnoreOtherMessageTypes"/> 

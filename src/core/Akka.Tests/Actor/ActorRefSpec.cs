@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorRefSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -277,6 +277,17 @@ namespace Akka.Tests.Actor
             var t2 = parent.Ask("what");
             t2.Wait(timeout);
             Assert.True(!(bool)t2.Result);
+        }
+
+        [Fact]
+        public void An_ActorRef_should_never_have_a_null_Sender_Bug_1212()
+        {          
+            var actor = ActorOfAsTestActorRef<NonPublicActor>(Props.Create<NonPublicActor>(SupervisorStrategy.StoppingStrategy));
+            // actors with a null sender should always write to deadletters
+            EventFilter.DeadLetter<object>().ExpectOne(() => actor.Tell(new object(), null));
+
+            // will throw an exception if there's a bug
+            ExpectNoMsg();
         }
 
         private void VerifyActorTermination(IActorRef actorRef)

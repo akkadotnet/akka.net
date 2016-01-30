@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterDomainEventPublisherSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -20,7 +20,6 @@ namespace Akka.Cluster.Tests
             auto-down-unreachable-after = 0s
             periodic-tasks-initial-delay = 120 s // turn off scheduled tasks
             publish-stats-interval = 0 s # always, when it happens
-            failure-detector.implementation-class = ""Akka.MultiNodeTests.FailureDetectorPuppet, Akka.MultiNodeTests""
         }
         akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
         akka.remote.helios.tcp.port = 0";

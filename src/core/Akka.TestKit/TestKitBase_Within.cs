@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestKitBase_Within.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,7 +15,7 @@ namespace Akka.TestKit
     {
 
         /// <summary>
-        /// Execute code block while bounding its execution time between 0 seconds and <see cref="max"/>.
+        /// Execute code block while bounding its execution time between 0 seconds and <paramref name="max"/>.
         /// <para>`within` blocks may be nested. All methods in this class which take maximum wait times 
         /// are available in a version which implicitly uses the remaining time governed by 
         /// the innermost enclosing `within` block.</para>
@@ -27,7 +27,7 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// Execute code block while bounding its execution time between <see cref="min"/> and <see cref="max"/>.
+        /// Execute code block while bounding its execution time between <paramref name="min"/> and <paramref name="max"/>.
         /// <para>`within` blocks may be nested. All methods in this class which take maximum wait times 
         /// are available in a version which implicitly uses the remaining time governed by 
         /// the innermost enclosing `within` block.</para>
@@ -40,7 +40,7 @@ namespace Akka.TestKit
 
 
         /// <summary>
-        /// Execute code block while bounding its execution time between 0 seconds and <see cref="max"/>.
+        /// Execute code block while bounding its execution time between 0 seconds and <paramref name="max"/>.
         /// <para>`within` blocks may be nested. All methods in this class which take maximum wait times 
         /// are available in a version which implicitly uses the remaining time governed by 
         /// the innermost enclosing `within` block.</para>
@@ -52,7 +52,7 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// Execute code block while bounding its execution time between <see cref="min"/> and <see cref="max"/>.
+        /// Execute code block while bounding its execution time between <paramref name="min"/> and <paramref name="max"/>.
         /// <para>`within` blocks may be nested. All methods in this class which take maximum wait times 
         /// are available in a version which implicitly uses the remaining time governed by 
         /// the innermost enclosing `within` block.</para>

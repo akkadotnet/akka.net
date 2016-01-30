@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------
 // <copyright file="SingleThreadDispatcher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -35,9 +35,11 @@ namespace Akka.Dispatch
             else
             {
                 _settings = new DedicatedThreadPoolSettings(1,
-                DedicatedThreadPoolConfigHelpers.ConfigureThreadType(dtp.GetString("threadtype", ThreadType.Background.ToString())),
-                config.GetString("id"),
-                DedicatedThreadPoolConfigHelpers.GetSafeDeadlockTimeout(dtp));
+                    DedicatedThreadPoolConfigHelpers.ConfigureThreadType(dtp.GetString("threadtype",
+                        ThreadType.Background.ToString())),
+                    config.GetString("id"),
+                    DedicatedThreadPoolConfigHelpers.GetSafeDeadlockTimeout(dtp),
+                    DedicatedThreadPoolConfigHelpers.GetApartmentState(dtp));
             }
         }
 
@@ -64,6 +66,7 @@ namespace Akka.Dispatch
     ///	            dedicated-thread-pool{ #settings for Helios.DedicatedThreadPool
     ///		            #deadlock-timeout = 3s #optional timeout for deadlock detection
     ///		            threadtype = background #values can be "background" or "foreground"
+    ///                 apartment = mta # values can be "mta" or "sta" or empty
     ///	            }
     ///     }
     /// 

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SupervisorStrategy.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -78,19 +78,11 @@ namespace Akka.Actor
         ///     thrown. It will be restarted for other `Exception` types.
         ///     The error is escalated if it's a `Exception`, i.e. `Error`.
         /// </summary>
-        /// <param name="exception">The exception.</param>
         /// <returns>Directive.</returns>
-        public static Directive DefaultDecider(Exception exception)
-        {
-            if (exception is ActorInitializationException)
-                return Directive.Stop;
-            if (exception is ActorKilledException)
-                return Directive.Stop;
-            if (exception is DeathPactException)
-                return Directive.Stop;
-
-            return Directive.Restart;
-        }
+        public static IDecider DefaultDecider = Decider.From(Directive.Restart,
+            Directive.Stop.When<ActorInitializationException>(),
+            Directive.Stop.When<ActorKilledException>(),
+            Directive.Stop.When<DeathPactException>());
 
         /// <summary>
         ///     Restarts the child.
@@ -183,6 +175,12 @@ namespace Akka.Actor
         /// </summary>
         /// <value>The default.</value>
         public static readonly SupervisorStrategy DefaultStrategy = new OneForOneStrategy(DefaultDecider);    
+
+        /// <summary>
+        ///     This strategy resembles Erlang in that failing children are always
+        ///     terminated (one-for-one).
+        /// </summary>
+        public static readonly OneForOneStrategy StoppingStrategy = new OneForOneStrategy(ex => Directive.Stop);
 
         /// <summary>
         /// This method is called after the child has been removed from the set of children.
@@ -358,6 +356,8 @@ namespace Akka.Actor
 
         public override ISurrogate ToSurrogate(ActorSystem system)
         {
+            if (Decider is LocalOnlyDecider)
+                throw new NotSupportedException("Can not serialize LocalOnlyDecider");
             return new OneForOneStrategySurrogate
             {
                 Decider = Decider,

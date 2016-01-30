@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FileSystemMessageSinkActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,7 +22,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             : this(
                 Props.Create(
                     () =>
-                        new FileSystemMessageSinkActor(new JsonPersistentTestRunStore(), GenerateFileName(assemblyName),
+                        new FileSystemMessageSinkActor(new JsonPersistentTestRunStore(), FileNameGenerator.GenerateFileName(assemblyName, ".json"),
                             true)))
         {
             
@@ -36,15 +36,6 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         {
             //do nothing
         }
-
-        #region Static methods
-
-        public static string GenerateFileName(string assemblyName)
-        {
-            return string.Format("{0}-{1}.json", assemblyName.Replace(".dll", ""), DateTime.UtcNow.Ticks);
-        }
-
-        #endregion
     }
 
     /// <summary>
@@ -70,7 +61,15 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         protected override void HandleTestRunTree(TestRunTree tree)
         {
             Console.WriteLine("Writing test state to: {0}", Path.GetFullPath(FileName));
-            FileStore.SaveTestRun(FileName, tree);
+            try
+            {
+                FileStore.SaveTestRun(FileName, tree);
+            }
+            catch (Exception ex) //avoid throwing exception back to parent - just continue
+            {
+                Console.WriteLine("Failed to write test state to {0}. Cause: {1}", Path.GetFullPath(FileName), ex);
+            }
+            Console.WriteLine("Finished.");
         }
 
         protected override void ReceiveFactData(FactData data)

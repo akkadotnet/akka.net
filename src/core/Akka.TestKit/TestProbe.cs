@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestProbe.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using Akka.Actor;
+using Akka.Dispatch.SysMsg;
 using Akka.Util;
 
 namespace Akka.TestKit
@@ -137,6 +138,16 @@ namespace Akka.TestKit
         void IInternalActorRef.Suspend()
         {
             ((IInternalActorRef)TestActor).Suspend();
+        }
+
+        public void SendSystemMessage(ISystemMessage message, IActorRef sender)
+        {
+            ((IInternalActorRef)TestActor).SendSystemMessage(message, sender);
+        }
+
+        public int CompareTo(object obj)
+        {
+            return TestActor.CompareTo(obj);
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SyncWriteJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -81,7 +81,13 @@ namespace Akka.Persistence.Journal
             var sender = Sender;
             ReplayMessagesAsync(msg.PersistenceId, msg.FromSequenceNr, msg.ToSequenceNr, msg.Max, persistent =>
             {
-                if (!persistent.IsDeleted || msg.ReplayDeleted) msg.PersistentActor.Tell(new ReplayedMessage(persistent), sender);
+                if (!persistent.IsDeleted || msg.ReplayDeleted)
+                {
+                    foreach (var adapterRepresentation in AdaptFromJournal(persistent))
+                    {
+                        msg.PersistentActor.Tell(new ReplayedMessage(adapterRepresentation), sender);
+                    }
+                }
             })
             .NotifyAboutReplayCompletion(msg.PersistentActor)
             .ContinueWith(t =>

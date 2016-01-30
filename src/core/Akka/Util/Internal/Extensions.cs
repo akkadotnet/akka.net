@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Extensions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -82,12 +82,23 @@ namespace Akka.Util.Internal
             return @this > other ? @this : other;
         }
 
+        public static TimeSpan Min(this TimeSpan @this, TimeSpan other)
+        {
+            return @this < other ? @this : other;
+        }
+
         public static IEnumerable<T> Concat<T>(this IEnumerable<T> enumerable, T item)
         {
             var itemInArray = new[] {item};
             if (enumerable == null)
                 return itemInArray;
             return enumerable.Concat(itemInArray);
+        }
+
+        public static void ForEach<T>(this IEnumerable<T> enumerable, Action<T> action)
+        {
+            foreach (var item in enumerable)
+                action(item);
         }
     }
 }

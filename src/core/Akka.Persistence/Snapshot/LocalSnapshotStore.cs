@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LocalSnapshotStore.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -103,17 +103,17 @@ namespace Akka.Persistence.Snapshot
             _saving.Remove(metadata);
         }
 
-        protected override void Delete(SnapshotMetadata metadata)
+        protected override async Task DeleteAsync(SnapshotMetadata metadata)
         {
             _saving.Remove(metadata);
             GetSnapshotFile(metadata).Delete();
         }
 
-        protected override void Delete(string persistenceId, SnapshotSelectionCriteria criteria)
+        protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             foreach (var metadata in GetSnapshotMetadata(persistenceId, criteria))
             {
-                Delete(metadata);
+                await DeleteAsync(metadata);
             }
         }
 
@@ -185,7 +185,7 @@ namespace Akka.Persistence.Snapshot
         private IEnumerable<SnapshotMetadata> GetSnapshotMetadata(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             var snapshots = _snapshotDirectory
-                .EnumerateFiles("snapshot-" + persistenceId + "-*", SearchOption.TopDirectoryOnly)
+                .EnumerateFiles("snapshot-" + Uri.EscapeDataString(persistenceId) + "-*", SearchOption.TopDirectoryOnly)
                 .Select(ExtractSnapshotMetadata)
                 .Where(metadata => metadata != null && criteria.IsMatch(metadata) && !_saving.Contains(metadata)).ToList();
 
@@ -197,7 +197,7 @@ namespace Akka.Persistence.Snapshot
             var match = FilenameRegex.Match(fileInfo.Name);
             if (match.Success)
             {
-                var pid = match.Groups[1].Value;
+                var pid = Uri.UnescapeDataString(match.Groups[1].Value);
                 var seqNrString = match.Groups[2].Value;
                 var timestampTicks = match.Groups[3].Value;
 
@@ -213,7 +213,7 @@ namespace Akka.Persistence.Snapshot
 
         private FileInfo GetSnapshotFile(SnapshotMetadata metadata, string extension = "")
         {
-            var filename = string.Format("snapshot-{0}-{1}-{2}{3}", metadata.PersistenceId, metadata.SequenceNr, metadata.Timestamp.Ticks, extension);
+            var filename = string.Format("snapshot-{0}-{1}-{2}{3}", Uri.EscapeDataString(metadata.PersistenceId), metadata.SequenceNr, metadata.Timestamp.Ticks, extension);
             var file = _snapshotDirectory.GetFiles(filename, SearchOption.TopDirectoryOnly).FirstOrDefault();
             return file ?? new FileInfo(Path.Combine(_snapshotDirectory.FullName, filename));
         }

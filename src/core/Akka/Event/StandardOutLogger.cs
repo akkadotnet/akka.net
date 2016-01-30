@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StandardOutLogger.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -31,11 +31,10 @@ namespace Akka.Event
         /// <summary>
         /// Gets the provider.
         /// </summary>
-        /// <value>The provider.</value>
-        /// <exception cref="System.Exception">StandardOutLogged does not provide</exception>
+        /// <exception cref="System.NotSupportedException">StandardOutLogger does not provide</exception>
         public override IActorRefProvider Provider
         {
-            get { throw new Exception("StandardOutLogger does not provide"); }
+            get { throw new NotSupportedException("StandardOutLogger does not provide"); }
         }
 
         /// <summary>

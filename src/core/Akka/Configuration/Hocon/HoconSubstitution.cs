@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HoconSubstitution.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -44,7 +44,7 @@ namespace Akka.Configuration.Hocon
         /// <summary>
         ///     The full path to the value which should substitute this instance.
         /// </summary>
-        public string Path { get; private set; }
+        public string Path { get; set; }
 
         /// <summary>
         ///     The evaluated value from the Path property
@@ -104,20 +104,6 @@ namespace Akka.Configuration.Hocon
         {
             return ResolvedValue.GetObject();
         }
-
-        #region Implicit operators
-
-        /// <summary>
-        /// Performs an implicit conversion from <see cref="HoconSubstitution" /> to <see cref="HoconObject" />.
-        /// </summary>
-        /// <param name="substitution">The HOCON object that contains the substitution.</param>
-        /// <returns>The HOCON object contained in the substitution.</returns>
-        public static implicit operator HoconObject(HoconSubstitution substitution)
-        {
-            return substitution.GetObject();
-        }
-
-        #endregion
     }
 }
 

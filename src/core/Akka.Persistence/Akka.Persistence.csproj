@@ -33,31 +33,39 @@
     <DocumentationFile>bin\Release\Akka.Persistence.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Google.ProtocolBuffers">
-      <HintPath>..\..\packages\Google.ProtocolBuffers.2.4.1.521\lib\net40\Google.ProtocolBuffers.dll</HintPath>
+    <Reference Include="Google.ProtocolBuffers, Version=2.4.1.555, Culture=neutral, PublicKeyToken=55f7125234beb589, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Google.ProtocolBuffers.2.4.1.555\lib\net40\Google.ProtocolBuffers.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="Google.ProtocolBuffers.Serialization">
-      <HintPath>..\..\packages\Google.ProtocolBuffers.2.4.1.521\lib\net40\Google.ProtocolBuffers.Serialization.dll</HintPath>
+    <Reference Include="Google.ProtocolBuffers.Serialization, Version=2.4.1.555, Culture=neutral, PublicKeyToken=55f7125234beb589, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Google.ProtocolBuffers.2.4.1.555\lib\net40\Google.ProtocolBuffers.Serialization.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=7.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Runtime" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="AtLeastOnceDeliveryReceiveActor.cs" />
+    <Compile Include="AtLeastOnceDeliverySemantic.cs" />
     <Compile Include="Eventsourced.Lifecycle.cs" />
     <Compile Include="AtLeastOnceDelivery.cs" />
     <Compile Include="Eventsourced.cs" />
     <Compile Include="Eventsourced.Recovery.cs" />
+    <Compile Include="Fsm\PersistentFSM.cs" />
+    <Compile Include="Fsm\PersistentFSMBase.cs" />
     <Compile Include="InternalExtensions.cs" />
+    <Compile Include="Journal\EventAdapters.cs" />
+    <Compile Include="Journal\EventSequences.cs" />
     <Compile Include="PersistentActor.cs" />
     <Compile Include="PersistentView.Recovery.cs" />
     <Compile Include="PersistentView.Lifecycle.cs" />

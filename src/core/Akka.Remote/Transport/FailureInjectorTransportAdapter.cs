@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FailureInjectorTransportAdapter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -29,20 +29,32 @@ namespace Akka.Remote.Transport
     }
 
     /// <summary>
-    /// The failure we're going to inject into a transport, of course :)
+    /// This exception is used to indicate a simulated failure in an association.
     /// </summary>
     public sealed class FailureInjectorException : AkkaException
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FailureInjectorException"/> class.
+        /// </summary>
+        /// <param name="msg">The message that describes the error.</param>
         public FailureInjectorException(string msg)
         {
             Msg = msg;
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FailureInjectorException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
         private FailureInjectorException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
 
+        /// <summary>
+        /// Retrieves the message of the simulated failure.
+        /// </summary>
         public string Msg { get; private set; }
     }
 
@@ -170,9 +182,7 @@ namespace Akka.Remote.Transport
                 // Listen is called only during the initialization of the stack, and upstreamListener is not read before this
                 // finishes.
                 _upstreamListener = tr.Result;
-            }, TaskContinuationOptions.AttachedToParent & 
-            TaskContinuationOptions.ExecuteSynchronously & 
-            TaskContinuationOptions.OnlyOnRanToCompletion);
+            }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion);
             return Task.FromResult((IAssociationEventListener)this);
         }
 
@@ -193,7 +203,7 @@ namespace Akka.Remote.Transport
                    addressChaosTable.AddOrUpdate(NakedAddress(handle.RemoteAddress), address => PassThru.Instance,
                        (address, mode) => PassThru.Instance);
                    statusPromise.SetResult(new FailureInjectorHandle(handle, this));
-               }, TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously);
+               }, TaskContinuationOptions.ExecuteSynchronously);
             }
         }
 
@@ -297,9 +307,7 @@ namespace Akka.Remote.Transport
             {
                 _upstreamListener = tr.Result;
                 WrappedHandle.ReadHandlerSource.SetResult(this);
-            }, TaskContinuationOptions.AttachedToParent 
-            & TaskContinuationOptions.ExecuteSynchronously 
-            & TaskContinuationOptions.OnlyOnRanToCompletion);
+            }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion);
         }
 
         public override bool Write(ByteString payload)

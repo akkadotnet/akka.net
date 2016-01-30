@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ApiTests.fs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -38,24 +38,108 @@ type TestUnion =
 type TestUnion2 = 
     | C of string * TestUnion
     | D of int
+//
+//[<Fact>]
+//let ``can serialize and deserialize discriminated unions over remote nodes using wire serializer`` () =     
+//    let remoteConfig port = 
+//        sprintf """
+//        akka { 
+//            actor {
+//                ask-timeout = 5s
+//                provider = "Akka.Remote.RemoteActorRefProvider, Akka.Remote"
+//                serialization-bindings {
+//                    "System.Object" = wire
+//                }
+//            }
+//            remote {
+//                helios.tcp {
+//                    port = %i
+//                    hostname = localhost
+//                }
+//            }
+//        }
+//        """ port
+//        |> Configuration.parse
+//
+//    use server = System.create "server-system" (remoteConfig 9911)
+//    use client = System.create "client-system" (remoteConfig 0)
+//
+//    let aref = 
+//        spawne client "a-1" <@ actorOf2 (fun mailbox msg -> 
+//               match msg with
+//               | C("a-11", B(11, "a-12")) -> mailbox.Sender() <! msg
+//               | _ -> mailbox.Unhandled msg) @>
+//            [SpawnOption.Deploy (Deploy(RemoteScope (Address.Parse "akka.tcp://server-system@localhost:9911")))]
+//    let msg = C("a-11", B(11, "a-12"))
+//    let response = aref <? msg |> Async.RunSynchronously
+//    response
+//    |> equals msg
 
+//[<Fact>]
+// FAILS
+let ``actor that accepts _ will receive unit message`` () =    
+    let timeoutConfig =
+        """
+        akka { 
+            actor {
+                ask-timeout = 5s
+            }
+        }
+        """
+        |> Configuration.parse 
+
+    let getWhateverHandler (mailbox : Actor<_>) _ = 
+        mailbox.Sender() <! "SomethingToReturn"
+
+    let system = System.create "my-system" timeoutConfig
+    let aref = spawn system "UnitActor" (actorOf2 getWhateverHandler)
+
+    let response = aref <? () |> Async.RunSynchronously
+    response
+    |> equals "SomethingToReturn"
 
 [<Fact>]
-let ``can serialize discriminated unions`` () =
-    let x = B (23,"hello")
-    use sys = System.create "system" (Configuration.defaultConfig())
-    let serializer = sys.Serialization.FindSerializerFor x
-    let bytes = serializer.ToBinary x
-    let des = serializer.FromBinary (bytes, typeof<TestUnion>) :?> TestUnion
-    des
-    |> equals x
+// SUCCEEDS
+let ``actor that accepts _ will receive string message`` () =    
+    let timeoutConfig =
+        """
+        akka { 
+            actor {
+                ask-timeout = 5s
+            }
+        }
+        """
+        |> Configuration.parse 
+
+    let getWhateverHandler (mailbox : Actor<_>) _ = 
+        mailbox.Sender() <! "SomethingToReturn"
+
+    let system = System.create "my-system" timeoutConfig
+    let aref = spawn system "UnitActor" (actorOf2 getWhateverHandler)
+
+    let response = aref <? "SomeRandomInput" |> Async.RunSynchronously
+    response
+    |> equals "SomethingToReturn"
 
 [<Fact>]
-let ``can serialize nested discriminated unions`` () =
-    let x = C("bar",B (23,"hello"))
-    use sys = System.create "system" (Configuration.defaultConfig())
-    let serializer = sys.Serialization.FindSerializerFor x
-    let bytes = serializer.ToBinary x
-    let des = serializer.FromBinary (bytes, typeof<TestUnion2>) :?> TestUnion2
-    des
-    |> equals x
+// SUCCEEDS
+let ``actor that accepts unit will receive unit message`` () =    
+    let timeoutConfig =
+        """
+        akka { 
+            actor {
+                ask-timeout = 5s
+            }
+        }
+        """
+        |> Configuration.parse 
+
+    let getWhateverHandler (mailbox : Actor<unit>) () = 
+        mailbox.Sender() <! "SomethingToReturn"
+
+    let system = System.create "my-system" timeoutConfig
+    let aref = spawn system "UnitActor" (actorOf2 getWhateverHandler)
+
+    let response = aref <? () |> Async.RunSynchronously
+    response
+    |> equals "SomethingToReturn"

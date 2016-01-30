@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteActorRefProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -40,18 +40,21 @@ namespace Akka.Remote
         }
 
         private readonly LocalActorRefProvider _local;
-        private Internals _internals;
+        private volatile Internals _internals;
         private ActorSystemImpl _system;
 
         private Internals RemoteInternals
         {
-            get
-            {
-                return _internals ??
-                       (_internals =
-                           new Internals(new Remoting(_system, this), _system.Serialization,
-                               new RemoteSystemDaemon(_system, RootPath / "remote", SystemGuardian,this.DeadLetters /* TODO: should be RemoteTerminator*/, _log)));
-            }
+            get { return _internals ?? (_internals = CreateInternals()); }
+        }
+
+        private Internals CreateInternals()
+        {
+            var internals =
+                new Internals(new Remoting(_system, this), _system.Serialization,
+                    new RemoteSystemDaemon(_system, RootPath/"remote", SystemGuardian, _remotingTerminator, _log));
+            _local.RegisterExtraName("remote", internals.RemoteDaemon);
+            return internals;
         }
 
         public IInternalActorRef RemoteDaemon { get { return RemoteInternals.RemoteDaemon; } }
@@ -93,8 +96,9 @@ namespace Akka.Remote
             _local.UnregisterTempActor(path);
         }
 
-        //TODO: Why volatile?
-        private IActorRef _remoteWatcher;
+        private volatile IActorRef _remotingTerminator;
+        private volatile IActorRef _remoteWatcher;
+        private volatile IActorRef _remoteDeploymentWatcher;
 
         public virtual void Init(ActorSystemImpl system)
         {
@@ -102,10 +106,16 @@ namespace Akka.Remote
 
             _local.Init(system);
 
-            //TODO: RemotingTerminator
+            _remotingTerminator =
+                _system.SystemActorOf(
+                    RemoteSettings.ConfigureDispatcher(Props.Create(() => new RemotingTerminator(_local.SystemGuardian))),
+                    "remoting-terminator");
+
+            _remotingTerminator.Tell(RemoteInternals);
 
             Transport.Start();
             _remoteWatcher = CreateRemoteWatcher(system);
+            _remoteDeploymentWatcher = CreateRemoteDeploymentWatcher(system);
         }
 
         protected virtual IActorRef CreateRemoteWatcher(ActorSystemImpl system)
@@ -117,6 +127,12 @@ namespace Akka.Remote
                     RemoteSettings.WatchHeartBeatInterval,
                     RemoteSettings.WatchUnreachableReaperInterval,
                     RemoteSettings.WatchHeartbeatExpectedResponseAfter)), "remote-watcher");
+        }
+
+        protected virtual IActorRef CreateRemoteDeploymentWatcher(ActorSystemImpl system)
+        {
+            return system.SystemActorOf(RemoteSettings.ConfigureDispatcher(Props.Create<RemoteDeploymentWatcher>()),
+                "remote-deployment-watcher");
         }
 
         protected DefaultFailureDetectorRegistry<Address> CreateRemoteWatcherFailureDetector(ActorSystem system)
@@ -165,7 +181,7 @@ namespace Akka.Remote
 
             //merge all of the fallbacks together
             var deployment = new List<Deploy>() { deploy, configDeploy }.Where(x => x != null).Aggregate(Deploy.None, (deploy1, deploy2) => deploy2.WithFallback(deploy1));
-            var propsDeploy = new List<Deploy>() {props.Deploy, deployment}.Where(x => x != null)
+            var propsDeploy = new List<Deploy>() { props.Deploy, deployment }.Where(x => x != null)
                 .Aggregate(Deploy.None, (deploy1, deploy2) => deploy2.WithFallback(deploy1));
 
             //match for remote scope
@@ -202,7 +218,7 @@ namespace Akka.Remote
                                 props.Dispatcher, props.Mailbox), ex);
                     }
                     var localAddress = Transport.LocalAddressForRemote(addr);
-                    var rpath = (new RootActorPath(addr)/"remote"/localAddress.Protocol/localAddress.HostPort()/
+                    var rpath = (new RootActorPath(addr) / "remote" / localAddress.Protocol / localAddress.HostPort() /
                                  path.Elements.ToArray()).
                         WithUid(path.Uid);
                     var remoteRef = new RemoteActorRef(Transport, localAddress, rpath, supervisor, props, deployment);
@@ -353,6 +369,7 @@ namespace Akka.Remote
             _log.Debug("[{0}] Instantiating Remote Actor [{1}]", RootPath, actor.Path);
             IActorRef remoteNode = ResolveActorRef(new RootActorPath(actor.Path.Address) / "remote");
             remoteNode.Tell(new DaemonMsgCreate(props, deploy, actor.Path.ToSerializationFormat(), supervisor));
+            _remoteDeploymentWatcher.Tell(new RemoteDeploymentWatcher.WatchRemote(actor, supervisor));
         }
 
         /// <summary>
@@ -407,6 +424,9 @@ namespace Akka.Remote
 
         #region RemotingTerminator
 
+        /// <summary>
+        /// Describes the FSM states of the <see cref="RemotingTerminator"/>
+        /// </summary>
         enum TerminatorState
         {
             Uninitialized,
@@ -416,31 +436,88 @@ namespace Akka.Remote
             Finished
         }
 
+        /// <summary>
+        /// Responsible for shutting down the <see cref="RemoteDaemon"/> and all transports
+        /// when the <see cref="ActorSystem"/> is being shutdown.
+        /// </summary>
         private class RemotingTerminator : FSM<TerminatorState, Internals>
         {
             private readonly IActorRef _systemGuardian;
+            private readonly ILoggingAdapter _log;
 
             public RemotingTerminator(IActorRef systemGuardian)
             {
                 _systemGuardian = systemGuardian;
+                _log = Context.GetLogger();
                 InitFSM();
             }
 
             private void InitFSM()
             {
-
                 When(TerminatorState.Uninitialized, @event =>
                 {
-                    var internals = @event.StateData;
+                    var internals = @event.FsmEvent as Internals;
                     if (internals != null)
                     {
-                        //TODO: add a termination hook to the system guardian
+                        _systemGuardian.Tell(RegisterTerminationHook.Instance);
                         return GoTo(TerminatorState.Idle).Using(internals);
                     }
                     return null;
                 });
 
+                When(TerminatorState.Idle, @event =>
+                {
+                    if (@event.StateData != null && @event.FsmEvent is TerminationHook)
+                    {
+                        _log.Info("Shutting down remote daemon.");
+                        @event.StateData.RemoteDaemon.Tell(TerminationHook.Instance);
+                        return GoTo(TerminatorState.WaitDaemonShutdown);
+                    }
+                    return null;
+                });
+
+                // TODO: state timeout
+                When(TerminatorState.WaitDaemonShutdown, @event =>
+                {
+                    if (@event.StateData != null && @event.FsmEvent is TerminationHookDone)
+                    {
+                        _log.Info("Remote daemon shut down; proceeding with flushing remote transports.");
+                        @event.StateData.Transport.Shutdown()
+                            .ContinueWith(t => TransportShutdown.Instance,
+                                TaskContinuationOptions.ExecuteSynchronously)
+                            .PipeTo(Self);
+                        return GoTo(TerminatorState.WaitTransportShutdown);
+                    }
+
+                    return null;
+                });
+
+                When(TerminatorState.WaitTransportShutdown, @event =>
+                {
+                    _log.Info("Remoting shut down.");
+                    _systemGuardian.Tell(TerminationHookDone.Instance);
+                    return Stop();
+                });
+
                 StartWith(TerminatorState.Uninitialized, null);
+            }
+
+            public sealed class TransportShutdown
+            {
+                private TransportShutdown() { }
+                private static readonly TransportShutdown _instance = new TransportShutdown();
+                public static TransportShutdown Instance
+                {
+                    get
+                    {
+                        return _instance;
+                    }
+                }
+
+                public override string ToString()
+                {
+                    return "<TransportShutdown>";
+                }
             }
         }
 
@@ -456,22 +533,26 @@ namespace Akka.Remote
             protected override void TellInternal(object message, IActorRef sender)
             {
                 var send = message as EndpointManager.Send;
+                var deadLetter = message as DeadLetter;
                 if (send != null)
                 {
-                    // else ignore: it is a reliably delivered message that might be retried later, and it has not yet deserved
-                    // the dead letter status
-                    //TODO: Seems to have started causing endless cycle of messages (and stack overflow)
-                    //if (send.Seq == null) Tell(message, sender);
-                    return;
+                    if (send.Seq == null)
+                    {
+                        base.TellInternal(send.Message, send.SenderOption ?? ActorRefs.NoSender);
+                    }
                 }
-                var deadLetter = message as DeadLetter;
-                if (deadLetter != null)
+                else if (deadLetter?.Message is EndpointManager.Send)
                 {
-                    // else ignore: it is a reliably delivered message that might be retried later, and it has not yet deserved
-                    // the dead letter status
-                    //TODO: if(deadLetter.Message)
+                    var deadSend = (EndpointManager.Send) deadLetter.Message;
+                    if (deadSend.Seq == null)
+                    {
+                        base.TellInternal(deadSend.Message, deadSend.SenderOption ?? ActorRefs.NoSender);
+                    }
                 }
-
+                else
+                {
+                    base.TellInternal(message, sender);
+                }               
             }
         }
     }

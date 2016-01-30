@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BroadcastSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,12 +11,12 @@ using Akka.Routing;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.Routing
 {
     public class BroadcastSpec : AkkaSpec
     {
-
         public new class TestActor : UntypedActor
         {
             protected override void OnReceive(object message)
@@ -51,8 +51,7 @@ namespace Akka.Tests.Routing
                 }
             }
         }
-
-
+        
         [Fact]
         public void BroadcastGroup_router_must_broadcast_message_using_Tell()
         {

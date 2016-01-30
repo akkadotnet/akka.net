@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ConfigurationFactory.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using Akka.Configuration.Hocon;
+using Newtonsoft.Json;
 
 namespace Akka.Configuration
 {
@@ -34,11 +35,24 @@ namespace Akka.Configuration
         /// HOCON (Human-Optimized Config Object Notation) string.
         /// </summary>
         /// <param name="hocon">A string that contains configuration options to use.</param>
+        /// <param name="includeCallback">callback used to resolve includes</param>
+        /// <returns>The configuration defined in the supplied HOCON string.</returns>
+        public static Config ParseString(string hocon, Func<string,HoconRoot> includeCallback)
+        {
+            HoconRoot res = Parser.Parse(hocon, includeCallback);
+            return new Config(res);
+        }
+
+        /// <summary>
+        /// Generates a configuration defined in the supplied
+        /// HOCON (Human-Optimized Config Object Notation) string.
+        /// </summary>
+        /// <param name="hocon">A string that contains configuration options to use.</param>
         /// <returns>The configuration defined in the supplied HOCON string.</returns>
         public static Config ParseString(string hocon)
         {
-            HoconRoot res = Parser.Parse(hocon);
-            return new Config(res);
+            //TODO: add default include resolver
+            return ParseString(hocon, null);
         }
 
         /// <summary>
@@ -125,6 +139,18 @@ namespace Akka.Configuration
                     return ParseString(result);
                 }
             }
+        }
+
+        /// <summary>
+        /// Creates a configuration based on the supplied source object
+        /// </summary>
+        /// <param name="source">The source object</param>
+        /// <returns>The configuration created from the source object</returns>
+        public static Config FromObject(object source)
+        {
+            var json = JsonConvert.SerializeObject(source);
+            var config = ParseString(json);
+            return config;
         }
     }
 }

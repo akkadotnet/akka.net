@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PropsSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
 using Akka.TestKit;
 using System;
+using System.Linq;
 using Xunit;
 
 namespace Akka.Tests.Actor
@@ -56,6 +57,25 @@ namespace Akka.Tests.Actor
             Assert.Equal(strategy, props.SupervisorStrategy);
         }
 
+        [Fact]
+        public void Props_created_with_null_type_must_throw()
+        {
+            Type missingType = null;
+            object[] args = new object[0];
+            var argsEnumerable = Enumerable.Empty<object>();
+            var defaultStrategy = SupervisorStrategy.DefaultStrategy;
+            var defaultDeploy = Deploy.Local;
+
+            Props p = null;
+
+            Assert.Throws<ArgumentNullException>("type", () => p = new Props(missingType, args));
+            Assert.Throws<ArgumentNullException>("type", () => p = new Props(missingType));
+            Assert.Throws<ArgumentNullException>("type", () => p = new Props(missingType, defaultStrategy, argsEnumerable));
+            Assert.Throws<ArgumentNullException>("type", () => p = new Props(missingType, defaultStrategy, args));
+            Assert.Throws<ArgumentNullException>("type", () => p = new Props(defaultDeploy, missingType, argsEnumerable));
+            Assert.Throws<ArgumentNullException>("type", () => p = Props.Create(missingType, args));
+        }
+        
         private class TestProducer : IIndirectActorProducer
         {
             TestLatch latchActor;

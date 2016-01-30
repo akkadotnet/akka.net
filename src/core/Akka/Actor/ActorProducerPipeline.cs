@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorProducerPipeline.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -65,7 +65,7 @@ namespace Akka.Actor
     public abstract class ActorProducerPluginBase<TActor> : IActorProducerPlugin where TActor : ActorBase
     {
         /// <summary>
-        /// By default derivatives of this plugin will be applied to all actors inheriting from <typeparam name="TActor">actor generic type</typeparam>.
+        /// By default derivatives of this plugin will be applied to all actors inheriting from <typeparamref name="TActor">actor generic type</typeparamref>.
         /// </summary>
         public virtual bool CanBeAppliedTo(Type actorType)
         {

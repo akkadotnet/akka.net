@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Gossip.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -205,7 +205,6 @@ namespace Akka.Cluster
             return new Gossip(mergedMembers, new GossipOverview(mergedSeen, mergedReachability), mergedVClock);
         }
 
-        /// <summary>
         // First check that:
         //   1. we don't have any members that are unreachable, or
         //   2. all unreachable members in the set have status DOWN or EXITING
@@ -213,7 +212,6 @@ namespace Akka.Cluster
         // When that is done we check that all members with a convergence
         // status is in the seen table and has the latest vector clock
         // version
-        /// </summary>
         public bool Convergence(UniqueAddress selfUniqueAddress)
         {
             var unreachable = _overview.Reachability.AllUnreachableOrTerminated

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteDeployer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -47,7 +47,7 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// Used to determine if a given <see cref="deploy"/> is an instance of <see cref="RemoteRouterConfig"/>.
+        /// Used to determine if a given <paramref name="deploy"/> is an instance of <see cref="RemoteRouterConfig"/>.
         /// </summary>
         private static Deploy CheckRemoteRouterConfig(Deploy deploy)
         {

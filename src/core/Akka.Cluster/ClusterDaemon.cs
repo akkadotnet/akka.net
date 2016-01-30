@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterDaemon.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -985,8 +985,7 @@ namespace Akka.Cluster
             }
             else if (address.System != _cluster.SelfAddress.System)
             {
-                _log.Warning(
-                    "Trying to join member with wrong ActorSystem name, but was ignored, expected [{0}] but was [{1}]",
+                _log.Warning("Trying to join member with wrong ActorSystem name, but was ignored, expected [{0}] but was [{1}]",
                     _cluster.SelfAddress.System, address.System);
             }
             else
@@ -1036,8 +1035,7 @@ namespace Akka.Cluster
             }
             else if (node.Address.System != _cluster.SelfAddress.System)
             {
-                _log.Warning(
-                    "Member with wrong ActorSystem name tried to join, but was ignored, expected [{0}] but was [{1}]",
+                _log.Warning("Member with wrong ActorSystem name tried to join, but was ignored, expected [{0}] but was [{1}]",
                     _cluster.SelfAddress.System, node.Address.System);
             }
             else

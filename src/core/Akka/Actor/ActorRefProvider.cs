@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorRefProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -356,10 +356,8 @@ namespace Akka.Actor
                 {
                     var d = Deployer.Lookup(path);
                     if (d != null && d.RouterConfig != RouterConfig.NoRouter)
-                        Log.Warning(
-                            string.Format(
-                                "Configuration says that [{0}] should be a router, but code disagrees. Remove the config or add a RouterConfig to its Props.",
-                                path));
+                        Log.Warning("Configuration says that [{0}] should be a router, but code disagrees. Remove the config or add a RouterConfig to its Props.",
+                                	path);
                 }
 
                 var props2 = props;

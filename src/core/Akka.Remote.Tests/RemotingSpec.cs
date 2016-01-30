@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemotingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -70,7 +70,7 @@ namespace Akka.Remote.Tests
                   applied-adapters = []
                   registry-key = aX33k0jWKg
                   local-address = ""test://RemotingSpec@localhost:12345""
-                  maximum-payload-bytes = 32000 bytes
+                  maximum-payload-bytes = 32000b
                   scheme-identifier = test
                 }
               }
@@ -117,7 +117,7 @@ namespace Akka.Remote.Tests
                   applied-adapters = []
                   registry-key = aX33k0jWKg
                   local-address = ""test://remote-sys@localhost:12346""
-                    maximum-payload-bytes = 48000 bytes
+                  maximum-payload-bytes = 128000b
                   scheme-identifier = test
                 }
               }
@@ -139,7 +139,7 @@ namespace Akka.Remote.Tests
 
         protected override void AfterAll()
         {
-            remoteSystem.Shutdown();
+            remoteSystem.Terminate();
             AssociationRegistry.Clear();
             base.AfterAll();
         }
@@ -165,7 +165,6 @@ namespace Akka.Remote.Tests
             Assert.Equal("pong", msg.Item1);
             Assert.IsType<FutureActorRef>(msg.Item2);
         }
-
 
         [Fact]
         public void Remoting_must_create_and_supervise_children_on_remote_Node()
@@ -230,6 +229,31 @@ namespace Akka.Remote.Tests
             Assert.Equal(reporter, msg.Item2);
         }
 
+        [Fact]
+        public void Drop_sent_messages_over_payload_size()
+        {
+            var oversized = ByteStringOfSize(MaxPayloadBytes + 1);
+            EventFilter.Exception<OversizedPayloadException>(start: "Discarding oversized payload sent to ").ExpectOne(() =>
+            {
+                VerifySend(oversized, () =>
+                {
+                    ExpectNoMsg();
+                });
+            });
+        }
+
+        [Fact]
+        public void Drop_received_messages_over_payload_size()
+        {
+            EventFilter.Exception<OversizedPayloadException>(start: "Discarding oversized payload received").ExpectOne(() =>
+            {
+                VerifySend(MaxPayloadBytes + 1, () =>
+                {
+                    ExpectNoMsg();
+                });
+            });
+        }
+
         #endregion
 
         #region Internal Methods
@@ -239,7 +263,7 @@ namespace Akka.Remote.Tests
             get
             {
                 var byteSize = Sys.Settings.Config.GetByteSize("akka.remote.test.maximum-payload-bytes");
-        if (byteSize != null)
+                if (byteSize != null)
                     return (int)byteSize.Value;
                 return 0;
             }
@@ -290,7 +314,7 @@ namespace Akka.Remote.Tests
             {
                 bigBounceHere.Tell(msg, TestActor);
                 afterSend();
-                ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+                ExpectNoMsg();
             }
             finally
             {

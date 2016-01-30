@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -227,6 +227,29 @@ namespace Akka.Persistence
             _matchRecoverBuilders.Push(new MatchBuilder(CachedMatchCompiler<object>.Instance));
         }
 
+        /// <summary>
+        /// Changes the actor's command behavior and replaces the current receive command handler with the specified handler.
+        /// </summary>
+        /// <param name="configure">Configures the new handler by calling the different Receive overloads.</param>
+        protected void Become(Action configure)
+        {
+            var newHandler = CreateNewHandler(configure);
+            base.Become(m => ExecutePartialMessageHandler(m, newHandler));
+        }
+
+        /// <summary>
+        /// Changes the actor's command behavior and replaces the current receive command handler with the specified handler.
+        /// The current handler is stored on a stack, and you can revert to it by calling <see cref="ActorBase.UnbecomeStacked"/>
+        /// <remarks>Please note, that in order to not leak memory, make sure every call to <see cref="BecomeStacked"/>
+        /// is matched with a call to <see cref="ActorBase.UnbecomeStacked"/>.</remarks>
+        /// </summary>
+        /// <param name="configure">Configures the new handler by calling the different Command overloads.</param>
+        protected void BecomeStacked(Action configure)
+        {
+            var newHandler = CreateNewHandler(configure);
+            base.BecomeStacked(m => ExecutePartialMessageHandler(m, newHandler));
+        }
+
         protected sealed override void OnCommand(object message)
         {
             ExecutePartialMessageHandler(message, _partialReceiveCommand);
@@ -340,6 +363,20 @@ namespace Akka.Persistence
         {
             EnsureMayConfigureCommandHandlers();
             _matchCommandBuilders.Peek().MatchAny(handler);
+        }
+
+        protected void CommandAny(Action<object> handler)
+        {
+            EnsureMayConfigureCommandHandlers();
+            _matchCommandBuilders.Peek().MatchAny(handler);
+        }
+
+        private PartialAction<object> CreateNewHandler(Action configure)
+        {
+            _matchCommandBuilders.Push(new MatchBuilder(CachedMatchCompiler<object>.Instance));
+            configure();
+            var newHandler = BuildNewReceiveHandler(_matchCommandBuilders.Pop());
+            return newHandler;
         }
 
         #endregion

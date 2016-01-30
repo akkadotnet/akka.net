@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MatchBuilder.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -125,9 +125,9 @@ namespace Akka.Tools.MatchHandler
 
 
         /// <summary>
-        /// Builds all added handlers and returns a <see cref="PartialAction{T}">PartialAction&lt;object&gt;</see>.
+        /// Builds all added handlers and returns a <see cref="PartialAction{TItem}"/>.
         /// </summary>
-        /// <returns>Returns a <see cref="PartialAction{T}">PartialAction&lt;object&gt;</see></returns>
+        /// <returns>Returns a <see cref="PartialAction{TItem}"/></returns>
         public PartialAction<TItem> Build()
         {
             var partialAction = _compiler.Compile(_typeHandlers, _arguments, new MatchBuilderSignature(_signature));

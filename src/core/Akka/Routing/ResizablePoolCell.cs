@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ResizablePoolCell.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,6 +11,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Dispatch;
+using Akka.Dispatch.SysMsg;
 using Akka.Util;
 using Akka.Util.Internal;
 
@@ -55,6 +56,7 @@ namespace Akka.Routing
         public override void Post(IActorRef sender, object message)
         {
             if(!(_routerProps.RouterConfig.IsManagementMessage(message)) &&
+                !(message is ISystemMessage) &&
                 resizer.IsTimeForResize(_resizeCounter.GetAndIncrement()) &&
                 _resizeInProgress.CompareAndSet(false, true))
             {
@@ -93,7 +95,7 @@ namespace Akka.Routing
                 }
                 finally
                 {
-                    _resizeInProgress = false;
+                    _resizeInProgress.Value = false;
                 }
         }
     }

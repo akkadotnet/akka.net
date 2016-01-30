@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AckedDelivery.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -196,7 +196,7 @@ namespace Akka.Remote
         /// Class representing an acknowledgement with select negative acknowledgements.
         /// </summary>
         /// <param name="cumulativeAck">Represents the highest sequence number received</param>
-        /// <param name="nacks">Set of sequence numbers between the last delivered one and <see cref="cumulativeAck"/> that has not been received.</param>
+        /// <param name="nacks">Set of sequence numbers between the last delivered one and <paramref name="cumulativeAck"/> that has not been received.</param>
         public Ack(SeqNo cumulativeAck, IEnumerable<SeqNo> nacks)
         {
             Nacks = new SortedSet<SeqNo>(nacks, SeqNo.Comparer);
@@ -219,21 +219,39 @@ namespace Akka.Remote
         }
     }
 
+    /// <summary>
+    /// This exception is thrown when the Resent buffer is filled beyond its capacity.
+    /// </summary>
     class ResendBufferCapacityReachedException : AkkaException
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ResendBufferCapacityReachedException"/> class.
+        /// </summary>
+        /// <param name="c">The capacity of the buffer</param>
         public ResendBufferCapacityReachedException(int c)
             : base(string.Format("Resent buffer capacity of {0} has been reached.", c))
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ResendBufferCapacityReachedException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
         protected ResendBufferCapacityReachedException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
     }
 
+    /// <summary>
+    /// This exception is thrown when the system is unable to fulfill a resend request since negatively acknowledged payload is no longer in buffer.
+    /// </summary>
     class ResendUnfulfillableException : AkkaException
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ResendUnfulfillableException"/> class.
+        /// </summary>
         public ResendUnfulfillableException()
             : base("Unable to fulfill resend request since negatively acknowledged payload is no longer in buffer. " +
                 "The resend states between two systems are compromised and cannot be recovered") { }

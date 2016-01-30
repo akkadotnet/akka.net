@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ContinuousEnumerator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -63,9 +63,9 @@ namespace Akka.Util
     internal static class ContinuousEnumeratorExtensions
     {
         /// <summary>
-        /// Provides a <see cref="ContinuousEnumerator{T}"/> instance for <see cref="collection"/>.
+        /// Provides a <see cref="ContinuousEnumerator{T}"/> instance for <paramref name="collection"/>.
         /// 
-        /// Internally, it just wraps <see cref="collection"/>'s internal iterator with circular iteration behavior.
+        /// Internally, it just wraps <paramref name="collection"/>'s internal iterator with circular iteration behavior.
         /// </summary>
         public static ContinuousEnumerator<T> GetContinuousEnumerator<T>(this IEnumerable<T> collection)
         {

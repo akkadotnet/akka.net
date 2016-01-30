@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Settings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -68,6 +68,7 @@ namespace Akka.Actor
             
             SupervisorStrategyClass = Config.GetString("akka.actor.guardian-supervisor-strategy");
 
+            AskTimeout = Config.GetTimeSpan("akka.actor.ask-timeout", allowInfinite: true);
             CreationTimeout = Config.GetTimeSpan("akka.actor.creation-timeout");
             UnstartedPushTimeout = Config.GetTimeSpan("akka.actor.unstarted-push-timeout");
 
@@ -158,6 +159,12 @@ namespace Akka.Actor
         /// </summary>
         /// <value><c>true</c> if [serialize all creators]; otherwise, <c>false</c>.</value>
         public bool SerializeAllCreators { get; private set; }
+
+        /// <summary>
+        ///     Gets the default timeout for <see cref="Futures.Ask" /> calls.
+        /// </summary>
+        /// <value>The ask timeout.</value>
+        public TimeSpan AskTimeout { get; private set; }
 
         /// <summary>
         ///     Gets the creation timeout.

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SerilogLogger.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -24,15 +24,17 @@ namespace Akka.Logger.Serilog
 
         private void WithSerilog(Action<ILogger> logStatement)
         {
-            var logger = Log.Logger.ForContext(GetType());
+            var logger = Log.Logger.ForContext("SourceContext", Context.Sender.Path);
             logStatement(logger);
         }
 
         private ILogger SetContextFromLogEvent(ILogger logger, LogEvent logEvent)
         {
-            logger.ForContext("Timestamp", logEvent.Timestamp);
-            logger.ForContext("LogSource", logEvent.LogSource);
-            logger.ForContext("Thread", logEvent.Thread);
+            logger = logger
+                      .ForContext("Timestamp", logEvent.Timestamp)
+                      .ForContext("LogSource", logEvent.LogSource)
+                      .ForContext("Thread", logEvent.Thread.ManagedThreadId.ToString().PadLeft(4, '0'));
+
             return logger;
         }
 

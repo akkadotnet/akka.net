@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Router.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -159,8 +159,22 @@ namespace Akka.Routing
         }
     }
 
+    /// <summary>
+    /// This class contains logic used by a <see cref="Router"/> to route messages to one or more actors.
+    /// These actors are known in the system as a <see cref="Routee"/>.
+    /// </summary>
     public abstract class RoutingLogic
     {
+        /// <summary>
+        /// Picks a <see cref="Routee"/> to receive the <paramref name="message"/>.
+        /// <note>
+        /// Normally it picks one of the passed routees, but it is up to the implementation
+        /// to return whatever <see cref="Routee"/> to use for sending a specific message.
+        /// </note>
+        /// </summary>
+        /// <param name="message">The message that is being routed</param>
+        /// <param name="routees">A collection of routees to choose from when receiving the <paramref name="message"/>.</param>
+        /// <returns>A <see cref="Routee"/> that receives the <paramref name="message"/>.</returns>
         public abstract Routee Select(object message, Routee[] routees);
     }
 

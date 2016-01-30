@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Conductor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -24,8 +24,8 @@ namespace Akka.Remote.TestKit
     /// The conductor is the one orchestrating the test: it governs the
     /// <see cref="Akka.Remote.TestKit.Controller"/>'s ports to which all
     /// Players connect, it issues commands to their
-    /// <see cref="Akka.Remote.TestKit.NetworkFailureInjector"></see> and provides support
-    /// for barriers using the <see cref="Akka.Remote.TestKit.BarrierCoordinator"></see>.
+    /// <see cref="Akka.Remote.TestKit.NetworkFailureInjector"/> and provides support
+    /// for barriers using the <see cref="Akka.Remote.TestKit.BarrierCoordinator"/>.
     /// All of this is bundled inside the <see cref="TestConductor"/>
     /// </summary>
     partial class TestConductor //Conductor trait in JVM version
@@ -63,7 +63,7 @@ namespace Akka.Remote.TestKit
         /// <returns></returns>
         public async Task<INode> StartController(int participants, RoleName name, INode controllerPort)
         {
-            if(_controller != null) throw new Exception("TestConductorServer was already started");
+            if(_controller != null) throw new IllegalStateException("TestConductorServer was already started");
             _controller = _system.ActorOf(new Props(typeof (Controller), new object[] {participants, controllerPort}),
                 "controller");
             //TODO: Need to review this async stuff
@@ -284,7 +284,11 @@ namespace Akka.Remote.TestKit
             _log.Debug("message from {0}: {1}", responseChannel.RemoteHost, message);
             if (message is INetworkOp)
             {
-                _clients[responseChannel].Tell(message);
+                IActorRef fsm;
+                if (_clients.TryGetValue(responseChannel, out fsm))
+                {
+                    fsm.Tell(message);
+                }
             }
             else
             {

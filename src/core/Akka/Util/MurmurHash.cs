@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MurmurHash.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -125,7 +125,7 @@ namespace Akka.Util
         #region Internal 32-bit hashing helpers
 
         /// <summary>
-        /// Rotate a 32-bit unsigned integer to the left by <see cref="shift"/> bits
+        /// Rotate a 32-bit unsigned integer to the left by <paramref name="shift"/> bits
         /// </summary>
         /// <param name="original">Original value</param>
         /// <param name="shift">The shift value</param>
@@ -136,7 +136,7 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// Rotate a 64-bit unsigned integer to the left by <see cref="shift"/> bits
+        /// Rotate a 64-bit unsigned integer to the left by <paramref name="shift"/> bits
         /// </summary>
         /// <param name="original">Original value</param>
         /// <param name="shift">The shift value</param>

@@ -75,13 +75,13 @@
       <Project>{A8AA2D7E-3D35-44DF-AF92-80A2C39C1F4D}</Project>
       <Name>Akka.Logger.NLog</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Akka.MultiNodeTests\Akka.MultiNodeTests.csproj">
-      <Project>{f0781bea-5ba0-4af0-bb15-e3f209b681f5}</Project>
-      <Name>Akka.MultiNodeTests</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj">
       <Project>{E5957C3E-2B1E-469F-A680-7953B4DEA31B}</Project>
       <Name>Akka.Remote.TestKit</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka\Akka.csproj">
+      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
+      <Name>Akka</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

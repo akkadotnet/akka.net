@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.DefaultMessages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,6 +36,12 @@ namespace Akka.Actor
             }
         }
 
+        private int _currentEnvelopeId;
+
+        public int CurrentEnvelopeId
+        {
+            get { return _currentEnvelopeId; }
+        }
         /// <summary>
         ///     Invokes the specified envelope.
         /// </summary>
@@ -44,7 +50,8 @@ namespace Akka.Actor
         {
             var message = envelope.Message;
             CurrentMessage = message;
-            Sender = envelope.Sender;
+            _currentEnvelopeId ++;
+            Sender = MatchSender(envelope);
 
             try
             {
@@ -53,6 +60,7 @@ namespace Akka.Actor
                     AutoReceiveMessage(envelope);
                 else
                     ReceiveMessage(message);
+                CurrentMessage = null;
             }
             catch (Exception cause)
             {
@@ -62,6 +70,18 @@ namespace Akka.Actor
             {
                 CheckReceiveTimeout(); // Reschedule receive timeout
             }
+        }
+
+        /// <summary>
+        /// If the envelope.Sender property is null, then we'll substitute
+        /// Deadletters as the <see cref="Sender"/> of this message.
+        /// </summary>
+        /// <param name="envelope">The envelope we received</param>
+        /// <returns>An IActorRef that corresponds to a Sender</returns>
+        private IActorRef MatchSender(Envelope envelope)
+        {
+            var sender = envelope.Sender;
+            return sender ?? System.DeadLetters;
         }
 
 
@@ -153,7 +173,7 @@ namespace Akka.Actor
             {
                 var m = envelope.Message;
 
-                if (m is CompleteTask) HandleCompleteTask(m as CompleteTask);
+                if (m is ActorTaskSchedulerMessage) HandleActorTaskSchedulerMessage(m as ActorTaskSchedulerMessage);
                 else if (m is Failed) HandleFailed(m as Failed);
                 else if (m is DeathWatchNotification)
                 {
@@ -191,12 +211,21 @@ namespace Akka.Actor
             }
         }
 
-        private void HandleCompleteTask(CompleteTask task)
+        private void HandleActorTaskSchedulerMessage(ActorTaskSchedulerMessage m)
         {
-            CurrentMessage = task.State.Message;
-            Sender = task.State.Sender;
-            task.SetResult();
+            //set the current message captured in the async operation
+            //current message was cleared earlier when the async receive handler completed
+            CurrentMessage = m.Message;
+            if (m.Exception != null)
+            {
+                HandleInvokeFailure(m.Exception);
+                return;
+            }
+
+            m.ExecuteTask();
+            CurrentMessage = null;
         }
+
         public void SwapMailbox(DeadLetterMailbox mailbox)
         {
             Mailbox.DebugPrint("{0} Swapping mailbox to DeadLetterMailbox", Self);

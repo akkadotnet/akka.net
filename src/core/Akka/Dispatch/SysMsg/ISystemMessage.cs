@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ISystemMessage.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,7 +19,6 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class ISystemMessage.
     /// </summary>
-    /// **
     public interface ISystemMessage : INoSerializationVerificationNeeded
     {
     }
@@ -244,30 +243,43 @@ namespace Akka.Dispatch.SysMsg
         public Task Task { get; private set; }
     }
 
-    public sealed class CompleteTask : ISystemMessage
+    internal sealed class ActorTaskSchedulerMessage : ISystemMessage
     {
+        private readonly ActorTaskScheduler _scheduler;
+        private readonly Task _task;
+
         /// <summary>
-        ///     Initializes a new instance of the <see cref="CompleteTask" /> class.
+        ///     Initializes a new instance of the <see cref="ActorTaskSchedulerMessage" /> class.
         /// </summary>
-        /// <param name="state"></param>
-        /// <param name="action">The action.</param>
-        public CompleteTask(AmbientState state, Action action)
+        public ActorTaskSchedulerMessage(ActorTaskScheduler scheduler, Task task, object message)
         {
-            State = state;
-            SetResult = action;
+            _scheduler = scheduler;
+            _task = task;
+            Message = message;
         }
 
-        public AmbientState State { get; private set; }
-
         /// <summary>
-        ///     Gets the set result.
+        ///     Initializes a new instance of the <see cref="ActorTaskSchedulerMessage" /> class.
         /// </summary>
-        /// <value>The set result.</value>
-        public Action SetResult { get; private set; }
+        /// <param name="exception">The exception.</param>
+        /// <param name="message">The message causing the exception</param>
+        public ActorTaskSchedulerMessage(Exception exception,object message)
+        {
+            Exception = exception;
+            Message = message;
+        }
+
+        public Exception Exception { get; private set; }
+        public object Message { get;private set; }
+
+        public void ExecuteTask()
+        {
+            _scheduler.ExecuteTask(_task);
+        }
 
         public override string ToString()
         {
-            return "CompleteTask - AmbientState: " + State;
+            return "<ActorTaskSchedulerMessage>";
         }
     }
 
@@ -439,7 +451,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class Terminate.
     /// </summary>
-    public sealed class Terminate : ISystemMessage
+    public sealed class Terminate : ISystemMessage, IPossiblyHarmful
     {
         private Terminate() { }
         private static readonly Terminate _instance = new Terminate();

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Props.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,9 +19,9 @@ using Newtonsoft.Json;
 namespace Akka.Actor
 {
     /// <summary>
-    ///     Props is a configuration object used in creating an [[Actor]]; it is
+    ///     Props is a configuration object used in creating an <see cref="Akka.Actor.ActorBase">Actor</see>; it is
     ///     immutable, so it is thread-safe and fully shareable.
-    ///     Examples on C# API:
+    /// <example>
     /// <code>
     ///   private Props props = Props.Empty();
     ///   private Props props = Props.Create(() => new MyActor(arg1, arg2));
@@ -29,9 +29,12 @@ namespace Akka.Actor
     ///   private Props otherProps = props.WithDispatcher("dispatcher-id");
     ///   private Props otherProps = props.WithDeploy(deployment info);
     ///  </code>
+    ///  </example>
     /// </summary>
     public class Props : IEquatable<Props> , ISurrogated
     {
+        private const string NullActorTypeExceptionText = "Props must be instantiated with an actor type.";
+
         public class PropsSurrogate : ISurrogate
         {
             public Type Type { get; set; }
@@ -183,6 +186,8 @@ namespace Akka.Actor
         public Props(Type type, object[] args)
             : this(defaultDeploy, type, args)
         {
+            if (type == null)
+                throw new ArgumentNullException("type", NullActorTypeExceptionText);
         }
 
         /// <summary>
@@ -192,6 +197,8 @@ namespace Akka.Actor
         public Props(Type type)
             : this(defaultDeploy, type, noArgs)
         {
+            if (type == null)
+                throw new ArgumentNullException("type", NullActorTypeExceptionText);
         }
 
         /// <summary>
@@ -203,6 +210,9 @@ namespace Akka.Actor
         public Props(Type type, SupervisorStrategy supervisorStrategy, IEnumerable<object> args)
             : this(defaultDeploy, type, args.ToArray())
         {
+            if (type == null)
+                throw new ArgumentNullException("type", NullActorTypeExceptionText);
+
             SupervisorStrategy = supervisorStrategy;
         }
 
@@ -215,6 +225,9 @@ namespace Akka.Actor
         public Props(Type type, SupervisorStrategy supervisorStrategy, params object[] args)
             : this(defaultDeploy, type, args)
         {
+            if (type == null)
+                throw new ArgumentNullException("type", NullActorTypeExceptionText);
+
             SupervisorStrategy = supervisorStrategy;
         }
 
@@ -227,6 +240,8 @@ namespace Akka.Actor
         public Props(Deploy deploy, Type type, IEnumerable<object> args)
             : this(deploy, type, args.ToArray())
         {
+            if (type == null)
+                throw new ArgumentNullException("type", NullActorTypeExceptionText);
         }
 
         /// <summary>
@@ -394,6 +409,9 @@ namespace Akka.Actor
         /// <returns>Props.</returns>
         public static Props Create(Type type, params object[] args)
         {
+            if (type == null)
+                throw new ArgumentNullException("type", NullActorTypeExceptionText);
+
             return new Props(type, args);
         }
 
@@ -493,7 +511,7 @@ namespace Akka.Actor
             try {
                 return producer.Produce();
             } catch (Exception e) {
-                throw new Exception("Error while creating actor instance of type " + type + " with " + arguments.Length + " args: (" + StringFormat.SafeJoin(",", arguments) + ")", e);
+                throw new TypeLoadException("Error while creating actor instance of type " + type + " with " + arguments.Length + " args: (" + StringFormat.SafeJoin(",", arguments) + ")", e);
             }
         }
 
@@ -692,7 +710,7 @@ namespace Akka.Actor
 
     /// <summary>
     ///     This interface defines a class of actor creation strategies deviating from
-    ///     the usual default of just reflectively instantiating the [[Actor]]
+    ///     the usual default of just reflectively instantiating the <see cref="Akka.Actor.ActorBase">Actor</see>
     ///     subclass. It can be used to allow a dependency injection framework to
     ///     determine the actual actor class and how it shall be instantiated.
     /// </summary>
@@ -707,13 +725,13 @@ namespace Akka.Actor
         ActorBase Produce();
 
         /// <summary>
-        ///     This method is used by [[Props]] to determine the type of actor which will
+        ///     This method is used by <see cref="Akka.Actor.Props"/> to determine the type of actor which will
         ///     be created. The returned type is not used to produce the actor.
         /// </summary>
         Type ActorType { get; }
 
         /// <summary>
-        /// This method is used by [[Props]] to signal the Producer that it can
+        /// This method is used by <see cref="Akka.Actor.Props"/> to signal the Producer that it can
         /// release it's reference.  <see href="http://www.amazon.com/Dependency-Injection-NET-Mark-Seemann/dp/1935182501/ref=sr_1_1?ie=UTF8&qid=1425861096&sr=8-1&keywords=mark+seemann">HERE</see> 
         /// </summary>
         /// <param name="actor"></param>

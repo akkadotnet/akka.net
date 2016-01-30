@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.FaultHandling.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using Akka.Actor.Internal;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -323,7 +324,6 @@ namespace Akka.Actor
                                     Publish(new Debug(_self.Path.ToString(), ActorType, "Stopped"));
 
                                 ClearActor(a);
-                                ReleaseActor(a);
                                 ClearActorCell();
                                 
                                 _actor = null;
@@ -333,11 +333,6 @@ namespace Akka.Actor
                     }
                 }
             }
-        }
-
-        private void ReleaseActor(ActorBase a)
-        {
-            _props.Release(a);
         }
 
         private void FinishRecreate(Exception cause, ActorBase failedActor)
@@ -400,7 +395,7 @@ namespace Akka.Actor
                 {
                     var handled = _actor.SupervisorStrategyInternal.HandleFailure(this, f.Cause, childStats, ChildrenContainer.Stats);
                     if (!handled)
-                        throw f.Cause;
+                        ExceptionDispatchInfo.Capture(f.Cause).Throw();
                 }
                 else
                 {

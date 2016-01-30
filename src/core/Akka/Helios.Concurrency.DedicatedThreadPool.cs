@@ -2,11 +2,12 @@
  * Copyright 2015 Roger Alsing, Aaron Stannard
  * Helios.DedicatedThreadPool - https://github.com/helios-io/DedicatedThreadPool
  */
-
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -31,15 +32,31 @@ namespace Helios.Concurrency
         /// </summary>
         public const ThreadType DefaultThreadType = ThreadType.Background;
 
-        public DedicatedThreadPoolSettings(int numThreads, string name, TimeSpan? deadlockTimeout = null) 
-            : this(numThreads, DefaultThreadType, name, deadlockTimeout) { }
+        public DedicatedThreadPoolSettings(int numThreads,
+                                           string name = null,
+                                           TimeSpan? deadlockTimeout = null,
+                                           ApartmentState apartmentState = ApartmentState.Unknown,
+                                           Action<Exception> exceptionHandler = null,
+                                           int threadMaxStackSize = 0)
+            : this(numThreads, DefaultThreadType, name, deadlockTimeout, apartmentState, exceptionHandler, threadMaxStackSize)
+        { }
 
-        public DedicatedThreadPoolSettings(int numThreads, ThreadType threadType, string name, TimeSpan? deadlockTimeout = null)
+        public DedicatedThreadPoolSettings(int numThreads,
+                                           ThreadType threadType,
+                                           string name = null,
+                                           TimeSpan? deadlockTimeout = null,
+                                           ApartmentState apartmentState = ApartmentState.Unknown,
+                                           Action<Exception> exceptionHandler = null,
+                                           int threadMaxStackSize = 0)
         {
-            Name = name;
+            Name = name ?? ("DedicatedThreadPool-" + Guid.NewGuid());
             ThreadType = threadType;
             NumThreads = numThreads;
             DeadlockTimeout = deadlockTimeout;
+            ApartmentState = apartmentState;
+            ExceptionHandler = exceptionHandler ?? (ex => { });
+            ThreadMaxStackSize = threadMaxStackSize;
+
             if (deadlockTimeout.HasValue && deadlockTimeout.Value.TotalMilliseconds <= 0)
                 throw new ArgumentOutOfRangeException("deadlockTimeout", string.Format("deadlockTimeout must be null or at least 1ms. Was {0}.", deadlockTimeout));
             if (numThreads <= 0)
@@ -57,6 +74,11 @@ namespace Helios.Concurrency
         public ThreadType ThreadType { get; private set; }
 
         /// <summary>
+        /// Apartment state for threads to run in this thread pool
+        /// </summary>
+        public ApartmentState ApartmentState { get; private set; }
+
+        /// <summary>
         /// Interval to check for thread deadlocks.
         /// 
         /// If a thread takes longer than <see cref="DeadlockTimeout"/> it will be aborted
@@ -65,6 +87,13 @@ namespace Helios.Concurrency
         public TimeSpan? DeadlockTimeout { get; private set; }
 
         public string Name { get; private set; }
+
+        public Action<Exception> ExceptionHandler { get; private set; }
+
+        /// <summary>
+        /// Gets the thread stack size, 0 represents the default stack size.
+        /// </summary>
+        public int ThreadMaxStackSize { get; private set; }
     }
 
     /// <summary>
@@ -215,239 +244,455 @@ namespace Helios.Concurrency
     /// <summary>
     /// An instanced, dedicated thread pool.
     /// </summary>
-    internal class DedicatedThreadPool : IDisposable
+    internal sealed class DedicatedThreadPool : IDisposable
     {
-        internal class DedicatedThreadPoolSupervisor : IDisposable
-        {
-            private readonly Timer _timer;
-
-            internal DedicatedThreadPoolSupervisor(DedicatedThreadPool pool)
-            {
-
-                //don't set up a timer if a timeout wasn't specified
-                if (pool.Settings.DeadlockTimeout == null)
-                    return;
-
-                _timer = new Timer(_ =>
-                {
-                    //bail in the event of a shutdown
-                    if (pool.ShutdownRequested) return;
-
-                    for (var i = 0; i < pool.Workers.Length; i++)
-                    {
-                        var w = pool.Workers[i];
-                        if (Interlocked.Exchange(ref w.Status, 0) == 0)
-                        {
-                            //this requests a new new worker and calls ForceTermination on the old worker
-                            //Potential problem here: if the thread is not dead for real, we might abort real work.. there is no way to tell the difference between 
-                            //deadlocked or just very long running tasks
-                            var newWorker = pool.RequestThread(w, i);
-                            continue;
-                        }
-
-                        //schedule heartbeat action to worker
-                        pool.Workers[i].AddWork(() => Interlocked.Increment(ref w.Status));
-                    }
-                }, null, pool.Settings.DeadlockTimeout.Value, pool.Settings.DeadlockTimeout.Value);
-            }
-
-            public void Dispose()
-            {
-                /*
-                 * Timer can be null if no deadlock interval was defined in
-                 * DedicatedThreadPoolSettings.
-                 */
-                if (_timer != null)
-                {
-                    _timer.Dispose();
-                }
-            }
-        }
-
         public DedicatedThreadPool(DedicatedThreadPoolSettings settings)
         {
+            _workQueue = new ThreadPoolWorkQueue();
             Settings = settings;
+            _workers = Enumerable.Range(1, settings.NumThreads).Select(workerId => new PoolWorker(this, workerId)).ToArray();
 
-            Workers = Enumerable.Repeat(0, settings.NumThreads).Select(_ => new WorkerQueue()).ToArray();
-            for (var i = 0; i < Workers.Length; i++)
-            {
-                new PoolWorker(Workers[i], this, false, i);
-            }
-            _supervisor = new DedicatedThreadPoolSupervisor(this);
+            // Note:
+            // The DedicatedThreadPoolSupervisor was removed because aborting thread could lead to unexpected behavior
+            // If a new implementation is done, it should spawn a new thread when a worker is not making progress and
+            // try to keep {settings.NumThreads} active threads.
         }
 
         public DedicatedThreadPoolSettings Settings { get; private set; }
 
-        internal volatile bool ShutdownRequested;
-
-        public readonly WorkerQueue[] Workers;
-
-        [ThreadStatic]
-        internal static PoolWorker CurrentWorker;
-
-        /// <summary>
-        /// index for round-robin load-balancing across worker threads
-        /// </summary>
-        private volatile int _index;
-
-        private readonly DedicatedThreadPoolSupervisor _supervisor;
-
-        public bool WasDisposed { get; private set; }
-
-        private void Shutdown()
-        {
-            ShutdownRequested = true;
-        }
-
-        private PoolWorker RequestThread(WorkerQueue unclaimedQueue, int workerNumber, bool errorRecovery = false)
-        {
-            var worker = new PoolWorker(unclaimedQueue, this, errorRecovery, workerNumber);
-            return worker;
-        }
+        private readonly ThreadPoolWorkQueue _workQueue;
+        private readonly PoolWorker[] _workers;
 
         public bool QueueUserWorkItem(Action work)
         {
-            bool success = true;
-
-            //don't queue work if we've been disposed
-            if (WasDisposed) return false;
-
-            if (work != null)
-            {
-                //no local queue, write to a round-robin queue
-                //if (null == CurrentWorker)
-                //{
-                //using volatile instead of interlocked, no need to be exact, gaining 20% perf
-                unchecked
-                {
-                    _index = (_index + 1);
-                    //need to wrap bitwise operations in parens to preserve order, otherwise this won't round-robin
-                    //to some actors if Settings.NumThreads is an odd number
-                    Workers[(_index & 0x7fffffff) % Settings.NumThreads].AddWork(work);
-                }
-                //}
-                //else //recursive task queue, write directly
-                //{
-                //    // send work directly to PoolWorker
-                //    // CurrentWorker.AddWork(work);
-                //}
-            }
-            else
-            {
+            if (work == null)
                 throw new ArgumentNullException("work");
-            }
-            return success;
-        }
 
-        #region IDisposable members
+            return _workQueue.TryAdd(work);
+        }
 
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            _workQueue.CompleteAdding();
         }
 
-        public void Dispose(bool isDisposing)
+        public void WaitForThreadsExit()
         {
-            if (!WasDisposed)
+            WaitForThreadsExit(Timeout.InfiniteTimeSpan);
+        }
+
+        public void WaitForThreadsExit(TimeSpan timeout)
+        {
+            Task.WaitAll(_workers.Select(worker => worker.ThreadExit).ToArray(), timeout);
+        }
+
+        #region Pool worker implementation
+
+        private class PoolWorker
+        {
+            private readonly DedicatedThreadPool _pool;
+
+            private readonly TaskCompletionSource<object> _threadExit;
+
+            public Task ThreadExit
             {
-                if (isDisposing)
-                {
-                    _supervisor.Dispose();
-                    Shutdown();
-                }
+                get { return _threadExit.Task; }
             }
 
-            WasDisposed = true;
+            public PoolWorker(DedicatedThreadPool pool, int workerId)
+            {
+                _pool = pool;
+                _threadExit = new TaskCompletionSource<object>();
+
+                var thread = new Thread(RunThread, pool.Settings.ThreadMaxStackSize);
+
+                thread.IsBackground = pool.Settings.ThreadType == ThreadType.Background;
+
+                if (pool.Settings.Name != null)
+                    thread.Name = string.Format("{0}_{1}", pool.Settings.Name, workerId);
+
+                if (pool.Settings.ApartmentState != ApartmentState.Unknown)
+                    thread.SetApartmentState(pool.Settings.ApartmentState);
+
+                thread.Start();
+            }
+
+            private void RunThread()
+            {
+                try
+                {
+                    foreach (var action in _pool._workQueue.GetConsumingEnumerable())
+                    {
+                        try
+                        {
+                            action();
+                        }
+                        catch (Exception ex)
+                        {
+                            _pool.Settings.ExceptionHandler(ex);
+                        }
+                    }
+                }
+                finally
+                {
+                    _threadExit.TrySetResult(null);
+                }
+            }
         }
 
         #endregion
 
-        #region Pool worker implementation
+        #region WorkQueue implementation
 
-        internal sealed class WorkerQueue
+        private class ThreadPoolWorkQueue
         {
-            internal BlockingCollection<Action> WorkQueue = new BlockingCollection<Action>();
-            internal int Status = 1;
-            private PoolWorker _poolWorker;
+            private static readonly int ProcessorCount = Environment.ProcessorCount;
+            private const int CompletedState = 1;
 
-            public void AddWork(Action work)
+            private readonly ConcurrentQueue<Action> _queue = new ConcurrentQueue<Action>();
+            private readonly UnfairSemaphore _semaphore = new UnfairSemaphore();
+            private int _outstandingRequests;
+            private int _isAddingCompleted;
+
+            public bool IsAddingCompleted
             {
-                WorkQueue.Add(work);
+                get { return Volatile.Read(ref _isAddingCompleted) == CompletedState; }
             }
 
-            internal void ReplacePoolWorker(PoolWorker poolWorker, bool errorRecovery)
+            public bool TryAdd(Action work)
             {
-                if (_poolWorker != null && !errorRecovery)
+                // If TryAdd returns true, it's garanteed the work item will be executed.
+                // If it returns false, it's also garanteed the work item won't be executed.
+
+                if (IsAddingCompleted)
+                    return false;
+
+                _queue.Enqueue(work);
+                EnsureThreadRequested();
+
+                return true;
+            }
+
+            public IEnumerable<Action> GetConsumingEnumerable()
+            {
+                while (true)
                 {
-                    _poolWorker.ForceTermination();
+                    Action work;
+                    if (_queue.TryDequeue(out work))
+                    {
+                        yield return work;
+                    }
+                    else if (IsAddingCompleted)
+                    {
+                        while (_queue.TryDequeue(out work))
+                            yield return work;
+
+                        break;
+                    }
+                    else
+                    {
+                        _semaphore.Wait();
+                        MarkThreadRequestSatisfied();
+                    }
                 }
-                _poolWorker = poolWorker;
+            }
+
+            public void CompleteAdding()
+            {
+                int previousCompleted = Interlocked.Exchange(ref _isAddingCompleted, CompletedState);
+
+                if (previousCompleted == CompletedState)
+                    return;
+
+                // When CompleteAdding() is called, we fill up the _outstandingRequests and the semaphore
+                // This will ensure that all threads will unblock and try to execute the remaining item in
+                // the queue. When IsAddingCompleted is set, all threads will exit once the queue is empty.
+
+                while (true)
+                {
+                    int count = Volatile.Read(ref _outstandingRequests);
+                    int countToRelease = UnfairSemaphore.MaxWorker - count;
+
+                    int prev = Interlocked.CompareExchange(ref _outstandingRequests, UnfairSemaphore.MaxWorker, count);
+
+                    if (prev == count)
+                    {
+                        _semaphore.Release((short)countToRelease);
+                        break;
+                    }
+                }
+            }
+
+            private void EnsureThreadRequested()
+            {
+                // There is a double counter here (_outstandingRequest and _semaphore)
+                // Unfair semaphore does not support value bigger than short.MaxValue,
+                // tring to Release more than short.MaxValue could fail miserably.
+
+                // The _outstandingRequest counter ensure that we only request a
+                // maximum of {ProcessorCount} to the semaphore.
+
+                // It's also more efficient to have two counter, _outstandingRequests is
+                // more lightweight than the semaphore.
+
+                // This trick is borrowed from the .Net ThreadPool
+                // https://github.com/dotnet/coreclr/blob/bc146608854d1db9cdbcc0b08029a87754e12b49/src/mscorlib/src/System/Threading/ThreadPool.cs#L568
+
+                int count = Volatile.Read(ref _outstandingRequests);
+                while (count < ProcessorCount)
+                {
+                    int prev = Interlocked.CompareExchange(ref _outstandingRequests, count + 1, count);
+                    if (prev == count)
+                    {
+                        _semaphore.Release();
+                        break;
+                    }
+                    count = prev;
+                }
+            }
+
+            private void MarkThreadRequestSatisfied()
+            {
+                int count = Volatile.Read(ref _outstandingRequests);
+                while (count > 0)
+                {
+                    int prev = Interlocked.CompareExchange(ref _outstandingRequests, count - 1, count);
+                    if (prev == count)
+                    {
+                        break;
+                    }
+                    count = prev;
+                }
             }
         }
 
-        internal class PoolWorker
+        #endregion
+
+        #region UnfairSemaphore implementation
+
+        // This class has been translated from:
+        // https://github.com/dotnet/coreclr/blob/97433b9d153843492008652ff6b7c3bf4d9ff31c/src/vm/win32threadpool.h#L124
+
+        // UnfairSemaphore is a more scalable semaphore than Semaphore.  It prefers to release threads that have more recently begun waiting,
+        // to preserve locality.  Additionally, very recently-waiting threads can be released without an addition kernel transition to unblock
+        // them, which reduces latency.
+        //
+        // UnfairSemaphore is only appropriate in scenarios where the order of unblocking threads is not important, and where threads frequently
+        // need to be woken.
+
+        [StructLayout(LayoutKind.Sequential)]
+        private sealed class UnfairSemaphore
         {
-            private WorkerQueue _work;
-            private DedicatedThreadPool _pool;
-            private readonly int _workerNumber;
+            public const int MaxWorker = 0x7FFF;
 
-            private BlockingCollection<Action> _workQueue;
-            private readonly Thread _thread;
-
-            public PoolWorker(WorkerQueue work, DedicatedThreadPool pool, bool errorRecovery, int workerNumber)
+            // We track everything we care about in a single 64-bit struct to allow us to 
+            // do CompareExchanges on this for atomic updates.
+            [StructLayout(LayoutKind.Explicit)]
+            private struct SemaphoreState
             {
-                _work = work;
-                _pool = pool;
-                _workerNumber = workerNumber;
-                _workQueue = _work.WorkQueue;
-                _work.ReplacePoolWorker(this, errorRecovery);
-                
-                _thread = new Thread(() =>
-                {
-                    Thread.CurrentThread.Name = string.Format("{0}_{1}", pool.Settings.Name, _workerNumber);
-                    CurrentWorker = this;
+                //how many threads are currently spin-waiting for this semaphore?
+                [FieldOffset(0)]
+                public short Spinners;
 
-                    foreach (var action in _workQueue.GetConsumingEnumerable())
+                //how much of the semaphore's count is availble to spinners?
+                [FieldOffset(2)]
+                public short CountForSpinners;
+
+                //how many threads are blocked in the OS waiting for this semaphore?
+                [FieldOffset(4)]
+                public short Waiters;
+
+                //how much count is available to waiters?
+                [FieldOffset(6)]
+                public short CountForWaiters;
+
+                [FieldOffset(0)]
+                public long RawData;
+            }
+
+            [StructLayout(LayoutKind.Explicit, Size = 64)]
+            private struct CacheLinePadding
+            { }
+
+            private readonly Semaphore m_semaphore;
+
+            // padding to ensure we get our own cache line
+#pragma warning disable 169
+            private readonly CacheLinePadding m_padding1;
+            private SemaphoreState m_state;
+            private readonly CacheLinePadding m_padding2;
+#pragma warning restore 169
+
+            public UnfairSemaphore()
+            {
+                m_semaphore = new Semaphore(0, short.MaxValue);
+            }
+
+            public bool Wait()
+            {
+                return Wait(Timeout.InfiniteTimeSpan);
+            }
+
+            public bool Wait(TimeSpan timeout)
+            {
+                while (true)
+                {
+                    SemaphoreState currentCounts = GetCurrentState();
+                    SemaphoreState newCounts = currentCounts;
+
+                    // First, just try to grab some count.
+                    if (currentCounts.CountForSpinners > 0)
                     {
-                        try
+                        --newCounts.CountForSpinners;
+                        if (TryUpdateState(newCounts, currentCounts))
+                            return true;
+                    }
+                    else
+                    {
+                        // No count available, become a spinner
+                        ++newCounts.Spinners;
+                        if (TryUpdateState(newCounts, currentCounts))
+                            break;
+                    }
+                }
+
+                //
+                // Now we're a spinner.  
+                //
+                int numSpins = 0;
+                const int spinLimitPerProcessor = 50;
+                while (true)
+                {
+                    SemaphoreState currentCounts = GetCurrentState();
+                    SemaphoreState newCounts = currentCounts;
+
+                    if (currentCounts.CountForSpinners > 0)
+                    {
+                        --newCounts.CountForSpinners;
+                        --newCounts.Spinners;
+                        if (TryUpdateState(newCounts, currentCounts))
+                            return true;
+                    }
+                    else
+                    {
+                        double spinnersPerProcessor = (double)currentCounts.Spinners / Environment.ProcessorCount;
+                        int spinLimit = (int)((spinLimitPerProcessor / spinnersPerProcessor) + 0.5);
+                        if (numSpins >= spinLimit)
                         {
-                            //bail if shutdown has been requested
-                            if (_pool.ShutdownRequested) return;
-                            action();
+                            --newCounts.Spinners;
+                            ++newCounts.Waiters;
+                            if (TryUpdateState(newCounts, currentCounts))
+                                break;
                         }
-                        catch (Exception)
+                        else
                         {
-                            Failover(true);
-                            return;
+                            //
+                            // We yield to other threads using Thread.Sleep(0) rather than the more traditional Thread.Yield().
+                            // This is because Thread.Yield() does not yield to threads currently scheduled to run on other
+                            // processors.  On a 4-core machine, for example, this means that Thread.Yield() is only ~25% likely
+                            // to yield to the correct thread in some scenarios.
+                            // Thread.Sleep(0) has the disadvantage of not yielding to lower-priority threads.  However, this is ok because
+                            // once we've called this a few times we'll become a "waiter" and wait on the Semaphore, and that will
+                            // yield to anything that is runnable.
+                            //
+                            Thread.Sleep(0);
+                            numSpins++;
                         }
                     }
-                })
+                }
+
+                //
+                // Now we're a waiter
+                //
+                bool waitSucceeded = m_semaphore.WaitOne(timeout);
+
+                while (true)
                 {
-                    IsBackground = _pool.Settings.ThreadType == ThreadType.Background
-                };
+                    SemaphoreState currentCounts = GetCurrentState();
+                    SemaphoreState newCounts = currentCounts;
 
-                _thread.Start();
+                    --newCounts.Waiters;
+
+                    if (waitSucceeded)
+                        --newCounts.CountForWaiters;
+
+                    if (TryUpdateState(newCounts, currentCounts))
+                        return waitSucceeded;
+                }
             }
 
-            private void Failover(bool errorRecovery = false)
+            public void Release()
             {
-                /* request a new thread then shut down */
-                _pool.RequestThread(_work, _workerNumber, errorRecovery);
-                CurrentWorker = null;
-                _work = null;
-                _workQueue = null;
-                _pool = null;
+                Release(1);
             }
 
-            internal void ForceTermination()
+            public void Release(short count)
             {
-                //TODO: abort is no guarantee for thread abortion
-                _thread.Abort();
+                while (true)
+                {
+                    SemaphoreState currentState = GetCurrentState();
+                    SemaphoreState newState = currentState;
+
+                    short remainingCount = count;
+
+                    // First, prefer to release existing spinners,
+                    // because a) they're hot, and b) we don't need a kernel
+                    // transition to release them.
+                    short spinnersToRelease = Math.Max((short)0, Math.Min(remainingCount, (short)(currentState.Spinners - currentState.CountForSpinners)));
+                    newState.CountForSpinners += spinnersToRelease;
+                    remainingCount -= spinnersToRelease;
+
+                    // Next, prefer to release existing waiters
+                    short waitersToRelease = Math.Max((short)0, Math.Min(remainingCount, (short)(currentState.Waiters - currentState.CountForWaiters)));
+                    newState.CountForWaiters += waitersToRelease;
+                    remainingCount -= waitersToRelease;
+
+                    // Finally, release any future spinners that might come our way
+                    newState.CountForSpinners += remainingCount;
+
+                    // Try to commit the transaction
+                    if (TryUpdateState(newState, currentState))
+                    {
+                        // Now we need to release the waiters we promised to release
+                        if (waitersToRelease > 0)
+                            m_semaphore.Release(waitersToRelease);
+
+                        break;
+                    }
+                }
+            }
+
+            private bool TryUpdateState(SemaphoreState newState, SemaphoreState currentState)
+            {
+                if (Interlocked.CompareExchange(ref m_state.RawData, newState.RawData, currentState.RawData) == currentState.RawData)
+                {
+                    Debug.Assert(newState.CountForSpinners <= MaxWorker, "CountForSpinners is greater than MaxWorker");
+                    Debug.Assert(newState.CountForSpinners >= 0, "CountForSpinners is lower than zero");
+                    Debug.Assert(newState.Spinners <= MaxWorker, "Spinners is greater than MaxWorker");
+                    Debug.Assert(newState.Spinners >= 0, "Spinners is lower than zero");
+                    Debug.Assert(newState.CountForWaiters <= MaxWorker, "CountForWaiters is greater than MaxWorker");
+                    Debug.Assert(newState.CountForWaiters >= 0, "CountForWaiters is lower than zero");
+                    Debug.Assert(newState.Waiters <= MaxWorker, "Waiters is greater than MaxWorker");
+                    Debug.Assert(newState.Waiters >= 0, "Waiters is lower than zero");
+                    Debug.Assert(newState.CountForSpinners + newState.CountForWaiters <= MaxWorker, "CountForSpinners + CountForWaiters is greater than MaxWorker");
+
+                    return true;
+                }
+
+                return false;
+            }
+
+            private SemaphoreState GetCurrentState()
+            {
+                // Volatile.Read of a long can get a partial read in x86 but the invalid
+                // state will be detected in TryUpdateState with the CompareExchange.
+
+                SemaphoreState state = new SemaphoreState();
+                state.RawData = Volatile.Read(ref m_state.RawData);
+                return state;
             }
         }
 
         #endregion
     }
 }
-

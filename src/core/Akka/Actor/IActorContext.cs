@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="IActorContext.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -134,6 +134,11 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="timeout">The timeout. Pass in <c>null</c> to switch off this feature.</param>
         void SetReceiveTimeout(TimeSpan? timeout);
+
+        /// <summary>
+        /// Gets the inactivity deadline timeout set using <see cref="SetReceiveTimeout"/>.
+        /// </summary>
+        TimeSpan? ReceiveTimeout { get; }
 
         /*
   def self: ActorRef

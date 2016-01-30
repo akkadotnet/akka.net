@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LoggingAdapterBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -31,15 +31,21 @@ namespace Akka.Event
         /// Creates an instance of the LoggingAdapterBase.
         /// </summary>
         /// <param name="logMessageFormatter">The log message formatter used by this logging adapter.</param>
-        /// <exception cref="ArgumentException"></exception>
+        /// <exception cref="ArgumentNullException">This exception is thrown when the supplied message formatter is null.</exception>
         protected LoggingAdapterBase(ILogMessageFormatter logMessageFormatter)
         {
             if(logMessageFormatter == null)
-                throw new ArgumentException("logMessageFormatter");
+                throw new ArgumentNullException("logMessageFormatter", "The message formatter must not be null.");
 
             _logMessageFormatter = logMessageFormatter;
         }
-        
+
+        /// <summary>
+        /// Checks the logging adapter to see if the supplied <paramref name="logLevel"/> is enabled.
+        /// </summary>
+        /// <param name="logLevel">The log level to check if it is enabled in this logging adapter.</param>
+        /// <returns><c>true</c> if the supplied log level is enabled; otherwise <c>false</c></returns>
+        /// <exception cref="NotSupportedException">This exception is thrown when the supplied log level is unknown.</exception>
         public bool IsEnabled(LogLevel logLevel)
         {
             switch(logLevel)
@@ -62,7 +68,7 @@ namespace Akka.Event
         /// </summary>
         /// <param name="logLevel">The log level of the log event.</param>
         /// <param name="message">The log message of the log event.</param>
-        /// <exception cref="NotSupportedException"></exception>
+        /// <exception cref="NotSupportedException">This exception is thrown when the supplied log level is unknown.</exception>
         protected void NotifyLog(LogLevel logLevel, object message)
         {
             switch(logLevel)

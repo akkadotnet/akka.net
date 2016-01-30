@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentViewSpec.Actors.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -67,6 +67,11 @@ namespace Akka.Persistence.Tests
             {
                 if (message.ToString() == "get") _probe.Tell(_last);
                 else if (message.ToString() == "boom") throw new TestException("boom");
+                else if (message is RecoveryFailure)
+                {
+                    var failure = message as RecoveryFailure;
+                    throw failure.Cause;
+                }
                 else if (IsPersistent && ShouldFail(message)) throw new TestException("boom");
                 else if (IsPersistent)
                 {

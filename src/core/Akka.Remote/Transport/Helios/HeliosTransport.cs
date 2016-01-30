@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HeliosTransport.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -83,7 +83,7 @@ namespace Akka.Remote.Transport.Helios
             var configHost = Config.GetString("hostname");
             var publicConfigHost = Config.GetString("public-hostname");
             Hostname = string.IsNullOrEmpty(configHost) ? IPAddress.Any.ToString() : configHost;
-            PublicHostname = string.IsNullOrEmpty(publicConfigHost) ? configHost : publicConfigHost;
+            PublicHostname = string.IsNullOrEmpty(publicConfigHost) ? Hostname : publicConfigHost;
             ServerSocketWorkerPoolSize = ComputeWps(Config.GetConfig("server-socket-worker-pool"));
             ClientSocketWorkerPoolSize = ComputeWps(Config.GetConfig("client-socket-worker-pool"));
             Port = Config.GetInt("port");
@@ -169,6 +169,14 @@ namespace Akka.Remote.Transport.Helios
             {
                 var sslPrefix = (Settings.EnableSsl ? "ssl." : "");
                 return string.Format("{0}{1}", sslPrefix, Settings.TransportMode);
+            }
+        }
+
+        public override long MaximumPayloadBytes
+        {
+            get
+            {
+                return Settings.MaxFrameSize;
             }
         }
 
@@ -292,8 +300,7 @@ namespace Akka.Remote.Transport.Helios
             var addr = NodeToAddress(publicAddress, SchemeIdentifier, System.Name, Settings.PublicHostname);
             if(addr == null) throw new HeliosNodeException("Unknown local address type {0}", newServerChannel.Local);
             LocalAddress = addr;
-            AssociationListenerPromise.Task.ContinueWith(result => ServerChannel.BeginReceive(),
-                TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously);
+            AssociationListenerPromise.Task.ContinueWith(result => ServerChannel.BeginReceive(), TaskContinuationOptions.ExecuteSynchronously);
 
             return Task.Run(() => Tuple.Create(addr, AssociationListenerPromise));
         }
@@ -310,11 +317,20 @@ namespace Akka.Remote.Transport.Helios
         {
             return Task.Run(() =>
             {
-                foreach (var channel in ConnectionGroup)
+                try
                 {
-                    channel.StopReceive();
-                    channel.Dispose();
+                    foreach (var channel in ConnectionGroup)
+                    {
+                        channel.StopReceive();
+                        channel.Dispose();
+                    }
                 }
+                finally
+                {
+                    // free all of the connection objects we were holding onto
+                    ConnectionGroup.Clear();
+                }
+                
                 return true;
             });
 

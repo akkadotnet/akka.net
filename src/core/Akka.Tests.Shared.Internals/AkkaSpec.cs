@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using Akka.Configuration;
 using Xunit;
+using Xunit.Abstractions;
 using Xunit.Sdk;
 
 // ReSharper disable once CheckNamespace
@@ -39,13 +40,13 @@ namespace Akka.TestKit
 
         private static int _systemNumber = 0;
 
-        public AkkaSpec(string config)
-            : this(ConfigurationFactory.ParseString(config).WithFallback(_akkaSpecConfig))
+        public AkkaSpec(string config, ITestOutputHelper output = null)
+            : this(ConfigurationFactory.ParseString(config).WithFallback(_akkaSpecConfig), output)
         {
         }
 
-        public AkkaSpec(Config config = null)
-            : base(config.SafeWithFallback(_akkaSpecConfig), GetCallerName())
+        public AkkaSpec(Config config = null, ITestOutputHelper output = null)
+            : base(config.SafeWithFallback(_akkaSpecConfig), GetCallerName(), output)
         {
             BeforeAll();
         }

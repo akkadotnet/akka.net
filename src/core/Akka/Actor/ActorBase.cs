@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -199,7 +199,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Changes the actor's behavior and replaces the current receive handler with the specified handler.
+        /// Changes the actor's command behavior and replaces the current receive handler with the specified handler.
         /// </summary>
         /// <param name="receive">The new message handler.</param>
         protected void Become(Receive receive)

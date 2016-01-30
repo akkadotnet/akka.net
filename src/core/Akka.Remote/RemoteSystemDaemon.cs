@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="RemoteDaemon.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// <copyright file="RemoteSystemDaemon.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -73,13 +73,12 @@ namespace Akka.Remote
     /// 
     /// Internal system "daemon" actor for remote internal communication.
     /// 
-    /// It acts as the brain of the remote that response to system remote messages and executes actions accordingly.
+    /// It acts as the brain of the remote that responds to system remote messages and executes actions accordingly.
     /// </summary>
     internal class RemoteSystemDaemon : VirtualPathContainer
     {
         private readonly ActorSystemImpl _system;
         private readonly Switch _terminating = new Switch(false);
-        //private val parent2children = new ConcurrentHashMap[ActorRef, Set[ActorRef]]
         private readonly ConcurrentDictionary<IActorRef, IImmutableSet<IActorRef>> _parent2Children = new ConcurrentDictionary<IActorRef, IImmutableSet<IActorRef>>();
         private readonly IActorRef _terminator;
 
@@ -103,8 +102,9 @@ namespace Akka.Remote
         /// <summary>
         ///     Called when [receive].
         /// </summary>
-        /// <param name="message">The message.</param>
-        protected void OnReceive(object message)
+        /// <param name="message">The message that was received.</param>
+        /// <param name="sender">The actor that sent the message.</param>
+        protected void OnReceive(object message, IActorRef sender)
         {
             //note: RemoteDaemon does not handle ActorSelection messages - those are handled directly by the RemoteActorRefProvider.
             if (message is IDaemonMsg)
@@ -122,6 +122,19 @@ namespace Akka.Remote
                 ForEachChild(@ref =>
                 {
                     if(@ref.Parent.Path.Address == addressTerminated.Address) _system.Stop(@ref);
+                });
+            }
+            else if (message is Identify)
+            {
+                var identify = message as Identify;
+                sender.Tell(new ActorIdentity(identify.MessageId, this));
+            }
+            else if (message is TerminationHook)
+            {
+                _terminating.SwitchOn(() =>
+                {
+                    TerminationHookDoneWhenNoChildren();
+                    ForEachChild(c => _system.Stop(c));
                 });
             }
             else if (message is DeathWatchNotification)
@@ -210,7 +223,7 @@ namespace Akka.Remote
         /// <param name="sender">The sender.</param>
         protected override void TellInternal(object message, IActorRef sender)
         {
-            OnReceive(message);
+            OnReceive(message, sender);
         }
 
         /// <summary>

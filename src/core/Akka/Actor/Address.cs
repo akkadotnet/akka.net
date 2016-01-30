@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Address.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -217,12 +217,12 @@ namespace Akka.Actor
         {
             try
             {
+                Uri uri;
+                bool isRelative = Uri.TryCreate(addr, UriKind.Relative, out uri);
+                if (!isRelative) return null;
+
                 var finalAddr = addr;
-                // need to add a special case for URI fragments containing #, since those don't get counted
-                // as relative URIs by C#
-                if(Uri.IsWellFormedUriString(addr, UriKind.Absolute) || (!Uri.IsWellFormedUriString(addr, UriKind.Relative) 
-                    && !addr.Contains("#"))) return null;
-                if(!addr.StartsWith("/"))
+                if (!addr.StartsWith("/"))
                 {
                     //hack to cause the URI not to explode when we're only given an actor name
                     finalAddr = "/" + addr;

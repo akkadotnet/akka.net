@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Controller.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -71,10 +71,22 @@ namespace Akka.Remote.TestKit
             }
         }
 
+        /// <summary>
+        /// This exception is thrown when a client has disconnected.
+        /// </summary>
         public class ClientDisconnectedException : AkkaException
         {
-            public ClientDisconnectedException(string msg) : base(msg){}
+            /// <summary>
+            /// Initializes a new instance of the <see cref="ClientDisconnectedException"/> class.
+            /// </summary>
+            /// <param name="message">The message that describes the error.</param>
+            public ClientDisconnectedException(string message) : base(message){}
 
+            /// <summary>
+            /// Initializes a new instance of the <see cref="ClientDisconnectedException"/> class.
+            /// </summary>
+            /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+            /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
             protected ClientDisconnectedException(SerializationInfo info, StreamingContext context) : base(info, context)
             {
             }
@@ -219,21 +231,21 @@ namespace Akka.Remote.TestKit
         {
             return new OneForOneStrategy(e =>
             {
-                var barrierTimeout = e as BarrierCoordinator.BarrierTimeout;
+                var barrierTimeout = e as BarrierCoordinator.BarrierTimeoutException;
                 if (barrierTimeout != null) return FailBarrier(barrierTimeout.BarrierData);
-                var failedBarrier = e as BarrierCoordinator.FailedBarrier;
+                var failedBarrier = e as BarrierCoordinator.FailedBarrierException;
                 if (failedBarrier != null) return FailBarrier(failedBarrier.BarrierData);
-                var barrierEmpty = e as BarrierCoordinator.BarrierEmpty;
+                var barrierEmpty = e as BarrierCoordinator.BarrierEmptyException;
                 if(barrierEmpty != null) return Directive.Resume;
-                var wrongBarrier = e as BarrierCoordinator.WrongBarrier;
+                var wrongBarrier = e as BarrierCoordinator.WrongBarrierException;
                 if (wrongBarrier != null)
                 {
                     wrongBarrier.Client.Tell(new ToClient<BarrierResult>(new BarrierResult(wrongBarrier.Barrier, false)));
                     return FailBarrier(wrongBarrier.BarrierData);
                 }
-                var clientLost = e as BarrierCoordinator.ClientLost;
+                var clientLost = e as BarrierCoordinator.ClientLostException;
                 if (clientLost != null) return FailBarrier(clientLost.BarrierData);
-                var duplicateNode = e as BarrierCoordinator.DuplicateNode;
+                var duplicateNode = e as BarrierCoordinator.DuplicateNodeException;
                 if (duplicateNode != null) return FailBarrier(duplicateNode.BarrierData);
                 throw new InvalidOperationException(String.Format("Cannot process exception of type {0}", e.GetType()));
             });

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Player.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Transport;
@@ -34,7 +35,7 @@ namespace Akka.Remote.TestKit
             get
             {
                 if(_client == null) throw new IllegalStateException("TestConductor client not yet started");
-                if(_system.TerminationTask.IsCompleted) throw new IllegalStateException("TestConductor unavailable because system is terminated; you need to StartNewSystem() before this point");
+                if(_system.WhenTerminated.IsCompleted) throw new IllegalStateException("TestConductor unavailable because system is terminated; you need to StartNewSystem() before this point");
                 return _client;
             }
         }
@@ -116,7 +117,7 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public void Enter(TimeSpan timeout, ImmutableList<string> names)
         {
-            _system.Log.Debug("entering barriers " + names.Aggregate((a,b) => a = ", " + b));
+            _system.Log.Debug("entering barriers {0}", names.Aggregate((a,b) => a = ", " + b));
             var stop = Deadline.Now + timeout;
 
             foreach (var name in names)
@@ -446,12 +447,13 @@ namespace Akka.Remote.TestKit
                                 .Transport.ManagementCommand(new SetThrottle(throttleMsg.Target, throttleMsg.Direction,
                                     mode));
 
+                        var self = Self;
                         cmdTask.ContinueWith(t =>
                         {
                             if (t.IsFaulted)
-                                throw new Exception("Throttle was requested from the TestConductor, but no transport " +
-                                                    "adapters available that support throttling. Specify 'testTransport(on=true)' in your MultiNodeConfig");
-                            Self.Tell(new ToServer<Done>(Done.Instance));
+                                throw new ConfigurationException("Throttle was requested from the TestConductor, but no transport " +
+                                    "adapters available that support throttling. Specify 'testTransport(on=true)' in your MultiNodeConfig");
+                            self.Tell(new ToServer<Done>(Done.Instance));
                         });
                         return Stay();
                     }
@@ -463,14 +465,14 @@ namespace Akka.Remote.TestKit
                     {
                         if (terminateMsg.ShutdownOrExit.IsLeft && terminateMsg.ShutdownOrExit.ToLeft().Value == false)
                         {
-                            Context.System.Shutdown();
+                            Context.System.Terminate();
                             return Stay();
                         }
                         if (terminateMsg.ShutdownOrExit.IsLeft && terminateMsg.ShutdownOrExit.ToLeft().Value == true)
                         {
                             //TODO: terminate more aggressively with Abort
                             //Context.System.AsInstanceOf<ActorSystemImpl>().Abort();
-                            Context.System.Shutdown();
+                            Context.System.Terminate();
                             return Stay();
                         }
                         if (terminateMsg.ShutdownOrExit.IsRight)

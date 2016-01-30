@@ -1,12 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HoconTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using Akka.Configuration;
+using Akka.Configuration.Hocon;
 using Akka.TestKit;
 using Xunit;
 
@@ -554,7 +556,7 @@ a {
             var config2 = config.GetConfig("a");
             var enumerable = config2.AsEnumerable();
 
-            enumerable.Select(kvp => kvp.Key).First().ShouldBe("some quoted, key");            
+            enumerable.Select(kvp => kvp.Key).First().ShouldBe("some quoted, key");
         }
 
         [Fact]
@@ -583,7 +585,10 @@ akka.actor {
             var serializersConfig = config.GetConfig("akka.actor.serializers").AsEnumerable().ToList();
             var serializerBindingConfig = config.GetConfig("akka.actor.serialization-bindings").AsEnumerable().ToList();
 
-            serializersConfig.Select(kvp => kvp.Value).First().GetString().ShouldBe("Akka.Remote.Serialization.MessageContainerSerializer, Akka.Remote");
+            serializersConfig.Select(kvp => kvp.Value)
+                .First()
+                .GetString()
+                .ShouldBe("Akka.Remote.Serialization.MessageContainerSerializer, Akka.Remote");
             serializerBindingConfig.Select(kvp => kvp.Key).Last().ShouldBe("Akka.Remote.DaemonMsgCreate, Akka.Remote");
         }
 
@@ -598,6 +603,101 @@ test.value = 456
 ";
             var config = ConfigurationFactory.ParseString(hocon);
             config.GetInt("test.value").ShouldBe(456);
+        }
+
+        [Fact]
+        public void CanCSubstituteObject()
+        {
+            var hocon = @"a {
+  b {
+      foo = hello
+      bar = 123
+  }
+  c {
+     d = xyz
+     e = ${a.b}
+  }  
+}";
+            var ace = ConfigurationFactory.ParseString(hocon).GetConfig("a.c.e");
+            Assert.Equal("hello", ace.GetString("foo"));
+            Assert.Equal(123, ace.GetInt("bar"));
+        }
+
+        [Fact]
+        public void CanAssignNullStringToField()
+        {
+            var hocon = @"a=null";
+            Assert.Equal(null, ConfigurationFactory.ParseString(hocon).GetString("a"));
+        }
+
+        [Fact(Skip = "we currently do not make any destinction between quoted and unquoted strings once parsed")]
+        public void CanAssignQuotedNullStringToField()
+        {
+            var hocon = @"a=""null""";
+            Assert.Equal("null", ConfigurationFactory.ParseString(hocon).GetString("a"));
+        }
+
+        [Fact]
+        public void CanParseInclude()
+        {
+            var hocon = @"a {
+  b { 
+       include ""foo""
+  }";
+            var includeHocon = @"
+x = 123
+y = hello
+";
+            Func<string, HoconRoot> include = s => Parser.Parse(includeHocon, null);
+            var config = ConfigurationFactory.ParseString(hocon,include);
+
+            Assert.Equal(123,config.GetInt("a.b.x"));
+            Assert.Equal("hello", config.GetString("a.b.y"));
+        }
+
+        [Fact]
+        public void CanResolveSubstitutesInInclude()
+        {
+            var hocon = @"a {
+  b { 
+       include ""foo""
+  }";
+            var includeHocon = @"
+x = 123
+y = ${x}
+";
+            Func<string, HoconRoot> include = s => Parser.Parse(includeHocon, null);
+            var config = ConfigurationFactory.ParseString(hocon, include);
+
+            Assert.Equal(123, config.GetInt("a.b.x"));
+            Assert.Equal(123, config.GetInt("a.b.y"));
+        }
+
+        [Fact]
+        public void CanResolveSubstitutesInNestedIncludes()
+        {
+            var hocon = @"a.b.c {
+  d { 
+       include ""foo""
+  }";
+            var includeHocon = @"
+f = 123
+e {
+      include ""foo""
+}
+";
+
+            var includeHocon2 = @"
+x = 123
+y = ${x}
+";
+
+            Func<string, HoconRoot> include2 = s => Parser.Parse(includeHocon2, null);
+            Func<string, HoconRoot> include = s => Parser.Parse(includeHocon, include2);
+            var config = ConfigurationFactory.ParseString(hocon, include);
+
+            Assert.Equal(123, config.GetInt("a.b.c.d.e.x"));
+            Assert.Equal(123, config.GetInt("a.b.c.d.e.y"));
         }
     }
 }

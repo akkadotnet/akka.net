@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HoconConfigurationElement.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,6 +13,7 @@ namespace Akka.Configuration.Hocon
     /// This class represents a custom HOCON (Human-Optimized Config Object Notation)
     /// node within a configuration file.
     /// <code>
+    /// <![CDATA[
     /// <?xml version="1.0" encoding="utf-8" ?>
     /// <configuration>
     ///   <configSections>
@@ -24,6 +25,7 @@ namespace Akka.Configuration.Hocon
     ///     </hocon>
     ///   </akka>
     /// </configuration>
+    /// ]]>
     /// </code>
     /// </summary>
     public class HoconConfigurationElement : CDataConfigurationElement

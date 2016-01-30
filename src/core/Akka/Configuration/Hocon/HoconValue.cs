@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HoconValue.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -16,6 +16,7 @@ namespace Akka.Configuration.Hocon
     /// <summary>
     /// This class represents the root type for a HOCON (Human-Optimized Config Object Notation)
     /// configuration object.
+    /// </summary>
     public class HoconValue : IMightBeAHoconObject
     {
         /// <summary>
@@ -31,7 +32,19 @@ namespace Akka.Configuration.Hocon
         /// </summary>
         public bool IsEmpty
         {
-            get { return Values.Count == 0; }
+            get
+            {
+                if (Values.Count == 0)
+                    return true;
+
+                var first = Values[0] as HoconObject;
+                if (first != null)
+                {
+                    if (first.Items.Count == 0)
+                        return true;
+                }
+                return false;
+            }
         }
 
         /// <summary>

@@ -70,6 +70,7 @@
     </Compile>
     <Compile Include="ActorCellKeepingSynchronizationContext.cs" />
     <Compile Include="CallingThreadDispatcher.cs" />
+    <Compile Include="Configs\TestConfigs.cs" />
     <Compile Include="EventFilter\IEventFilterApplier.cs" />
     <Compile Include="EventFilter\Internal\CustomEventFilter.cs" />
     <Compile Include="EventFilter\DeadLettersFilter.cs" />
@@ -110,6 +111,7 @@
     <Compile Include="TestActors\BlackHoleActor.cs" />
     <Compile Include="TestActors\EchoActor.cs" />
     <Compile Include="TestBarrier.cs" />
+    <Compile Include="TestBreaker.cs" />
     <Compile Include="TestFSMRef.cs" />
     <Compile Include="ITestKitAssertions.cs" />
     <Compile Include="MessageEnvelope.cs" />
@@ -133,6 +135,7 @@
     <Compile Include="TestKitSettings.cs" />
     <Compile Include="TestLatch.cs" />
     <Compile Include="TestProbe.cs" />
+    <Compile Include="TestScheduler.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Akka\Akka.csproj">
@@ -149,6 +152,7 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>EventFilterFactory_Generated.cs</LastGenOutput>
     </None>
+    <EmbeddedResource Include="Configs\TestScheduler.conf" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />

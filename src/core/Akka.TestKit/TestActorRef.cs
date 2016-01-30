@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestActorRef.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -14,7 +14,7 @@ namespace Akka.TestKit
     /// overrides the dispatcher to <see cref="CallingThreadDispatcher"/> and sets the receiveTimeout to None. Otherwise,
     /// it acts just like a normal ActorRef. You may retrieve a reference to the underlying actor to test internal logic.
     /// A <see cref="TestActorRef{TActor}"/> can be implicitly casted to an <see cref="IActorRef"/> or you can get the actual
-    /// <see cref="IActorRef"/> from the <see cref="TestActorRefBase{TActor}.Ref">Ref</see> property.
+    /// <see cref="IActorRef"/> from the <see cref="TestActorRefBase{TActor}.Ref"/> property.
     /// </summary>
     /// <typeparam name="TActor">The type of actor</typeparam>
     public class TestActorRef<TActor> : TestActorRefBase<TActor> where TActor : ActorBase

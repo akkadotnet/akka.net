@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentViewSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -108,7 +108,7 @@ namespace Akka.Persistence.Tests
             _viewProbe.ExpectMsg("replicated-b-2");
         }
 
-        [Fact(Skip = "FIXME")]
+        [Fact]
         public void PersistentView_should_run_updates_again_on_failure_during_an_update_cycle()
         {
             _pref.Tell("c");

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaProtocolTransport.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -37,17 +37,22 @@ namespace Akka.Remote.Transport
     }
 
     /// <summary>
-    /// An <see cref="AkkaException"/> that can occur during the course of an Akka Protocol handshake.
+    /// This exception is thrown when an error occurred during the Akka protocol handshake.
     /// </summary>
     public class AkkaProtocolException : AkkaException
     {
         /// <summary>
-        /// Constructor.
+        /// Initializes a new instance of the <see cref="AkkaProtocolException"/> class.
         /// </summary>
-        /// <param name="message">The error message.</param>
-        /// <param name="cause">The internal exception (null by default.)</param>
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="cause">The exception that is the cause of the current exception.</param>
         public AkkaProtocolException(string message, Exception cause = null) : base(message, cause) { }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AkkaProtocolException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
         protected AkkaProtocolException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
@@ -158,8 +163,8 @@ namespace Akka.Remote.Transport
                 .With<InboundAssociation>(ia => //need to create an Inbound ProtocolStateActor
                 {
                     var handle = ia.Association;
-                    var stateActorLocalAddress = localAddress;
-                    var stateActorAssociationListener = associationListener;
+                    var stateActorLocalAddress = LocalAddress;
+                    var stateActorAssociationListener = AssociationListener;
                     var stateActorSettings = _settings;
                     var failureDetector = CreateTransportFailureDetector();
                     Context.ActorOf(RARP.For(Context.System).ConfigureDispatcher(ProtocolStateActor.InboundProps(
@@ -180,13 +185,13 @@ namespace Akka.Remote.Transport
 
         private string ActorNameFor(Address remoteAddress)
         {
-            return string.Format("akkaProtocol-{0}-{1}", AddressUrlEncoder.Encode(remoteAddress), nextId());
+            return string.Format("akkaProtocol-{0}-{1}", AddressUrlEncoder.Encode(remoteAddress), NextId());
         }
 
         private void CreateOutboundStateActor(Address remoteAddress,
             TaskCompletionSource<AssociationHandle> statusPromise, int? refuseUid)
         {
-            var stateActorLocalAddress = localAddress;
+            var stateActorLocalAddress = LocalAddress;
             var stateActorSettings = _settings;
             var stateActorWrappedTransport = _wrappedTransport;
             var failureDetector = CreateTransportFailureDetector();
@@ -228,7 +233,7 @@ namespace Akka.Remote.Transport
 
     internal sealed class HandshakeInfo
     {
-        public HandshakeInfo(Address origin, long uid)
+        public HandshakeInfo(Address origin, int uid)
         {
             Origin = origin;
             Uid = uid;
@@ -236,7 +241,7 @@ namespace Akka.Remote.Transport
 
         public Address Origin { get; private set; }
 
-        public long Uid { get; private set; }
+        public int Uid { get; private set; }
 
         public override bool Equals(object obj)
         {
@@ -784,7 +789,7 @@ namespace Akka.Remote.Transport
                         disassociateNotification = new Disassociated(DisassociateInfo.Unknown);
                     }
                     awh.HandlerListener.ContinueWith(result => result.Result.Notify(disassociateNotification),
-                        TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+                        TaskContinuationOptions.ExecuteSynchronously);
                 })
                 .With<ListenerReady>(lr =>
                 {

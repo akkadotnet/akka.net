@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AssemblyInfo.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -29,6 +29,8 @@ using System.Runtime.InteropServices;
 [assembly: Guid("78986bdb-73f7-4532-8e03-1c9ccbe8148e")]
 [assembly: InternalsVisibleTo("Akka.Remote.TestKit")]
 [assembly: InternalsVisibleTo("Akka.Remote.Tests")]
+[assembly: InternalsVisibleTo("Akka.Remote.Tests.MultiNode")]
+[assembly: InternalsVisibleTo("Akka.Remote.Tests.Performance")]
 [assembly: InternalsVisibleTo("Akka.Cluster")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Tests")]
-[assembly: InternalsVisibleTo("Akka.MultiNodeTests")]
+[assembly: InternalsVisibleTo("Akka.Cluster.Tests.MultiNode")]

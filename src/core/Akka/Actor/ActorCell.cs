@@ -1,14 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using Akka.Actor.Internal;
 using Akka.Actor.Internal;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
@@ -30,6 +29,7 @@ namespace Akka.Actor
         private bool _actorHasBeenCleared;
         private Mailbox _mailbox;
         private readonly ActorSystemImpl _systemImpl;
+        private ActorTaskScheduler _taskScheduler;
 
 
         public ActorCell(ActorSystemImpl system, IInternalActorRef self, Props props, MessageDispatcher dispatcher, IInternalActorRef parent)
@@ -65,6 +65,20 @@ namespace Akka.Actor
         public int NumberOfMessages { get { return Mailbox.NumberOfMessages; } }
         internal bool ActorHasBeenCleared { get { return _actorHasBeenCleared; } }
         internal static Props TerminatedProps { get { return terminatedProps; } }
+
+        public ActorTaskScheduler TaskScheduler
+        {
+            get
+            {
+                var taskScheduler = Volatile.Read(ref _taskScheduler);
+
+                if (taskScheduler != null)
+                    return taskScheduler;
+
+                taskScheduler = new ActorTaskScheduler(this);
+                return Interlocked.CompareExchange(ref _taskScheduler, taskScheduler, null) ?? taskScheduler;
+            }
+        }
 
         public void Init(bool sendSupervise, Func<Mailbox> createMailbox /*, MailboxType mailboxType*/) //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType
         {
@@ -209,7 +223,7 @@ namespace Akka.Actor
             {
                 _state = _state.ClearBehaviorStack();
                 instance = CreateNewActorInstance();
-                //TODO: this overwrites any already initiaized supervisor strategy
+                //TODO: this overwrites any already initialized supervisor strategy
                 //We should investigate what we can do to handle this better
                 instance.SupervisorStrategyInternal = _props.SupervisorStrategy;
                 //defaults to null - won't affect lazy instantiation unless explicitly set in props
@@ -303,6 +317,7 @@ namespace Akka.Actor
                     }
                 }
 
+                ReleaseActor(actor);
                 actor.Clear(_systemImpl.DeadLetters);
             }
             _actorHasBeenCleared = true;
@@ -310,6 +325,11 @@ namespace Akka.Actor
 
             //TODO: semantics here? should all "_state" be cleared? or just behavior?
             _state = _state.ClearBehaviorStack();
+        }
+
+        private void ReleaseActor(ActorBase a)
+        {
+            _props.Release(a);
         }
 
         protected void PrepareForNewActor()

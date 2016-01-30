@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AbstractStash.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -51,6 +51,8 @@ An (unbounded) deque-based mailbox can be configured as follows:
 
         private IDequeBasedMailbox Mailbox { get { return (IDequeBasedMailbox)_actorCell.Mailbox; } }
 
+        private int _currentEnvelopeId;
+
         /// <summary>
         /// Stashes the current message in the actor's state.
         /// </summary>
@@ -61,12 +63,13 @@ An (unbounded) deque-based mailbox can be configured as follows:
         {
             var currMsg = _actorCell.CurrentMessage;
             var sender = _actorCell.Sender;
-            if(_theStash.Count > 0)
+
+            if (_actorCell.CurrentEnvelopeId == _currentEnvelopeId)
             {
-                var lastEnvelope = _theStash.Last.Value;
-                if(lastEnvelope.Message.Equals(currMsg) && lastEnvelope.Sender == sender)
-                    throw new IllegalActorStateException(string.Format("Can't stash the same message {0} more than once", currMsg));
+                 throw new IllegalActorStateException(string.Format("Can't stash the same message {0} more than once", currMsg));
             }
+            _currentEnvelopeId = _actorCell.CurrentEnvelopeId;
+            
             if(_capacity <= 0 || _theStash.Count < _capacity)
                 _theStash.AddLast(new Envelope() { Message = currMsg, Sender = sender });
             else throw new StashOverflowException(string.Format("Couldn't enqueue message {0} to stash of {1}", currMsg, _actorCell.Self));

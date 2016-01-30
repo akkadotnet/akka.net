@@ -1,5 +1,13 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Settings.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Configuration;
+using Akka.Persistence.Sql.Common.Journal;
 
 namespace Akka.Persistence.Sql.Common
 {
@@ -12,6 +20,11 @@ namespace Akka.Persistence.Sql.Common
         /// Connection string used to access a persistent SQL Server instance.
         /// </summary>
         public string ConnectionString { get; private set; }
+
+        /// <summary>
+        /// Name of the connection string stored in &lt;connectionStrings&gt; section of *.config file.
+        /// </summary>
+        public string ConnectionStringName { get; private set; }
 
         /// <summary>
         /// Connection timeout for SQL Server related operations.
@@ -28,14 +41,21 @@ namespace Akka.Persistence.Sql.Common
         /// </summary>
         public string TableName { get; private set; }
 
+        /// <summary>
+        /// Fully qualified type name for <see cref="ITimestampProvider"/> used to generate journal timestamps.
+        /// </summary>
+        public string TimestampProvider { get; set; }
+
         public JournalSettings(Config config)
         {
             if (config == null) throw new ArgumentNullException("config", "SqlServer journal settings cannot be initialized, because required HOCON section couldn't been found");
 
             ConnectionString = config.GetString("connection-string");
+            ConnectionStringName = config.GetString("connection-string-name");
             ConnectionTimeout = config.GetTimeSpan("connection-timeout");
             SchemaName = config.GetString("schema-name");
             TableName = config.GetString("table-name");
+            TimestampProvider = config.GetString("timestamp-provider");
         }
     }
 
@@ -48,6 +68,11 @@ namespace Akka.Persistence.Sql.Common
         /// Connection string used to access a persistent SQL Server instance.
         /// </summary>
         public string ConnectionString { get; private set; }
+
+        /// <summary>
+        /// Name of the connection string stored in &lt;connectionStrings&gt; section of *.config file.
+        /// </summary>
+        public string ConnectionStringName { get; private set; }
 
         /// <summary>
         /// Connection timeout for SQL Server related operations.
@@ -69,6 +94,7 @@ namespace Akka.Persistence.Sql.Common
             if (config == null) throw new ArgumentNullException("config", "SqlServer snapshot store settings cannot be initialized, because required HOCON section couldn't been found");
 
             ConnectionString = config.GetString("connection-string");
+            ConnectionStringName = config.GetString("connection-string-name");
             ConnectionTimeout = config.GetTimeSpan("connection-timeout");
             SchemaName = config.GetString("schema-name");
             TableName = config.GetString("table-name");

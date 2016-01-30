@@ -44,6 +44,9 @@ bld/
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 
+# NBench results
+[Pp]erf[Rr]esult*/
+
 #NUNIT
 *.VisualState.xml
 TestResult.xml
@@ -117,6 +120,9 @@ _TeamCity*
 # NCrunch
 _NCrunch_*
 .*crunch*.local.xml
+*.ncrunchsolution
+*.v2.ncrunchproject
+
 
 # MightyMoose
 *.mm.*
@@ -211,3 +217,13 @@ FakesAssemblies/
 /src/.Akka.boltdata/TestResults.json
 resetdev.bat
 /src/packages/repositories.config
+/src/.nuget
+
+# FAKE build folder
+.fake/
+
+# Akka.Persistence Test Output
+target/
+
+# API Approval received files
+**/Akka.API.Tests/*.received.txt
