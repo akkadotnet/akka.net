@@ -123,6 +123,20 @@ namespace Akka.Actor
         public Akka.Actor.IActorRef Watch(Akka.Actor.IActorRef subject) { }
         protected void WatchedActorTerminated(Akka.Actor.IActorRef actor, bool existenceConfirmed, bool addressTerminated) { }
     }
+    public class static ActorDsl
+    {
+        public static Akka.Actor.ActorSystem ActorSystem(string name, Akka.Configuration.Config config) { }
+        public static Akka.Actor.ActorSystem ActorSystem(string name) { }
+        public static Akka.Actor.Status.Failure Failure(System.Exception cause) { }
+        public static Akka.Routing.FromConfig FromConfig() { }
+        public static Akka.Actor.Identify Identify(object messageId) { }
+        public static Akka.Actor.PoisonPill PoisonPill() { }
+        public static Akka.Actor.Props Props<T>()
+            where T : Akka.Actor.ActorBase, new () { }
+        public static Akka.Actor.Props Props<T>(System.Linq.Expressions.Expression<System.Func<T>> factory)
+            where T : Akka.Actor.ActorBase { }
+        public static Akka.Actor.Status.Success Success(object status) { }
+    }
     public sealed class ActorIdentity
     {
         public ActorIdentity(object messageId, Akka.Actor.IActorRef subject) { }
