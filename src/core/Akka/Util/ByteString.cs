@@ -650,13 +650,13 @@ namespace Akka.IO
         {
             if (byteOrder == ByteOrder.BigEndian)
             {
-                PutByte(Convert.ToByte(x >> 8));
-                PutByte(Convert.ToByte(x >> 0));
+                PutByte((byte)(x >> 8));
+                PutByte((byte)(x >> 0));
             }
             else
             {
-                PutByte(Convert.ToByte(x >> 0));
-                PutByte(Convert.ToByte(x >> 8));
+                PutByte((byte)(x >> 0));
+                PutByte((byte)(x >> 8));
             }
             return this;
         }

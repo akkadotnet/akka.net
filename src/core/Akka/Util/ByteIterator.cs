@@ -418,15 +418,15 @@ namespace Akka.Util
         /// <summary>Get a single Int from this iterator.</summary>
         public int GetInt(ByteOrder byteOrder = ByteOrder.BigEndian)
         {
-          return byteOrder == ByteOrder.BigEndian
-              ? (short)(((Next() & 0xff) << 24) 
-                      | ((Next() & 0xff) << 16)
-                      | ((Next() & 0xff) <<  8)
-                      | ((Next() & 0xff) <<  0))
-              : (short)(((Next() & 0xff) <<  0)
-                      | ((Next() & 0xff) <<  8)
-                      | ((Next() & 0xff) << 16)
-                      | ((Next() & 0xff) << 24));
+            return byteOrder == ByteOrder.BigEndian
+                         ? (((Next() & 0xff) << 24)
+                          | ((Next() & 0xff) << 16)
+                          | ((Next() & 0xff) << 8)
+                          | ((Next() & 0xff) << 0))
+                         : (((Next() & 0xff) << 0)
+                          | ((Next() & 0xff) << 8)
+                          | ((Next() & 0xff) << 16)
+                          | ((Next() & 0xff) << 24));
         }
 
         /// <summary>Get a single Long from this iterator.</summary>
