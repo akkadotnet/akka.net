@@ -14,6 +14,7 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Transport;
+using Akka.Util;
 using Helios.Exceptions;
 using Helios.Net;
 using Helios.Topology;
@@ -439,9 +440,8 @@ namespace Akka.Remote.TestKit
                     {
                         ThrottleMode mode;
                         if (throttleMsg.RateMBit < 0.0f) mode = Unthrottled.Instance;
-                        else if (throttleMsg.RateMBit < 0.0f) mode = Blackhole.Instance;
+                        else if (throttleMsg.RateMBit == 0.0f) mode = Blackhole.Instance;
                         else mode = new TokenBucket(1000, throttleMsg.RateMBit*125000, 0, 0);
-
                         var cmdTask =
                             TestConductor.Get(Context.System)
                                 .Transport.ManagementCommand(new SetThrottle(throttleMsg.Target, throttleMsg.Direction,

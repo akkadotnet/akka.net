@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Transport;
@@ -127,10 +128,9 @@ namespace Akka.Remote.TestKit
 
         private void RequireTestConductorTransport()
         {
-            //TODO: What is helios equivalent of this?
-            /*if(!Transport.DefaultAddress.Protocol.Contains(".trttl.gremlin."))
+            if(!Transport.DefaultAddress.Protocol.Contains(".trttl.gremlin."))
                 throw new ConfigurationException("To use this feature you must activate the failure injector adapters " +
-                    "(trttl, gremlin) by specifying `testTransport(on = true)` in your MultiNodeConfig.");*/
+                    "(trttl, gremlin) by specifying `testTransport(on = true)` in your MultiNodeConfig.");
         }
 
         /// <summary>

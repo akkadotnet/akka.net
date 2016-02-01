@@ -126,9 +126,8 @@ namespace Akka.Remote.TestKit
         {
             get
             {
-                //TODO: Equivalent in Helios?
                 var transportConfig = _testTransport ?
-                    ConfigurationFactory.ParseString("akka.remote.helios.tcp.applied-adapters = []")
+                    ConfigurationFactory.ParseString("akka.remote.helios.tcp.applied-adapters = [trttl, gremlin]")
                         : ConfigurationFactory.Empty;
 
                 var builder = ImmutableList.CreateBuilder<Config>();
