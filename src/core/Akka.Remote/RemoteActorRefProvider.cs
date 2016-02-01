@@ -15,7 +15,6 @@ using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Remote.Configuration;
-using Akka.Serialization;
 using Akka.Util.Internal;
 
 namespace Akka.Remote
