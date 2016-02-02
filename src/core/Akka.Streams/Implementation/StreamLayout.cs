@@ -826,8 +826,8 @@ namespace Akka.Streams.Implementation
 
         private readonly LinkedList<IDictionary<InPort, ISubscriber>> _subscribersStack = new LinkedList<IDictionary<InPort, ISubscriber>>();
         private readonly LinkedList<IDictionary<OutPort, IPublisher>> _publishersStack = new LinkedList<IDictionary<OutPort, IPublisher>>();
-        private readonly IDictionary<StreamLayout.IMaterializedValueNode, LinkedList<MaterializedValueSource<TMat>>> _materializedValueSources =
-            new Dictionary<StreamLayout.IMaterializedValueNode, LinkedList<MaterializedValueSource<TMat>>>();
+        private readonly IDictionary<StreamLayout.IMaterializedValueNode, LinkedList<IMaterializedValueSource>> _materializedValueSources =
+            new Dictionary<StreamLayout.IMaterializedValueNode, LinkedList<IMaterializedValueSource>>();
 
         /// <summary>
         /// Please note that this stack keeps track of the scoped modules wrapped in CopiedModule but not the CopiedModule
@@ -911,7 +911,7 @@ namespace Akka.Streams.Implementation
                 var errorPublisher = new ErrorPublisher<object>(new MaterializationPanicException(cause), string.Empty);
                 foreach (var subMap in _subscribersStack)
                     foreach (var subscriber in subMap.Values)
-                        errorPublisher.Subscribe(subscriber);
+                        ((IPublisher)errorPublisher).Subscribe(subscriber);
 
                 foreach (var pubMap in _publishersStack)
                     foreach (var publisher in pubMap.Values)
@@ -926,12 +926,12 @@ namespace Akka.Streams.Implementation
             return parent.And(current);
         }
 
-        protected void RegisterSource(MaterializedValueSource<TMat> materializedSource)
+        protected void RegisterSource(IMaterializedValueSource materializedSource)
         {
-            LinkedList<MaterializedValueSource<TMat>> sources;
+            LinkedList<IMaterializedValueSource> sources;
             if (_materializedValueSources.TryGetValue(materializedSource.Computation, out sources))
                 sources.AddFirst(materializedSource);
-            else _materializedValueSources.Add(materializedSource.Computation, new LinkedList<MaterializedValueSource<TMat>>(new[] { materializedSource }));
+            else _materializedValueSources.Add(materializedSource.Computation, new LinkedList<IMaterializedValueSource>(new[] { materializedSource }));
         }
 
         protected TMat MaterializeModule(IModule module, Attributes effectiveAttributes)
@@ -986,7 +986,7 @@ namespace Akka.Streams.Implementation
             }
             else result = null;
 
-            LinkedList<MaterializedValueSource<object>> sources;
+            LinkedList<IMaterializedValueSource> sources;
             if (_materializedValueSources.TryGetValue(node, out sources))
             {
                 _materializedValueSources.Remove(node);
@@ -1003,7 +1003,7 @@ namespace Akka.Streams.Implementation
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
             if (!CurrentLayout.InPorts.Contains(inPort))
             {
-                IPublisher<object> publisher;
+                IPublisher publisher;
                 if (Publishers.TryGetValue(CurrentLayout.Upstreams[inPort], out publisher))
                     publisher.Subscribe(subscriber);
             }
@@ -1015,7 +1015,7 @@ namespace Akka.Streams.Implementation
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
             if (!CurrentLayout.OutPorts.Contains(outPort))
             {
-                ISubscriber<object> subscriber;
+                ISubscriber subscriber;
                 if (Subscribers.TryGetValue(CurrentLayout.Downstreams[outPort], out subscriber))
                     publisher.Subscribe(subscriber);
             }

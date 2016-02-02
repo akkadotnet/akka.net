@@ -254,6 +254,8 @@ namespace Akka.Streams.Implementation.Fusing
     internal interface IMaterializedValueSource
     {
         IMaterializedValueSource CopySource();
+        StreamLayout.IMaterializedValueNode Computation { get; }
+        void SetValue(object result);
     }
 
     internal class MaterializedValueSource<T> : GraphStage<SourceShape<T>>, IMaterializedValueSource
@@ -279,7 +281,8 @@ namespace Akka.Streams.Implementation.Fusing
 
         private static readonly Attributes Name = Attributes.CreateName("matValueSource");
 
-        public readonly StreamLayout.IMaterializedValueNode Computation;
+        public StreamLayout.IMaterializedValueNode Computation { get; }
+
         public readonly Outlet<T> Outlet;
 
         private readonly TaskCompletionSource<T> _promise = new TaskCompletionSource<T>();
@@ -299,6 +302,11 @@ namespace Akka.Streams.Implementation.Fusing
         public void SetValue(T value)
         {
             _promise.SetResult(value);
+        }
+
+        void IMaterializedValueSource.SetValue(object result)
+        {
+            SetValue((T)result);
         }
 
         public MaterializedValueSource<T> CopySource()
