@@ -16,7 +16,13 @@ using Akka.Util.Internal;
 
 namespace Akka.Streams.Stage
 {
-    public abstract class GraphStageWithMaterializedValue<TShape, TMat> : IGraph<TShape, TMat> where TShape : Shape
+    public interface IGraphStageWithMaterializedValue
+    {
+        Shape Shape { get; }
+        GraphStageLogic CreateLogicAndMaterializedValue(Attributes attributes, out object materialized);
+    }
+
+    public abstract class GraphStageWithMaterializedValue<TShape, TMat> : IGraph<TShape, TMat>, IGraphStageWithMaterializedValue where TShape : Shape
     {
         #region anonymous graph class
         private sealed class Graph : IGraph<TShape, TMat>
@@ -55,12 +61,21 @@ namespace Akka.Streams.Stage
 
         protected virtual Attributes InitialAttributes { get { return Attributes.None; } }
         public abstract TShape Shape { get; }
+        Shape IGraphStageWithMaterializedValue.Shape => Shape;
 
         public IGraph<TShape, TMat> WithAttributes(Attributes attributes)
         {
             return new Graph(Shape, Module, attributes);
         }
         public abstract GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out TMat materialized);
+        GraphStageLogic IGraphStageWithMaterializedValue.CreateLogicAndMaterializedValue(Attributes attributes, out object materialized)
+        {
+            TMat m;
+            var result = CreateLogicAndMaterializedValue(attributes, out m);
+            materialized = m;
+            return result;
+        }
+
 
         public IModule Module { get { return _module.Value; } }
         public IGraph<TShape, TMat> Named(string name)

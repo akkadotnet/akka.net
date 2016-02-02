@@ -251,7 +251,12 @@ namespace Akka.Streams.Implementation.Fusing
         }
     }
 
-    internal class MaterializedValueSource<T> : GraphStage<SourceShape<T>>, ICloneable
+    internal interface IMaterializedValueSource
+    {
+        IMaterializedValueSource CopySource();
+    }
+
+    internal class MaterializedValueSource<T> : GraphStage<SourceShape<T>>, IMaterializedValueSource
     {
         #region internal classes
         internal sealed class MaterializedValueGraphStageLogic : GraphStageLogic
@@ -301,14 +306,14 @@ namespace Akka.Streams.Implementation.Fusing
             return new MaterializedValueSource<T>(Computation, Outlet);
         }
 
+        IMaterializedValueSource IMaterializedValueSource.CopySource()
+        {
+            return CopySource();
+        }
+
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new MaterializedValueGraphStageLogic(Shape, this);
-        }
-
-        public object Clone()
-        {
-            return CopySource();
         }
     }
 

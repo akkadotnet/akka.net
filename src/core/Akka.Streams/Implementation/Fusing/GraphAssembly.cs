@@ -43,7 +43,7 @@ namespace Akka.Streams.Implementation.Fusing
      */
     internal sealed class GraphAssembly
     {
-        public static GraphAssembly Create(IEnumerable<Inlet> inlets, IEnumerable<Outlet> outlets, IEnumerable<GraphStageWithMaterializedValue<Shape, object>> stages)
+        public static GraphAssembly Create(IEnumerable<Inlet> inlets, IEnumerable<Outlet> outlets, IEnumerable<IGraphStageWithMaterializedValue> stages)
         {
             // add the contents of an iterator to an array starting at idx
             var inletsCount = inlets.Count();
@@ -79,14 +79,14 @@ namespace Akka.Streams.Implementation.Fusing
             return array;
         }
 
-        public readonly GraphStageWithMaterializedValue<Shape, object>[] Stages;
+        public readonly IGraphStageWithMaterializedValue[] Stages;
         public readonly Attributes[] OriginalAttributes;
         public readonly Inlet[] Inlets;
         public readonly int[] InletOwners;
         public readonly Outlet[] Outlets;
         public readonly int[] OutletOwners;
 
-        public GraphAssembly(GraphStageWithMaterializedValue<Shape, object>[] stages, Attributes[] originalAttributes, Inlet[] inlets, int[] inletOwners, Outlet[] outlets, int[] outletOwners)
+        public GraphAssembly(IGraphStageWithMaterializedValue[] stages, Attributes[] originalAttributes, Inlet[] inlets, int[] inletOwners, Outlet[] outlets, int[] outletOwners)
         {
             Stages = stages;
             OriginalAttributes = originalAttributes;
@@ -112,7 +112,7 @@ namespace Akka.Streams.Implementation.Fusing
             Attributes inheritedAttributes,
             IModule[] copiedModules,
             IDictionary<IModule, object> materializedValues,
-            Action<MaterializedValueSource<object>> register)
+            Action<IMaterializedValueSource> register)
         {
             var logics = new GraphStageLogic[Stages.Length];
             for (int i = 0; i < Stages.Length; i++)
@@ -140,11 +140,11 @@ namespace Akka.Streams.Implementation.Fusing
                 }
 
                 var stage = Stages[i];
-                if (stage is ICloneable)
+                if (stage is IMaterializedValueSource)
                 {
-                    var copy = (MaterializedValueSource<object>)((ICloneable)stage).Clone();
+                    var copy = ((IMaterializedValueSource) stage).CopySource();
                     register(copy);
-                    stage = copy;
+                    stage = (IGraphStageWithMaterializedValue)copy;
                 }
 
                 object materialized;
