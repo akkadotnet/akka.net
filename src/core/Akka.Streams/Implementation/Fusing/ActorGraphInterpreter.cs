@@ -556,7 +556,7 @@ namespace Akka.Streams.Implementation.Fusing
                     else if (upstreamCompleted) _that.Complete(outlet);
                 }
 
-                public override void OnDownstreamFinish<T1>()
+                public override void OnDownstreamFinish()
                 {
                     _that.Cancel();
                 }
@@ -711,12 +711,12 @@ namespace Akka.Streams.Implementation.Fusing
                     else if (_that._downstreamDemand > 0) _that.Pull(inlet);
                 }
 
-                public override void OnUpstreamFinish<T1>()
+                public override void OnUpstreamFinish()
                 {
                     _that.Complete();
                 }
 
-                public override void OnUpstreamFailure<T1>(Exception e)
+                public override void OnUpstreamFailure(Exception e)
                 {
                     _that.Fail(e);
                 }

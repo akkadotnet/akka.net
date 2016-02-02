@@ -54,7 +54,7 @@ namespace Akka.Streams.Implementation
                 onUpstreamFinish: () =>
                 {
                     if (IsAvailable(_stage.Outlet) && IsTimerActive(TimerName)) _willStop = true;
-                    else CompleteStage<T>();
+                    else CompleteStage();
                 });
 
                 SetHandler(_stage.Outlet, onPull: () => Pull(_stage.Inlet));
@@ -66,7 +66,7 @@ namespace Akka.Streams.Implementation
                 _currentElement = null;
                 _previousTime = DateTime.UtcNow;
                 _lastTokens = 0;
-                if (_willStop) CompleteStage<T>();
+                if (_willStop) CompleteStage();
             }
 
             public override void PreStart()

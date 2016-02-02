@@ -57,14 +57,14 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In<#= t #>)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In<#= t #>)) CompleteStage();
 					_willShutDown = true;
 				});
 				<# } #>
 
 				SetHandler(_stage.Out, onPull: () => {
 					_pending = stage.Shape.Inlets.Count();
-					if (_willShutDown) CompleteStage<TOut>();
+					if (_willShutDown) CompleteStage();
 					else 
 					{
 						<# for (int t = 0; t < i; t++) { #>
@@ -78,7 +78,7 @@ Pull(_stage.In<#=t#>);
 			private void PushAll()
 			{
 				Push(_stage.Out, _stage._zipper(<#= string.Join(", ", Enumerable.Range(0, i).Select(x => "Grab(_stage.In" + x + ")")) #>));
-				if (_willShutDown) CompleteStage<TOut>();
+				if (_willShutDown) CompleteStage();
 			}
 		}
 

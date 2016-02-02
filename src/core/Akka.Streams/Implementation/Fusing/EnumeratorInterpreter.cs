@@ -18,7 +18,7 @@ namespace Akka.Streams.Implementation.Fusing
                 Out = new Outlet<TIn>("IteratorUpstream.out") { Id = 0 };
                 SetHandler(Out, onPull: () =>
                 {
-                    if (!HasNext) CompleteStage<TIn>();
+                    if (!HasNext) CompleteStage();
                     else
                     {
                         var element = input.Current;
@@ -31,7 +31,7 @@ namespace Akka.Streams.Implementation.Fusing
                         else Push(Out, element);
                     }
                 },
-                onDownstreamFinish: CompleteStage<TIn>);
+                onDownstreamFinish: CompleteStage);
             }
 
             public override Outlet<TIn> Out { get; }
@@ -55,13 +55,13 @@ namespace Akka.Streams.Implementation.Fusing
                 onUpstreamFinish: () =>
                 {
                     IsDone = true;
-                    CompleteStage<TOut>();
+                    CompleteStage();
                 }, 
                 onUpstreamFailure: cause =>
                 {
                     IsDone = true;
                     LastFailure = cause;
-                    CompleteStage<TOut>();
+                    CompleteStage();
                 });
             }
 

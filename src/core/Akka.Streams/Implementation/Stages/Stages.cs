@@ -434,7 +434,7 @@ namespace Akka.Streams.Implementation.Stages
                 Action onPush = () =>
                 {
                     _promise.TrySetResult(Grab(_inlet));
-                    CompleteStage<TIn>();
+                    CompleteStage();
                 };
 
                 Action onUpstreamFinish = () =>
@@ -444,7 +444,7 @@ namespace Akka.Streams.Implementation.Stages
                     else
                         _promise.TrySetResult(default(TIn));
 
-                    CompleteStage<TIn>();
+                    CompleteStage();
                 };
 
                 Action<Exception> onUpstreamFailure = e =>
@@ -512,7 +512,7 @@ namespace Akka.Streams.Implementation.Stages
                     else
                         _promise.TrySetResult(_prev);
 
-                    CompleteStage<TIn>();
+                    CompleteStage();
                 };
 
                 Action<Exception> onUpstreamFailure = e =>

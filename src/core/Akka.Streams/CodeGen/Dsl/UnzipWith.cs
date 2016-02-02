@@ -1,4 +1,4 @@
-﻿// --- auto generated: 2016-01-13 15:07:28 --- //
+﻿// --- auto generated: 2016-02-02 11:11:01 --- //
 using System;
 using Akka.Streams.Stage;
 
@@ -117,7 +117,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending0) pendingCount--;
@@ -131,7 +131,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending1) pendingCount--;
@@ -196,7 +196,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending0) pendingCount--;
@@ -210,7 +210,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending1) pendingCount--;
@@ -224,7 +224,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending2) pendingCount--;
@@ -293,7 +293,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2, T3>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending0) pendingCount--;
@@ -307,7 +307,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2, T3>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending1) pendingCount--;
@@ -321,7 +321,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2, T3>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending2) pendingCount--;
@@ -335,7 +335,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2, T3>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending3) pendingCount--;
@@ -408,7 +408,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2, T3, T4>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending0) pendingCount--;
@@ -422,7 +422,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2, T3, T4>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending1) pendingCount--;
@@ -436,7 +436,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2, T3, T4>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending2) pendingCount--;
@@ -450,7 +450,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2, T3, T4>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending3) pendingCount--;
@@ -464,7 +464,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2, T3, T4>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending4) pendingCount--;
@@ -541,7 +541,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2, T3, T4, T5>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending0) pendingCount--;
@@ -555,7 +555,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2, T3, T4, T5>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending1) pendingCount--;
@@ -569,7 +569,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2, T3, T4, T5>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending2) pendingCount--;
@@ -583,7 +583,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2, T3, T4, T5>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending3) pendingCount--;
@@ -597,7 +597,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2, T3, T4, T5>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending4) pendingCount--;
@@ -611,7 +611,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2, T3, T4, T5>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending5) pendingCount--;
@@ -692,7 +692,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2, T3, T4, T5, T6>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending0) pendingCount--;
@@ -706,7 +706,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2, T3, T4, T5, T6>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending1) pendingCount--;
@@ -720,7 +720,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2, T3, T4, T5, T6>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending2) pendingCount--;
@@ -734,7 +734,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2, T3, T4, T5, T6>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending3) pendingCount--;
@@ -748,7 +748,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2, T3, T4, T5, T6>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending4) pendingCount--;
@@ -762,7 +762,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2, T3, T4, T5, T6>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending5) pendingCount--;
@@ -776,7 +776,7 @@ namespace Akka.Streams.Dsl
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<T0, T1, T2, T3, T4, T5, T6>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending6) pendingCount--;

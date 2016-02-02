@@ -73,7 +73,7 @@ if (!IsClosed(stage.Out<#=t#>)) Push(stage.Out<#=t#>, elements.Item<#=t+1#>);
 				},
 				onDownstreamFinish: () => {
 					downstreamRunning--;
-					if (downstreamRunning == 0) CompleteStage<Tuple<<#= typeParams #>>>();
+					if (downstreamRunning == 0) CompleteStage();
 					else 
 					{
 						if (pending<#=t#>) pendingCount--;

@@ -58,12 +58,12 @@ namespace Akka.Streams.Dsl
                         {
                             foreach (var i in _stage._ins) Cancel(i);
                             _runningUpstreams = 0;
-                            if (!IsPending) CompleteStage<TOut>();
+                            if (!IsPending) CompleteStage();
                         }
                         else
                         {
                             _runningUpstreams--;
-                            if (IsUpstreamClosed && !IsPending) CompleteStage<TOut>();
+                            if (IsUpstreamClosed && !IsPending) CompleteStage();
                         }
                     });
                 }
@@ -93,7 +93,7 @@ namespace Akka.Streams.Dsl
                 var inlet = _pendingQueue[_pendingHead % _stage._inputPorts];
                 _pendingHead++;
                 Push(_stage._out, Grab(inlet));
-                if (IsUpstreamClosed && !IsPending) CompleteStage<TOut>();
+                if (IsUpstreamClosed && !IsPending) CompleteStage();
                 else TryPull(inlet);
             }
         }
@@ -235,7 +235,7 @@ namespace Akka.Streams.Dsl
             private void OnComplete()
             {
                 _openInputs--;
-                if (_stage._eagerClose || _openInputs == 0) CompleteStage<T>();
+                if (_stage._eagerClose || _openInputs == 0) CompleteStage();
             }
 
             private void EmitPreferred()
@@ -342,9 +342,9 @@ namespace Akka.Streams.Dsl
                                     if (IsAvailable(_stage.Out)) Pull(CurrentUpstream);
                                 }
                             }
-                            else CompleteStage<TOut>();
+                            else CompleteStage();
                         }
-                        else CompleteStage<TOut>();
+                        else CompleteStage();
                     });
                 }
 
@@ -374,7 +374,7 @@ namespace Akka.Streams.Dsl
                         }
                         else
                         {
-                            CompleteStage<TOut>();
+                            CompleteStage();
                             _currentUpstreamIndex = 0;
                         }
                     }
@@ -577,11 +577,11 @@ namespace Akka.Streams.Dsl
                     },
                     onDownstreamFinish: () =>
                     {
-                        if (stage._eagerCancel) CompleteStage<T>();
+                        if (stage._eagerCancel) CompleteStage();
                         else
                         {
                             _downstreamRunning--;
-                            if (_downstreamRunning == 0) CompleteStage<T>();
+                            if (_downstreamRunning == 0) CompleteStage();
                             else if (_pending[i])
                             {
                                 _pending[i] = false;
@@ -693,7 +693,7 @@ namespace Akka.Streams.Dsl
                     onDownstreamFinish: () =>
                     {
                         _downstreamsRunning--;
-                        if (_downstreamsRunning == 0) CompleteStage<T>();
+                        if (_downstreamsRunning == 0) CompleteStage();
                         else if (!hasPulled && _needDownstreamPulls > 0)
                         {
                             _needDownstreamPulls--;
@@ -857,7 +857,7 @@ namespace Akka.Streams.Dsl
                                 activeStream++;
                                 // skip closed inputs
                                 while (activeStream < stage._inputPorts && IsClosed(stage.Ins[activeStream])) activeStream++;
-                                if (activeStream == stage._inputPorts) CompleteStage<TOut>();
+                                if (activeStream == stage._inputPorts) CompleteStage();
                                 else if (IsAvailable(stage.Out)) Pull(stage.Ins[activeStream]);
                             }
                         });

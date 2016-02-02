@@ -80,7 +80,7 @@ namespace Akka.Streams.Implementation.IO
                         .With<Tcp.Unbound>(() =>
                         {
                             if (_stage._connectionFlowsAwaitingInitialization.Current == 0)
-                                CompleteStage<object>();
+                                CompleteStage();
                             else
                                 ScheduleOnce(BindShutdownTimer, _stage._bindShutdownTimeout);
                         })
@@ -135,7 +135,7 @@ namespace Akka.Streams.Implementation.IO
             protected internal override void OnTimer(object timerKey)
             {
                 if (BindShutdownTimer.Equals(timerKey))
-                    CompleteStage<object>(); // TODO need to manually shut down instead right?
+                    CompleteStage(); // TODO need to manually shut down instead right?
             }
 
             public override void PreStart()
@@ -297,14 +297,14 @@ namespace Akka.Streams.Implementation.IO
 
                 public override void OnPull() => _logic._connection.Tell(Tcp.ResumeReading.Instance);
 
-                public override void OnDownstreamFinish<T>()
+                public override void OnDownstreamFinish()
                 {
                     if (_logic.IsClosed(_logic._bytesIn))
                         _logic._connection.Tell(Tcp.ResumeReading.Instance);
                     else
                     {
                         _logic._connection.Tell(Tcp.Abort.Instance);
-                        _logic.CompleteStage<object>();
+                        _logic.CompleteStage();
                     }
                 }
             }
@@ -347,7 +347,7 @@ namespace Akka.Streams.Implementation.IO
                         else if (_connection != null)
                             _connection.Tell(Tcp.ConfirmedClose.Instance);
                         else
-                            CompleteStage<object>();
+                            CompleteStage();
                     },
                     onUpstreamFailure: ex =>
                     {
@@ -430,8 +430,8 @@ namespace Akka.Streams.Implementation.IO
                     .With<Tcp.CommandFailed>(failed => FailStage(new StreamTcpException($"Tcp command {failed.Cmd} failed")))
                     .With<Tcp.ErrorClosed>(cause => FailStage(new StreamTcpException($"The connection closed with error: {cause}")))
                     .With<Tcp.Abort>(() => FailStage(new StreamTcpException($"The connection has been aborted")))
-                    .With<Tcp.Closed>(CompleteStage<object>)
-                    .With<Tcp.ConfirmedClosed>(CompleteStage<object>)
+                    .With<Tcp.Closed>(CompleteStage)
+                    .With<Tcp.ConfirmedClosed>(CompleteStage)
                     .With<Tcp.PeerClosed>(() => Complete(_bytesOut))
                     .With<Tcp.Received>(received =>
                     {

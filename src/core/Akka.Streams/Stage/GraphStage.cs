@@ -19,6 +19,7 @@ namespace Akka.Streams.Stage
     public interface IGraphStageWithMaterializedValue
     {
         Shape Shape { get; }
+        IModule Module { get; }
         GraphStageLogic CreateLogicAndMaterializedValue(Attributes attributes, out object materialized);
     }
 
@@ -297,31 +298,31 @@ namespace Akka.Streams.Stage
                 _andThen(element);
             }
 
-            public override void OnUpstreamFinish<T2>()
+            public override void OnUpstreamFinish()
             {
                 _logic.SetHandler(_inlet, Previous);
                 _onClose();
-                Previous.OnUpstreamFinish<T2>();
+                Previous.OnUpstreamFinish();
             }
 
-            public override void OnUpstreamFailure<T2>(Exception e)
+            public override void OnUpstreamFailure(Exception e)
             {
                 _logic.SetHandler(_inlet, Previous);
-                Previous.OnUpstreamFailure<T2>(e);
+                Previous.OnUpstreamFailure(e);
             }
         }
 
-        private abstract class Emitting<T> : OutHandler
+        private abstract class Emitting : OutHandler
         {
-            public readonly Outlet<T> Out;
+            public readonly Outlet Out;
             public readonly OutHandler Previous;
 
             protected readonly Action AndThen;
             protected readonly GraphStageLogic Logic;
-            protected Emitting<T> FollowUps;
-            protected Emitting<T> FollowUpsTail;
+            protected Emitting FollowUps;
+            protected Emitting FollowUpsTail;
 
-            protected Emitting(Outlet<T> @out, OutHandler previous, Action andThen, GraphStageLogic logic)
+            protected Emitting(Outlet @out, OutHandler previous, Action andThen, GraphStageLogic logic)
             {
                 Out = @out;
                 Previous = previous;
@@ -335,19 +336,19 @@ namespace Akka.Streams.Stage
                 AndThen();
                 if (FollowUps != null)
                 {
-                    Emitting<T> e;
-                    if ((e = Logic.GetHandler(Out) as Emitting<T>) != null)
+                    Emitting e;
+                    if ((e = Logic.GetHandler(Out) as Emitting) != null)
                         e.AddFollowUps(this);
                     else
                     {
                         var next = Dequeue();
-                        if (next is EmittingCompletion<T>) Logic.Complete(Out);
+                        if (next is EmittingCompletion) Logic.Complete(Out);
                         else Logic.SetHandler(Out, next);
                     }
                 }
             }
 
-            public void AddFollowUp(Emitting<T> e)
+            public void AddFollowUp(Emitting e)
             {
                 if (FollowUps == null)
                 {
@@ -361,7 +362,7 @@ namespace Akka.Streams.Stage
                 }
             }
 
-            private void AddFollowUps(Emitting<T> e)
+            private void AddFollowUps(Emitting e)
             {
                 if (FollowUps == null)
                 {
@@ -387,13 +388,13 @@ namespace Akka.Streams.Stage
                 return result;
             }
 
-            public override void OnDownstreamFinish<T2>()
+            public override void OnDownstreamFinish()
             {
-                Previous.OnDownstreamFinish<T2>();
+                Previous.OnDownstreamFinish();
             }
         }
 
-        private sealed class EmittingSingle<T> : Emitting<T>
+        private sealed class EmittingSingle<T> : Emitting
         {
             private readonly T _element;
             public EmittingSingle(Outlet<T> @out, T element, OutHandler previous, Action andThen, GraphStageLogic logic) : base(@out, previous, andThen, logic)
@@ -403,12 +404,12 @@ namespace Akka.Streams.Stage
 
             public override void OnPull()
             {
-                Logic.Push(Out, _element);
+                Logic.Push((Outlet<T>)Out, _element);
                 FollowUp();
             }
         }
 
-        private sealed class EmittingIterator<T> : Emitting<T>
+        private sealed class EmittingIterator<T> : Emitting
         {
             private readonly IEnumerator<T> _enumerator;
 
@@ -419,14 +420,14 @@ namespace Akka.Streams.Stage
 
             public override void OnPull()
             {
-                Logic.Push(Out, _enumerator.Current);
+                Logic.Push((Outlet<T>)Out, _enumerator.Current);
                 if (!_enumerator.MoveNext()) FollowUp();
             }
         }
 
-        private sealed class EmittingCompletion<T> : Emitting<T>
+        private sealed class EmittingCompletion: Emitting
         {
-            public EmittingCompletion(Outlet<T> @out, OutHandler previous, GraphStageLogic logic) : base(@out, previous, DoNothing, logic) { }
+            public EmittingCompletion(Outlet @out, OutHandler previous, GraphStageLogic logic) : base(@out, previous, DoNothing, logic) { }
 
             public override void OnPull()
             {
@@ -462,12 +463,12 @@ namespace Akka.Streams.Stage
                 _logic.Emit(To, _logic.Grab(From), Apply);
             }
 
-            public override void OnUpstreamFinish<T>()
+            public override void OnUpstreamFinish()
             {
-                if (_doFinish) _logic.CompleteStage<T>();
+                if (_doFinish) _logic.CompleteStage();
             }
 
-            public override void OnUpstreamFailure<T>(Exception e)
+            public override void OnUpstreamFailure(Exception e)
             {
                 if (_doFail) _logic.FailStage(e);
             }
@@ -491,16 +492,16 @@ namespace Akka.Streams.Stage
                 _onPush();
             }
 
-            public override void OnUpstreamFinish<T>()
+            public override void OnUpstreamFinish()
             {
                 if (_onUpstreamFinish != null) _onUpstreamFinish();
-                else base.OnUpstreamFinish<T>();
+                else base.OnUpstreamFinish();
             }
 
-            public override void OnUpstreamFailure<T>(Exception e)
+            public override void OnUpstreamFailure(Exception e)
             {
                 if (_onUpstreamFailure != null) _onUpstreamFailure(e);
-                else base.OnUpstreamFailure<T>(e);
+                else base.OnUpstreamFailure(e);
             }
         }
 
@@ -520,10 +521,10 @@ namespace Akka.Streams.Stage
                 _onPull();
             }
 
-            public override void OnDownstreamFinish<T>()
+            public override void OnDownstreamFinish()
             {
                 if (_onDownstreamFinish != null) _onDownstreamFinish();
-                else base.OnDownstreamFinish<T>();
+                else base.OnDownstreamFinish();
             }
         }
 
@@ -628,7 +629,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Assigns callbacks for the events for an <see cref="Inlet{T}"/>.
         /// </summary>
-        internal protected void SetHandler<TIn>(Inlet<TIn> inlet, InHandler handler)
+        internal protected void SetHandler(Inlet inlet, InHandler handler)
         {
             Handlers[inlet.Id] = handler;
             if (Interpreter != null) Interpreter.SetHandler(GetConnection(inlet), handler);
@@ -637,7 +638,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Assigns callbacks for the events for an <see cref="Outlet{T}"/>.
         /// </summary>
-        internal protected void SetHandler<TIn>(Inlet<TIn> inlet, Action onPush, Action onUpstreamFinish = null, Action<Exception> onUpstreamFailure = null)
+        internal protected void SetHandler(Inlet inlet, Action onPush, Action onUpstreamFinish = null, Action<Exception> onUpstreamFailure = null)
         {
             if (onPush == null) throw new ArgumentNullException("onPush", "GraphStageLogic onPush handler must be provided");
             SetHandler(inlet, new LambdaInHandler(onPush, onUpstreamFinish, onUpstreamFailure));
@@ -646,7 +647,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Retrieves the current callback for the events on the given <see cref="Inlet{T}"/>
         /// </summary>
-        protected InHandler GetHandler<TIn>(Inlet<TIn> inlet)
+        protected InHandler GetHandler(Inlet inlet)
         {
             return (InHandler)Handlers[inlet.Id];
         }
@@ -654,7 +655,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Assigns callbacks for the events for an <see cref="Outlet{T}"/>.
         /// </summary>
-        internal protected void SetHandler<TOut>(Outlet<TOut> outlet, OutHandler handler)
+        internal protected void SetHandler(Outlet outlet, OutHandler handler)
         {
             Handlers[outlet.Id + InCount] = handler;
             if (Interpreter != null) Interpreter.SetHandler(GetConnection(outlet), handler);
@@ -663,7 +664,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Assigns callbacks for the events for an <see cref="Outlet{T}"/>.
         /// </summary>
-        internal protected void SetHandler<TOut>(Outlet<TOut> outlet, Action onPull, Action onDownstreamFinish = null)
+        internal protected void SetHandler(Outlet outlet, Action onPull, Action onDownstreamFinish = null)
         {
             if (onPull == null) throw new ArgumentNullException("onPull", "GraphStageLogic onPull handler must be provided");
             SetHandler(outlet, new LambdaOutHandler(onPull, onDownstreamFinish));
@@ -672,26 +673,26 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Retrieves the current callback for the events on the given <see cref="Outlet{T}"/>
         /// </summary>
-        protected OutHandler GetHandler<TOut>(Outlet<TOut> outlet)
+        protected OutHandler GetHandler(Outlet outlet)
         {
             return (OutHandler)Handlers[outlet.Id + InCount];
         }
 
-        private int GetConnection<TIn>(Inlet<TIn> inlet)
+        private int GetConnection(Inlet inlet)
         {
             return PortToConn[inlet.Id];
         }
 
-        private int GetConnection<TOut>(Outlet<TOut> outlet)
+        private int GetConnection(Outlet outlet)
         {
             return PortToConn[outlet.Id + InCount];
         }
 
-        private OutHandler GetNonEmittingHandler<TOut>(Outlet<TOut> outlet)
+        private OutHandler GetNonEmittingHandler(Outlet outlet)
         {
             var h = GetHandler(outlet);
-            Emitting<TOut> e;
-            return (e = h as Emitting<TOut>) != null ? e.Previous : h;
+            Emitting e;
+            return (e = h as Emitting) != null ? e.Previous : h;
         }
 
         /// <summary>
@@ -832,12 +833,12 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Signals that there will be no more elements emitted on the given port.
         /// </summary>
-        protected void Complete<T>(Outlet<T> outlet)
+        protected void Complete(Outlet outlet)
         {
             var h = GetHandler(outlet);
-            Emitting<T> e;
-            if ((e = h as Emitting<T>) != null)
-                e.AddFollowUp(new EmittingCompletion<T>(e.Out, e.Previous, this));
+            Emitting e;
+            if ((e = h as Emitting) != null)
+                e.AddFollowUp(new EmittingCompletion(e.Out, e.Previous, this));
             else
                 Interpreter.Complete(GetConnection(outlet));
         }
@@ -845,7 +846,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Signals failure through the given port.
         /// </summary>
-        protected void Fail<T>(Outlet<T> outlet, Exception reason)
+        protected void Fail(Outlet outlet, Exception reason)
         {
             Interpreter.Fail(GetConnection(outlet), reason, isInternal: false);
         }
@@ -854,7 +855,7 @@ namespace Akka.Streams.Stage
         /// Automatically invokes <see cref="Cancel{T}"/> or <see cref="Complete{T}"/> on all the input or output ports that have been called,
         /// then stops the stage, then <see cref="PostStop"/> is called.
         /// </summary>
-        public void CompleteStage<T>()
+        public void CompleteStage()
         {
             for (int i = 0; i < PortToConn.Length; i++)
             {
@@ -862,9 +863,9 @@ namespace Akka.Streams.Stage
                 else
                 {
                     var handler = Handlers[i];
-                    Emitting<T> e;
-                    if ((e = handler as Emitting<T>) != null)
-                        e.AddFollowUp(new EmittingCompletion<T>(e.Out, e.Previous, this));
+                    Emitting e;
+                    if ((e = handler as Emitting) != null)
+                        e.AddFollowUp(new EmittingCompletion(e.Out, e.Previous, this));
                     else
                         Interpreter.Complete(PortToConn[i]);
                 }
@@ -1091,14 +1092,14 @@ namespace Akka.Streams.Stage
         /// </summary>
         internal protected void AbortEmitting<T>(Outlet<T> outlet)
         {
-            Emitting<T> e;
-            if ((e = GetHandler(outlet) as Emitting<T>) != null) SetHandler(outlet, e.Previous);
+            Emitting e;
+            if ((e = GetHandler(outlet) as Emitting) != null) SetHandler(outlet, e.Previous);
         }
 
-        private void SetOrAddEmitting<T>(Outlet<T> outlet, Emitting<T> next)
+        private void SetOrAddEmitting<T>(Outlet<T> outlet, Emitting next)
         {
-            Emitting<T> e;
-            if ((e = GetHandler(outlet) as Emitting<T>) != null) e.AddFollowUp(next);
+            Emitting e;
+            if ((e = GetHandler(outlet) as Emitting) != null) e.AddFollowUp(next);
             else SetHandler(outlet, next);
         }
 
@@ -1115,7 +1116,7 @@ namespace Akka.Streams.Stage
             if (Interpreter == null)
             {
                 if (IsAvailable(from)) Emit(to, Grab(from), passHandler.Apply);
-                if (doFinish && IsClosed(from)) CompleteStage<TOut>();
+                if (doFinish && IsClosed(from)) CompleteStage();
             }
 
             SetHandler(@from, passHandler);
@@ -1221,15 +1222,15 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Called when the input port is finished. After this callback no other callbacks will be called for this port.
         /// </summary>
-        public virtual void OnUpstreamFinish<T>()
+        public virtual void OnUpstreamFinish()
         {
-            GraphInterpreter.Current.ActiveStage.CompleteStage<T>();
+            GraphInterpreter.Current.ActiveStage.CompleteStage();
         }
 
         /// <summary>
         /// Called when the input port has failed. After this callback no other callbacks will be called for this port.
         /// </summary>
-        public virtual void OnUpstreamFailure<T>(Exception e)
+        public virtual void OnUpstreamFailure(Exception e)
         {
             GraphInterpreter.Current.ActiveStage.FailStage(e);
         }
@@ -1249,9 +1250,9 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Called when the output port will no longer accept any new elements. After this callback no other callbacks will be called for this port.
         /// </summary>
-        public virtual void OnDownstreamFinish<T>()
+        public virtual void OnDownstreamFinish()
         {
-            GraphInterpreter.Current.ActiveStage.CompleteStage<T>();
+            GraphInterpreter.Current.ActiveStage.CompleteStage();
         }
     }
 
@@ -1281,7 +1282,7 @@ namespace Akka.Streams.Stage
         public static readonly IgnoreTerminateInput Instance = new IgnoreTerminateInput();
         private IgnoreTerminateInput() { }
         public override void OnPush() { }
-        public override void OnUpstreamFinish<T>() { }
+        public override void OnUpstreamFinish() { }
     }
 
     /// <summary>
@@ -1298,9 +1299,9 @@ namespace Akka.Streams.Stage
         }
 
         public override void OnPush() { }
-        public override void OnUpstreamFinish<T>()
+        public override void OnUpstreamFinish()
         {
-            if (_predicate()) GraphInterpreter.Current.ActiveStage.CompleteStage<T>();
+            if (_predicate()) GraphInterpreter.Current.ActiveStage.CompleteStage();
         }
     }
 
@@ -1312,8 +1313,8 @@ namespace Akka.Streams.Stage
         public static readonly TotallyIgnorantInput Instance = new TotallyIgnorantInput();
         private TotallyIgnorantInput() { }
         public override void OnPush() { }
-        public override void OnUpstreamFinish<T>() { }
-        public override void OnUpstreamFailure<T>(Exception e) { }
+        public override void OnUpstreamFinish() { }
+        public override void OnUpstreamFailure(Exception e) { }
     }
 
     /// <summary>
@@ -1334,7 +1335,7 @@ namespace Akka.Streams.Stage
         public static readonly IgnoreTerminateOutput Instance = new IgnoreTerminateOutput();
         private IgnoreTerminateOutput() { }
         public override void OnPull() { }
-        public override void OnDownstreamFinish<T>() { }
+        public override void OnDownstreamFinish() { }
     }
 
     /// <summary>
@@ -1351,9 +1352,9 @@ namespace Akka.Streams.Stage
         }
 
         public override void OnPull() { }
-        public override void OnDownstreamFinish<T>()
+        public override void OnDownstreamFinish()
         {
-            if (_predicate()) GraphInterpreter.Current.ActiveStage.CompleteStage<T>();
+            if (_predicate()) GraphInterpreter.Current.ActiveStage.CompleteStage();
         }
     }
 

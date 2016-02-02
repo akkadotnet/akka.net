@@ -79,7 +79,7 @@ namespace Akka.Streams.Implementation.IO
             private void OnUpstreamFinish()
             {
                 _stage._dataQueue.Add(new Finished());
-                CompleteStage<object>();
+                CompleteStage();
             }
 
             public override void PreStart() => Pull(_stage._in);
@@ -89,7 +89,7 @@ namespace Akka.Streams.Implementation.IO
                 if (msg is ReadElementAcknowledgement)
                     SendPullIfAllowed();
                 else if (msg is Close)
-                    CompleteStage<object>();
+                    CompleteStage();
             }
 
             private void SendPullIfAllowed()

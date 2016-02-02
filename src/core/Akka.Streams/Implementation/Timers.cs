@@ -308,7 +308,7 @@ namespace Akka.Streams.Implementation
                 },
                 onUpstreamFinish: () =>
                 {
-                    if(!IsAvailable(_stage.In)) CompleteStage<TIn>();
+                    if(!IsAvailable(_stage.In)) CompleteStage();
                 });
 
                 SetHandler(_stage.Out, onPull: () =>
@@ -316,7 +316,7 @@ namespace Akka.Streams.Implementation
                     if (IsAvailable(_stage.In))
                     {
                         Push(_stage.Out, Grab(_stage.In));
-                        if (IsClosed(_stage.In)) CompleteStage<TIn>();
+                        if (IsClosed(_stage.In)) CompleteStage();
                         else Pull(_stage.In);
                     }
                     else

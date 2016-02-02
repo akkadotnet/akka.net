@@ -49,7 +49,7 @@ namespace Akka.Streams.Implementation.IO
                 //assuming there can be no further in messages
                 _stage._downstreamStatus.Value = new Canceled();
                 _stage._dataQueue = null;
-                CompleteStage<object>();
+                CompleteStage();
             }
 
             private void OnPull()
@@ -93,7 +93,7 @@ namespace Akka.Streams.Implementation.IO
                     if (_stage._dataQueue.Count == 0)
                     {
                         _stage._downstreamStatus.Value = new Canceled();
-                        CompleteStage<object>();
+                        CompleteStage();
                         UnblockUpsteam();
                     }
                     else

@@ -34,7 +34,7 @@ namespace Akka.Streams.Implementation.Fusing
                 },
                 onUpstreamFinish: () =>
                 {
-                    if (ActiveSources == 0) CompleteStage<T>();
+                    if (ActiveSources == 0) CompleteStage();
                 });
                 SetHandler(_stage.Out, onPull: () =>
                 {
@@ -96,7 +96,7 @@ namespace Akka.Streams.Implementation.Fusing
                 var pullSuppressed = ActiveSources == _stage.Breadth;
                 _sources = _sources.Remove(source);
                 if (pullSuppressed) TryPull(_stage.In);
-                if (ActiveSources == 0 && IsClosed(_stage.In)) CompleteStage<T>();
+                if (ActiveSources == 0 && IsClosed(_stage.In)) CompleteStage();
             }
 
             public override void PostStop()
@@ -259,7 +259,7 @@ namespace Akka.Streams.Implementation.Fusing
                     _subscriptionPromise.SetResult(GetAsyncCallback<IActorPublisherMessage>(msg =>
                     {
                         if (msg == RequestSingle) TryPull(_stage.In);
-                        else if (msg is Cancel) CompleteStage<T>();
+                        else if (msg is Cancel) CompleteStage();
                         else throw new IllegalStateException(string.Format("Invalid message {0} send throug the local sink task", msg.GetType()));
                     }));
                 }
@@ -319,7 +319,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     _stage = stage;
                     _onParentPush = GetAsyncCallback<T>(element => Push(stage.Out, element));
-                    _onParentFinish = GetAsyncCallback<Unit>(_ => CompleteStage<T>());
+                    _onParentFinish = GetAsyncCallback<Unit>(_ => CompleteStage());
                     _onParentFailure = GetAsyncCallback<Exception>(FailStage);
 
                     SetHandler(stage.Out,
@@ -339,7 +339,7 @@ namespace Akka.Streams.Implementation.Fusing
                             FailStage(new SubscriptionTimeoutException(string.Format("Tail source has not been materialized in {0}", _stage.Timeout)));
                             break;
                         case NormalCompletion:  // already detached from parent
-                            CompleteStage<T>();
+                            CompleteStage();
                             break;
                         case FailureCompletion: // already detached from parent
                             FailStage(_stage.MaterializationFailure);
@@ -414,7 +414,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _builder = new List<T>(_left);
 
                 _onSubstreamPull = GetAsyncCallback(() => Pull(_stage.In));
-                _onSubstreamFinish = GetAsyncCallback(CompleteStage<T>);
+                _onSubstreamFinish = GetAsyncCallback(CompleteStage);
                 _onSubstreamRegister = GetAsyncCallback<ITail>(tailIf =>
                 {
                     _tail = tailIf;
@@ -422,12 +422,12 @@ namespace Akka.Streams.Implementation.Fusing
                     if (_pendingCompletion == NormalCompletion)
                     {
                         _tail.CompleteSubstream();
-                        CompleteStage<T>();
+                        CompleteStage();
                     }
                     else if (_pendingCompletion == FailureCompletion)
                     {
                         _tail.FailSubstream(_completionFailure);
-                        CompleteStage<T>();
+                        CompleteStage();
                     }
                 });
 
@@ -449,7 +449,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             protected internal override void OnTimer(object timerKey)
             {
-                if (_tailSource.MaterializationState.CompareAndSet(NotMaterialized, TimedOut)) CompleteStage<T>();
+                if (_tailSource.MaterializationState.CompareAndSet(NotMaterialized, TimedOut)) CompleteStage();
             }
 
             private Source<T, Unit> OpenSubstream()
@@ -492,7 +492,7 @@ namespace Akka.Streams.Implementation.Fusing
                 if (!IsPrefixComplete)
                 {
                     // This handles the unpulled out case as well
-                    Emit(_stage.Out, Tuple.Create(_builder as IEnumerable<T>, Source.Empty<T>()), CompleteStage<T>);
+                    Emit(_stage.Out, Tuple.Create(_builder as IEnumerable<T>, Source.Empty<T>()), CompleteStage);
                 }
                 else
                 {
@@ -503,13 +503,13 @@ namespace Akka.Streams.Implementation.Fusing
                         // is empty anyway. If it is already being registered (state was not NotMaterialized) then we will be
                         // able to signal completion normally soon.
                         if (_tailSource.MaterializationState.CompareAndSet(NotMaterialized, NormalCompletion))
-                            CompleteStage<T>();
+                            CompleteStage();
                         else _pendingCompletion = NormalCompletion;
                     }
                     else
                     {
                         _tail.CompleteSubstream();
-                        CompleteStage<T>();
+                        CompleteStage();
                     }
                 }
             }
@@ -540,7 +540,7 @@ namespace Akka.Streams.Implementation.Fusing
                     else
                     {
                         _tail.FailSubstream(cause);
-                        CompleteStage<T>();
+                        CompleteStage();
                     }
                 }
                 else FailStage(cause);
@@ -548,7 +548,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             private void OnDownstreamFinish()
             {
-                if(!IsPrefixComplete) CompleteStage<T>();
+                if(!IsPrefixComplete) CompleteStage();
                 // Otherwise substream is open, ignore
             }
         }

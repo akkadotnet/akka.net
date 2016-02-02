@@ -1,5 +1,5 @@
 ﻿
-// --- auto generated: 2016-01-13 15:07:58 --- //
+// --- auto generated: 2016-02-02 11:10:25 --- //
 using System;
 using System.Linq;
 using System.Reactive.Streams;
@@ -104,7 +104,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In0)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In0)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -113,13 +113,13 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In1)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In1)) CompleteStage();
 					_willShutDown = true;
 				});
 				
 				SetHandler(_stage.Out, onPull: () => {
 					_pending = stage.Shape.Inlets.Count();
-					if (_willShutDown) CompleteStage<TOut>();
+					if (_willShutDown) CompleteStage();
 					else 
 					{
 						Pull(_stage.In0);
@@ -132,7 +132,7 @@ namespace Akka.Streams.Dsl
 			private void PushAll()
 			{
 				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1)));
-				if (_willShutDown) CompleteStage<TOut>();
+				if (_willShutDown) CompleteStage();
 			}
 		}
 
@@ -179,7 +179,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In0)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In0)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -188,7 +188,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In1)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In1)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -197,13 +197,13 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In2)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In2)) CompleteStage();
 					_willShutDown = true;
 				});
 				
 				SetHandler(_stage.Out, onPull: () => {
 					_pending = stage.Shape.Inlets.Count();
-					if (_willShutDown) CompleteStage<TOut>();
+					if (_willShutDown) CompleteStage();
 					else 
 					{
 						Pull(_stage.In0);
@@ -217,7 +217,7 @@ namespace Akka.Streams.Dsl
 			private void PushAll()
 			{
 				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2)));
-				if (_willShutDown) CompleteStage<TOut>();
+				if (_willShutDown) CompleteStage();
 			}
 		}
 
@@ -266,7 +266,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In0)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In0)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -275,7 +275,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In1)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In1)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -284,7 +284,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In2)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In2)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -293,13 +293,13 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In3)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In3)) CompleteStage();
 					_willShutDown = true;
 				});
 				
 				SetHandler(_stage.Out, onPull: () => {
 					_pending = stage.Shape.Inlets.Count();
-					if (_willShutDown) CompleteStage<TOut>();
+					if (_willShutDown) CompleteStage();
 					else 
 					{
 						Pull(_stage.In0);
@@ -314,7 +314,7 @@ namespace Akka.Streams.Dsl
 			private void PushAll()
 			{
 				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3)));
-				if (_willShutDown) CompleteStage<TOut>();
+				if (_willShutDown) CompleteStage();
 			}
 		}
 
@@ -365,7 +365,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In0)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In0)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -374,7 +374,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In1)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In1)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -383,7 +383,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In2)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In2)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -392,7 +392,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In3)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In3)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -401,13 +401,13 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In4)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In4)) CompleteStage();
 					_willShutDown = true;
 				});
 				
 				SetHandler(_stage.Out, onPull: () => {
 					_pending = stage.Shape.Inlets.Count();
-					if (_willShutDown) CompleteStage<TOut>();
+					if (_willShutDown) CompleteStage();
 					else 
 					{
 						Pull(_stage.In0);
@@ -423,7 +423,7 @@ namespace Akka.Streams.Dsl
 			private void PushAll()
 			{
 				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3), Grab(_stage.In4)));
-				if (_willShutDown) CompleteStage<TOut>();
+				if (_willShutDown) CompleteStage();
 			}
 		}
 
@@ -476,7 +476,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In0)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In0)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -485,7 +485,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In1)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In1)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -494,7 +494,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In2)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In2)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -503,7 +503,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In3)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In3)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -512,7 +512,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In4)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In4)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -521,13 +521,13 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In5)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In5)) CompleteStage();
 					_willShutDown = true;
 				});
 				
 				SetHandler(_stage.Out, onPull: () => {
 					_pending = stage.Shape.Inlets.Count();
-					if (_willShutDown) CompleteStage<TOut>();
+					if (_willShutDown) CompleteStage();
 					else 
 					{
 						Pull(_stage.In0);
@@ -544,7 +544,7 @@ namespace Akka.Streams.Dsl
 			private void PushAll()
 			{
 				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3), Grab(_stage.In4), Grab(_stage.In5)));
-				if (_willShutDown) CompleteStage<TOut>();
+				if (_willShutDown) CompleteStage();
 			}
 		}
 
@@ -599,7 +599,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In0)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In0)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -608,7 +608,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In1)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In1)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -617,7 +617,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In2)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In2)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -626,7 +626,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In3)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In3)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -635,7 +635,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In4)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In4)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -644,7 +644,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In5)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In5)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -653,13 +653,13 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In6)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In6)) CompleteStage();
 					_willShutDown = true;
 				});
 				
 				SetHandler(_stage.Out, onPull: () => {
 					_pending = stage.Shape.Inlets.Count();
-					if (_willShutDown) CompleteStage<TOut>();
+					if (_willShutDown) CompleteStage();
 					else 
 					{
 						Pull(_stage.In0);
@@ -677,7 +677,7 @@ namespace Akka.Streams.Dsl
 			private void PushAll()
 			{
 				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3), Grab(_stage.In4), Grab(_stage.In5), Grab(_stage.In6)));
-				if (_willShutDown) CompleteStage<TOut>();
+				if (_willShutDown) CompleteStage();
 			}
 		}
 
@@ -734,7 +734,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In0)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In0)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -743,7 +743,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In1)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In1)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -752,7 +752,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In2)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In2)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -761,7 +761,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In3)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In3)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -770,7 +770,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In4)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In4)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -779,7 +779,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In5)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In5)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -788,7 +788,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In6)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In6)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -797,13 +797,13 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In7)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In7)) CompleteStage();
 					_willShutDown = true;
 				});
 				
 				SetHandler(_stage.Out, onPull: () => {
 					_pending = stage.Shape.Inlets.Count();
-					if (_willShutDown) CompleteStage<TOut>();
+					if (_willShutDown) CompleteStage();
 					else 
 					{
 						Pull(_stage.In0);
@@ -822,7 +822,7 @@ namespace Akka.Streams.Dsl
 			private void PushAll()
 			{
 				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3), Grab(_stage.In4), Grab(_stage.In5), Grab(_stage.In6), Grab(_stage.In7)));
-				if (_willShutDown) CompleteStage<TOut>();
+				if (_willShutDown) CompleteStage();
 			}
 		}
 
@@ -881,7 +881,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In0)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In0)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -890,7 +890,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In1)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In1)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -899,7 +899,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In2)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In2)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -908,7 +908,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In3)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In3)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -917,7 +917,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In4)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In4)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -926,7 +926,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In5)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In5)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -935,7 +935,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In6)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In6)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -944,7 +944,7 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In7)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In7)) CompleteStage();
 					_willShutDown = true;
 				});
 				
@@ -953,13 +953,13 @@ namespace Akka.Streams.Dsl
 					if (_pending == 0) PushAll();
 				},
 				onUpstreamFinish: () =>{
-					if (!IsAvailable(_stage.In8)) CompleteStage<TOut>();
+					if (!IsAvailable(_stage.In8)) CompleteStage();
 					_willShutDown = true;
 				});
 				
 				SetHandler(_stage.Out, onPull: () => {
 					_pending = stage.Shape.Inlets.Count();
-					if (_willShutDown) CompleteStage<TOut>();
+					if (_willShutDown) CompleteStage();
 					else 
 					{
 						Pull(_stage.In0);
@@ -979,7 +979,7 @@ namespace Akka.Streams.Dsl
 			private void PushAll()
 			{
 				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3), Grab(_stage.In4), Grab(_stage.In5), Grab(_stage.In6), Grab(_stage.In7), Grab(_stage.In8)));
-				if (_willShutDown) CompleteStage<TOut>();
+				if (_willShutDown) CompleteStage();
 			}
 		}
 

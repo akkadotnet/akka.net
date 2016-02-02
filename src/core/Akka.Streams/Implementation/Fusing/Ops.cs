@@ -374,10 +374,10 @@ namespace Akka.Streams.Implementation.Fusing
                 _logic.SetHandler(_stage.In, new RestInHandler(_stage, _logic));
             }
 
-            public override void OnUpstreamFinish<T1>()
+            public override void OnUpstreamFinish()
             {
                 _logic.EmitMultiple(_stage.Out, new[] { _stage._start, _stage._end });
-                _logic.CompleteStage<T>();
+                _logic.CompleteStage();
             }
         }
         private sealed class RestInHandler : InHandler
@@ -396,10 +396,10 @@ namespace Akka.Streams.Implementation.Fusing
                 _logic.EmitMultiple(_stage.Out, new[] { _stage._inject, _logic.Grab(_stage.In) });
             }
 
-            public override void OnUpstreamFinish<T1>()
+            public override void OnUpstreamFinish()
             {
                 if (_stage.InjectStartEnd) _logic.Emit(_stage.Out, _stage._end);
-                _logic.CompleteStage<T1>();
+                _logic.CompleteStage();
             }
         }
         private sealed class AnonymousGraphStageLogic : GraphStageLogic
@@ -858,7 +858,7 @@ namespace Akka.Streams.Implementation.Fusing
                         if (_decider(e) == Directive.Stop) FailStage(e);
                     }
                     if (Todo < _stage.Parallelism) TryPull(_stage.In);
-                }, onUpstreamFinish: () => { if (Todo == 0) CompleteStage<TOut>(); });
+                }, onUpstreamFinish: () => { if (Todo == 0) CompleteStage(); });
                 SetHandler(_stage.Out, onPull: PushOne);
             }
 
@@ -881,7 +881,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     if (_buffer.IsEmpty)
                     {
-                        if (IsClosed(inlet)) CompleteStage<TOut>();
+                        if (IsClosed(inlet)) CompleteStage();
                         else if (!HasBeenPulled(inlet)) Pull(inlet);
                     }
                     else if (_buffer.Peek() == NotYetThere)
@@ -975,12 +975,12 @@ namespace Akka.Streams.Implementation.Fusing
 
                     if (Todo < _stage.Parallelism) TryPull(_stage.In);
                 },
-                onUpstreamFinish: () => { if (Todo == 0) CompleteStage<TOut>(); });
+                onUpstreamFinish: () => { if (Todo == 0) CompleteStage(); });
                 SetHandler(_stage.Out, onPull: () =>
                 {
                     var inlet = _stage.In;
                     if (!_buffer.IsEmpty) Push(_stage.Out, _buffer.Dequeue());
-                    else if (IsClosed(inlet) && Todo == 0) CompleteStage<TOut>();
+                    else if (IsClosed(inlet) && Todo == 0) CompleteStage();
 
                     if (Todo < _stage.Parallelism && !HasBeenPulled(inlet)) TryPull(inlet);
                 });
@@ -992,7 +992,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 var inlet = _stage.In;
                 if (_decider(failure) == Directive.Stop) FailStage(failure);
-                else if (IsClosed(inlet) && Todo == 0) CompleteStage<TOut>();
+                else if (IsClosed(inlet) && Todo == 0) CompleteStage();
                 else if (!HasBeenPulled(inlet)) TryPull(inlet);
             }
         }
@@ -1142,7 +1142,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     _finished = true;
                     if (!_groupClosed && _elements > 0) CloseGroup();
-                    else CompleteStage<T>();
+                    else CompleteStage();
                 },
                 onUpstreamFailure: FailStage);
             }
@@ -1176,7 +1176,7 @@ namespace Akka.Streams.Implementation.Fusing
                 Push(_stage.Out, _buffer);
                 _buffer = new List<T>();
                 if (!_finished) StartNewGroup();
-                else CompleteStage<T>();
+                else CompleteStage();
             }
 
             private void StartNewGroup()
@@ -1245,7 +1245,7 @@ namespace Akka.Streams.Implementation.Fusing
                 onUpstreamFinish: () =>
                 {
                     if (IsAvailable(_stage.Outlet) && IsTimerActive(TimerName)) _willStop = true;
-                    else CompleteStage<T>();
+                    else CompleteStage();
                 });
 
                 SetHandler(_stage.Outlet, onPull: () =>
@@ -1263,7 +1263,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             private void CompleteIfReady()
             {
-                if (_willStop && _buffer.IsEmpty) CompleteStage<T>();
+                if (_willStop && _buffer.IsEmpty) CompleteStage();
             }
 
             protected internal override void OnTimer(object timerKey)
@@ -1369,7 +1369,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             protected internal override void OnTimer(object timerKey)
             {
-                CompleteStage<T>();
+                CompleteStage();
             }
 
             public override void PreStart()

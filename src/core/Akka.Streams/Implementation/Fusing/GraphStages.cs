@@ -209,7 +209,7 @@ namespace Akka.Streams.Implementation.Fusing
                 ScheduleRepeatedly("TickTimer", _stage._initialDelay, _stage._interval);
                 var callback = GetAsyncCallback<Unit>(_ =>
                 {
-                    CompleteStage<T>();
+                    CompleteStage();
                     _cancelable.Cancelled.Value = true;
                 });
 
@@ -273,7 +273,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void PreStart()
             {
-                var cb = GetAsyncCallback<T>(element => Emit(_source.Outlet, element, CompleteStage<T>));
+                var cb = GetAsyncCallback<T>(element => Emit(_source.Outlet, element, CompleteStage));
                 _source._promise.Task.ContinueWith(task => cb(task.Result), TaskContinuationOptions.ExecuteSynchronously);
             }
         }
@@ -335,7 +335,7 @@ namespace Akka.Streams.Implementation.Fusing
                 SetHandler(source.Outlet, onPull: () =>
                 {
                     Push(source.Outlet, source._element);
-                    CompleteStage<T>();
+                    CompleteStage();
                 });
             }
         }
