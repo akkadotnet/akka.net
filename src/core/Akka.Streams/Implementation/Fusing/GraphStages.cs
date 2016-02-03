@@ -254,6 +254,7 @@ namespace Akka.Streams.Implementation.Fusing
     internal interface IMaterializedValueSource
     {
         IMaterializedValueSource CopySource();
+        Outlet Outlet { get; }
         StreamLayout.IMaterializedValueNode Computation { get; }
         void SetValue(object result);
     }
@@ -283,6 +284,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         public StreamLayout.IMaterializedValueNode Computation { get; }
 
+        Outlet IMaterializedValueSource.Outlet => Outlet;
         public readonly Outlet<T> Outlet;
 
         private readonly TaskCompletionSource<T> _promise = new TaskCompletionSource<T>();

@@ -4,6 +4,8 @@ using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Actors;
+using Akka.Streams.Stage;
+using Akka.Util;
 
 namespace Akka.Streams.Implementation
 {
@@ -257,7 +259,7 @@ namespace Akka.Streams.Implementation
 
         public override string ToString() => "ActorSubscriberSink";
     }
-    
+
     /// <summary>
     /// INTERNAL API
     /// </summary>
@@ -297,4 +299,176 @@ namespace Akka.Streams.Implementation
         public override string ToString() => "ActorRefSink";
     }
 
+    internal sealed class LastOrDefaultStage<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<T>>
+    {
+        #region stage logic
+        private sealed class LastOrDefaultLogic : GraphStageLogic
+        {
+            private readonly LastOrDefaultStage<T> _stage;
+
+            public LastOrDefaultLogic(Shape shape, TaskCompletionSource<T> promise, LastOrDefaultStage<T> stage) : base(shape)
+            {
+                _stage = stage;
+                var prev = default(T);
+                SetHandler(stage.In, onPush: () =>
+                {
+                    prev = Grab(stage.In);
+                    Pull(stage.In);
+                },
+                onUpstreamFinish: () =>
+                {
+                    var head = prev;
+                    prev = default(T);
+                    promise.TrySetResult(head);
+                    CompleteStage();
+                },
+                onUpstreamFailure: cause =>
+                {
+                    prev = default(T);
+                    promise.TrySetException(cause);
+                    FailStage(cause);
+                });
+            }
+
+            public override void PreStart()
+            {
+                Pull(_stage.In);
+            }
+        }
+        #endregion
+
+        public readonly Inlet<T> In = new Inlet<T>("LastOrDefault.in");
+
+        public LastOrDefaultStage()
+        {
+            Shape = new SinkShape<T>(In);
+        }
+
+        public override SinkShape<T> Shape { get; }
+        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Task<T> materialized)
+        {
+            var promise = new TaskCompletionSource<T>();
+            materialized = promise.Task;
+            return new LastOrDefaultLogic(Shape, promise, this);
+        }
+    }
+
+    internal sealed class FirstOrDefaultStage<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<T>>
+    {
+        #region stage logic
+        private sealed class FirstOrDefaultLogic : GraphStageLogic
+        {
+            private readonly FirstOrDefaultStage<T> _stage;
+
+            public FirstOrDefaultLogic(Shape shape, TaskCompletionSource<T> promise, FirstOrDefaultStage<T> stage) : base(shape)
+            {
+                _stage = stage;
+                SetHandler(stage.In, onPush: () =>
+                {
+                    promise.TrySetResult(Grab(stage.In));
+                    CompleteStage();
+                },
+                onUpstreamFinish: () =>
+                {
+                    promise.TrySetResult(default(T));
+                    CompleteStage();
+                },
+                onUpstreamFailure: cause =>
+                {
+                    promise.TrySetException(cause);
+                    FailStage(cause);
+                });
+            }
+
+            public override void PreStart()
+            {
+                Pull(_stage.In);
+            }
+        }
+        #endregion
+
+        public readonly Inlet<T> In = new Inlet<T>("FirstOrDefault.in");
+
+        public FirstOrDefaultStage()
+        {
+            Shape = new SinkShape<T>(In);
+        }
+
+        public override SinkShape<T> Shape { get; }
+        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Task<T> materialized)
+        {
+            var promise = new TaskCompletionSource<T>();
+            materialized = promise.Task;
+            return new FirstOrDefaultLogic(Shape, promise, this);
+        }
+    }
+
+    internal class QueueSink<T> : GraphStageWithMaterializedValue<SinkShape<T>, ISinkQueue<T>>
+    {
+        #region stage logic
+
+        private interface IRequestElementCallback
+        {
+            AtomicReference<TaskCompletionSource<T>> RequestElement { get; }
+        }
+
+        private sealed class QueueStageLogic : GraphStageLogic, IRequestElementCallback
+        {
+            public AtomicReference<TaskCompletionSource<T>> RequestElement { get; set; }
+
+            private QueueSink<T> _stage;
+
+            public QueueStageLogic(Shape shape, QueueSink<T> stage) : base(shape)
+            {
+                _stage = stage;
+            }
+
+            public override void PreStart()
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        private sealed class SinkQueue : ISinkQueue<T>
+        {
+            private IRequestElementCallback _stageLogic;
+
+            public SinkQueue(IRequestElementCallback stageLogic)
+            {
+                _stageLogic = stageLogic;
+            }
+
+            public Task<T> PullAsync()
+            {
+                var reference = _stageLogic.RequestElement;
+                var promise = new TaskCompletionSource<T>();
+
+                //TODO
+
+                return promise.Task;
+            }
+        }
+        #endregion
+
+        public readonly Inlet<T> In = new Inlet<T>("QueueSink.in");
+
+        public QueueSink()
+        {
+            Shape = new SinkShape<T>(In);
+        }
+
+        public override SinkShape<T> Shape { get; }
+        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out ISinkQueue<T> materialized)
+        {
+            var maxBuffer = Module.Attributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;
+            if (maxBuffer <= 0) throw new ArgumentException("Buffer must be greater than zero", "inheritedAttributes");
+
+            var buffer = FixedSizeBuffer.Create<Result<T>>(maxBuffer);
+            var currentRequest = default(TaskCompletionSource<T>);  
+            
+            var stageLogic = new QueueStageLogic(Shape, this);
+            materialized = new SinkQueue(stageLogic);
+            return stageLogic;
+        }
+    }
 }

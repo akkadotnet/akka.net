@@ -9,17 +9,17 @@ using Directive = Akka.Streams.Supervision.Directive;
 
 namespace Akka.Streams.Implementation
 {
-    internal class GroupByProcessorImpl<TIn, TOut> : MultiStreamOutputProcessor<TOut>
+    internal class GroupByProcessorImpl : MultiStreamOutputProcessor<object>
     {
-        public static Props Props(ActorMaterializerSettings settings, int maxSubstreams, Func<TIn, TOut> keyFor)
+        public static Props Props(ActorMaterializerSettings settings, int maxSubstreams, Func<object, object> keyFor)
         {
-            return Actor.Props.Create(() => new GroupByProcessorImpl<TIn, TOut>(settings, maxSubstreams, keyFor)).WithDeploy(Deploy.Local);
+            return Actor.Props.Create(() => new GroupByProcessorImpl(settings, maxSubstreams, keyFor)).WithDeploy(Deploy.Local);
         }
 
         private readonly int _maxSubstreams;
-        private readonly Func<TIn, TOut> _keyFor;
+        private readonly Func<object, object> _keyFor;
         private readonly Decider _decider;
-        private readonly IDictionary<TOut, SubstreamOutput> _keyToSubstreamOutput = new Dictionary<TOut, SubstreamOutput>();
+        private readonly IDictionary<object, SubstreamOutput> _keyToSubstreamOutput = new Dictionary<object, SubstreamOutput>();
         // No substream is open yet. If downstream cancels now, we are complete
         private readonly TransferPhase _waitFirst;
         // some substreams are open now. If downstream cancels, we still continue until the substreams are closed
@@ -27,22 +27,22 @@ namespace Akka.Streams.Implementation
 
         private SubstreamOutput _pendingSubstreamOutput;
 
-        private GroupByProcessorImpl(ActorMaterializerSettings settings, int maxSubstreams, Func<TIn, TOut> keyFor) : base(settings)
+        private GroupByProcessorImpl(ActorMaterializerSettings settings, int maxSubstreams, Func<object, object> keyFor) : base(settings)
         {
             _maxSubstreams = maxSubstreams;
             _keyFor = keyFor;
             _decider = settings.SupervisionDecider;
             _waitFirst = new TransferPhase(PrimaryInputs.NeedsInput.And(PrimaryOutputs.NeedsDemand), () =>
             {
-                var element = (TIn)PrimaryInputs.DequeueInputElement();
-                TOut key;
+                var element = PrimaryInputs.DequeueInputElement();
+                object key;
                 if (TryKeyFor(element, out key))
                     NextPhase(OpenSubstream(element, key));
             });
             _waitNext = new TransferPhase(PrimaryInputs.NeedsInput, () =>
             {
-                var element = (TIn)PrimaryInputs.DequeueInputElement();
-                TOut key;
+                var element = PrimaryInputs.DequeueInputElement();
+                object key;
                 if (TryKeyFor(element, out key))
                 {
                     SubstreamOutput substream;
@@ -68,7 +68,7 @@ namespace Akka.Streams.Implementation
             base.InvalidateSubstreamOutput(substream);
         }
 
-        private bool TryKeyFor(TIn key, out TOut element)
+        private bool TryKeyFor(object key, out object element)
         {
             try
             {
@@ -79,7 +79,7 @@ namespace Akka.Streams.Implementation
             {
                 if (_decider(cause) != Directive.Stop)
                 {
-                    element = default(TOut);
+                    element = null;
                     if (Settings.IsDebugLogging)
                         Log.Debug("Dropped element [{0}] due to exception from groupBy function: {1}", key, cause.Message);
                     return false;
@@ -88,7 +88,7 @@ namespace Akka.Streams.Implementation
             }
         }
 
-        private TransferPhase OpenSubstream(TIn element, TOut key)
+        private TransferPhase OpenSubstream(object element, object key)
         {
             return new TransferPhase(PrimaryOutputs.NeedsDemandOrCancel, () =>
             {
@@ -113,7 +113,7 @@ namespace Akka.Streams.Implementation
             });
         }
 
-        private TransferPhase DispatchToSubstream(TIn element, SubstreamOutput substream)
+        private TransferPhase DispatchToSubstream(object element, SubstreamOutput substream)
         {
             _pendingSubstreamOutput = substream;
             return new TransferPhase(substream.NeedsDemand, () =>

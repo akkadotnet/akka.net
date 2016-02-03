@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reactive.Streams;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Stages;
 
@@ -26,7 +27,7 @@ namespace Akka.Streams.Dsl
         /// without parallelism limit (i.e. having an unbounded number of sub-flows
         /// active concurrently).
         /// </summary>
-        public virtual IFlow<TOut, TMat> MergeSubstreams()
+        public virtual IFlow<TOut, Unit> MergeSubstreams()
         {
             return MergeSubstreamsWithParallelism(int.MaxValue);
         }
@@ -39,7 +40,7 @@ namespace Akka.Streams.Dsl
         /// be exerted at the operator that creates the substreams when the parallelism
         /// limit is reached.
         /// </summary>
-        public abstract IFlow<TOut, TMat> MergeSubstreamsWithParallelism(int parallelism);
+        public abstract IFlow<TOut, Unit> MergeSubstreamsWithParallelism(int parallelism);
 
         /// <summary>
         /// Flatten the sub-flows back into the super-flow by concatenating them.
@@ -48,7 +49,7 @@ namespace Akka.Streams.Dsl
         /// substream until the first has finished and the <see cref="GroupBy"/> stage will get
         /// back-pressure from the second stream.
         /// </summary>
-        public virtual IFlow<TOut, TMat> ConcatSubstream()
+        public virtual IFlow<TOut, Unit> ConcatSubstream()
         {
             return MergeSubstreamsWithParallelism(1);
         }

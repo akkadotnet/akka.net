@@ -283,7 +283,7 @@ namespace Akka.Streams.Dsl
         public static Sink<TIn, ISinkQueue<TIn>> Queue<TIn>(int bufferSize, TimeSpan? timeout = null)
         {
             if (bufferSize < 0) throw new ArgumentException("Buffer size must be greater than or equal 0");
-            return new Sink<TIn, ISinkQueue<TIn>>(new AcknowledgeSink<TIn>(bufferSize, timeout ?? TimeSpan.FromSeconds(5), DefaultAttributes.QueueSink, Shape<TIn>("AcknowledgeSink")));
+            return FromGraph(new QueueSink<TIn>().WithAttributes(DefaultAttributes.QueueSink));
         }
 
         /// <summary>

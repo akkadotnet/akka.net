@@ -88,17 +88,10 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes OutputStreamSink = Attributes.CreateName("outputStreamSink").And(IODispatcher);
         public static readonly Attributes FileSink = Attributes.CreateName("fileSink").And(IODispatcher);
     }
-
-    internal interface IStageModule
-    {
-        Inlet In { get; }
-        Outlet Out { get; }
-    }
+    
     // FIXME: To be deprecated as soon as stream-of-stream operations are stages
-    internal abstract class StageModule<TIn, TOut, TMat> : FlowModule<TIn, TOut, TMat>, IStageModule
+    internal abstract class StageModule : FlowModule<Object, object, object>
     {
-        Inlet IStageModule.In => In;
-        Outlet IStageModule.Out => Out;
     }
 
     /// <summary>
@@ -558,12 +551,12 @@ namespace Akka.Streams.Implementation.Stages
 
     // FIXME: These are not yet proper stages, therefore they use the deprecated StageModule infrastructure
 
-    internal sealed class GroupBy<TIn, TOut, TMat> : StageModule<TIn, TOut, TMat>
+    internal sealed class GroupBy : StageModule
     {
         public readonly int MaxSubstreams;
-        public readonly Func<TIn, TOut> Extractor;
+        public readonly Func<object, object> Extractor;
 
-        public GroupBy(int maxSubstreams, Func<TIn, TOut> extractor, Attributes attributes = null)
+        public GroupBy(int maxSubstreams, Func<object, object> extractor, Attributes attributes = null)
         {
             MaxSubstreams = maxSubstreams;
             Extractor = extractor;
@@ -572,21 +565,33 @@ namespace Akka.Streams.Implementation.Stages
 
         public override IModule CarbonCopy()
         {
-            return new GroupBy<TIn, TOut, TMat>(MaxSubstreams, Extractor, Attributes);
+            return new GroupBy(MaxSubstreams, Extractor, Attributes);
         }
 
         public override Attributes Attributes { get; }
         public override IModule WithAttributes(Attributes attributes)
         {
-            return new GroupBy<TIn, TOut, TMat>(MaxSubstreams, Extractor, attributes);
+            return new GroupBy(MaxSubstreams, Extractor, attributes);
         }
     }
 
-    internal sealed class Split<TIn, TOut, TMat> : StageModule<TIn, TOut, TMat>
+    internal sealed class Split : StageModule
     {
-        private readonly Func<TIn, SplitDecision> _splitDecision;
+        public static Split When<TIn>(Predicate<TIn> predicate)
+        {
+            Predicate<object> predicateAs = o => predicate((TIn)o);
+            return new Split(element => predicateAs(element) ? SplitDecision.SplitBefore : SplitDecision.Continue, Attributes.CreateName("splitWhen"));
+        }
 
-        public Split(Func<TIn, SplitDecision> splitDecision, Attributes attributes = null)
+        public static Split After<TIn>(Predicate<TIn> predicate)
+        {
+            Predicate<object> predicateAs = o => predicate((TIn)o);
+            return new Split(element => predicateAs(element) ? SplitDecision.SplitAfter : SplitDecision.Continue, Attributes.CreateName("splitAfter"));
+        }
+
+        private readonly Func<object, SplitDecision> _splitDecision;
+
+        public Split(Func<object, SplitDecision> splitDecision, Attributes attributes = null)
         {
             _splitDecision = splitDecision;
             Attributes = attributes ?? DefaultAttributes.Split;
@@ -594,34 +599,21 @@ namespace Akka.Streams.Implementation.Stages
 
         public override IModule CarbonCopy()
         {
-            return new Split<TIn, TOut, TMat>(_splitDecision, Attributes);
+            return new Split(_splitDecision, Attributes);
         }
 
         public override Attributes Attributes { get; }
         public override IModule WithAttributes(Attributes attributes)
         {
-            return new Split<TIn, TOut, TMat>(_splitDecision, attributes);
+            return new Split(_splitDecision, attributes);
         }
     }
 
-    internal static class Split
+    internal sealed class DirectProcessor : StageModule
     {
-        public static Split<TIn, TOut, TMat> When<TIn, TOut, TMat>(Predicate<TIn> predicate)
-        {
-            return new Split<TIn, TOut, TMat>(element => predicate(element) ? SplitDecision.SplitBefore : SplitDecision.Continue, Attributes.CreateName("splitWhen"));
-        }
+        public readonly Func<Tuple<IProcessor<object, object>, object>> ProcessorFactory;
 
-        public static Split<TIn, TOut, TMat> After<TIn, TOut, TMat>(Predicate<TIn> predicate)
-        {
-            return new Split<TIn, TOut, TMat>(element => predicate(element) ? SplitDecision.SplitAfter : SplitDecision.Continue, Attributes.CreateName("splitAfter"));
-        }
-    }
-
-    internal sealed class DirectProcessor<TIn, TOut, TMat> : StageModule<TIn, TOut, TMat>
-    {
-        public readonly Func<Tuple<IProcessor<TIn, TOut>, TMat>> ProcessorFactory;
-
-        public DirectProcessor(Func<Tuple<IProcessor<TIn, TOut>, TMat>> processorFactory, Attributes attributes = null)
+        public DirectProcessor(Func<Tuple<IProcessor<object, object>, object>> processorFactory, Attributes attributes = null)
         {
             ProcessorFactory = processorFactory;
             Attributes = attributes ?? DefaultAttributes.Processor;
@@ -629,13 +621,13 @@ namespace Akka.Streams.Implementation.Stages
 
         public override IModule CarbonCopy()
         {
-            return new DirectProcessor<TIn, TOut, TMat>(ProcessorFactory, Attributes);
+            return new DirectProcessor(ProcessorFactory, Attributes);
         }
 
         public override Attributes Attributes { get; }
         public override IModule WithAttributes(Attributes attributes)
         {
-            return new DirectProcessor<TIn, TOut, TMat>(ProcessorFactory, attributes);
+            return new DirectProcessor(ProcessorFactory, attributes);
         }
     }
 }

@@ -363,12 +363,12 @@ namespace Akka.Streams.Implementation.Fusing
                     var materializedSources = structInfo.ExitMaterializationContext();
                     foreach (var c in materializedSources)
                     {
-                        var ms = (MaterializedValueSource<T>)((GraphStageModule<T>)c.CopyOf).Stage;
+                        var ms = (IMaterializedValueSource)((GraphStageModule<T>)c.CopyOf).Stage;
                         var mapped = ms.Computation is StreamLayout.Atomic
                             ? subMat[((StreamLayout.Atomic) ms.Computation).Module]
                             : matNodeMapping[ms.Computation];
                         
-                        var newSrc = new MaterializedValueSource<T>(mapped, ms.Outlet);
+                        var newSrc = new MaterializedValueSource<T>(mapped, Outlet.Create<T>(ms.Outlet));
                         var replacement = new CopiedModule(c.Shape, c.Attributes, newSrc.Module);
                         structInfo.Replace(c, replacement, localGroup);
                     }

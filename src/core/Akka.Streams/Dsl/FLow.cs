@@ -121,8 +121,25 @@ namespace Akka.Streams.Dsl
         /// <see cref="JoinMaterialized{TMat2,TMat3}"/> if a different strategy is needed.
         /// </summary>
         public IRunnableGraph<TMat> Join<TMat2>(IGraph<FlowShape<TOut, TIn>, TMat2> flow)
-        {
+        {   
             return JoinMaterialized(flow, Keep.Left<TMat, TMat2, TMat>);
+        }
+
+        public Flow<TIn2, TOut2, TMat> Join<TIn2, TOut2, TMat2>(IGraph<BidiShape<TOut, TOut2, TIn2, TIn>, TMat2> bidi)
+        {
+            return JoinMaterialized(bidi, Keep.Left<TMat, TMat2, TMat>);
+        }
+
+        public Flow<TIn2, TOut2, TMatRes> JoinMaterialized<TIn2, TOut2, TMat2, TMatRes>(IGraph<BidiShape<TOut, TOut2, TIn2, TIn>, TMat2> bidi, Func<TMat, TMat2, TMatRes> combine)
+        {
+            var copy = bidi.Module.CarbonCopy();
+            var ins = copy.Shape.Inlets.ToArray();
+            var outs = copy.Shape.Outlets.ToArray();
+
+            return new Flow<TIn2, TOut2, TMatRes>(Module.Compose(copy, combine)
+                .Wire(Shape.Outlet, ins[0])
+                .Wire(outs[1], Shape.Inlet)
+                .ReplaceShape(new FlowShape<TIn2, TOut2>(Inlet.Create<TIn2>(ins[1]), Outlet.Create<TOut2>(outs[0]))));
         }
 
         /// <summary>

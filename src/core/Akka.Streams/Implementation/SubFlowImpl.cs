@@ -38,7 +38,7 @@ namespace Akka.Streams.Implementation
             throw new NotImplementedException();
         }
 
-        public override IFlow<TOut, TMat> MergeSubstreamsWithParallelism(int parallelism)
+        public override IFlow<TOut, Unit> MergeSubstreamsWithParallelism(int parallelism)
         {
             return _mergeBackFunction.Apply(Flow, parallelism);
         }

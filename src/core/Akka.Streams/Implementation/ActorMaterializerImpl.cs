@@ -49,7 +49,7 @@ namespace Akka.Streams.Implementation
                         AssignPort(source.Shape.Outlets.First(), publisher);
                         materializedValues.Add(atomic, materialized);
                     })
-                    .With<IStageModule>(stage =>
+                    .With<StageModule>(stage =>
                     {
                         object materialized;
                         var processor = ProcessorFor(stage, effectiveAttributes, _materializer.EffectiveSettings(effectiveAttributes), out materialized);
@@ -114,10 +114,10 @@ namespace Akka.Streams.Implementation
                 }
             }
 
-            private IProcessor<TIn, TOut> ProcessorFor<TIn, TOut>(IStageModule op, Attributes effectiveAttributes, ActorMaterializerSettings settings, out TMat materialized)
+            private IProcessor<object, object> ProcessorFor(StageModule op, Attributes effectiveAttributes, ActorMaterializerSettings settings, out object materialized)
             {
-                DirectProcessor<TIn, TOut, TMat> processor;
-                if ((processor = op as DirectProcessor<TIn, TOut, TMat>) != null)
+                DirectProcessor processor;
+                if ((processor = op as DirectProcessor) != null)
                 {
                     var t = processor.ProcessorFactory();
                     materialized = t.Item2;
@@ -125,8 +125,8 @@ namespace Akka.Streams.Implementation
                 }
                 else
                 {
-                    var props = ActorProcessorFactory.Props<TIn, TOut, TMat>(_materializer, op, effectiveAttributes, out materialized);
-                    return ActorProcessorFactory.Create<TIn, TOut>(_materializer.ActorOf(props, StageName(effectiveAttributes), settings.Dispatcher));
+                    var props = ActorProcessorFactory.Props(_materializer, op, effectiveAttributes, out materialized);
+                    return ActorProcessorFactory.Create<object, object>(_materializer.ActorOf(props, StageName(effectiveAttributes), settings.Dispatcher));
                 }
             }
         }
@@ -413,21 +413,21 @@ namespace Akka.Streams.Implementation
 
     internal static class ActorProcessorFactory
     {
-        public static Props Props<TIn, TOut, TMat>(ActorMaterializer materializer, StageModule<TIn, TOut, TMat> op, Attributes parentAttributes, out TMat materialized)
+        public static Props Props(ActorMaterializer materializer, StageModule op, Attributes parentAttributes, out object materialized)
         {
             var attr = parentAttributes.And(op.Attributes);
             // USE THIS TO AVOID CLOSING OVER THE MATERIALIZER BELOW
             // Also, otherwise the attributes will not affect the settings properly!
             var settings = materializer.EffectiveSettings(attr);    
             Props result = null;
-            materialized = default(TMat);
+            materialized = null;
 
             op.Match()
-                .With<GroupBy<TIn, TOut, TMat>>(groupBy =>
+                .With<GroupBy>(groupBy =>
                 {
-                    result = GroupByProcessorImpl<TIn, TOut>.Props(settings, groupBy.MaxSubstreams, groupBy.Extractor);
+                    result = GroupByProcessorImpl.Props(settings, groupBy.MaxSubstreams, groupBy.Extractor);
                 })
-                .With<DirectProcessor<TIn, TOut, TMat>>(processor =>
+                .With<DirectProcessor>(processor =>
                 {
                     throw new ArgumentException("DirectProcessor cannot end up in ActorProcessorFactory");
                 })
