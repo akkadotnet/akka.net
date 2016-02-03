@@ -968,7 +968,7 @@ namespace Akka.Streams.Implementation
             return MaterializeModule(composite, effectiveAttributes);
         }
 
-        protected abstract object MaterializeAtomic<TIn, TOut>(IModule atomic, Attributes effectiveAttributes, IDictionary<IModule, object> materializedValues);
+        protected abstract object MaterializeAtomic(IModule atomic, Attributes effectiveAttributes, IDictionary<IModule, object> materializedValues);
 
         private object ResolveMaterialized(StreamLayout.IMaterializedValueNode node, IDictionary<IModule, object> values, string indent)
         {

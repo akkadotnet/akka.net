@@ -89,9 +89,16 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes FileSink = Attributes.CreateName("fileSink").And(IODispatcher);
     }
 
-    // FIXME: To be deprecated as soon as stream-of-stream operations are stages
-    internal abstract class StageModule<TIn, TOut, TMat> : FlowModule<TIn, TOut, TMat>
+    internal interface IStageModule
     {
+        Inlet In { get; }
+        Outlet Out { get; }
+    }
+    // FIXME: To be deprecated as soon as stream-of-stream operations are stages
+    internal abstract class StageModule<TIn, TOut, TMat> : FlowModule<TIn, TOut, TMat>, IStageModule
+    {
+        Inlet IStageModule.In => In;
+        Outlet IStageModule.Out => Out;
     }
 
     /// <summary>

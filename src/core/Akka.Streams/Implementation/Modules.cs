@@ -7,7 +7,13 @@ using Akka.Streams.Actors;
 
 namespace Akka.Streams.Implementation
 {
-    internal abstract class SourceModule<TOut, TMat> : Module
+    internal interface ISourceModule
+    {
+        Shape Shape { get; }
+        IPublisher Create(MaterializationContext context, out object materializer);
+    }
+
+    internal abstract class SourceModule<TOut, TMat> : Module, ISourceModule
     {
         private readonly SourceShape<TOut> _shape;
 
@@ -21,6 +27,14 @@ namespace Akka.Streams.Implementation
         // This is okay since the only caller of this method is right below.
         protected abstract SourceModule<TOut, TMat> NewInstance(SourceShape<TOut> shape);
         public abstract IPublisher<TOut> Create(MaterializationContext context, out TMat materializer);
+
+        IPublisher ISourceModule.Create(MaterializationContext context, out object materializer)
+        {
+            TMat m;
+            var result = Create(context, out m);
+            materializer = m;
+            return result;
+        }
 
         public override IModule ReplaceShape(Shape shape)
         {

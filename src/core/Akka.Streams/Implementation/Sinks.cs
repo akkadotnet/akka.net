@@ -7,7 +7,13 @@ using Akka.Streams.Actors;
 
 namespace Akka.Streams.Implementation
 {
-    public abstract class SinkModule<TIn, TMat> : Module
+    internal interface ISinkModule
+    {
+        Shape Shape { get; }
+        ISubscriber Create(MaterializationContext context, out object materializer);
+    }
+
+    public abstract class SinkModule<TIn, TMat> : Module, ISinkModule
     {
         private readonly SinkShape<TIn> _shape;
 
@@ -22,6 +28,14 @@ namespace Akka.Streams.Implementation
         protected abstract SinkModule<TIn, TMat> NewInstance(SinkShape<TIn> shape);
 
         public abstract ISubscriber<TIn> Create(MaterializationContext context, out TMat materializer);
+
+        ISubscriber ISinkModule.Create(MaterializationContext context, out object materializer)
+        {
+            TMat m;
+            var result = Create(context, out m);
+            materializer = m;
+            return result;
+        }
 
         public override IModule ReplaceShape(Shape shape)
         {

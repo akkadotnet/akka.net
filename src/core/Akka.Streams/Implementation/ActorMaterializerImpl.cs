@@ -32,26 +32,26 @@ namespace Akka.Streams.Implementation
                 _flowName = _materializer.CreateFlowName();
             }
 
-            protected override object MaterializeAtomic<TIn, TOut>(IModule atomic, Attributes effectiveAttributes, IDictionary<IModule, object> materializedValues)
+            protected override object MaterializeAtomic(IModule atomic, Attributes effectiveAttributes, IDictionary<IModule, object> materializedValues)
             {
                 atomic.Match()
-                    .With<SinkModule<TIn, TMat>>(sink =>
+                    .With<ISinkModule>(sink =>
                     {
-                        TMat materialized;
+                        object materialized;
                         var subscriber = sink.Create(CreateMaterializationContext(effectiveAttributes), out materialized);
                         AssignPort(sink.Shape.Inlets.First(), subscriber);
                         materializedValues.Add(atomic, materialized);
                     })
-                    .With<SourceModule<TOut, TMat>>(source =>
+                    .With<ISourceModule>(source =>
                     {
-                        TMat materialized;
+                        object materialized;
                         var publisher = source.Create(CreateMaterializationContext(effectiveAttributes), out materialized);
                         AssignPort(source.Shape.Outlets.First(), publisher);
                         materializedValues.Add(atomic, materialized);
                     })
-                    .With<StageModule<TIn, TOut, TMat>>(stage =>
+                    .With<IStageModule>(stage =>
                     {
-                        TMat materialized;
+                        object materialized;
                         var processor = ProcessorFor(stage, effectiveAttributes, _materializer.EffectiveSettings(effectiveAttributes), out materialized);
                         AssignPort(stage.In, processor);
                         AssignPort(stage.Out, processor);
@@ -98,7 +98,7 @@ namespace Akka.Streams.Implementation
                 var inletsEnumerator = graph.Shape.Inlets.GetEnumerator();
                 while (inletsEnumerator.MoveNext())
                 {
-                    var subscriber = new ActorGraphInterpreter.BoundarySubscriber(impl, shell, i);
+                    var subscriber = new ActorGraphInterpreter.BoundarySubscriber<object>(impl, shell, i);
                     AssignPort(inletsEnumerator.Current, subscriber);
                     i++;
                 }
@@ -107,14 +107,14 @@ namespace Akka.Streams.Implementation
                 var outletsEnumerator = graph.Shape.Outlets.GetEnumerator();
                 while (outletsEnumerator.MoveNext())
                 {
-                    var publisher = new ActorGraphInterpreter.BoundaryPublisher(impl, shell, i);
-                    impl.Tell(new ActorGraphInterpreter.ExposedPublisher(shell, i, publisher));
+                    var publisher = new ActorGraphInterpreter.BoundaryPublisher<object>(impl, shell, i);
+                    impl.Tell(new ActorGraphInterpreter.ExposedPublisher<object>(shell, i, publisher));
                     AssignPort(outletsEnumerator.Current, publisher);
                     i++;
                 }
             }
 
-            private IProcessor<TIn, TOut> ProcessorFor<TIn, TOut>(StageModule<TIn, TOut, TMat> op, Attributes effectiveAttributes, ActorMaterializerSettings settings, out TMat materialized)
+            private IProcessor<TIn, TOut> ProcessorFor<TIn, TOut>(IStageModule op, Attributes effectiveAttributes, ActorMaterializerSettings settings, out TMat materialized)
             {
                 DirectProcessor<TIn, TOut, TMat> processor;
                 if ((processor = op as DirectProcessor<TIn, TOut, TMat>) != null)
