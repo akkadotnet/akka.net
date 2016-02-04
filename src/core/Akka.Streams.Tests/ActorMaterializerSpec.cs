@@ -8,11 +8,16 @@ using Akka.Streams.Implementation;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests
 {
     public class ActorMaterializerSpec : AkkaSpec
     {
+        public ActorMaterializerSpec(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ActorMaterializer_should_report_shutdown_status_properly()
         {

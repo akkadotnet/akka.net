@@ -176,6 +176,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <EmbeddedResource Include="reference.conf" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="CodeGen\Dsl\GraphApply.tt">

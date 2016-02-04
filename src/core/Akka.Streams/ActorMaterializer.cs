@@ -23,6 +23,11 @@ namespace Akka.Streams
     /// </summary>
     public abstract class ActorMaterializer : IMaterializer, IDisposable
     {
+        public static Config DefaultConfig()
+        {
+            return ConfigurationFactory.FromResource<ActorMaterializer>("Akka.Streams.reference.conf");
+        }
+
         #region static
 
         /// <summary>
@@ -46,6 +51,7 @@ namespace Akka.Streams
         {
             var haveShutDown = new AtomicBoolean();
             var system = ActorSystemOf(context);
+            system.Settings.InjectTopLevelFallback(DefaultConfig());
             settings = settings ?? ActorMaterializerSettings.Create(system);
 
             return new ActorMaterializerImpl(
