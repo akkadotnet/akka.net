@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Akka.Streams.Tests.Implementation
 {
-    public class StreamLayoutSpec : TestKit.Xunit2.TestKit
+    public class StreamLayoutSpec : Akka.TestKit.Xunit2.TestKit
     {
         private class TestAtomicModule : Module
         {
