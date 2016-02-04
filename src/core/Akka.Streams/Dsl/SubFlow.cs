@@ -20,7 +20,7 @@ namespace Akka.Streams.Dsl
         /// Attach a <see cref="Sink"/> to each sub-flow, closing the overall Graph that is being
         /// constructed.
         /// </summary>
-        public abstract IFlow<TOut, TMat2> To<TMat2>(IGraph<SinkShape<TOut>, TMat> sink);
+        public abstract IFlow<TOut, TMat> To<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink);
 
         /// <summary>
         /// Flatten the sub-flows back into the super-flow by performing a merge

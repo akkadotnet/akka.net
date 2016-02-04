@@ -7,9 +7,9 @@ namespace Akka.Streams.Stage
     internal class PushPullGraphLogic<TIn, TOut> : GraphStageLogic, IDetachedContext<TOut>
     {
         public PushPullGraphLogic(
-            FlowShape<TIn, TOut> shape, 
-            Attributes attributes, 
-            AbstractStage<TIn, TOut, IDirective, IDirective, IContext<TOut>, ILifecycleContext> stage) 
+            FlowShape<TIn, TOut> shape,
+            Attributes attributes,
+            AbstractStage<TIn, TOut, IDirective, IDirective, IContext<TOut>, ILifecycleContext> stage)
             : base(shape)
         {
             Attributes = attributes;
@@ -114,20 +114,30 @@ namespace Akka.Streams.Stage
     internal class PushPullGraphStageWithMaterializedValue<TIn, TOut, TExt, TMat> :
         GraphStageWithMaterializedValue<FlowShape<TIn, TOut>, TMat>
     {
+        public readonly Func<Attributes, Tuple<IStage<TIn, TOut>, TMat>> Factory;
+
         public PushPullGraphStageWithMaterializedValue(Func<Attributes, Tuple<IStage<TIn, TOut>, TMat>> factory, Attributes stageAttributes)
         {
+            InitialAttributes = stageAttributes;
+            Factory = factory;
+
+            var name = stageAttributes.GetNameOrDefault();
+            Shape = new FlowShape<TIn, TOut>(new Inlet<TIn>(name + ".in"), new Outlet<TOut>(name + ".out"));
         }
 
+        protected override Attributes InitialAttributes { get; }
         public override FlowShape<TIn, TOut> Shape { get; }
         public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out TMat materialized)
         {
-            throw new NotImplementedException();
+            var stageAndMat = Factory(inheritedAttributes);
+            materialized = stageAndMat.Item2;
+            return new PushPullGraphLogic<TIn, TOut>(Shape, inheritedAttributes, (AbstractStage<TIn, TOut, IDirective, IDirective, IContext<TOut>, ILifecycleContext>)stageAndMat.Item1);
         }
     }
 
     internal class PushPullGraphStage<TIn, TOut, TExt> : PushPullGraphStageWithMaterializedValue<TIn, TOut, TExt, Unit>
     {
-        public PushPullGraphStage(Func<Attributes, IStage<TIn, TOut>> factory, Attributes stageAttributes) 
+        public PushPullGraphStage(Func<Attributes, IStage<TIn, TOut>> factory, Attributes stageAttributes)
             : base(attributes => Tuple.Create(factory(attributes), Unit.Instance), stageAttributes)
         {
         }

@@ -17,13 +17,13 @@ namespace Akka.Streams.Implementation.Fusing
         }
     }
 
-    internal class GraphStageModule<TMat> : Module
+    internal class GraphStageModule : Module
     {
-        public readonly GraphStageWithMaterializedValue<Shape, TMat> Stage;
+        public readonly IGraphStageWithMaterializedValue Stage;
         private readonly Shape _shape;
         private readonly Attributes _attributes;
 
-        public GraphStageModule(Shape shape, Attributes attributes, GraphStageWithMaterializedValue<Shape, TMat> stage)
+        public GraphStageModule(Shape shape, Attributes attributes, IGraphStageWithMaterializedValue stage)
         {
             _shape = shape;
             _attributes = attributes;
@@ -45,7 +45,7 @@ namespace Akka.Streams.Implementation.Fusing
         public override Attributes Attributes { get { return _attributes; } }
         public override IModule WithAttributes(Attributes attributes)
         {
-            return new GraphStageModule<TMat>(Shape, attributes, Stage);
+            return new GraphStageModule(Shape, attributes, Stage);
         }
     }
 

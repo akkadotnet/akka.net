@@ -941,8 +941,8 @@ namespace Akka.Streams.Implementation
             foreach (var submodule in module.SubModules)
             {
                 var subEffectiveAttributes = MergeAttributes(effectiveAttributes, submodule.Attributes);
-                GraphStageModule<TMat> graphStageModule;
-                if ((graphStageModule = submodule as GraphStageModule<TMat>) != null && graphStageModule.MaterializedValueComputation is MaterializedValueSource<TMat>)
+                GraphStageModule graphStageModule;
+                if ((graphStageModule = submodule as GraphStageModule) != null && graphStageModule.MaterializedValueComputation is MaterializedValueSource<TMat>)
                 {
                     var copy = ((MaterializedValueSource<TMat>)graphStageModule.MaterializedValueComputation).CopySource();
                     RegisterSource(copy);

@@ -76,7 +76,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         private static GraphModule FuseGroup<T>(BuildStructuralInfo info, ISet<IModule> group)
         {
-            var stages = new GraphStageWithMaterializedValue<Shape, T>[group.Count];
+            var stages = new IGraphStageWithMaterializedValue[group.Count];
             var materializedValueIds = new IModule[group.Count];
             var attributes = new Attributes[group.Count];
 
@@ -112,8 +112,8 @@ namespace Akka.Streams.Implementation.Fusing
             while (enumerator.MoveNext())
             {
                 CopiedModule copy;
-                GraphStageModule<T> graphStageModule;
-                if ((copy = enumerator.Current as CopiedModule) != null && (graphStageModule = copy.CopyOf as GraphStageModule<T>) != null)
+                GraphStageModule graphStageModule;
+                if ((copy = enumerator.Current as CopiedModule) != null && (graphStageModule = copy.CopyOf as GraphStageModule) != null)
                 {
                     stages[pos] = graphStageModule.Stage;
                     materializedValueIds[pos] = copy;
@@ -155,8 +155,8 @@ namespace Akka.Streams.Implementation.Fusing
             while (enumerator.MoveNext())
             {
                 CopiedModule copy;
-                GraphStageModule<T> graphStageModule;
-                if ((copy = enumerator.Current as CopiedModule) != null && (graphStageModule = copy.CopyOf as GraphStageModule<T>) != null)
+                GraphStageModule graphStageModule;
+                if ((copy = enumerator.Current as CopiedModule) != null && (graphStageModule = copy.CopyOf as GraphStageModule) != null)
                 {
                     var outEnumerator = copy.Shape.Outlets.GetEnumerator();
                     var gsmEnumerator = graphStageModule.Shape.Outlets.GetEnumerator();
@@ -296,14 +296,14 @@ namespace Akka.Streams.Implementation.Fusing
 
                             // need to add the module so that the structural (internal) wirings can be rewritten as well
                             // but these modules must not be added to any of the groups
-                            structInfo.AddModule<T>(copy, new HashSet<IModule>(), inheritedAttributes, indent, x.Shape);
+                            structInfo.AddModule(copy, new HashSet<IModule>(), inheritedAttributes, indent, x.Shape);
                             structInfo.RegisterInternal(newShape, indent);
                             return copy;
                         }).ToArray();
                         
                         var newGraphModule = new GraphModule(graphModule.Assembly, oldShape.CopyFromPorts(oldIns.ToList(), oldOuts.ToList()), graphModule.Attributes, newIds);
                         // make sure to add all the port mappings from old GraphModule Shape to new shape
-                        structInfo.AddModule<T>(newGraphModule, localGroup, inheritedAttributes, indent, oldShape);
+                        structInfo.AddModule(newGraphModule, localGroup, inheritedAttributes, indent, oldShape);
                         // now compute the list of all materialized value computation updates
                         var result = new List<KeyValuePair<IModule, StreamLayout.IMaterializedValueNode>>(mvids.Length + 1);
                         for (int i = 0; i < mvids.Length; i++)
@@ -318,7 +318,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     return new[]
                     {
-                        new KeyValuePair<IModule, StreamLayout.IMaterializedValueNode>(module, structInfo.AddModule<T>(module, localGroup, inheritedAttributes, indent))
+                        new KeyValuePair<IModule, StreamLayout.IMaterializedValueNode>(module, structInfo.AddModule(module, localGroup, inheritedAttributes, indent))
                     };
                 }
             }
@@ -363,7 +363,7 @@ namespace Akka.Streams.Implementation.Fusing
                     var materializedSources = structInfo.ExitMaterializationContext();
                     foreach (var c in materializedSources)
                     {
-                        var ms = (IMaterializedValueSource)((GraphStageModule<T>)c.CopyOf).Stage;
+                        var ms = (IMaterializedValueSource)((GraphStageModule)c.CopyOf).Stage;
                         var mapped = ms.Computation is StreamLayout.Atomic
                             ? subMat[((StreamLayout.Atomic) ms.Computation).Module]
                             : matNodeMapping[ms.Computation];
@@ -612,7 +612,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Add a module to the given group, performing normalization (i.e. giving it a unique port identity).
         /// </summary>
-        public StreamLayout.Atomic AddModule<T>(IModule module, ISet<IModule> group, Attributes inheritedAttributes, string indent, Shape oldShape = null)
+        public StreamLayout.Atomic AddModule(IModule module, ISet<IModule> group, Attributes inheritedAttributes, string indent, Shape oldShape = null)
         {
             var copy = oldShape == null
                 ? new CopiedModule(module.Shape.DeepCopy(), inheritedAttributes, Fusing.GetRealModule(module))
@@ -654,7 +654,7 @@ namespace Akka.Streams.Implementation.Fusing
                 foreach (var outlet in module.Shape.Outlets)
                     InternalOuts.Remove(outlet);
 
-            if (IsCopiedModuleWithGraphStageAndMaterializedValue<T>(copy))
+            if (IsCopiedModuleWithGraphStageAndMaterializedValue(copy))
             {
                 PushMaterializationSource((CopiedModule)copy);
             }
@@ -663,7 +663,7 @@ namespace Akka.Streams.Implementation.Fusing
                 var mvids = ((GraphModule)copy).MaterializedValueIds;
                 for (int i = 0; i < mvids.Length; i++)
                 {
-                    if (IsCopiedModuleWithGraphStageAndMaterializedValue<T>(mvids[i]))
+                    if (IsCopiedModuleWithGraphStageAndMaterializedValue(mvids[i]))
                     {
                         PushMaterializationSource((CopiedModule)mvids[i]);
                     }
@@ -731,13 +731,13 @@ namespace Akka.Streams.Implementation.Fusing
             return old.Select(o => (Outlet)NewOutputs[o].First.Value);
         }
 
-        private bool IsCopiedModuleWithGraphStageAndMaterializedValue<T>(IModule module)
+        private bool IsCopiedModuleWithGraphStageAndMaterializedValue(IModule module)
         {
             var copiedModule = module as CopiedModule;
-            GraphStageModule<T> graphStage;
+            GraphStageModule graphStage;
             Type mvcType;
             return copiedModule != null
-                && (graphStage = copiedModule.CopyOf as GraphStageModule<T>) != null
+                && (graphStage = copiedModule.CopyOf as GraphStageModule) != null
                 && (mvcType = graphStage.MaterializedValueComputation.GetType()).IsGenericType
                 && mvcType.GetGenericTypeDefinition() == typeof(MaterializedValueSource<>);
         }

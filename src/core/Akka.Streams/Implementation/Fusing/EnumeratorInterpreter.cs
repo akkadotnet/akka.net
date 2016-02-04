@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Streams;
 using System.Runtime.Serialization;
 using Akka.Event;
 using Akka.Streams.Stage;
@@ -143,7 +144,7 @@ namespace Akka.Streams.Implementation.Fusing
             var inOwners = new int[length + 1];
             var outs = new Outlet[length + 1];
             var outOwners = new int[length + 1];
-            var stages = new GraphStageWithMaterializedValue<Shape, object>[length];
+            var stages = new IGraphStageWithMaterializedValue[length];
 
             ins[length] = null;
             inOwners[length] = GraphInterpreter.Boundary;
@@ -154,7 +155,7 @@ namespace Akka.Streams.Implementation.Fusing
             while (opsEnumerator.MoveNext())
             {
                 var op = opsEnumerator.Current;
-                var stage = new PushPullGraphStage<TIn, TOut>(_ => op, Attributes.None);
+                var stage = new PushPullGraphStage<TIn, TOut, Unit>(_ => op, Attributes.None);
                 stages[i] = stage;
                 ins[i] = stage.Shape.Inlet;
                 inOwners[i] = i;

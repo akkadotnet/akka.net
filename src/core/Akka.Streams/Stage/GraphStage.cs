@@ -57,7 +57,7 @@ namespace Akka.Streams.Stage
 
         protected GraphStageWithMaterializedValue()
         {
-            _module = new Lazy<IModule>(() => new GraphStageModule<TMat>(Shape, InitialAttributes, this));
+            _module = new Lazy<IModule>(() => new GraphStageModule(Shape, InitialAttributes, this));
         }
 
         protected virtual Attributes InitialAttributes { get { return Attributes.None; } }

@@ -25,7 +25,7 @@ namespace Akka.Streams.Implementation
 
         public override IFlow<T2, TMat> Via<T2, TMat2>(IGraph<FlowShape<TOut, T2>, TMat2> flow)
         {
-            return new SubFlowImpl<TIn, T2, TMat>(Flow.Via(flow), _mergeBackFunction, _finishFunction);
+            return new SubFlowImpl<TIn, T2, TMat>(Flow.Via(flow), _mergeBackFunction, sink => (IFlow<T2, TMat>)_finishFunction(sink));
         }
 
         public override IFlow<T2, TMat3> ViaMaterialized<T2, TMat2, TMat3>(IGraph<FlowShape<TOut, T2>, TMat2> flow, Func<TMat, TMat2, TMat3> combine)
@@ -33,9 +33,10 @@ namespace Akka.Streams.Implementation
             throw new NotImplementedException();
         }
 
-        public override IFlow<TOut, TMat2> To<TMat2>(IGraph<SinkShape<TOut>, TMat> sink)
+        public override IFlow<TOut, TMat> To<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink)
         {
-            throw new NotImplementedException();
+            var result = _finishFunction(Flow.To(sink));
+            return result;
         }
 
         public override IFlow<TOut, Unit> MergeSubstreamsWithParallelism(int parallelism)

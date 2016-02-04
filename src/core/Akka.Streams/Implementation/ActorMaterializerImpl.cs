@@ -62,7 +62,7 @@ namespace Akka.Streams.Implementation
 
                     //})
                     .With<GraphModule>(graph => MaterializeGraph(graph, effectiveAttributes, materializedValues))
-                    .With<GraphStageModule<object>>(stage =>
+                    .With<GraphStageModule>(stage =>
                     {
                         var graph = new GraphModule(GraphAssembly.Create(stage.Shape.Inlets, stage.Shape.Outlets, new[] { stage.Stage }), stage.Shape, stage.Attributes, new IModule[] { stage });
                         MaterializeGraph(graph, effectiveAttributes, materializedValues);
