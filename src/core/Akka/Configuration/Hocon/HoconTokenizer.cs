@@ -470,15 +470,8 @@ namespace Akka.Configuration.Hocon
             Take(3);
             while (!EoF && !Matches("\"\"\""))
             {
-                if (Matches("\\"))
-                {
-                    sb.Append(PullEscapeSequence());
-                }
-                else
-                {
-                    sb.Append(Peek());
-                    Take();
-                }
+                sb.Append(Peek());
+                Take();
             }
             Take(3);
             return Token.LiteralValue(sb.ToString());

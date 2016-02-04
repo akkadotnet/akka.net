@@ -387,6 +387,14 @@ a.b.e.f=3
         }
 
         [Fact]
+        public void CanAssignTripleQuotedStringWithUnescapedCharsToField()
+        {
+            var hocon = @"a=""""""hello\y\o\u""""""";
+            Assert.Equal("hello\\y\\o\\u", ConfigurationFactory.ParseString(hocon).GetString("a"));
+        }
+
+
+        [Fact]
         public void CanUseFallback()
         {
             var hocon1 = @"
