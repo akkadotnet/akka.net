@@ -12,6 +12,10 @@ using Xunit;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
+using System.Xml;
+using Akka.Configuration;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.Actor
 {
@@ -19,8 +23,8 @@ namespace Akka.Tests.Actor
     public class ActorSystemSpec : AkkaSpec
     {
 
-        public ActorSystemSpec()
-            : base(@"akka.extensions = [""Akka.Tests.Actor.TestExtension,Akka.Tests""]")
+        public ActorSystemSpec(ITestOutputHelper output)
+            : base(@"akka.extensions = [""Akka.Tests.Actor.TestExtension,Akka.Tests""]", output)
         {
         }
        
@@ -131,8 +135,75 @@ namespace Akka.Tests.Actor
             Assert.Equal("ActorSystem already terminated.", ex.Message);
         }
 
+        [Fact]
+        public void AnActorSystem_Must_Allow_Configuration_Of_Guardian_Supervisor_Strategy()
+        {
+            var config = ConfigurationFactory
+                .ParseString(@"akka.actor.guardian-supervisor-strategy = ""Akka.Actor.StoppingSupervisorStrategy""")
+                .WithFallback(DefaultConfig);
+
+            var actorSystem = ActorSystem.Create("Stop", config);
+            var a = actorSystem.ActorOf(Props.Create<ThrowerActor>());
+            var probe = CreateTestProbe("guardian-test-observer");
+            probe.Watch(a);
+
+            // TODO: EventFilter works with Sys actor system only.
+            //EventFilter.Exception(typeof(Exception)).ExpectOne(() =>
+            //{
+                a.Tell("die");
+            //});
+
+            var terminated = probe.ExpectMsg<Terminated>();
+            Assert.True(terminated.ExistenceConfirmed, "terminated.ExistenceConfirmed should equal true");
+            Assert.False(terminated.AddressTerminated, "terminated.AddressTerminated should equal false");
+            Shutdown(actorSystem);
+        }
+
+        [Fact]
+        public void AnActorSystem_Must_Shut_Down_When_User_Guardian_Escalates()
+        {
+            var config = ConfigurationFactory
+                .ParseString(@"akka.actor.guardian-supervisor-strategy = ""Akka.Tests.Actor.ActorSystemSpec+Strategy, Akka.Tests""")
+                .WithFallback(DefaultConfig);
+
+            var actorSystem = ActorSystem.Create("Stop", config);
+            var a = actorSystem.ActorOf(Props.Create<ThrowerActor>());
+
+            // TODO: EventFilter works with Sys actor system only.
+            //EventFilter.Exception(typeof(Exception)).ExpectOne(() =>
+            //{
+            a.Tell("die");
+            //});
+
+            var result = Task.WaitAny(actorSystem.TerminationTask, Task.Delay(GetTimeoutOrDefault(null)));
+            Assert.Equal(0, result);
+        }
+
+        private class ThrowerActor : ReceiveActor
+        {
+            public ThrowerActor()
+            {
+                Receive<string>(str =>
+                {
+                    if (str == "die")
+                    {
+                        throw new Exception("Hello");
+                    }
+                });
+            }
+        }
+
+        private class Strategy : ISupervisorStrategyConfigurator
+        {
+            public SupervisorStrategy Create()
+            {
+                // TODO: Akka contains SupervisorStrategy.Escalate
+                return new OneForOneStrategy(Decider.From(e => Directive.Escalate));
+            }
+        }
+
         #region Extensions tests
-        
+
         [Fact]
         public void AnActorSystem_Must_Support_Extensions()
         {
