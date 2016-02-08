@@ -60,7 +60,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ActorMaterializerSpec.cs" />
+    <Compile Include="Actor\ActorSubscriberSpec.cs" />
+    <Compile Include="Actor\RequestStragySpecs.cs" />
     <Compile Include="Dsl\AcknowledgeSourceSpec.cs" />
+    <Compile Include="Actor\ActorPublisherSpec.cs" />
     <Compile Include="Implementation\StreamLayoutSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Sample.cs" />
@@ -96,7 +99,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Actor\" />
     <Folder Include="IO\" />
   </ItemGroup>
   <ItemGroup>

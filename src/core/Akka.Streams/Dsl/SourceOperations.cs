@@ -233,7 +233,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut2, TMat> Collect<TIn, TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, Func<TOut1, TOut2> collector) where TOut2 : class
+        public static Source<TOut2, TMat> Collect<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, Func<TOut1, TOut2> collector) where TOut2 : class
         {
             return (Source<TOut2, TMat>)InternalFlowOperations.Collect(flow, collector);
         }

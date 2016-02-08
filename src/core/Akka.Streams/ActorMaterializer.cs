@@ -89,11 +89,11 @@ namespace Akka.Streams
 
         public abstract MessageDispatcher ExecutionContext { get; }
 
-        internal protected abstract ActorSystem System { get; }
+        public abstract ActorSystem System { get; }
 
-        internal protected abstract ILoggingAdapter Logger { get; }
+        public abstract ILoggingAdapter Logger { get; }
 
-        internal protected abstract IActorRef Supervisor { get; }
+        public abstract IActorRef Supervisor { get; }
 
         public abstract IMaterializer WithNamePrefix(string namePrefix);
 

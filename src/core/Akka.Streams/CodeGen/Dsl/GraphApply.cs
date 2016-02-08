@@ -1,4 +1,4 @@
-﻿// --- auto generated: 2016-01-14 07:53:21 --- //
+﻿// --- auto generated: 05.02.2016 09:30:42 --- //
 using System;
 using System.Linq;
 using System.Reactive.Streams;
@@ -12,13 +12,13 @@ namespace Akka.Streams.Dsl
 		/// <summary>
 		/// Creates a new <see cref="IGraph{TShape, TMat}"/> by passing a <see cref="GraphDsl.Builder{TMat}"/> to the given create function.
 		/// </summary>
-		public static IGraph<TShape, Unit> Create<TShape>(Func<GraphDsl.Builder<Unit>, TShape> buildBlock) where TShape: Shape
+		public static IGraph<TShape, TMat> Create<TShape, TMat>(Func<GraphDsl.Builder<TMat>, TShape> buildBlock) where TShape: Shape
 		{
-			var builder = new GraphDsl.Builder<Unit>();
+			var builder = new GraphDsl.Builder<TMat>();
 			var shape = buildBlock(builder);
 			var module = builder.Module.Nest().ReplaceShape(shape);
 
-			return new GraphImpl<TShape, Unit>(shape, module);
+			return new GraphImpl<TShape, TMat>(shape, module);
 		}
 		
 		/// <summary>

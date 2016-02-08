@@ -13,7 +13,7 @@ using Akka.Util.Internal;
 
 namespace Akka.Streams.Implementation
 {
-    internal sealed class ActorMaterializerImpl : ActorMaterializer
+    public sealed class ActorMaterializerImpl : ActorMaterializer
     {
         #region Materializer session implementation
 
@@ -160,9 +160,9 @@ namespace Akka.Streams.Implementation
 
         public override bool IsShutdown { get { return _haveShutDown.Value; } }
         public override ActorMaterializerSettings Settings { get { return _settings; } }
-        internal protected override ActorSystem System { get { return _system; } }
-        internal protected override IActorRef Supervisor { get { return _supervisor; } }
-        internal protected override ILoggingAdapter Logger { get { return _logger ?? (_logger = GetLogger()); } }
+        public override ActorSystem System { get { return _system; } }
+        public override IActorRef Supervisor { get { return _supervisor; } }
+        public override ILoggingAdapter Logger { get { return _logger ?? (_logger = GetLogger()); } }
 
         public override IMaterializer WithNamePrefix(string name)
         {
@@ -327,7 +327,7 @@ namespace Akka.Streams.Implementation
         }
     }
     
-    internal class StreamSupervisor : ReceiveActor
+    public class StreamSupervisor : ReceiveActor
     {
         #region Messages
         
@@ -357,6 +357,11 @@ namespace Akka.Streams.Implementation
             public static readonly StoppedChildren Instance = new StoppedChildren();
             private StoppedChildren() { }
         }
+        public sealed class PrintDebugDump
+        {
+            public static readonly PrintDebugDump Instance = new PrintDebugDump();
+            private PrintDebugDump() { }
+        }
         public sealed class Children
         {
             public readonly ISet<IActorRef> Refs;
@@ -383,7 +388,7 @@ namespace Akka.Streams.Implementation
         public readonly ActorMaterializerSettings Settings;
         public readonly AtomicBoolean HaveShutdown;
 
-        private StreamSupervisor(ActorMaterializerSettings settings, AtomicBoolean haveShutdown)
+        public StreamSupervisor(ActorMaterializerSettings settings, AtomicBoolean haveShutdown)
         {
             Settings = settings;
             HaveShutdown = haveShutdown;

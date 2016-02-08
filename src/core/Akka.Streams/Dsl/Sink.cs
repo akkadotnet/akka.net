@@ -161,21 +161,18 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Combine several sinks with fun-out strategy like <see cref="Broadcast{TIn}"/> or <see cref="Balance{TIn}"/> and returns <see cref="Sink{TIn,TMat}"/>.
         /// </summary>
-        public static Sink<TIn, Unit> Combine<TIn, TOut>(Func<int, IGraph<UniformFanOutShape<TIn, TOut>, object>> strategy, Sink<TOut, object> first, Sink<TOut, object> second, params Sink<TOut, object>[] rest)
+        public static Sink<TIn, TMat> Combine<TIn, TOut, TMat>(Func<int, IGraph<UniformFanOutShape<TIn, TOut>, TMat>> strategy, Sink<TOut, TMat> first, Sink<TOut, TMat> second, params Sink<TOut, TMat>[] rest)
         {
-            return FromGraph(GraphDsl.Create(builder =>
+            return FromGraph(GraphDsl.Create<SinkShape<TIn>, TMat>(builder =>
             {
                 var d = builder.Add(strategy(rest.Length + 2));
-                //TODO implement as far as GraphDsl is ported
-                //d.Out(0) ~> first
-                //d.Out(1) ~> second
+
+                builder.From(d.Out(0)).To(first);
+                builder.From(d.Out(1)).To(second);
 
                 var index = 2;
                 foreach (var sink in rest)
-                {
-                    //TODO implement as far as GraphDsl is ported
-                    //d.Out(index++) ~> sink
-                }
+                    builder.From(d.Out(index++)).To(sink);
 
                 return new SinkShape<TIn>(d.In);
             }));
@@ -300,9 +297,9 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Helper to create <see cref="Sink{TIn,TMat}"/> from <see cref="ISubscriber{TIn}"/>.
         /// </summary>
-        public static Sink<TIn, Unit> FromSubscriber<TIn>(ISubscriber<TIn> subscriber)
+        public static Sink<TIn, TMat> FromSubscriber<TIn, TMat>(ISubscriber<TIn> subscriber)
         {
-            return new Sink<TIn, Unit>(new SubscriberSink<TIn>(subscriber, DefaultAttributes.SubscriberSink, Shape<TIn>("SubscriberSink")));
+            return new Sink<TIn, TMat>(new SubscriberSink<TIn>(subscriber, DefaultAttributes.SubscriberSink, Shape<TIn>("SubscriberSink")));
         }
 
         /// <summary>

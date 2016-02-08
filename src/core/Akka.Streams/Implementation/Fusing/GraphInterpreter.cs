@@ -563,5 +563,18 @@ namespace Akka.Streams.Implementation.Fusing
             n -= i >> 31;
             return n;
         }
+
+        /// <summary>
+        /// Debug utility to dump the "waits-on" relationships in DOT format to the console for analysis of deadlocks.
+        /// 
+        /// Only invoke this after the interpreter completely settled, otherwise the results might be off. This is a very
+        /// simplistic tool, make sure you are understanding what you are doing and then it will serve you well.
+        /// </summary>
+        public void DumpWaits()
+        {
+            Console.WriteLine("digraph waits {");
+            for (var i = 0; i < Assembly.Stages.Length; i++)
+                Console.WriteLine($@"N{i} [label=""{Assembly.Stages[i]}""]");
+        }
     }
 }

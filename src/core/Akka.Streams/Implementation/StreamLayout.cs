@@ -562,7 +562,7 @@ namespace Akka.Streams.Implementation
 
         public override IModule ReplaceShape(Shape shape)
         {
-            if (Shape.HasSamePortsAs(shape))
+            if (!Shape.HasSamePortsAs(shape))
                 throw new ArgumentException("CombinedModule requires shape with same ports to replace", "shape");
 
             return new CompositeModule(SubModules, shape, Downstreams, Upstreams, MaterializedValueComputation, Attributes);

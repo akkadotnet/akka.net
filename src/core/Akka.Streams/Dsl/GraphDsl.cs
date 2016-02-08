@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Streams;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
@@ -94,9 +95,17 @@ namespace Akka.Streams.Dsl
             {
                 return new ForwardOps<TOut, T>(this, source.Outlet);
             }
+            public ForwardOps<TOut, T> From<TOut>(IGraph<SourceShape<TOut>, T> source)
+            {
+                return new ForwardOps<TOut, T>(this, Add(source).Outlet);
+            }
             public ForwardOps<TOut, T> From<TIn, TOut>(FlowShape<TIn, TOut> flow)
             {
                 return new ForwardOps<TOut, T>(this, flow.Outlet);
+            }
+            public ForwardOps<TOut, T> From<TIn, TOut>(IGraph<FlowShape<TIn, TOut>, T> flow)
+            {
+                return new ForwardOps<TOut, T>(this, Add(flow).Outlet);
             }
             public ForwardOps<TOut, T> From<TIn, TOut>(UniformFanInShape<TIn, TOut> fanIn)
             {
@@ -199,6 +208,14 @@ namespace Akka.Streams.Dsl
             return b;
         }
 
+        public static GraphDsl.Builder<TMat> To<TIn, TOut, TMat>(this GraphDsl.ForwardOps<TOut, TMat> ops, IGraph<SinkShape<TIn>, TMat> sink)
+            where TIn : TOut
+        {
+            var b = ops.Builder;
+            b.AddEdge(ops.Out, b.Add(sink).Inlet);
+            return b;
+        }
+
         public static GraphDsl.Builder<TMat> To<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, UniformFanInShape<TIn, TOut2> junction)
             where TIn : TOut1
         {
@@ -237,6 +254,15 @@ namespace Akka.Streams.Dsl
             var b = ops.Builder;
             b.AddEdge(ops.Out, flow.Inlet);
             return new GraphDsl.ForwardOps<TOut2, TMat>(b, flow.Outlet);
+        }
+
+        public static GraphDsl.ForwardOps<TOut2, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, IGraph<FlowShape<TIn, TOut2>, Unit> flow)
+            where TIn : TOut1
+        {
+            var b = ops.Builder;
+            var s = b.Add(flow);
+            b.AddEdge(ops.Out, s.Inlet);
+            return new GraphDsl.ForwardOps<TOut2, TMat>(b, s.Outlet);
         }
 
         public static GraphDsl.ForwardOps<TOut2, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, UniformFanInShape<TIn, TOut2> junction)

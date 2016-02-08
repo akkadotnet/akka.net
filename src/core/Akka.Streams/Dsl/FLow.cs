@@ -222,7 +222,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Flow<TIn, TOut, TMat> FromGraph<TIn, TOut, TMat>(IGraph<FlowShape<TIn, TOut>, TMat> graph)
         {
-            throw new NotImplementedException();
+            return graph as Flow<TIn, TOut, TMat> ?? new Flow<TIn, TOut, TMat>(graph.Module);
         }
     }
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl;
@@ -28,7 +29,7 @@ namespace Akka.Streams.Tests.Dsl
         public void AcknowledgeSource_should_emit_received_message_to_the_stream()
         {
             var s = this.CreateManualProbe<int>();
-            var queue = Source.Queue<int>(10, OverflowStrategy.Fail).To(Sink.FromSubscriber(s)).Run(materializer);
+            var queue = Source.Queue<int>(10, OverflowStrategy.Fail).To(Sink.FromSubscriber<int, Unit>(s)).Run(materializer);
             var sub = s.ExpectSubscription();
 
             sub.Request(2);
@@ -44,7 +45,7 @@ namespace Akka.Streams.Tests.Dsl
         public void AcknowledgeSource_should_buffer_when_needed()
         {
             var s = this.CreateManualProbe<int>();
-            var queue = Source.Queue<int>(100, OverflowStrategy.DropHead).To(Sink.FromSubscriber(s)).Run(materializer);
+            var queue = Source.Queue<int>(100, OverflowStrategy.DropHead).To(Sink.FromSubscriber<int, Unit>(s)).Run(materializer);
             var sub = s.ExpectSubscription();
 
             for (int i = 1; i <= 20; i++) AssertSuccess(queue.OfferAsync(i), true);
@@ -63,7 +64,7 @@ namespace Akka.Streams.Tests.Dsl
         public void AcknowledgeSource_should_not_fail_when_0_buffer_space_and_demand_is_signalled()
         {
             var s = this.CreateManualProbe<int>();
-            var queue = Source.Queue<int>(0, OverflowStrategy.DropHead).To(Sink.FromSubscriber(s)).Run(materializer);
+            var queue = Source.Queue<int>(0, OverflowStrategy.DropHead).To(Sink.FromSubscriber<int, Unit>(s)).Run(materializer);
             var sub = s.ExpectSubscription();
 
             sub.Request(1);
@@ -76,7 +77,7 @@ namespace Akka.Streams.Tests.Dsl
         public void AcknowledgeSource_should_return_false_when_can_reject_element_to_buffer()
         {
             var s = this.CreateManualProbe<int>();
-            var queue = Source.Queue<int>(1, OverflowStrategy.DropNew).To(Sink.FromSubscriber(s)).Run(materializer);
+            var queue = Source.Queue<int>(1, OverflowStrategy.DropNew).To(Sink.FromSubscriber<int, Unit>(s)).Run(materializer);
             var sub = s.ExpectSubscription();
 
             AssertSuccess(queue.OfferAsync(1), true);
@@ -90,7 +91,7 @@ namespace Akka.Streams.Tests.Dsl
         public void AcknowledgeSource_should_wait_when_buffer_is_full_and_backpressure_is_on()
         {
             var s = this.CreateManualProbe<int>();
-            var queue = Source.Queue<int>(2, OverflowStrategy.Backpressure).To(Sink.FromSubscriber(s)).Run(materializer);
+            var queue = Source.Queue<int>(2, OverflowStrategy.Backpressure).To(Sink.FromSubscriber<int, Unit>(s)).Run(materializer);
             var sub = s.ExpectSubscription();
 
             AssertSuccess(queue.OfferAsync(1), true);

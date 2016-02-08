@@ -65,7 +65,7 @@ namespace Akka.Streams.Implementation
      * When you instantiate this class, or its subclasses, you MUST send an ExposedPublisher message to the wrapped
      * ActorRef! If you don't need to subclass, prefer the apply() method on the companion object which takes care of this.
      */
-    public abstract class ActorPublisher<TOut> : IPublisher<TOut>
+    public class ActorPublisher<TOut> : IPublisher<TOut>
     {
         protected readonly IActorRef Impl;
         public const string NormalShutdownReasonMessage = "Cannot subscribe to shut-down Publisher";
@@ -82,7 +82,7 @@ namespace Akka.Streams.Implementation
         
         protected virtual object WakeUpMessage { get { return SubscribePending.Instance; } }
 
-        protected ActorPublisher(IActorRef impl)
+        public ActorPublisher(IActorRef impl)
         {
             Impl = impl;
         }

@@ -150,9 +150,9 @@ namespace Akka.Streams.Dsl
         /// that mediate the flow of elements downstream and the propagation of
         /// back-pressure upstream.
         /// </summary>
-        public static Source<T, Unit> FromPublisher<T>(IPublisher<T> publisher)
+        public static Source<T, TMat> FromPublisher<T, TMat>(IPublisher<T> publisher)
         {
-            return new Source<T, Unit>(new PublisherSource<T>(publisher, DefaultAttributes.PublisherSource, Shape<T>("PublisherSource")));
+            return new Source<T, TMat>(new PublisherSource<T>(publisher, DefaultAttributes.PublisherSource, Shape<T>("PublisherSource")));
         }
 
         /// <summary>

@@ -508,7 +508,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         public void EnterMaterializationContext()
         {
-            _materializedSources.Clear();
+            _materializedSources.AddFirst(new LinkedList<CopiedModule>());
         }
 
         public IImmutableList<CopiedModule> ExitMaterializationContext()

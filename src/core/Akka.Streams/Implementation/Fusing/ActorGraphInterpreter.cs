@@ -10,6 +10,7 @@ using Akka.Event;
 using Akka.Pattern;
 using Akka.Streams.Stage;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Streams.Implementation.Fusing
 {
@@ -863,6 +864,18 @@ namespace Akka.Streams.Implementation.Fusing
                     if (_activeInterpreters.Count == 0) Context.Stop(Self);
                 }
 
+                return true;
+            }
+
+            if (message is StreamSupervisor.PrintDebugDump)
+            {
+                Console.WriteLine("ActiveShells:");
+                _activeInterpreters.ForEach(shell =>
+                {
+                    Console.WriteLine("  " + shell.ToString().Replace(@"\n", @"\n "));
+                    shell.Interpreter.DumpWaits();
+                });
+            
                 return true;
             }
 
