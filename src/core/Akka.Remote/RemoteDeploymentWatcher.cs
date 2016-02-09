@@ -7,13 +7,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
-using Akka.Util.Internal.Collections;
 
 namespace Akka.Remote
 {
@@ -24,8 +24,8 @@ namespace Akka.Remote
     internal class RemoteDeploymentWatcher : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
 
-        private readonly IImmutableMap<IActorRef, IInternalActorRef> _supervisors =
-            ImmutableTreeMap<IActorRef, IInternalActorRef>.Empty;
+        private readonly IImmutableDictionary<IActorRef, IInternalActorRef> _supervisors =
+            ImmutableDictionary<IActorRef, IInternalActorRef>.Empty;
         protected override bool Receive(object message)
         {
             if (message == null)
@@ -39,7 +39,7 @@ namespace Akka.Remote
             }).With<Terminated>(t =>
             {
                 IInternalActorRef supervisor;
-                if (_supervisors.TryGet(t.ActorRef, out supervisor))
+                if (_supervisors.TryGetValue(t.ActorRef, out supervisor))
                 {
                     supervisor.SendSystemMessage(new DeathWatchNotification(t.ActorRef, t.ExistenceConfirmed, t.AddressTerminated), supervisor);
                     _supervisors.Remove(t.ActorRef);
