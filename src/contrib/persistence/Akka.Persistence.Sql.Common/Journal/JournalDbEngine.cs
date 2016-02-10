@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Configuration;
 using System.Data.Common;
 using System.Linq;
@@ -160,8 +161,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="fromSequenceNr">Lower inclusive sequence number bound. Unbound by default.</param>
         /// <param name="toSequenceNr">Upper inclusive sequence number bound. Unbound by default.</param>
         /// <param name="max">Maximum number of messages to be replayed. Unbound by default.</param>
-        /// <param name="replayCallback">Action invoked for each replayed message.</param>
-        public async Task ReplayMessagesAsync(string persistenceId, long fromSequenceNr, long toSequenceNr, long max, IActorRef sender, Action<IPersistentRepresentation> replayCallback)
+        /// <param name="recoveryCallback">Action invoked for each replayed message.</param>
+        public async Task ReplayMessagesAsync(string persistenceId, long fromSequenceNr, long toSequenceNr, long max, IActorRef sender, Action<IPersistentRepresentation> recoveryCallback)
         {
             using (var connection = CreateDbConnection())
             {
@@ -178,7 +179,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                     {
                         var persistent = QueryMapper.Map(reader, sender);
                         if (persistent != null)
-                            replayCallback(persistent);
+                            recoveryCallback(persistent);
                     }
                 }
                 finally
@@ -211,37 +212,56 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// Specific table used for message persistence may be defined through configuration within 
         /// 'akka.persistence.journal.sql-server' scope with 'schema-name' and 'table-name' keys.
         /// </summary>
-        public async Task WriteMessagesAsync(IEnumerable<IPersistentRepresentation> messages)
+        public async Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
         {
-            using (var connection = CreateDbConnection())
+            var writeTasks = messages.Select(async message =>
             {
-                await connection.OpenAsync();
+                using (var connection = CreateDbConnection())
+                {
+                    await connection.OpenAsync();
 
-                var persistentMessages = messages.ToArray();
-                var sqlCommand = QueryBuilder.InsertBatchMessages(persistentMessages);
-                CompleteCommand(sqlCommand, connection);
+                    var persistentMessages = ((IImmutableList<IPersistentRepresentation>) message.Payload).ToArray();
+                    var sqlCommand = QueryBuilder.InsertBatchMessages(persistentMessages);
+                    CompleteCommand(sqlCommand, connection);
 
-                var journalEntries = persistentMessages.Select(ToJournalEntry).ToList();
-                await InsertInTransactionAsync(sqlCommand, journalEntries);
-            }
+                    var journalEntries = persistentMessages.Select(ToJournalEntry).ToList();
+                    await InsertInTransactionAsync(sqlCommand, journalEntries);
+                }
+            });
+
+            return await Task<IImmutableList<Exception>>
+                .Factory
+                .ContinueWhenAll(writeTasks.ToArray(),
+                    tasks => tasks.Select(t => t.IsFaulted ? TryUnwrapException(t.Exception) : null).ToImmutableList());
         }
 
         /// <summary>
         /// Asynchronously deletes all persisted messages identified by provided <paramref name="persistenceId"/>
-        /// up to provided message sequence number (inclusive). If <paramref name="isPermanent"/> flag is cleared,
-        /// messages will still reside inside database, but will be logically counted as deleted.
+        /// up to provided message sequence number (inclusive).
         /// </summary>
-        public async Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, bool isPermanent)
+        public async Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
         {
             using (var connection = CreateDbConnection())
             {
                 await connection.OpenAsync();
 
-                var sqlCommand = QueryBuilder.DeleteBatchMessages(persistenceId, toSequenceNr, isPermanent);
+                var sqlCommand = QueryBuilder.DeleteBatchMessages(persistenceId, toSequenceNr);
                 CompleteCommand(sqlCommand, connection);
 
                 await sqlCommand.ExecuteNonQueryAsync();
             }
+        }
+
+        private Exception TryUnwrapException(Exception e)
+        {
+            var aggregateException = e as AggregateException;
+            if (aggregateException != null)
+            {
+                aggregateException = aggregateException.Flatten();
+                if (aggregateException.InnerExceptions.Count == 1)
+                    return aggregateException.InnerExceptions[0];
+            }
+            return e;
         }
 
         /// <summary>
@@ -268,11 +288,14 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             var payloadType = message.Payload.GetType();
             var serializer = _system.Serialization.FindSerializerForType(payloadType);
-            var manifest = string.IsNullOrEmpty(message.Manifest) ? payloadType.QualifiedTypeName() : message.Manifest;
+            var manifest = string.IsNullOrEmpty(message.Manifest)
+                ? payloadType.QualifiedTypeName()
+                : message.Manifest;
             var timestamp = TimestampProvider.GenerateTimestamp(message);
             var payload = serializer.ToBinary(message.Payload);
 
-            return new JournalEntry(message.PersistenceId, message.SequenceNr, message.IsDeleted, manifest, timestamp, payload);
+            return new JournalEntry(message.PersistenceId, message.SequenceNr, message.IsDeleted, manifest,
+                timestamp, payload);
         }
 
         private ITimestampProvider CreateTimestampProvider()

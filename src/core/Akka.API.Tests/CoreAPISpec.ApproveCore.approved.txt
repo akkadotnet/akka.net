@@ -4264,6 +4264,7 @@ namespace Akka.Serialization
         public void AddSerializationMap(System.Type type, Akka.Serialization.Serializer serializer) { }
         public void AddSerializer(Akka.Serialization.Serializer serializer) { }
         public object Deserialize(byte[] bytes, int serializerId, System.Type type) { }
+        public object Deserialize(byte[] bytes, int serializerId, string manifest) { }
         public Akka.Serialization.Serializer FindSerializerFor(object obj) { }
         public Akka.Serialization.Serializer FindSerializerForType(System.Type objectType) { }
         public Akka.Serialization.Serializer GetSerializerById(int serializerId) { }
@@ -4274,11 +4275,12 @@ namespace Akka.Serialization
     {
         protected readonly Akka.Actor.ExtendedActorSystem system;
         public Serializer(Akka.Actor.ExtendedActorSystem system) { }
-        public abstract int Identifier { get; }
+        public virtual int Identifier { get; }
         public abstract bool IncludeManifest { get; }
         public abstract object FromBinary(byte[] bytes, System.Type type);
         public abstract byte[] ToBinary(object obj);
         public byte[] ToBinaryWithAddress(Akka.Actor.Address address, object obj) { }
+        protected static string TypeQualifiedNameForManifest(System.Type type) { }
     }
     public class static SerializerIdentifierHelper
     {

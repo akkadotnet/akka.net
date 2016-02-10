@@ -37,9 +37,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         DbCommand InsertBatchMessages(IPersistentRepresentation[] messages);
 
         /// <summary>
-        /// Depending on <paramref name="permanent"/> flag this method may return either UPDATE or DELETE statement
-        /// used to alter IsDeleted field or delete rows permanently.
+        /// Returns DELETE statement used to delete rows permanently.
         /// </summary>
-        DbCommand DeleteBatchMessages(string persistenceId, long toSequenceNr, bool permanent);
+        DbCommand DeleteBatchMessages(string persistenceId, long toSequenceNr);
     }
 }

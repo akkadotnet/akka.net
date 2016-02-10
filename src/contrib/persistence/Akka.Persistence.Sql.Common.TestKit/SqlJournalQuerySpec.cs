@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Sql.Common.Journal;
@@ -45,13 +46,13 @@ namespace Akka.Persistence.Sql.Common.TestKit
 
         private static readonly IPersistentRepresentation[] Events =
         {
-            new Persistent("a-1", 1, "System.String", "p-1"),
-            new Persistent("a-2", 2, "System.String", "p-1"),
-            new Persistent("a-3", 3, "System.String", "p-1"),
-            new Persistent("a-4", 1, "System.String", "p-2"),
-            new Persistent(5, 2, "System.Int32", "p-2"),
-            new Persistent(6, 1, "System.Int32", "p-3"),
-            new Persistent("a-7", 2, "System.String", "p-3"),
+            new Persistent("a-1", 1, "p-1", "System.String"),
+            new Persistent("a-2", 2, "p-1", "System.String"),
+            new Persistent("a-3", 3, "p-1", "System.String"),
+            new Persistent("a-4", 1, "p-2", "System.String"),
+            new Persistent(5, 2, "p-2", "System.Int32"),
+            new Persistent(6, 1, "p-3", "System.Int32"),
+            new Persistent("a-7", 2, "p-3", "System.String")
         };
 
         public IActorRef JournalRef { get; protected set; }
@@ -116,7 +117,7 @@ namespace Akka.Persistence.Sql.Common.TestKit
         private void WriteEvents()
         {
             var probe = CreateTestProbe();
-            var message = new WriteMessages(Events, probe.Ref, ActorInstanceId);
+            var message = new WriteMessages(Events.Select(p => new AtomicWrite(p)), probe.Ref, ActorInstanceId);
 
             JournalRef.Tell(message);
             probe.ExpectMsg<WriteMessagesSuccessful>();
