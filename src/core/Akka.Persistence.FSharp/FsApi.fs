@@ -18,7 +18,7 @@ type PersistenceId = string
 type Snapshotter<'State> =
     abstract LoadSnapshot: PersistenceId -> SnapshotSelectionCriteria -> int64 -> unit
     abstract SaveSnapshot: 'State -> unit
-    abstract DeleteSnapshot: int64 -> DateTime -> unit
+    abstract DeleteSnapshot: int64 -> unit
     abstract DeleteSnapshots: SnapshotSelectionCriteria -> unit
 
 [<Interface>]
@@ -131,8 +131,8 @@ type FunPersistentActor<'Command, 'Event, 'State>(aggregate: Aggregate<'Command,
             member __.Log = lazy (Akka.Event.Logging.GetLogger(context)) 
             member __.Defer fn = deferables <- fn::deferables
             member __.DeferEvent callback events = this.Defer(events, Action<_>(updateState callback))
-            member __.PersistEvent callback events = this.Persist(events, Action<_>(updateState callback))
-            member __.AsyncPersistEvent callback events = this.PersistAsync(events, Action<_>(updateState callback)) 
+            member __.PersistEvent callback events = this.PersistAll(events, Action<_>(updateState callback))
+            member __.AsyncPersistEvent callback events = this.PersistAllAsync(events, Action<_>(updateState callback)) 
             member __.Journal() = this.Journal
             member __.SnapshotStore() = this.SnapshotStore
             member __.PersistenceId() = this.PersistenceId
@@ -140,7 +140,7 @@ type FunPersistentActor<'Command, 'Event, 'State>(aggregate: Aggregate<'Command,
             member __.LastSequenceNr() = this.LastSequenceNr
             member __.LoadSnapshot pid criteria seqNr = this.LoadSnapshot(pid, criteria, seqNr)
             member __.SaveSnapshot state = this.SaveSnapshot(state)
-            member __.DeleteSnapshot seqNr timestamp = this.DeleteSnapshot(seqNr, timestamp)
+            member __.DeleteSnapshot seqNr = this.DeleteSnapshot(seqNr)
             member __.DeleteSnapshots criteria = this.DeleteSnapshots(criteria) }
             
     member __.Sender() : IActorRef = base.Sender
@@ -264,7 +264,7 @@ type FunPersistentView<'Event, 'State>(perspective: Perspective<'Event, 'State>,
             member __.LastSequenceNr() = this.LastSequenceNr
             member __.LoadSnapshot pid criteria seqNr = this.LoadSnapshot(pid, criteria, seqNr)
             member __.SaveSnapshot state = this.SaveSnapshot(state)
-            member __.DeleteSnapshot seqNr timestamp = this.DeleteSnapshot(seqNr, timestamp)
+            member __.DeleteSnapshot seqNr = this.DeleteSnapshot(seqNr)
             member __.DeleteSnapshots criteria = this.DeleteSnapshots(criteria) }
       
     member __.Sender() : IActorRef = base.Sender
@@ -327,8 +327,8 @@ type Deliverer<'Command, 'Event, 'State>(aggregate: DeliveryAggregate<'Command, 
             member __.Log = lazy (Akka.Event.Logging.GetLogger(context)) 
             member __.Defer fn = deferables <- fn::deferables
             member __.DeferEvent callback events = this.Defer(events, Action<_>(updateState callback))
-            member __.PersistEvent callback events = this.Persist(events, Action<_>(updateState callback))
-            member __.AsyncPersistEvent callback events = this.PersistAsync(events, Action<_>(updateState callback)) 
+            member __.PersistEvent callback events = this.PersistAll(events, Action<_>(updateState callback))
+            member __.AsyncPersistEvent callback events = this.PersistAllAsync(events, Action<_>(updateState callback)) 
             member __.Journal() = this.Journal
             member __.SnapshotStore() = this.SnapshotStore
             member __.PersistenceId() = this.PersistenceId
@@ -336,7 +336,7 @@ type Deliverer<'Command, 'Event, 'State>(aggregate: DeliveryAggregate<'Command, 
             member __.LastSequenceNr() = this.LastSequenceNr
             member __.LoadSnapshot pid criteria seqNr = this.LoadSnapshot(pid, criteria, seqNr)
             member __.SaveSnapshot state = this.SaveSnapshot(state)
-            member __.DeleteSnapshot seqNr timestamp = this.DeleteSnapshot(seqNr, timestamp)
+            member __.DeleteSnapshot seqNr = this.DeleteSnapshot(seqNr)
             member __.DeleteSnapshots criteria = this.DeleteSnapshots(criteria)
             member __.Deliver mapper path = this.Deliver(path, System.Func<_,_>(mapper))
             member __.ConfirmDelivery id = this.ConfirmDelivery(id)

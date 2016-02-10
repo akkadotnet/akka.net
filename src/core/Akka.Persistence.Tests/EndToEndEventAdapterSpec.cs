@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Journal;
@@ -19,8 +18,8 @@ namespace Akka.Persistence.Tests
 {
     public class MemoryEndToEndAdapterSpec : EndToEndEventAdapterSpec
     {
-        private static readonly Config Config = ConfigurationFactory.ParseString(@"akka.persistence.journal.inmem.shared = true");
-        public MemoryEndToEndAdapterSpec() : base("inmem", PersistenceSpec.Configuration("inmem", "MemoryEndToEndAdapterSpec").WithFallback(Config))
+        private static readonly Config Config = ConfigurationFactory.ParseString(@"akka.persistence.journal.inmem.class = ""Akka.Persistence.Journal.SharedMemoryJournal, Akka.Persistence""");
+        public MemoryEndToEndAdapterSpec() : base("inmem", Configuration("inmem", "MemoryEndToEndAdapterSpec").WithFallback(Config))
         {
         }
     }
@@ -387,6 +386,17 @@ namespace Akka.Persistence.Tests
 
                 return true;
             });
+        }
+
+        [Fact]
+        public void EventAdapters_in_end_to_end_scenarios_should_give_nice_error_message_when_unable_to_play_back_as_adapter_does_not_exist()
+        {
+            // after some time we start the system a-new
+            // and the adapter originally used for adapting A is missing from the configuration!
+            var journalPath = string.Format("akka.persistence.journal.{0}", _journalName);
+
+            // TODO when WithoutPath is added
+            // var missingAdapterConfig = AdaptersConfig.WithoutPath(...)
         }
     }
 }

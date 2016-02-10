@@ -150,18 +150,11 @@ namespace Akka.Persistence.Sqlite.Journal
             return command;
         }
 
-        public DbCommand DeleteBatchMessages(string persistenceId, long toSequenceNr, bool permanent)
+        public DbCommand DeleteBatchMessages(string persistenceId, long toSequenceNr)
         {
             var sb = new StringBuilder();
 
-            if (permanent)
-            {
-                sb.Append("DELETE FROM ").Append(_tableName);
-            }
-            else
-            {
-                sb.AppendFormat("UPDATE {0} SET is_deleted = 1", _tableName);
-            }
+            sb.Append("DELETE FROM ").Append(_tableName);
 
             sb.Append(" WHERE persistence_id = ?");
 

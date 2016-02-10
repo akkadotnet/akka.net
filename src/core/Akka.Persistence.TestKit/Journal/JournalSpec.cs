@@ -7,8 +7,10 @@
 
 ﻿using System;
 ﻿using System.Collections.Generic;
+﻿using System.Collections.Immutable;
 ﻿using System.Linq;
-using Akka.Actor;
+﻿using System.Runtime.Serialization;
+﻿using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
@@ -45,17 +47,41 @@ namespace Akka.Persistence.TestKit.Journal
         /// <summary>
         /// Initializes a journal with set o predefined messages.
         /// </summary>
-        protected IEnumerable<Persistent> Initialize()
+        protected IEnumerable<AtomicWrite> Initialize()
         {
             _senderProbe = CreateTestProbe();
             _receiverProbe = CreateTestProbe();
-            return WriteMessages(1, 5, Pid, _senderProbe.Ref);
+            PreparePersistenceId(Pid);
+            return WriteMessages(1, 5, Pid, _senderProbe.Ref, WriterGuid);
         }
 
-        protected JournalSpec(Type journalType, string actorSystemName = null)
-            : base(ConfigFromTemplate(journalType), actorSystemName)
+        protected JournalSpec(Type journalType, string actorSystemName = null, ITestOutputHelper output = null)
+            : base(ConfigFromTemplate(journalType), actorSystemName, output)
         {
         }
+
+        /// <summary>
+        /// Overridable hook that is called before populating the journal for the next test case.
+        /// <paramref name="pid"/> is the persistenceId that will be used in the test.
+        /// This method may be needed to clean pre-existing events from the log.
+        /// </summary>
+        /// <param name="pid"></param>
+        protected virtual void PreparePersistenceId(string pid)
+        {
+        }
+
+        /// <summary>
+        /// Implementation may override and return false if it does not support
+        /// atomic writes of several events, as emitted by
+        /// <see cref="Eventsourced.PersistAll{TEvent}(IEnumerable{TEvent},Action{TEvent})"/>.
+        /// </summary>
+        protected virtual bool SupportsAtomicPersistAllOfSeveralEvents { get { return true; } }
+
+        /// <summary>
+        /// When true enables tests which check if the Journal properly rejects
+        /// writes of objects which are not serializable.
+        /// </summary>
+        protected virtual bool SupportsRejectingNonSerializableObjects { get { return true; } }
 
         protected IActorRef Journal { get { return Extension.JournalFor(null); } }
 
@@ -74,9 +100,19 @@ namespace Akka.Persistence.TestKit.Journal
                    && p.SequenceNr == seqNr;
         }
 
-        private Persistent[] WriteMessages(int from, int to, string pid, IActorRef sender)
+        private AtomicWrite[] WriteMessages(int from, int to, string pid, IActorRef sender, string writerGuid)
         {
-            var messages = Enumerable.Range(from, to).Select(i => new Persistent("a-" + i, i, string.Empty, pid, false, sender)).ToArray();
+            Func<long, Persistent> persistent = i => new Persistent("a-" + i, i, pid, string.Empty, false, sender, writerGuid);
+            var messages = (SupportsAtomicPersistAllOfSeveralEvents
+                ? Enumerable.Range(from, to - 1)
+                    .Select(
+                        i =>
+                            i == to - 1
+                                ? new AtomicWrite(
+                                    new[] {persistent(i), persistent(i + 1)}.ToImmutableList<IPersistentRepresentation>())
+                                : new AtomicWrite(persistent(i)))
+                : Enumerable.Range(from, to).Select(i => new AtomicWrite(persistent(i))))
+                .ToArray();
             var probe = CreateTestProbe();
 
             Journal.Tell(new WriteMessages(messages, probe.Ref, ActorInstanceId));
@@ -93,12 +129,25 @@ namespace Akka.Persistence.TestKit.Journal
             return messages;
         }
 
+        /// <summary>
+        /// JSON serializer should fail on this
+        /// </summary>
+        private class NotSerializableEvent : ISerializable
+        {
+            public NotSerializableEvent(bool foo) { }
+
+            public void GetObjectData(SerializationInfo info, StreamingContext context)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
         [Fact]
         public void Journal_should_replay_all_messages()
         {
             Journal.Tell(new ReplayMessages(1, long.MaxValue, long.MaxValue, Pid, _receiverProbe.Ref));
             for (int i = 1; i <= 5; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i));
-            _receiverProbe.ExpectMsg<ReplayMessagesSuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>();
         }
 
         [Fact]
@@ -106,7 +155,7 @@ namespace Akka.Persistence.TestKit.Journal
         {
             Journal.Tell(new ReplayMessages(3, long.MaxValue, long.MaxValue, Pid, _receiverProbe.Ref));
             for (int i = 3; i <= 5; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i));
-            _receiverProbe.ExpectMsg<ReplayMessagesSuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>();
         }
 
         [Fact]
@@ -114,7 +163,7 @@ namespace Akka.Persistence.TestKit.Journal
         {
             Journal.Tell(new ReplayMessages(1, 3, long.MaxValue, Pid, _receiverProbe.Ref));
             for (int i = 1; i <= 3; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i));
-            _receiverProbe.ExpectMsg<ReplayMessagesSuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>();
         }
 
         [Fact]
@@ -122,23 +171,23 @@ namespace Akka.Persistence.TestKit.Journal
         {
             Journal.Tell(new ReplayMessages(1, long.MaxValue, 3, Pid, _receiverProbe.Ref));
             for (int i = 1; i <= 3; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i));
-            _receiverProbe.ExpectMsg<ReplayMessagesSuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>();
         }
 
         [Fact]
         public void Journal_should_replay_messages_using_lower_and_upper_sequence_number_bound()
         {
-            Journal.Tell(new ReplayMessages(2, 4, long.MaxValue, Pid, _receiverProbe.Ref));
-            for (int i = 2; i <= 4; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i));
-            _receiverProbe.ExpectMsg<ReplayMessagesSuccess>();
+            Journal.Tell(new ReplayMessages(2, 3, long.MaxValue, Pid, _receiverProbe.Ref));
+            for (int i = 2; i <= 3; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i));
+            _receiverProbe.ExpectMsg<RecoverySuccess>();
         }
 
         [Fact]
         public void Journal_should_replay_messages_using_lower_and_upper_sequence_number_bound_and_count_limit()
         {
-            Journal.Tell(new ReplayMessages(2, 4, 2, Pid, _receiverProbe.Ref));
+            Journal.Tell(new ReplayMessages(2, 5, 2, Pid, _receiverProbe.Ref));
             for (int i = 2; i <= 3; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i));
-            _receiverProbe.ExpectMsg<ReplayMessagesSuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>();
         }
 
         [Fact]
@@ -146,7 +195,7 @@ namespace Akka.Persistence.TestKit.Journal
         {
             Journal.Tell(new ReplayMessages(2, 2, long.MaxValue, Pid, _receiverProbe.Ref));
             _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, 2));
-            _receiverProbe.ExpectMsg<ReplayMessagesSuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>();
         }
 
         [Fact]
@@ -154,72 +203,110 @@ namespace Akka.Persistence.TestKit.Journal
         {
             Journal.Tell(new ReplayMessages(2, 4, 1, Pid, _receiverProbe.Ref));
             _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, 2));
-            _receiverProbe.ExpectMsg<ReplayMessagesSuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>();
         }
 
         [Fact]
         public void Journal_should_not_replay_messages_if_count_limit_equals_zero()
         {
             Journal.Tell(new ReplayMessages(2, 4, 0, Pid, _receiverProbe.Ref));
-            _receiverProbe.ExpectMsg<ReplayMessagesSuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>();
         }
 
         [Fact]
         public void Journal_should_not_replay_messages_if_lower_sequence_number_bound_is_greater_than_upper_sequence_number_bound()
         {
             Journal.Tell(new ReplayMessages(3, 2, long.MaxValue, Pid, _receiverProbe.Ref));
-            _receiverProbe.ExpectMsg<ReplayMessagesSuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>();
+        }
+
+        [Fact]
+        public void Journal_should_not_replay_messages_if_the_persistent_actor_has_not_yet_written_messages()
+        {
+            Journal.Tell(new ReplayMessages(0, long.MaxValue, long.MaxValue, "non-existing-pid", _receiverProbe.Ref));
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 0L);
         }
 
         [Fact]
         public void Journal_should_not_replay_permanently_deleted_messages_on_range_deletion()
         {
-            var command = new DeleteMessagesTo(Pid, 3, true);
+            var receiverProbe2 = CreateTestProbe();
+            var command = new DeleteMessagesTo(Pid, 3, receiverProbe2.Ref);
             var subscriber = CreateTestProbe();
 
             Subscribe<DeleteMessagesTo>(subscriber.Ref);
             Journal.Tell(command);
-            subscriber.ExpectMsg<DeleteMessagesTo>(cmd => cmd.PersistenceId == Pid && cmd.ToSequenceNr == 3 && cmd.IsPermanent);
+            subscriber.ExpectMsg<DeleteMessagesTo>(cmd => cmd.PersistenceId == Pid && cmd.ToSequenceNr == 3);
+            receiverProbe2.ExpectMsg<DeleteMessagesSuccess>(m => m.ToSequenceNr == command.ToSequenceNr);
 
             Journal.Tell(new ReplayMessages(1, long.MaxValue, long.MaxValue, Pid, _receiverProbe.Ref));
             _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, 4));
             _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, 5));
+
+            receiverProbe2.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
         }
 
         [Fact]
-        public void Journal_should_replay_logically_deleted_messages_with_deleted_flag_set_on_range_deletion()
+        public void Journal_should_not_reset_HighestSequenceNr_after_message_deletion()
         {
-            var command = new DeleteMessagesTo(Pid, 3, false);
-            var subscriber = CreateTestProbe();
+            Journal.Tell(new ReplayMessages(0, long.MaxValue, long.MaxValue, Pid, _receiverProbe.Ref));
+            for (int i = 1; i <= 5; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i));
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
 
-            Subscribe<DeleteMessagesTo>(subscriber.Ref);
-            Journal.Tell(command);
-            subscriber.ExpectMsg<DeleteMessagesTo>(cmd => cmd.PersistenceId == Pid && cmd.ToSequenceNr == 3 && !cmd.IsPermanent);
+            Journal.Tell(new DeleteMessagesTo(Pid, 3L, _receiverProbe.Ref));
+            _receiverProbe.ExpectMsg<DeleteMessagesSuccess>(m => m.ToSequenceNr == 3L);
 
-            Journal.Tell(new ReplayMessages(1, long.MaxValue, long.MaxValue, Pid, _receiverProbe.Ref, replayDeleted: true));
+            Journal.Tell(new ReplayMessages(0, long.MaxValue, long.MaxValue, Pid, _receiverProbe.Ref));
+            for (int i = 4; i <= 5; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i));
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
+        }
 
-            _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, 1, true));
-            _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, 2, true));
-            _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, 3, true));
-            _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, 4));
-            _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, 5));
+        [Fact(Skip = "This is not yet supported by the journals")]
+        public void Journal_should_not_reset_HighestSequenceNr_after_journal_cleanup()
+        {
+            Journal.Tell(new ReplayMessages(0, long.MaxValue, long.MaxValue, Pid, _receiverProbe.Ref));
+            for (int i = 1; i <= 5; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i));
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
+
+            Journal.Tell(new DeleteMessagesTo(Pid, long.MaxValue, _receiverProbe.Ref));
+            _receiverProbe.ExpectMsg<DeleteMessagesSuccess>(m => m.ToSequenceNr == long.MaxValue);
+
+            Journal.Tell(new ReplayMessages(0, long.MaxValue, long.MaxValue, Pid, _receiverProbe.Ref));
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
         }
 
         [Fact]
-        public void Journal_should_return_a_highest_seq_number_greater_than_zero_if_actor_has_already_written_messages_and_message_log_is_not_empty()
+        public void Journal_optionally_may_reject_non_serializable_events()
         {
-            Journal.Tell(new ReadHighestSequenceNr(3L, Pid, _receiverProbe.Ref));
-            _receiverProbe.ExpectMsg<ReadHighestSequenceNrSuccess>(m => m.HighestSequenceNr == 5);
+            if (!SupportsRejectingNonSerializableObjects) return;
 
-            Journal.Tell(new ReadHighestSequenceNr(5L, Pid, _receiverProbe.Ref));
-            _receiverProbe.ExpectMsg<ReadHighestSequenceNrSuccess>(m => m.HighestSequenceNr == 5);
-        }
+            var msgs = Enumerable.Range(6, 3).Select(i =>
+            {
+                var evt = i == 7 ? (object) new NotSerializableEvent(false) : "b-" + i;
+                return new AtomicWrite(new Persistent(evt, i, Pid, sender: ActorRefs.NoSender, writerGuid: WriterGuid));
+            });
 
-        [Fact]
-        public void Journal_should_return_a_highest_sequence_number_equal_zero_if_actor_did_not_written_any_messages_yet()
-        {
-            Journal.Tell(new ReadHighestSequenceNr(0L, "invalid", _receiverProbe.Ref));
-            _receiverProbe.ExpectMsg<ReadHighestSequenceNrSuccess>(m => m.HighestSequenceNr == 0);
+            var probe = CreateTestProbe();
+            Journal.Tell(new WriteMessages(msgs, probe.Ref, ActorInstanceId));
+            probe.ExpectMsg<WriteMessagesSuccessful>();
+
+            var pid = Pid;
+            var writerGuid = WriterGuid;
+            probe.ExpectMsg<WriteMessageSuccess>(m => m.Persistent.SequenceNr == 6L &&
+                                                      m.Persistent.PersistenceId.Equals(pid) &&
+                                                      m.Persistent.Sender == null &&
+                                                      m.Persistent.WriterGuid.Equals(writerGuid) &&
+                                                      m.Persistent.Payload.Equals("b-6"));
+            probe.ExpectMsg<WriteMessageRejected>(m => m.Persistent.SequenceNr == 7L &&
+                                                       m.Persistent.PersistenceId.Equals(pid) &&
+                                                       m.Persistent.Sender == null &&
+                                                       m.Persistent.WriterGuid.Equals(writerGuid) &&
+                                                       m.Persistent.Payload is NotSerializableEvent);
+            probe.ExpectMsg<WriteMessageSuccess>(m => m.Persistent.SequenceNr == 8L &&
+                                                      m.Persistent.PersistenceId.Equals(pid) &&
+                                                      m.Persistent.Sender == null &&
+                                                      m.Persistent.WriterGuid.Equals(writerGuid) &&
+                                                      m.Persistent.Payload.Equals("b-8"));
         }
     }
 }

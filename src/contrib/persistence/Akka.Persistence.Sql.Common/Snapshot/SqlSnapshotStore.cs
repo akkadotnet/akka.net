@@ -115,8 +115,6 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             }
         }
 
-        protected override void Saved(SnapshotMetadata metadata) { }
-
         protected override async Task DeleteAsync(SnapshotMetadata metadata)
         {
             using (var connection = CreateDbConnection())

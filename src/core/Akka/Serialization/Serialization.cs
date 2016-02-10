@@ -106,6 +106,15 @@ namespace Akka.Serialization
             return _serializers[serializerId].FromBinary(bytes, type);
         }
 
+        public object Deserialize(byte[] bytes, int serializerId, string manifest)
+        {
+            var serializer = _serializers[serializerId];
+
+            if (serializer is SerializerWithStringManifest)
+                return ((SerializerWithStringManifest)serializer).FromBinary(bytes, manifest);
+            return serializer.FromBinary(bytes, Type.GetType(manifest));
+        }
+
         public Serializer FindSerializerFor(object obj)
         {
             if (obj == null)

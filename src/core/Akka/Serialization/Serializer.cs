@@ -50,7 +50,10 @@ namespace Akka.Serialization
         /// Completely unique value to identify this implementation of Serializer, used to optimize network traffic
         /// Values from 0 to 16 is reserved for Akka internal usage
         /// </summary>
-        public abstract int Identifier { get; }
+        public virtual int Identifier
+        {
+            get { return SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(GetType(), system); }
+        }
 
         /// <summary>
         /// Returns whether this serializer needs a manifest in the fromBinary method
@@ -82,6 +85,24 @@ namespace Akka.Serialization
         /// <param name="type">The type of object contained in the array</param>
         /// <returns>The object contained in the array</returns>
         public abstract object FromBinary(byte[] bytes, Type type);
+
+        /// <summary>
+        /// Utility to be used by implementors to create a manifest from the type.
+        /// The manifest is used to look up the type on deserialization.
+        /// Returns the type qualified name including namespace and assembly, but not assembly version.
+        /// </summary>
+        /// <remarks>
+        /// See <see cref="Type.GetType(string)"/> for details on how a type is looked up
+        /// from a name. In particular, if the (partial) assembly name is not included
+        /// only the assembly calling <see cref="Type.GetType(string)"/> is searched.
+        /// If the (partial) assembly name is included, it searches in the specified assembly.
+        /// </remarks>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        protected static string TypeQualifiedNameForManifest(Type type)
+        {
+            return type == null ? string.Empty : string.Format("{0},{1}", type.FullName, type.Assembly.GetName().Name);
+        }
     }
 
     public abstract class SerializerWithStringManifest : Serializer
@@ -94,7 +115,7 @@ namespace Akka.Serialization
 
         public sealed override object FromBinary(byte[] bytes, Type type)
         {
-            var manifest = type == null ? string.Empty : type.FullName;
+            var manifest = TypeQualifiedNameForManifest(type);
             return FromBinary(bytes, manifest);
         }
 
