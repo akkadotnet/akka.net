@@ -23,9 +23,9 @@ namespace Akka.Streams.TestKit.Tests
 
     public abstract class ScriptedTest : AkkaSpec
     {
-        protected class Script<TIn, TOut>
+        protected static class Script
         {
-            public static Script<TIn, TOut> Create(params Tuple<IEnumerable<TIn>, IEnumerable<TOut>>[] phases)
+            public static Script<TIn, TOut> Create<TIn, TOut>(params Tuple<IEnumerable<TIn>, IEnumerable<TOut>>[] phases)
             {
                 var providedInputs = new List<TIn>();
                 var expectedOutputs = new List<TOut>();
@@ -46,6 +46,10 @@ namespace Akka.Streams.TestKit.Tests
                 return new Script<TIn, TOut>(providedInputs.ToArray(), expectedOutputs.ToArray(), jumps.ToArray(), 0, 0, 0, false);
             }
 
+        }
+
+        protected class Script<TIn, TOut>
+        {
             internal readonly TIn[] ProvidedInputs;
             internal readonly TOut[] ExpectedOutputs;
             internal readonly int[] Jumps;
@@ -250,13 +254,13 @@ namespace Akka.Streams.TestKit.Tests
                     else break;
                 }
             }
+        }
 
-            public void RunScript<TIn2, TOut2, TMat2>(Script<TIn2, TOut2> script, ActorMaterializerSettings settings,
-                Func<Flow<TIn2, TIn2, Unit>, Flow<TIn2, TOut2, TMat2>> op, TestKitBase system,
-                int maximumOverrun = 3, int maximumRequest = 3, int maximumBuffer = 3)
-            {
-                new ScriptRunner<TIn2, TOut2, TMat2>(op, settings, script, maximumOverrun, maximumRequest, maximumBuffer, system).Run();
-            }
+        protected void RunScript<TIn2, TOut2, TMat2>(Script<TIn2, TOut2> script, ActorMaterializerSettings settings,
+            Func<Flow<TIn2, TIn2, Unit>, Flow<TIn2, TOut2, TMat2>> op,
+            int maximumOverrun = 3, int maximumRequest = 3, int maximumBuffer = 3)
+        {
+            new ScriptRunner<TIn2, TOut2, TMat2>(op, settings, script, maximumOverrun, maximumRequest, maximumBuffer, this).Run();
         }
 
         protected static IPublisher<TOut> ToPublisher<TIn, TOut>(Source<TOut, Unit> source, IMaterializer materializer)
