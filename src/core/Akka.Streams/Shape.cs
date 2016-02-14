@@ -248,8 +248,8 @@ namespace Akka.Streams
 
         public override Shape CopyFromPorts(IEnumerable<Inlet> inlets, IEnumerable<Outlet> outlets)
         {
-            if (!inlets.Any()) throw new ArgumentException("Proposed inlets do not fit ClosedShape", "inlets");
-            if (!outlets.Any()) throw new ArgumentException("Proposed outlets do not fit ClosedShape", "outlets");
+            if (inlets.Any()) throw new ArgumentException("Proposed inlets do not fit ClosedShape", "inlets");
+            if (outlets.Any()) throw new ArgumentException("Proposed outlets do not fit ClosedShape", "outlets");
 
             return this;
         }

@@ -188,7 +188,7 @@ namespace Akka.Streams.Dsl
     /// </summary>
     public static class Flow
     {
-        internal static Flow<T, T, Unit> Identity<T>()
+        public static Flow<T, T, Unit> Identity<T>()
         {
             return new Flow<T, T, Unit>(GraphStages.Identity<T>().Module);
         }

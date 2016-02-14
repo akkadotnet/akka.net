@@ -8,7 +8,7 @@ namespace Akka.Streams.TestKit
 {
     public class StreamTestKit
     {
-        internal sealed class CompletedSubscription<T> : ISubscription
+        public sealed class CompletedSubscription<T> : ISubscription
         {
             public ISubscriber<T> Subscriber { get; private set; }
 
@@ -27,7 +27,7 @@ namespace Akka.Streams.TestKit
             }
         }
 
-        internal sealed class FailedSubscription<T> : ISubscription
+        public sealed class FailedSubscription<T> : ISubscription
         {
             public ISubscriber<T> Subscriber { get; private set; }
             public Exception Cause { get; private set; }
@@ -48,7 +48,7 @@ namespace Akka.Streams.TestKit
             }
         }
 
-        internal sealed class PublisherProbeSubscription<T> : ISubscription
+        public sealed class PublisherProbeSubscription<T> : ISubscription
         {
             public ISubscriber<T> Subscriber { get; private set; }
             public TestProbe PublisherProbe { get; private set; }

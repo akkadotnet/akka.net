@@ -5,6 +5,7 @@ using System.Linq;
 using Akka.Dispatch;
 using Akka.Pattern;
 using Akka.Streams.Stage;
+using Akka.Util.Internal;
 
 namespace Akka.Streams.Implementation.Fusing
 {
@@ -385,21 +386,21 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 var atomic = (StreamLayout.Atomic) mat;
                 var result = subMat[atomic.Module];
-                mapping.Add(mat, result);
+                mapping.Put(mat, result);
                 return result;
             }
             if (mat is StreamLayout.Combine)
             {
                 var combine = (StreamLayout.Combine) mat;
                 var result = new StreamLayout.Combine(combine.Combinator, RewriteMaterializer(subMat, combine.Left, mapping), RewriteMaterializer(subMat, combine.Right, mapping));
-                mapping.Add(mat, result);
+                mapping.Put(mat, result);
                 return result;
             }
             if (mat is StreamLayout.Transform)
             {
                 var transform = (StreamLayout.Transform) mat;
                 var result = new StreamLayout.Transform(transform.Transformator, RewriteMaterializer(subMat, transform.Node, mapping));
-                mapping.Add(mat, result);
+                mapping.Put(mat, result);
                 return result;
             }
 

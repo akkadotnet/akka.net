@@ -118,7 +118,7 @@ namespace Akka.Streams.Implementation
             var downs = module.Downstreams.ToImmutableHashSet();
             var inter = ups2.Intersect(downs);
 
-            if (downs.SetEquals(ups2)) problems.Add(string.Format("inconsistent maps: ups {0} downs {1}", pairs(ups2.Except(inter)), pairs(downs.Except(inter))));
+            if (!downs.SetEquals(ups2)) problems.Add(string.Format("inconsistent maps: ups {0} downs {1}", pairs(ups2.Except(inter)), pairs(downs.Except(inter))));
 
             var allIn = ImmutableHashSet<InPort>.Empty;
             var duplicateIn = ImmutableHashSet<InPort>.Empty;
@@ -160,7 +160,8 @@ namespace Akka.Streams.Implementation
                 Validate(subModule, level + 1, shouldPrint, idMap);
             }
 
-            if (problems.Any() && !shouldPrint) throw new IllegalStateException(string.Format("module inconsistent, found {0} problems", problems.Count));
+            if (problems.Any() && !shouldPrint) throw new IllegalStateException(
+                $"module inconsistent, found {problems.Count} problems:\n - {string.Join("\n - ", problems)}");
         }
 
         private static ImmutableHashSet<IModule> Atomics(IMaterializedValueNode node)
