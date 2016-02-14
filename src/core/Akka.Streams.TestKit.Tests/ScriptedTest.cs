@@ -25,9 +25,9 @@ namespace Akka.Streams.TestKit.Tests
 
     public abstract class ScriptedTest : AkkaSpec
     {
-        protected static class Script
+        protected class Script<TIn, TOut>
         {
-            public static Script<TIn, TOut> Create<TIn, TOut>(params Tuple<IEnumerable<TIn>, IEnumerable<TOut>>[] phases)
+            public static Script<TIn, TOut> Create(params Tuple<IEnumerable<TIn>, IEnumerable<TOut>>[] phases)
             {
                 var providedInputs = new List<TIn>();
                 var expectedOutputs = new List<TOut>();
@@ -47,7 +47,6 @@ namespace Akka.Streams.TestKit.Tests
 
                 return new Script<TIn, TOut>(providedInputs.ToArray(), expectedOutputs.ToArray(), jumps.ToArray(), 0, 0, 0, false);
             }
-
         }
 
         protected class Script<TIn, TOut>

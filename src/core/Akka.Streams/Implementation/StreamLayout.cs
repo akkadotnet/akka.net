@@ -262,7 +262,7 @@ namespace Akka.Streams.Implementation
 
         /// <summary>
         /// Creates a new Module which is `this` Module composed with <paramref name="that"/> Module.
-        /// 
+        ///
         /// The difference to compose(that) is that this version completely ignores the materialized value
         /// computation of <paramref name="that"/> while the normal version executes the computation and discards its result.
         /// This means that this version must not be used for user-provided <paramref name="that"/> modules because users may
@@ -350,7 +350,7 @@ namespace Akka.Streams.Implementation
             return new CompositeModule(
                 subModules: SubModules,
                 shape: new AmorphousShape(
-                    Shape.Inlets.Where(i => !i.Equals(to)).ToImmutableArray(), 
+                    Shape.Inlets.Where(i => !i.Equals(to)).ToImmutableArray(),
                     Shape.Outlets.Where(o => !o.Equals(from)).ToImmutableArray()),
                 downstreams: Downstreams.SetItem(from, to),
                 upstreams: Upstreams.SetItem(to, from),
@@ -395,7 +395,7 @@ namespace Akka.Streams.Implementation
             return new CompositeModule(
                 subModules: modules1.Union(modules2).ToImmutableArray(),
                 shape: new AmorphousShape(
-                    Shape.Inlets.Union(other.Shape.Inlets).ToImmutableArray(), 
+                    Shape.Inlets.Union(other.Shape.Inlets).ToImmutableArray(),
                     Shape.Outlets.Union(other.Shape.Outlets).ToImmutableArray()),
                 downstreams: Downstreams.AddRange(other.Downstreams),
                 upstreams: Upstreams.AddRange(other.Upstreams),
@@ -416,7 +416,7 @@ namespace Akka.Streams.Implementation
             return new CompositeModule(
                 subModules: module1.Union(module2).ToImmutableArray(),
                 shape: new AmorphousShape(
-                    Shape.Inlets.Union(that.Shape.Inlets).ToImmutableArray(), 
+                    Shape.Inlets.Union(that.Shape.Inlets).ToImmutableArray(),
                     Shape.Outlets.Union(that.Shape.Outlets).ToImmutableArray()),
                 downstreams: Downstreams.AddRange(that.Downstreams),
                 upstreams: Upstreams.AddRange(that.Upstreams),
@@ -452,7 +452,7 @@ namespace Akka.Streams.Implementation
 
         public abstract Shape Shape { get; }
         public abstract IModule ReplaceShape(Shape shape);
-        
+
         public abstract ImmutableArray<IModule> SubModules { get; }
         public abstract IModule CarbonCopy();
         public abstract Attributes Attributes { get; }
@@ -811,7 +811,7 @@ namespace Akka.Streams.Implementation
         /// Please note that this stack keeps track of the scoped modules wrapped in CopiedModule but not the CopiedModule
         /// itself. The reason is that the CopiedModule itself is only needed for the enterScope and exitScope methods but
         /// not elsewhere. For this reason they are just simply passed as parameters to those methods.
-        /// 
+        ///
         /// The reason why the encapsulated (copied) modules are stored as mutable state to save subclasses of this class
         /// from passing the current scope around or even knowing about it.
         /// </summary>
