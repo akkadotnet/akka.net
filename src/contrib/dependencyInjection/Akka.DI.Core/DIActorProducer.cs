@@ -11,7 +11,7 @@ using Akka.Actor;
 namespace Akka.DI.Core
 {
     /// <summary>
-    /// Dependency Injection Backed IndirectActorProducer
+    /// This class represents an actor creation strategy that uses dependency injection (DI) to resolve and instantiate actors based on their type.
     /// </summary>
     public class DIActorProducer : IIndirectActorProducer
     {
@@ -20,8 +20,15 @@ namespace Akka.DI.Core
 
         readonly Func<ActorBase> actorFactory;
 
-        public DIActorProducer(IDependencyResolver dependencyResolver,
-                               Type actorType)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DIActorProducer"/> class.
+        /// </summary>
+        /// <param name="dependencyResolver">The resolver used to resolve the given actor type.</param>
+        /// <param name="actorType">The type of actor that this producer creates.</param>
+        /// <exception cref="ArgumentNullException">
+        /// Either the <paramref name="dependencyResolver"/> or the <paramref name="actorType"/> was null.
+        /// </exception>
+        public DIActorProducer(IDependencyResolver dependencyResolver, Type actorType)
         {
             if (dependencyResolver == null) throw new ArgumentNullException("dependencyResolver");
             if (actorType == null) throw new ArgumentNullException("actorType");
@@ -30,30 +37,31 @@ namespace Akka.DI.Core
             this.actorType = actorType;
             this.actorFactory = dependencyResolver.CreateActorFactory(actorType);
         }
+
         /// <summary>
-        /// The System.Type of the Actor specified in the constructor parameter actorName
+        /// Retrieves the type of the actor to produce.
         /// </summary>
         public Type ActorType
         {
             get { return this.actorType; }
         }
+
         /// <summary>
-        /// Creates an instance of the Actor based on the Type specified in the constructor parameter actorName
+        /// Creates an actor based on the container's implementation specific actor factory.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>An actor created by the container.</returns>
         public ActorBase Produce()
         {
             return actorFactory();
         }
 
         /// <summary>
-        /// This method is used to signal the container that it can release it's reference to the actor.
+        /// Signals the container that it can release its reference to the actor.
         /// </summary>
-        /// <param name="actor">The actor to remove from the container</param>
+        /// <param name="actor">The actor to remove from the container.</param>
         public void Release(ActorBase actor)
         {
             dependencyResolver.Release(actor);
         }
     }
 }
-
