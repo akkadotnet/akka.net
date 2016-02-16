@@ -151,6 +151,14 @@ namespace Akka.Tests.Actor
             updatedSelect.Client.ShouldBe(updatedActorRef);
         }
 
+        [Fact]
+        public void Inbox_Receive_will_timeout_gracefully_if_timeout_is_already_expired()
+        {
+            var task = _inbox.ReceiveAsync(TimeSpan.FromSeconds(-1));
+
+            Assert.True(task.Wait(1000), "Receive did not complete in time.");
+            Assert.IsType<Status.Failure>(task.Result);
+        }
     }
 }
 
