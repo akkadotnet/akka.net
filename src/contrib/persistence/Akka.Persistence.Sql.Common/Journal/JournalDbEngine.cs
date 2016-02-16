@@ -29,9 +29,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         public readonly bool IsDeleted;
         public readonly string Manifest;
         public readonly DateTime Timestamp;
-        public readonly byte[] Payload;
+        public readonly object Payload;
 
-        public JournalEntry(string persistenceId, long sequenceNr, bool isDeleted, string manifest, DateTime timestamp, byte[] payload)
+        public JournalEntry(string persistenceId, long sequenceNr, bool isDeleted, string manifest, DateTime timestamp, object payload)
         {
             PersistenceId = persistenceId;
             SequenceNr = sequenceNr;

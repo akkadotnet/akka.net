@@ -222,7 +222,7 @@ namespace Akka.Persistence
 
     #endregion
 
-    internal class AtLeastOnceDeliverySemantic
+    public class AtLeastOnceDeliverySemantic
     {
         /// <summary>
         ///     This exception is thrown when the <see cref="MaxUnconfirmedMessages" /> threshold has been exceeded.
