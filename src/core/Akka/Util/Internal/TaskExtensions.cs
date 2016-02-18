@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Akka.Actor;
 using System;
 using System.Threading.Tasks;
 
@@ -29,7 +30,11 @@ namespace Akka.Util.Internal
                     else
                         try
                         {
-                            tcs.SetResult((TResult) (object) task.Result);
+                            var result = (object) task.Result;
+                            if (result is Failure)
+                                tcs.SetException(((Failure) result).Exception);
+                            else
+                                tcs.SetResult((TResult) result);
                         }
                         catch (Exception e)
                         {
