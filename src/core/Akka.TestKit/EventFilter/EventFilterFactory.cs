@@ -241,7 +241,7 @@ namespace Akka.TestKit
         /// <returns></returns>
         public IEventFilterApplier DeadLetter(Type type, string source = null)
         {
-            return DeadLetter(deadLetter => deadLetter.Message.GetType().IsInstanceOfType(type), source);
+            return DeadLetter(deadLetter => type.IsInstanceOfType(deadLetter.Message), source);
         }
 
         /// <summary>
@@ -250,7 +250,7 @@ namespace Akka.TestKit
         /// <returns></returns>
         public IEventFilterApplier DeadLetter(Type type, Func<object, bool> isMatch, string source = null)
         {
-            return DeadLetter(deadLetter => deadLetter.Message.GetType().IsInstanceOfType(type) && isMatch(deadLetter.Message), source);
+            return DeadLetter(deadLetter => type.IsInstanceOfType(deadLetter.Message) && isMatch(deadLetter.Message), source);
         }
 
         private IEventFilterApplier DeadLetter(Predicate<DeadLetter> isMatch, string source = null)
