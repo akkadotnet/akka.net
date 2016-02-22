@@ -37,7 +37,7 @@ namespace Akka.Streams.TestKit.Tests
             ActorMaterializerSettings settings,
             Func<Source<TOut, Unit>, ActorMaterializer, IPublisher<TOut>> toPublisher,
             TestKitBase system)
-            : this(stream, settings, system.Materializer(), toPublisher, system)
+            : this(stream, settings, system.Sys.Materializer(), toPublisher, system)
         {
         }
 
@@ -47,7 +47,7 @@ namespace Akka.Streams.TestKit.Tests
             Func<ActorMaterializerSettings, IActorRefFactory, ActorMaterializer> materializerCreator,
             Func<Source<TOut, Unit>, ActorMaterializer, IPublisher<TOut>> toPublisher,
             TestKitBase system)
-            : this(stream, settings, materializerCreator(settings, system), toPublisher, system)
+            : this(stream, settings, materializerCreator(settings, system.Sys), toPublisher, system)
         {
         }
 

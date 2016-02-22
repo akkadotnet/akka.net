@@ -16,6 +16,7 @@ namespace Akka.Streams.Tests.Dsl
 
         public FlowMapSpec()
         {
+            Sys.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
             _settings = ActorMaterializerSettings.Create(Sys)
                 .WithInputBuffer(initialSize: 2, maxSize: 16);
 
