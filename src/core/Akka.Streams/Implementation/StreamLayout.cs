@@ -120,10 +120,10 @@ namespace Akka.Streams.Implementation
 
             if (!downs.SetEquals(ups2)) problems.Add(string.Format("inconsistent maps: ups {0} downs {1}", pairs(ups2.Except(inter)), pairs(downs.Except(inter))));
 
-            var allIn = ImmutableHashSet<InPort>.Empty;
-            var duplicateIn = ImmutableHashSet<InPort>.Empty;
-            var allOut = ImmutableHashSet<OutPort>.Empty;
-            var duplicateOut = ImmutableHashSet<OutPort>.Empty;
+            var allIn = ImmutableSortedSet<InPort>.Empty;
+            var duplicateIn = ImmutableSortedSet<InPort>.Empty;
+            var allOut = ImmutableSortedSet<OutPort>.Empty;
+            var duplicateOut = ImmutableSortedSet<OutPort>.Empty;
 
             foreach (var subModule in module.SubModules)
             {

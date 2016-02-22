@@ -6,6 +6,7 @@ using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.Util;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -14,7 +15,7 @@ namespace Akka.Streams.Tests.Dsl
         private readonly ActorMaterializerSettings _settings;
         private readonly ActorMaterializer _materializer;
 
-        public FlowMapSpec()
+        public FlowMapSpec(ITestOutputHelper output) : base(output)
         {
             Sys.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
             _settings = ActorMaterializerSettings.Create(Sys)

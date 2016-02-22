@@ -66,6 +66,7 @@
     <Compile Include="Actor\ActorPublisherSpec.cs" />
     <Compile Include="Dsl\ActorRefBackpressureSinkSpec.cs" />
     <Compile Include="Dsl\ActorRefSinkSpec.cs" />
+    <Compile Include="Dsl\FlowMapConcatSpec.cs" />
     <Compile Include="Dsl\FlowMapSpec.cs" />
     <Compile Include="Implementation\StreamLayoutSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

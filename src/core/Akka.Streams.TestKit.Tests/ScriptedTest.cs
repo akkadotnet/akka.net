@@ -5,10 +5,12 @@ using System.Reactive.Streams;
 using System.Runtime.Serialization;
 using System.Threading;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
 using Akka.TestKit;
 using Akka.Util;
+using Xunit.Abstractions;
 
 namespace Akka.Streams.TestKit.Tests
 {
@@ -254,6 +256,22 @@ namespace Akka.Streams.TestKit.Tests
                     else break;
                 }
             }
+        }
+
+        protected ScriptedTest(ActorSystem system, ITestOutputHelper output = null) : base(system, output)
+        {
+        }
+
+        protected ScriptedTest(Config config, ITestOutputHelper output = null) : base(config, output)
+        {
+        }
+
+        protected ScriptedTest(string config, ITestOutputHelper output = null) : base(config, output)
+        {
+        }
+
+        protected ScriptedTest(ITestOutputHelper output = null) : base(output)
+        {
         }
 
         protected void RunScript<TIn2, TOut2, TMat2>(Script<TIn2, TOut2> script, ActorMaterializerSettings settings,
