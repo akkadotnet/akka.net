@@ -73,7 +73,7 @@ namespace Akka.DI.Unity
         }
 
         /// <summary>
-        /// Used to register the configuration for an actor of the specified type <typeparam name="TActor"/>
+        /// Used to register the configuration for an actor of the specified type <typeparamref name="TActor"/>
         /// </summary>
         /// <typeparam name="TActor">The type of actor the configuration is based</typeparam>
         /// <returns>The configuration object for the given actor type</returns>
