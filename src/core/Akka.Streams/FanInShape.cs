@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 
 namespace Akka.Streams
@@ -56,14 +57,14 @@ namespace Akka.Streams
 
         #endregion
 
-        private readonly List<Inlet> _inlets = new List<Inlet>();
+        private ImmutableArray<Inlet> _inlets = new ImmutableArray<Inlet>();
         private readonly IEnumerator<Inlet> _registered;
         private readonly string _name;
 
         protected FanInShape(Outlet<TOut> outlet, IEnumerable<Inlet> registered, string name)
         {
             Out = outlet;
-            Outlets = new Outlet[] { Out };
+            Outlets = ImmutableArray.Create<Outlet>(outlet);
             _name = name;
 
             _registered = registered.GetEnumerator();
@@ -76,24 +77,22 @@ namespace Akka.Streams
         protected Inlet<T> NewInlet<T>(string name)
         {
             var p = _registered.MoveNext() ? Inlet.Create<T>(_registered.Current) : new Inlet<T>(_name + "." + name);
-            _inlets.Add(p);
+            _inlets = _inlets.Add(p);
             return p;
         }
 
-        public override IEnumerable<Inlet> Inlets { get { return _inlets; } }
-        public override IEnumerable<Outlet> Outlets { get; }
+        public override ImmutableArray<Inlet> Inlets => _inlets;
+        public override ImmutableArray<Outlet> Outlets { get; }
         public Outlet<TOut> Out { get; }
         public override Shape DeepCopy()
         {
             return Construct(new InitPorts(Out, _inlets.Select(Inlet.Create<TOut>)));
         }
 
-        public sealed override Shape CopyFromPorts(IEnumerable<Inlet> inlets, IEnumerable<Outlet> outlets)
+        public sealed override Shape CopyFromPorts(ImmutableArray<Inlet> i, ImmutableArray<Outlet> o)
         {
-            var i = inlets.ToList();
-            var o = outlets.ToList();
-            if (o.Count != 1) throw new ArgumentException(string.Format("Proposed outlets [{0}] do not fit FanInShape", string.Join(", ", o)));
-            if (i.Count != _inlets.Count) throw new ArgumentException(string.Format("Proposed inlets [{0}] do not fit FanInShape", string.Join(", ", i)));
+            if (o.Length != 1) throw new ArgumentException(string.Format("Proposed outlets [{0}] do not fit FanInShape", string.Join(", ", o)));
+            if (i.Length != Inlets.Length) throw new ArgumentException(string.Format("Proposed inlets [{0}] do not fit FanInShape", string.Join(", ", i)));
 
             return Construct(new InitPorts(Outlet.Create<TOut>(o[0]), i));
         }

@@ -14,8 +14,8 @@ namespace Akka.Streams.Tests.Implementation
         {
             public TestAtomicModule(int inportCount, int outportCount)
             {
-                var inports = Enumerable.Range(0, inportCount).Select(i => new Inlet<object>(".in" + i)).ToArray();
-                var outports = Enumerable.Range(0, outportCount).Select(i => new Outlet<object>(".out" + i)).ToArray();
+                var inports = Enumerable.Range(0, inportCount).Select(i => new Inlet<object>(".in" + i)).ToImmutableArray<Inlet>();
+                var outports = Enumerable.Range(0, outportCount).Select(i => new Outlet<object>(".out" + i)).ToImmutableArray<Outlet>();
 
                 Shape = new AmorphousShape(inports, outports);
             }

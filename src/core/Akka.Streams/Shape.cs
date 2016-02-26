@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Akka.Streams.Implementation;
 
@@ -181,12 +182,12 @@ namespace Akka.Streams
         /// <summary>
         /// Gets list of all input ports.
         /// </summary>
-        public abstract IEnumerable<Inlet> Inlets { get; }
+        public abstract ImmutableArray<Inlet> Inlets { get; }
 
         /// <summary>
         /// Gets list of all output ports.
         /// </summary>
-        public abstract IEnumerable<Outlet> Outlets { get; }
+        public abstract ImmutableArray<Outlet> Outlets { get; }
 
         /// <summary>
         /// Create a copy of this Shape object, returning the same type as the
@@ -199,7 +200,7 @@ namespace Akka.Streams
         /// Create a copy of this Shape object, returning the same type as the
         /// original but containing the ports given within the passed-in Shape.
         /// </summary>
-        public abstract Shape CopyFromPorts(IEnumerable<Inlet> inlets, IEnumerable<Outlet> outlets);
+        public abstract Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets);
 
         /// <summary>
         /// Compare this to another shape and determine whether the set of ports is the same (ignoring their ordering).
@@ -233,20 +234,17 @@ namespace Akka.Streams
     public class ClosedShape : Shape
     {
         public static readonly ClosedShape Instance = new ClosedShape();
-
-        private static readonly IEnumerable<Inlet> _inlets = Enumerable.Empty<Inlet>();
-        private static readonly IEnumerable<Outlet> _outlets = Enumerable.Empty<Outlet>();
-
+        
         private ClosedShape() { }
 
-        public override IEnumerable<Inlet> Inlets { get { return _inlets; } }
-        public override IEnumerable<Outlet> Outlets { get { return _outlets; } }
+        public override ImmutableArray<Inlet> Inlets => ImmutableArray<Inlet>.Empty;
+        public override ImmutableArray<Outlet> Outlets => ImmutableArray<Outlet>.Empty;
         public override Shape DeepCopy()
         {
             return this;
         }
 
-        public override Shape CopyFromPorts(IEnumerable<Inlet> inlets, IEnumerable<Outlet> outlets)
+        public override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
         {
             if (inlets.Any()) throw new ArgumentException("Proposed inlets do not fit ClosedShape", "inlets");
             if (outlets.Any()) throw new ArgumentException("Proposed outlets do not fit ClosedShape", "outlets");
@@ -263,24 +261,21 @@ namespace Akka.Streams
     /// </summary>
     public class AmorphousShape : Shape
     {
-        private readonly IEnumerable<Inlet> _inlets;
-        private readonly IEnumerable<Outlet> _outlets;
-
-        public AmorphousShape(IEnumerable<Inlet> inlets, IEnumerable<Outlet> outlets)
+        public AmorphousShape(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
         {
-            _inlets = inlets;
-            _outlets = outlets;
+            Inlets = inlets;
+            Outlets = outlets;
         }
 
-        public override IEnumerable<Inlet> Inlets { get { return _inlets; } }
-        public override IEnumerable<Outlet> Outlets { get { return _outlets; } }
+        public override ImmutableArray<Inlet> Inlets { get; }
+        public override ImmutableArray<Outlet> Outlets { get; }
 
         public override Shape DeepCopy()
         {
-            return new AmorphousShape(Inlets.Select(i => i.CarbonCopy()), Outlets.Select(o => o.CarbonCopy()));
+            return new AmorphousShape(Inlets.Select(i => i.CarbonCopy()).ToImmutableArray(), Outlets.Select(o => o.CarbonCopy()).ToImmutableArray());
         }
 
-        public override Shape CopyFromPorts(IEnumerable<Inlet> inlets, IEnumerable<Outlet> outlets)
+        public override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
         {
             return new AmorphousShape(inlets, outlets);
         }
@@ -291,32 +286,30 @@ namespace Akka.Streams
     /// </summary>
     public sealed class SourceShape<TOut> : Shape
     {
-        private static readonly IEnumerable<Inlet> _inlets = Enumerable.Empty<Inlet>();
-
+        private readonly ImmutableArray<Outlet> _outlets;
         public readonly Outlet<TOut> Outlet;
 
         public SourceShape(Outlet<TOut> outlet)
         {
             if (outlet == null) throw new ArgumentNullException("outlet");
             Outlet = outlet;
+            Outlets = ImmutableArray.Create<Outlet>(outlet);
         }
 
-        public override IEnumerable<Inlet> Inlets { get { return _inlets; } }
-        public override IEnumerable<Outlet> Outlets { get { yield return Outlet; } }
+        public override ImmutableArray<Inlet> Inlets => ImmutableArray<Inlet>.Empty;
+        public override ImmutableArray<Outlet> Outlets { get; }
 
         public override Shape DeepCopy()
         {
             return new SourceShape<TOut>(Outlet);
         }
 
-        public override Shape CopyFromPorts(IEnumerable<Inlet> inlets, IEnumerable<Outlet> outlets)
+        public override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
         {
-            if (!inlets.Any()) throw new ArgumentException("Proposed inlets do not fit SourceShape", "inlets");
+            if (inlets.Length != 0) throw new ArgumentException("Proposed inlets do not fit SourceShape", "inlets");
+            if (outlets.Length != 1) throw new ArgumentException("Proposed outlets do not fit SourceShape", "outlets");
 
-            var outletArray = outlets as Outlet[] ?? outlets.ToArray();
-            if (outletArray.Count() != 1) throw new ArgumentException("Proposed outlets do not fit SourceShape", "outlets");
-
-            return new SourceShape<TOut>(outletArray[0] as Outlet<TOut>);
+            return new SourceShape<TOut>(outlets[0] as Outlet<TOut>);
         }
     }
 
@@ -336,25 +329,24 @@ namespace Akka.Streams
 
             Inlet = inlet;
             Outlet = outlet;
+            Inlets = ImmutableArray.Create<Inlet>(inlet);
+            Outlets = ImmutableArray.Create<Outlet>(outlet);
         }
 
-        public override IEnumerable<Inlet> Inlets { get { yield return Inlet; } }
-        public override IEnumerable<Outlet> Outlets { get { yield return Outlet; } }
+        public override ImmutableArray<Inlet> Inlets { get; }
+        public override ImmutableArray<Outlet> Outlets { get; }
 
         public override Shape DeepCopy()
         {
             return new FlowShape<TIn, TOut>(Inlet, Outlet);
         }
 
-        public override Shape CopyFromPorts(IEnumerable<Inlet> inlets, IEnumerable<Outlet> outlets)
+        public override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
         {
-            var inletArray = inlets as Inlet[] ?? inlets.ToArray();
-            if (!inletArray.Any()) throw new ArgumentException("Proposed inlets do not fit FlowShape", "inlets");
+            if (inlets.Length != 1) throw new ArgumentException("Proposed inlets do not fit FlowShape", "inlets");
+            if (outlets.Length != 1) throw new ArgumentException("Proposed outlets do not fit FlowShape", "outlets");
 
-            var outletArray = outlets as Outlet[] ?? outlets.ToArray();
-            if (outletArray.Count() != 1) throw new ArgumentException("Proposed outlets do not fit FlowShape", "outlets");
-
-            return new FlowShape<TIn, TOut>(inletArray[0] as Inlet<TIn>, outletArray[0] as Outlet<TOut>);
+            return new FlowShape<TIn, TOut>(inlets[0] as Inlet<TIn>, outlets[0] as Outlet<TOut>);
         }
     }
 
@@ -363,32 +355,29 @@ namespace Akka.Streams
     /// </summary>
     public sealed class SinkShape<TIn> : Shape
     {
-        private static readonly IEnumerable<Outlet> _outlets = Enumerable.Empty<Outlet>();
-
         public readonly Inlet<TIn> Inlet;
 
         public SinkShape(Inlet<TIn> inlet)
         {
             if (inlet == null) throw new ArgumentNullException("inlet");
             Inlet = inlet;
+            Inlets = ImmutableArray.Create<Inlet>(inlet);
         }
 
-        public override IEnumerable<Inlet> Inlets { get { yield return Inlet; } }
-        public override IEnumerable<Outlet> Outlets { get { return _outlets; } }
+        public override ImmutableArray<Inlet> Inlets { get; }
+        public override ImmutableArray<Outlet> Outlets => ImmutableArray<Outlet>.Empty;
 
         public override Shape DeepCopy()
         {
             return new SinkShape<TIn>(Inlet);
         }
 
-        public override Shape CopyFromPorts(IEnumerable<Inlet> inlets, IEnumerable<Outlet> outlets)
+        public override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
         {
-            if (!outlets.Any()) throw new ArgumentException("Proposed outlets do not fit SinkShape", "outlets");
+            if (outlets.Length != 0) throw new ArgumentException("Proposed outlets do not fit SinkShape", "outlets");
+            if (inlets.Length != 1) throw new ArgumentException("Proposed inlets do not fit SinkShape", "inlets");
 
-            var inletArray = inlets as Inlet[] ?? inlets.ToArray();
-            if (!inletArray.Any()) throw new ArgumentException("Proposed inlets do not fit SinkShape", "inlets");
-
-            return new SinkShape<TIn>(inletArray[0] as Inlet<TIn>);
+            return new SinkShape<TIn>(inlets[0] as Inlet<TIn>);
         }
     }
 
@@ -413,6 +402,9 @@ namespace Akka.Streams
             Inlet2 = in2;
             Outlet1 = out1;
             Outlet2 = out2;
+
+            Inlets = ImmutableArray.Create<Inlet>(Inlet1, Inlet2);
+            Outlets = ImmutableArray.Create<Outlet>(Outlet1, Outlet2);
         }
 
         public BidiShape(FlowShape<TIn1, TOut1> top, FlowShape<TIn2, TOut2> bottom)
@@ -420,37 +412,19 @@ namespace Akka.Streams
         {
         }
 
-        public override IEnumerable<Inlet> Inlets
-        {
-            get
-            {
-                yield return Inlet1;
-                yield return Inlet2;
-            }
-        }
+        public override ImmutableArray<Inlet> Inlets { get; }
 
-        public override IEnumerable<Outlet> Outlets
-        {
-            get
-            {
-                yield return Outlet1;
-                yield return Outlet2;
-            }
-        }
+        public override ImmutableArray<Outlet> Outlets { get; }
 
         public override Shape DeepCopy()
         {
             return new BidiShape<TIn1, TOut1, TIn2, TOut2>(Inlet1, Outlet1, Inlet2, Outlet2);
         }
 
-        public override Shape CopyFromPorts(IEnumerable<Inlet> inlets, IEnumerable<Outlet> outlets)
+        public override Shape CopyFromPorts(ImmutableArray<Inlet> i, ImmutableArray<Outlet> o)
         {
-            var i = inlets.ToArray();
-            var o = outlets.ToArray();
-            if (i.Length != 2)
-                throw new ArgumentException(string.Format("Proposed inlets [{0}] don't fit BidiShape", string.Join(", ", (IEnumerable<Inlet>)i)));
-            if (o.Length != 2)
-                throw new ArgumentException(string.Format("Proposed outlets [{0}] don't fit BidiShape", string.Join(", ", (IEnumerable<Outlet>)o)));
+            if (i.Length != 2) throw new ArgumentException(string.Format("Proposed inlets [{0}] don't fit BidiShape", string.Join(", ", (IEnumerable<Inlet>)i)));
+            if (o.Length != 2) throw new ArgumentException(string.Format("Proposed outlets [{0}] don't fit BidiShape", string.Join(", ", (IEnumerable<Outlet>)o)));
 
             return new BidiShape<TIn1, TOut1, TIn2, TOut2>((Inlet<TIn1>)i[0], (Outlet<TOut1>)o[0], (Inlet<TIn2>)i[1], (Outlet<TOut2>)o[1]);
         }

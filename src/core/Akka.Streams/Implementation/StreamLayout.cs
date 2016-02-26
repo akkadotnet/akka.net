@@ -334,7 +334,9 @@ namespace Akka.Streams.Implementation
 
             return new CompositeModule(
                 subModules: SubModules,
-                shape: new AmorphousShape(Shape.Inlets.Where(i => !i.Equals(to)), Shape.Outlets.Where(o => !o.Equals(from))),
+                shape: new AmorphousShape(
+                    Shape.Inlets.Where(i => !i.Equals(to)).ToImmutableArray(), 
+                    Shape.Outlets.Where(o => !o.Equals(from)).ToImmutableArray()),
                 downstreams: Downstreams.SetItem(from, to),
                 upstreams: Upstreams.SetItem(to, from),
                 materializedValueComputation: MaterializedValueComputation,
@@ -374,7 +376,9 @@ namespace Akka.Streams.Implementation
 
             return new CompositeModule(
                 subModules: modules1.Union(modules2),
-                shape: new AmorphousShape(Shape.Inlets.Union(other.Shape.Inlets), Shape.Outlets.Union(other.Shape.Outlets)),
+                shape: new AmorphousShape(
+                    Shape.Inlets.Union(other.Shape.Inlets).ToImmutableArray(), 
+                    Shape.Outlets.Union(other.Shape.Outlets).ToImmutableArray()),
                 downstreams: Downstreams.AddRange(other.Downstreams),
                 upstreams: Upstreams.AddRange(other.Upstreams),
                 materializedValueComputation: new StreamLayout.Combine((x, y) => matFunc((T1)x, (T2)y), matComputation1, matComputation2),
@@ -393,7 +397,9 @@ namespace Akka.Streams.Implementation
 
             return new CompositeModule(
                 subModules: module1.Union(module2),
-                shape: new AmorphousShape(Shape.Inlets.Union(that.Shape.Inlets), Shape.Outlets.Union(that.Shape.Outlets)),
+                shape: new AmorphousShape(
+                    Shape.Inlets.Union(that.Shape.Inlets).ToImmutableArray(), 
+                    Shape.Outlets.Union(that.Shape.Outlets).ToImmutableArray()),
                 downstreams: Downstreams.AddRange(that.Downstreams),
                 upstreams: Upstreams.AddRange(that.Upstreams),
                 materializedValueComputation: matComputation,

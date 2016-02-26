@@ -95,8 +95,8 @@ namespace Akka.Streams.Implementation.Fusing
             var outOwnersB3 = new List<int>();
 
             // for the shape of the GraphModule
-            var inlets = new List<Inlet>();
-            var outlets = new List<Outlet>();
+            var inlets = ImmutableArray.CreateBuilder<Inlet>(2);
+            var outlets = ImmutableArray.CreateBuilder<Outlet>(2);
 
             // connection slots are allocated from the inputs side, outs find their place by this map
             var outConns = new Dictionary<OutPort, int>();
@@ -184,7 +184,7 @@ namespace Akka.Streams.Implementation.Fusing
             /*
              * Now mechanically gather together the GraphAssembly arrays from their various pieces.
              */
-            var shape = new AmorphousShape(inlets, outlets);
+            var shape = new AmorphousShape(inlets.ToImmutable(), outlets.ToImmutable());
             var connStart = insB1.Count;
             var conns = insB2.Count;
             var outStart = connStart + conns;
@@ -302,7 +302,7 @@ namespace Akka.Streams.Implementation.Fusing
                             return copy;
                         }).ToArray();
                         
-                        var newGraphModule = new GraphModule(graphModule.Assembly, oldShape.CopyFromPorts(oldIns.ToList(), oldOuts.ToList()), graphModule.Attributes, newIds);
+                        var newGraphModule = new GraphModule(graphModule.Assembly, oldShape.CopyFromPorts(oldIns.ToImmutableArray(), oldOuts.ToImmutableArray()), graphModule.Attributes, newIds);
                         // make sure to add all the port mappings from old GraphModule Shape to new shape
                         structInfo.AddModule(newGraphModule, localGroup, inheritedAttributes, indent, oldShape);
                         // now compute the list of all materialized value computation updates
@@ -719,17 +719,17 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Transform original into copied Inlets.
         /// </summary>
-        public IEnumerable<Inlet> NewInlets(IEnumerable<Inlet> old)
+        public ImmutableArray<Inlet> NewInlets(IEnumerable<Inlet> old)
         {
-            return old.Select(i => (Inlet)NewInputs[i].First.Value);
+            return old.Select(i => (Inlet)NewInputs[i].First.Value).ToImmutableArray();
         }
 
         /// <summary>
         /// Transform original into copied Outlets.
         /// </summary>
-        public IEnumerable<Outlet> NewOutlets(IEnumerable<Outlet> old)
+        public ImmutableArray<Outlet> NewOutlets(IEnumerable<Outlet> old)
         {
-            return old.Select(o => (Outlet)NewOutputs[o].First.Value);
+            return old.Select(o => (Outlet)NewOutputs[o].First.Value).ToImmutableArray();
         }
 
         private bool IsCopiedModuleWithGraphStageAndMaterializedValue(IModule module)

@@ -1,6 +1,7 @@
-﻿// --- auto generated: 2016-01-13 11:28:18 --- //
+﻿// --- auto generated: 2016-02-26 09:05:39 --- //
 using System;
 using System.Linq;
+using System.Collections.Immutable;
 
 namespace Akka.Streams
 {
@@ -8,13 +9,14 @@ namespace Akka.Streams
 	{
 		public readonly int N;
 		public readonly Inlet<T0> In0;
-		public readonly Inlet<T1>[] In1s;
+		public readonly ImmutableArray<Inlet<T1>> In1s;
 		public FanInShapeN(int n, IInit init) : base(init)
 		{
 			N = n;
 			In0 = NewInlet<T0>("in0");
-			In1s = new Inlet<T1>[n];
-			for (int i = 0; i < n; i++) In1s[i] = new Inlet<T1>("in" + i);
+		    var builder = ImmutableArray.CreateBuilder<Inlet<T1>>(n);
+			for (int i = 0; i < n; i++) builder.Add(new Inlet<T1>("in" + i));
+		    In1s = builder.ToImmutable();
 		}
 
         public FanInShapeN(int n) : this(n, new InitName("FanInShape1N")) { }
