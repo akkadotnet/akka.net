@@ -18,33 +18,34 @@ namespace Akka.Streams.Implementation.Fusing
     {
         public readonly IModule[] MaterializedValueIds;
         public readonly GraphAssembly Assembly;
-        private readonly Shape _shape;
-        private readonly Attributes _attributes;
 
         public GraphModule(GraphAssembly assembly, Shape shape, Attributes attributes, IModule[] materializedValueIds)
         {
             Assembly = assembly;
-            _shape = shape;
-            _attributes = attributes;
+            Shape = shape;
+            Attributes = attributes;
             MaterializedValueIds = materializedValueIds;
         }
 
-        public override Shape Shape { get { return _shape; } }
+        public override Shape Shape { get; }
+
         public override IModule ReplaceShape(Shape shape)
         {
-            return new CopiedModule(shape, _attributes, this);
+            return new CopiedModule(shape, Attributes, this);
         }
 
-        public override IImmutableSet<IModule> SubModules { get { return ImmutableHashSet<IModule>.Empty; } }
+        public override ImmutableArray<IModule> SubModules => ImmutableArray<IModule>.Empty;
+
         public override IModule CarbonCopy()
         {
             return ReplaceShape(Shape.DeepCopy());
         }
 
-        public override Attributes Attributes { get { return _attributes; } }
+        public override Attributes Attributes { get; }
+
         public override IModule WithAttributes(Attributes attributes)
         {
-            return new GraphModule(Assembly, _shape, attributes, MaterializedValueIds);
+            return new GraphModule(Assembly, Shape, attributes, MaterializedValueIds);
         }
     }
 

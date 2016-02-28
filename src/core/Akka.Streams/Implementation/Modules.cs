@@ -47,7 +47,7 @@ namespace Akka.Streams.Implementation
             return NewInstance(new SourceShape<TOut>(Outlet.Create<TOut>(_shape.Outlet.CarbonCopy())));
         }
 
-        public override IImmutableSet<IModule> SubModules { get { return ImmutableHashSet<IModule>.Empty; } }
+        public override ImmutableArray<IModule> SubModules => ImmutableArray<IModule>.Empty;
 
         protected SourceShape<TOut> AmendShape(Attributes attributes)
         {

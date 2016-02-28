@@ -20,29 +20,30 @@ namespace Akka.Streams.Implementation.Fusing
     internal class GraphStageModule : Module
     {
         public readonly IGraphStageWithMaterializedValue Stage;
-        private readonly Shape _shape;
-        private readonly Attributes _attributes;
 
         public GraphStageModule(Shape shape, Attributes attributes, IGraphStageWithMaterializedValue stage)
         {
-            _shape = shape;
-            _attributes = attributes;
+            Shape = shape;
+            Attributes = attributes;
             Stage = stage;
         }
 
-        public override Shape Shape { get { return _shape; } }
+        public override Shape Shape { get; }
+
         public override IModule ReplaceShape(Shape shape)
         {
             return new CopiedModule(shape, Attributes.None, this);
         }
 
-        public override IImmutableSet<IModule> SubModules { get { return ImmutableHashSet<IModule>.Empty; } }
+        public override ImmutableArray<IModule> SubModules => ImmutableArray<IModule>.Empty;
+
         public override IModule CarbonCopy()
         {
             return ReplaceShape(Shape.DeepCopy());
         }
 
-        public override Attributes Attributes { get { return _attributes; } }
+        public override Attributes Attributes { get; }
+
         public override IModule WithAttributes(Attributes attributes)
         {
             return new GraphStageModule(Shape, attributes, Stage);

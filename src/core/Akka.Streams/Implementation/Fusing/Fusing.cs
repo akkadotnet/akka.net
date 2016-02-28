@@ -56,14 +56,14 @@ namespace Akka.Streams.Implementation.Fusing
         /// Take the fusable islands identified by <see cref="Descend"/> in the `groups` list 
         /// and execute their fusion; only fusable islands will have multiple modules in their set.
         /// </summary>
-        private static IImmutableSet<IModule> Fuse<T>(BuildStructuralInfo info)
+        private static ImmutableArray<IModule> Fuse<T>(BuildStructuralInfo info)
         {
             return info.Groups.SelectMany(group =>
             {
                 if (group.Count == 0) return Enumerable.Empty<IModule>();
                 if (group.Count == 1) return new[] {group.First()};
                 return new[] {FuseGroup<T>(info, group)};
-            }).ToImmutableHashSet();
+            }).Distinct().ToImmutableArray();
         }
 
         /// <summary>
@@ -680,9 +680,9 @@ namespace Akka.Streams.Implementation.Fusing
         public void Wire(OutPort outPort, InPort inPort, string indent)
         {
             var newOut = RemoveMapping(outPort, NewOutputs);
-            if (newOut == null) throw new ArgumentException(string.Format("wiring {0} -> {1}", outPort, inPort), "outPort");
+            if (newOut == null) throw new ArgumentException($"wiring {outPort} -> {inPort}", nameof(outPort));
             var newIn = RemoveMapping(inPort, NewInputs);
-            if (newIn == null) throw new ArgumentException(string.Format("wiring {0} -> {1}", outPort, inPort), "inPort");
+            if (newIn == null) throw new ArgumentException($"wiring {outPort} -> {inPort}", nameof(inPort));
             Downstreams.Add(newOut, newIn);
             Upstreams.Add(newIn, newOut);
         }
@@ -699,7 +699,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     var x = RemoveMapping(oins.Current, NewInputs);
                     if (x == null)
-                        throw new ArgumentException(string.Format("rewiring {0} -> {1}", oins.Current, nins.Current), "oldShape");
+                        throw new ArgumentException($"rewiring {oins.Current} -> {nins.Current}", nameof(oldShape));
                     AddMapping(nins.Current, x, NewInputs);
                 }
             }
@@ -710,7 +710,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     var x = RemoveMapping(oouts.Current, NewOutputs);
                     if (x == null)
-                        throw new ArgumentException(string.Format("rewiring {0} -> {1}", oouts.Current, nouts.Current), "oldShape");
+                        throw new ArgumentException($"rewiring {oouts.Current} -> {nouts.Current}", nameof(oldShape));
                     AddMapping(nouts.Current, x, NewOutputs);
                 }
             }
@@ -773,23 +773,20 @@ namespace Akka.Streams.Implementation.Fusing
     /// </summary>
     internal sealed class FusedGraph<TShape, TMat> : IGraph<TShape, TMat> where TShape : Shape
     {
-        private readonly FusedModule _module;
-        private readonly TShape _shape;
-
         public FusedGraph(FusedModule module, TShape shape)
         {
-            if (module == null) throw new ArgumentNullException("module");
-            if (shape == null) throw new ArgumentNullException("shape");
+            if (module == null) throw new ArgumentNullException(nameof(module));
+            if (shape == null) throw new ArgumentNullException(nameof(shape));
 
-            _module = module;
-            _shape = shape;
+            Module = module;
+            Shape = shape;
         }
 
-        public TShape Shape { get { return _shape; } }
-        public IModule Module { get { return _module; } }
+        public TShape Shape { get; }
+        public IModule Module { get; }
         public IGraph<TShape, TMat> WithAttributes(Attributes attributes)
         {
-            return new FusedGraph<TShape, TMat>(_module.WithAttributes(attributes) as FusedModule, _shape);
+            return new FusedGraph<TShape, TMat>(Module.WithAttributes(attributes) as FusedModule, Shape);
         }
 
         public IGraph<TShape, TMat> Named(string name)

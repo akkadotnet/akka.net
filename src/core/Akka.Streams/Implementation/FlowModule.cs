@@ -14,7 +14,7 @@ namespace Akka.Streams.Implementation
         }
         
         public override Shape Shape { get; }
-        public override IImmutableSet<IModule> SubModules { get { return ImmutableHashSet<IModule>.Empty; } }
+        public override ImmutableArray<IModule> SubModules => ImmutableArray<IModule>.Empty;
 
         public override IModule ReplaceShape(Shape shape)
         {

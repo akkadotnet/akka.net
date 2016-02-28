@@ -24,8 +24,8 @@ namespace Akka.Streams.Implementation
             _shape = shape;
         }
 
-        public override Shape Shape { get { return _shape; } }
-        public override IImmutableSet<IModule> SubModules { get { return ImmutableHashSet<IModule>.Empty; } }
+        public override Shape Shape => _shape;
+        public override ImmutableArray<IModule> SubModules => ImmutableArray<IModule>.Empty;
 
         protected abstract SinkModule<TIn, TMat> NewInstance(SinkShape<TIn> shape);
 
@@ -70,17 +70,16 @@ namespace Akka.Streams.Implementation
     /// </summary>
     internal class PublisherSink<TIn> : SinkModule<TIn, IPublisher<TIn>>
     {
-        private readonly Attributes _attributes;
         private readonly SinkShape<TIn> _shape;
 
         public PublisherSink(Attributes attributes, SinkShape<TIn> shape)
             : base(shape)
         {
-            _attributes = attributes;
+            Attributes = attributes;
             _shape = shape;
         }
 
-        public override Attributes Attributes { get { return _attributes; } }
+        public override Attributes Attributes { get; }
 
         public override IModule WithAttributes(Attributes attributes)
         {
@@ -89,7 +88,7 @@ namespace Akka.Streams.Implementation
 
         protected override SinkModule<TIn, IPublisher<TIn>> NewInstance(SinkShape<TIn> shape)
         {
-            return new PublisherSink<TIn>(_attributes, shape);
+            return new PublisherSink<TIn>(Attributes, shape);
         }
 
         public override ISubscriber<TIn> Create(MaterializationContext context, out IPublisher<TIn> materializer)
@@ -137,14 +136,12 @@ namespace Akka.Streams.Implementation
     /// </summary>
     internal sealed class SinkholeSink<TIn> : SinkModule<TIn, Task>
     {
-        private readonly Attributes _attributes;
-
         public SinkholeSink(SinkShape<TIn> shape, Attributes attributes) : base(shape)
         {
-            _attributes = attributes;
+            Attributes = attributes;
         }
 
-        public override Attributes Attributes => _attributes;
+        public override Attributes Attributes { get; }
 
         public override IModule WithAttributes(Attributes attributes)
             => new SinkholeSink<TIn>(AmendShape(attributes), attributes);
@@ -169,16 +166,15 @@ namespace Akka.Streams.Implementation
     /// </summary>
     internal sealed class SubscriberSink<TIn> : SinkModule<TIn, Unit>
     {
-        private readonly Attributes _attributes;
         private readonly ISubscriber<TIn> _subscriber;
 
         public SubscriberSink(ISubscriber<TIn> subscriber, Attributes attributes, SinkShape<TIn> shape) : base(shape)
         {
-            _attributes = attributes;
+            Attributes = attributes;
             _subscriber = subscriber;
         }
 
-        public override Attributes Attributes => _attributes;
+        public override Attributes Attributes { get; }
 
         public override IModule WithAttributes(Attributes attributes)
             => new SubscriberSink<TIn>(_subscriber, attributes, AmendShape(attributes));
@@ -201,15 +197,13 @@ namespace Akka.Streams.Implementation
     /// </summary>
     internal sealed class CancelSink<T> : SinkModule<T, Unit>
     {
-        private readonly Attributes _attributes;
-
         public CancelSink(Attributes attributes, SinkShape<T> shape)
             : base(shape)
         {
-            _attributes = attributes;
+            Attributes = attributes;
         }
 
-        public override Attributes Attributes => _attributes;
+        public override Attributes Attributes { get; }
 
         protected override SinkModule<T, Unit> NewInstance(SinkShape<T> shape) => new CancelSink<T>(Attributes, shape);
 
@@ -461,7 +455,7 @@ namespace Akka.Streams.Implementation
         public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out ISinkQueue<T> materialized)
         {
             var maxBuffer = Module.Attributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;
-            if (maxBuffer <= 0) throw new ArgumentException("Buffer must be greater than zero", "inheritedAttributes");
+            if (maxBuffer <= 0) throw new ArgumentException("Buffer must be greater than zero", nameof(inheritedAttributes));
 
             var buffer = FixedSizeBuffer.Create<Result<T>>(maxBuffer);
             var currentRequest = default(TaskCompletionSource<T>);  

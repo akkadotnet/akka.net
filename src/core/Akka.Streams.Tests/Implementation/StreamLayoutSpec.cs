@@ -26,7 +26,7 @@ namespace Akka.Streams.Tests.Implementation
                 throw new System.NotImplementedException();
             }
 
-            public override IImmutableSet<IModule> SubModules => ImmutableHashSet<IModule>.Empty;
+            public override ImmutableArray<IModule> SubModules => ImmutableArray<IModule>.Empty;
 
             public override IModule CarbonCopy()
             {

@@ -12,10 +12,9 @@ namespace Akka.Streams
     /// It is also used in the Java DSL for “untyped Inlets” as a work-around
     /// for otherwise unreasonable existential types.
     /// </summary>
-    public abstract class InPort : IComparable<InPort>
+    public abstract class InPort
     {
         internal int Id = -1;
-        public abstract int CompareTo(InPort other);
     }
 
     /// <summary>
@@ -24,10 +23,9 @@ namespace Akka.Streams
     /// It is also used in the Java DSL for “untyped Outlets” as a work-around
     /// for otherwise unreasonable existential types.
     /// </summary>
-    public abstract class OutPort : IComparable<OutPort>
+    public abstract class OutPort 
     {
         internal int Id = -1;
-        public abstract int CompareTo(OutPort other);
     }
 
     /// <summary>
@@ -35,7 +33,7 @@ namespace Akka.Streams
     /// is the InPort(which does not bear an element type because Modules only 
     /// express the internal structural hierarchy of stream topologies).
     /// </summary>
-    public abstract class Inlet : InPort, IEquatable<Inlet>, ICloneable
+    public abstract class Inlet : InPort
     {
         public static Inlet<T> Create<T>(Inlet inlet)
         {
@@ -51,38 +49,9 @@ namespace Akka.Streams
             Name = name;
         }
 
-        public sealed override int CompareTo(InPort other)
-        {
-            if (other is Inlet) return string.Compare(Name, ((Inlet)other).Name);
-            return -1;
-        }
-
-        public bool Equals(Inlet other)
-        {
-            return string.Equals(Name, other.Name);
-        }
-
-        public override int GetHashCode()
-        {
-            return Name.GetHashCode();
-        }
-
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(obj, null)) return false;
-            if (ReferenceEquals(obj, this)) return true;
-            if (obj is Inlet) return Equals(Name, ((Inlet)obj).Name);
-            return false;
-        }
-
         public sealed override string ToString()
         {
             return Name;
-        }
-
-        public object Clone()
-        {
-            return CarbonCopy();
         }
     }
 
@@ -106,7 +75,7 @@ namespace Akka.Streams
     /// is the OutPort(which does not bear an element type because Modules only
     /// express the internal structural hierarchy of stream topologies).
     /// </summary>
-    public abstract class Outlet : OutPort, IEquatable<Outlet>, ICloneable
+    public abstract class Outlet : OutPort
     {
         public static Outlet<T> Create<T>(Outlet outlet)
         {
@@ -116,43 +85,14 @@ namespace Akka.Streams
         public readonly string Name;
         public abstract Outlet CarbonCopy();
 
-        public sealed override int CompareTo(OutPort other)
-        {
-            if (other is Outlet) return string.Compare(Name, ((Outlet)other).Name);
-            return -1;
-        }
-
         protected Outlet(string name)
         {
             Name = name;
         }
 
-        public bool Equals(Outlet other)
-        {
-            return string.Equals(Name, other.Name);
-        }
-
-        public override int GetHashCode()
-        {
-            return Name.GetHashCode();
-        }
-
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(obj, null)) return false;
-            if (ReferenceEquals(obj, this)) return true;
-            if (obj is Outlet) return Equals(Name, ((Outlet)obj).Name);
-            return false;
-        }
-
         public sealed override string ToString()
         {
             return Name;
-        }
-
-        public object Clone()
-        {
-            return CarbonCopy();
         }
     }
 
@@ -224,6 +164,11 @@ namespace Akka.Streams
         public object Clone()
         {
             return DeepCopy();
+        }
+
+        public sealed override string ToString()
+        {
+            return $"{GetType().Name}([{string.Join(", ", Inlets)}] [{string.Join(", ", Outlets)}])";
         }
     }
 

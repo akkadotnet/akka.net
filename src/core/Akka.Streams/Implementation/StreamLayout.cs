@@ -105,11 +105,11 @@ namespace Akka.Streams.Implementation
             var problems = new List<string>();
 
             if (inset.Count != shape.Inlets.Count()) problems.Add("shape has duplicate inlets " + ins(shape.Inlets));
-            if (!inset.SetEquals(inports)) problems.Add(string.Format("shape has extra {0}, module has extra {1}", ins(inset.Except(inports)), ins(inports.Except(inset))));
+            if (!inset.SetEquals(inports)) problems.Add($"shape has extra {ins(inset.Except(inports))}, module has extra {ins(inports.Except(inset))}");
             var connectedInlets = inset.Intersect(module.Upstreams.Keys).ToArray();
             if (connectedInlets.Any()) problems.Add("found connected inlets " + ins(connectedInlets));
             if (outset.Count != shape.Outlets.Count()) problems.Add("shape has duplicate outlets " + outs(shape.Outlets));
-            if (!outset.SetEquals(outports)) problems.Add(string.Format("shape has extra {0}, module has extra {1}", outs(outset.Except(outports)), outs(outports.Except(outset))));
+            if (!outset.SetEquals(outports)) problems.Add($"shape has extra {outs(outset.Except(outports))}, module has extra {outs(outports.Except(outset))}");
             var connectedOutlets = outset.Intersect(module.Downstreams.Keys).ToArray();
             if (connectedOutlets.Any()) problems.Add("found connected outlets " + outs(connectedOutlets));
 
@@ -118,12 +118,12 @@ namespace Akka.Streams.Implementation
             var downs = module.Downstreams.ToImmutableHashSet();
             var inter = ups2.Intersect(downs);
 
-            if (!downs.SetEquals(ups2)) problems.Add(string.Format("inconsistent maps: ups {0} downs {1}", pairs(ups2.Except(inter)), pairs(downs.Except(inter))));
+            if (!downs.SetEquals(ups2)) problems.Add($"inconsistent maps: ups {pairs(ups2.Except(inter))} downs {pairs(downs.Except(inter))}");
 
-            var allIn = ImmutableSortedSet<InPort>.Empty;
-            var duplicateIn = ImmutableSortedSet<InPort>.Empty;
-            var allOut = ImmutableSortedSet<OutPort>.Empty;
-            var duplicateOut = ImmutableSortedSet<OutPort>.Empty;
+            var allIn = ImmutableHashSet<InPort>.Empty;
+            var duplicateIn = ImmutableHashSet<InPort>.Empty;
+            var allOut = ImmutableHashSet<OutPort>.Empty;
+            var duplicateOut = ImmutableHashSet<OutPort>.Empty;
 
             foreach (var subModule in module.SubModules)
             {
@@ -266,7 +266,9 @@ namespace Akka.Streams.Implementation
         /// </summary>
         IModule Nest();
 
-        IImmutableSet<IModule> SubModules { get; }
+        // this cannot be set, since sets are changing ordering of modules
+        // which must be kept for fusing to work
+        ImmutableArray<IModule> SubModules { get; }
         bool IsSealed { get; }
 
         IImmutableDictionary<OutPort, InPort> Downstreams { get; }
@@ -293,16 +295,16 @@ namespace Akka.Streams.Implementation
             Upstreams = ImmutableDictionary<InPort, OutPort>.Empty;
         }
 
-        public IImmutableSet<InPort> InPorts { get { return _inports.Value; } }
-        public IImmutableSet<OutPort> OutPorts { get { return _outports.Value; } }
-        public virtual bool IsRunnable { get { return InPorts.Count == 0 && OutPorts.Count == 0; } }
-        public virtual bool IsSink { get { return InPorts.Count == 1 && OutPorts.Count == 0; } }
-        public virtual bool IsSource { get { return InPorts.Count == 0 && OutPorts.Count == 1; } }
-        public virtual bool IsFlow { get { return InPorts.Count == 1 && OutPorts.Count == 1; } }
-        public virtual bool IsBidiFlow { get { return InPorts.Count == 2 && OutPorts.Count == 2; } }
-        public virtual bool IsAtomic { get { return !SubModules.Any(); } }
-        public virtual bool IsCopied { get { return false; } }
-        public virtual bool IsFused { get { return false; } }
+        public IImmutableSet<InPort> InPorts => _inports.Value;
+        public IImmutableSet<OutPort> OutPorts => _outports.Value;
+        public virtual bool IsRunnable => InPorts.Count == 0 && OutPorts.Count == 0;
+        public virtual bool IsSink => InPorts.Count == 1 && OutPorts.Count == 0;
+        public virtual bool IsSource => InPorts.Count == 0 && OutPorts.Count == 1;
+        public virtual bool IsFlow => InPorts.Count == 1 && OutPorts.Count == 1;
+        public virtual bool IsBidiFlow => InPorts.Count == 2 && OutPorts.Count == 2;
+        public virtual bool IsAtomic => !SubModules.Any();
+        public virtual bool IsCopied => false;
+        public virtual bool IsFused => false;
 
         public virtual IModule Fuse(IModule other, OutPort @from, InPort to)
         {
@@ -319,16 +321,16 @@ namespace Akka.Streams.Implementation
             if (!OutPorts.Contains(from))
             {
                 var message = Downstreams.ContainsKey(from)
-                    ? string.Format("The output port [{0}] is already connected", from)
-                    : string.Format("The output port [{0}] is not part of underlying graph", from);
+                    ? $"The output port [{@from}] is already connected"
+                    : $"The output port [{@from}] is not part of underlying graph";
                 throw new ArgumentException(message);
             }
 
             if (!InPorts.Contains(to))
             {
                 var message = Upstreams.ContainsKey(to)
-                    ? string.Format("The input port [{0}] is already connected", from)
-                    : string.Format("The input port [{0}] is not part of underlying graph", from);
+                    ? $"The input port [{@from}] is already connected"
+                    : $"The input port [{@from}] is not part of underlying graph";
                 throw new ArgumentException(message);
             }
 
@@ -346,7 +348,7 @@ namespace Akka.Streams.Implementation
         public virtual IModule TransformMaterializedValue<TMat, TMat2>(Func<TMat, TMat2> mapFunc)
         {
             return new CompositeModule(
-                subModules: IsSealed ? ImmutableHashSet.Create(this as IModule) : SubModules,
+                subModules: IsSealed ? ImmutableArray.Create(this as IModule) : SubModules,
                 shape: Shape,
                 downstreams: Downstreams,
                 upstreams: Upstreams,
@@ -368,14 +370,14 @@ namespace Akka.Streams.Implementation
             if (SubModules.Contains(other))
                 throw new ArgumentException("An existing submodule cannot be added again. All contained modules must be unique.");
 
-            var modules1 = IsSealed ? ImmutableHashSet.Create(this as IModule) : SubModules;
-            var modules2 = IsSealed ? ImmutableHashSet.Create(other as IModule) : SubModules;
+            var modules1 = this.IsSealed ? ImmutableArray.Create<IModule>(this) : this.SubModules;
+            var modules2 = other.IsSealed ? ImmutableArray.Create<IModule>(other) : other.SubModules;
 
             var matComputation1 = IsSealed ? new StreamLayout.Atomic(this) : MaterializedValueComputation;
             var matComputation2 = IsSealed ? new StreamLayout.Atomic(other) : MaterializedValueComputation;
 
             return new CompositeModule(
-                subModules: modules1.Union(modules2),
+                subModules: modules1.Union(modules2).ToImmutableArray(),
                 shape: new AmorphousShape(
                     Shape.Inlets.Union(other.Shape.Inlets).ToImmutableArray(), 
                     Shape.Outlets.Union(other.Shape.Outlets).ToImmutableArray()),
@@ -390,13 +392,13 @@ namespace Akka.Streams.Implementation
             if (ReferenceEquals(this, that)) throw new ArgumentException("A module cannot be added to itself. You should pass a separate instance to Compose().");
             if (SubModules.Contains(that)) throw new ArgumentException("An existing submodule cannot be added again. All contained modules must be unique.");
 
-            var module1 = IsSealed ? ImmutableHashSet.Create <IModule>(this) : SubModules;
-            var module2 = that.IsSealed ? ImmutableHashSet.Create<IModule>(that) : that.SubModules;
+            var module1 = IsSealed ? ImmutableArray.Create <IModule>(this) : SubModules;
+            var module2 = that.IsSealed ? ImmutableArray.Create<IModule>(that) : that.SubModules;
 
             var matComputation = IsSealed ? new StreamLayout.Atomic(this) : MaterializedValueComputation;
 
             return new CompositeModule(
-                subModules: module1.Union(module2),
+                subModules: module1.Union(module2).ToImmutableArray(),
                 shape: new AmorphousShape(
                     Shape.Inlets.Union(that.Shape.Inlets).ToImmutableArray(), 
                     Shape.Outlets.Union(that.Shape.Outlets).ToImmutableArray()),
@@ -409,7 +411,7 @@ namespace Akka.Streams.Implementation
         public virtual IModule Nest()
         {
             return new CompositeModule(
-                subModules: ImmutableHashSet.Create(this as IModule),
+                subModules: ImmutableArray.Create(this as IModule),
                 shape: Shape,
                 /*
                  * Composite modules always maintain the flattened upstreams/downstreams map (i.e. they contain all the
@@ -427,14 +429,15 @@ namespace Akka.Streams.Implementation
                 attributes: Attributes.None);
         }
 
-        public bool IsSealed { get { return IsAtomic || IsCopied; } }
+        public bool IsSealed => IsAtomic || IsCopied;
         public virtual IImmutableDictionary<OutPort, InPort> Downstreams { get; private set; }
         public virtual IImmutableDictionary<InPort, OutPort> Upstreams { get; private set; }
-        public virtual StreamLayout.IMaterializedValueNode MaterializedValueComputation { get { return new StreamLayout.Atomic(this); } }
+        public virtual StreamLayout.IMaterializedValueNode MaterializedValueComputation => new StreamLayout.Atomic(this);
 
         public abstract Shape Shape { get; }
         public abstract IModule ReplaceShape(Shape shape);
-        public abstract IImmutableSet<IModule> SubModules { get; }
+        
+        public abstract ImmutableArray<IModule> SubModules { get; }
         public abstract IModule CarbonCopy();
         public abstract Attributes Attributes { get; }
         public abstract IModule WithAttributes(Attributes attributes);
@@ -450,10 +453,10 @@ namespace Akka.Streams.Implementation
 
         private EmptyModule() { }
 
-        public override Shape Shape { get { return ClosedShape.Instance; } }
-        public override bool IsAtomic { get { return false; } }
-        public override bool IsRunnable { get { return false; } }
-        public override StreamLayout.IMaterializedValueNode MaterializedValueComputation { get { return StreamLayout.Ignore.Instance; } }
+        public override Shape Shape => ClosedShape.Instance;
+        public override bool IsAtomic => false;
+        public override bool IsRunnable => false;
+        public override StreamLayout.IMaterializedValueNode MaterializedValueComputation => StreamLayout.Ignore.Instance;
 
         public override IModule ReplaceShape(Shape shape)
         {
@@ -461,30 +464,20 @@ namespace Akka.Streams.Implementation
             else throw new NotSupportedException("Cannot replace the shape of empty module");
         }
 
-        public override IModule Compose(IModule other)
-        {
-            return other;
-        }
+        public override IModule Compose(IModule other) => other;
 
         public override IModule Compose<T1, T2, T3>(IModule other, Func<T1, T2, T3> matFunc)
         {
             throw new NotSupportedException("It is invalid to combine materialized value with EmptyModule");
         }
 
-        public override IModule Nest()
-        {
-            return this;
-        }
+        public override IModule Nest() => this;
 
-        private readonly IImmutableSet<IModule> _emptyModules = ImmutableHashSet<IModule>.Empty;
-        public override IImmutableSet<IModule> SubModules { get { return _emptyModules; } }
+        public override ImmutableArray<IModule> SubModules { get; } = ImmutableArray<IModule>.Empty;
 
-        public override IModule CarbonCopy()
-        {
-            return this;
-        }
+        public override IModule CarbonCopy() => this;
 
-        public override Attributes Attributes { get { return Attributes.None; } }
+        public override Attributes Attributes => Attributes.None;
 
         public override IModule WithAttributes(Attributes attributes)
         {
@@ -494,22 +487,22 @@ namespace Akka.Streams.Implementation
 
     public sealed class CopiedModule : Module
     {
-        private readonly Shape _shape;
-        private readonly Attributes _attributes;
-        private readonly IImmutableSet<IModule> _subModules;
-
         public CopiedModule(Shape shape, Attributes attributes, IModule copyOf)
         {
-            _shape = shape;
-            _attributes = attributes;
+            Shape = shape;
+            Attributes = attributes;
             CopyOf = copyOf;
-            _subModules = ImmutableHashSet.Create(copyOf);
+            SubModules = ImmutableArray.Create(copyOf);
         }
 
-        public IModule CopyOf { get; private set; }
-        public override Shape Shape { get { return _shape; } }
-        public override bool IsCopied { get { return true; } }
-        public override StreamLayout.IMaterializedValueNode MaterializedValueComputation { get { return new StreamLayout.Atomic(this); } }
+        public override ImmutableArray<IModule> SubModules { get; }
+        public override Attributes Attributes { get; }
+
+        public IModule CopyOf { get; }
+        public override Shape Shape { get; }
+
+        public override bool IsCopied => true;
+        public override StreamLayout.IMaterializedValueNode MaterializedValueComputation => new StreamLayout.Atomic(this);
 
         public override IModule ReplaceShape(Shape shape)
         {
@@ -519,90 +512,58 @@ namespace Akka.Streams.Implementation
             return new CopiedModule(shape, Attributes, CopyOf);
         }
 
-        public override IImmutableSet<IModule> SubModules { get { return _subModules; } }
+        public override IModule CarbonCopy() => new CopiedModule(Shape, Attributes, CopyOf);
 
-        public override IModule CarbonCopy()
-        {
-            return new CopiedModule(Shape, Attributes, CopyOf);
-        }
-
-        public override Attributes Attributes { get { return _attributes; } }
-
-        public override IModule WithAttributes(Attributes attributes)
-        {
-            return new CopiedModule(Shape, attributes, CopyOf);
-        }
+        public override IModule WithAttributes(Attributes attributes) => new CopiedModule(Shape, attributes, CopyOf);
     }
 
     public sealed class CompositeModule : Module
     {
-        private readonly IImmutableSet<IModule> _subModules;
-        private readonly Shape _shape;
         private readonly IImmutableDictionary<OutPort, InPort> _downstreams;
         private readonly IImmutableDictionary<InPort, OutPort> _upstreams;
-        private readonly StreamLayout.IMaterializedValueNode _materializedValueComputation;
-        private readonly Attributes _attributes;
 
-        public CompositeModule(IImmutableSet<IModule> subModules,
+        public CompositeModule(ImmutableArray<IModule> subModules,
             Shape shape,
             IImmutableDictionary<OutPort, InPort> downstreams,
             IImmutableDictionary<InPort, OutPort> upstreams,
             StreamLayout.IMaterializedValueNode materializedValueComputation,
             Attributes attributes)
         {
-            _subModules = subModules;
-            _shape = shape;
+            SubModules = subModules;
+            Shape = shape;
             _downstreams = downstreams;
             _upstreams = upstreams;
-            _materializedValueComputation = materializedValueComputation;
-            _attributes = attributes;
+            MaterializedValueComputation = materializedValueComputation;
+            Attributes = attributes;
         }
 
-        public override Shape Shape { get { return _shape; } }
-        public override StreamLayout.IMaterializedValueNode MaterializedValueComputation
-        {
-            get
-            {
-                return _materializedValueComputation;
-            }
-        }
+        public override Shape Shape { get; }
+        public override Attributes Attributes { get; }
+        public override ImmutableArray<IModule> SubModules { get; }
+        public override StreamLayout.IMaterializedValueNode MaterializedValueComputation { get; }
 
         public override IModule ReplaceShape(Shape shape)
         {
             if (!Shape.HasSamePortsAs(shape))
-                throw new ArgumentException("CombinedModule requires shape with same ports to replace", "shape");
+                throw new ArgumentException("CombinedModule requires shape with same ports to replace", nameof(shape));
 
             return new CompositeModule(SubModules, shape, Downstreams, Upstreams, MaterializedValueComputation, Attributes);
         }
 
-        public override IImmutableSet<IModule> SubModules { get { return _subModules; } }
+        public override IModule CarbonCopy() => new CopiedModule(Shape.DeepCopy(), Attributes, this);
 
-        public override IModule CarbonCopy()
-        {
-            return new CopiedModule(Shape.DeepCopy(), Attributes, this);
-        }
-
-        public override Attributes Attributes { get { return _attributes; } }
-
-        public override IModule WithAttributes(Attributes attributes)
-        {
-            return new CompositeModule(SubModules, Shape.DeepCopy(), Downstreams, Upstreams, MaterializedValueComputation, Attributes);
-        }
+        public override IModule WithAttributes(Attributes attributes) => new CompositeModule(SubModules, Shape.DeepCopy(), Downstreams, Upstreams, MaterializedValueComputation, Attributes);
     }
 
     public sealed class FusedModule : Module
     {
-        private readonly IImmutableSet<IModule> _subModules;
-        private readonly Shape _shape;
         private readonly IImmutableDictionary<OutPort, InPort> _downstreams;
         private readonly IImmutableDictionary<InPort, OutPort> _upstreams;
-        private readonly StreamLayout.IMaterializedValueNode _materializedValueComputation;
-        private readonly Attributes _attributes;
 
         public readonly Streams.Fusing.StructuralInfo Info;
 
         public FusedModule(
-            IImmutableSet<IModule> subModules,
+            ImmutableArray<IModule> subModules,
             Shape shape,
             IImmutableDictionary<OutPort, InPort> downstreams,
             IImmutableDictionary<InPort, OutPort> upstreams,
@@ -610,39 +571,34 @@ namespace Akka.Streams.Implementation
             Attributes attributes,
             Streams.Fusing.StructuralInfo info)
         {
-            _subModules = subModules;
-            _shape = shape;
+            SubModules = subModules;
+            Shape = shape;
             _downstreams = downstreams;
             _upstreams = upstreams;
-            _materializedValueComputation = materializedValueComputation;
-            _attributes = attributes;
+            MaterializedValueComputation = materializedValueComputation;
+            Attributes = attributes;
             Info = info;
         }
 
-        public override bool IsFused { get { return true; } }
-        public override IImmutableDictionary<OutPort, InPort> Downstreams { get { return _downstreams; } }
-        public override IImmutableDictionary<InPort, OutPort> Upstreams { get { return _upstreams; } }
-        public override StreamLayout.IMaterializedValueNode MaterializedValueComputation { get { return _materializedValueComputation; } }
+        public override bool IsFused => true;
+        public override IImmutableDictionary<OutPort, InPort> Downstreams => _downstreams;
+        public override IImmutableDictionary<InPort, OutPort> Upstreams => _upstreams;
+        public override StreamLayout.IMaterializedValueNode MaterializedValueComputation { get; }
 
-        public override Shape Shape { get { return _shape; } }
+        public override Shape Shape { get; }
+        public override ImmutableArray<IModule> SubModules { get; }
+        public override Attributes Attributes { get; }
+
         public override IModule ReplaceShape(Shape shape)
         {
             if (!shape.HasSamePortsAndShapeAs(Shape))
-                throw new ArgumentException("FusedModule requires shape with the same ports as existing one", "shape");
-            return new FusedModule(_subModules, shape, _downstreams, _upstreams, _materializedValueComputation, _attributes, Info);
+                throw new ArgumentException("FusedModule requires shape with the same ports as existing one", nameof(shape));
+            return new FusedModule(SubModules, shape, Downstreams, Upstreams, MaterializedValueComputation, Attributes, Info);
         }
 
-        public override IImmutableSet<IModule> SubModules { get { return _subModules; } }
-        public override IModule CarbonCopy()
-        {
-            return new CopiedModule(Shape.DeepCopy(), Attributes, this);
-        }
+        public override IModule CarbonCopy() => new CopiedModule(Shape.DeepCopy(), Attributes, this);
 
-        public override Attributes Attributes { get { return _attributes; } }
-        public override IModule WithAttributes(Attributes attributes)
-        {
-            return new FusedModule(_subModules, _shape, _downstreams, _upstreams, _materializedValueComputation, attributes, Info);
-        }
+        public override IModule WithAttributes(Attributes attributes) => new FusedModule(SubModules, Shape, Downstreams, Upstreams, MaterializedValueComputation, attributes, Info);
     }
 
     internal sealed class VirtualProcessor<T> : IProcessor<T, T>
@@ -852,9 +808,9 @@ namespace Akka.Streams.Implementation
             InitialAttributes = initialAttributes;
         }
 
-        private IDictionary<InPort, ISubscriber> Subscribers { get { return _subscribersStack.First.Value; } }
-        private IDictionary<OutPort, IPublisher> Publishers { get { return _publishersStack.First.Value; } }
-        private IModule CurrentLayout { get { return _moduleStack.First.Value; } }
+        private IDictionary<InPort, ISubscriber> Subscribers => _subscribersStack.First.Value;
+        private IDictionary<OutPort, IPublisher> Publishers => _publishersStack.First.Value;
+        private IModule CurrentLayout => _moduleStack.First.Value;
 
         ///<summary>
         /// Enters a copied module and establishes a scope that prevents internals to leak out and interfere with copies
