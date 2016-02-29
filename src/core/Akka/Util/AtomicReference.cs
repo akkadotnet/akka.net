@@ -67,7 +67,7 @@ namespace Akka.Util
         {
             return Interlocked.Exchange(ref atomicValue, newValue);
         }
-
+        
         #region Conversion operators
 
         /// <summary>

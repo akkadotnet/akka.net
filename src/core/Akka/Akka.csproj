@@ -273,6 +273,7 @@
     <Compile Include="Util\Internal\AtomicState.cs" />
     <Compile Include="Util\Internal\Collections\EnumeratorExtensions.cs" />
     <Compile Include="Util\Internal\Collections\Iterator.cs" />
+    <Compile Include="Util\Internal\DictionaryExtensions.cs" />
     <Compile Include="Util\Internal\ImmutabilityUtils.cs" />
     <Compile Include="Util\Internal\InterlockedSpin.cs" />
     <Compile Include="Util\Internal\Collections\EmptyReadOnlyCollections.cs" />
@@ -288,6 +289,7 @@
     <Compile Include="Util\Internal\TaskExtensions.cs" />
     <Compile Include="Util\ISurrogate.cs" />
     <Compile Include="Util\MonotonicClock.cs" />
+    <Compile Include="Util\Result.cs" />
     <Compile Include="Util\StandardOutWriter.cs" />
     <Compile Include="Event\Subscription.cs" />
     <Compile Include="Event\TraceLogger.cs" />
