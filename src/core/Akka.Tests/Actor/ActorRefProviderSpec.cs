@@ -15,7 +15,7 @@ namespace Akka.Tests.Actor
     public class ActorRefProviderSpec : AkkaSpec
     {
         [Fact]
-        public void CanResolveActorRef()
+        public void Can_resolve_ActorRef()
         {
             var path = TestActor.Path.ToString();
             var resolved = ((ActorSystemImpl)Sys).Provider.ResolveActorRef(path);

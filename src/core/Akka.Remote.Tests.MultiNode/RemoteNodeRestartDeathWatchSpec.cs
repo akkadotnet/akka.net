@@ -46,7 +46,7 @@ namespace Akka.Remote.Tests.MultiNode
 
 
         [MultiNodeFact]
-        public void MustReceiveTerminatedWhenRemoteActorSystemIsRestarted()
+        public void Must_receive_terminated_when_remote_actor_system_is_restarted()
         {
             
             RunOn(() =>

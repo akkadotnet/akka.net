@@ -20,7 +20,7 @@ namespace Akka.Tests.Dispatch
 	public class XUnitAsyncTestsSanityCheck : AkkaSpec
 	{
 		[Fact]
-		public async Task AsyncTestsShouldNotLoseAmbientContext()
+		public async Task Async_tests_should_not_lose_ambient_context()
 		{
 			var ambientContext = InternalCurrentActorCellKeeper.Current;
 			var backgroundOps = new List<Task>();

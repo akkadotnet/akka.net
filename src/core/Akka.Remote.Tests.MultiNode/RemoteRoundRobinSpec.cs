@@ -117,18 +117,18 @@ namespace Akka.Remote.Tests.MultiNode
         [MultiNodeFact]
         public void RemoteRoundRobinSpecs()
         {
-            ARemoteRoundRobinMustBeLocallyInstantiatedOnARemoteNodeAndBeAbleToCommunicateThroughItsRemoteActorRef();
+            A_remote_round_robin_must_be_locally_instantiated_on_a_remote_node_and_be_able_to_communicate_through_its_remote_actor_ref();
 
             /*
             Test is commented out until it is no longer flaky (issue1311 https://github.com/akkadotnet/akka.net/issues/1311).
             */
             //ARemoteRoundRobinPoolWithResizerMustBeLocallyInstantiatedOnARemoteNodeAfterSeveralResizeRounds();
 
-            ARemoteRoundRobinGroupMustSendMessagesWithActorSelectionToRemotePaths();
+            A_remote_round_robin_group_must_send_messages_with_actor_selection_to_remote_paths();
         }
 
         public void
-            ARemoteRoundRobinMustBeLocallyInstantiatedOnARemoteNodeAndBeAbleToCommunicateThroughItsRemoteActorRef()
+            A_remote_round_robin_must_be_locally_instantiated_on_a_remote_node_and_be_able_to_communicate_through_its_remote_actor_ref()
         {
             RunOn(() => { EnterBarrier("start", "broadcast-end", "end"); },
                 _config.First, _config.Second, _config.Third);
@@ -178,7 +178,7 @@ namespace Akka.Remote.Tests.MultiNode
             EnterBarrier("done");
         }
 
-        public void ARemoteRoundRobinPoolWithResizerMustBeLocallyInstantiatedOnARemoteNodeAfterSeveralResizeRounds()
+        public void A_remote_round_robin_pool_with_resizer_must_be_locally_instantiated_on_a_remote_node_after_several_resize_rounds()
         {
             Within(TimeSpan.FromSeconds(10), () =>
             {
@@ -233,7 +233,7 @@ namespace Akka.Remote.Tests.MultiNode
             });
         }
 
-        public void ARemoteRoundRobinGroupMustSendMessagesWithActorSelectionToRemotePaths()
+        public void A_remote_round_robin_group_must_send_messages_with_actor_selection_to_remote_paths()
         {
             RunOn(() =>
             {

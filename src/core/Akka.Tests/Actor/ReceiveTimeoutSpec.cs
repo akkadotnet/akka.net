@@ -71,7 +71,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact(DisplayName="An actor with receive timeout must get timeout")]
-        public void GetTimeout()
+        public void Get_timeout()
         {
             var timeoutLatch = new TestLatch();
             var timeoutActor = Sys.ActorOf(Props.Create(() => new TimeoutActor(timeoutLatch)));
@@ -82,7 +82,7 @@ namespace Akka.Tests.Actor
 
         //TODO: how does this prove that there was a reschedule?? see ReceiveTimeoutSpec.scala 
         [Fact(DisplayName = "An actor with receive timeout must reschedule timeout after regular receive")]
-        public void RescheduleTimeout()
+        public void Reschedule_timeout()
         {
             var timeoutLatch = new TestLatch();
             var timeoutActor = Sys.ActorOf(Props.Create(() => new TimeoutActor(timeoutLatch)));
@@ -92,7 +92,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact(DisplayName = "An actor with receive timeout must not receive timeout message when not specified")]
-        public void NotGetTimeout()
+        public void Not_get_timeout()
         {
             var timeoutLatch = new TestLatch();
             var timeoutActor = Sys.ActorOf(Props.Create(() => new NoTimeoutActor(timeoutLatch)));
