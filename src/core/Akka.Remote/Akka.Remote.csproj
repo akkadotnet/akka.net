@@ -91,6 +91,7 @@
     <Compile Include="Proto\Wireformats.cs" />
     <Compile Include="RemoteActorRef.cs" />
     <Compile Include="RemoteDeploymentWatcher.cs" />
+    <Compile Include="RemoteMetricsExtension.cs" />
     <Compile Include="RemoteSystemDaemon.cs" />
     <Compile Include="RemoteDeployer.cs" />
     <Compile Include="RemoteSettings.cs" />
