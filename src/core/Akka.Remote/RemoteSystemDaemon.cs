@@ -7,6 +7,7 @@
 
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internal;
@@ -14,7 +15,6 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Util;
 using Akka.Util.Internal;
-using Akka.Util.Internal.Collections;
 
 namespace Akka.Remote
 {
@@ -184,7 +184,7 @@ namespace Akka.Remote
                     {
                         _terminating.Locked(() =>
                         {
-                            IImmutableSet<IActorRef> children;
+                           IImmutableSet<IActorRef> children;
                             if (_parent2Children.TryRemove(parent,out children))
                             {
                                 foreach (var c in children)
@@ -303,7 +303,7 @@ namespace Akka.Remote
             const bool weDontHaveTailRecursion = true;
             while (weDontHaveTailRecursion)
             {
-                if (_parent2Children.TryAdd(parent, ImmutableTreeSet<IActorRef>.Create(child)))
+                if (_parent2Children.TryAdd(parent, ImmutableHashSet<IActorRef>.Empty.Add(child)))
                     return true; //child was successfully added
 
                 IImmutableSet<IActorRef> children;
