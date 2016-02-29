@@ -173,6 +173,15 @@ namespace Akka.TestKit
         /// </summary>
         public EventFilterFactory EventFilter { get { return _testState.EventFilterFactory; } }
 
+        /// <summary>
+        /// Creates a new event filter for the specified actor system.
+        /// </summary>
+        /// <param name="system">Actor system.</param>
+        /// <returns>A new instance of <see cref="EventFilterFactory"/>.</returns>
+        public EventFilterFactory CreateEventFilter(ActorSystem system)
+        {
+            return new EventFilterFactory(this, system);
+        }
 
         /// <summary>
         /// Returns <c>true</c> if messages are available.
