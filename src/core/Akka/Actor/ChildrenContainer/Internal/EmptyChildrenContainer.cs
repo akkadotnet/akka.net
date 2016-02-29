@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using Akka.Util.Internal.Collections;
 
 namespace Akka.Actor.Internal
@@ -15,7 +16,7 @@ namespace Akka.Actor.Internal
     /// </summary>
     public class EmptyChildrenContainer : IChildrenContainer
     {
-        private static readonly ImmutableTreeMap<string, IChildStats> _emptyStats = ImmutableTreeMap<string, IChildStats>.Empty;
+        private static readonly ImmutableDictionary<string, IChildStats> _emptyStats = ImmutableDictionary<string, IChildStats>.Empty;
         private static readonly IChildrenContainer _instance = new EmptyChildrenContainer();
 
         protected EmptyChildrenContainer()
@@ -53,9 +54,9 @@ namespace Akka.Actor.Internal
             return false;
         }
 
-        public IReadOnlyList<IInternalActorRef> Children { get { return EmptyReadOnlyCollections<IInternalActorRef>.List; } }
+        public IReadOnlyList<IInternalActorRef> Children { get { return ImmutableList<IInternalActorRef>.Empty; } }
 
-        public IReadOnlyList<ChildRestartStats> Stats { get { return EmptyReadOnlyCollections<ChildRestartStats>.List; } }
+        public IReadOnlyList<ChildRestartStats> Stats { get { return ImmutableList<ChildRestartStats>.Empty; } }
 
         public IChildrenContainer ShallDie(IActorRef actor)
         {
