@@ -222,7 +222,6 @@ Target "CopyOutput" <| fun _ ->
       "core/Akka.Persistence.TestKit"
       "contrib/loggers/Akka.Logger.slf4net"
       "contrib/loggers/Akka.Logger.CommonLogging"
-      "contrib/loggers/Akka.Logger.log4net" 
       "contrib/dependencyinjection/Akka.DI.Core"
       "contrib/dependencyinjection/Akka.DI.AutoFac"
       "contrib/dependencyinjection/Akka.DI.CastleWindsor"
