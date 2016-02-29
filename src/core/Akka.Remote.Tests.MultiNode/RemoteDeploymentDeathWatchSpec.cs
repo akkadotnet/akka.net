@@ -50,7 +50,7 @@ namespace Akka.Remote.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void AnActorSystemThatDeploysActorsOnAnotherNodeMustBeAbleToShutdownWhenRemoteNodeCrash()
+        public void An_actor_system_that_deploys_actors_on_another_node_must_be_able_to_shutdown_when_remote_node_crash()
         {
             RunOn(() =>
             {

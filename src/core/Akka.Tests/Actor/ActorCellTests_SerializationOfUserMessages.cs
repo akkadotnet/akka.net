@@ -28,7 +28,7 @@ namespace Akka.Tests.Actor
         }
 
        [Fact]
-       public void DoesNotSerializesUserMessages()
+       public void Does_not_serializes_user_messages()
        {
             var message = new SomeUserMessage
             {
@@ -61,7 +61,7 @@ namespace Akka.Tests.Actor
         }
        
         [Fact]
-        public void DoSerializeUserMessages()
+        public void Do_serialize_user_messages()
         {
             var message = new SomeUserMessage
             {

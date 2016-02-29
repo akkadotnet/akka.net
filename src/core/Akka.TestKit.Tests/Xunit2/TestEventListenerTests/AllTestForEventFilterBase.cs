@@ -38,7 +38,7 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         protected abstract void PublishMessage(object message, string source);
 
         [Fact]
-        public void SingleMessageIsIntercepted()
+        public void Single_message_is_intercepted()
         {
             EventFilter.ForLogLevel(LogLevel).ExpectOne(() => LogMessage("whatever"));
             TestSuccessful = true;
@@ -46,14 +46,14 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
 
 
         [Fact]
-        public void CanInterceptMessagesWhenStartIsSpecified()
+        public void Can_intercept_messages_when_start_is_specified()
         {
             EventFilter.ForLogLevel(LogLevel, start: "what").ExpectOne(() => LogMessage("whatever"));
             TestSuccessful = true;
         }
 
         [Fact]
-        public void DoNotInterceptMessagesWhenStartDoesNotMatch()
+        public void Do_not_intercept_messages_when_start_does_not_match()
         {
             EventFilter.ForLogLevel(LogLevel, start: "what").ExpectOne(() =>
             {
@@ -65,14 +65,14 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         }
 
         [Fact]
-        public void CanInterceptMessagesWhenMessageIsSpecified()
+        public void Can_intercept_messages_when_message_is_specified()
         {
             EventFilter.ForLogLevel(LogLevel, message: "whatever").ExpectOne(() => LogMessage("whatever"));
             TestSuccessful = true;
         }
 
         [Fact]
-        public void DoNotInterceptMessagesWhenMessageDoesNotMatch()
+        public void Do_not_intercept_messages_when_message_does_not_match()
         {
             EventFilter.ForLogLevel(LogLevel, message: "whatever").ExpectOne(() =>
             {
@@ -84,14 +84,14 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         }
 
         [Fact]
-        public void CanInterceptMessagesWhenContainsIsSpecified()
+        public void Can_intercept_messages_when_contains_is_specified()
         {
             EventFilter.ForLogLevel(LogLevel, contains: "ate").ExpectOne(() => LogMessage("whatever"));
             TestSuccessful = true;
         }
 
         [Fact]
-        public void DoNotInterceptMessagesWhenContainsDoesNotMatch()
+        public void Do_not_intercept_messages_when_contains_does_not_match()
         {
             EventFilter.ForLogLevel(LogLevel, contains: "eve").ExpectOne(() =>
             {
@@ -104,14 +104,14 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
 
 
         [Fact]
-        public void CanInterceptMessagesWhenSourceIsSpecified()
+        public void Can_intercept_messages_when_source_is_specified()
         {
             EventFilter.ForLogLevel(LogLevel, source: GetType().FullName).ExpectOne(() => LogMessage("whatever"));
             TestSuccessful = true;
         }
 
         [Fact]
-        public void DoNotInterceptMessagesWhenSourceDoesNotMatch()
+        public void Do_not_intercept_messages_when_source_does_not_match()
         {
             EventFilter.ForLogLevel(LogLevel, source: "expected-source").ExpectOne(() =>
             {
@@ -125,7 +125,7 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
 
 
         [Fact]
-        public void SpecifiedNumbersOfMessagesanBeIntercepted()
+        public void Specified_numbers_of_messagesan_be_intercepted()
         {
             EventFilter.ForLogLevel(LogLevel).Expect(2, () =>
             {
@@ -137,7 +137,7 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
 
 
         [Fact]
-        public void MessagesCanBeMuted()
+        public void Messages_can_be_muted()
         {
             EventFilter.ForLogLevel(LogLevel).Mute(() =>
             {
@@ -149,7 +149,7 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
 
 
         [Fact]
-        public void MessagesCanBeMutedFromNowOn()
+        public void Messages_can_be_muted_from_now_on()
         {
             var unmutableFilter = EventFilter.ForLogLevel(LogLevel).Mute();
             LogMessage("whatever");
@@ -159,7 +159,7 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         }
 
         [Fact]
-        public void MessagesCanBeMutedFromNowOnWithUsing()
+        public void Messages_can_be_muted_from_now_on_with_using()
         {
             using(EventFilter.ForLogLevel(LogLevel).Mute())
             {
@@ -171,7 +171,7 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
 
 
         [Fact]
-        public void MakeSureAsyncWorks()
+        public void Make_sure_async_works()
         {
             EventFilter.ForLogLevel(LogLevel).Expect(1, TimeSpan.FromMilliseconds(100), () =>
             {
@@ -180,7 +180,7 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         }
 
         [Fact]
-        public void ChainManyFilters()
+        public void Chain_many_filters()
         {
             EventFilter
                 .ForLogLevel(LogLevel,message:"Message 1").And
@@ -197,7 +197,7 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
 
 
         [Fact]
-        public void ShouldTimeoutIfTooFewMessages()
+        public void Should_timeout_if_too_few_messages()
         {
             var exception = XAssert.Throws<TrueException>(() =>
             {
@@ -210,7 +210,7 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         }
 
         [Fact]
-        public void ShouldLogWhenNotMuting()
+        public void Should_log_when_not_muting()
         {
             const string message = "This should end up in the log since it's not filtered";
             LogMessage(message);

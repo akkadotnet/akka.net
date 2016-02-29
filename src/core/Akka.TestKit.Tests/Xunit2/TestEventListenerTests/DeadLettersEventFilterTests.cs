@@ -30,7 +30,7 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         }
 
         [Fact]
-        public void ShouldBeAbleToFilterDeadLetters()
+        public void Should_be_able_to_filter_dead_letters()
         {
             EventFilter.DeadLetter().ExpectOne(() =>
             {

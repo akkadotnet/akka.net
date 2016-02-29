@@ -77,7 +77,7 @@ akka.cluster.publish-stats-interval = 25 s")
 
             [MultiNodeFact]
             public void
-                ALeaderThatIsLeavingMustBeMovedToLeavingThenExitingThenRemovedThenBeShutDownAndThenANewLeaderShouldBeElected
+                A_leader_that_is_leaving_must_be_moved_to_leaving_then_exiting_then_removed_then_be_shut_down_and_then_a_new_leader_should_be_elected
                 ()
             {
                 AwaitClusterUp(_config.First, _config.Second, _config.Third);

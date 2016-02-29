@@ -74,10 +74,10 @@ namespace Akka.Remote.Tests.MultiNode
                 () => Sys.ActorOf<NewRemoteActorMultiNodeSpecConfig.SomeActor>("service-hello"),
                 _config.Master);
 
-            RemotingMustLookupRemoteActor();
+            Remoting_must_lookup_remote_actor();
         }
 
-        public void RemotingMustLookupRemoteActor()
+        public void Remoting_must_lookup_remote_actor()
         {
             RunOn(
                 () =>

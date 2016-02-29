@@ -16,7 +16,7 @@ namespace Akka.Tests
     public class DeadLettersSpec : AkkaSpec
     {
         [Fact]
-        public void CanSendMessagesToDeadLetters()
+        public void Can_send_messages_to_dead_letters()
         {
             Sys.EventStream.Subscribe(TestActor, typeof(DeadLetter));
             Sys.DeadLetters.Tell("foobar");

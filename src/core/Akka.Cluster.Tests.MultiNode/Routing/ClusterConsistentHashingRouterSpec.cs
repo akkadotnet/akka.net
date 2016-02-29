@@ -130,24 +130,23 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         //[MultiNodeFact(Skip = "Race conditions - needs debugging")]
         public void ClusterConsistentHashingRouterSpecs()
         {
-            AClusterRouterWithConsistentHashingPoolMustStartClusterWith2Nodes();
-            AClusterRouterWithConsistentHashingPoolMustCreateRouteesFromConfiguration();
-            AClusterRouterWithConsistentHashingPoolMustSelectDestinationBasedOnHashKey();
-            AClusterRouterWithConsistentHashingPoolMustDeployRouteesToNewMemberNodesInTheCluster();
-            AClusterRouterWithConsistentHashingPoolMustDeployProgramaticallyDefinedRouteesToTheMemberNodesInTheCluster();
-            AClusterRouterWithConsistentHashingPoolMustHandleCombinationOfConfiguredRouterAndProgramaticallyDefinedHashMapping();
-            AClusterRouterWithConsistentHashingPoolMustHandleCombinationOfConfiguredRouterAndProgramaticallyDefinedHashMappingAndClusterConfig
-                ();
-            AClusterRouterWithConsistentHashingPoolMustRemoveRouteesFromDownedNode();
+            A_cluster_router_with_consistent_hashing_pool_must_start_cluster_with2_nodes();
+            A_cluster_router_with_consistent_hashing_pool_must_create_routees_from_configuration();
+            A_cluster_router_with_consistent_hashing_pool_must_select_destination_based_on_hash_key();
+            A_cluster_router_with_consistent_hashing_pool_must_deploy_routees_to_new_member_nodes_in_the_cluster();
+            A_cluster_router_with_consistent_hashing_pool_must_deploy_programatically_defined_routees_to_the_member_nodes_in_the_cluster();
+            A_cluster_router_with_consistent_hashing_pool_must_handle_combination_of_configured_router_and_programatically_defined_hash_mapping();
+            A_cluster_router_with_consistent_hashing_pool_must_handle_combination_of_configured_router_and_programatically_defined_hash_mapping_and_cluster_config();
+            A_cluster_router_with_consistent_hashing_pool_must_remove_routees_from_downed_node();
         }
 
-        protected void AClusterRouterWithConsistentHashingPoolMustStartClusterWith2Nodes()
+        protected void A_cluster_router_with_consistent_hashing_pool_must_start_cluster_with2_nodes()
         {
             AwaitClusterUp(_config.First, _config.Second);
             EnterBarrier("after-1");
         }
 
-        protected void AClusterRouterWithConsistentHashingPoolMustCreateRouteesFromConfiguration()
+        protected void A_cluster_router_with_consistent_hashing_pool_must_create_routees_from_configuration()
         {
             RunOn(() =>
             {
@@ -164,7 +163,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
             EnterBarrier("after-2");
         }
 
-        protected void AClusterRouterWithConsistentHashingPoolMustSelectDestinationBasedOnHashKey()
+        protected void A_cluster_router_with_consistent_hashing_pool_must_select_destination_based_on_hash_key()
         {
             RunOn(() =>
             {
@@ -177,7 +176,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
             EnterBarrier("after-3");
         }
 
-        protected void AClusterRouterWithConsistentHashingPoolMustDeployRouteesToNewMemberNodesInTheCluster()
+        protected void A_cluster_router_with_consistent_hashing_pool_must_deploy_routees_to_new_member_nodes_in_the_cluster()
         {
             AwaitClusterUp(_config.First, _config.Second, _config.Third);
 
@@ -197,7 +196,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         }
 
         protected void
-            AClusterRouterWithConsistentHashingPoolMustDeployProgramaticallyDefinedRouteesToTheMemberNodesInTheCluster()
+            A_cluster_router_with_consistent_hashing_pool_must_deploy_programatically_defined_routees_to_the_member_nodes_in_the_cluster()
         {
             RunOn(() =>
             {
@@ -222,7 +221,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         }
 
         protected void
-            AClusterRouterWithConsistentHashingPoolMustHandleCombinationOfConfiguredRouterAndProgramaticallyDefinedHashMapping()
+            A_cluster_router_with_consistent_hashing_pool_must_handle_combination_of_configured_router_and_programatically_defined_hash_mapping()
         {
             RunOn(() =>
             {
@@ -241,7 +240,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         }
 
         protected void
-            AClusterRouterWithConsistentHashingPoolMustHandleCombinationOfConfiguredRouterAndProgramaticallyDefinedHashMappingAndClusterConfig
+            A_cluster_router_with_consistent_hashing_pool_must_handle_combination_of_configured_router_and_programatically_defined_hash_mapping_and_cluster_config
             ()
         {
             RunOn(() =>
@@ -267,7 +266,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         /// <summary>
         /// An explicit check to ensure that our routers can adjust to unreachable member events as well
         /// </summary>
-        protected void AClusterRouterWithConsistentHashingPoolMustRemoveRouteesFromDownedNode()
+        protected void A_cluster_router_with_consistent_hashing_pool_must_remove_routees_from_downed_node()
         {
             RunOn(() =>
             {

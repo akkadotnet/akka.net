@@ -59,7 +59,7 @@ akka {
         }
 
         [Fact]
-        public void CanCreateActorUsingRemoteDaemonAndInteractWithChild()
+        public void Can_create_actor_using_remote_daemon_and_interact_with_child()
         {
             var p = CreateTestProbe();
             Sys.EventStream.Subscribe(p.Ref, typeof(string));
