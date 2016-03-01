@@ -142,13 +142,14 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                 TotalReceiveClosedConfirmations = Sinks.Count;
                 ReceivedSinkCloseConfirmations = 0;
 
+                var self = Self;
                 foreach (var sink in Sinks)
                 {
                     sink.RequestExitCode(Self);
                     sink.Close(Context.System)
                         .ContinueWith(r => new SinkClosed(),
                         TaskContinuationOptions.ExecuteSynchronously)
-                        .PipeTo(Self);
+                        .PipeTo(self);
                 }
             });
             Receive<string>(s =>
