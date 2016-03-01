@@ -15,7 +15,7 @@ namespace Akka.Persistence.Journal
 {
     public abstract class AsyncWriteJournal : WriteJournalBase, IAsyncRecovery
     {
-        private static readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent;
+        private static readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously;
         protected readonly bool CanPublish;
         private readonly PersistenceExtension _extension;
         private readonly IActorRef _resequencer;

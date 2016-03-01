@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 
@@ -29,25 +30,26 @@ namespace Akka.Persistence.Snapshot
 
         protected override bool Receive(object message)
         {
+            var self = Self;
+            var sender = Sender;
             if (message is LoadSnapshot)
             {
                 var msg = (LoadSnapshot)message;
-
                 LoadAsync(msg.PersistenceId, msg.Criteria.Limit(msg.ToSequenceNr))
                     .ContinueWith(t => !t.IsFaulted
                     ? new LoadSnapshotResult(t.Result, msg.ToSequenceNr)
-                    : new LoadSnapshotResult(null, msg.ToSequenceNr))
-                    .PipeTo(Sender);
+                    : new LoadSnapshotResult(null, msg.ToSequenceNr), TaskScheduler.Default)
+                    .PipeTo(sender);
             }
             else if (message is SaveSnapshot)
             {
                 var msg = (SaveSnapshot)message;
                 var metadata = new SnapshotMetadata(msg.Metadata.PersistenceId, msg.Metadata.SequenceNr, DateTime.UtcNow);
-
+                
                 SaveAsync(metadata, msg.Snapshot).ContinueWith(t => !t.IsFaulted
                         ? (object)new SaveSnapshotSuccess(metadata)
-                        : new SaveSnapshotFailure(msg.Metadata, t.Exception))
-                        .PipeTo(Self, Sender);
+                        : new SaveSnapshotFailure(msg.Metadata, t.Exception), TaskScheduler.Default)
+                        .PipeTo(self, sender);
 
             }
             else if (message is SaveSnapshotSuccess)
@@ -60,8 +62,8 @@ namespace Akka.Persistence.Snapshot
             {
                 var msg = (SaveSnapshotFailure)message;
                 DeleteAsync(msg.Metadata)
-                    .ContinueWith(t => msg)
-                    .PipeTo(Sender);        // Sender is PersistentActor
+                    .ContinueWith(t => msg, TaskScheduler.Default)
+                    .PipeTo(sender);        // Sender is PersistentActor
             }
             else if (message is DeleteSnapshot)
             {
@@ -71,7 +73,9 @@ namespace Akka.Persistence.Snapshot
                 {
                     if (_publish) eventStream.Publish(message);
                 },
-                TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously, 
+                TaskScheduler.Default);
 
             }
             else if (message is DeleteSnapshots)
@@ -82,7 +86,9 @@ namespace Akka.Persistence.Snapshot
                 {
                     if (_publish) eventStream.Publish(message);
                 },
-                TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
 
             }
             else return false;

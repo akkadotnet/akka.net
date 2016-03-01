@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Persistence.Journal;
@@ -48,7 +49,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             var queryId = query.QueryId;
             var sender = Context.Sender;
-            DbEngine.ReadEvents(queryId, query.Hints, Context.Sender, reply =>
+            DbEngine.ReadEvents(queryId, query.Hints, sender, reply =>
             {
                 foreach (var adapted in AdaptFromJournal(reply))
                 {
@@ -56,9 +57,11 @@ namespace Akka.Persistence.Sql.Common.Journal
                 }
             })
             .ContinueWith(task => 
-                task.IsFaulted || task.IsCanceled ? (IQueryReply)new QueryFailure(queryId, task.Exception) : new QuerySuccess(queryId), 
-                TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent)
-            .PipeTo(Context.Sender);
+                task.IsFaulted || task.IsCanceled ? (IQueryReply)new QueryFailure(queryId, task.Exception) : new QuerySuccess(queryId),
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default)
+            .PipeTo(sender);
         }
 
         public override Task ReplayMessagesAsync(string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> replayCallback)

@@ -85,6 +85,7 @@ A special thanks to all of our contributors for making this happen!
 | 1 | 182 | 0 | derwasp |
 | 1 | 179 | 0 | Onat Yiğit Mercan |
 
+
 #### 1.0.5 December 3 2015 ####
 **Maintenance release for Akka.NET v1.0.4**
 This release is a collection of bug fixes, performance enhancements, and general improvements contributed by 29 individual contributors.

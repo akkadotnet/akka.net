@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -63,8 +64,10 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
             //Signal that the test run has ended
             return await MessageSinkActorRef.Ask<MessageSinkActor.SinkCanBeTerminated>(new EndTestRun())
-                .ContinueWith(tr => MessageSinkActorRef.GracefulStop(TimeSpan.FromSeconds(2)), 
-                TaskContinuationOptions.ExecuteSynchronously).Unwrap();
+                .ContinueWith(tr => MessageSinkActorRef.GracefulStop(TimeSpan.FromSeconds(2)),
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default).Unwrap();
         }
 
         #endregion
