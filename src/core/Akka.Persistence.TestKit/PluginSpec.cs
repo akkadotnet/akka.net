@@ -18,6 +18,7 @@ namespace Akka.Persistence.TestKit
         private static readonly AtomicCounter Counter = new AtomicCounter(0);
         private readonly PersistenceExtension _extension;
         private string _pid;
+        private string _writerGuid;
 
         protected int ActorInstanceId = 1;
 
@@ -26,6 +27,7 @@ namespace Akka.Persistence.TestKit
         {
             _extension = Persistence.Instance.Apply(Sys as ExtendedActorSystem);
             _pid = "p-" + Counter.IncrementAndGet();
+            _writerGuid = Guid.NewGuid().ToString();
         }
 
         protected static Config FromConfig(Config config = null)
@@ -35,8 +37,9 @@ namespace Akka.Persistence.TestKit
                 : config.WithFallback(Persistence.DefaultConfig());
         }
 
-        public string Pid { get { return _pid; } }
         public PersistenceExtension Extension { get { return _extension; } }
+        public string Pid { get { return _pid; } }
+        public string WriterGuid { get { return _writerGuid; } }
 
         public void Subscribe<T>(IActorRef subscriber)
         {

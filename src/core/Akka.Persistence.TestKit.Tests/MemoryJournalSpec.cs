@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Akka.Persistence.Journal;
 using Akka.Persistence.TestKit.Journal;
 using Xunit.Abstractions;
 
@@ -13,9 +14,11 @@ namespace Akka.Persistence.TestKit.Tests
     public class MemoryJournalSpec : JournalSpec
     {
         public MemoryJournalSpec(ITestOutputHelper output)
-            : base(actorSystemName: "MemoryJournalSpec", output: output)
+            : base(typeof(MemoryJournal), "MemoryJournalSpec", output)
         {
             Initialize();
         }
+
+        protected override bool SupportsRejectingNonSerializableObjects { get { return false; } }
     }
 }

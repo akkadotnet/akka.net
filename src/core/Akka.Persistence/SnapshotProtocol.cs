@@ -1,5 +1,5 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="Snapshot.cs" company="Akka.NET Project">
+// <copyright file="SnapshotProtocol.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -11,21 +11,44 @@ using Newtonsoft.Json;
 
 namespace Akka.Persistence
 {
+    /// <summary>
+    /// Marker interface for internal snapshot messages
+    /// </summary>
+    public interface ISnapshotMessage : IPersistenceMessage { }
+
+    /// <summary>
+    /// Internal snapshot command
+    /// </summary>
+    public interface ISnapshotRequest : ISnapshotMessage { }
+
+    /// <summary>
+    /// Internal snapshot acknowledgement
+    /// </summary>
+    public interface ISnapshotResponse : ISnapshotMessage { }
+
     [Serializable]
     public sealed class SnapshotMetadata : IEquatable<SnapshotMetadata>
     {
-        internal class SnapshotMetadataTimestampComparer : IComparer<SnapshotMetadata>
+        internal class SnapshotMetadataComparer : IComparer<SnapshotMetadata>
         {
             public int Compare(SnapshotMetadata x, SnapshotMetadata y)
             {
-                return x.Timestamp.CompareTo(y.Timestamp);
+                var compare = string.Compare(x.PersistenceId, y.PersistenceId, StringComparison.Ordinal);
+                if (compare == 0)
+                {
+                    compare = Math.Sign(x.SequenceNr - y.SequenceNr);
+                    if (compare == 0)
+                        compare = x.Timestamp.CompareTo(y.Timestamp);
+                }
+                return compare;
             }
         }
 
-        public static readonly IComparer<SnapshotMetadata> TimestampComparer = new SnapshotMetadataTimestampComparer();
+        public static readonly IComparer<SnapshotMetadata> Comparer = new SnapshotMetadataComparer();
+        public static DateTime TimestampNotSpecified = DateTime.MinValue;
 
         public SnapshotMetadata(string persistenceId, long sequenceNr)
-            : this(persistenceId, sequenceNr, DateTime.MinValue)
+            : this(persistenceId, sequenceNr, TimestampNotSpecified)
         {
         }
 
@@ -86,7 +109,7 @@ namespace Akka.Persistence
     /// Sent to <see cref="PersistentActor"/> after successful saving of a snapshot.
     /// </summary>
     [Serializable]
-    public sealed class SaveSnapshotSuccess : IEquatable<SaveSnapshotSuccess>
+    public sealed class SaveSnapshotSuccess : ISnapshotResponse, IEquatable<SaveSnapshotSuccess>
     {
         public SaveSnapshotSuccess(SnapshotMetadata metadata)
         {
@@ -120,10 +143,84 @@ namespace Akka.Persistence
     }
 
     /// <summary>
+    /// Sent to <see cref="PersistentActor"/> after successful deletion of a snapshot.
+    /// </summary>
+    [Serializable]
+    public sealed class DeleteSnapshotSuccess : ISnapshotResponse, IEquatable<DeleteSnapshotSuccess>
+    {
+        public DeleteSnapshotSuccess(SnapshotMetadata metadata)
+        {
+            Metadata = metadata;
+        }
+
+        public readonly SnapshotMetadata Metadata;
+        
+        public bool Equals(DeleteSnapshotSuccess other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(Metadata, other.Metadata);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as DeleteSnapshotSuccess);
+        }
+
+        public override int GetHashCode()
+        {
+            return (Metadata != null ? Metadata.GetHashCode() : 0);
+        }
+
+        public override string ToString()
+        {
+            return string.Format("DeleteSnapshotSuccess<{0}>", Metadata);
+        }
+    }
+
+    /// <summary>
+    /// Sent to <see cref="PersistentActor"/> after successful deletion of a specified range of snapshots.
+    /// </summary>
+    [Serializable]
+    public sealed class DeleteSnapshotsSuccess : ISnapshotResponse, IEquatable<DeleteSnapshotsSuccess>
+    {
+        public DeleteSnapshotsSuccess(SnapshotSelectionCriteria criteria)
+        {
+            Criteria = criteria;
+        }
+
+        public readonly SnapshotSelectionCriteria Criteria;
+        
+        public bool Equals(DeleteSnapshotsSuccess other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(Criteria, other.Criteria);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as DeleteSnapshotsSuccess);
+        }
+
+        public override int GetHashCode()
+        {
+            return (Criteria != null ? Criteria.GetHashCode() : 0);
+        }
+
+        public override string ToString()
+        {
+            return string.Format("DeleteSnapshotsSuccess<{0}>", Criteria);
+        }
+    }
+
+    /// <summary>
     /// Sent to <see cref="PersistentActor"/> after failed saving a snapshot.
     /// </summary>
     [Serializable]
-    public sealed class SaveSnapshotFailure : IEquatable<SaveSnapshotFailure>
+    public sealed class SaveSnapshotFailure : ISnapshotResponse, IEquatable<SaveSnapshotFailure>
     {
         public SaveSnapshotFailure(SnapshotMetadata metadata, Exception cause)
         {
@@ -165,6 +262,104 @@ namespace Akka.Persistence
         public override string ToString()
         {
             return string.Format("SaveSnapshotFailure<meta: {0}, cause: {1}>", Metadata, Cause);
+        }
+    }
+
+    /// <summary>
+    /// Sent to <see cref="PersistentActor"/> after failed deletion of a snapshot.
+    /// </summary>
+    [Serializable]
+    public sealed class DeleteSnapshotFailure : ISnapshotResponse, IEquatable<DeleteSnapshotFailure>
+    {
+        public DeleteSnapshotFailure(SnapshotMetadata metadata, Exception cause)
+        {
+            Metadata = metadata;
+            Cause = cause;
+        }
+
+        /// <summary>
+        /// Snapshot metadata.
+        /// </summary>
+        public readonly SnapshotMetadata Metadata;
+
+        /// <summary>
+        /// A failure cause.
+        /// </summary>
+        public readonly Exception Cause;
+
+        public bool Equals(DeleteSnapshotFailure other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(Cause, other.Cause) && Equals(Metadata, other.Metadata);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as DeleteSnapshotFailure);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((Metadata != null ? Metadata.GetHashCode() : 0) * 397) ^ (Cause != null ? Cause.GetHashCode() : 0);
+            }
+        }
+
+        public override string ToString()
+        {
+            return string.Format("DeleteSnapshotFailure<meta: {0}, cause: {1}>", Metadata, Cause);
+        }
+    }
+
+    /// <summary>
+    /// Sent to <see cref="PersistentActor"/> after failed deletion of a range of snapshots.
+    /// </summary>
+    [Serializable]
+    public sealed class DeleteSnapshotsFailure : ISnapshotResponse, IEquatable<DeleteSnapshotsFailure>
+    {
+        public DeleteSnapshotsFailure(SnapshotSelectionCriteria criteria, Exception cause)
+        {
+            Criteria = criteria;
+            Cause = cause;
+        }
+
+        /// <summary>
+        /// Snapshot metadata.
+        /// </summary>
+        public readonly SnapshotSelectionCriteria Criteria;
+
+        /// <summary>
+        /// A failure cause.
+        /// </summary>
+        public readonly Exception Cause;
+
+        public bool Equals(DeleteSnapshotsFailure other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(Cause, other.Cause) && Equals(Criteria, other.Criteria);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as DeleteSnapshotsFailure);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((Criteria != null ? Criteria.GetHashCode() : 0) * 397) ^ (Cause != null ? Cause.GetHashCode() : 0);
+            }
+        }
+
+        public override string ToString()
+        {
+            return string.Format("DeleteSnapshotsFailure<criteria: {0}, cause: {1}>", Criteria, Cause);
         }
     }
 
@@ -329,7 +524,7 @@ namespace Akka.Persistence
     /// Instructs a snapshot store to load the snapshot.
     /// </summary>
     [Serializable]
-    public sealed class LoadSnapshot: IEquatable<LoadSnapshot>
+    public sealed class LoadSnapshot: ISnapshotRequest, IEquatable<LoadSnapshot>
     {
         public LoadSnapshot(string persistenceId, SnapshotSelectionCriteria criteria, long toSequenceNr)
         {
@@ -389,7 +584,7 @@ namespace Akka.Persistence
     /// Response to a <see cref="LoadSnapshot"/> message.
     /// </summary>
     [Serializable]
-    public sealed class LoadSnapshotResult : IEquatable<LoadSnapshotResult>
+    public sealed class LoadSnapshotResult : ISnapshotResponse, IEquatable<LoadSnapshotResult>
     {
         public LoadSnapshotResult(SelectedSnapshot snapshot, long toSequenceNr)
         {
@@ -435,7 +630,7 @@ namespace Akka.Persistence
     /// Instructs a snapshot store to save a snapshot.
     /// </summary>
     [Serializable]
-    public sealed class SaveSnapshot : IEquatable<SaveSnapshot>
+    public sealed class SaveSnapshot : ISnapshotRequest, IEquatable<SaveSnapshot>
     {
         public SaveSnapshot(SnapshotMetadata metadata, object snapshot)
         {
@@ -480,7 +675,7 @@ namespace Akka.Persistence
     /// Instructs a snapshot store to delete a snapshot.
     /// </summary>
     [Serializable]
-    public sealed class DeleteSnapshot : IEquatable<DeleteSnapshot>
+    public sealed class DeleteSnapshot : ISnapshotRequest, IEquatable<DeleteSnapshot>
     {
         public DeleteSnapshot(SnapshotMetadata metadata)
         {
@@ -520,7 +715,7 @@ namespace Akka.Persistence
     /// Instructs a snapshot store to delete all snapshots that match provided criteria.
     /// </summary>
     [Serializable]
-    public sealed class DeleteSnapshots : IEquatable<DeleteSnapshots>
+    public sealed class DeleteSnapshots : ISnapshotRequest, IEquatable<DeleteSnapshots>
     {
         public DeleteSnapshots(string persistenceId, SnapshotSelectionCriteria criteria)
         {

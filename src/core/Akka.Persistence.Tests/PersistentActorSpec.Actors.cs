@@ -29,10 +29,32 @@ namespace Akka.Persistence.Tests
             if (message is Cmd)
             {
                 var cmd = message as Cmd;
-                Persist(new[] { new Evt(cmd.Data + "-1"), new Evt(cmd.Data + "-2") }, UpdateStateHandler);
-                return true;
+                PersistAll(new[] { new Evt(cmd.Data + "-1"), new Evt(cmd.Data + "-2") }, UpdateStateHandler);
             }
-            return false;
+            else if (message is DeleteMessagesSuccess)
+            {
+                if (AskedForDelete == null)
+                    throw new ApplicationException("Received DeleteMessagesSuccess without anyone asking for delete!");
+                AskedForDelete.Tell(message);
+            }
+            else return false;
+            return true;
+        }
+
+        protected override void OnPersistRejected(Exception cause, object @event, long sequenceNr)
+        {
+            if (@event is Evt)
+                Sender.Tell("Rejected: " + ((Evt)@event).Data);
+            else
+                base.OnPersistRejected(cause, @event, sequenceNr);
+        }
+
+        protected override void OnPersistFailure(Exception cause, object @event, long sequenceNr)
+        {
+            if (@event is Evt)
+                Sender.Tell("Failure: " + ((Evt)@event).Data);
+            else
+                base.OnPersistFailure(cause, @event, sequenceNr);
         }
     }
     internal class Cmd
@@ -81,9 +103,26 @@ namespace Akka.Persistence.Tests
             public object Data { get; private set; }
         }
 
+        internal class Delete
+        {
+            public Delete(long toSequenceNr)
+            {
+                ToSequenceNr = toSequenceNr;
+            }
+
+            public long ToSequenceNr { get; private set; }
+
+            public override string ToString()
+            {
+                return "Delete(" + ToSequenceNr + ")";
+            }
+        }
+
+
         internal abstract class ExamplePersistentActor : NamedPersistentActor
         {
             protected LinkedList<object> Events = new LinkedList<object>();
+            protected IActorRef AskedForDelete;
 
             protected readonly Action<object> UpdateStateHandler;
 
@@ -101,18 +140,23 @@ namespace Akka.Persistence.Tests
             protected bool UpdateState(object message)
             {
                 if (message is Evt)
-                {
                     Events.AddFirst((message as Evt).Data);
-                    return true;
-                }
-
-                return false;
+                else if (message is IActorRef)
+                    AskedForDelete = (IActorRef) message;
+                else
+                    return false;
+                return true;
             }
 
             protected bool CommonBehavior(object message)
             {
                 if (message is GetState) Sender.Tell(Events.Reverse().ToArray());
                 else if (message.ToString() == "boom") throw new TestException("boom");
+                else if (message is Delete)
+                {
+                    Persist(Sender, s => AskedForDelete = s);
+                    DeleteMessages(((Delete)message).ToSequenceNr);
+                }
                 else return false;
                 return true;
             }
@@ -133,8 +177,8 @@ namespace Akka.Persistence.Tests
                 if (message is Cmd)
                 {
                     var cmd = message as Cmd;
-                    Persist(new[] { new Evt(cmd.Data + "-1"), new Evt(cmd.Data + "-2") }, UpdateStateHandler);
-                    Persist(new[] { new Evt(cmd.Data + "-3"), new Evt(cmd.Data + "-4") }, UpdateStateHandler);
+                    PersistAll(new[] { new Evt(cmd.Data + "-1"), new Evt(cmd.Data + "-2") }, UpdateStateHandler);
+                    PersistAll(new[] { new Evt(cmd.Data + "-3"), new Evt(cmd.Data + "-4") }, UpdateStateHandler);
                     return true;
                 }
                 return false;
@@ -154,7 +198,7 @@ namespace Akka.Persistence.Tests
                 if (message is Cmd)
                 {
                     var cmd = message as Cmd;
-                    Persist(new[] { new Evt(cmd.Data + "-11"), new Evt(cmd.Data + "-12") }, UpdateStateHandler);
+                    PersistAll(new[] { new Evt(cmd.Data + "-11"), new Evt(cmd.Data + "-12") }, UpdateStateHandler);
                     UpdateState(new Evt(cmd.Data + "-10"));
                     return true;
                 }
@@ -263,7 +307,7 @@ namespace Akka.Persistence.Tests
                 {
                     var cmd = message as Cmd;
                     Context.UnbecomeStacked();
-                    Persist(new[] { new Evt(cmd.Data + "-31"), new Evt(cmd.Data + "-32") }, UpdateStateHandler);
+                    PersistAll(new[] { new Evt(cmd.Data + "-31"), new Evt(cmd.Data + "-32") }, UpdateStateHandler);
                     UpdateState(new Evt(cmd.Data + "-30"));
                     return true;
                 }
@@ -294,7 +338,7 @@ namespace Akka.Persistence.Tests
                 if (message is Cmd)
                 {
                     var cmd = message as Cmd;
-                    Persist(new[] { new Evt(cmd.Data + "-31"), new Evt(cmd.Data + "-32") }, UpdateStateHandler);
+                    PersistAll(new[] { new Evt(cmd.Data + "-31"), new Evt(cmd.Data + "-32") }, UpdateStateHandler);
                     UpdateState(new Evt(cmd.Data + "-30"));
                     Context.UnbecomeStacked();
                     return true;
@@ -338,7 +382,7 @@ namespace Akka.Persistence.Tests
 
             private void HandleCmd(Cmd cmd)
             {
-                Persist(new[] { new Evt(cmd.Data + "-41"), new Evt(cmd.Data + "-42") }, UpdateStateHandler);
+                PersistAll(new[] { new Evt(cmd.Data + "-41"), new Evt(cmd.Data + "-42") }, UpdateStateHandler);
             }
         }
 
@@ -387,91 +431,6 @@ namespace Akka.Persistence.Tests
             }
         }
 
-        internal class UserStashActor : ExamplePersistentActor
-        {
-            private bool _stashed = false;
-            public UserStashActor(string name) : base(name) { }
-
-            protected override bool ReceiveCommand(object message)
-            {
-                if (message is Cmd)
-                {
-                    var cmd = message as Cmd;
-                    if (cmd.Data.ToString() == "a")
-                    {
-                        if (!_stashed)
-                        {
-                            Stash.Stash();
-                            _stashed = true;
-                        }
-                        else Sender.Tell("a");
-
-                    }
-                    else if (cmd.Data.ToString() == "b") Persist(new Evt("b"), evt => Sender.Tell(evt.Data));
-                    else if (cmd.Data.ToString() == "c")
-                    {
-                        Stash.UnstashAll();
-                        Sender.Tell("c");
-                    }
-                    else return false;
-                }
-                else return false;
-                return true;
-            }
-        }
-
-        internal class UserStashManyActor : ExamplePersistentActor
-        {
-            public UserStashManyActor(string name)
-                : base(name)
-            {
-            }
-
-            protected override bool ReceiveCommand(object message)
-            {
-                if (!CommonBehavior(message))
-                {
-                    var cmd = message as Cmd;
-                    if (cmd != null)
-                    {
-                        var data = cmd.Data.ToString();
-                        if (data == "a")
-                        {
-                            Persist(new Evt("a"), evt =>
-                            {
-                                UpdateState(evt);
-                                Context.Become(ProcessC);
-                            });
-                        }
-                        else if (data == "b-1" || data == "b-2")
-                        {
-                            Persist(new Evt(cmd.Data.ToString()), UpdateStateHandler);
-                        }
-
-                        return true;
-                    }
-                }
-                else return true;
-                return false;
-            }
-
-            protected bool ProcessC(object message)
-            {
-                var cmd = message as Cmd;
-                if (cmd != null && cmd.Data.ToString() == "c")
-                {
-                    Persist(new Evt("c"), evt =>
-                    {
-                        UpdateState(evt);
-                        Context.UnbecomeStacked();
-                    });
-                    UnstashAll();
-                }
-                else Stash.Stash();
-                return true;
-            }
-        }
-
         internal class AsyncPersistActor : ExamplePersistentActor
         {
             private int _counter = 0;
@@ -498,6 +457,14 @@ namespace Akka.Persistence.Tests
                 }
                 else return true;
                 return false;
+            }
+
+            protected override void OnPersistFailure(Exception cause, object @event, long sequenceNr)
+            {
+                if (@event is Evt)
+                    Sender.Tell(string.Format("Failure: {0}", ((Evt)@event).Data));
+                else
+                    base.OnPersistFailure(cause, @event, sequenceNr);
             }
         }
 
@@ -558,6 +525,45 @@ namespace Akka.Persistence.Tests
                         });
 
                         PersistAsync(@event, evt => Sender.Tell(evt.Data.ToString() + "-b-" + _sendMessageCounter.IncrementAndGet()));
+
+                        return true;
+                    }
+                }
+                else return true;
+                return false;
+            }
+        }
+
+        internal class PersistAllNullActor : ExamplePersistentActor
+        {
+            public PersistAllNullActor(string name)
+                : base(name)
+            {
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (!CommonBehavior(message))
+                {
+                    var cmd = message as Cmd;
+                    if (cmd != null)
+                    {
+                        var data = (string)cmd.Data;
+                        if (data.Contains("defer"))
+                        {
+                            DeferAsync("before-nil", evt => Sender.Tell(evt));
+                            PersistAll<object>(null, evt => Sender.Tell("Null"));
+                            DeferAsync("after-nil", evt => Sender.Tell(evt));
+                            Sender.Tell(data);
+                        }
+                        else if (data.Contains("persist"))
+                        {
+                            Persist("before-nil", evt => Sender.Tell(evt));
+                            PersistAll<object>(null, evt => Sender.Tell("Null"));
+                            DeferAsync("after-nil", evt => Sender.Tell(evt));
+                            Sender.Tell(data);
+                            return true;
+                        }
 
                         return true;
                     }
@@ -654,57 +660,9 @@ namespace Akka.Persistence.Tests
             }
         }
 
-        internal class UserStashFailureActor : ExamplePersistentActor
+        internal class ValueTypeEventPersistentActor : ExamplePersistentActor
         {
-            public UserStashFailureActor(string name)
-                : base(name)
-            {
-            }
-
-            protected override bool ReceiveCommand(object message)
-            {
-                if (!CommonBehavior(message))
-                {
-                    var cmd = message as Cmd;
-                    if (cmd != null)
-                    {
-                        if (cmd.Data.ToString() == "b-2") throw new TestException("boom");
-
-                        Persist(new Evt(cmd.Data), evt =>
-                        {
-                            UpdateState(evt);
-                            if (cmd.Data.ToString() == "a") Context.Become(OtherCommandHandler);
-                        });
-
-                        return true;
-                    }
-                }
-                else return true;
-                return false;
-            }
-
-            protected bool OtherCommandHandler(object message)
-            {
-                var cmd = message as Cmd;
-                if (cmd != null && cmd.Data.ToString() == "c")
-                {
-                    //FIXME: after persisting Evt(c) messages are unstashed onto actor cell mailbox,
-                    // but then actor becomes terminated and messages land inside death letters
-                    Persist(new Evt("c"), evt =>
-                    {
-                        UpdateState(evt);
-                        Context.UnbecomeStacked();
-                    });
-                    UnstashAll();
-                }
-                else Stash.Stash();
-                return true;
-            }
-        }
-
-        internal class IntEventPersistentActor : ExamplePersistentActor
-        {
-            public IntEventPersistentActor(string name)
+            public ValueTypeEventPersistentActor(string name)
                 : base(name)
             {
             }
@@ -774,10 +732,10 @@ namespace Akka.Persistence.Tests
                 var cmd = message as Cmd;
                 if (cmd != null)
                 {
-                    Defer("d-1", Sender.Tell);
+                    DeferAsync("d-1", Sender.Tell);
                     Persist(cmd.Data + "-2", Sender.Tell);
-                    Defer("d-3", Sender.Tell);
-                    Defer("d-4", Sender.Tell);
+                    DeferAsync("d-3", Sender.Tell);
+                    DeferAsync("d-4", Sender.Tell);
 
                     return true;
                 }
@@ -797,10 +755,10 @@ namespace Akka.Persistence.Tests
                 var cmd = message as Cmd;
                 if (cmd != null)
                 {
-                    Defer("d-" + cmd.Data + "-1", Sender.Tell);
+                    DeferAsync("d-" + cmd.Data + "-1", Sender.Tell);
                     PersistAsync("pa-" + cmd.Data + "-2", Sender.Tell);
-                    Defer("d-" + cmd.Data + "-3", Sender.Tell);
-                    Defer("d-" + cmd.Data + "-4", Sender.Tell);
+                    DeferAsync("d-" + cmd.Data + "-3", Sender.Tell);
+                    DeferAsync("d-" + cmd.Data + "-4", Sender.Tell);
 
                     return true;
                 }
@@ -822,10 +780,10 @@ namespace Akka.Persistence.Tests
                 {
                     Persist("p-" + cmd.Data + "-1", Sender.Tell);
                     PersistAsync("pa-" + cmd.Data + "-2", Sender.Tell);
-                    Defer("d-" + cmd.Data + "-3", Sender.Tell);
-                    Defer("d-" + cmd.Data + "-4", Sender.Tell);
+                    DeferAsync("d-" + cmd.Data + "-3", Sender.Tell);
+                    DeferAsync("d-" + cmd.Data + "-4", Sender.Tell);
                     PersistAsync("pa-" + cmd.Data + "-5", Sender.Tell);
-                    Defer("d-" + cmd.Data + "-6", Sender.Tell);
+                    DeferAsync("d-" + cmd.Data + "-6", Sender.Tell);
 
                     return true;
                 }
@@ -845,9 +803,9 @@ namespace Akka.Persistence.Tests
                 var cmd = message as Cmd;
                 if (cmd != null)
                 {
-                    Defer("d-1", Sender.Tell);
-                    Defer("d-2", Sender.Tell);
-                    Defer("d-3", Sender.Tell);
+                    DeferAsync("d-1", Sender.Tell);
+                    DeferAsync("d-2", Sender.Tell);
+                    DeferAsync("d-3", Sender.Tell);
 
                     return true;
                 }
@@ -881,6 +839,259 @@ namespace Akka.Persistence.Tests
                     Sender.Tell(message.ToString());
                 else return false;
                 return true;
+            }
+        }
+
+        internal class MultipleAndNestedPersists : ExamplePersistentActor
+        {
+            private readonly IActorRef _probe;
+
+            public MultipleAndNestedPersists(string name, IActorRef probe)
+                : base(name)
+            {
+                _probe = probe;
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (message is string)
+                {
+                    var s = (string) message;
+                    _probe.Tell(s);
+                    Persist(s + "-outer-1", outer =>
+                    {
+                        _probe.Tell(outer);
+                        Persist(s + "-inner-1", inner => _probe.Tell(inner));
+                    });
+                    Persist(s + "-outer-2", outer =>
+                    {
+                        _probe.Tell(outer);
+                        Persist(s + "-inner-2", inner => _probe.Tell(inner));
+                    });
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        internal class MultipleAndNestedPersistAsyncs : ExamplePersistentActor
+        {
+            private readonly IActorRef _probe;
+
+            public MultipleAndNestedPersistAsyncs(string name, IActorRef probe)
+                : base(name)
+            {
+                _probe = probe;
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (message is string)
+                {
+                    var s = (string) message;
+                    _probe.Tell(s);
+                    PersistAsync(s + "-outer-1", outer =>
+                    {
+                        _probe.Tell(outer);
+                        PersistAsync(s + "-inner-1", inner => _probe.Tell(inner));
+                    });
+                    PersistAsync(s + "-outer-2", outer =>
+                    {
+                        _probe.Tell(outer);
+                        PersistAsync(s + "-inner-2", inner => _probe.Tell(inner));
+                    });
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        internal class NestedPersistNormalAndAsyncs : ExamplePersistentActor
+        {
+            private readonly IActorRef _probe;
+
+            public NestedPersistNormalAndAsyncs(string name, IActorRef probe)
+                : base(name)
+            {
+                _probe = probe;
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (message is string)
+                {
+                    var s = (string) message;
+                    _probe.Tell(s);
+                    Persist(s + "-outer-1", outer =>
+                    {
+                        _probe.Tell(outer);
+                        PersistAsync(s + "-inner-async-1", inner => _probe.Tell(inner));
+                    });
+                    Persist(s + "-outer-2", outer =>
+                    {
+                        _probe.Tell(outer);
+                        PersistAsync(s + "-inner-async-2", inner => _probe.Tell(inner));
+                    });
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        internal class NestedPersistAsyncsAndNormal : ExamplePersistentActor
+        {
+            private readonly IActorRef _probe;
+
+            public NestedPersistAsyncsAndNormal(string name, IActorRef probe)
+                : base(name)
+            {
+                _probe = probe;
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (message is string)
+                {
+                    var s = (string) message;
+                    _probe.Tell(s);
+                    PersistAsync(s + "-outer-async-1", outer =>
+                    {
+                        _probe.Tell(outer);
+                        Persist(s + "-inner-1", inner => _probe.Tell(inner));
+                    });
+                    PersistAsync(s + "-outer-async-2", outer =>
+                    {
+                        _probe.Tell(outer);
+                        Persist(s + "-inner-2", inner => _probe.Tell(inner));
+                    });
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        internal class NestedPersistInAsyncEnforcesStashing : ExamplePersistentActor
+        {
+            private readonly IActorRef _probe;
+
+            public NestedPersistInAsyncEnforcesStashing(string name, IActorRef probe)
+                : base(name)
+            {
+                _probe = probe;
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (message is string)
+                {
+                    var s = (string) message;
+                    _probe.Tell(s);
+                    PersistAsync(s + "-outer-async", outer =>
+                    {
+                        _probe.Tell(outer);
+                        Persist(s + "-inner", inner =>
+                        {
+                            _probe.Tell(inner);
+                            Thread.Sleep(1000); // really long wait here
+                            // the next incoming command must be handled by the following function
+                            Context.Become(_ =>
+                            {
+                                Sender.Tell("done");
+                                return true;
+                            });
+                        });
+                    });
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        internal class DeeplyNestedPersists : ExamplePersistentActor
+        {
+            private readonly int _maxDepth;
+            private readonly IActorRef _probe;
+            private readonly Dictionary<string, int> _currentDepths = new Dictionary<string, int>();
+
+            public DeeplyNestedPersists(string name, int maxDepth, IActorRef probe)
+                : base(name)
+            {
+                _maxDepth = maxDepth;
+                _probe = probe;
+            }
+
+            private void WeMustGoDeeper(string dWithDepth)
+            {
+                var d = dWithDepth.Split('-')[0];
+                _probe.Tell(dWithDepth);
+                int currentDepth;
+                if (!_currentDepths.TryGetValue(d, out currentDepth)) currentDepth = 1;
+                if (currentDepth < _maxDepth)
+                {
+                    _currentDepths[d] = currentDepth + 1;
+                    Persist(d + "-" + _currentDepths[d], WeMustGoDeeper);
+                }
+                else
+                {
+                    // reset depth counter before next command
+                    _currentDepths[d] = 1;
+                }
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (message is string)
+                {
+                    var s = (string) message;
+                    _probe.Tell(s);
+                    Persist(s + "-1", WeMustGoDeeper);
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        internal class DeeplyNestedPersistAsyncs : ExamplePersistentActor
+        {
+            private readonly int _maxDepth;
+            private readonly IActorRef _probe;
+            private readonly Dictionary<string, int> _currentDepths = new Dictionary<string, int>();
+
+            public DeeplyNestedPersistAsyncs(string name, int maxDepth, IActorRef probe)
+                : base(name)
+            {
+                _maxDepth = maxDepth;
+                _probe = probe;
+            }
+
+            private void WeMustGoDeeper(string dWithDepth)
+            {
+                var d = dWithDepth.Split('-')[0];
+                _probe.Tell(dWithDepth);
+                int currentDepth;
+                if (!_currentDepths.TryGetValue(d, out currentDepth)) currentDepth = 1;
+                if (currentDepth < _maxDepth)
+                {
+                    _currentDepths[d] = currentDepth + 1;
+                    PersistAsync(d + "-" + _currentDepths[d], WeMustGoDeeper);
+                }
+                else
+                {
+                    // reset depth counter before next command
+                    _currentDepths[d] = 1;
+                }
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (message is string)
+                {
+                    var s = (string) message;
+                    _probe.Tell(s);
+                    PersistAsync(s + "-1", WeMustGoDeeper);
+                    return true;
+                }
+                return false;
             }
         }
     }

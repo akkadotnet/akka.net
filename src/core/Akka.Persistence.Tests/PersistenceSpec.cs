@@ -29,6 +29,7 @@ namespace Akka.Persistence.Tests
                 akka.actor.serialize-messages = {0}
                 akka.persistence.publish-plugin-commands = on
                 akka.persistence.journal.plugin = ""akka.persistence.journal.{1}""
+                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.local""
                 akka.persistence.snapshot-store.local.dir = ""target/snapshots-{2}/""
                 akka.test.single-expect-default = 10s", serialization ?? "on", plugin, test);
 

@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -83,29 +84,34 @@ namespace Akka.Persistence.Journal
         [Serializable]
         public sealed class ReplaySuccess : IEquatable<ReplaySuccess>
         {
-            public static readonly ReplaySuccess Instance = new ReplaySuccess();
+            public ReplaySuccess(long highestSequenceNr)
+            {
+                HighestSequenceNr = highestSequenceNr;
+            }
 
-            private ReplaySuccess() { }
-
+            public long HighestSequenceNr { get; private set; }
             public bool Equals(ReplaySuccess other)
             {
-                return true;
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(this, other)) return true;
+
+                return HighestSequenceNr == other.HighestSequenceNr;
             }
         }
 
         [Serializable]
         public sealed class WriteMessages
         {
-            public WriteMessages(IEnumerable<IPersistentRepresentation> messages)
+            public WriteMessages(IEnumerable<AtomicWrite> messages)
             {
                 Messages = messages.ToArray();
             }
 
-            public IPersistentRepresentation[] Messages { get; private set; }
+            public AtomicWrite[] Messages { get; private set; }
         }
 
         [Serializable]
-        public sealed class ReplayMessages : IWithPersistenceId, IEquatable<ReplayMessages>
+        public sealed class ReplayMessages : IEquatable<ReplayMessages>
         {
             public ReplayMessages(string persistenceId, long fromSequenceNr, long toSequenceNr, long max)
             {
@@ -132,82 +138,102 @@ namespace Akka.Persistence.Journal
         }
 
         [Serializable]
-        public sealed class ReadHighestSequenceNr : IWithPersistenceId, IEquatable<ReadHighestSequenceNr>
-        {
-            public ReadHighestSequenceNr(string persistenceId, long fromSequenceNr)
-            {
-                PersistenceId = persistenceId;
-                FromSequenceNr = fromSequenceNr;
-            }
-
-            public string PersistenceId { get; private set; }
-            public long FromSequenceNr { get; private set; }
-            public bool Equals(ReadHighestSequenceNr other)
-            {
-                if (ReferenceEquals(other, null)) return false;
-                if (ReferenceEquals(this, other)) return true;
-
-                return PersistenceId == other.PersistenceId
-                       && FromSequenceNr == other.FromSequenceNr;
-            }
-        }
-
-        [Serializable]
         public sealed class DeleteMessagesTo : IEquatable<DeleteMessagesTo>
         {
-            public DeleteMessagesTo(string persistenceId, long toSequenceNr, bool isPermanent)
+            public DeleteMessagesTo(string persistenceId, long toSequenceNr)
             {
                 PersistenceId = persistenceId;
                 ToSequenceNr = toSequenceNr;
-                IsPermanent = isPermanent;
             }
 
             public string PersistenceId { get; private set; }
             public long ToSequenceNr { get; private set; }
-            public bool IsPermanent { get; private set; }
             public bool Equals(DeleteMessagesTo other)
             {
                 if (ReferenceEquals(other, null)) return false;
                 if (ReferenceEquals(this, other)) return true;
 
                 return PersistenceId == other.PersistenceId
-                       && ToSequenceNr == other.ToSequenceNr
-                       && IsPermanent == other.IsPermanent;
+                       && ToSequenceNr == other.ToSequenceNr;
             }
         }
 
         #endregion
     }
 
+    /// <summary>
+    /// A journal that delegates actual storage to a target actor. For testing only.
+    /// </summary>
     public abstract class AsyncWriteProxy : AsyncWriteJournal, IWithUnboundedStash
     {
-        private bool _isInitialized = false;
+        private bool _isInitialized;
+        private bool _isInitTimedOut;
         private IActorRef _store;
 
         protected AsyncWriteProxy()
         {
-            ReplayTimeout = Context.System.Settings.Config.GetTimeSpan("akka.persistence.journal.async-proxy-replay-timeout");
+            _isInitialized = false;
+            _isInitTimedOut = false;
+            _store = null;
         }
 
-        public TimeSpan ReplayTimeout { get; private set; }
+        public abstract TimeSpan Timeout { get; }
+
+        public override void AroundPreStart()
+        {
+            Context.System.Scheduler.ScheduleTellOnce(Timeout, Self, InitTimeout.Instance, Self);
+            base.AroundPreStart();
+        }
 
         protected override bool AroundReceive(Receive receive, object message)
         {
-            if (_isInitialized) return base.AroundReceive(receive, message);
+            if (_isInitialized)
+            {
+                if (!(message is InitTimeout))
+                    return base.AroundReceive(receive, message);
+            }
             else if (message is SetStore)
             {
                 _store = ((SetStore) message).Store;
                 Stash.UnstashAll();
                 _isInitialized = true;
             }
+            else if (message is InitTimeout)
+            {
+                _isInitTimedOut = true;
+                Stash.UnstashAll(); // will trigger appropriate failures
+            }
+            else if (_isInitTimedOut)
+            {
+                return base.AroundReceive(receive, message);
+            }
             else Stash.Stash();
             return true;
         }
 
-        public override Task ReplayMessagesAsync(string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> replayCallback)
+        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
         {
+            if (_store == null)
+                return StoreNotInitialized<IImmutableList<Exception>>();
+
+            return _store.Ask<IImmutableList<Exception>>(new AsyncWriteTarget.WriteMessages(messages), Timeout);
+        }
+
+        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
+        {
+            if (_store == null)
+                return StoreNotInitialized<object>();
+
+            return _store.Ask(new AsyncWriteTarget.DeleteMessagesTo(persistenceId, toSequenceNr), Timeout);
+        }
+
+        public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback)
+        {
+            if (_store == null)
+                return StoreNotInitialized<object>();
+
             var replayCompletionPromise = new TaskCompletionSource<object>();
-            var mediator = Context.ActorOf(Props.Create(() => new ReplayMediator(replayCallback, replayCompletionPromise, ReplayTimeout)).WithDeploy(Deploy.Local));
+            var mediator = context.ActorOf(Props.Create(() => new ReplayMediator(recoveryCallback, replayCompletionPromise, Timeout)).WithDeploy(Deploy.Local));
 
             _store.Tell(new AsyncWriteTarget.ReplayMessages(persistenceId, fromSequenceNr, toSequenceNr, max), mediator);
 
@@ -216,20 +242,36 @@ namespace Akka.Persistence.Journal
 
         public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
         {
-            return _store.Ask<long>(new AsyncWriteTarget.ReadHighestSequenceNr(persistenceId, fromSequenceNr));
+            if (_store == null)
+                return StoreNotInitialized<long>();
+
+            return _store.Ask<AsyncWriteTarget.ReplaySuccess>(new AsyncWriteTarget.ReplayMessages(persistenceId, 0, 0, 0), Timeout)
+                .ContinueWith(t => t.Result.HighestSequenceNr, TaskContinuationOptions.OnlyOnRanToCompletion);
         }
 
-        protected override Task WriteMessagesAsync(IEnumerable<IPersistentRepresentation> messages)
+        private Task<T> StoreNotInitialized<T>()
         {
-            return _store.Ask(new AsyncWriteTarget.WriteMessages(messages));
-        }
-
-        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, bool isPermanent)
-        {
-            return _store.Ask(new AsyncWriteTarget.DeleteMessagesTo(persistenceId, toSequenceNr, isPermanent));
+            var promise = new TaskCompletionSource<T>();
+            promise.SetException(new TimeoutException("Store not intialized."));
+            return promise.Task;
         }
 
         public IStash Stash { get; set; }
+
+        // sent to self only
+        public class InitTimeout
+        {
+            private InitTimeout() { }
+            private static readonly InitTimeout _instance = new InitTimeout();
+
+            public static InitTimeout Instance
+            {
+                get
+                {
+                    return _instance;
+                }
+            }
+        }
     }
 
     internal class ReplayMediator : ActorBase
@@ -263,7 +305,7 @@ namespace Akka.Persistence.Journal
             }
             else if (message is ReceiveTimeout)
             {
-                var timeoutException = new AsyncReplayTimeoutException("Replay timed out after " + _replayTimeout.TotalSeconds + " of inactivity");
+                var timeoutException = new AsyncReplayTimeoutException("Replay timed out after " + _replayTimeout.TotalSeconds + "s of inactivity");
                 _replayCompletionPromise.SetException(timeoutException);
                 Context.Stop(Self);
             }
