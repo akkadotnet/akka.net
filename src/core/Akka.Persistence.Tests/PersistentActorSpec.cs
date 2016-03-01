@@ -256,6 +256,15 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
+        public void PersistentActor_should_be_able_to_persist_events_on_the_actor_task_scheduler()
+        {
+            var pref = ActorOf(Props.Create(() => new AsyncReceiveAndPersistActor(Name)));
+            pref.Tell(new Cmd("x"));
+            ExpectMsg("x");
+            ExpectMsg("x-1");
+        }
+
+        [Fact]
         public void PersistentActor_should_support_mutli_PersistAsync_calls_for_one_command_and_executed_them_when_possible()
         {
             var pref = ActorOf(Props.Create(() => new AsyncPersistThreeTimesActor(Name)));
