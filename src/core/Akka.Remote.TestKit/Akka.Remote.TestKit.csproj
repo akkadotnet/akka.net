@@ -126,7 +126,7 @@
     <EmbeddedResource Include="Internals\Reference.conf" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config" />
+    <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <Choose>

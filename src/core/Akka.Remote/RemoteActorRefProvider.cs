@@ -480,11 +480,12 @@ namespace Akka.Remote
                 {
                     if (@event.StateData != null && @event.FsmEvent is TerminationHookDone)
                     {
+                        var self = Self;
                         _log.Info("Remote daemon shut down; proceeding with flushing remote transports.");
                         @event.StateData.Transport.Shutdown()
                             .ContinueWith(t => TransportShutdown.Instance,
                                 TaskContinuationOptions.ExecuteSynchronously)
-                            .PipeTo(Self);
+                            .PipeTo(self);
                         return GoTo(TerminatorState.WaitTransportShutdown);
                     }
 

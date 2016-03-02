@@ -23,10 +23,11 @@ akka {
         provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
     }
     remote {
+      
+    log-received-messages = off
+
+    log-sent-messages = off
         helios.tcp {
-            transport-class = ""Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote""
-            applied-adapters = []
-            transport-protocol = tcp
             port = 8081
             hostname = localhost
         }

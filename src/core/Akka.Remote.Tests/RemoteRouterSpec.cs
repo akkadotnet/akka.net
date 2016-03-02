@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
@@ -42,6 +43,7 @@ namespace Akka.Remote.Tests
 
         public RemoteRouterSpec()
             : base(@"
+            #akka.loglevel = DEBUG
             akka.test.single-expect-default = 6s #to help overcome issues with GC pauses on build server
             akka.remote.retry-gate-closed-for = 1 s #in the event of a Sys <--> System2 whoosh (both tried to connect to each other), retry quickly
             akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
@@ -106,6 +108,7 @@ namespace Akka.Remote.Tests
 
         protected override void AfterTermination()
         {
+           // masterActorSystem.Log.Debug("Termination called");
             Shutdown(masterActorSystem);
         }
 
@@ -113,13 +116,17 @@ namespace Akka.Remote.Tests
         public void RemoteRouter_must_deploy_its_children_on_remote_host_driven_by_configuration()
         {
             var probe = CreateTestProbe(masterActorSystem);
+            masterActorSystem.Log.Debug("Deploying actors");
             var router = masterActorSystem.ActorOf(new RoundRobinPool(2).Props(Props.Create<Echo>()), "blub");
             var replies = new HashSet<ActorPath>();
+            //masterActorSystem.Log.Debug("Sending messages");
             for (var i = 0; i < 5; i++)
             {
+                //masterActorSystem.Log.Debug("Sent {0}", i);
                 router.Tell("", probe.Ref);
                 var expected = probe.ExpectMsg<IActorRef>(GetTimeoutOrDefault(null));
                 replies.Add(expected.Path);
+                //masterActorSystem.Log.Debug("Received {0}", i);
             }
 
             Assert.Equal(2, replies.Count);
