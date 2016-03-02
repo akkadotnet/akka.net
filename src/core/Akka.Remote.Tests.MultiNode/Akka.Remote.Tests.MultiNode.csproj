@@ -68,6 +68,7 @@
     <Compile Include="RemoteGatePiercingSpec.cs" />
     <Compile Include="RemoteNodeRestartDeathWatchSpec.cs" />
     <Compile Include="RemoteDeploymentDeathWatchSpec.cs" />
+    <Compile Include="RemoteNodeShutdownAndComesBackSpec.cs" />
     <Compile Include="RemoteRoundRobinSpec.cs" />
     <Compile Include="RemoteRandomSpec.cs" />
   </ItemGroup>
