@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using Akka.Util.Internal.Collections;
@@ -14,9 +15,9 @@ namespace Akka.Actor.Internal
 {
     public abstract class ChildrenContainerBase : IChildrenContainer
     {
-        private readonly IImmutableMap<string, IChildStats> _children;
+        private readonly IImmutableDictionary<string, IChildStats> _children;
 
-        protected ChildrenContainerBase(IImmutableMap<string, IChildStats> children)
+        protected ChildrenContainerBase(IImmutableDictionary<string, IChildStats> children)
         {
             _children = children;
         }
@@ -33,7 +34,7 @@ namespace Akka.Actor.Internal
         {
             get
             {
-                return (from stat in InternalChildren.AllValuesMinToMax
+                return (from stat in InternalChildren.Values
                         let childRestartStats = stat as ChildRestartStats
                         where childRestartStats != null
                         select childRestartStats.Child).ToList();
@@ -44,18 +45,18 @@ namespace Akka.Actor.Internal
         {
             get
             {
-                return (from stat in InternalChildren.AllValuesMinToMax
+                return (from stat in InternalChildren.Values
                         let childRestartStats = stat as ChildRestartStats
                         where childRestartStats != null
                         select childRestartStats).ToList();
             }
         }
 
-        protected IImmutableMap<string, IChildStats> InternalChildren { get { return _children; } }
+        protected IImmutableDictionary<string, IChildStats> InternalChildren { get { return _children; } }
 
         public bool TryGetByName(string name, out IChildStats stats)
         {
-            if (InternalChildren.TryGet(name, out stats)) return true;
+            if (InternalChildren.TryGetValue(name, out stats)) return true;
             stats = null;
             return false;
         }
@@ -63,7 +64,7 @@ namespace Akka.Actor.Internal
         public bool TryGetByRef(IActorRef actor, out ChildRestartStats childRestartStats)
         {
             IChildStats stats;
-            if (InternalChildren.TryGet(actor.Path.Name, out stats))
+            if (InternalChildren.TryGetValue(actor.Path.Name, out stats))
             {
                 //Since the actor exists, ChildRestartStats is the only valid ChildStats.
                 var crStats = stats as ChildRestartStats;
@@ -83,7 +84,7 @@ namespace Akka.Actor.Internal
             return TryGetByRef(actor, out stats);
         }
 
-        protected void ChildStatsAppender(StringBuilder sb, IKeyValuePair<string, IChildStats> kvp, int index)
+        protected void ChildStatsAppender(StringBuilder sb, KeyValuePair<string, IChildStats> kvp, int index)
         {
             sb.Append('<');
             var childStats = kvp.Value;

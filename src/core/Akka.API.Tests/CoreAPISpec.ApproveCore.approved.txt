@@ -1752,14 +1752,14 @@ namespace Akka.Actor.Internal
     }
     public abstract class ChildrenContainerBase : Akka.Actor.Internal.IChildrenContainer
     {
-        protected ChildrenContainerBase(Akka.Util.Internal.Collections.IImmutableMap<string, Akka.Actor.Internal.IChildStats> children) { }
+        protected ChildrenContainerBase(System.Collections.Immutable.IImmutableDictionary<string, Akka.Actor.Internal.IChildStats> children) { }
         public System.Collections.Generic.IReadOnlyList<Akka.Actor.IInternalActorRef> Children { get; }
-        protected Akka.Util.Internal.Collections.IImmutableMap<string, Akka.Actor.Internal.IChildStats> InternalChildren { get; }
+        protected System.Collections.Immutable.IImmutableDictionary<string, Akka.Actor.Internal.IChildStats> InternalChildren { get; }
         public virtual bool IsNormal { get; }
         public virtual bool IsTerminating { get; }
         public System.Collections.Generic.IReadOnlyList<Akka.Actor.Internal.ChildRestartStats> Stats { get; }
         public abstract Akka.Actor.Internal.IChildrenContainer Add(string name, Akka.Actor.Internal.ChildRestartStats stats);
-        protected void ChildStatsAppender(System.Text.StringBuilder sb, Akka.Util.Internal.Collections.IKeyValuePair<string, Akka.Actor.Internal.IChildStats> kvp, int index) { }
+        protected void ChildStatsAppender(System.Text.StringBuilder sb, System.Collections.Generic.KeyValuePair<string, Akka.Actor.Internal.IChildStats> kvp, int index) { }
         public bool Contains(Akka.Actor.IActorRef actor) { }
         public abstract Akka.Actor.Internal.IChildrenContainer Remove(Akka.Actor.IActorRef child);
         public abstract Akka.Actor.Internal.IChildrenContainer Reserve(string name);
@@ -1831,7 +1831,7 @@ namespace Akka.Actor.Internal
     public class NormalChildrenContainer : Akka.Actor.Internal.ChildrenContainerBase
     {
         public override Akka.Actor.Internal.IChildrenContainer Add(string name, Akka.Actor.Internal.ChildRestartStats stats) { }
-        public static Akka.Actor.Internal.IChildrenContainer Create(Akka.Util.Internal.Collections.IImmutableMap<string, Akka.Actor.Internal.IChildStats> children) { }
+        public static Akka.Actor.Internal.IChildrenContainer Create(System.Collections.Immutable.IImmutableDictionary<string, Akka.Actor.Internal.IChildStats> children) { }
         public override Akka.Actor.Internal.IChildrenContainer Remove(Akka.Actor.IActorRef child) { }
         public override Akka.Actor.Internal.IChildrenContainer Reserve(string name) { }
         public override Akka.Actor.Internal.IChildrenContainer ShallDie(Akka.Actor.IActorRef actor) { }
@@ -1871,8 +1871,8 @@ namespace Akka.Actor.Internal
     }
     public class TerminatingChildrenContainer : Akka.Actor.Internal.ChildrenContainerBase
     {
-        public TerminatingChildrenContainer(Akka.Util.Internal.Collections.IImmutableMap<string, Akka.Actor.Internal.IChildStats> children, Akka.Actor.IActorRef toDie, Akka.Actor.Internal.SuspendReason reason) { }
-        public TerminatingChildrenContainer(Akka.Util.Internal.Collections.IImmutableMap<string, Akka.Actor.Internal.IChildStats> children, Akka.Util.Internal.Collections.IImmutableSet<Akka.Actor.IActorRef> toDie, Akka.Actor.Internal.SuspendReason reason) { }
+        public TerminatingChildrenContainer(System.Collections.Immutable.IImmutableDictionary<string, Akka.Actor.Internal.IChildStats> children, Akka.Actor.IActorRef toDie, Akka.Actor.Internal.SuspendReason reason) { }
+        public TerminatingChildrenContainer(System.Collections.Immutable.IImmutableDictionary<string, Akka.Actor.Internal.IChildStats> children, System.Collections.Immutable.ImmutableHashSet<Akka.Actor.IActorRef> toDie, Akka.Actor.Internal.SuspendReason reason) { }
         public override bool IsNormal { get; }
         public override bool IsTerminating { get; }
         public Akka.Actor.Internal.SuspendReason Reason { get; }
@@ -4843,12 +4843,6 @@ namespace Akka.Util.Internal
 }
 namespace Akka.Util.Internal.Collections
 {
-    public class EmptyReadOnlyCollections<T>
-    {
-        public EmptyReadOnlyCollections() { }
-        public static System.Collections.Generic.IReadOnlyCollection<T> Collection { get; }
-        public static System.Collections.Generic.IReadOnlyList<T> List { get; }
-    }
     public class static EnumeratorExtensions
     {
         public static Akka.Util.Internal.Collections.Iterator<T> Iterator<T>(this System.Collections.Generic.IEnumerable<T> enumerable) { }
@@ -4858,123 +4852,10 @@ namespace Akka.Util.Internal.Collections
         Akka.Util.Internal.Collections.IBinaryTreeNode<TKey, TValue> Left { get; }
         Akka.Util.Internal.Collections.IBinaryTreeNode<TKey, TValue> Right { get; }
     }
-    public interface IImmutableMap<TKey, TValue>
-        where TKey : System.IComparable<>
-    {
-        System.Collections.Generic.IEnumerable<TKey> AllKeysMaxToMin { get; }
-        System.Collections.Generic.IEnumerable<TKey> AllKeysMinToMax { get; }
-        System.Collections.Generic.IEnumerable<Akka.Util.Internal.Collections.IKeyValuePair<TKey, TValue>> AllMaxToMin { get; }
-        System.Collections.Generic.IEnumerable<Akka.Util.Internal.Collections.IKeyValuePair<TKey, TValue>> AllMinToMax { get; }
-        System.Collections.Generic.IEnumerable<TValue> AllValuesMaxToMin { get; }
-        System.Collections.Generic.IEnumerable<TValue> AllValuesMinToMax { get; }
-        int Count { get; }
-        bool IsEmpty { get; }
-        TValue this[TKey key] { get; }
-        Akka.Util.Internal.Collections.IImmutableMap<TKey, TValue> Add(TKey key, TValue value);
-        Akka.Util.Internal.Collections.IImmutableMap<TKey, TValue> AddOrUpdate(TKey key, TValue value);
-        bool Contains(TKey key);
-        Akka.Util.Internal.Collections.IImmutableMap<TKey, TValue> Remove(TKey key);
-        bool TryAdd(TKey key, TValue value, out Akka.Util.Internal.Collections.IImmutableMap<, > newMap);
-        bool TryGet(TKey key, out TValue value);
-        bool TryRemove(TKey key, out Akka.Util.Internal.Collections.IImmutableMap<, > newMap);
-    }
-    public interface IImmutableSet<TValue> : System.Collections.Generic.IEnumerable<TValue>, System.Collections.IEnumerable
-        where TValue : System.IComparable<>
-    {
-        System.Collections.Generic.IEnumerable<TValue> AllMaxToMin { get; }
-        System.Collections.Generic.IEnumerable<TValue> AllMinToMax { get; }
-        int Count { get; }
-        bool IsEmpty { get; }
-        Akka.Util.Internal.Collections.IImmutableSet<TValue> Add(TValue value);
-        bool Contains(TValue value);
-        Akka.Util.Internal.Collections.IImmutableSet<TValue> Remove(TValue value);
-        Akka.Util.Internal.Collections.IImmutableSet<TValue> Remove(System.Collections.Generic.IEnumerable<TValue> values);
-        bool TryAdd(TValue value, out Akka.Util.Internal.Collections.IImmutableSet<> newMap);
-        bool TryRemove(TValue value, out Akka.Util.Internal.Collections.IImmutableSet<> newMap);
-    }
     public interface IKeyValuePair<out TKey, out TValue>
     {
         TKey Key { get; }
         TValue Value { get; }
-    }
-    public sealed class ImmutableAvlTree<TKey, TValue> : Akka.Util.Internal.Collections.ImmutableAvlTreeBase<TKey, TValue>
-        where TKey : System.IComparable<>
-    {
-        public static readonly Akka.Util.Internal.Collections.ImmutableAvlTree<TKey, TValue> Empty;
-        public Akka.Util.Internal.Collections.ImmutableAvlTree<TKey, TValue> Add(TKey key, TValue value) { }
-        public Akka.Util.Internal.Collections.ImmutableAvlTree<TKey, TValue> AddOrUpdate(TKey key, TValue value) { }
-        public Akka.Util.Internal.Collections.ImmutableAvlTree<TKey, TValue> Remove(TKey key) { }
-        public bool TryRemove(TKey key, out Akka.Util.Internal.Collections.ImmutableAvlTree<, > newMap) { }
-    }
-    public abstract class ImmutableAvlTreeBase<TKey, TValue> : System.Collections.Generic.IEnumerable<Akka.Util.Internal.Collections.IKeyValuePair<TKey, TValue>>, System.Collections.IEnumerable
-        where TKey : System.IComparable<>
-    {
-        protected ImmutableAvlTreeBase() { }
-        protected ImmutableAvlTreeBase(Akka.Util.Internal.Collections.ImmutableAvlTreeBase<TKey, TValue>.Node node) { }
-        public System.Collections.Generic.IEnumerable<TKey> AllKeysMaxToMin { get; }
-        public System.Collections.Generic.IEnumerable<TKey> AllKeysMinToMax { get; }
-        public System.Collections.Generic.IEnumerable<Akka.Util.Internal.Collections.IKeyValuePair<TKey, TValue>> AllMaxToMin { get; }
-        public System.Collections.Generic.IEnumerable<Akka.Util.Internal.Collections.IKeyValuePair<TKey, TValue>> AllMinToMax { get; }
-        public System.Collections.Generic.IEnumerable<TValue> AllValuesMaxToMin { get; }
-        public System.Collections.Generic.IEnumerable<TValue> AllValuesMinToMax { get; }
-        public int Count { get; }
-        public bool IsEmpty { get; }
-        public TValue this[TKey key] { get; }
-        public Akka.Util.Internal.Collections.IBinaryTreeNode<TKey, TValue> Root { get; }
-        public bool Contains(TKey key) { }
-        public System.Collections.Generic.IEnumerator<Akka.Util.Internal.Collections.IKeyValuePair<TKey, TValue>> GetEnumerator() { }
-        public override string ToString() { }
-        protected bool TryAdd(TKey key, TValue value, out Akka.Util.Internal.Collections.ImmutableAvlTreeBase<, >.Node newNode, Akka.Util.Internal.Collections.ImmutableAvlTreeBase<TKey, TValue>.AddOperation typeOfAdd) { }
-        protected static bool TryAdd(Akka.Util.Internal.Collections.ImmutableAvlTreeBase<TKey, TValue>.Node node, TKey key, TValue value, out Akka.Util.Internal.Collections.ImmutableAvlTreeBase<, >.Node newNode, Akka.Util.Internal.Collections.ImmutableAvlTreeBase<TKey, TValue>.AddOperation typeOfAdd) { }
-        public bool TryGet(TKey key, out TValue value) { }
-        protected bool TryRemove(TKey key, out Akka.Util.Internal.Collections.ImmutableAvlTreeBase<, >.Node newNode) { }
-        protected enum AddOperation<TKey, TValue>
-            where TKey : System.IComparable<>
-        {
-            Add = 0,
-            AddOrUpdate = 1,
-            AddOnlyUnique = 2,
-        }
-        public class Node<TKey, TValue> : Akka.Util.Internal.Collections.IBinaryTreeNode<TKey, TValue>, Akka.Util.Internal.Collections.IKeyValuePair<TKey, TValue>
-            where TKey : System.IComparable<>
-        {
-            public Node(TKey key, TValue value, Akka.Util.Internal.Collections.ImmutableAvlTreeBase<TKey, TValue>.Node left, Akka.Util.Internal.Collections.ImmutableAvlTreeBase<TKey, TValue>.Node right) { }
-            public int Count { get; }
-            public int Height { get; }
-            public TKey Key { get; }
-            public Akka.Util.Internal.Collections.ImmutableAvlTreeBase<TKey, TValue>.Node Left { get; }
-            public Akka.Util.Internal.Collections.ImmutableAvlTreeBase<TKey, TValue>.Node Right { get; }
-            public TValue Value { get; }
-            public override string ToString() { }
-        }
-    }
-    public class static ImmutableSetExtensions
-    {
-        public static Akka.Util.Internal.Collections.IImmutableSet<TValue> Remove<TValue>(this Akka.Util.Internal.Collections.IImmutableSet<TValue> set, System.Predicate<TValue> itemsToRemove)
-            where TValue : System.IComparable<> { }
-    }
-    public sealed class ImmutableTreeMap<TKey, TValue> : Akka.Util.Internal.Collections.ImmutableAvlTreeBase<TKey, TValue>, Akka.Util.Internal.Collections.IImmutableMap<TKey, TValue>
-        where TKey : System.IComparable<>
-    {
-        public static readonly Akka.Util.Internal.Collections.ImmutableTreeMap<TKey, TValue> Empty;
-        public Akka.Util.Internal.Collections.ImmutableTreeMap<TKey, TValue> Add(TKey key, TValue value) { }
-        public Akka.Util.Internal.Collections.ImmutableTreeMap<TKey, TValue> AddOrUpdate(TKey key, TValue value) { }
-        public Akka.Util.Internal.Collections.ImmutableTreeMap<TKey, TValue> Remove(TKey key) { }
-        public bool TryAdd(TKey key, TValue value, out Akka.Util.Internal.Collections.ImmutableTreeMap<, > newTreeMap) { }
-        public bool TryRemove(TKey key, out Akka.Util.Internal.Collections.ImmutableTreeMap<, > newMap) { }
-    }
-    public class ImmutableTreeSet<TValue> : Akka.Util.Internal.Collections.ImmutableAvlTreeBase<TValue, TValue>, Akka.Util.Internal.Collections.IImmutableSet<TValue>, System.Collections.Generic.IEnumerable<TValue>, System.Collections.IEnumerable
-        where TValue : System.IComparable<>
-    {
-        public static readonly Akka.Util.Internal.Collections.ImmutableTreeSet<TValue> Empty;
-        public Akka.Util.Internal.Collections.ImmutableTreeSet<TValue> Add(TValue value) { }
-        public Akka.Util.Internal.Collections.ImmutableTreeSet<TValue> AddOrUpdate(TValue value) { }
-        public static Akka.Util.Internal.Collections.ImmutableTreeSet<TValue> Create(TValue value, params TValue[] values) { }
-        public static Akka.Util.Internal.Collections.ImmutableTreeSet<TValue> Create(System.Collections.Generic.IEnumerable<TValue> values) { }
-        public Akka.Util.Internal.Collections.ImmutableTreeSet<TValue> Remove(TValue value) { }
-        public Akka.Util.Internal.Collections.ImmutableTreeSet<TValue> Remove(System.Collections.Generic.IEnumerable<TValue> values) { }
-        public bool TryAdd(TValue value, out Akka.Util.Internal.Collections.ImmutableTreeSet<> newTreeMap) { }
-        public bool TryRemove(TValue value, out Akka.Util.Internal.Collections.ImmutableTreeSet<> newMap) { }
     }
     public class Iterator<T>
     {
