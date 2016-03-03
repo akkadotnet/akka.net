@@ -8,6 +8,7 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Xunit;
@@ -98,6 +99,18 @@ namespace Akka.Tests.Actor
 
             //xUnit 2 will have Assert.ThrowsAsync<TException>();
             await AkkaSpecExtensions.ThrowsAsync<ActorNotFoundException>(async () => await selection.ResolveOne(TimeSpan.FromSeconds(1)));  
+        }
+
+        [Fact]
+        public void ActorSelection_must_send_ActorSelection_targeted_to_missing_actor_to_DeadLetters()
+        {
+            var p = CreateTestProbe();
+            Sys.EventStream.Subscribe(p.Ref, typeof(DeadLetter));
+            Sys.ActorSelection("/user/missing").Tell("boom", TestActor);
+            var d = p.ExpectMsg<DeadLetter>();
+            d.Message.ShouldBe("boom");
+            d.Sender.ShouldBe(TestActor);
+            d.Recipient.Path.ToStringWithoutAddress().ShouldBe("/user/missing");
         }
 
         #region Tests for verifying that ActorSelections made within an ActorContext can be resolved
