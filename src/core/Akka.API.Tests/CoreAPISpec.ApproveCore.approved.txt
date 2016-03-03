@@ -515,6 +515,11 @@ namespace Akka.Actor
         protected override void InternalScheduleTellOnce(System.TimeSpan delay, Akka.Actor.ICanTell receiver, object message, Akka.Actor.IActorRef sender, Akka.Actor.ICancelable cancelable) { }
         protected override void InternalScheduleTellRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Actor.ICanTell receiver, object message, Akka.Actor.IActorRef sender, Akka.Actor.ICancelable cancelable) { }
     }
+    public class DefaultSupervisorStrategy : Akka.Actor.SupervisorStrategyConfigurator
+    {
+        public DefaultSupervisorStrategy() { }
+        public override Akka.Actor.SupervisorStrategy Create() { }
+    }
     public class Deploy : Akka.Util.ISurrogated, System.IEquatable<Akka.Actor.Deploy>
     {
         public static readonly Akka.Actor.Deploy Local;
@@ -1520,6 +1525,11 @@ namespace Akka.Actor
             public Success(object status) { }
         }
     }
+    public class StoppingSupervisorStrategy : Akka.Actor.SupervisorStrategyConfigurator
+    {
+        public StoppingSupervisorStrategy() { }
+        public override Akka.Actor.SupervisorStrategy Create() { }
+    }
     public abstract class SupervisorStrategy : Akka.Util.ISurrogated
     {
         public static Akka.Actor.IDecider DefaultDecider;
@@ -1535,6 +1545,12 @@ namespace Akka.Actor
         protected void RestartChild(Akka.Actor.IActorRef child, System.Exception cause, bool suspendFirst) { }
         protected void ResumeChild(Akka.Actor.IActorRef child, System.Exception exception) { }
         public abstract Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system);
+    }
+    public abstract class SupervisorStrategyConfigurator
+    {
+        protected SupervisorStrategyConfigurator() { }
+        public abstract Akka.Actor.SupervisorStrategy Create();
+        public static Akka.Actor.SupervisorStrategyConfigurator CreateConfigurator(string typeName) { }
     }
     public class SystemGuardianActor : Akka.Actor.ActorBase
     {

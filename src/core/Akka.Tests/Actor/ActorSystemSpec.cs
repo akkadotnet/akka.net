@@ -7,6 +7,7 @@
 
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Dsl;
 using Akka.TestKit;
 using Xunit;
 using System;
@@ -238,6 +239,50 @@ namespace Akka.Tests.Actor
             var actorSystem = ActorSystem.Create(Guid.NewGuid().ToString(), DefaultConfig.WithFallback("akka.scheduler.implementation = \"Akka.Tests.Actor.TestScheduler, Akka.Tests\""));
             Assert.True(actorSystem.Scheduler.GetType() == typeof(TestScheduler));
         }
+
+        [Fact]
+        public void Allow_configuration_of_guardian_supervisor_strategy()
+        {
+            var config = ConfigurationFactory.ParseString("akka.actor.guardian-supervisor-strategy=\"Akka.Actor.StoppingSupervisorStrategy\"")
+                .WithFallback(DefaultConfig);
+
+            var system = ActorSystem.Create(Guid.NewGuid().ToString(), config);
+
+            var a = system.ActorOf(actor =>
+            {
+                actor.Receive<string>((msg, context) => { throw new Exception("Boom"); });
+            });
+
+            var probe = CreateTestProbe(system);
+            probe.Watch(a);
+
+            a.Tell("die");
+
+            var t = probe.ExpectTerminated(a);
+
+            Assert.True(t.ExistenceConfirmed);
+            Assert.False(t.AddressTerminated);
+
+            system.Terminate();
+        }
+
+        [Fact]
+        public void Shutdown_when_userguardian_escalates()
+        {
+            var config = ConfigurationFactory.ParseString("akka.actor.guardian-supervisor-strategy=\"Akka.Tests.Actor.TestStrategy, Akka.Tests\"")
+                .WithFallback(DefaultConfig);
+
+            var system = ActorSystem.Create(Guid.NewGuid().ToString(), config);
+
+            var a = system.ActorOf(actor =>
+            {
+                actor.Receive<string>((msg, context) => { throw new Exception("Boom"); });
+            });
+
+            a.Tell("die");
+
+            Assert.True(system.WhenTerminated.Wait(1000));
+        }
     }
 
     public class OtherTestExtension : ExtensionIdProvider<OtherTestExtensionImpl>
@@ -384,6 +429,14 @@ namespace Akka.Tests.Actor
         public Terminater()
         {
             Receive<string>(s => "run".Equals(s), s => Context.Stop(Self));
+        }
+    }
+
+    public class TestStrategy : SupervisorStrategyConfigurator
+    {
+        public override SupervisorStrategy Create()
+        {
+            return new OneForOneStrategy(ex => Directive.Escalate);
         }
     }
 
