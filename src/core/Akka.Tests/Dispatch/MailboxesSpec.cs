@@ -62,7 +62,7 @@ int-prio-mailbox {
         }
 
         [Fact]
-        public void CanUseUnboundedPriorityMailbox()
+        public void Can_use_unbounded_priority_mailbox()
         {
             var actor = Sys.ActorOf(EchoActor.Props(this).WithMailbox("string-prio-mailbox"), "echo");
 
@@ -97,7 +97,7 @@ int-prio-mailbox {
         }       
 
         [Fact]
-        public void PriorityMailboxKeepsOrderingWithManyPriorityValues()
+        public void Priority_mailbox_keeps_ordering_with_many_priority_values()
         {
             var actor = Sys.ActorOf(EchoActor.Props(this).WithMailbox("int-prio-mailbox"), "echo");
 

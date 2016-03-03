@@ -24,7 +24,7 @@ namespace Akka.TestKit.Tests
         }
         
         [Fact]
-        public void delivers_message_when_scheduled_time_reached()
+        public void Delivers_message_when_scheduled_time_reached()
         {
             _testReceiveActor.Tell(new ScheduleOnceMessage(TimeSpan.FromSeconds(1)));
             Scheduler.Advance(TimeSpan.FromSeconds(1));
@@ -32,7 +32,7 @@ namespace Akka.TestKit.Tests
         }
 
         [Fact]
-        public void does_not_deliver_message_prematurely()
+        public void Does_not_deliver_message_prematurely()
         {
             _testReceiveActor.Tell(new ScheduleOnceMessage(TimeSpan.FromSeconds(1)));
             Scheduler.Advance(TimeSpan.FromMilliseconds(999));
@@ -40,7 +40,7 @@ namespace Akka.TestKit.Tests
         }
 
         [Fact]
-        public void delivers_messages_scheduled_for_same_time_in_order_they_were_added()
+        public void Delivers_messages_scheduled_for_same_time_in_order_they_were_added()
         {
             _testReceiveActor.Tell(new ScheduleOnceMessage(TimeSpan.FromSeconds(1), 1));
             _testReceiveActor.Tell(new ScheduleOnceMessage(TimeSpan.FromSeconds(1), 2));
@@ -52,7 +52,7 @@ namespace Akka.TestKit.Tests
         }
 
         [Fact]
-        public void keeps_delivering_rescheduled_message()
+        public void Keeps_delivering_rescheduled_message()
         {
             _testReceiveActor.Tell(new RescheduleMessage(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5)));
             
@@ -64,7 +64,7 @@ namespace Akka.TestKit.Tests
         }
 
         [Fact]
-        public void uses_initial_delay_to_schedule_first_rescheduled_message()
+        public void Uses_initial_delay_to_schedule_first_rescheduled_message()
         {
             _testReceiveActor.Tell(new RescheduleMessage(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5)));
             Scheduler.Advance(TimeSpan.FromSeconds(1));
@@ -72,7 +72,7 @@ namespace Akka.TestKit.Tests
         }
 
         [Fact]
-        public void doesnt_reschedule_cancelled()
+        public void Doesnt_reschedule_cancelled()
         {
             _testReceiveActor.Tell(new CancelableMessage(TimeSpan.FromSeconds(1)));
             Scheduler.Advance(TimeSpan.FromSeconds(1));
@@ -84,7 +84,7 @@ namespace Akka.TestKit.Tests
 
 
         [Fact]
-        public void advance_to_takes_us_to_correct_time()
+        public void Advance_to_takes_us_to_correct_time()
         {
             _testReceiveActor.Tell(new ScheduleOnceMessage(TimeSpan.FromSeconds(1), 1));
             _testReceiveActor.Tell(new ScheduleOnceMessage(TimeSpan.FromSeconds(2), 2));

@@ -121,12 +121,12 @@ namespace Akka.Cluster.Tests.MultiNode
         public void ConvergenceSpecTests()
         {
             //TODO: This better
-            AClusterOf3MembersMustReachInitialConvergence();
-            AClusterOf3MembersMustNotReachConvergenceWhileAnyNodesAreUnreachable();
-            AClusterOf3MembersMustNotMoveANewJoiningNodeToUpWhileThereIsNoConvergence();
+            A_cluster_of_3_members_must_reach_initial_convergence();
+            A_cluster_of_3_members_must_not_reach_convergence_while_any_nodes_are_unreachable();
+            A_cluster_of_3_members_must_not_move_a_new_joining_node_to_up_while_there_is_no_convergence();
         }
 
-        public void AClusterOf3MembersMustReachInitialConvergence()
+        public void A_cluster_of_3_members_must_reach_initial_convergence()
         {
             AwaitClusterUp(_config.First, _config.Second, _config.Third);
 
@@ -135,7 +135,7 @@ namespace Akka.Cluster.Tests.MultiNode
             EnterBarrier("after-1");
         }
 
-        public void AClusterOf3MembersMustNotReachConvergenceWhileAnyNodesAreUnreachable()
+        public void A_cluster_of_3_members_must_not_reach_convergence_while_any_nodes_are_unreachable()
         {
             var thirdAddress = GetAddress(_config.Third);
             EnterBarrier("before-shutdown");
@@ -161,7 +161,7 @@ namespace Akka.Cluster.Tests.MultiNode
             EnterBarrier("after-2");
         }
 
-        public void AClusterOf3MembersMustNotMoveANewJoiningNodeToUpWhileThereIsNoConvergence()
+        public void A_cluster_of_3_members_must_not_move_a_new_joining_node_to_up_while_there_is_no_convergence()
         {
             RunOn(() => Cluster.Join(GetAddress(_config.First)), _config.Fourth);
 

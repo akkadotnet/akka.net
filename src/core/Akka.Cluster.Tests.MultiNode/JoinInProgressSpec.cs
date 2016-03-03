@@ -62,7 +62,7 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void AClusterNodeMustSendHeartbeatsImmediatelyWhenJoiningToAvoidFalseFailureDetectionDueToDelayedGossip()
+        public void A_cluster_node_must_send_heartbeats_immediately_when_joining_to_avoid_false_failure_detection_due_to_delayed_gossip()
         {
             RunOn(StartClusterNode, _config.First);
 

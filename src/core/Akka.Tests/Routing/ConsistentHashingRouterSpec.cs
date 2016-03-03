@@ -109,14 +109,14 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public async Task ConsistentHashingRouterMustCreateRouteesFromConfiguration()
+        public async Task Consistent_hashing_router_must_create_routees_from_configuration()
         {
             var currentRoutees = await _router1.Ask<Routees>(new GetRoutees(), GetTimeoutOrDefault(null));
             currentRoutees.Members.Count().ShouldBe(3);
         }
 
         [Fact]
-        public void ConsistentHashingRouterMustSelectDestinationBasedOnConsistentHashKeyOfMessage()
+        public void Consistent_hashing_router_must_select_destination_based_on_consistent_hash_key_of_message()
         {
             _router1.Tell(new Msg("a", "A"));
             var destinationA = ExpectMsg<IActorRef>();
@@ -135,7 +135,7 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public void ConsistentHashingRouterMustSelectDestinationWithDefinedHashMapping()
+        public void Consistent_hashing_router_must_select_destination_with_defined_hash_mapping()
         {
             ConsistentHashMapping hashMapping = msg =>
             {
@@ -167,14 +167,14 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public async Task ConsistentHashingGroupRouterMustCreateRouteesFromConfiguration()
+        public async Task Consistent_hashing_group_router_must_create_routees_from_configuration()
         {
             var currentRoutees = await _router3.Ask<Routees>(new GetRoutees(), GetTimeoutOrDefault(null));
             currentRoutees.Members.Count().ShouldBe(3);
         }
 
         [Fact]
-        public void ConsistentHashingGroupRouterMustSelectDestinationBasedOnConsistentHashKeyOfMessage()
+        public void Consistent_hashing_group_router_must_select_destination_based_on_consistent_hash_key_of_message()
         {
             _router3.Tell(new Msg("a", "A"));
             var destinationA = ExpectMsg<IActorRef>();
@@ -193,7 +193,7 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public void ConsistentHashingGroupRouterMustSelectDestinationWithDefinedHashMapping()
+        public void Consistent_hashing_group_router_must_select_destination_with_defined_hash_mapping()
         {
             ConsistentHashMapping hashMapping = msg =>
             {
@@ -225,7 +225,7 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public void ConsistentHashingRouterMustAdjustNodeRingWhenRouteeDies()
+        public void Consistent_hashing_router_must_adjust_node_ring_when_routee_dies()
         {
             //create pool router with two routees
             var router5 =
