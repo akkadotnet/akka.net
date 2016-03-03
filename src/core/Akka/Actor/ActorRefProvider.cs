@@ -130,6 +130,7 @@ namespace Akka.Actor
         private readonly Dictionary<string, IInternalActorRef> _extraNames = new Dictionary<string, IInternalActorRef>();
         private readonly TaskCompletionSource<Status> _terminationPromise = new TaskCompletionSource<Status>();
         private readonly SupervisorStrategy _systemGuardianStrategy;
+        private readonly SupervisorStrategyConfigurator _userGuardianStrategyConfigurator;
         private VirtualPathContainer _tempContainer;
         private RootGuardianActorRef _rootGuardian;
         private LocalActorRef _userGuardian;    //This is called guardian in Akka
@@ -155,9 +156,8 @@ namespace Akka.Actor
             _tempNumber = new AtomicCounterLong(1);
             _tempNode = _rootPath / "temp";
 
-            //TODO: _guardianSupervisorStrategyConfigurator = dynamicAccess.createInstanceFor[SupervisorStrategyConfigurator](settings.SupervisorStrategyClass, EmptyImmutableSeq).get
             _systemGuardianStrategy = SupervisorStrategy.DefaultStrategy;
-
+            _userGuardianStrategyConfigurator = SupervisorStrategyConfigurator.CreateConfigurator(Settings.SupervisorStrategyClass);
         }
 
         public IActorRef DeadLetters { get { return _deadLetters; } }
@@ -180,7 +180,7 @@ namespace Akka.Actor
 
         private MessageDispatcher DefaultDispatcher { get { return _system.Dispatchers.DefaultGlobalDispatcher; } }
 
-        private SupervisorStrategy UserGuardianSupervisorStrategy { get { return SupervisorStrategy.DefaultStrategy; } }    //TODO: Implement Akka's _guardianSupervisorStrategyConfigurator.create()
+        private SupervisorStrategy UserGuardianSupervisorStrategy { get { return _userGuardianStrategyConfigurator.Create(); } }
 
         public ActorPath TempPath()
         {
