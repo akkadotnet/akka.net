@@ -15,30 +15,61 @@ namespace Akka.Persistence.Tests
 {
     public class PersistentActorStashingSpec : PersistenceSpec
     {
-        internal class UserStashActor : PersistentActorSpec.ExamplePersistentActor
+        internal abstract class StashExamplePersistentActor : PersistentActorSpec.ExamplePersistentActor
+        {
+            public StashExamplePersistentActor(string name) : base(name)
+            {
+            }
+
+            protected virtual bool UnstashBehavior(object message)
+            {
+                return false;
+            }
+        }
+
+        internal class UserStashActor : StashExamplePersistentActor
         {
             private bool _stashed = false;
             public UserStashActor(string name) : base(name) { }
 
             protected override bool ReceiveCommand(object message)
             {
+                if (!UnstashBehavior(message))
+                {
+                    if (message is Cmd)
+                    {
+                        var cmd = message as Cmd;
+                        if (cmd.Data.ToString() == "a")
+                        {
+                            if (!_stashed)
+                            {
+                                Stash.Stash();
+                                _stashed = true;
+                            }
+                            else Sender.Tell("a");
+
+                        }
+                        else if (cmd.Data.ToString() == "b") Persist(new Evt("b"), evt => Sender.Tell(evt.Data));
+                        else if (cmd.Data.ToString() == "c")
+                        {
+                            UnstashAll();
+                            Sender.Tell("c");
+                        }
+                        else return false;
+                    }
+                    else return false;
+                }
+                return true;
+            }
+
+            protected override bool UnstashBehavior(object message)
+            {
                 if (message is Cmd)
                 {
                     var cmd = message as Cmd;
-                    if (cmd.Data.ToString() == "a")
+                    if (cmd.Data.ToString() == "c")
                     {
-                        if (!_stashed)
-                        {
-                            Stash.Stash();
-                            _stashed = true;
-                        }
-                        else Sender.Tell("a");
-
-                    }
-                    else if (cmd.Data.ToString() == "b") Persist(new Evt("b"), evt => Sender.Tell(evt.Data));
-                    else if (cmd.Data.ToString() == "c")
-                    {
-                        Stash.UnstashAll();
+                        UnstashAll();
                         Sender.Tell("c");
                     }
                     else return false;
@@ -48,7 +79,33 @@ namespace Akka.Persistence.Tests
             }
         }
 
-        internal class UserStashManyActor : PersistentActorSpec.ExamplePersistentActor
+        internal class UserStashWithinHandlerActor : UserStashActor
+        {
+            public UserStashWithinHandlerActor(string name) : base(name)
+            {
+            }
+
+            protected override bool UnstashBehavior(object message)
+            {
+                if (message is Cmd)
+                {
+                    var cmd = message as Cmd;
+                    if (cmd.Data.ToString() == "c")
+                    {
+                        Persist(new Evt("c"), e =>
+                        {
+                            Sender.Tell(e.Data);
+                            UnstashAll();
+                        });
+                    }
+                    else return false;
+                }
+                else return false;
+                return true;
+            }
+        }
+
+        internal class UserStashManyActor : StashExamplePersistentActor
         {
             public UserStashManyActor(string name)
                 : base(name)
@@ -85,6 +142,15 @@ namespace Akka.Persistence.Tests
 
             protected bool ProcessC(object message)
             {
+                if (!UnstashBehavior(message))
+                {
+                    Stash.Stash();
+                }
+                return true;
+            }
+
+            protected override bool UnstashBehavior(object message)
+            {
                 var cmd = message as Cmd;
                 if (cmd != null && cmd.Data.ToString() == "c")
                 {
@@ -95,12 +161,35 @@ namespace Akka.Persistence.Tests
                     });
                     UnstashAll();
                 }
-                else Stash.Stash();
+                else return false;
                 return true;
             }
         }
 
-        internal class UserStashFailureActor : PersistentActorSpec.ExamplePersistentActor
+        internal class UserStashWithinHandlerManyActor : UserStashManyActor
+        {
+            public UserStashWithinHandlerManyActor(string name) : base(name)
+            {
+            }
+
+            protected override bool UnstashBehavior(object message)
+            {
+                var cmd = message as Cmd;
+                if (cmd != null && cmd.Data.ToString() == "c")
+                {
+                    Persist(new Evt("c"), evt =>
+                    {
+                        UpdateState(evt);
+                        Context.UnbecomeStacked();
+                        UnstashAll();
+                    });
+                }
+                else return false;
+                return true;
+            }
+        }
+
+        internal class UserStashFailureActor : StashExamplePersistentActor
         {
             public UserStashFailureActor(string name)
                 : base(name)
@@ -131,6 +220,15 @@ namespace Akka.Persistence.Tests
 
             protected bool OtherCommandHandler(object message)
             {
+                if (!UnstashBehavior(message))
+                {
+                    Stash.Stash();
+                }
+                return true;
+            }
+
+            protected override bool UnstashBehavior(object message)
+            {
                 var cmd = message as Cmd;
                 if (cmd != null && cmd.Data.ToString() == "c")
                 {
@@ -141,7 +239,30 @@ namespace Akka.Persistence.Tests
                     });
                     UnstashAll();
                 }
-                else Stash.Stash();
+                else return false;
+                return true;
+            }
+        }
+
+        internal class UserStashWithinHandlerFailureCallbackActor : UserStashFailureActor
+        {
+            public UserStashWithinHandlerFailureCallbackActor(string name) : base(name)
+            {
+            }
+
+            protected override bool UnstashBehavior(object message)
+            {
+                var cmd = message as Cmd;
+                if (cmd != null && cmd.Data.ToString() == "c")
+                {
+                    Persist(new Evt("c"), evt =>
+                    {
+                        UpdateState(evt);
+                        Context.UnbecomeStacked();
+                        UnstashAll();
+                    });
+                }
+                else return false;
                 return true;
             }
         }
@@ -164,9 +285,39 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
+        public void PersistentActor_should_support_user_stash_operations_within_handler()
+        {
+            var pref = ActorOf(Props.Create(() => new UserStashWithinHandlerActor(Name)));
+            pref.Tell(new Cmd("a"));
+            pref.Tell(new Cmd("b"));
+            pref.Tell(new Cmd("c"));
+            ExpectMsg("b");
+            ExpectMsg("c");
+            ExpectMsg("a");
+        }
+
+        [Fact]
         public void PersistentActor_should_support_user_stash_operations_with_several_stashed_messages()
         {
             var pref = ActorOf(Props.Create(() => new UserStashManyActor(Name)));
+            var n = 10;
+            var commands = Enumerable.Range(1, n).SelectMany(_ => new[] { new Cmd("a"), new Cmd("b-1"), new Cmd("b-2"), new Cmd("c"), });
+            var evts = Enumerable.Range(1, n).SelectMany(_ => new[] { "a", "c", "b-1", "b-2" }).ToArray();
+
+            foreach (var command in commands)
+            {
+                pref.Tell(command);
+            }
+
+            pref.Tell(GetState.Instance);
+
+            ExpectMsgInOrder(evts);
+        }
+
+        [Fact]
+        public void PersistentActor_should_support_user_stash_operations_within_handler_with_several_stashed_messages()
+        {
+            var pref = ActorOf(Props.Create(() => new UserStashWithinHandlerManyActor(Name)));
             var n = 10;
             var commands = Enumerable.Range(1, n).SelectMany(_ => new[] { new Cmd("a"), new Cmd("b-1"), new Cmd("b-2"), new Cmd("c"), });
             var evts = Enumerable.Range(1, n).SelectMany(_ => new[] { "a", "c", "b-1", "b-2" }).ToArray();
@@ -195,11 +346,26 @@ namespace Akka.Persistence.Tests
             pref.Tell(GetState.Instance);
             ExpectMsgInOrder("a", "c", "b-1", "b-3", "b-4", "b-5", "b-6", "b-7", "b-8", "b-9", "b-10");
         }
+
+        [Fact]
+        public void PersistentActor_should_support_user_stash_operations_within_handler_under_failures()
+        {
+            var pref = ActorOf(Props.Create(() => new UserStashWithinHandlerFailureCallbackActor(Name)));
+            pref.Tell(new Cmd("a"));
+            for (int i = 1; i <= 10; i++)
+            {
+                var cmd = new Cmd("b-" + i);
+                pref.Tell(cmd);
+            }
+            pref.Tell(new Cmd("c"));
+            pref.Tell(GetState.Instance);
+            ExpectMsgInOrder("a", "c", "b-1", "b-3", "b-4", "b-5", "b-6", "b-7", "b-8", "b-9", "b-10");
+        }
     }
 
     public class SteppingMemoryPersistentActorStashingSpec : PersistenceSpec
     {
-        internal class AsyncStashingActor : PersistentActorSpec.ExamplePersistentActor
+        internal class AsyncStashingActor : PersistentActorStashingSpec.StashExamplePersistentActor
         {
             private bool _stashed = false;
 
@@ -209,7 +375,7 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                if (!CommonBehavior(message))
+                if (!CommonBehavior(message) && !UnstashBehavior(message))
                 {
                     if (message is Cmd)
                     {
@@ -230,16 +396,44 @@ namespace Akka.Persistence.Tests
                                 PersistAsync(new Evt("b"), UpdateStateHandler);
                             return true;
                         }
-                        if (data.Equals("c"))
-                        {
-                            PersistAsync(new Evt("c"), UpdateStateHandler);
-                            Stash.UnstashAll();
-                            return true;
-                        }
                     }
                 }
                 else return true;
                 return false;
+            }
+
+            protected override bool UnstashBehavior(object message)
+            {
+                var cmd = message as Cmd;
+                if (cmd != null && cmd.Data.ToString() == "c")
+                {
+                    PersistAsync(new Evt("c"), UpdateStateHandler);
+                    Stash.UnstashAll();
+                }
+                else return false;
+                return true;
+            }
+        }
+
+        internal class AsyncStashingWithinHandlerActor : AsyncStashingActor
+        {
+            public AsyncStashingWithinHandlerActor(string name) : base(name)
+            {
+            }
+
+            protected override bool UnstashBehavior(object message)
+            {
+                var cmd = message as Cmd;
+                if (cmd != null && cmd.Data.ToString() == "c")
+                {
+                    PersistAsync(new Evt("c"), evt =>
+                    {
+                        UpdateState(evt);
+                        Stash.UnstashAll();
+                    });
+                }
+                else return false;
+                return true;
             }
         }
 
@@ -252,6 +446,37 @@ namespace Akka.Persistence.Tests
         public void Stashing_in_a_PersistentActor_mixed_with_PersistAsync_should_handle_async_callback_not_happening_until_next_message_has_been_stashed()
         {
             var pref = Sys.ActorOf(Props.Create(() => new AsyncStashingActor(Name)));
+            AwaitAssert(() => SteppingMemoryJournal.GetRef("persistence-stash"), TimeSpan.FromSeconds(3));
+            var journal = SteppingMemoryJournal.GetRef("persistence-stash");
+
+            // initial read highest
+            SteppingMemoryJournal.Step(journal);
+
+            pref.Tell(new Cmd("a"));
+            pref.Tell(new Cmd("b"));
+
+            // allow the write to complete, after the stash
+            SteppingMemoryJournal.Step(journal);
+
+            pref.Tell(new Cmd("c"));
+            // writing of c and b
+            SteppingMemoryJournal.Step(journal);
+            SteppingMemoryJournal.Step(journal);
+
+            Within(TimeSpan.FromSeconds(3), () =>
+            {
+                AwaitAssert(() =>
+                {
+                    pref.Tell(GetState.Instance);
+                    ExpectMsgInOrder("a", "c", "b");
+                });
+            });
+        }
+
+        [Fact]
+        public void Stashing_in_a_PersistentActor_mixed_with_PersistAsync_should_handle_async_callback_not_happening_until_next_message_has_been_stashed_within_handler()
+        {
+            var pref = Sys.ActorOf(Props.Create(() => new AsyncStashingWithinHandlerActor(Name)));
             AwaitAssert(() => SteppingMemoryJournal.GetRef("persistence-stash"), TimeSpan.FromSeconds(3));
             var journal = SteppingMemoryJournal.GetRef("persistence-stash");
 

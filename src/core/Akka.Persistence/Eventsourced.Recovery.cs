@@ -146,7 +146,11 @@ namespace Akka.Persistence
         {
             return new EventsourcedState("processing commands", false, (receive, message) =>
             {
-                var handled = CommonProcessingStateBehavior(message, err => _pendingInvocations.Pop());
+                var handled = CommonProcessingStateBehavior(message, err =>
+                {
+                    _pendingInvocations.Pop();
+                    UnstashInternally(err);
+                });
                 if (!handled)
                 {
                     try
@@ -169,10 +173,8 @@ namespace Akka.Persistence
 
             if (_pendingStashingPersistInvocations > 0)
                 ChangeState(PersistingEvents());
-            else if (err)
-                _internalStash.UnstashAll();
             else
-                _internalStash.Unstash();
+                UnstashInternally(err);
         }
 
         private void FlushBatch()
@@ -211,8 +213,7 @@ namespace Akka.Persistence
                     if (_pendingStashingPersistInvocations == 0)
                     {
                         ChangeState(ProcessingCommands());
-                        if (err) _internalStash.UnstashAll();
-                        else _internalStash.Unstash();
+                        UnstashInternally(err);
                     }
                 });
 
