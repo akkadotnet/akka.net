@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using Akka.Actor;
 using Akka.Configuration;
@@ -40,7 +41,6 @@ namespace Akka.Remote.Tests.Transport
                 ## Keep gate duration in this test for a low value otherwise too much messages are dropped
                   remote.retry-gate-closed-for = 100 ms
                   remote.transport-failure-detector{
-                        threshold = 1.0
                         max-sample-size = 2
                         min-std-deviation = 1 ms
                         ## We want lots of lost connections in this test, keep it sensitive
@@ -66,13 +66,13 @@ namespace Akka.Remote.Tests.Transport
 
         class SequenceVerifier : UntypedActor
         {
-            private int Limit = 100000;
-            private int NextSeq = 0;
-            private int MaxSeq = -1;
-            private int Losses = 0;
+            private const int Limit = 100000;
+            private int _nextSeq = 0;
+            private int _maxSeq = -1;
+            private int _losses = 0;
 
-            private IActorRef _remote;
-            private IActorRef _controller;
+            private readonly IActorRef _remote;
+            private readonly IActorRef _controller;
 
             public SequenceVerifier(IActorRef remote, IActorRef controller)
             {
@@ -86,22 +86,26 @@ namespace Akka.Remote.Tests.Transport
                 {
                     Self.Tell("sendNext");
                 }
-                else if (message.Equals("sendNext") && NextSeq < Limit)
+                else if (message.Equals("sendNext") && _nextSeq < Limit)
                 {
-                    _remote.Tell(NextSeq);
-                    NextSeq++;
-                    if (NextSeq%2000 == 0)
+                    _remote.Tell(_nextSeq);
+                     _nextSeq++;
+                    if (_nextSeq%2000 == 0)
+                    { 
                         Context.System.Scheduler.ScheduleTellOnce(TimeSpan.FromMilliseconds(500), Self, "sendNext", Self);
+                    }
+                        
                     else
                         Self.Tell("sendNext");
+                   
                 }
                 else if (message is int || message is long)
                 {
                     var seq = Convert.ToInt32(message);
-                    if (seq > MaxSeq)
+                    if (seq > _maxSeq)
                     {
-                        Losses += seq - MaxSeq - 1;
-                        MaxSeq = seq;
+                        _losses += seq - _maxSeq - 1;
+                        _maxSeq = seq;
 
                         // Due to the (bursty) lossyness of gate, we are happy with receiving at least one message from the upper
                         // half (> 50000). Since messages are sent in bursts of 2000 0.5 seconds apart, this is reasonable.
@@ -110,7 +114,7 @@ namespace Akka.Remote.Tests.Transport
 
                         if (seq > Limit*0.5)
                         {
-                            _controller.Tell(Tuple.Create(MaxSeq, Losses));
+                            _controller.Tell(Tuple.Create(_maxSeq, _losses));
                             Context.System.Scheduler.ScheduleTellRepeatedly(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), Self,
                                 ResendFinal.Instance, Self);
                             Context.Become(Done);
@@ -118,7 +122,7 @@ namespace Akka.Remote.Tests.Transport
                     }
                     else
                     {
-                        _controller.Tell(string.Format("Received out of order message. Previous {0} Received: {1}", MaxSeq, seq));
+                        _controller.Tell(string.Format("Received out of order message. Previous {0} Received: {1}", _maxSeq, seq));
                     }
                 }
             }
@@ -128,7 +132,7 @@ namespace Akka.Remote.Tests.Transport
             {
                 if (message is ResendFinal)
                 {
-                    _controller.Tell(Tuple.Create(MaxSeq, Losses));
+                    _controller.Tell(Tuple.Create(_maxSeq, _losses));
                 }
             }
         }
@@ -163,7 +167,7 @@ namespace Akka.Remote.Tests.Transport
             get
             {
                 Sys.ActorSelection(RootB / "user" / "echo").Tell(new Identify(null), TestActor);
-                return ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(300)).Subject;
+                return ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(3)).Subject;
             }
         }
 
@@ -178,7 +182,7 @@ namespace Akka.Remote.Tests.Transport
 
         #region Tests
 
-        [Fact(Skip = "fails due to out-of-order processing as a result of Helios eventing")]
+        [Fact()]
         public void AkkaProtocolTransport_must_guarantee_at_most_once_delivery_and_message_ordering_despite_packet_loss()
         {
             //todo mute both systems for deadletters for any type of message
@@ -186,14 +190,25 @@ namespace Akka.Remote.Tests.Transport
                 RARP.For(Sys)
                     .Provider.Transport.ManagementCommand(new FailureInjectorTransportAdapter.One(AddressB,
                         new FailureInjectorTransportAdapter.Drop(0.1, 0.1)));
-            AwaitCondition(() => mc.IsCompleted && mc.Result, TimeSpan.FromSeconds(3));
+            mc.Wait(Dilated(TimeSpan.FromSeconds(3)));
+            mc.Result.ShouldBeTrue();
 
             var here = Here;
 
             var tester = Sys.ActorOf(Props.Create(() => new SequenceVerifier(here, TestActor)));
             tester.Tell("start");
 
-            ExpectMsg<Tuple<int,int>>(TimeSpan.FromSeconds(60));
+            ExpectMsgPf<Tuple<int, int>>(TimeSpan.FromSeconds(60),
+                "Expected a tuple indicating messages received versus lost",
+                o =>
+                {
+                    var tuple = o as Tuple<int, int>;
+                    if (tuple == null) return null;
+                    var received = tuple.Item1;
+                    var lost = tuple.Item2;
+                    Log.Debug($" ###### Received {received - lost} messages from {received} ######");
+                    return tuple;
+                });
         }
 
         #endregion
