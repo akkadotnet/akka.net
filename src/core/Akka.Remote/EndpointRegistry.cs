@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EndpointRegistry.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,47 +18,41 @@ namespace Akka.Remote
     /// </summary>
     internal class EndpointRegistry
     {
-        private readonly Dictionary<Address, Tuple<IActorRef, int>> _addressToReadonly = new Dictionary<Address, Tuple<IActorRef, int>>();
+        private readonly Dictionary<Address, IActorRef> addressToReadonly = new Dictionary<Address, IActorRef>();
 
-        private Dictionary<Address, EndpointManager.EndpointPolicy> _addressToWritable =
+        private Dictionary<Address, EndpointManager.EndpointPolicy> addressToWritable =
             new Dictionary<Address, EndpointManager.EndpointPolicy>();
 
-        private readonly Dictionary<IActorRef, Address> _readonlyToAddress = new Dictionary<IActorRef, Address>();
-        private readonly Dictionary<IActorRef, Address> _writableToAddress = new Dictionary<IActorRef, Address>();
-        public IActorRef RegisterWritableEndpoint(Address address, IActorRef endpoint, int? uid, int? refuseUid)
+        private readonly Dictionary<IActorRef, Address> readonlyToAddress = new Dictionary<IActorRef, Address>();
+        private readonly Dictionary<IActorRef, Address> writableToAddress = new Dictionary<IActorRef, Address>();
+        public IActorRef RegisterWritableEndpoint(Address address, IActorRef endpoint, int? uid = null)
         {
             EndpointManager.EndpointPolicy existing;
-            _addressToWritable.TryGetValue(address, out existing);
-
-            var pass = existing as EndpointManager.Pass;
-            if (pass != null) // if we already have a writable endpoint....
+            if (addressToWritable.TryGetValue(address, out existing))
             {
-                var e = pass.Endpoint;
-                throw new ArgumentException("Attempting to overwrite existing endpoint " + e + " with " + endpoint);
+                var gated = existing as EndpointManager.Gated;
+                if (gated != null && !gated.TimeOfRelease.IsOverdue) //don't throw if the prune timer didn't get a chance to run first
+                    throw new ArgumentException("Attempting to overwrite existing endpoint " + existing + " with " + endpoint);
             }
-
-            _addressToWritable.AddOrSet(address, new EndpointManager.Pass(endpoint, uid, refuseUid));
-            _writableToAddress.AddOrSet(endpoint, address);
+            addressToWritable.AddOrSet(address, new EndpointManager.Pass(endpoint, uid));
+            writableToAddress.AddOrSet(endpoint, address);
             return endpoint;
         }
 
         public void RegisterWritableEndpointUid(IActorRef writer, int uid)
         {
-            var address = _writableToAddress[writer];
-            if (_addressToWritable[address] is EndpointManager.Pass)
+            var address = writableToAddress[writer];
+            if (addressToWritable[address] is EndpointManager.Pass)
             {
-                var pass = (EndpointManager.Pass)_addressToWritable[address];
-                _addressToWritable[address] = new EndpointManager.Pass(pass.Endpoint, uid, pass.RefuseUid);
+                var pass = (EndpointManager.Pass)addressToWritable[address];
+                addressToWritable[address] = new EndpointManager.Pass(pass.Endpoint, uid);
             }
-
-            // if the policy is not Pass, then the GotUid might have lost the race with some failure
-
         }
 
-        public IActorRef RegisterReadOnlyEndpoint(Address address, IActorRef endpoint, int uid)
+        public IActorRef RegisterReadOnlyEndpoint(Address address, IActorRef endpoint)
         {
-            _addressToReadonly.Add(address, Tuple.Create(endpoint, uid));
-            _readonlyToAddress.Add(endpoint, address);
+            addressToReadonly.Add(address, endpoint);
+            readonlyToAddress.Add(endpoint, address);
             return endpoint;
         }
 
@@ -66,36 +60,30 @@ namespace Akka.Remote
         {
             if (IsWritable(endpoint))
             {
-                var address = _writableToAddress[endpoint];
-                var policy = _addressToWritable[address];
-                if (policy.IsTombstone)
+                var address = writableToAddress[endpoint];
+                if (addressToWritable[address] is EndpointManager.EndpointPolicy)
                 {
+                    var policy = addressToWritable[address];
                     //if there is already a tombstone directive, leave it there
+                    //otherwise, remove this address from the writeable address range
+                    if (!policy.IsTombstone)
+                    {
+                        addressToWritable.Remove(address);
+                    }
                 }
-                else
-                {
-                    _addressToWritable.Remove(address);
-                }
-                _writableToAddress.Remove(endpoint);
+                writableToAddress.Remove(endpoint);
             }
             else if (IsReadOnly(endpoint))
             {
-                _addressToReadonly.Remove(_readonlyToAddress[endpoint]);
-                _readonlyToAddress.Remove(endpoint);
+                addressToReadonly.Remove(readonlyToAddress[endpoint]);
+                readonlyToAddress.Remove(endpoint);
             }
         }
 
-        public Address AddressForWriter(IActorRef writer)
+        public IActorRef ReadOnlyEndpointFor(Address address)
         {
-            // Needs to return null if the key is not in the dictionary, instead of throwing.
-            Address value;
-            return _writableToAddress.TryGetValue(writer, out value) ? value : null;
-        }
-
-        public Tuple<IActorRef, int> ReadOnlyEndpointFor(Address address)
-        {
-            Tuple<IActorRef, int> tmp;
-            if (_addressToReadonly.TryGetValue(address, out tmp))
+            IActorRef tmp;
+            if (addressToReadonly.TryGetValue(address, out tmp))
             {
                 return tmp;
             }
@@ -104,38 +92,32 @@ namespace Akka.Remote
 
         public bool IsWritable(IActorRef endpoint)
         {
-            return _writableToAddress.ContainsKey(endpoint);
+            return writableToAddress.ContainsKey(endpoint);
         }
 
         public bool IsReadOnly(IActorRef endpoint)
         {
-            return _readonlyToAddress.ContainsKey(endpoint);
+            return readonlyToAddress.ContainsKey(endpoint);
         }
 
         public bool IsQuarantined(Address address, int uid)
         {
-            // timeOfRelease is only used for garbage collection. If an address is still probed, we should report the
-            // known fact that it is quarantined.
-            var policy = WritableEndpointWithPolicyFor(address) as EndpointManager.Quarantined;
-            return policy?.Uid == uid;
-        }
+            var rvalue = false;
+            WritableEndpointWithPolicyFor(address).Match()
+                .With<EndpointManager.Quarantined>(q =>
+                {
+                    if (q.Uid == uid)
+                        rvalue = q.Deadline.HasTimeLeft;
+                })
+                .Default(msg => rvalue = false);
 
-        public int? RefuseUid(Address address)
-        {
-            // timeOfRelease is only used for garbage collection. If an address is still probed, we should report the
-            // known fact that it is quarantined.
-            var policy = WritableEndpointWithPolicyFor(address);
-            var q = policy as EndpointManager.Quarantined;
-            var p = policy as EndpointManager.Pass;
-            if (q != null) return q.Uid;
-            if (p != null) return p.RefuseUid;
-            return null;
+            return rvalue;
         }
 
         public EndpointManager.EndpointPolicy WritableEndpointWithPolicyFor(Address address)
         {
             EndpointManager.EndpointPolicy tmp;
-            if (_addressToWritable.TryGetValue(address, out tmp))
+            if (addressToWritable.TryGetValue(address, out tmp))
             {
                 return tmp;
             }
@@ -155,35 +137,33 @@ namespace Akka.Remote
         {
             if (IsWritable(endpoint))
             {
-                _addressToWritable.AddOrSet(_writableToAddress[endpoint], new EndpointManager.Gated(timeOfRelease));
-                _writableToAddress.Remove(endpoint);
+                addressToWritable.AddOrSet(writableToAddress[endpoint], new EndpointManager.Gated(timeOfRelease));
+                writableToAddress.Remove(endpoint);
             }
             else if (IsReadOnly(endpoint))
             {
-                _addressToReadonly.Remove(_readonlyToAddress[endpoint]);
-                _readonlyToAddress.Remove(endpoint);
+                addressToReadonly.Remove(readonlyToAddress[endpoint]);
+                readonlyToAddress.Remove(endpoint);
             }
         }
 
         public void MarkAsQuarantined(Address address, int uid, Deadline timeOfRelease)
         {
-            _addressToWritable.AddOrSet(address, new EndpointManager.Quarantined(uid, timeOfRelease));
+            addressToWritable.AddOrSet(address, new EndpointManager.Quarantined(uid, timeOfRelease));
         }
 
         public void RemovePolicy(Address address)
         {
-            _addressToWritable.Remove(address);
+            addressToWritable.Remove(address);
         }
 
-        public IList<IActorRef> AllEndpoints
-        {
-            get { return _writableToAddress.Keys.Concat(_readonlyToAddress.Keys).ToList(); }
-        }
+        public IList<IActorRef> AllEndpoints => writableToAddress.Keys.Concat(readonlyToAddress.Keys).ToList();
 
         public void Prune()
         {
-            _addressToWritable = _addressToWritable.Where(
-                x => PruneFilterFunction(x.Value)).ToDictionary(key => key.Key, value => value.Value);
+            addressToWritable = addressToWritable
+                .Where(x => PruneFilterFunction(x.Value))
+                .ToDictionary(key => key.Key, value => value.Value);
         }
 
         /// <summary>
