@@ -501,6 +501,14 @@ namespace Akka.Persistence
                 }
             }
         }
+
+        private void UnstashInternally(bool all)
+        {
+            if (all)
+                _internalStash.UnstashAll();
+            else
+                _internalStash.Unstash();
+        }
     }
 }
 
