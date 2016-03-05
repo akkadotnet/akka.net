@@ -76,6 +76,7 @@ namespace Akka.Persistence
 
         protected readonly PersistenceExtension Extension;
         private readonly ILoggingAdapter _log;
+        private IStash _stash;
 
         protected Eventsourced()
         {
@@ -112,7 +113,11 @@ namespace Akka.Persistence
             get { return Extension.DefaultInternalStashOverflowStrategy; }
         }
 
-        public IStash Stash { get; set; }
+        public IStash Stash
+        {
+            get { return _stash; }
+            set { _stash = new InternalStashAwareStash(value, _internalStash); }
+        }
 
         public string JournalPluginId { get; protected set; }
 
@@ -382,15 +387,6 @@ namespace Akka.Persistence
             Journal.Tell(new DeleteMessagesTo(PersistenceId, toSequenceNr, Self));
         }
 
-        public void UnstashAll()
-        {
-            // Internally, all messages are processed by unstashing them from
-            // the internal stash one-by-one. Hence, an unstashAll() from the
-            // user stash must be prepended to the internal stash.
-
-            _internalStash.Prepend(Stash.ClearStash());
-        }
-
         /// <summary>
         /// Called whenever a message replay succeeds.
         /// </summary>
@@ -508,6 +504,52 @@ namespace Akka.Persistence
                 _internalStash.UnstashAll();
             else
                 _internalStash.Unstash();
+        }
+
+        private class InternalStashAwareStash : IStash
+        {
+            private readonly IStash _userStash;
+            private readonly IStash _internalStash;
+
+            public InternalStashAwareStash(IStash userStash, IStash internalStash)
+            {
+                _userStash = userStash;
+                _internalStash = internalStash;
+            }
+
+            public void Stash()
+            {
+                _userStash.Stash();
+            }
+
+            public void Unstash()
+            {
+                _userStash.Unstash();
+            }
+
+            public void UnstashAll()
+            {
+                // Internally, all messages are processed by unstashing them from
+                // the internal stash one-by-one. Hence, an unstashAll() from the
+                // user stash must be prepended to the internal stash.
+
+                _internalStash.Prepend(ClearStash());
+            }
+
+            public void UnstashAll(Func<Envelope, bool> predicate)
+            {
+                _userStash.UnstashAll(predicate);
+            }
+
+            public IEnumerable<Envelope> ClearStash()
+            {
+                return _userStash.ClearStash();
+            }
+
+            public void Prepend(IEnumerable<Envelope> envelopes)
+            {
+                _userStash.Prepend(envelopes);
+            }
         }
     }
 }
