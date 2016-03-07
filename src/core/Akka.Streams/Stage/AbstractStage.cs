@@ -133,6 +133,11 @@ namespace Akka.Streams.Stage
             materialized = stageAndMat.Item2;
             return new PushPullGraphLogic<TIn, TOut>(Shape, inheritedAttributes, (AbstractStage<TIn, TOut, IDirective, IDirective, IContext<TOut>, ILifecycleContext>)stageAndMat.Item1);
         }
+
+        public sealed override string ToString()
+        {
+            return InitialAttributes.GetNameOrDefault();
+        }
     }
 
     internal class PushPullGraphStage<TIn, TOut, TExt> : PushPullGraphStageWithMaterializedValue<TIn, TOut, TExt, Unit>

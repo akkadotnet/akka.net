@@ -43,6 +43,8 @@ namespace Akka.Streams.Implementation
                 Left = left;
                 Right = right;
             }
+
+            public override string ToString() => $"Combine({Left}, {Right})";
         }
 
         public sealed class Atomic : IMaterializedValueNode
@@ -53,6 +55,8 @@ namespace Akka.Streams.Implementation
             {
                 Module = module;
             }
+
+            public override string ToString() => $"Atomic({Module})";
         }
 
         public sealed class Transform : IMaterializedValueNode
@@ -65,12 +69,16 @@ namespace Akka.Streams.Implementation
                 Transformator = transformator;
                 Node = node;
             }
+
+            public override string ToString() => $"Transform({Node})";
         }
 
         public sealed class Ignore : IMaterializedValueNode
         {
             public static readonly Ignore Instance = new Ignore();
             private Ignore() { }
+
+            public override string ToString() => $"Ignore";
         }
 
         #endregion
@@ -531,6 +539,8 @@ namespace Akka.Streams.Implementation
         public override IModule CarbonCopy() => new CopiedModule(Shape, Attributes, CopyOf);
 
         public override IModule WithAttributes(Attributes attributes) => new CopiedModule(Shape, attributes, CopyOf);
+
+        public override string ToString() => $"Copy({CopyOf})";
     }
 
     public sealed class CompositeModule : Module
@@ -571,6 +581,8 @@ namespace Akka.Streams.Implementation
         public override IModule CarbonCopy() => new CopiedModule(Shape.DeepCopy(), Attributes, this);
 
         public override IModule WithAttributes(Attributes attributes) => new CompositeModule(SubModules, Shape.DeepCopy(), Downstreams, Upstreams, MaterializedValueComputation, Attributes);
+
+        public override string ToString() => $"Composite({string.Join(", ", SubModules)})";
     }
 
     public sealed class FusedModule : Module

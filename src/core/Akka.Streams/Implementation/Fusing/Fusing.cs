@@ -241,10 +241,7 @@ namespace Akka.Streams.Implementation.Fusing
             ISet<IModule> openGroup,
             string indent)
         {
-            // non-GraphStage atomic or has AsyncBoundary
-            var isAsync = module is GraphStageModule || module is GraphModule || !module.IsAtomic
-                ? module.Attributes.Contains<Attributes.AsyncBoundary>()
-                : true;
+            var isAsync = IsAsync<T>(module);
             var localGroup = isAsync ? structInfo.CreateGroup(indent) : openGroup;
 
             if (module.IsAtomic)
@@ -346,14 +343,21 @@ namespace Akka.Streams.Implementation.Fusing
                     // we need to keep track of all MaterializedValueSource nodes that get pushed into the current
                     // computation context (i.e. that need the same value).
                     structInfo.EnterMaterializationContext();
+                    
                     // now descend into submodules and collect their computations (plus updates to `struct`)
-                    var subMat = module.SubModules.SelectMany(sub => Descend<T>(sub, attributes, structInfo, localGroup, indent + "    "))
-                        .ToDictionary(x => x.Key, x => x.Value);
+                    var subMatBuilder = ImmutableDictionary.CreateBuilder<IModule, StreamLayout.IMaterializedValueNode>();
+                    foreach (var sub in module.SubModules)
+                    {
+                        var res = Descend<T>(sub, attributes, structInfo, localGroup, indent + "    ");
+                        subMatBuilder.AddRange(res);
+                    }
+                    var subMat = subMatBuilder.ToImmutable();
 
                     // we need to remove all wirings that this module copied from nested modules so that we don’t do wirings twice
-                    var oldDownstreams = module is FusedModule
-                        ? ((FusedModule) module).Info.Downstreams.ToImmutableHashSet()
-                        : module.Downstreams.ToImmutableHashSet();
+                    var oldDownstreams = 
+                        (module as FusedModule)?.Info.Downstreams.ToImmutableHashSet()
+                        ?? module.Downstreams.ToImmutableHashSet();
+
                     var down = module.SubModules.Aggregate(oldDownstreams, (set, m) => set.Except(m.Downstreams));
                     foreach (var entry in down)
                     {
@@ -381,6 +385,13 @@ namespace Akka.Streams.Implementation.Fusing
                     return new[] {new KeyValuePair<IModule, StreamLayout.IMaterializedValueNode>(module, newMat)};
                 }
             }
+        }
+
+        private static bool IsAsync<T>(IModule module)
+        {
+            return module is GraphStageModule || module is GraphModule
+                ? module.Attributes.Contains<Attributes.AsyncBoundary>()
+                : module.IsAtomic || module.Attributes.Contains<Attributes.AsyncBoundary>();
         }
 
         private static StreamLayout.IMaterializedValueNode RewriteMaterializer(IDictionary<IModule, StreamLayout.IMaterializedValueNode> subMat, StreamLayout.IMaterializedValueNode mat, Dictionary<StreamLayout.IMaterializedValueNode, StreamLayout.IMaterializedValueNode> mapping)

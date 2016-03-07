@@ -48,6 +48,11 @@ namespace Akka.Streams.Implementation.Fusing
         {
             return new GraphStageModule(Shape, attributes, Stage);
         }
+
+        public override string ToString()
+        {
+            return Stage.ToString();
+        }
     }
 
     internal abstract class SimpleLinearGraphStage<T> : GraphStage<FlowShape<T, T>>
