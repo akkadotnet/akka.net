@@ -116,7 +116,7 @@ namespace Akka.Persistence.Snapshot
 
         private IEnumerable<FileInfo> GetSnapshotFiles(SnapshotMetadata metadata)
         {
-            return _dir
+            return GetSnapshotDir()
                 .GetFiles("*", SearchOption.TopDirectoryOnly)
                 .Where(f => SnapshotSequenceNrFilenameFilter(f, metadata));
         }
@@ -210,12 +210,12 @@ namespace Akka.Persistence.Snapshot
         {
             var filename = string.Format("snapshot-{0}-{1}-{2}{3}", Uri.EscapeDataString(metadata.PersistenceId),
                 metadata.SequenceNr, metadata.Timestamp.Ticks, extension);
-            return new FileInfo(Path.Combine(_dir.FullName, filename));
+            return new FileInfo(Path.Combine(GetSnapshotDir().FullName, filename));
         }
 
         private IEnumerable<SnapshotMetadata> GetSnapshotMetadata(string persistenceId, SnapshotSelectionCriteria criteria)
         {
-            var snapshots = _dir
+            var snapshots = GetSnapshotDir()
                 .EnumerateFiles("snapshot-" + Uri.EscapeDataString(persistenceId) + "-*", SearchOption.TopDirectoryOnly)
                 .Select(ExtractSnapshotMetadata)
                 .Where(metadata => metadata != null && criteria.IsMatch(metadata) && !_saving.Contains(metadata)).ToList();
@@ -244,12 +244,35 @@ namespace Akka.Persistence.Snapshot
 
         protected override void PreStart()
         {
-            if (!_dir.Exists)
-            {
-                _dir.Create();
-            }
-
+            GetSnapshotDir();
             base.PreStart();
+        }
+
+        private DirectoryInfo GetSnapshotDir()
+        {
+            if (!_dir.Exists || (_dir.Attributes & FileAttributes.Directory) == 0)
+            {
+                // try to create the directory, on failure double check if someone else beat us to it
+                Exception exception;
+                try
+                {
+                    _dir.Create();
+                    exception = null;
+                }
+                catch (Exception e)
+                {
+                    exception = e;
+                }
+                finally
+                {
+                    _dir.Refresh();
+                }
+                if (exception != null || ((_dir.Attributes & FileAttributes.Directory) == 0))
+                {
+                    throw new IOException("Failed to create snapshot directory " + _dir.FullName, exception);
+                }
+            }
+            return _dir;
         }
 
         private static bool SnapshotSequenceNrFilenameFilter(FileInfo fileInfo, SnapshotMetadata metadata)
