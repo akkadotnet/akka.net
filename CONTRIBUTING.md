@@ -109,6 +109,9 @@ If we ask you to change already published commits using interactive rebase (like
 git push -f origin my-new-branch-123
 ```
 
+### The build server isn't picking up a Pull request that I've modified
+The build server relies on git commit timestamps to keep track of new builds that it needs to perform. When updating a PR, sometimes the timestamp of the latest commit in the PR isn't updated. This leads the build server to think that the PR has already been built and tested. In order to force the build server to rebuild and test the updated PR, please follow the instructions outlined in this post [How can one change the timestamp of an old commit in Git?](http://stackoverflow.com/questions/454734/how-can-one-change-the-timestamp-of-an-old-commit-in-git/31540373#31540373).
+
 ### All my commits are on dev. How do I get them to a new branch? ###
 If all commits are on _dev_ you need to move them to a new feature branch.
 

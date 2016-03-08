@@ -79,12 +79,11 @@ namespace Akka.Persistence
         public IActorRef SnapshotStoreFor(string snapshotPluginId)
         {
             var configPath = string.IsNullOrEmpty(snapshotPluginId) ? _defaultSnapshotPluginId.Value : snapshotPluginId;
-            Lazy<PluginHolder> pluginContainer;
-            if (!_snapshotPluginExtensionIds.TryGetValue(configPath, out pluginContainer))
-            {
-                var plugin = new Lazy<PluginHolder>(() => CreatePlugin(configPath, _ => DefaultPluginDispatcherId), LazyThreadSafetyMode.ExecutionAndPublication);
-                pluginContainer = _snapshotPluginExtensionIds.AddOrUpdate(configPath, plugin, (key, old) => plugin);
-            }
+
+            var pluginContainer = _snapshotPluginExtensionIds.GetOrAdd(configPath,
+                cp =>
+                    new Lazy<PluginHolder>(() => CreatePlugin(cp, _ => DefaultPluginDispatcherId),
+                        LazyThreadSafetyMode.ExecutionAndPublication));
 
             return pluginContainer.Value.Ref;
         }
@@ -96,16 +95,15 @@ namespace Akka.Persistence
         public IActorRef JournalFor(string journalPluginId)
         {
             var configPath = string.IsNullOrEmpty(journalPluginId) ? _defaultJournalPluginId.Value : journalPluginId;
-            Lazy<PluginHolder> pluginContainer;
-            if (!_journalPluginExtensionIds.TryGetValue(configPath, out pluginContainer))
-            {
-                var plugin = new Lazy<PluginHolder>(() => CreatePlugin(configPath, type =>
-                    typeof (AsyncWriteJournal).IsAssignableFrom(type)
-                        ? Dispatchers.DefaultDispatcherId
-                        : DefaultPluginDispatcherId), 
-                        LazyThreadSafetyMode.ExecutionAndPublication);
-                pluginContainer = _journalPluginExtensionIds.AddOrUpdate(configPath, plugin, (key, old) => plugin);
-            }
+            var pluginContainer = _journalPluginExtensionIds.GetOrAdd(configPath,
+                cp =>
+                    new Lazy<PluginHolder>(
+                        () =>
+                            CreatePlugin(cp,
+                                type =>
+                                    typeof (AsyncWriteJournal).IsAssignableFrom(type)
+                                        ? Dispatchers.DefaultDispatcherId
+                                        : DefaultPluginDispatcherId), LazyThreadSafetyMode.ExecutionAndPublication));
 
             return pluginContainer.Value.Ref;
         }
@@ -120,16 +118,15 @@ namespace Akka.Persistence
         public EventAdapters AdaptersFor(string journalPluginId)
         {
             var configPath = string.IsNullOrEmpty(journalPluginId) ? _defaultJournalPluginId.Value : journalPluginId;
-            Lazy<PluginHolder> pluginContainer;
-            if (!_journalPluginExtensionIds.TryGetValue(configPath, out pluginContainer))
-            {
-                var plugin = new Lazy<PluginHolder>(() =>
-                    CreatePlugin(configPath, type => typeof (AsyncWriteJournal).IsAssignableFrom(type)
-                        ? Dispatchers.DefaultDispatcherId
-                        : DefaultPluginDispatcherId), 
-                        LazyThreadSafetyMode.ExecutionAndPublication);
-                pluginContainer = _journalPluginExtensionIds.AddOrUpdate(configPath, plugin, (key, old) => plugin);
-            }
+            var pluginContainer = _journalPluginExtensionIds.GetOrAdd(configPath,
+                cp =>
+                    new Lazy<PluginHolder>(
+                        () =>
+                            CreatePlugin(cp,
+                                type =>
+                                    typeof (AsyncWriteJournal).IsAssignableFrom(type)
+                                        ? Dispatchers.DefaultDispatcherId
+                                        : DefaultPluginDispatcherId), LazyThreadSafetyMode.ExecutionAndPublication));
 
             return pluginContainer.Value.Adapters;
         }
@@ -235,6 +232,15 @@ namespace Akka.Persistence
         public AtLeastOnceDeliverySettings AtLeastOnceDelivery { get; set; }
         public class AtLeastOnceDeliverySettings
         {
+            public AtLeastOnceDeliverySettings(TimeSpan redeliverInterval, int redeliveryBurstLimit,
+                int unconfirmedAttemptsToWarn, int maxUnconfirmedMessages)
+            {
+                RedeliverInterval = redeliverInterval;
+                RedeliveryBurstLimit = redeliveryBurstLimit;
+                UnconfirmedAttemptsToWarn = unconfirmedAttemptsToWarn;
+                MaxUnconfirmedMessages = maxUnconfirmedMessages;
+            }
+
             public AtLeastOnceDeliverySettings(Config config)
             {
                 RedeliverInterval = config.GetTimeSpan("at-least-once-delivery.redeliver-interval");
@@ -243,10 +249,60 @@ namespace Akka.Persistence
                 RedeliveryBurstLimit = config.GetInt("at-least-once-delivery.redelivery-burst-limit");
             }
 
+            /// <summary>
+            ///     Interval between redelivery attempts.
+            /// </summary>
             public TimeSpan RedeliverInterval { get; private set; }
+
+            /// <summary>
+            ///     Maximum number of unconfirmed messages, that this actor is allowed to hold in the memory. When this
+            ///     number is exceed, <see cref="AtLeastOnceDeliverySemantic.Deliver" /> will throw
+            ///     <see cref="AtLeastOnceDeliverySemantic.MaxUnconfirmedMessagesExceededException" />
+            ///     instead of accepting messages.
+            /// </summary>
             public int MaxUnconfirmedMessages { get; private set; }
+
+            /// <summary>
+            ///     After this number of delivery attempts a <see cref="UnconfirmedWarning" /> message will be sent to
+            ///     <see cref="ActorBase.Self" />.
+            ///     The count is reset after restart.
+            /// </summary>
             public int UnconfirmedAttemptsToWarn { get; private set; }
+            /// <summary>
+            ///     Maximum number of unconfirmed messages that will be sent at each redelivery burst. This is to help to
+            ///     prevent overflowing amount of messages to be sent at once, for eg. when destination cannot be reached for a long
+            ///     time.
+            /// </summary>
             public int RedeliveryBurstLimit { get; private set; }
+
+
+            public AtLeastOnceDeliverySettings WithRedeliverInterval(TimeSpan redeliverInterval)
+            {
+                return Copy(redeliverInterval);
+            }
+
+            public AtLeastOnceDeliverySettings WithMaxUnconfirmedMessages(int maxUnconfirmedMessages)
+            {
+                return Copy(null, null, null, maxUnconfirmedMessages);
+            }
+
+            public AtLeastOnceDeliverySettings WithRedeliveryBurstLimit(int redeliveryBurstLimit)
+            {
+                return Copy(null, redeliveryBurstLimit);
+            }
+
+            public AtLeastOnceDeliverySettings WithUnconfirmedAttemptsToWarn(int unconfirmedAttemptsToWarn)
+            {
+                return Copy(null, null, unconfirmedAttemptsToWarn);
+            }
+
+            private AtLeastOnceDeliverySettings Copy(TimeSpan? redeliverInterval = null, int? redeliveryBurstLimit = null,
+                int? unconfirmedAttemptsToWarn = null, int? maxUnconfirmedMessages = null)
+            {
+                return new AtLeastOnceDeliverySettings(redeliverInterval ?? RedeliverInterval,
+                    redeliveryBurstLimit ?? RedeliveryBurstLimit, unconfirmedAttemptsToWarn ?? UnconfirmedAttemptsToWarn,
+                    maxUnconfirmedMessages ?? MaxUnconfirmedMessages);
+            }
         }
 
         public InternalSettings Internal { get; private set; }

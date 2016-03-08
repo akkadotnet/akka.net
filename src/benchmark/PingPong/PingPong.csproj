@@ -64,6 +64,7 @@
     <Reference Include="System.Management" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ClientAsyncActor.cs" />
     <Compile Include="ClientReceiveActor.cs" />
     <Compile Include="ClientActorBase.cs" />
     <Compile Include="Program.cs" />

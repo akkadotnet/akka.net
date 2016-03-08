@@ -78,7 +78,7 @@ namespace Akka.Tests.Actor
             Assert.Same(extraNameChild, actorRef);
         }
 
-        [Fact(Skip = "Ignored")]
+        [Fact]
         public void Getting_an_unknown_child_that_exists_in_extraNames_Should_return_nobody()
         {
             var props = Props.Create<GuardianActor>(new OneForOneStrategy(e => Directive.Stop));

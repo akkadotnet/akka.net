@@ -343,8 +343,8 @@ namespace Akka.TestKit
             if (system == null) system = _testState.System;
 
             var durationValue = duration.GetValueOrDefault(Dilated(TimeSpan.FromSeconds(5)).Min(TimeSpan.FromSeconds(10)));
-            system.Shutdown();
-            var wasShutdownDuringWait = system.AwaitTermination(durationValue);
+
+            var wasShutdownDuringWait = system.Terminate().Wait(durationValue);
             if(!wasShutdownDuringWait)
             {
                 const string msg = "Failed to stop [{0}] within [{1}] \n{2}";

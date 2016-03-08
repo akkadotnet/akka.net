@@ -1,0 +1,78 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{B17DEDCB-D2AA-472D-82A0-D242B711F488}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Akka.Tests.Performance</RootNamespace>
+    <AssemblyName>Akka.Tests.Performance</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="NBench, Version=0.1.5.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\NBench.0.1.5\lib\net45\NBench.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Actor\ActorMemoryFootprintSpec.cs" />
+    <Compile Include="Actor\ActorPathSpec.cs" />
+    <Compile Include="Actor\ActorSelectionSpecs.cs" />
+    <Compile Include="Actor\AddressSpec.cs" />
+    <Compile Include="Actor\MinimalActorRefThroughputSpec.cs" />
+    <Compile Include="Actor\ReceiveActorThroughputSpec.cs" />
+    <Compile Include="Actor\UntypedActorThroughputSpec.cs" />
+    <Compile Include="Dispatch\DefaultDispatcherColdThroughputSpec.cs" />
+    <Compile Include="Dispatch\DispatcherThroughputSpecBase.cs" />
+    <Compile Include="Dispatch\ForkJoinDispatcherThroughputSpec.cs" />
+    <Compile Include="Dispatch\MailboxMemoryFootprintSpec.cs" />
+    <Compile Include="Actor\ActorThroughputSpecBase.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj">
+      <Project>{0d3cbad0-bbdb-43e5-afc4-ed1d3ecdc224}</Project>
+      <Name>Akka.TestKit</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka\Akka.csproj">
+      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
+      <Name>Akka</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

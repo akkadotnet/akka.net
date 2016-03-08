@@ -60,14 +60,14 @@ namespace FaultTolerance
                 if (progress.Percent >= 100)
                 {
                     log.Info("That's all, shutting down");
-                    Context.System.Shutdown();
+                    Context.System.Terminate();
                 }
             }
             else if (message == ReceiveTimeout.Instance)
             {
                 // No progress within 15 seconds, ServiceUnavailable
                 log.Error("Shutting down due to unavailable service");
-                Context.System.Shutdown();
+                Context.System.Terminate();
             }
             else
             {

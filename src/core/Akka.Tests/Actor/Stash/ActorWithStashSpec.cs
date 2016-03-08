@@ -59,6 +59,17 @@ namespace Akka.Tests.Actor.Stash
         }
 
         [Fact]
+        public void An_actor_Should__not_throw_an_exception_if_the_same_message_is_received_and_stashed_twice()
+        {
+            _state.ExpectedException = new TestLatch();
+            var stasher = ActorOf<StashAndReplyActor>("stashing-actor");
+            stasher.Tell("hello");
+            ExpectMsg("bye");
+            stasher.Tell("hello");
+            ExpectMsg("bye");
+        }
+
+        [Fact]
         public void An_actor_must_unstash_all_messages_on_PostStop()
         {
             var stasher = ActorOf<StashEverythingActor>("stasher");
@@ -170,6 +181,20 @@ namespace Akka.Tests.Actor.Stash
                 ReceiveAny(_ => { }); //Do nothing
             }
 
+            public IStash Stash { get; set; }
+        }
+
+        private class StashAndReplyActor : ReceiveActor, IWithUnboundedStash
+        {
+            public StashAndReplyActor()
+            {
+                ReceiveAny(m =>
+                {
+                    Stash.Stash();
+                    Sender.Tell("bye");
+                }
+                );
+            }
             public IStash Stash { get; set; }
         }
 

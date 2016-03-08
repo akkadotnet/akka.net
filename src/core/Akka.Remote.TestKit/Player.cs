@@ -35,7 +35,7 @@ namespace Akka.Remote.TestKit
             get
             {
                 if(_client == null) throw new IllegalStateException("TestConductor client not yet started");
-                if(_system.TerminationTask.IsCompleted) throw new IllegalStateException("TestConductor unavailable because system is terminated; you need to StartNewSystem() before this point");
+                if(_system.WhenTerminated.IsCompleted) throw new IllegalStateException("TestConductor unavailable because system is terminated; you need to StartNewSystem() before this point");
                 return _client;
             }
         }
@@ -447,12 +447,13 @@ namespace Akka.Remote.TestKit
                                 .Transport.ManagementCommand(new SetThrottle(throttleMsg.Target, throttleMsg.Direction,
                                     mode));
 
+                        var self = Self;
                         cmdTask.ContinueWith(t =>
                         {
                             if (t.IsFaulted)
                                 throw new ConfigurationException("Throttle was requested from the TestConductor, but no transport " +
                                     "adapters available that support throttling. Specify 'testTransport(on=true)' in your MultiNodeConfig");
-                            Self.Tell(new ToServer<Done>(Done.Instance));
+                            self.Tell(new ToServer<Done>(Done.Instance));
                         });
                         return Stay();
                     }
@@ -464,14 +465,14 @@ namespace Akka.Remote.TestKit
                     {
                         if (terminateMsg.ShutdownOrExit.IsLeft && terminateMsg.ShutdownOrExit.ToLeft().Value == false)
                         {
-                            Context.System.Shutdown();
+                            Context.System.Terminate();
                             return Stay();
                         }
                         if (terminateMsg.ShutdownOrExit.IsLeft && terminateMsg.ShutdownOrExit.ToLeft().Value == true)
                         {
                             //TODO: terminate more aggressively with Abort
                             //Context.System.AsInstanceOf<ActorSystemImpl>().Abort();
-                            Context.System.Shutdown();
+                            Context.System.Terminate();
                             return Stay();
                         }
                         if (terminateMsg.ShutdownOrExit.IsRight)

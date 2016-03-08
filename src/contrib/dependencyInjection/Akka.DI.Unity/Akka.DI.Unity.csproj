@@ -30,6 +30,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\Akka.DI.Unity.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.Practices.Unity">
@@ -83,74 +84,4 @@
   <Target Name="AfterBuild">
   </Target>
   -->
-  
-  <Choose>
-    <When Condition="($(TargetFrameworkIdentifier) == 'WindowsPhoneApp') Or ($(TargetFrameworkIdentifier) == '.NETCore') Or ($(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.0' Or $(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6')) Or ($(TargetFrameworkIdentifier) == 'Silverlight' And $(TargetFrameworkVersion) == 'v5.0') Or ($(TargetFrameworkIdentifier) == 'WindowsPhone' And ($(TargetFrameworkVersion) == 'v8.0' Or $(TargetFrameworkVersion) == 'v8.1')) Or ($(TargetFrameworkIdentifier) == 'MonoAndroid') Or ($(TargetFrameworkIdentifier) == 'MonoTouch') Or ($(TargetFrameworkIdentifier) == 'Xamarin.iOS') Or ($(TargetFrameworkIdentifier) == 'Xamarin.Mac') Or ($(TargetFrameworkProfile) == 'Profile5') Or ($(TargetFrameworkProfile) == 'Profile6') Or ($(TargetFrameworkProfile) == 'Profile7') Or ($(TargetFrameworkProfile) == 'Profile14') Or ($(TargetFrameworkProfile) == 'Profile19') Or ($(TargetFrameworkProfile) == 'Profile24') Or ($(TargetFrameworkProfile) == 'Profile31') Or ($(TargetFrameworkProfile) == 'Profile32') Or ($(TargetFrameworkProfile) == 'Profile37') Or ($(TargetFrameworkProfile) == 'Profile42') Or ($(TargetFrameworkProfile) == 'Profile44') Or ($(TargetFrameworkProfile) == 'Profile47') Or ($(TargetFrameworkProfile) == 'Profile49') Or ($(TargetFrameworkProfile) == 'Profile78') Or ($(TargetFrameworkProfile) == 'Profile84') Or ($(TargetFrameworkProfile) == 'Profile92') Or ($(TargetFrameworkProfile) == 'Profile102') Or ($(TargetFrameworkProfile) == 'Profile111') Or ($(TargetFrameworkProfile) == 'Profile136') Or ($(TargetFrameworkProfile) == 'Profile147') Or ($(TargetFrameworkProfile) == 'Profile151') Or ($(TargetFrameworkProfile) == 'Profile157') Or ($(TargetFrameworkProfile) == 'Profile158') Or ($(TargetFrameworkProfile) == 'Profile225') Or ($(TargetFrameworkProfile) == 'Profile240') Or ($(TargetFrameworkProfile) == 'Profile255') Or ($(TargetFrameworkProfile) == 'Profile259') Or ($(TargetFrameworkProfile) == 'Profile328') Or ($(TargetFrameworkProfile) == 'Profile336') Or ($(TargetFrameworkProfile) == 'Profile344')">
-      <ItemGroup>
-        <Reference Include="Microsoft.Practices.ServiceLocation">
-          <HintPath>..\..\..\..\packages\CommonServiceLocator\lib\portable-net4+sl5+netcore45+wpa81+wp8\Microsoft.Practices.ServiceLocation.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-      </ItemGroup>
-    </When>
-  </Choose>
-  <Choose>
-    <When Condition="$(TargetFrameworkIdentifier) == '.NETCore'">
-      <ItemGroup>
-        <Reference Include="Microsoft.Practices.Unity.RegistrationByConvention">
-          <HintPath>..\..\..\..\packages\Unity\lib\win8\Microsoft.Practices.Unity.RegistrationByConvention.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-        <Reference Include="Microsoft.Practices.Unity">
-          <HintPath>..\..\..\..\packages\Unity\lib\win8\Microsoft.Practices.Unity.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-      </ItemGroup>
-    </When>
-    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6')">
-      <ItemGroup>
-        <Reference Include="Microsoft.Practices.Unity.Configuration">
-          <HintPath>..\..\..\..\packages\Unity\lib\net45\Microsoft.Practices.Unity.Configuration.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-        <Reference Include="Microsoft.Practices.Unity.RegistrationByConvention">
-          <HintPath>..\..\..\..\packages\Unity\lib\net45\Microsoft.Practices.Unity.RegistrationByConvention.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-        <Reference Include="Microsoft.Practices.Unity">
-          <HintPath>..\..\..\..\packages\Unity\lib\net45\Microsoft.Practices.Unity.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-      </ItemGroup>
-    </When>
-    <When Condition="$(TargetFrameworkIdentifier) == 'WindowsPhone' And ($(TargetFrameworkVersion) == 'v8.0' Or $(TargetFrameworkVersion) == 'v8.1')">
-      <ItemGroup>
-        <Reference Include="Microsoft.Practices.Unity.RegistrationByConvention">
-          <HintPath>..\..\..\..\packages\Unity\lib\wp80\Microsoft.Practices.Unity.RegistrationByConvention.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-        <Reference Include="Microsoft.Practices.Unity">
-          <HintPath>..\..\..\..\packages\Unity\lib\wp80\Microsoft.Practices.Unity.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-      </ItemGroup>
-    </When>
-    <When Condition="($(TargetFrameworkIdentifier) == 'WindowsPhoneApp') Or ($(TargetFrameworkIdentifier) == 'MonoAndroid') Or ($(TargetFrameworkIdentifier) == 'MonoTouch') Or ($(TargetFrameworkIdentifier) == 'Xamarin.iOS') Or ($(TargetFrameworkIdentifier) == 'Xamarin.Mac') Or ($(TargetFrameworkProfile) == 'Profile7') Or ($(TargetFrameworkProfile) == 'Profile31') Or ($(TargetFrameworkProfile) == 'Profile32') Or ($(TargetFrameworkProfile) == 'Profile44') Or ($(TargetFrameworkProfile) == 'Profile49') Or ($(TargetFrameworkProfile) == 'Profile78') Or ($(TargetFrameworkProfile) == 'Profile84') Or ($(TargetFrameworkProfile) == 'Profile111') Or ($(TargetFrameworkProfile) == 'Profile151') Or ($(TargetFrameworkProfile) == 'Profile157') Or ($(TargetFrameworkProfile) == 'Profile259')">
-      <ItemGroup>
-        <Reference Include="Microsoft.Practices.Unity">
-          <HintPath>..\..\..\..\packages\Unity\lib\portable-net45+wp80+win8+wpa81+MonoAndroid10+MonoTouch10\Microsoft.Practices.Unity.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-      </ItemGroup>
-    </When>
-  </Choose>
 </Project>

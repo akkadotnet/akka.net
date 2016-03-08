@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Runtime.Serialization;
 using Akka.Actor;
 
@@ -23,6 +24,15 @@ namespace Akka.Pattern
         {
         }
 #if !DNXCORE50
+        /// <summary>
+        /// Initializes a new instance of the <see cref="IllegalStateException"/> class.
+        /// </summary>
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="innerEx">The inner <see cref="Exception"/> that was thrown.</param>
+        public IllegalStateException(string message, Exception innerEx) : base(message, innerEx)
+        {
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="IllegalStateException"/> class.
         /// </summary>

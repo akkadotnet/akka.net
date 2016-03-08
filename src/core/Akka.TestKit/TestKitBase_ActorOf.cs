@@ -131,6 +131,11 @@ namespace Akka.TestKit
         }
 
 
+        public ActorSelection ActorSelection(IActorRef anchorRef, string actorPath)
+        {
+            return Sys.ActorSelection(anchorRef, actorPath);
+        }
+
         /// <summary>
         /// Create a new actor as child of specified supervisor and returns it as <see cref="TestActorRef{TActor}"/>
         /// to enable access to the underlying actor instance via <see cref="TestActorRefBase{TActor}.UnderlyingActor"/>.

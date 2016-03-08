@@ -45,6 +45,7 @@ namespace Akka.Cluster
         readonly TimeSpan _metricsMovingAverageHalfLife;
         readonly int _minNrOfMembers;
         readonly ImmutableDictionary<string, int> _minNrOfMembersOfRole;
+        readonly TimeSpan _downRemovalMargin;
 
         public ClusterSettings(Config config, string systemName)
         {
@@ -66,6 +67,7 @@ namespace Akka.Cluster
             _leaderActionsInterval = cc.GetTimeSpan("leader-actions-interval");
             _unreachableNodesReaperInterval = cc.GetTimeSpan("unreachable-nodes-reaper-interval");
             _publishStatsInterval = cc.GetTimeSpanWithOffSwitch("publish-stats-interval");
+            _downRemovalMargin = cc.GetTimeSpan("down-removal-margin");
 
             _autoDownUnreachableAfter = cc.GetTimeSpanWithOffSwitch("auto-down-unreachable-after");
 
@@ -233,6 +235,11 @@ namespace Akka.Cluster
         public ImmutableDictionary<string, int> MinNrOfMembersOfRole
         {
             get { return _minNrOfMembersOfRole; }
+        }
+
+        public TimeSpan DownRemovalMargin
+        {
+            get { return _downRemovalMargin; }
         }
     }
 }

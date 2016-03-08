@@ -44,6 +44,9 @@ bld/
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 
+# NBench results
+[Pp]erf[Rr]esult*/
+
 #NUNIT
 *.VisualState.xml
 TestResult.xml
@@ -223,3 +226,6 @@ src/.vs/
 
 # Akka.Persistence Test Output
 target/
+
+# API Approval received files
+**/Akka.API.Tests/*.received.txt

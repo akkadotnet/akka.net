@@ -19,12 +19,20 @@ namespace Akka.Actor
             _receiveTimeoutDuration = timeout;
         }
 
+        public TimeSpan? ReceiveTimeout
+        {
+            get
+            {
+                return _receiveTimeoutDuration;
+            }
+        }
+
         public void CheckReceiveTimeout()
         {
             CancelReceiveTimeout();
             if (_receiveTimeoutDuration != null && !Mailbox.HasMessages)
             {
-                _pendingReceiveTimeout = System.Scheduler.ScheduleTellOnceCancelable(_receiveTimeoutDuration.Value, Self, ReceiveTimeout.Instance, Self);
+                _pendingReceiveTimeout = System.Scheduler.ScheduleTellOnceCancelable(_receiveTimeoutDuration.Value, Self, Akka.Actor.ReceiveTimeout.Instance, Self);
             }
         }
 

@@ -61,7 +61,15 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         protected override void HandleTestRunTree(TestRunTree tree)
         {
             Console.WriteLine("Writing test state to: {0}", Path.GetFullPath(FileName));
-            FileStore.SaveTestRun(FileName, tree);
+            try
+            {
+                FileStore.SaveTestRun(FileName, tree);
+            }
+            catch (Exception ex) //avoid throwing exception back to parent - just continue
+            {
+                Console.WriteLine("Failed to write test state to {0}. Cause: {1}", Path.GetFullPath(FileName), ex);
+            }
+            Console.WriteLine("Finished.");
         }
 
         protected override void ReceiveFactData(FactData data)

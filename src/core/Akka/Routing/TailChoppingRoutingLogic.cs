@@ -16,33 +16,25 @@ using Akka.Util.Internal;
 namespace Akka.Routing
 {
     /// <summary>
-    /// The routing logic for the TailChoppingRouter. This router will send a message to a randomly chosen
-    /// routee, and after a delay, send to a different randomly chosen routee. The first response is forwarded,
-    /// and all other responses are discarded.
+    /// This class contains logic used by a <see cref="Router"/> to route a message to a <see cref="Routee"/> determined using tail-chopping.
+    /// This process has the router select a random routee, then waits an interval before sending to a different randomly chosen routee.
+    /// The first response is used and the remaining are discarded. If the none of the routees respond within a specified time limit,
+    /// a timeout failure occurs.
     /// </summary>
     public sealed class TailChoppingRoutingLogic : RoutingLogic
     {
-        /// <summary>
-        /// The amount of time to wait for a response.
-        /// </summary>
         private readonly TimeSpan _within;
 
-        /// <summary>
-        /// The interval to delay between choosing a new random routee.
-        /// </summary>
         private readonly TimeSpan _interval;
 
-        /// <summary>
-        /// An instance of the actor system scheduler.
-        /// </summary>
         private readonly IScheduler _scheduler;
 
         /// <summary>
-        /// Creates an instance of the TailChoppingRoutingLogic.
+        /// Initializes a new instance of the <see cref="TailChoppingRoutingLogic"/> class.
         /// </summary>
         /// <param name="within">The time within which at least one response is expected.</param>
         /// <param name="interval">The duration after which the next routee will be picked.</param>
-        /// <param name="scheduler">The scheduler to use</param>
+        /// <param name="scheduler">The <see cref="IScheduler"/> used to force deadlines.</param>
         public TailChoppingRoutingLogic(TimeSpan within, TimeSpan interval, IScheduler scheduler)
         {
             _within = within;
@@ -51,11 +43,11 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// Selects all routees and creates a TailChoppingRoutee.
+        /// Picks all of the provided <paramref name="routees"/> to receive the <paramref name="message" />.
         /// </summary>
-        /// <param name="message">The message to use.</param>
-        /// <param name="routees">The routees to select from.</param>
-        /// <returns>A TailChoppingRoutee to handle the tail chopping routing.</returns>
+        /// <param name="message">The message that is being routed</param>
+        /// <param name="routees">A collection of routees used when receiving the <paramref name="message" />.</param>
+        /// <returns>A <see cref="TailChoppingRoutee" /> that receives the <paramref name="message" />.</returns>
         public override Routee Select(object message, Routee[] routees)
         {
             if(routees.IsNullOrEmpty())
@@ -67,37 +59,28 @@ namespace Akka.Routing
     }
 
     /// <summary>
-    /// A single point routee that routes to randomly chosen routees at a given interval. Accepts the first response.
+    /// This class represents a single point <see cref="Routee"/> that sends messages to a <see cref="Routee"/> determined using tail-chopping.
+    /// This process has the routee select a random routee, then waits an interval before sending to a different randomly chosen routee.
+    /// The first response is used and the remaining are discarded. If the none of the routees respond within a specified time limit,
+    /// a timeout failure occurs.
     /// </summary>
     internal sealed class TailChoppingRoutee : Routee
     {
-        /// <summary>
-        /// The collection of possible routees to send messages to.
-        /// </summary>
         private readonly Routee[] _routees;
 
-        /// <summary>
-        /// The amount of time to wait for a response.
-        /// </summary>
         private readonly TimeSpan _within;
 
-        /// <summary>
-        /// The interval to wait before sending to the next routee.
-        /// </summary>
         private readonly TimeSpan _interval;
 
-        /// <summary>
-        /// An instance of the actor system scheduler.
-        /// </summary>
         private readonly IScheduler _scheduler;
 
         /// <summary>
-        /// Creates an instance of the TailChoppingRoutee.
+        /// Initializes a new instance of the <see cref="TailChoppingRoutee"/> class.
         /// </summary>
-        /// <param name="routees">The routees to route to.</param>
+        /// <param name="routees">The list of routees that the router uses to send messages.</param>
         /// <param name="within">The time within which at least one response is expected.</param>
         /// <param name="interval">The duration after which the next routee will be picked.</param>
-        /// <param name="scheduler">Access to a <see cref="IScheduler"/> instance, used to force deadlines.</param>
+        /// <param name="scheduler">The <see cref="IScheduler"/> used to force deadlines.</param>
         public TailChoppingRoutee(Routee[] routees, TimeSpan within, TimeSpan interval, IScheduler scheduler)
         {
             _routees = routees;
@@ -107,10 +90,10 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// Sends a message to the tail chopping router's collection of routees.
+        /// Sends a message to the collection of routees.
         /// </summary>
-        /// <param name="message">The message to send.</param>
-        /// <param name="sender">The sender of the message.</param>
+        /// <param name="message">The message that is being sent.</param>
+        /// <param name="sender">The actor sending the message.</param>
         public override void Send(object message, IActorRef sender)
         {
             _routees.Shuffle();
@@ -153,27 +136,61 @@ namespace Akka.Routing
     }
 
     /// <summary>
-    /// A router pool that selects a random routee, then waits an interval before sending to a
-    /// different routee. The first response is used and the remaining discarded.
+    /// This class represents a <see cref="Pool"/> router that sends messages to a <see cref="Routee"/> determined using tail-chopping.
+    /// This process has the router select a random routee, then waits an interval before sending to a different randomly chosen routee.
+    /// The first response is used and the remaining are discarded. If the none of the routees respond within a specified time limit,
+    /// a timeout failure occurs.
     /// </summary>
     public sealed class TailChoppingPool : Pool
     {
+        /// <summary>
+        /// This class represents a surrogate of a <see cref="TailChoppingPool"/> router.
+        /// Its main use is to help during the serialization process.
+        /// </summary>
         public class TailChoppingPoolSurrogate : ISurrogate
         {
+            /// <summary>
+            /// Creates a <see cref="TailChoppingPool"/> encapsulated by this surrogate.
+            /// </summary>
+            /// <param name="system">The actor system that owns this router.</param>
+            /// <returns>The <see cref="TailChoppingPool"/> encapsulated by this surrogate.</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new TailChoppingPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, Within, Interval, UsePoolDispatcher);
             }
 
+            /// The interval to wait before sending to the next routee.
             public TimeSpan Interval { get; set; }
+            /// The amount of time to wait for a response.
             public TimeSpan Within { get; set; }
+            /// <summary>
+            /// The number of routees associated with this pool.
+            /// </summary>
             public int NrOfInstances { get; set; }
+            /// <summary>
+            /// Determine whether or not to use the pool dispatcher. The dispatcher is defined in the
+            /// 'pool-dispatcher' configuration property in the deployment section of the router.
+            /// </summary>
             public bool UsePoolDispatcher { get; set; }
+            /// <summary>
+            /// The resizer to use when dynamically allocating routees to the pool.
+            /// </summary>
             public Resizer Resizer { get; set; }
+            /// <summary>
+            /// The strategy to use when supervising the pool.
+            /// </summary>
             public SupervisorStrategy SupervisorStrategy { get; set; }
+            /// <summary>
+            /// The dispatcher to use when passing messages to the routees.
+            /// </summary>
             public string RouterDispatcher { get; set; }
         }
 
+        /// <summary>
+        /// Creates a surrogate representation of the current <see cref="TailChoppingPool"/>.
+        /// </summary>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>The surrogate representation of the current <see cref="TailChoppingPool"/>.</returns>
         public override ISurrogate ToSurrogate(ActorSystem system)
         {
             return new TailChoppingPoolSurrogate
@@ -188,26 +205,20 @@ namespace Akka.Routing
             };
         }
 
-        /// <summary>
-        /// The amount of time to wait for a response.
-        /// </summary>
         private readonly TimeSpan _within;
 
-        /// <summary>
-        /// The interval to wait before sending to the next routee.
-        /// </summary>
         private readonly TimeSpan _interval;
 
         /// <summary>
-        /// Creates an instance of the TailChoppingPool.
+        /// Initializes a new instance of the <see cref="TailChoppingPool"/> class.
         /// </summary>
         /// <param name="nrOfInstances">The initial number of routees in the pool.</param>
-        /// <param name="resizer">The resizer to use with this instance.</param>
-        /// <param name="supervisorStrategy">The supervision strategy to use with this pool.</param>
-        /// <param name="routerDispatcher">The router dispatcher to use with this instance.</param>
+        /// <param name="resizer">The resizer to use when dynamically allocating routees to the pool.</param>
+        /// <param name="supervisorStrategy">The strategy to use when supervising the pool.</param>
+        /// <param name="routerDispatcher">The dispatcher to use when passing messages to the routees.</param>
         /// <param name="within">The amount of time to wait for a response.</param>
         /// <param name="interval">The interval to wait before sending to the next routee.</param>
-        /// <param name="usePoolDispatcher">Whether or not to use the pool dispatcher.</param>
+        /// <param name="usePoolDispatcher"><c>true</c> to use the pool dispatcher; otherwise <c>false</c>.</param>
         public TailChoppingPool(int nrOfInstances, Resizer resizer, SupervisorStrategy supervisorStrategy,
             string routerDispatcher, TimeSpan within, TimeSpan interval, bool usePoolDispatcher = false)
             : base(nrOfInstances, resizer, supervisorStrategy, routerDispatcher, usePoolDispatcher)
@@ -217,9 +228,14 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// Creates an instance of the TailChoppingPool.
+        /// Initializes a new instance of the <see cref="TailChoppingPool"/> class.
+        /// 
+        /// <note>
+        /// 'nr-of-instances', 'within', and 'tail-chopping-router.interval'
+        /// must be defined in the provided configuration.
+        /// </note>
         /// </summary>
-        /// <param name="config">The configuration to use with this instance.</param>
+        /// <param name="config">The configuration used to configure the pool.</param>
         public TailChoppingPool(Config config)
             : this(config.GetInt("nr-of-instances"),
                 DefaultResizer.FromConfig(config),
@@ -233,7 +249,7 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// Creates an instance of the TailChoppingPool.
+        /// Initializes a new instance of the <see cref="TailChoppingPool"/> class.
         /// </summary>
         /// <param name="nrOfInstances">The initial number of routees in the pool.</param>
         /// <param name="within">The amount of time to wait for a response.</param>
@@ -245,45 +261,62 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// Sets the supervisor strategy to use for the pool.
+        /// Creates a new <see cref="TailChoppingPool"/> router with a given <see cref="SupervisorStrategy"/>.
+        /// 
+        /// <note>
+        /// This method is immutable and returns a new instance of the router.
+        /// </note>
         /// </summary>
-        /// <param name="strategy">The strategy to use.</param>
-        /// <returns>The tail chopping pool.</returns>
+        /// <param name="strategy">The <see cref="SupervisorStrategy"/> used to configure the new router.</param>
+        /// <returns>A new router with the provided <paramref name="strategy"/>.</returns>
         public override Pool WithSupervisorStrategy(SupervisorStrategy strategy)
         {
             return new TailChoppingPool(NrOfInstances, Resizer, strategy, RouterDispatcher, _within, _interval, UsePoolDispatcher);
         }
 
         /// <summary>
-        /// Sets the resizer to use for the pool.
+        /// Creates a new <see cref="TailChoppingPool"/> router with a given <see cref="Resizer"/>.
+        /// 
+        /// <note>
+        /// This method is immutable and returns a new instance of the router.
+        /// </note>
         /// </summary>
-        /// <param name="resizer">The resizer to use.</param>
-        /// <returns>The tail chopping pool.</returns>
+        /// <param name="resizer">The <see cref="Resizer"/> used to configure the new router.</param>
+        /// <returns>A new router with the provided <paramref name="resizer"/>.</returns>
         public override Pool WithResizer(Resizer resizer)
         {
             return new TailChoppingPool(NrOfInstances, resizer, SupervisorStrategy, RouterDispatcher, _within, _interval, UsePoolDispatcher);
         }
 
         /// <summary>
-        /// Sets the router dispatcher to use for the pool.
+        /// Creates a new <see cref="TailChoppingPool"/> router with a given dispatcher id.
+        /// 
+        /// <note>
+        /// This method is immutable and returns a new instance of the router.
+        /// </note>
         /// </summary>
-        /// <param name="routerDispatcher">The router dispatcher to use.</param>
-        /// <returns>The tail chopping pool.</returns>
-        public override Pool WithDispatcher(string routerDispatcher)
+        /// <param name="dispatcher">The dispatcher id used to configure the new router.</param>
+        /// <returns>A new router with the provided dispatcher id.</returns>
+        public override Pool WithDispatcher(string dispatcher)
         {
-            return new TailChoppingPool(NrOfInstances, Resizer, SupervisorStrategy, routerDispatcher, _within, _interval, UsePoolDispatcher);
+            return new TailChoppingPool(NrOfInstances, Resizer, SupervisorStrategy, dispatcher, _within, _interval, UsePoolDispatcher);
         }
 
         /// <summary>
-        /// Creates a tail chopping router.
+        /// Creates a router that is responsible for routing messages to routees within the provided <paramref name="system" />.
         /// </summary>
-        /// <param name="system">The actor system to use to create this router.</param>
-        /// <returns>The created router.</returns>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>The newly created router tied to the given system.</returns>
         public override Router CreateRouter(ActorSystem system)
         {
             return new Router(new TailChoppingRoutingLogic(_within, _interval, system.Scheduler));
         }
 
+        /// <summary>
+        /// Configure the current router with an auxiliary router for routes that it does not know how to handle.
+        /// </summary>
+        /// <param name="routerConfig">The router to use as an auxiliary source.</param>
+        /// <returns>The router configured with the auxiliary information.</returns>
         public override RouterConfig WithFallback(RouterConfig routerConfig)
         {
             return OverrideUnsetConfig(routerConfig);
@@ -291,23 +324,42 @@ namespace Akka.Routing
     }
 
     /// <summary>
-    /// A router group that selects a random routee, then waits an interval before sending to a
-    /// different routee. The first response is used and the remaining discarded.
+    /// This class represents a <see cref="Group"/> router that sends messages to a <see cref="Routee"/> determined using tail-chopping.
+    /// This process has the router select a random routee, then waits an interval before sending to a different randomly chosen routee.
+    /// The first response is used and the remaining are discarded. If the none of the routees respond within a specified time limit,
+    /// a timeout failure occurs.
     /// </summary>
     public sealed class TailChoppingGroup : Group
     {
+        /// <summary>
+        /// This class represents a surrogate of a <see cref="TailChoppingGroup"/> router.
+        /// Its main use is to help during the serialization process.
+        /// </summary>
         public class TailChoppingGroupSurrogate : ISurrogate
         {
+            /// <summary>
+            /// Creates a <see cref="TailChoppingGroup"/> encapsulated by this surrogate.
+            /// </summary>
+            /// <param name="system">The actor system that owns this router.</param>
+            /// <returns>The <see cref="TailChoppingGroup"/> encapsulated by this surrogate.</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new TailChoppingGroup(Paths, Within,Interval);
             }
 
+            /// The amount of time to wait for a response.
             public TimeSpan Within { get; set; }
+            /// The actor paths used by this router during routee selection.
             public string[] Paths { get; set; }
+            /// The interval to wait before sending to the next routee.
             public TimeSpan Interval { get; set; }
         }
 
+        /// <summary>
+        /// Creates a surrogate representation of the current <see cref="TailChoppingGroup"/>.
+        /// </summary>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>The surrogate representation of the current <see cref="TailChoppingGroup"/>.</returns>
         public override ISurrogate ToSurrogate(ActorSystem system)
         {
             return new TailChoppingGroupSurrogate
@@ -318,20 +370,22 @@ namespace Akka.Routing
             };
         }
 
-        /// <summary>
-        /// The amount of time to wait for a response.
-        /// </summary>
         private readonly TimeSpan _within;
 
-        /// <summary>
-        /// The interval to wait before sending to the next routee.
-        /// </summary>
         private readonly TimeSpan _interval;
-        
+
         /// <summary>
-        /// Creates an instance of the TailChoppingGroup.
+        /// Initializes a new instance of the <see cref="TailChoppingGroup"/> class.
         /// </summary>
-        /// <param name="config">The configuration to use with this instance.</param>
+        /// <param name="config">
+        /// The configuration to use to lookup paths used by the group router.
+        /// 
+        /// <note>
+        /// If 'routees.path' is defined in the provided configuration then those paths will be used by the router.
+        /// If 'within' is defined in the provided configuration then that will be used as the timeout.
+        /// If 'tail-chopping-router.interval' is defined in the provided configuration then that will be used as the interval.
+        /// </note>
+        /// </param>
         public TailChoppingGroup(Config config)
             : base(config.GetStringList("routees.paths").ToArray())
         {
@@ -340,9 +394,9 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// Creates an instance of the TailChoppingGroup.
+        /// Initializes a new instance of the <see cref="TailChoppingGroup"/> class.
         /// </summary>
-        /// <param name="routeePaths">The configured routee paths to use with this instance.</param>
+        /// <param name="routeePaths">The actor paths used by this router during routee selection.</param>
         /// <param name="within">The amount of time to wait for a response.</param>
         /// <param name="interval">The interval to wait before sending to the next routee.</param>
         public TailChoppingGroup(string[] routeePaths, TimeSpan within, TimeSpan interval) : base(routeePaths)
@@ -352,19 +406,27 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// Creates a tail chopping router.
+        /// Creates a router that is responsible for routing messages to routees within the provided <paramref name="system" />.
         /// </summary>
-        /// <param name="system">The actor system to use to create this router.</param>
-        /// <returns>The created router.</returns>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>The newly created router tied to the given system.</returns>
         public override Router CreateRouter(ActorSystem system)
         {
             return new Router(new TailChoppingRoutingLogic(_within, _interval, system.Scheduler));
         }
 
+        /// <summary>
+        /// Creates a new <see cref="TailChoppingGroup" /> router with a given dispatcher id.
+        /// 
+        /// <note>
+        /// This method is immutable and returns a new instance of the router.
+        /// </note>
+        /// </summary>
+        /// <param name="dispatcher">The dispatcher id used to configure the new router.</param>
+        /// <returns>A new router with the provided dispatcher id.</returns>
         public override Group WithDispatcher(string dispatcher)
         {
             return new TailChoppingGroup(Paths, _within, _interval){ RouterDispatcher = dispatcher};
         }
     }
 }
-

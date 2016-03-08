@@ -1,4 +1,157 @@
-#### 1.0.5 August 07 2015 ####
+#### 1.0.6 January 18 2016 ####
+**Maintenance release for Akka.NET v1.0.5**
+This patch consists of many bug fixes, performance improvements, as well as the addition of two brand new alpha modules for Akka.Cluster users.
+
+**Akka.Cluster.Tools** and **Akka.Cluster.Sharding**
+The biggest part of this release is the addition of [Akka.Cluster.Tools](http://getakka.net/docs/clustering/cluster-tools) and [Akka.Cluster.Sharding](http://getakka.net/docs/clustering/cluster-sharding), both of which are available now as pre-release packages on NuGet.
+
+```
+PM> Install-Package Akka.Cluster.Tools -pre
+```
+and
+
+```
+PM> Install-Package Akka.Cluster.Sharding -pre
+```
+
+Respectively, these two packages extend Akka.Cluster to do the following:
+
+1. Distributed pub/sub (Akka.Cluster.Tools)
+2. `ClusterClient` - subscribe to changes in cluster availability without actually being part of the cluster itself. (Akka.Cluster.Tools)
+3. `ClusterSingleton` - guarantee a single instance of a specific actor throughout the cluster. (Akka.Cluster.Tools)
+4. Sharding - partition data into durable stores (built on top of Akka.Persistence) in a manner that is fault-tolerant and recoverable across thecluster. (Akka.Cluster.Sharding)
+
+Check out the documentation for more details!
+* http://getakka.net/docs/clustering/cluster-tools
+* http://getakka.net/docs/clustering/cluster-sharding
+
+**Fixes & Changes - Akka.NET Core**
+* [Fix incorrect serialization of Unicode characters in NewtonSoftJsonSerializer](https://github.com/akkadotnet/akka.net/pull/1508)
+* [Fixed: Supervisorstrategy does not preserve stacktrace](https://github.com/akkadotnet/akka.net/issues/1499)
+* [added initial performance specs using NBench](https://github.com/akkadotnet/akka.net/pull/1520)
+* [Add wire back as contrib package + Serialization TestKit](https://github.com/akkadotnet/akka.net/pull/1503)
+* [Implemented the RegisterOnTermination feature.](https://github.com/akkadotnet/akka.net/pull/1523)
+* [Increased performance of DedicatedThreadPool](https://github.com/akkadotnet/akka.net/pull/1569)
+* [#1605 updated Google.ProtocolBuffers to 2.4.1.555](https://github.com/akkadotnet/akka.net/pull/1634)
+* [Clear current message - fixes #1609](https://github.com/akkadotnet/akka.net/pull/1613)
+* [Rewrite of the AtomicReference ](https://github.com/akkadotnet/akka.net/pull/1615)
+* [Implemented WhenTerminated and Terminate](https://github.com/akkadotnet/akka.net/pull/1614)
+* [Implemented StartTime and Uptime](https://github.com/akkadotnet/akka.net/pull/1617)
+* [API Diff with fixed Approval file](https://github.com/akkadotnet/akka.net/pull/1639)
+* [Fixed: NullReferenceException in Akka.Util.Internal.Collections.ImmutableAvlTreeBase`2.RotateLeft](https://github.com/akkadotnet/akka.net/issues/1202)
+
+
+
+**Fixes & Changes - Akka.Remote & Akka.Cluster**
+It should be noted that we've improved the throughput from Akka.NET v1.0.5 to 1.0.6 by a factor of 8
+
+* [Akka.Cluster.Tools & Akka.Cluster.Sharding with tests and examples](https://github.com/akkadotnet/akka.net/pull/1530)
+* [Added UntrustedSpec](https://github.com/akkadotnet/akka.net/pull/1535)
+* [Akka.Remote Performance - String.Format logging perf fix](https://github.com/akkadotnet/akka.net/pull/1540)
+* [Remoting system upgrade](https://github.com/akkadotnet/akka.net/pull/1596)
+* [PublicHostname defaults to IPAddress.Any when hostname is blank](https://github.com/akkadotnet/akka.net/pull/1621)
+* [Removes code that overrides OFF log level with WARNING.](https://github.com/akkadotnet/akka.net/pull/1644)
+* [fixes issue with Helios message ordering](https://github.com/akkadotnet/akka.net/pull/1638)
+* [Fixed: Actor does not receive "Terminated" message if remoting is used and it is not monitored actor's parent](https://github.com/akkadotnet/akka.net/issues/1646)
+
+**Fixes & Changes - Akka.Persistence**
+* [Fixed racing conditions on sql-based snapshot stores](https://github.com/akkadotnet/akka.net/pull/1507)
+* [Fix for race conditions in presistence plugins](https://github.com/akkadotnet/akka.net/pull/1543)
+* [Fix #1522 Ensure extensions and persistence plugins are only registered/created once](https://github.com/akkadotnet/akka.net/pull/1648)
+
+A special thanks to all of our contributors for making this happen!
+18 contributors since release v1.0.5
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 22 | 3564 | 28087 | Aaron Stannard |
+| 15 | 1710 | 1303 | rogeralsing |
+| 6 | 569 | 95 | Silv3rcircl3 |
+| 6 | 53594 | 4417 | Bartosz Sypytkowski |
+| 5 | 1786 | 345 | Sean Gilliam |
+| 3 | 786 | 159 | maxim.salamatko |
+| 2 | 765 | 277 | JeffCyr |
+| 2 | 44 | 53 | Chris Constantin |
+| 2 | 14 | 2 | Simon Anderson |
+| 1 | 84 | 4 | Bart de Boer |
+| 1 | 6051 | 27 | danielmarbach |
+| 1 | 6 | 2 | tstojecki |
+| 1 | 3 | 5 | Ralf1108 |
+| 1 | 27 | 0 | Andrew Skotzko |
+| 1 | 2 | 2 | easuter |
+| 1 | 2 | 1 | Danthar |
+| 1 | 182 | 0 | derwasp |
+| 1 | 179 | 0 | Onat Yiğit Mercan |
+
+#### 1.0.5 December 3 2015 ####
+**Maintenance release for Akka.NET v1.0.4**
+This release is a collection of bug fixes, performance enhancements, and general improvements contributed by 29 individual contributors.
+
+**Fixes & Changes - Akka.NET Core**
+* [Bugfix: Make the Put on the SimpleDnsCache idempotent](https://github.com/akkadotnet/akka.net/commit/2ed1d574f76491707deac236db3fd7c1e5af5757)
+* [Add CircuitBreaker Initial based on akka 2.0.5](https://github.com/akkadotnet/akka.net/commit/7e16834ef0ff8551cdd3530eacb1016d40cb1cb8)
+* [Fix for receive timeout in async await actor](https://github.com/akkadotnet/akka.net/commit/6474bd7dc3d27756e255d12ef21f331108d9922d)
+* [akka-io: fixed High CPU load using the Akka.IO TCP server](https://github.com/akkadotnet/akka.net/commit/4af2cfbcaafa33ea04a1a8b1aa6486e78bd6f821)
+* [akka-io: Stop select loop on idle](https://github.com/akkadotnet/akka.net/commit/e545780d36cfb805b2014746a2e97006894c2e00)
+* [Serialization fixes](https://github.com/akkadotnet/akka.net/commit/6385cc20a3d310efc0bb2f9e29710c5b7bceaa87)
+* [Fix issue #1301 - inprecise resizing of resizable routers](https://github.com/akkadotnet/akka.net/commit/cf714333b25190249f01d79bad606d4ce5863e47)
+* [Stashing now checks message equality by reference](https://github.com/akkadotnet/akka.net/commit/884330dfb5d69b523f25a59b98450322fe3b34f4)
+* [rewrote ActorPath.TryParseAddrss to now test Uris by try / catch and use Uri.TryCreate instead](https://github.com/akkadotnet/akka.net/commit/8eaf32147a08f213db818bf19d74ed9d1aadaed2)
+* [Port EventBusUnsubscribers](https://github.com/akkadotnet/akka.net/commit/bd91bcd50d918e5e8ee4b085e53d603cfd46c89a)
+* [Add optional PipeTo completion handlers](https://github.com/akkadotnet/akka.net/commit/dfb7f61026d5d0b2d23efe1dd73af820f70a1d1c)
+* [Akka context props output to Serilog](https://github.com/akkadotnet/akka.net/commit/409cd7f4ed0b285827b681685af59ec19c5a4b73)
+
+
+**Fixes & Changes - Akka.Remote, Akka.Cluster**
+* [MultiNode tests can now be skipped by specifying a SkipReason](https://github.com/akkadotnet/akka.net/commit/75f966cb7d2f2c0d859e0e3a90a38d251a10c5e5)
+* [Akka.Remote: Discard msg if payload size > max allowed.](https://github.com/akkadotnet/akka.net/commit/05f57b9b1ff256145bc085f94d49a591e51e1304)
+* [Throw `TypeLoadException` when an actor type or dependency cannot be found in a remote actor deploy scenario](https://github.com/akkadotnet/akka.net/commit/ffed3eb088bc00f90a5e4b7367d4598fda007401)
+* [MultiNode Test Visualizer](https://github.com/akkadotnet/akka.net/commit/7706bb242719b7f7197058e89f8579af5b82dfc3)
+* [Fix for Akka.Cluster.Routing.ClusterRouterGroupSettings Mono Linux issue](https://github.com/akkadotnet/akka.net/commit/dbbd2ac9b16772af8f8e35d3d1c8bf5dcf354f42)
+* [Added RemoteDeploymentWatcher](https://github.com/akkadotnet/akka.net/commit/44c29ccefaeca0abdc4fd1f81daf1dc27a285f66)
+* [Akka IO Transport: framing support](https://github.com/akkadotnet/akka.net/commit/60b5d2a318b485652e0888190aaa930fe43b1bbc)
+* [#1443 fix for cluster shutdown](https://github.com/akkadotnet/akka.net/commit/941688aead57266b454b76530a7fb5446f68e15d)
+
+**Fixes & Changes - Akka.Persistence**
+* [Fixes the NullReferenceException in #1235 and appears to adhere to the practice of including an addres with the serialized binary.](https://github.com/akkadotnet/akka.net/commit/3df119ff614c3298299f863e18efd6e0fa848858)
+* [Port Finite State Machine DSL to Akka.Persistence](https://github.com/akkadotnet/akka.net/commit/dce684d907df86f5039eb2ca20727ab48d4b218a)
+* [Become and BecomeStacked for ReceivePersistentActor](https://github.com/akkadotnet/akka.net/commit/b11dafc86eb9284c2d515fd9da3599fe463a5681)
+* [Persistent actor stops on recovery failures](https://github.com/akkadotnet/akka.net/commit/03105719a8866e8eadac268bc8f813e738f989b9)
+* [Fixed: data races inside sql journal engine](https://github.com/akkadotnet/akka.net/commit/f088f0c681fdc7ba1b4eaf7f823c2a9535d3045d)
+* [fix sqlite.conf and readme](https://github.com/akkadotnet/akka.net/commit/c7e925ba624eee7e386855251169aecbafd6ae7d)
+* [#1416 created ReceiveActor implementation of AtLeastOnceDeliveryActor base class](https://github.com/akkadotnet/akka.net/commit/4d1d79b568bdae6565423c3ed914f8a9606dc0e8)
+
+A special thanks to all of our contributors, organized below by the number of changes made:
+
+23369 5258  18111 Aaron Stannard
+18827 16329 2498  Bartosz Sypytkowski
+11994 9496  2498  Steffen Forkmann
+6031  4637  1394  maxim.salamatko
+1987  1667  320 Graeme Bradbury
+1556  1149  407 Sean Gilliam
+1118  1118  0 moliver
+706 370 336 rogeralsing
+616 576 40  Marek Kadek
+501 5 496 Alex Koshelev
+377 269 108 Jeff Cyr
+280 208 72  willieferguson
+150 98  52  Christian Palmstierna
+85  63  22  Willie Ferguson
+77  71  6 Emil Ingerslev
+66  61  5 Grover Jackson
+60  39  21  Alexander Pantyukhin
+56  33  23  Uladzimir Makarau
+55  54  1 rdavisau
+51  18  33  alex-kondrashov
+42  26  16  Silv3rcircl3
+36  30  6 evertmulder
+33  19  14  Filip Malachowicz
+13  11  2 Suhas Chatekar
+7 6 1 tintoy
+4 2 2 Jonathan
+2 1 1 neekgreen
+2 1 1 Christopher Martin
+2 1 1 Artem Borzilov 
 
 #### 1.0.4 August 07 2015 ####
 **Maintenance release for Akka.NET v1.0.3**

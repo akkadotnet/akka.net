@@ -1,6 +1,6 @@
 ## Akka.Persistence.Sqlite
 
-Akka Persistence journal and snapshot store backed by SQL Server database.
+Akka Persistence journal and snapshot store backed by SQLite database.
 
 **WARNING: Akka.Persistence.Sqlite plugin is still in beta and it's mechanics described bellow may be still subject to change**.
 
@@ -13,7 +13,7 @@ akka.persistence.journal.plugin = "akka.persistence.journal.sqlite"
 akka.persistence.journal.sqlite.connection-string = "<database connection string>"
 ```
 
-Similar configuration may be used to setup a SQL Server snapshot store:
+Similar configuration may be used to setup a SQLite snapshot store:
 
 ```
 akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.sqlite"
@@ -28,7 +28,7 @@ Both journal and snapshot store share the same configuration keys (however they 
 
 - `class` (string with fully qualified type name) - determines class to be used as a persistent journal. Default: *Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite* (for journal) and *Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite* (for snapshot store).
 - `plugin-dispatcher` (string with configuration path) - describes a message dispatcher for persistent journal. Default: *akka.actor.default-dispatcher*
-- `connection-string` - connection string used to access SQL Server database. Default: *none*.
+- `connection-string` - connection string used to access SQLite database. Default: *none*.
 - `connection-timeout` - timespan determining default connection timeouts on database-related operations. Default: *30s*
 - `table-name` - name of the table used by either journal or snapshot store. Default: *event_journal* (for journal) or *snapshot_store* (for snapshot store)
 - `auto-initialize` - flag determining if journal or snapshot store related tables should by automatically created when they have not been found in connected database. Default: *false*
