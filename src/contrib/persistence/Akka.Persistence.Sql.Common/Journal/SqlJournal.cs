@@ -63,7 +63,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback)
         {
-            return DbEngine.ReplayMessagesAsync(persistenceId, fromSequenceNr, toSequenceNr, max, Context.Sender, recoveryCallback);
+            return DbEngine.ReplayMessagesAsync(persistenceId, fromSequenceNr, toSequenceNr, max, context.Sender, recoveryCallback);
         }
 
         public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
