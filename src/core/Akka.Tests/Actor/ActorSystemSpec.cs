@@ -163,8 +163,11 @@ namespace Akka.Tests.Actor
         [Fact]
         public void Reliable_deny_creation_of_actors_while_shutting_down()
         {
-            var sys = ActorSystem.Create("DenyCreationWhileShuttingDone");
-            Task.Delay(500).ContinueWith(_ => sys.Terminate());
+            var sys = ActorSystem.Create("DenyCreationWhileShuttingDown");
+            sys.Scheduler.Advanced.ScheduleOnce(TimeSpan.FromMilliseconds(100), () =>
+            {
+                sys.Terminate();
+            });
             var failing = false;
             var created = new HashSet<IActorRef>();
 
@@ -185,14 +188,15 @@ namespace Akka.Tests.Actor
                 }
 
                 
-                if (!failing && sys.Uptime.TotalSeconds >= 5)
+                if (!failing && sys.Uptime.TotalSeconds >= 10)
                     throw new AssertionFailedException(created.Last() + Environment.NewLine +
                                                        "System didn't terminate within 5 seconds");
             }
 
-            Assert.Empty(
-                created.Cast<ActorRefWithCell>()
-                    .Where(actor => !actor.IsTerminated && !(actor.Underlying is UnstartedCell)));
+            var nonTerminatedOrNonstartedActors = created.Cast<ActorRefWithCell>()
+                .Where(actor => !actor.IsTerminated && !(actor.Underlying is UnstartedCell)).ToList();
+            Assert.Equal(0, 
+                nonTerminatedOrNonstartedActors.Count);
         }
 
         #region Extensions tests
