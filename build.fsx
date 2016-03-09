@@ -352,6 +352,8 @@ module Nuget =
         match project with
         | "Akka" -> []
         | "Akka.Cluster" -> ["Akka.Remote", release.NugetVersion]
+        | "Akka.Cluster.Sharding" -> ["Akka.Cluster.Tools", preReleaseVersion; "Akka.Persistence", preReleaseVersion]
+        | "Akka.Cluster.Tools" -> ["Akka.Cluster", preReleaseVersion]
         | "Akka.Persistence.TestKit" -> ["Akka.Persistence", preReleaseVersion; "Akka.TestKit.Xunit2", release.NugetVersion]
         | persistence when (persistence.Contains("Sql") && not (persistence.Equals("Akka.Persistence.Sql.Common"))) -> ["Akka.Persistence.Sql.Common", preReleaseVersion]
         | persistence when (persistence.StartsWith("Akka.Persistence.")) -> ["Akka.Persistence", preReleaseVersion]
@@ -364,6 +366,7 @@ module Nuget =
     let getProjectVersion project =
       match project with
       | "Akka.Cluster" -> preReleaseVersion
+      | cluster when cluster.StartsWith("Akka.Cluster.") -> preReleaseVersion
       | persistence when persistence.StartsWith("Akka.Persistence") -> preReleaseVersion
       | "Akka.Serialization.Wire" -> preReleaseVersion
       | _ -> release.NugetVersion
