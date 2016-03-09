@@ -269,8 +269,6 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
                 Watch(snd);
                 rcv.Tell(PoisonPill.Instance);
                 ExpectTerminated(snd);
-
-                return Unit.Instance;
             }, materializer);
         }
 
@@ -339,7 +337,6 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
                 // termination is tiggered by user code
                 Watch(a);
                 ExpectTerminated(a);
-                return Unit.Instance;
             }, materializer);
         }
 

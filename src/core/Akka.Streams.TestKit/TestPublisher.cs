@@ -81,9 +81,10 @@ namespace Akka.Streams.TestKit
             /// <summary>
             /// Expect a subscription.
             /// </summary>
-            public ISubscription ExpectSubscription()
+            public StreamTestKit.PublisherProbeSubscription<T> ExpectSubscription()
             {
-                return _probe.ExpectMsg<TestPublisher.Subscribe>().Subscription;
+                return
+                    (StreamTestKit.PublisherProbeSubscription<T>) _probe.ExpectMsg<Subscribe>().Subscription;
             }
 
             /// <summary>
@@ -119,6 +120,11 @@ namespace Akka.Streams.TestKit
             public IEnumerable<TOther> ReceiveWhile<TOther>(TimeSpan? max = null, TimeSpan? idle = null, Func<object, TOther> filter = null, int msgs = int.MaxValue) where TOther : class
             {
                 return _probe.ReceiveWhile(max, idle, filter, msgs);
+            }
+
+            public IPublisherEvent ExpectEvent()
+            {
+                return _probe.ExpectMsg<IPublisherEvent>();
             }
 
             void IPublisher.Subscribe(ISubscriber subscriber)
@@ -194,6 +200,54 @@ namespace Akka.Streams.TestKit
             }
         }
 
+        internal sealed class LazyEmptyPublisher<T> : IPublisher<T>
+        {
+            public static readonly IPublisher<T> Instance = new LazyEmptyPublisher<T>();
+            private LazyEmptyPublisher() { }
+
+            public void Subscribe(ISubscriber<T> subscriber)
+            {
+                subscriber.OnSubscribe(new StreamTestKit.CompletedSubscription<T>(subscriber));
+            }
+
+            public override string ToString()
+            {
+                return "soon-to-complete-publisher";
+            }
+
+            void IPublisher.Subscribe(ISubscriber subscriber)
+            {
+                Subscribe((ISubscriber<T>) subscriber);
+            }
+        }
+
+        internal sealed class LazyErrorPublisher<T> : IPublisher<T>
+        {
+            public readonly string Name;
+            public readonly Exception Cause;
+
+            public LazyErrorPublisher(Exception cause, string name)
+            {
+                Name = name;
+                Cause = cause;
+            }
+
+            public void Subscribe(ISubscriber<T> subscriber)
+            {
+                subscriber.OnSubscribe(new StreamTestKit.FailedSubscription<T>(subscriber, Cause));
+            }
+
+            public override string ToString()
+            {
+                return Name;
+            }
+
+            void IPublisher.Subscribe(ISubscriber subscriber)
+            {
+                Subscribe((ISubscriber<T>) subscriber);
+            }
+        }
+
         /// <summary>
         /// Publisher that signals complete to subscribers, after handing a void subscription.
         /// </summary>
@@ -203,11 +257,27 @@ namespace Akka.Streams.TestKit
         }
 
         /// <summary>
+        /// Publisher that subscribes the subscriber and completes after the first request.
+        /// </summary>
+        public static IPublisher<T> LazyEmpty<T>()
+        {
+            return LazyEmptyPublisher<T>.Instance;
+        }
+
+        /// <summary>
         /// Publisher that signals error to subscribers immediately after handing out subscription.
         /// </summary>
         public static IPublisher<T> Error<T>(Exception exception)
         {
             return new ErrorPublisher<T>(exception, "error");
+        }
+
+        /// <summary>
+        /// Publisher subscribes the subscriber and signals error after the first request.
+        /// </summary>
+        public static IPublisher<T> LazyError<T>(Exception exception)
+        {
+            return new LazyErrorPublisher<T>(exception, "error");
         }
 
         /// <summary>

@@ -46,6 +46,7 @@
     <Compile Include="TestSink.cs" />
     <Compile Include="TestSource.cs" />
     <Compile Include="TestSubscriber.cs" />
+    <Compile Include="TestUtils.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\System.Reactive.Streams\System.Reactive.Streams.csproj">
