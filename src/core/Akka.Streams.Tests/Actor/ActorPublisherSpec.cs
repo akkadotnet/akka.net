@@ -214,7 +214,7 @@ my-dispatcher1 {
         }
 
         [Fact]
-        public void ActorPublisher_should_singal_immediate_onComplete()
+        public void ActorPublisher_should_signal_immediate_onComplete()
         {
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));

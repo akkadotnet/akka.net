@@ -73,6 +73,7 @@
     <Compile Include="TestException.cs" />
     <Compile Include="TestPublisherSubscriberSpec.cs" />
     <Compile Include="TwoStreamsSetup.cs" />
+    <Compile Include="StreamTestDefaultMailbox.cs" />
     <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>
