@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Streams;
 using Akka.Actor;
+using Akka.Streams.Actors;
 using Akka.TestKit;
 
 namespace Akka.Streams.TestKit
@@ -285,6 +286,54 @@ namespace Akka.Streams.TestKit
                 var sub = ExpectSubscription();
                 if (signalDemand) sub.Request(1);
                 ExpectComplete();
+                return this;
+            }
+
+            /// <summary>
+            /// Expect given next element or error signal, returning whichever was signalled.
+            /// </summary>
+            public object ExpectNextOrError()
+            {
+                var message = _probe.FishForMessage(m => m is OnNext || m is OnError, hint: "OnNext(_) or error");
+                if (message is OnNext)
+                    return ((OnNext) message).Element;
+                return ((OnError) message).Cause;
+            }
+
+            /// <summary>
+            /// Fluent DSL. Expect given next element or error signal.
+            /// </summary>
+            public ManualProbe<T> ExpectNextOrError(T element, Exception cause)
+            {
+                _probe.FishForMessage(
+                    m =>
+                        (m is OnNext && ((OnNext) m).Element.Equals(element)) ||
+                        (m is OnError && ((OnError) m).Cause.Equals(cause)),
+                    hint: string.Format("OnNext({0}) or {1}", element, cause.GetType().Name));
+                return this;
+            }
+
+            /// <summary>
+            /// Expect given next element or stream completion, returning whichever was signalled.
+            /// </summary>
+            public object ExpectNextOrComplete()
+            {
+                var message = _probe.FishForMessage(m => m is OnNext || m is OnComplete, hint: "OnNext(_) or OnComplete");
+                if (message is OnNext)
+                    return ((OnNext) message).Element;
+                return message;
+            }
+
+            /// <summary>
+            /// Fluent DSL. Expect given next element or stream completion.
+            /// </summary>
+            public ManualProbe<T> ExpectNextOrComplete(T element)
+            {
+                _probe.FishForMessage(
+                    m =>
+                        (m is OnNext && ((OnNext) m).Element.Equals(element)) ||
+                        m is OnComplete,
+                    hint: string.Format("OnNext({0}) or OnComplete", element));
                 return this;
             }
 

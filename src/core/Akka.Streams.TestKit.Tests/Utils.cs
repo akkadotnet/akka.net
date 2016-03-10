@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Streams;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Streams.Implementation;
@@ -19,7 +20,16 @@ namespace Akka.Streams.TestKit.Tests
             public TE(string message) : base(message) { }
         }
 
-        public static T AssertAllStagesStopped<T>(this AkkaSpec spec,Func<T> block, IMaterializer materializer)
+        public static void AssertAllStagesStopped(this AkkaSpec spec, Action block, IMaterializer materializer)
+        {
+            AssertAllStagesStopped(spec, () =>
+            {
+                block();
+                return Unit.Instance;
+            }, materializer);
+        }
+
+        public static T AssertAllStagesStopped<T>(this AkkaSpec spec, Func<T> block, IMaterializer materializer)
         {
             var impl = materializer as ActorMaterializerImpl;
             if (impl == null)
