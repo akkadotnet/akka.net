@@ -3616,7 +3616,7 @@ namespace Akka.Routing
     {
         public ActorRefRoutee(Akka.Actor.IActorRef actor) { }
         public Akka.Actor.IActorRef Actor { get; }
-        public override System.Threading.Tasks.Task Ask(object message, System.Nullable<System.TimeSpan> timeout) { }
+        public override System.Threading.Tasks.Task<object> Ask(object message, System.Nullable<System.TimeSpan> timeout) { }
         public override bool Equals(object obj) { }
         protected bool Equals(Akka.Routing.ActorRefRoutee other) { }
         public override int GetHashCode() { }
@@ -3626,7 +3626,7 @@ namespace Akka.Routing
     {
         public ActorSelectionRoutee(Akka.Actor.ActorSelection actor) { }
         public Akka.Actor.ActorSelection Selection { get; }
-        public override System.Threading.Tasks.Task Ask(object message, System.Nullable<System.TimeSpan> timeout) { }
+        public override System.Threading.Tasks.Task<object> Ask(object message, System.Nullable<System.TimeSpan> timeout) { }
         public override bool Equals(object obj) { }
         protected bool Equals(Akka.Routing.ActorSelectionRoutee other) { }
         public override int GetHashCode() { }
@@ -4023,7 +4023,7 @@ namespace Akka.Routing
     {
         public static readonly Akka.Routing.Routee NoRoutee;
         public Routee() { }
-        public virtual System.Threading.Tasks.Task Ask(object message, System.Nullable<System.TimeSpan> timeout) { }
+        public virtual System.Threading.Tasks.Task<object> Ask(object message, System.Nullable<System.TimeSpan> timeout) { }
         public static Akka.Routing.Routee FromActorRef(Akka.Actor.IActorRef actorRef) { }
         public virtual void Send(object message, Akka.Actor.IActorRef sender) { }
     }
