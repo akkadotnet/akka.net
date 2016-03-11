@@ -6,113 +6,182 @@ namespace Akka.Streams.Stage
 {
     internal class PushPullGraphLogic<TIn, TOut> : GraphStageLogic, IDetachedContext<TOut>
     {
+        private AbstractStage<TIn, TOut, ISyncDirective, ISyncDirective, IContext<TOut>, ILifecycleContext> _currentStage;
+        private readonly FlowShape<TIn, TOut> _shape;
+
         public PushPullGraphLogic(
             FlowShape<TIn, TOut> shape,
             Attributes attributes,
-            AbstractStage<TIn, TOut, IDirective, IDirective, IContext<TOut>, ILifecycleContext> stage)
+            AbstractStage<TIn, TOut, ISyncDirective, ISyncDirective, IContext<TOut>, ILifecycleContext> stage)
             : base(shape)
         {
             Attributes = attributes;
-            Stage = stage;
-            Materializer = Interpreter.Materializer;
+            _currentStage = Stage = stage;
+            _shape = shape;
+
+            SetHandler(_shape.Inlet, onPush: () =>
+            {
+                try
+                {
+                    _currentStage.OnPush(Grab(_shape.Inlet), Context);
+                }
+                catch (Exception e)
+                {
+                    OnSupervision(e);
+                }
+            },
+            onUpstreamFailure: exception => _currentStage.OnUpstreamFailure(exception, Context),
+            onUpstreamFinish: () => _currentStage.OnUpstreamFinish(Context));
+
+            SetHandler(_shape.Outlet, 
+                onPull: () => _currentStage.OnPull(Context),
+                onDownstreamFinish: () => _currentStage.OnDownstreamFinish(Context));
         }
 
-        public AbstractStage<TIn, TOut, IDirective, IDirective, IContext<TOut>, ILifecycleContext> Stage { get; }
-        public IMaterializer Materializer { get; }
+        public AbstractStage<TIn, TOut, ISyncDirective, ISyncDirective, IContext<TOut>, ILifecycleContext> Stage { get; }
+        IMaterializer ILifecycleContext.Materializer => Materializer;
         public Attributes Attributes { get; }
-        public bool IsFinishing { get; }
+        public IDetachedContext<TOut> Context => this;
 
-        public void Enter()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Execute()
-        {
-            throw new NotImplementedException();
-        }
-
+        public bool IsFinishing => IsClosed(_shape.Inlet);
+        
         public IDownstreamDirective PushAndFinish(object element)
         {
-            throw new NotImplementedException();
+            return PushAndFinish((TOut)element);
         }
 
         public IDownstreamDirective Push(object element)
         {
-            throw new NotImplementedException();
+            return Push((TOut)element);
         }
 
         public IUpstreamDirective Pull()
         {
-            throw new NotImplementedException();
+            Pull(_shape.Inlet);
+            return null;
         }
 
         public FreeDirective Finish()
         {
-            throw new NotImplementedException();
+            CompleteStage();
+            return null;
         }
 
         public FreeDirective Fail(Exception cause)
         {
-            throw new NotImplementedException();
+            FailStage(cause);
+            return null;
         }
 
         public ITerminationDirective AbsorbTermination()
         {
-            throw new NotImplementedException();
+            if (IsClosed(_shape.Outlet))
+            {
+                var exception = new NotSupportedException("It is not allowed to call AbsorbTermination() from onDownstreamFinish.");
+                // This MUST be logged here, since the downstream has cancelled, i.e. there is no one to send onError to, the
+                // stage is just about to finish so no one will catch it anyway just the interpreter
+
+                Interpreter.Log.Error(exception.Message);
+                throw exception;    // We still throw for correctness (although a finish() would also work here)
+            }
+
+            if (IsAvailable(_shape.Outlet)) _currentStage.OnPull(Context);
+            return null;
         }
 
         public bool IsHoldingBoth { get; }
-        public bool IsHoldingUpstream { get; }
-        public bool IsHoldingDownstream { get; }
+        public bool IsHoldingUpstream => !(IsClosed(_shape.Inlet) || HasBeenPulled(_shape.Inlet));
+        public bool IsHoldingDownstream => IsAvailable(_shape.Outlet);
         public FreeDirective PushAndPull(object element)
         {
-            throw new NotImplementedException();
+            return PushAndPull((TOut)element);
         }
 
         public IUpstreamDirective HoldUpstream()
         {
-            throw new NotImplementedException();
+            return null;
         }
 
         public IDownstreamDirective HoldUpstreamAndPush(object element)
         {
-            throw new NotImplementedException();
+            return HoldUpstreamAndPush((TOut)element);
         }
 
         public IDownstreamDirective HoldDownstream()
         {
-            throw new NotImplementedException();
+            return null;
         }
 
         public IDownstreamDirective HoldDownstreamAndPull()
         {
-            throw new NotImplementedException();
+            Pull(_shape.Inlet);
+            return null;
         }
 
         public IDownstreamDirective PushAndFinish(TOut element)
         {
-            throw new NotImplementedException();
+            Push(_shape.Outlet, element);
+            CompleteStage();
+            return null;
         }
 
         public IDownstreamDirective Push(TOut element)
         {
-            throw new NotImplementedException();
+            Push(_shape.Outlet, element);
+            return null;
         }
 
         public FreeDirective PushAndPull(TOut element)
         {
-            throw new NotImplementedException();
+            Push(_shape.Outlet, element);
+            Pull(_shape.Inlet);
+            return null;
         }
 
         public IDownstreamDirective HoldUpstreamAndPush(TOut element)
         {
-            throw new NotImplementedException();
+            Push(_shape.Outlet, element);
+            return null;
         }
+
+        protected internal override void BeforePreStart()
+        {
+            base.BeforePreStart();
+            if (_currentStage.IsDetached) Pull(_shape.Inlet);
+        }
+
+        private void OnSupervision(Exception exception)
+        {
+            var decision = _currentStage.Decide(exception);
+            switch (decision)
+            {
+                case Directive.Stop:
+                    FailStage(exception);
+                    break;
+                case Directive.Resume:
+                    ResetAfterSupervise();
+                    break;
+                case Directive.Restart:
+                    ResetAfterSupervise();
+                    _currentStage.PostStop();
+                    _currentStage = (AbstractStage<TIn, TOut, ISyncDirective, ISyncDirective, IContext<TOut>, ILifecycleContext>)_currentStage.Restart();
+                    _currentStage.PreStart(Context);
+                    break;
+                default:
+                    throw new NotSupportedException($"PushPullGraphLogic doesn't support supervision directive {decision}");
+            }
+        }
+
+        private void ResetAfterSupervise()
+        {
+            var mustPull = _currentStage.IsDetached || IsAvailable(_shape.Outlet);
+            if (!HasBeenPulled(_shape.Inlet) && mustPull) Pull(_shape.Inlet);
+        }
+
+        public override string ToString() => $"PushPullGraphLogic({_currentStage})";
     }
 
-    internal class PushPullGraphStageWithMaterializedValue<TIn, TOut, TExt, TMat> :
-        GraphStageWithMaterializedValue<FlowShape<TIn, TOut>, TMat>
+    internal class PushPullGraphStageWithMaterializedValue<TIn, TOut, TExt, TMat> : GraphStageWithMaterializedValue<FlowShape<TIn, TOut>, TMat>
     {
         public readonly Func<Attributes, Tuple<IStage<TIn, TOut>, TMat>> Factory;
 
@@ -127,11 +196,12 @@ namespace Akka.Streams.Stage
 
         protected override Attributes InitialAttributes { get; }
         public override FlowShape<TIn, TOut> Shape { get; }
+
         public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out TMat materialized)
         {
             var stageAndMat = Factory(inheritedAttributes);
             materialized = stageAndMat.Item2;
-            return new PushPullGraphLogic<TIn, TOut>(Shape, inheritedAttributes, (AbstractStage<TIn, TOut, IDirective, IDirective, IContext<TOut>, ILifecycleContext>)stageAndMat.Item1);
+            return new PushPullGraphLogic<TIn, TOut>(Shape, inheritedAttributes, (AbstractStage<TIn, TOut, ISyncDirective, ISyncDirective, IContext<TOut>, ILifecycleContext>)stageAndMat.Item1);
         }
 
         public sealed override string ToString()
@@ -142,49 +212,17 @@ namespace Akka.Streams.Stage
 
     internal class PushPullGraphStage<TIn, TOut, TExt> : PushPullGraphStageWithMaterializedValue<TIn, TOut, TExt, Unit>
     {
-        public PushPullGraphStage(Func<Attributes, IStage<TIn, TOut>> factory, Attributes stageAttributes)
-            : base(attributes => Tuple.Create(factory(attributes), Unit.Instance), stageAttributes)
+        public PushPullGraphStage(Func<Attributes, IStage<TIn, TOut>> factory, Attributes stageAttributes) : base(attributes => Tuple.Create(factory(attributes), Unit.Instance), stageAttributes)
         {
         }
     }
 
-    public abstract class AbstractStage<TIn, TOut, TPushDirective, TPullDirective, TContext, TLifecycleContext> : IStage<TIn, TOut>
-        where TPushDirective : IDirective
-        where TPullDirective : IDirective
-        where TContext : IContext
-        where TLifecycleContext : ILifecycleContext
+    public abstract class AbstractStage<TIn, TOut, TPushDirective, TPullDirective, TContext, TLifecycleContext> : IStage<TIn, TOut> where TPushDirective : IDirective where TPullDirective : IDirective where TContext : IContext where TLifecycleContext : ILifecycleContext
     {
         protected TContext Context;
 
-        protected virtual bool IsDetached { get { return false; } }
-
-        protected void EnterAndPush(TOut element)
-        {
-            Context.Enter();
-            Context.Push(element);
-            Context.Execute();
-        }
-
-        protected void EnterAndPull()
-        {
-            Context.Enter();
-            Context.Pull();
-            Context.Execute();
-        }
-
-        protected void EnterAndFinish()
-        {
-            Context.Enter();
-            Context.Finish();
-            Context.Execute();
-        }
-        protected void EnterAndFail(Exception e)
-        {
-            Context.Enter();
-            Context.Fail(e);
-            Context.Execute();
-        }
-
+        internal protected virtual bool IsDetached => false;
+        
         /// <summary>
         /// User overridable callback.
         /// <para>
@@ -192,7 +230,9 @@ namespace Akka.Streams.Stage
         /// Empty default implementation.
         /// </para>
         /// </summary>
-        public virtual void PreStart(TLifecycleContext context) { }
+        public virtual void PreStart(TLifecycleContext context)
+        {
+        }
 
         /// <summary>
         /// <para>
@@ -275,7 +315,9 @@ namespace Akka.Streams.Stage
         /// Is called after the Stages final action is performed.  
         /// Empty default implementation.
         /// </summary>
-        public virtual void PostStop() { }
+        public virtual void PostStop()
+        {
+        }
 
         /// <summary>
         /// If an exception is thrown from <see cref="OnPush"/> this method is invoked to decide how

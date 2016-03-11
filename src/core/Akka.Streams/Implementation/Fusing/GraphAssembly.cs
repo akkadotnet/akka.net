@@ -177,12 +177,13 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     var owner = OutletOwners[i];
                     var logic = logics[owner];
-                    var h = logic.Handlers[outlet.Id] as OutHandler;
+                    var inCount = logic.InCount;
+                    var h = logic.Handlers[outlet.Id + inCount] as OutHandler;
 
                     if (h == null) throw new IllegalStateException(string.Format("No handler defined in stage {0} for port {1}", logic, outlet));
                     outHandlers[i] = h;
 
-                    logic.PortToConn[outlet.Id] = i;
+                    logic.PortToConn[outlet.Id + inCount] = i;
                 }
             }
 

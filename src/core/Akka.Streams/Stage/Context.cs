@@ -44,10 +44,7 @@ namespace Akka.Streams.Stage
          * This returns `true` after [[#absorbTermination]] has been used.
          */
         bool IsFinishing { get; }
-
-        void Enter();
-        void Execute();
-
+        
         /**
          * Push one element to downstream immediately followed by
          * cancel of upstreams and complete of downstreams.

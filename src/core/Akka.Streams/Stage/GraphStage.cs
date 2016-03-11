@@ -601,7 +601,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// The <see cref="IMaterializer"/> that has set this GraphStage in motion.
         /// </summary>
-        protected IMaterializer Materializer { get { return Interpreter.Materializer; } }
+        protected IMaterializer Materializer => Interpreter.Materializer;
 
         /// <summary>
         /// An <see cref="IMaterializer"/> that may run fusable parts of the graphs that it materializes 

@@ -24,6 +24,8 @@ namespace Akka.Streams
             {
                 Value = value;
             }
+
+            public override string ToString() => $"Name({Value})";
         }
 
         public sealed class InputBuffer : IAttribute
@@ -36,6 +38,8 @@ namespace Akka.Streams
                 Initial = initial;
                 Max = max;
             }
+
+            public override string ToString() => $"InputBuffer(initial={Initial}, max={Max})";
         }
 
         public sealed class LogLevels : IAttribute
@@ -52,12 +56,16 @@ namespace Akka.Streams
                 OnFinish = onFinish;
                 OnFailure = onFailure;
             }
+
+            public override string ToString() => $"LogLevel(element={OnElement}, finish={OnFinish}, failure={OnFailure})";
         }
         
         public sealed class AsyncBoundary : IAttribute
         {
             public static readonly AsyncBoundary Instance = new AsyncBoundary();
             private AsyncBoundary() { }
+
+            public override string ToString() => $"AsyncBoundary";
         }
 
         public static readonly Attributes None = new Attributes();
@@ -150,6 +158,8 @@ namespace Akka.Streams
         {
             return _attributes.Any(attr => attr is TAttr);
         }
+
+        public override string ToString() => $"Attributes({string.Join(", ", _attributes as IEnumerable<IAttribute>)})";
     }
 
     /// <summary>
@@ -165,6 +175,8 @@ namespace Akka.Streams
             {
                 Name = name;
             }
+
+            public override string ToString() => $"Dispatcher({Name})";
         }
 
         public sealed class SupervisionStrategy : Attributes.IAttribute
@@ -175,6 +187,8 @@ namespace Akka.Streams
             {
                 Decider = decider;
             }
+
+            public override string ToString() => $"SupervisionStrategy";
         }
 
         /**
