@@ -73,7 +73,6 @@
     <Compile Include="TestPublisherSubscriberSpec.cs" />
     <Compile Include="TwoStreamsSetup.cs" />
     <Compile Include="Utils.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj">

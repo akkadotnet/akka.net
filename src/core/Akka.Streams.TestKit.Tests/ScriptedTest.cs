@@ -25,27 +25,30 @@ namespace Akka.Streams.TestKit.Tests
 
     public abstract class ScriptedTest : AkkaSpec
     {
-        protected class Script<TIn, TOut>
+        protected static class Script
         {
-            public static Script<TIn, TOut> Create(params Tuple<IEnumerable<TIn>, IEnumerable<TOut>>[] phases)
+            public static ScriptedTest.Script<T1, T2> Create<T1, T2>(params Tuple<IEnumerable<T1>, IEnumerable<T2>>[] phases)
             {
-                var providedInputs = new List<TIn>();
-                var expectedOutputs = new List<TOut>();
+                var providedInputs = new List<T1>();
+                var expectedOutputs = new List<T2>();
                 var jumps = new List<int>();
 
                 foreach (var phase in phases)
                 {
-                    var ins = phase.Item1.ToArray();
-                    var outs = phase.Item2.ToArray();
+                    var ins = phase.Item1;
+                    var outs = phase.Item2;
 
                     providedInputs.AddRange(ins);
                     expectedOutputs.AddRange(outs);
 
-                    jumps.AddRange(new int[ins.Length - 1]);
-                    jumps.Add(outs.Length);
+                    var jump = new int[ins.Count()];
+                    jump.Initialize();
+                    jump[jump.Length - 1] = outs.Count();
+
+                    jumps.AddRange(jump);
                 }
 
-                return new Script<TIn, TOut>(providedInputs.ToArray(), expectedOutputs.ToArray(), jumps.ToArray(), 0, 0, 0, false);
+                return new Script<T1, T2>(providedInputs.ToArray(), expectedOutputs.ToArray(), jumps.ToArray(), 0, 0, 0, false);
             }
         }
 
@@ -227,7 +230,7 @@ namespace Akka.Streams.TestKit.Tests
                     if (!_currentScript.Completed)
                     {
                         idleRounds = ShakeIt() ? 0 : idleRounds + 1;
-                        var tieBreak = ThreadLocalRandom.Current.Next()%2 == 0;
+                        var tieBreak = ThreadLocalRandom.Current.Next() % 2 == 0;
 
                         if (MayProvideInput && (!MayRequestMore || tieBreak))
                         {
