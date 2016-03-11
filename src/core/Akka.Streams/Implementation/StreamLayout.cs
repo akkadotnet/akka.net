@@ -545,9 +545,6 @@ namespace Akka.Streams.Implementation
 
     public sealed class CompositeModule : Module
     {
-        private readonly IImmutableDictionary<OutPort, InPort> _downstreams;
-        private readonly IImmutableDictionary<InPort, OutPort> _upstreams;
-
         public CompositeModule(ImmutableArray<IModule> subModules,
             Shape shape,
             IImmutableDictionary<OutPort, InPort> downstreams,
@@ -557,18 +554,19 @@ namespace Akka.Streams.Implementation
         {
             SubModules = subModules;
             Shape = shape;
-            _downstreams = downstreams;
-            _upstreams = upstreams;
+            Downstreams = downstreams;
+            Upstreams = upstreams;
             MaterializedValueComputation = materializedValueComputation;
             Attributes = attributes;
         }
+
+        public override IImmutableDictionary<InPort, OutPort> Upstreams { get; }
+        public override IImmutableDictionary<OutPort, InPort> Downstreams { get; }
 
         public override Shape Shape { get; }
         public override Attributes Attributes { get; }
         public override ImmutableArray<IModule> SubModules { get; }
         public override StreamLayout.IMaterializedValueNode MaterializedValueComputation { get; }
-        public override IImmutableDictionary<OutPort, InPort> Downstreams => _downstreams;
-        public override IImmutableDictionary<InPort, OutPort> Upstreams => _upstreams;
 
         public override IModule ReplaceShape(Shape shape)
         {

@@ -205,7 +205,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             var outOwners = new int[count];
             for (int i = 0; i < connStart; i++) outOwners[i] = -1;
-            Array.Copy(outOwnersB2, 0, outOwnersB2, connStart, conns);
+            Array.Copy(outOwnersB2, 0, outOwners, connStart, conns);
             outOwnersB3.CopyTo(outOwners, outStart);
 
             var firstModule = group.First();
