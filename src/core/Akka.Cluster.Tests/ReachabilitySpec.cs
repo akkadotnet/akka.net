@@ -23,7 +23,7 @@ namespace Akka.Cluster.Tests
         static readonly UniqueAddress nodeE = new UniqueAddress(new Address("akka.tcp", "sys", "e", 2552), 5);
 
         [Fact]
-        public void ReachabilityTableMustBeReachableWhenEmpty()
+        public void ReachabilityTable_must_be_reachable_when_empty()
         {
             var r = Reachability.Empty;
             Assert.True(r.IsReachable(nodeA));
@@ -31,7 +31,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void ReachabilityTableMustBeUnreachableWhenOneObservedUnreachable()
+        public void ReachabilityTable_must_be_unreachable_when_one_observed_unreachable()
         {
             var r = Reachability.Empty.Unreachable(nodeB, nodeA);
             Assert.False(r.IsReachable(nodeA));
@@ -39,7 +39,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void ReachabilityTableMustNotBeReachableWhenTerminated()
+        public void ReachabilityTable_must_not_be_reachable_when_terminated()
         {
             var r = Reachability.Empty.Terminated(nodeB, nodeA);
             Assert.False(r.IsReachable(nodeA));
@@ -49,7 +49,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void ReachabilityTableMustNotChangeTerminatedEntry()
+        public void ReachabilityTable_must_not_change_terminated_entry()
         {
             var r = Reachability.Empty.Terminated(nodeB, nodeA);
             Assert.True(r == r.Reachable(nodeB, nodeA));
@@ -57,21 +57,21 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void ReachabilityTableMustNotChangeWhenSameStatus()
+        public void ReachabilityTable_must_not_change_when_same_status()
         {
             var r = Reachability.Empty.Unreachable(nodeB, nodeA);
             Assert.True(r == r.Unreachable(nodeB, nodeA));
         }
 
         [Fact]
-        public void ReachabilityTableMustBeUnreachableWhenSomeObservedUnreachableAndOtherReachable()
+        public void ReachabilityTable_must_be_unreachable_when_some_observed_unreachable_and_other_reachable()
         {
             var r = Reachability.Empty.Unreachable(nodeB, nodeA).Unreachable(nodeC, nodeA).Reachable(nodeD, nodeA);
             Assert.False(r.IsReachable(nodeA));
         }
 
         [Fact]
-        public void ReachabilityTableMustReachableWhenAllObservedReachableAgain()
+        public void ReachabilityTable_must_reachable_when_all_observed_reachable_again()
         {
             var r = Reachability.Empty.Unreachable(nodeB, nodeA).Unreachable(nodeC, nodeA).
                 Reachable(nodeB, nodeA).Reachable(nodeC, nodeA).
@@ -80,7 +80,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void ReachabilityTableMustBePrunedWhenAllRecordsOfAnObserverAreReachable()
+        public void ReachabilityTable_must_be_pruned_when_all_records_of_an_observer_are_reachable()
         {
             var r = Reachability.Empty.
                 Unreachable(nodeB, nodeA).Unreachable(nodeB, nodeC).
@@ -105,7 +105,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void ReachabilityTableMustHaveCorrectAggregatedStatus()
+        public void ReachabilityTable_must_have_correct_aggregated_status()
         {
             var records = ImmutableList.Create(
                 new Reachability.Record(nodeA, nodeB, Reachability.ReachabilityStatus.Reachable, 2),
@@ -126,7 +126,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void ReachabilityTableMustHaveCorrectStatusForAMixOfNodes()
+        public void ReachabilityTable_must_have_correct_status_for_a_mix_of_nodes()
         {
             var r = Reachability.Empty.
                 Unreachable(nodeB, nodeA).Unreachable(nodeC, nodeA).Unreachable(nodeD, nodeA).
@@ -175,7 +175,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void ReachabilityTableMustMergeByTakingAllowedSetIntoAccount()
+        public void ReachabilityTable_must_merge_by_taking_allowed_set_into_account()
         {
             var r1 = Reachability.Empty.Unreachable(nodeB, nodeA).Unreachable(nodeC, nodeD);
             var r2 = r1.Reachable(nodeB, nodeA).Unreachable(nodeD, nodeE).Unreachable(nodeC, nodeA);
@@ -201,7 +201,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void ReachabilityTableMustMergeCorrectlyAfterPruning()
+        public void ReachabilityTable_must_merge_correctly_after_pruning()
         {
             var r1 = Reachability.Empty.Unreachable(nodeB, nodeA).Unreachable(nodeC, nodeD);
             var r2 = r1.Unreachable(nodeA, nodeE);
@@ -218,7 +218,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void ReachabilityTableMustMergeVersionsCorrectly()
+        public void ReachabilityTable_must_merge_versions_correctly()
         {
             var r1 = new Reachability(ImmutableList.Create<Reachability.Record>(),
                 new Dictionary<UniqueAddress, long> {{nodeA, 3}, {nodeB, 5}, {nodeC, 7}}.ToImmutableDictionary());
@@ -234,7 +234,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void ReachabilityTableMustRemoveNode()
+        public void ReachabilityTable_must_remove_node()
         {
             var r = Reachability.Empty.
                 Unreachable(nodeB, nodeA).

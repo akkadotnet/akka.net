@@ -74,10 +74,10 @@ namespace Akka.Remote.Tests.MultiNode
         [MultiNodeFact]
         public void PiercingShouldKeepQuarantineSpecs()
         {
-            WhileProbingThroughTheQuarantineRemotingMustNotLoseExistingQuarantineMarker();
+            While_probing_through_the_quarantine_remoting_must_not_lose_existing_quarantine_marker();
         }
 
-        public void WhileProbingThroughTheQuarantineRemotingMustNotLoseExistingQuarantineMarker()
+        public void While_probing_through_the_quarantine_remoting_must_not_lose_existing_quarantine_marker()
         {
             RunOn(() =>
             {

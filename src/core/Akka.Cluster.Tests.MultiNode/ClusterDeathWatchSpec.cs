@@ -109,13 +109,13 @@ namespace Akka.Cluster.Tests.MultiNode
         [MultiNodeFact]
         public void ClusterDeathWatchSpecTests()
         {
-            AnActorWatchingARemoteActorInTheClusterMustReceiveTerminatedWhenWatchedNodeBecomesDownRemoved();
+            An_actor_watching_a_remote_actor_in_the_cluster_must_receive_terminated_when_watched_node_becomes_down_removed();
             //AnActorWatchingARemoteActorInTheClusterMustReceiveTerminatedWhenWatchedPathDoesNotExist();
-            AnActorWatchingARemoteActorInTheClusterMustBeAbleToWatchActorBeforeNodeJoinsClusterAndClusterRemoteWatcherTakesOverFromRemoteWatcher();
-            AnActorWatchingARemoteActorInTheClusterMustBeAbleToShutdownSystemWhenUsingRemoteDeployedActorOnNodeThatCrashed();
+            An_actor_watching_a_remote_actor_in_the_cluster_must_be_able_to_watch_actor_before_node_joins_cluster_and_cluster_remote_watcher_takes_over_from_remote_watcher();
+            An_actor_watching_a_remote_actor_in_the_cluster_must_be_able_to_shutdown_system_when_using_remote_deployed_actor_on_node_that_crashed();
         }
 
-        public void AnActorWatchingARemoteActorInTheClusterMustReceiveTerminatedWhenWatchedNodeBecomesDownRemoved()
+        public void An_actor_watching_a_remote_actor_in_the_cluster_must_receive_terminated_when_watched_node_becomes_down_removed()
         {
             Within(TimeSpan.FromSeconds(20), () =>
             {
@@ -197,7 +197,7 @@ namespace Akka.Cluster.Tests.MultiNode
         //    EnterBarrier("after-2");
         //}
 
-        public void AnActorWatchingARemoteActorInTheClusterMustBeAbleToWatchActorBeforeNodeJoinsClusterAndClusterRemoteWatcherTakesOverFromRemoteWatcher()
+        public void An_actor_watching_a_remote_actor_in_the_cluster_must_be_able_to_watch_actor_before_node_joins_cluster_and_cluster_remote_watcher_takes_over_from_remote_watcher()
         {
             Within(TimeSpan.FromSeconds(20), () =>
             {
@@ -256,7 +256,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         }
 
-        public void AnActorWatchingARemoteActorInTheClusterMustBeAbleToShutdownSystemWhenUsingRemoteDeployedActorOnNodeThatCrashed()
+        public void An_actor_watching_a_remote_actor_in_the_cluster_must_be_able_to_shutdown_system_when_using_remote_deployed_actor_on_node_that_crashed()
         {
             Within(TimeSpan.FromSeconds(20), () =>
             {

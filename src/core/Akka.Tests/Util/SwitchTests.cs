@@ -16,7 +16,7 @@ namespace Akka.Tests.Util
     public class SwitchTests : AkkaSpec
     {
         [Fact]
-        public void OnAndOff()
+        public void On_and_off()
         {
             var s = new Switch(false);
             Assert.True(s.IsOff, "Initially should be off");
@@ -40,7 +40,7 @@ namespace Akka.Tests.Util
         }
 
         [Fact]
-        public void InitiallyOnShouldBeOn()
+        public void Initially_on_should_be_on()
         {
             var s = new Switch(true);
             Assert.True(s.IsOn, "Switched on should be on");
@@ -67,7 +67,7 @@ namespace Akka.Tests.Util
         }
 
         [Fact]
-        public void RunActionWithoutLocking()
+        public void Run_action_without_locking()
         {
             var s = new Switch(false);
             var actionRun = false;
@@ -89,7 +89,7 @@ namespace Akka.Tests.Util
 
 
         [Fact]
-        public void RunActionWithLocking()
+        public void Run_action_with_locking()
         {
             var s = new Switch(false);
             var actionRun = false;

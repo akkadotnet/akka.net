@@ -17,7 +17,7 @@ namespace Akka.Cluster.Tests
     public class MemberOrderingSpec
     {
         [Fact]
-        public void MemberOrderingMustOrderMembersByHostAndPort()
+        public void MemberOrdering_must_order_members_by_host_and_port()
         {
             var sortedSet = new SortedSet<Member>         
             {
@@ -37,7 +37,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void MemberOrderingMustBeSortedByAddressCorrectly()
+        public void MemberOrdering_must_be_sorted_by_address_correctly()
         {
             var m1 = TestMember.Create(new Address("akka.tcp", "sys1", "host1", 9000), MemberStatus.Up);
             var m2 = TestMember.Create(new Address("akka.tcp", "sys1", "host1", 10000), MemberStatus.Up);
@@ -55,7 +55,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void MemberOrderingMustHaveStableEqualsAndHashCode()
+        public void MemberOrdering_must_have_stable_equals_and_hash_code()
         {
             var address = new Address("akka.tcp", "sys1", "host1", 9000);
             var m1 = TestMember.Create(address, MemberStatus.Joining);
@@ -74,7 +74,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void MemberOrderingMustConsistentOrderingAndEquals()
+        public void MemberOrdering_must_consistent_ordering_and_equals()
         {
             var address1 = new Address("akka.tcp", "sys1", "host1", 9001);
             var address2 = address1.WithPort(9002);
@@ -93,7 +93,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void MemberOrderingMustWorkWithSortedSet()
+        public void MemberOrdering_must_work_with_sorted_set()
         {
             var address1 = new Address("akka.tcp", "sys1", "host1", 9001);
             var address2 = address1.WithPort(9002);
@@ -135,7 +135,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AddressOrderingMustOrderAddressesByPort()
+        public void AddressOrdering_must_order_addresses_by_port()
         {
             var addresses = new SortedSet<Address>(Member.AddressOrdering)
             {
@@ -154,7 +154,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AddressOrderingMustOrderAddressesByHostName()
+        public void AddressOrdering_must_order_addresses_by_host_name()
         {
             var addresses = new SortedSet<Address>(Member.AddressOrdering)
             {
@@ -173,7 +173,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AddressOrderingMustOrderAddressesByHostNameAndPort()
+        public void AddressOrdering_must_order_addresses_by_host_name_and_port()
         {
             var addresses = new SortedSet<Address>(Member.AddressOrdering)
             {
@@ -193,7 +193,7 @@ namespace Akka.Cluster.Tests
 
 
         [Fact]
-        public void LeaderOrderingMustOrderMembersWithStatusJoiningExitingDownLast()
+        public void LeaderOrdering_must_order_members_with_status_joining_exiting_down_last()
         {
             var address = new Address("akka.tcp", "sys1", "host1", 5000);
             var m1 = TestMember.Create(address, MemberStatus.Joining);

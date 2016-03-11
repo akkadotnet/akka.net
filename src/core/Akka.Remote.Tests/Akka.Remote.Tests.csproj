@@ -112,6 +112,7 @@
     <Compile Include="Transport\TestTransportSpec.cs" />
     <Compile Include="Transport\ThrottleModeSpec.cs" />
     <Compile Include="Transport\ThrottlerTransportAdapterSpec.cs" />
+    <Compile Include="RemoteMetricsSpec.cs" />
     <Compile Include="UntrustedSpec.cs" />
   </ItemGroup>
   <ItemGroup>

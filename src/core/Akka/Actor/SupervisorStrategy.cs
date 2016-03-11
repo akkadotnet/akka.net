@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Akka.Actor.Internal;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -706,5 +707,48 @@ namespace Akka.Actor
             return DefaultDirective;
         }
     }
-}
 
+    public abstract class SupervisorStrategyConfigurator
+    {
+        public abstract SupervisorStrategy Create();
+
+        public static SupervisorStrategyConfigurator CreateConfigurator(string typeName)
+        {
+            switch (typeName)
+            {
+                case "Akka.Actor.DefaultSupervisorStrategy":
+                    return new DefaultSupervisorStrategy();
+
+                case "Akka.Actor.StoppingSupervisorStrategy":
+                    return new StoppingSupervisorStrategy();
+
+                case null:
+                    throw new ConfigurationException("Could not resolve SupervisorStrategyConfigurator. typeName is null");
+
+                default:
+                    Type configuratorType = Type.GetType(typeName);
+
+                    if (configuratorType == null)
+                        throw new ConfigurationException("Could not resolve SupervisorStrategyConfigurator type " + typeName);
+
+                    return (SupervisorStrategyConfigurator)Activator.CreateInstance(configuratorType);
+            }
+        }
+    }
+
+    public class DefaultSupervisorStrategy : SupervisorStrategyConfigurator
+    {
+        public override SupervisorStrategy Create()
+        {
+            return SupervisorStrategy.DefaultStrategy;
+        }
+    }
+
+    public class StoppingSupervisorStrategy : SupervisorStrategyConfigurator
+    {
+        public override SupervisorStrategy Create()
+        {
+            return SupervisorStrategy.StoppingStrategy;
+        }
+    }
+}

@@ -21,7 +21,7 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         }
 
         [Fact]
-        public void CustomFilterShouldMatch()
+        public void Custom_filter_should_match()
         {
             EventFilter.Custom(logEvent => logEvent is Error && (string) logEvent.Message == "whatever").ExpectOne(() =>
             {
@@ -30,7 +30,7 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         }
 
         [Fact]
-        public void CustomFilterShouldMatch2()
+        public void Custom_filter_should_match2()
         {
             EventFilter.Custom<Error>(logEvent => (string)logEvent.Message == "whatever").ExpectOne(() =>
             {

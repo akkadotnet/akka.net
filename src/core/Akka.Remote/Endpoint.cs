@@ -774,6 +774,7 @@ namespace Akka.Remote
             Inbound = handleOrActive != null;
             _ackDeadline = NewAckDeadline();
             _handle = handleOrActive;
+            _remoteMetrics = RemoteMetricsExtension.Create(Context.System.AsInstanceOf<ExtendedActorSystem>());
 
             if (_handle == null)
             {
@@ -812,6 +813,8 @@ namespace Akka.Remote
         //buffer for IPriorityMessages - ensures that heartbeats get delivered before user-defined messages
         private readonly LinkedList<EndpointManager.Send> _prioBuffer = new LinkedList<EndpointManager.Send>();
         private long _largeBufferLogTimestamp = MonotonicClock.GetNanos();
+
+        private readonly IRemoteMetrics _remoteMetrics;
 
         #region ActorBase methods
 
@@ -1168,7 +1171,7 @@ namespace Akka.Remote
                 var pdu = _codec.ConstructMessage(send.Recipient.LocalAddressToUse, send.Recipient,
                     SerializeMessage(send.Message), send.SenderOption, send.Seq, _lastAck);
 
-                //todo: RemoteMetrics https://github.com/akka/akka/blob/dc0547dd73b54b5de9c3e0b45a21aa865c5db8e2/akka-remote/src/main/scala/akka/remote/Endpoint.scala#L742
+                _remoteMetrics.LogPayloadBytes(send.Message, pdu.Length);
 
                 if (pdu.Length > Transport.MaximumPayloadBytes)
                 {

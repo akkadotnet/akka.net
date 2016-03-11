@@ -34,7 +34,7 @@ namespace PersistenceBenchmark
         protected bool ControlBehavior(object message)
         {
             var sender = Sender;
-            if (message is StopMeasure) Defer(StopMeasure.Instance, _ => sender.Tell(StopMeasure.Instance));
+            if (message is StopMeasure) DeferAsync(StopMeasure.Instance, _ => sender.Tell(StopMeasure.Instance));
             else if (message is FailAt) FailAt = ((FailAt)message).SequenceNr;
             else return false;
             return true;

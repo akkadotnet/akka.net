@@ -29,7 +29,7 @@ namespace Akka.Tests.Performance.Actor
         [PerfBenchmark(Description = "Tests how quickly `Address.Parse` can run on a LOCAL address", RunMode = RunMode.Throughput, NumberOfIterations = 13, RunTimeMilliseconds = 1000, TestMode = TestMode.Measurement)]
         [CounterThroughputAssertion(ParseThroughputCounterName, MustBe.GreaterThan, MinimumAcceptableOperationsPerSecond)]
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
-        public void ParseLocalThroughput(BenchmarkContext context)
+        public void Parse_local_throughput(BenchmarkContext context)
         {
             Address.Parse("akka.tcp://sys@localhost:9091");
             _parseThroughput.Increment();
@@ -38,7 +38,7 @@ namespace Akka.Tests.Performance.Actor
         [PerfBenchmark(Description = "Tests how quickly `Address.Parse` can run on a REMOTE address", RunMode = RunMode.Throughput, NumberOfIterations = 13, RunTimeMilliseconds = 1000, TestMode = TestMode.Measurement)]
         [CounterThroughputAssertion(ParseThroughputCounterName, MustBe.GreaterThan, MinimumAcceptableOperationsPerSecond)]
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
-        public void ParseRemoteThroughput(BenchmarkContext context)
+        public void Parse_remote_throughput(BenchmarkContext context)
         {
             Address.Parse("akka://sys");
             _parseThroughput.Increment();
@@ -50,7 +50,7 @@ namespace Akka.Tests.Performance.Actor
         [CounterMeasurement(ParseThroughputCounterName)]
         [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
-        public void MemoryFootprint(BenchmarkContext context)
+        public void Memory_footprint(BenchmarkContext context)
         {
             var actorPaths = new Address[100000];
             for (var i = 0; i < 100000;)

@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Persistence.Journal;
@@ -32,10 +33,9 @@ namespace Akka.Persistence.Sql.Common.Journal
             DbEngine.Close();
         }
 
-        protected override bool Receive(object message)
+        protected override bool ReceivePluginInternal(object message)
         {
-            var wasHandled = base.Receive(message);
-            if (!wasHandled && message is Query)
+            if (message is Query)
             {
                 HandleEventQuery(message as Query);
                 return true;
@@ -61,9 +61,9 @@ namespace Akka.Persistence.Sql.Common.Journal
             .PipeTo(Context.Sender);
         }
 
-        public override Task ReplayMessagesAsync(string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> replayCallback)
+        public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback)
         {
-            return DbEngine.ReplayMessagesAsync(persistenceId, fromSequenceNr, toSequenceNr, max, Context.Sender, replayCallback);
+            return DbEngine.ReplayMessagesAsync(persistenceId, fromSequenceNr, toSequenceNr, max, context.Sender, recoveryCallback);
         }
 
         public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
@@ -71,14 +71,14 @@ namespace Akka.Persistence.Sql.Common.Journal
             return DbEngine.ReadHighestSequenceNrAsync(persistenceId, fromSequenceNr);
         }
 
-        protected override Task WriteMessagesAsync(IEnumerable<IPersistentRepresentation> messages)
+        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
         {
             return DbEngine.WriteMessagesAsync(messages);
         }
 
-        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, bool isPermanent)
+        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
         {
-            return DbEngine.DeleteMessagesToAsync(persistenceId, toSequenceNr, isPermanent);
+            return DbEngine.DeleteMessagesToAsync(persistenceId, toSequenceNr);
         }
     }
 }

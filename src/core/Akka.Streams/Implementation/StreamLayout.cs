@@ -43,6 +43,8 @@ namespace Akka.Streams.Implementation
                 Left = left;
                 Right = right;
             }
+
+            public override string ToString() => $"Combine({Left}, {Right})";
         }
 
         public sealed class Atomic : IMaterializedValueNode
@@ -53,6 +55,8 @@ namespace Akka.Streams.Implementation
             {
                 Module = module;
             }
+
+            public override string ToString() => $"Atomic({Module})";
         }
 
         public sealed class Transform : IMaterializedValueNode
@@ -65,12 +69,16 @@ namespace Akka.Streams.Implementation
                 Transformator = transformator;
                 Node = node;
             }
+
+            public override string ToString() => $"Transform({Node})";
         }
 
         public sealed class Ignore : IMaterializedValueNode
         {
             public static readonly Ignore Instance = new Ignore();
             private Ignore() { }
+
+            public override string ToString() => $"Ignore";
         }
 
         #endregion
@@ -262,7 +270,7 @@ namespace Akka.Streams.Implementation
 
         /// <summary>
         /// Creates a new Module which is `this` Module composed with <paramref name="that"/> Module.
-        /// 
+        ///
         /// The difference to compose(that) is that this version completely ignores the materialized value
         /// computation of <paramref name="that"/> while the normal version executes the computation and discards its result.
         /// This means that this version must not be used for user-provided <paramref name="that"/> modules because users may
@@ -350,7 +358,7 @@ namespace Akka.Streams.Implementation
             return new CompositeModule(
                 subModules: SubModules,
                 shape: new AmorphousShape(
-                    Shape.Inlets.Where(i => !i.Equals(to)).ToImmutableArray(), 
+                    Shape.Inlets.Where(i => !i.Equals(to)).ToImmutableArray(),
                     Shape.Outlets.Where(o => !o.Equals(from)).ToImmutableArray()),
                 downstreams: Downstreams.SetItem(from, to),
                 upstreams: Upstreams.SetItem(to, from),
@@ -395,7 +403,7 @@ namespace Akka.Streams.Implementation
             return new CompositeModule(
                 subModules: modules1.Union(modules2).ToImmutableArray(),
                 shape: new AmorphousShape(
-                    Shape.Inlets.Union(other.Shape.Inlets).ToImmutableArray(), 
+                    Shape.Inlets.Union(other.Shape.Inlets).ToImmutableArray(),
                     Shape.Outlets.Union(other.Shape.Outlets).ToImmutableArray()),
                 downstreams: Downstreams.AddRange(other.Downstreams),
                 upstreams: Upstreams.AddRange(other.Upstreams),
@@ -416,7 +424,7 @@ namespace Akka.Streams.Implementation
             return new CompositeModule(
                 subModules: module1.Union(module2).ToImmutableArray(),
                 shape: new AmorphousShape(
-                    Shape.Inlets.Union(that.Shape.Inlets).ToImmutableArray(), 
+                    Shape.Inlets.Union(that.Shape.Inlets).ToImmutableArray(),
                     Shape.Outlets.Union(that.Shape.Outlets).ToImmutableArray()),
                 downstreams: Downstreams.AddRange(that.Downstreams),
                 upstreams: Upstreams.AddRange(that.Upstreams),
@@ -452,7 +460,7 @@ namespace Akka.Streams.Implementation
 
         public abstract Shape Shape { get; }
         public abstract IModule ReplaceShape(Shape shape);
-        
+
         public abstract ImmutableArray<IModule> SubModules { get; }
         public abstract IModule CarbonCopy();
         public abstract Attributes Attributes { get; }
@@ -531,13 +539,12 @@ namespace Akka.Streams.Implementation
         public override IModule CarbonCopy() => new CopiedModule(Shape, Attributes, CopyOf);
 
         public override IModule WithAttributes(Attributes attributes) => new CopiedModule(Shape, attributes, CopyOf);
+
+        public override string ToString() => $"Copy({CopyOf})";
     }
 
     public sealed class CompositeModule : Module
     {
-        private readonly IImmutableDictionary<OutPort, InPort> _downstreams;
-        private readonly IImmutableDictionary<InPort, OutPort> _upstreams;
-
         public CompositeModule(ImmutableArray<IModule> subModules,
             Shape shape,
             IImmutableDictionary<OutPort, InPort> downstreams,
@@ -547,18 +554,19 @@ namespace Akka.Streams.Implementation
         {
             SubModules = subModules;
             Shape = shape;
-            _downstreams = downstreams;
-            _upstreams = upstreams;
+            Downstreams = downstreams;
+            Upstreams = upstreams;
             MaterializedValueComputation = materializedValueComputation;
             Attributes = attributes;
         }
+
+        public override IImmutableDictionary<InPort, OutPort> Upstreams { get; }
+        public override IImmutableDictionary<OutPort, InPort> Downstreams { get; }
 
         public override Shape Shape { get; }
         public override Attributes Attributes { get; }
         public override ImmutableArray<IModule> SubModules { get; }
         public override StreamLayout.IMaterializedValueNode MaterializedValueComputation { get; }
-        public override IImmutableDictionary<OutPort, InPort> Downstreams => _downstreams;
-        public override IImmutableDictionary<InPort, OutPort> Upstreams => _upstreams;
 
         public override IModule ReplaceShape(Shape shape)
         {
@@ -571,6 +579,8 @@ namespace Akka.Streams.Implementation
         public override IModule CarbonCopy() => new CopiedModule(Shape.DeepCopy(), Attributes, this);
 
         public override IModule WithAttributes(Attributes attributes) => new CompositeModule(SubModules, Shape.DeepCopy(), Downstreams, Upstreams, MaterializedValueComputation, Attributes);
+
+        public override string ToString() => $"Composite({string.Join(", ", SubModules)})";
     }
 
     public sealed class FusedModule : Module
@@ -811,7 +821,7 @@ namespace Akka.Streams.Implementation
         /// Please note that this stack keeps track of the scoped modules wrapped in CopiedModule but not the CopiedModule
         /// itself. The reason is that the CopiedModule itself is only needed for the enterScope and exitScope methods but
         /// not elsewhere. For this reason they are just simply passed as parameters to those methods.
-        /// 
+        ///
         /// The reason why the encapsulated (copied) modules are stored as mutable state to save subclasses of this class
         /// from passing the current scope around or even knowing about it.
         /// </summary>

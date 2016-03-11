@@ -20,7 +20,7 @@ namespace Akka.Cluster.Tests
         public ClusterConfigSpec() : base(@"akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""") { }
 
         [Fact]
-        public void ClusteringMustBeAbleToParseGenericClusterConfigElements()
+        public void Clustering_must_be_able_to_parse_generic_cluster_config_elements()
         {
             var settings = new ClusterSettings(Sys.Settings.Config, Sys.Name);
             Assert.True(settings.LogInfo);
@@ -59,7 +59,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void ClusteringShouldHaveCorrectDefaultForkJoinDispatcher()
+        public void Clustering_should_have_correct_default_fork_join_dispatcher()
         {
             var dispatchConfig = Sys.Settings.Config.GetConfig("akka.cluster.default-cluster-dispatcher");
             var dispatcherThreadPoolSettings = dispatchConfig.GetConfig("dedicated-thread-pool");

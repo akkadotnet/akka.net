@@ -59,7 +59,7 @@ namespace Akka.Persistence.Fsm
                 var handlersExecutedCounter = 0;
 
 
-                Persist(eventsToPersist, @event =>
+                PersistAll(eventsToPersist, @event =>
                 {
                     handlersExecutedCounter++;
                     if (@event is TEvent)

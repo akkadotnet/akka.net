@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 
@@ -22,28 +23,11 @@ namespace Akka.Persistence.Journal
             _eventAdapters = _persistence.AdaptersFor(Self);
         }
 
-        //protected IEnumerable<IPersistentRepresentation> CreatePersistentBatch(IEnumerable<IPersistentEnvelope> resequencables)
-        //{
-        //    return resequencables.Where(PreparePersistentWrite).Cast<IPersistentRepresentation>();
-        //}
-
-        protected bool PreparePersistentWrite(IPersistentEnvelope persistentEnvelope)
-        {
-            if (persistentEnvelope is IPersistentRepresentation)
-            {
-                var repr = AdaptToJournal(persistentEnvelope as IPersistentRepresentation);
-                repr.PrepareWrite(Context);
-                return true;
-            }
-
-            return false;
-        }
-
-        protected IEnumerable<IPersistentRepresentation> CreatePersistentBatch(IEnumerable<IPersistentEnvelope> resequencables)
+        protected IEnumerable<AtomicWrite> PreparePersistentBatch(IEnumerable<IPersistentEnvelope> resequencables)
         {
             return resequencables
-               .Where(e => e is IPersistentRepresentation)
-               .Select(e => AdaptToJournal(e as IPersistentRepresentation).PrepareWrite(Context));
+               .OfType<AtomicWrite>()
+               .Select(aw => new AtomicWrite(((IEnumerable<IPersistentRepresentation>)aw.Payload).Select(p => AdaptToJournal(p.Update(p.SequenceNr, p.PersistenceId, p.IsDeleted, ActorRefs.NoSender, p.WriterGuid))).ToImmutableList()));
         }
 
         protected IEnumerable<IPersistentRepresentation> AdaptFromJournal(IPersistentRepresentation representation)
