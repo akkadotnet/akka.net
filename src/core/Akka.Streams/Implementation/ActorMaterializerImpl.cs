@@ -223,11 +223,11 @@ namespace Akka.Streams.Implementation
             if (_haveShutDown.Value)
                 throw new IllegalStateException("Attempted to call Materialize() after the ActorMaterializer has been shut down.");
 
-            if (StreamLayout.IsDebug) StreamLayout.Validate(runnable.Module);
+            if (StreamLayout.IsDebug) StreamLayout.Validate(runnableGraph.Module);
 
-            var session = new ActorMaterializerSession<TMat>(this, runnable.Module, InitialAttributes, subFlowFuser);
+            var session = new ActorMaterializerSession<TMat>(this, runnableGraph.Module, InitialAttributes, subFlowFuser);
 
-            return session.Materialize();
+            return (TMat)session.Materialize();
         }
 
         private readonly Lazy<MessageDispatcher> _executionContext;

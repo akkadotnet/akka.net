@@ -36,7 +36,7 @@ namespace Akka.Streams.TestKit.Tests
                 return block();
 
             var probe = spec.CreateTestProbe(impl.System);
-            probe.Send(impl.Supervisor, StreamSupervisor.StoppedChildren.Instance);
+            probe.Send(impl.Supervisor, StreamSupervisor.StopChildren.Instance);
             probe.ExpectMsg<StreamSupervisor.StoppedChildren>();
             var result = block();
 
