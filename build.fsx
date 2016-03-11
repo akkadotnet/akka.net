@@ -7,7 +7,6 @@ open System.IO
 open System.Text
 open Fake
 open Fake.FileUtils
-open Fake.MSTest
 open Fake.TaskRunnerHelper
 open Fake.ProcessHelper
 
@@ -254,13 +253,9 @@ Target "CleanTests" <| fun _ ->
 
 open Fake.Testing
 Target "RunTests" <| fun _ ->  
-    let msTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
-    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- 
-                                    "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
+    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll"
 
     mkdir testOutput
-
-    MSTest (fun p -> p) msTestAssemblies
    
     let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
