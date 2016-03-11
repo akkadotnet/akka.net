@@ -78,8 +78,8 @@ namespace Akka.Streams.Implementation
         public static void Validate(IModule module, int level = 0, bool shouldPrint = false, IDictionary<object, int> idMap = null)
         {
             idMap = idMap ?? new Dictionary<object, int>();
-            var i = 1;
-            Func<int> ids = () => i++;
+            var currentId = 1;
+            Func<int> ids = () => currentId++;
             Func<object, int> id = obj =>
             {
                 int x;
@@ -90,26 +90,26 @@ namespace Akka.Streams.Implementation
                 }
                 return x;
             };
-            Func<InPort, string> inPort = inPorti => inPorti.ToString() + "@" + id(inPorti);
-            Func<OutPort, string> outPort = o => o.ToString() + "@" + id(o);
-            Func<IEnumerable<InPort>, string> ins = iterables => "[" + string.Join(", ", iterables.Select(inPort)) + "]";
-            Func<IEnumerable<OutPort>, string> outs = iterablesOuts => "[" + string.Join(", ", iterablesOuts.Select(outPort)) + "]";
-            Func<OutPort, InPort, string> pair = (outPortP, inPortP) => outPort(outPortP) + "->" + inPort(inPortP);
-            Func<IEnumerable<KeyValuePair<OutPort, InPort>>, string> pairs = enumerable => "[" + string.Join(", ", enumerable.Select(p => pair(p.Key, p.Value))) + "]";
+            Func<InPort, string> inPort = i => string.Format("{0}@{1}", i.ToString(), id(i));
+            Func<OutPort, string> outPort = o => string.Format("{0}@{1}", o.ToString(), id(o));
+            Func<IEnumerable<InPort>, string> ins = i => string.Format("In[{0}]", string.Join(",", i.Select(inPort)));
+            Func<IEnumerable<OutPort>, string> outs = o => string.Format("Out[{0}]", string.Join(",", o.Select(outPort)));
+            Func<OutPort, InPort, string> pair = (o, i) => string.Format("{0}->{1}", inPort(i), outPort(o));
+            Func<IEnumerable<KeyValuePair<OutPort, InPort>>, string> pairs = i => string.Format("[{0}]", string.Join(",", i.Select(p => pair(p.Key, p.Value))));
 
             var shape = module.Shape;
             var inset = shape.Inlets.ToImmutableHashSet();
             var outset = shape.Outlets.ToImmutableHashSet();
-            var inports = module.InPorts.Cast<Inlet>().ToImmutableHashSet();
-            var outports = module.OutPorts.Cast<Outlet>().ToImmutableHashSet();
+            var inPorts = module.InPorts.Cast<Inlet>().ToImmutableHashSet();
+            var outPorts = module.OutPorts.Cast<Outlet>().ToImmutableHashSet();
             var problems = new List<string>();
 
             if (inset.Count != shape.Inlets.Count()) problems.Add("shape has duplicate inlets " + ins(shape.Inlets));
-            if (!inset.SetEquals(inports)) problems.Add($"shape has extra {ins(inset.Except(inports))}, module has extra {ins(inports.Except(inset))}");
+            if (!inset.SetEquals(inPorts)) problems.Add($"shape has extra {ins(inset.Except(inPorts))}, module has extra {ins(inPorts.Except(inset))}");
             var connectedInlets = inset.Intersect(module.Upstreams.Keys).ToArray();
             if (connectedInlets.Any()) problems.Add("found connected inlets " + ins(connectedInlets));
             if (outset.Count != shape.Outlets.Count()) problems.Add("shape has duplicate outlets " + outs(shape.Outlets));
-            if (!outset.SetEquals(outports)) problems.Add($"shape has extra {outs(outset.Except(outports))}, module has extra {outs(outports.Except(outset))}");
+            if (!outset.SetEquals(outPorts)) problems.Add($"shape has extra {outs(outset.Except(outPorts))}, module has extra {outs(outPorts.Except(outset))}");
             var connectedOutlets = outset.Intersect(module.Downstreams.Keys).ToArray();
             if (connectedOutlets.Any()) problems.Add("found connected outlets " + outs(connectedOutlets));
 
@@ -120,24 +120,29 @@ namespace Akka.Streams.Implementation
 
             if (!downs.SetEquals(ups2)) problems.Add($"inconsistent maps: ups {pairs(ups2.Except(inter))} downs {pairs(downs.Except(inter))}");
 
-            var allIn = ImmutableHashSet<InPort>.Empty;
-            var duplicateIn = ImmutableHashSet<InPort>.Empty;
-            var allOut = ImmutableHashSet<OutPort>.Empty;
-            var duplicateOut = ImmutableHashSet<OutPort>.Empty;
-
+            var allInBuilder = ImmutableHashSet<InPort>.Empty.ToBuilder();
+            var duplicateInBuilder = ImmutableHashSet<InPort>.Empty.ToBuilder();
+            var allOutBuilder = ImmutableHashSet<OutPort>.Empty.ToBuilder();
+            var duplicateOutBuilder = ImmutableHashSet<OutPort>.Empty.ToBuilder();
             foreach (var subModule in module.SubModules)
             {
-                allIn = allIn.Union(subModule.InPorts);
-                duplicateIn = duplicateIn.Union(allIn.Intersect(subModule.InPorts));
-                allOut = allOut.Union(subModule.OutPorts);
-                duplicateOut = duplicateOut.Union(allOut.Intersect(subModule.OutPorts));
+                // check for duplicates before adding current module's ports
+                duplicateInBuilder.UnionWith(allInBuilder.Intersect(subModule.InPorts));
+                allInBuilder.UnionWith(subModule.InPorts);
+                // check for duplicates before adding current module's ports
+                duplicateOutBuilder.UnionWith(allOutBuilder.Intersect(subModule.OutPorts));
+                allOutBuilder.UnionWith(subModule.OutPorts);
             }
+            var allIn = allInBuilder.ToImmutable();
+            var duplicateIn = duplicateInBuilder.ToImmutable();
+            var allOut = allOutBuilder.ToImmutable();
+            var duplicateOut = duplicateOutBuilder.ToImmutable();
 
             if (!duplicateIn.IsEmpty) problems.Add("duplicate ports in submodules " + ins(duplicateIn));
             if (!duplicateOut.IsEmpty) problems.Add("duplicate ports in submodules " + outs(duplicateOut));
             if (!module.IsSealed && inset.Except(allIn).Any()) problems.Add("foreign inlets " + ins(inset.Except(allIn)));
             if (!module.IsSealed && outset.Except(allOut).Any()) problems.Add("foreign outlets " + outs(outset.Except(allOut)));
-            var unIn = allIn.Except(inset).ToImmutableHashSet().Except(module.Upstreams.Keys);
+            var unIn = allIn.Except(inset).Except(module.Upstreams.Keys);
             if (unIn.Any() && !module.IsCopied) problems.Add("unconnected inlets " + ins(unIn));
             var unOut = allOut.Except(outset).ToImmutableHashSet().Except(module.Downstreams.Keys);
             if (unOut.Any() && !module.IsCopied) problems.Add("unconnected outlets " + outs(unOut));
@@ -147,17 +152,25 @@ namespace Akka.Streams.Implementation
             var nonExistent = atomics.Except(module.SubModules).Except(graphValues).Except(new IModule[] { module });
             if (nonExistent.Any()) problems.Add("computation refers to non-existent modules " + string.Join(", ", nonExistent));
 
-            if (shouldPrint || problems.Any())
+            var print = shouldPrint || problems.Any();
+
+            if (print)
             {
-                //val indent = " " * (level * 2)
-                //println(s"$indent${simpleName(this)}($shape): ${ins(inPorts)} ${outs(outPorts)}")
-                //downstreams foreach { case (o, i) ⇒ println(s"$indent    ${out(o)} -> ${in(i)}") }
-                //problems foreach (p ⇒ println(s"$indent  -!- $p"))
+                var indent = string.Empty.PadLeft(level*2);
+                Console.Out.WriteLine("{0}{1}({2}): {3} {4}", indent, typeof(StreamLayout).Name, shape, ins(inPorts), outs(outPorts));
+                foreach (var downstream in module.Downstreams)
+                {
+                    Console.Out.WriteLine("{0}    {1} -> {2}", indent, outPort(downstream.Key), inPort(downstream.Value));
+                }
+                foreach (var problem in problems)
+                {
+                    Console.Out.WriteLine("{0}  -!- {1}", indent, problem);
+                }
             }
 
             foreach (var subModule in module.SubModules)
             {
-                Validate(subModule, level + 1, shouldPrint, idMap);
+                Validate(subModule, level + 1, print, idMap);
             }
 
             if (problems.Any() && !shouldPrint) throw new IllegalStateException(
@@ -290,9 +303,6 @@ namespace Akka.Streams.Implementation
         {
             _inports = new Lazy<IImmutableSet<InPort>>(() => ImmutableHashSet.CreateRange(Shape.Inlets.Cast<InPort>()));
             _outports = new Lazy<IImmutableSet<OutPort>>(() => ImmutableHashSet.CreateRange(Shape.Outlets.Cast<OutPort>()));
-
-            Downstreams = ImmutableDictionary<OutPort, InPort>.Empty;
-            Upstreams = ImmutableDictionary<InPort, OutPort>.Empty;
         }
 
         public IImmutableSet<InPort> InPorts => _inports.Value;
@@ -318,6 +328,9 @@ namespace Akka.Streams.Implementation
 
         public virtual IModule Wire(OutPort @from, InPort to)
         {
+            if (StreamLayout.IsDebug)
+                StreamLayout.Validate(this);
+
             if (!OutPorts.Contains(from))
             {
                 var message = Downstreams.ContainsKey(from)
@@ -365,6 +378,9 @@ namespace Akka.Streams.Implementation
 
         public virtual IModule Compose<T1, T2, T3>(IModule other, Func<T1, T2, T3> matFunc)
         {
+            if (StreamLayout.IsDebug)
+                StreamLayout.Validate(this);
+
             if (Equals(other, this))
                 throw new ArgumentException("A module cannot be added to itself. You should pass a separate instance to compose().");
             if (SubModules.Contains(other))
@@ -430,8 +446,8 @@ namespace Akka.Streams.Implementation
         }
 
         public bool IsSealed => IsAtomic || IsCopied;
-        public virtual IImmutableDictionary<OutPort, InPort> Downstreams { get; private set; }
-        public virtual IImmutableDictionary<InPort, OutPort> Upstreams { get; private set; }
+        public virtual IImmutableDictionary<OutPort, InPort> Downstreams => ImmutableDictionary<OutPort, InPort>.Empty;
+        public virtual IImmutableDictionary<InPort, OutPort> Upstreams => ImmutableDictionary<InPort, OutPort>.Empty ;
         public virtual StreamLayout.IMaterializedValueNode MaterializedValueComputation => new StreamLayout.Atomic(this);
 
         public abstract Shape Shape { get; }
@@ -502,7 +518,7 @@ namespace Akka.Streams.Implementation
         public override Shape Shape { get; }
 
         public override bool IsCopied => true;
-        public override StreamLayout.IMaterializedValueNode MaterializedValueComputation => new StreamLayout.Atomic(this);
+        public override StreamLayout.IMaterializedValueNode MaterializedValueComputation => new StreamLayout.Atomic(CopyOf);
 
         public override IModule ReplaceShape(Shape shape)
         {
@@ -541,6 +557,8 @@ namespace Akka.Streams.Implementation
         public override Attributes Attributes { get; }
         public override ImmutableArray<IModule> SubModules { get; }
         public override StreamLayout.IMaterializedValueNode MaterializedValueComputation { get; }
+        public override IImmutableDictionary<OutPort, InPort> Downstreams => _downstreams;
+        public override IImmutableDictionary<InPort, OutPort> Upstreams => _upstreams;
 
         public override IModule ReplaceShape(Shape shape)
         {
@@ -687,12 +705,9 @@ namespace Akka.Streams.Implementation
                         _subscriptionStatus.Value = subscriber;
                         ReactiveStreamsCompliance.TryOnSubscribe(subscriber, sub);
                         sub.CloseLatch(); // allow onNext only now
-                        var s = _terminationStatus.Value;
-                        if (_subscriptionStatus.CompareAndSet(s, Allowed.Instance))
-                        {
-                            if (s is Completed) ReactiveStreamsCompliance.TryOnComplete(subscriber);
-                            else if (s is Failed) ReactiveStreamsCompliance.TryOnError(subscriber, ((Failed)s).Reason);
-                        }
+                        var terminationStatus = _terminationStatus.GetAndSet(Allowed.Instance);
+                        if (terminationStatus is Completed) ReactiveStreamsCompliance.TryOnComplete(subscriber);
+                        else if (terminationStatus is Failed) ReactiveStreamsCompliance.TryOnError(subscriber, ((Failed)terminationStatus).Reason);
                     }
                     catch (Exception)
                     {
@@ -806,6 +821,9 @@ namespace Akka.Streams.Implementation
         {
             TopLevel = topLevel;
             InitialAttributes = initialAttributes;
+            _subscribersStack.AddFirst(new Dictionary<InPort, ISubscriber>());
+            _publishersStack.AddFirst(new Dictionary<OutPort, IPublisher>());
+            _moduleStack.AddFirst(TopLevel);
         }
 
         private IDictionary<InPort, ISubscriber> Subscribers => _subscribersStack.First.Value;
@@ -854,7 +872,7 @@ namespace Akka.Streams.Implementation
                 AssignPort(kv.Value, scopePublishers[kv.Key]);
         }
 
-        public TMat Materialize()
+        public object Materialize()
         {
             if (TopLevel is EmptyModule)
                 throw new InvalidOperationException("An empty module cannot be materialized (EmptyModule was given)");
@@ -897,7 +915,7 @@ namespace Akka.Streams.Implementation
             else _materializedValueSources.Add(materializedSource.Computation, new LinkedList<IMaterializedValueSource>(new[] { materializedSource }));
         }
 
-        protected TMat MaterializeModule(IModule module, Attributes effectiveAttributes)
+        protected object MaterializeModule(IModule module, Attributes effectiveAttributes)
         {
             var materializedValues = new Dictionary<IModule, object>();
 
@@ -922,8 +940,7 @@ namespace Akka.Streams.Implementation
                 else materializedValues.Add(submodule, MaterializeComposite(submodule, subEffectiveAttributes));
             }
 
-            var mat = ResolveMaterialized(module.MaterializedValueComputation, materializedValues, string.Empty);
-            return (TMat)mat;
+            return ResolveMaterialized(module.MaterializedValueComputation, materializedValues, string.Empty);
         }
 
         protected virtual object MaterializeComposite(IModule composite, Attributes effectiveAttributes)
