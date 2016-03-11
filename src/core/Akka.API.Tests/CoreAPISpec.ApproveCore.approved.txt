@@ -1769,11 +1769,11 @@ namespace Akka.Actor.Internal
     public abstract class ChildrenContainerBase : Akka.Actor.Internal.IChildrenContainer
     {
         protected ChildrenContainerBase(System.Collections.Immutable.IImmutableDictionary<string, Akka.Actor.Internal.IChildStats> children) { }
-        public System.Collections.Generic.IReadOnlyList<Akka.Actor.IInternalActorRef> Children { get; }
+        public System.Collections.Generic.IReadOnlyCollection<Akka.Actor.IInternalActorRef> Children { get; }
         protected System.Collections.Immutable.IImmutableDictionary<string, Akka.Actor.Internal.IChildStats> InternalChildren { get; }
         public virtual bool IsNormal { get; }
         public virtual bool IsTerminating { get; }
-        public System.Collections.Generic.IReadOnlyList<Akka.Actor.Internal.ChildRestartStats> Stats { get; }
+        public System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> Stats { get; }
         public abstract Akka.Actor.Internal.IChildrenContainer Add(string name, Akka.Actor.Internal.ChildRestartStats stats);
         protected void ChildStatsAppender(System.Text.StringBuilder sb, System.Collections.Generic.KeyValuePair<string, Akka.Actor.Internal.IChildStats> kvp, int index) { }
         public bool Contains(Akka.Actor.IActorRef actor) { }
@@ -1796,11 +1796,11 @@ namespace Akka.Actor.Internal
     public class EmptyChildrenContainer : Akka.Actor.Internal.IChildrenContainer
     {
         protected EmptyChildrenContainer() { }
-        public System.Collections.Generic.IReadOnlyList<Akka.Actor.IInternalActorRef> Children { get; }
+        public System.Collections.Generic.IReadOnlyCollection<Akka.Actor.IInternalActorRef> Children { get; }
         public static Akka.Actor.Internal.IChildrenContainer Instance { get; }
         public virtual bool IsNormal { get; }
         public virtual bool IsTerminating { get; }
-        public System.Collections.Generic.IReadOnlyList<Akka.Actor.Internal.ChildRestartStats> Stats { get; }
+        public System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> Stats { get; }
         public virtual Akka.Actor.Internal.IChildrenContainer Add(string name, Akka.Actor.Internal.ChildRestartStats stats) { }
         public bool Contains(Akka.Actor.IActorRef actor) { }
         public Akka.Actor.Internal.IChildrenContainer Remove(Akka.Actor.IActorRef child) { }
@@ -1813,10 +1813,10 @@ namespace Akka.Actor.Internal
     }
     public interface IChildrenContainer
     {
-        System.Collections.Generic.IReadOnlyList<Akka.Actor.IInternalActorRef> Children { get; }
+        System.Collections.Generic.IReadOnlyCollection<Akka.Actor.IInternalActorRef> Children { get; }
         bool IsNormal { get; }
         bool IsTerminating { get; }
-        System.Collections.Generic.IReadOnlyList<Akka.Actor.Internal.ChildRestartStats> Stats { get; }
+        System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> Stats { get; }
         Akka.Actor.Internal.IChildrenContainer Add(string name, Akka.Actor.Internal.ChildRestartStats stats);
         bool Contains(Akka.Actor.IActorRef actor);
         Akka.Actor.Internal.IChildrenContainer Remove(Akka.Actor.IActorRef child);

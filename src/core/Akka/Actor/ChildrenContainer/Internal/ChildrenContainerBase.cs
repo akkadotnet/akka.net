@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -15,6 +16,29 @@ namespace Akka.Actor.Internal
 {
     public abstract class ChildrenContainerBase : IChildrenContainer
     {
+        private class WrappedReadonlyCollection<T> : IReadOnlyCollection<T>
+        {
+            private readonly IEnumerable<T> _enumerable;
+
+            public int Count { get; }
+
+            public WrappedReadonlyCollection(IEnumerable<T> enumerable, int count)
+            {
+                _enumerable = enumerable;
+                Count = count;
+            }
+
+            public IEnumerator<T> GetEnumerator()
+            {
+                return _enumerable.GetEnumerator();
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return GetEnumerator();
+            }
+        }
+
         private readonly IImmutableDictionary<string, IChildStats> _children;
 
         protected ChildrenContainerBase(IImmutableDictionary<string, IChildStats> children)
@@ -30,25 +54,29 @@ namespace Akka.Actor.Internal
         public abstract IChildrenContainer ShallDie(IActorRef actor);
         public abstract IChildrenContainer Unreserve(string name);
 
-        public IReadOnlyList<IInternalActorRef> Children
+        public IReadOnlyCollection<IInternalActorRef> Children
         {
             get
             {
-                return (from stat in InternalChildren.Values
-                        let childRestartStats = stat as ChildRestartStats
-                        where childRestartStats != null
-                        select childRestartStats.Child).ToList();
+                var children = from stat in InternalChildren.Values
+                               let childRestartStats = stat as ChildRestartStats
+                               where childRestartStats != null
+                               select childRestartStats.Child;
+
+                return new WrappedReadonlyCollection<IInternalActorRef>(children, InternalChildren.Count);
             }
         }
 
-        public IReadOnlyList<ChildRestartStats> Stats
+        public IReadOnlyCollection<ChildRestartStats> Stats
         {
             get
             {
-                return (from stat in InternalChildren.Values
+                var children = from stat in InternalChildren.Values
                         let childRestartStats = stat as ChildRestartStats
                         where childRestartStats != null
-                        select childRestartStats).ToList();
+                        select childRestartStats;
+
+                return new WrappedReadonlyCollection<ChildRestartStats>(children, InternalChildren.Count);
             }
         }
 

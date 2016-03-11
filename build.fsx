@@ -264,9 +264,13 @@ Target "RunTests" <| fun _ ->
    
     let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
-    xUnit2
-        (fun p -> { p with XmlOutputPath = Some (testOutput + @"\XUnitTestResults.xml"); HtmlOutputPath = Some (testOutput + @"\XUnitTestResults.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization })
-        xunitTestAssemblies
+    let runSingleAssembly assembly =
+        let assemblyName = Path.GetFileNameWithoutExtension(assembly)
+        xUnit2
+            (fun p -> { p with XmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.xml"); HtmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization }) 
+            (Seq.singleton assembly)
+
+    xunitTestAssemblies |> Seq.iter (runSingleAssembly)
 
 Target "RunTestsMono" <| fun _ ->  
     let xunitTestAssemblies = !! "src/**/bin/Release Mono/*.Tests.dll"
@@ -275,9 +279,13 @@ Target "RunTestsMono" <| fun _ ->
 
     let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
-    xUnit2
-        (fun p -> { p with XmlOutputPath = Some (testOutput + @"\XUnitTestResults.xml"); HtmlOutputPath = Some (testOutput + @"\XUnitTestResults.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization })
-        xunitTestAssemblies
+    let runSingleAssembly assembly =
+        let assemblyName = Path.GetFileNameWithoutExtension(assembly)
+        xUnit2
+            (fun p -> { p with XmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.xml"); HtmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization }) 
+            (Seq.singleton assembly)
+
+    xunitTestAssemblies |> Seq.iter (runSingleAssembly)
 
 Target "MultiNodeTests" <| fun _ ->
     let testSearchPath =
@@ -352,6 +360,8 @@ module Nuget =
         match project with
         | "Akka" -> []
         | "Akka.Cluster" -> ["Akka.Remote", release.NugetVersion]
+        | "Akka.Cluster.Sharding" -> ["Akka.Cluster.Tools", preReleaseVersion; "Akka.Persistence", preReleaseVersion]
+        | "Akka.Cluster.Tools" -> ["Akka.Cluster", preReleaseVersion]
         | "Akka.Persistence.TestKit" -> ["Akka.Persistence", preReleaseVersion; "Akka.TestKit.Xunit2", release.NugetVersion]
         | persistence when (persistence.Contains("Sql") && not (persistence.Equals("Akka.Persistence.Sql.Common"))) -> ["Akka.Persistence.Sql.Common", preReleaseVersion]
         | persistence when (persistence.StartsWith("Akka.Persistence.")) -> ["Akka.Persistence", preReleaseVersion]
@@ -364,6 +374,7 @@ module Nuget =
     let getProjectVersion project =
       match project with
       | "Akka.Cluster" -> preReleaseVersion
+      | cluster when cluster.StartsWith("Akka.Cluster.") -> preReleaseVersion
       | persistence when persistence.StartsWith("Akka.Persistence") -> preReleaseVersion
       | "Akka.Serialization.Wire" -> preReleaseVersion
       | _ -> release.NugetVersion

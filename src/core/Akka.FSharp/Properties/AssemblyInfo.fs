@@ -6,7 +6,7 @@ open System.Runtime.InteropServices
 [<assembly: AssemblyTitleAttribute("Akka.FSharp")>]
 [<assembly: AssemblyProductAttribute("Akka.NET")>]
 [<assembly: AssemblyDescriptionAttribute("Akka.NET is a port of the popular Java/Scala framework Akka to .NET")>]
-[<assembly: AssemblyCopyrightAttribute("Copyright © 2013-2015 Akka.NET Team")>]
+[<assembly: AssemblyCopyrightAttribute("Copyright © 2013-2016 Akka.NET Team")>]
 [<assembly: AssemblyCompanyAttribute("Akka.NET Team")>]
 [<assembly: ComVisibleAttribute(false)>]
 [<assembly: CLSCompliantAttribute(true)>]
