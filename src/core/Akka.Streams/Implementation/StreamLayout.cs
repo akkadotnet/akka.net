@@ -148,8 +148,8 @@ namespace Akka.Streams.Implementation
             if (unOut.Any() && !module.IsCopied) problems.Add("unconnected outlets " + outs(unOut));
 
             var atomics = Atomics(module.MaterializedValueComputation);
-            var graphValues = module.SubModules.SelectMany(m => m is GraphModule ? ((GraphModule)m).SubModules : Enumerable.Empty<IModule>());
-            var nonExistent = atomics.Except(module.SubModules).Except(graphValues).Except(new IModule[] { module });
+            var graphValues = module.SubModules.SelectMany(m => m is GraphModule ? ((GraphModule)m).MaterializedValueIds : Enumerable.Empty<IModule>());
+            var nonExistent = atomics.Except(module.SubModules).Except(graphValues).Except(new[] { module });
             if (nonExistent.Any()) problems.Add("computation refers to non-existent modules " + string.Join(", ", nonExistent));
 
             var print = shouldPrint || problems.Any();

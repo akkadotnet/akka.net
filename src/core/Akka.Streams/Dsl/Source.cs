@@ -181,7 +181,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Source<T, Unit> From<T>(IEnumerable<T> enumerable)
         {
-            return Single(enumerable).MapConcat(x => x).WithAttributes(DefaultAttributes.SingleSource);
+            return Single(enumerable).MapConcat(x => x).WithAttributes(DefaultAttributes.EnumerableSource);
         }
 
         /// <summary>

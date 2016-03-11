@@ -241,7 +241,10 @@ namespace Akka.Streams.Implementation.Fusing
             ISet<IModule> openGroup,
             string indent)
         {
-            var isAsync = module.IsAtomic || module.Attributes.Contains<Attributes.AsyncBoundary>();
+            // non-GraphStage atomic or has AsyncBoundary
+            var isAsync = module is GraphStageModule || module is GraphModule || !module.IsAtomic
+                ? module.Attributes.Contains<Attributes.AsyncBoundary>()
+                : true;
             var localGroup = isAsync ? structInfo.CreateGroup(indent) : openGroup;
 
             if (module.IsAtomic)
