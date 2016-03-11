@@ -1928,6 +1928,7 @@ namespace Akka.Configuration
 {
     public class Config
     {
+        public static readonly Akka.Configuration.Config Empty;
         public Config() { }
         public Config(Akka.Configuration.Hocon.HoconRoot root) { }
         public Config(Akka.Configuration.Config source, Akka.Configuration.Config fallback) { }

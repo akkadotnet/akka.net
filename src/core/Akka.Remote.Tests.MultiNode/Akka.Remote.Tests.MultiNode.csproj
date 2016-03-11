@@ -72,6 +72,7 @@
     <Compile Include="RemoteNodeShutdownAndComesBackSpec.cs" />
     <Compile Include="RemoteRoundRobinSpec.cs" />
     <Compile Include="RemoteRandomSpec.cs" />
+    <Compile Include="TestConductor\TestConductorSpec.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj">

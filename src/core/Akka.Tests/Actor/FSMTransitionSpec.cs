@@ -122,6 +122,8 @@ namespace Akka.Tests.Actor
                 Initialize();
             }
 
+            
+
             public IActorRef Target { get; private set; }
 
             protected override void PreRestart(Exception reason, object message)

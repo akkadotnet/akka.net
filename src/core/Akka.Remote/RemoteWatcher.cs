@@ -427,13 +427,13 @@ namespace Akka.Remote
 
         protected void ProcessUnwatchRemote(IActorRef watchee, IActorRef watcher)
         {
-            if (watcher != Self)
+            if (!Equals(watcher, Self))
             {
                 _log.Debug("Unwatching: [{0} -> {1}]", watcher.Path, watchee.Path);
                 _watching.Remove(Tuple.Create(watchee, watcher));
 
                 // clean up self watch when no more watchers of this watchee
-                if (_watching.All(t => t.Item1 != watchee || t.Item2 == Self))
+                if (_watching.All(t => !Equals(t.Item1, watchee) || Equals(t.Item2, Self)))
                 {
                     _log.Debug("Cleanup self watch of [{0}]", watchee.Path);
                     Context.Unwatch(watchee);
@@ -456,7 +456,7 @@ namespace Akka.Remote
             var toProcess = _watching.Where(t => t.Item1.Equals(watchee)).ToList();
             foreach (var t in toProcess)
             {
-                if (!addressTerminated && t.Item2 != Self)
+                if (!addressTerminated && !Equals(t.Item2, Self))
                     t.Item2.Tell(new DeathWatchNotification(watchee, existenceConfirmed, false));
             }
 
