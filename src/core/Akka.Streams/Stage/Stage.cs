@@ -116,10 +116,7 @@ namespace Akka.Streams.Stage
     /// </summary>
     public abstract class DetachedStage<TIn, TOut> : AbstractStage<TIn, TOut, IUpstreamDirective, IDownstreamDirective, IDetachedContext<TOut>, ILifecycleContext>
     {
-        protected override bool IsDetached
-        {
-            get { return true; }
-        }
+        internal protected override bool IsDetached => true;
 
         /**
          * If an exception is thrown from [[#onPush]] this method is invoked to decide how
