@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Collections.Immutable;
 using System.Reactive.Streams;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Pattern;
-using Akka.Streams.Actors;
 using Akka.Util;
 
 namespace Akka.Streams.Implementation
@@ -59,13 +58,17 @@ namespace Akka.Streams.Implementation
         protected NormalShutdownException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
+    public interface IActorPublisher : IPublisher
+    {
+    }
+
     /**
      * INTERNAL API
      *
      * When you instantiate this class, or its subclasses, you MUST send an ExposedPublisher message to the wrapped
      * ActorRef! If you don't need to subclass, prefer the apply() method on the companion object which takes care of this.
      */
-    public class ActorPublisher<TOut> : IPublisher<TOut>
+    public class ActorPublisher<TOut> : IActorPublisher, IPublisher<TOut>
     {
         protected readonly IActorRef Impl;
         public const string NormalShutdownReasonMessage = "Cannot subscribe to shut-down Publisher";
@@ -76,9 +79,10 @@ namespace Akka.Streams.Implementation
         // SubscribePending message. The AtomicReference is set to null by the shutdown method, which is
         // called by the actor from postStop. Pending (unregistered) subscription attempts are denied by
         // the shutdown method. Subscription attempts after shutdown can be denied immediately.
-        private readonly ConcurrentSet<ISubscriber<TOut>> _pendingSubscribers = new ConcurrentSet<ISubscriber<TOut>>();
+        private readonly AtomicReference<ImmutableList<ISubscriber<TOut>>> _pendingSubscribers =
+            new AtomicReference<ImmutableList<ISubscriber<TOut>>>(ImmutableList<ISubscriber<TOut>>.Empty);
 
-        private volatile Exception ShutdownReason = null;
+        private volatile Exception _shutdownReason = null;
         
         protected virtual object WakeUpMessage { get { return SubscribePending.Instance; } }
 
@@ -92,14 +96,14 @@ namespace Akka.Streams.Implementation
             if (subscriber == null) throw new ArgumentNullException("subscriber");
             while (true)
             {
-                var isPending = _pendingSubscribers.Contains(subscriber);
-                if (!isPending)
+                var current = _pendingSubscribers.Value;
+                if (current == null)
                 {
                     ReportSubscribeFailure(subscriber);
                     break;
                 }
-                
-                if (_pendingSubscribers.TryAdd(subscriber))
+
+                if (_pendingSubscribers.CompareAndSet(current, current.Add(subscriber)))
                 {
                     Impl.Tell(WakeUpMessage);
                     break;
@@ -114,35 +118,39 @@ namespace Akka.Streams.Implementation
 
         public IEnumerable<ISubscriber<TOut>> TakePendingSubscribers()
         {
-            return _pendingSubscribers.Reverse().ToArray();
+            return _pendingSubscribers.GetAndSet(null);
         }
 
         public void Shutdown(Exception reason)
         {
-            ShutdownReason = reason;
-            //pendingSubscribers.getAndSet(null) match {
-            //  case null    ⇒ // already called earlier
-            //  case pending ⇒ pending foreach reportSubscribeFailure
-            //}
+            _shutdownReason = reason;
+            var pending = _pendingSubscribers.GetAndSet(ImmutableList<ISubscriber<TOut>>.Empty);
+            if (pending != null)
+            {
+                foreach (var subscriber in pending.Reverse())
+                {
+                    ReportSubscribeFailure(subscriber);
+                }
+            }
         }
 
         private void ReportSubscribeFailure(ISubscriber<TOut> subscriber)
         {
             try
             {
-                if (ShutdownReason == null)
+                if (_shutdownReason == null)
                 {
                     ReactiveStreamsCompliance.TryOnSubscribe(subscriber, CancelledSubscription.Instance);
                     ReactiveStreamsCompliance.TryOnComplete(subscriber);
                 }
-                else if (ShutdownReason is ISpecViolation)
+                else if (_shutdownReason is ISpecViolation)
                 {
                     // ok, not allowed to call OnError
                 }
                 else
                 {
                     ReactiveStreamsCompliance.TryOnSubscribe(subscriber, CancelledSubscription.Instance);
-                    ReactiveStreamsCompliance.TryOnError(subscriber, ShutdownReason);
+                    ReactiveStreamsCompliance.TryOnError(subscriber, _shutdownReason);
                 }
             }
             catch (Exception exception)
