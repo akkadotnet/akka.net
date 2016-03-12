@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using Akka.Actor;
 
@@ -67,7 +69,28 @@ namespace Akka.Event
         /// <returns>A <see cref="System.String" /> that represents this LogEvent.</returns>
         public override string ToString()
         {
-            return string.Format("[{0}][{1}][Thread {2}][{3}] {4}", LogLevel().ToString().Replace("Level", "").ToUpperInvariant(), Timestamp, Thread.ManagedThreadId.ToString().PadLeft(4, '0'), LogSource, Message);
+            return ToString("[{LogLevel}][{Timestamp}][Thread {ThreadId}][{LogSource}] {Message}");
+        }
+
+        private static readonly ConcurrentDictionary<string,string> TemplateLookup = new ConcurrentDictionary<string, string>();
+
+        protected static string GetOrAddTemplate(string template, Func<string,string> body)
+        {
+            return TemplateLookup.GetOrAdd(template, body);
+        }
+        public string ToString(string template)
+        {
+            var format = GetOrAddTemplate(template, t => template
+                .Replace("{LogLevel", "{0")
+                .Replace("{Timestamp", "{1")
+                .Replace("{ThreadId", "{2")
+                .Replace("{LogSource", "{3")
+                .Replace("{LogClass", "{4")
+                .Replace("{Message", "{5"));            
+
+            var logLevel = LogLevel().ToString().Replace("Level", "").ToUpperInvariant();
+            var threadId = Thread.ManagedThreadId.ToString().PadLeft(4, '0');
+            return String.Format(format, logLevel, Timestamp, threadId, LogSource, LogClass, Message);
         }
     }
 }

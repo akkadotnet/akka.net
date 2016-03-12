@@ -88,6 +88,11 @@ namespace Akka.Event
         public static ConsoleColor ErrorColor { get; set; }
 
         /// <summary>
+        /// Gets or Sets the log template of the events.
+        /// </summary>
+        public static string LogTemplate { get; set; }
+
+        /// <summary>
         /// Gets or Sets whether or not to use colors when printing events.
         /// </summary>
         public static bool UseColors { get; set; }
@@ -120,7 +125,10 @@ namespace Akka.Event
                 }
             }
 
-            StandardOutWriter.WriteLine(logEvent.ToString(), color);
+            //use built in template if no template is provided
+            var message = LogTemplate == null? logEvent.ToString() : logEvent.ToString(LogTemplate);
+
+            StandardOutWriter.WriteLine(message, color);
         }
     }
 }

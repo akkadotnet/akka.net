@@ -76,11 +76,18 @@ namespace Akka.Actor
             SerializeAllCreators = Config.GetBoolean("akka.actor.serialize-creators");
 
             LogLevel = Config.GetString("akka.loglevel");
+            LogTemplate = Config.GetString("akka.stdout-logtemplate");
             StdoutLogLevel = Config.GetString("akka.stdout-loglevel");
+            StdoutLogTemplate = Config.GetString("akka.stdout-logtemplate");
+
+            //use base template as fallback if missing
+            if (string.IsNullOrWhiteSpace(StdoutLogTemplate))
+                StdoutLogTemplate = LogTemplate;
+
             Loggers = Config.GetStringList("akka.loggers");
 
             LoggerStartTimeout = Config.GetTimeSpan("akka.logger-startup-timeout");
-
+            
             //handled
             LogConfigOnStart = Config.GetBoolean("akka.log-config-on-start");
             LogDeadLetters = 0;
@@ -117,6 +124,16 @@ namespace Akka.Actor
                 final val DefaultVirtualNodesFactor: Int = getInt("akka.actor.deployment.default.virtual-nodes-factor")
              */
         }
+
+        /// <summary>
+        /// Gets the base template used for all loggers
+        /// </summary>
+        public string LogTemplate { get; private set; }
+
+        /// <summary>
+        /// Gets the log template used for Stdout logging
+        /// </summary>
+        public string StdoutLogTemplate { get;private set; }
 
         /// <summary>
         ///     Gets the system.

@@ -47,12 +47,24 @@ namespace Akka.Event
         /// <returns></returns>
         public override string ToString()
         {
-            var cause = Cause;
-            var causeStr = cause == null ? "Unknown" : cause.ToString();
-            var errorStr = string.Format("[{0}][{1}][Thread {2}][{3}] {4}{5}Cause: {6}",
-                LogLevel().ToString().Replace("Level", "").ToUpperInvariant(), Timestamp,
-                Thread.ManagedThreadId.ToString().PadLeft(4, '0'), LogSource, Message, Environment.NewLine, causeStr);
-            return errorStr;
+            return ToString("[{LogLevel}][{Timestamp}][Thread {ThreadId}][{LogSource}] {Message}\r\n{Cause}");
+        }
+
+        public string ToString(string template)
+        {
+            var format = GetOrAddTemplate(template, t => template
+                .Replace("{LogLevel", "{0")
+                .Replace("{Timestamp", "{1")
+                .Replace("{ThreadId", "{2")
+                .Replace("{LogSource", "{3")
+                .Replace("{LogClass", "{4")
+                .Replace("{Message", "{5")
+                .Replace("{Cause","{6"));            
+
+            var logLevel = LogLevel().ToString().Replace("Level", "").ToUpperInvariant();
+            var threadId = Thread.ManagedThreadId.ToString().PadLeft(4, '0');
+            var causeStr = Cause == null ? "Unknown" : Cause.ToString();
+            return String.Format(format, logLevel, Timestamp, threadId, LogSource, LogClass, Message,causeStr);
         }
     }
 }

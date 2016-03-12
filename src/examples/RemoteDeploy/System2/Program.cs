@@ -18,8 +18,8 @@ namespace System2
             var config = ConfigurationFactory.ParseString(@"
 akka {  
     log-config-on-start = on
-    stdout-loglevel = DEBUG
-    loglevel = DEBUG
+    stdout-loglevel = ERROR
+    loglevel = ERROR
     actor {
         provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
         

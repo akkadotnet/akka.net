@@ -55,6 +55,7 @@ namespace Akka.Actor.Internal
 
             _name = name;            
             ConfigureSettings(config);
+            ConfigureStandardOutLogger();
             ConfigureEventStream();
             ConfigureProvider();
             ConfigureTerminationCallbacks();
@@ -128,6 +129,11 @@ namespace Akka.Actor.Internal
         public override ActorSelection ActorSelection(string actorPath)
         {
             return ActorRefFactoryShared.ActorSelection(actorPath, this, _provider.RootGuardian);
+        }
+
+        private void ConfigureStandardOutLogger()
+        {
+            StandardOutLogger.LogTemplate = Settings.StdoutLogTemplate;
         }
 
         private void ConfigureScheduler()
