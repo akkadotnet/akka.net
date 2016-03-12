@@ -43,7 +43,7 @@ namespace Akka.Persistence.Tests.Journal
             private TokenConsumed() { }
         }
 
-        private static readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent;
+        private static readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously;
         // keep it in a thread safe global so that tests can get their hand on the actor ref and send Steps to it
         private static readonly ConcurrentDictionary<string, IActorRef> _current = new ConcurrentDictionary<string, IActorRef>();
         private readonly string _instanceId;

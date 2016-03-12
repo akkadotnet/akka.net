@@ -433,7 +433,7 @@ namespace Akka.Remote.Transport
                 //        internalTarget.Tell(new Unwatch(target, promiseRef));
                 //       return SetThrottleAck.Instance;
                 //    }
-                //}, TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously);
+                //}, TaskContinuationOptions.ExecuteSynchronously);
 
             }
         }
