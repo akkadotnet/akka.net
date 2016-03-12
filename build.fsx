@@ -282,6 +282,16 @@ Target "RunTestsMono" <| fun _ ->
 
     xunitTestAssemblies |> Seq.iter (runSingleAssembly)
 
+
+(* Debug helper for troubleshooting an issue we had when we were running multi-node tests multiple times *)
+Target "PrintMultiNodeTests" <| fun _ ->
+    let testSearchPath =
+        let assemblyFilter = getBuildParamOrDefault "spec-assembly" String.Empty
+        sprintf "src/**/bin/Release/*%s*.Tests.MultiNode.dll" assemblyFilter
+    (!! testSearchPath) |> Seq.iter (printfn "%s")
+    
+
+
 Target "MultiNodeTests" <| fun _ ->
     let testSearchPath =
         let assemblyFilter = getBuildParamOrDefault "spec-assembly" String.Empty
