@@ -470,18 +470,21 @@ namespace Akka.Remote
             * those results will then be piped back to Remoting, who waits for the results of
             * listen.AddressPromise.
             * */
-            Receive<Listen>(listen => Listens.ContinueWith<INoSerializationVerificationNeeded>(listens =>
+            Receive<Listen>(listen =>
             {
-                if (listens.IsFaulted)
+                Listens.ContinueWith<INoSerializationVerificationNeeded>(listens =>
                 {
-                    return new ListensFailure(listen.AddressesPromise, listens.Exception);
-                }
-                else
-                {
-                    return new ListensResult(listen.AddressesPromise, listens.Result);
-                }
-            }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default)
-                    .PipeTo(Self));
+                    if (listens.IsFaulted)
+                    {
+                        return new ListensFailure(listen.AddressesPromise, listens.Exception);
+                    }
+                    else
+                    {
+                        return new ListensResult(listen.AddressesPromise, listens.Result);
+                    }
+                }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default)
+                    .PipeTo(Self);
+            });
 
             Receive<ListensResult>(listens =>
             {
