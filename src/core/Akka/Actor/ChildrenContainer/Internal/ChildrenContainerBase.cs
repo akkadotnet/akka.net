@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -50,10 +51,9 @@ namespace Akka.Actor.Internal
                 return GetEnumerator();
             }
         }
+        private readonly ConcurrentDictionary<string, IChildStats> _children;
 
-        private readonly IImmutableDictionary<string, IChildStats> _children;
-
-        protected ChildrenContainerBase(IImmutableDictionary<string, IChildStats> children)
+        protected ChildrenContainerBase(ConcurrentDictionary<string, IChildStats> children)
         {
             _children = children;
         }
@@ -89,7 +89,7 @@ namespace Akka.Actor.Internal
             }
         }
 
-        protected IImmutableDictionary<string, IChildStats> InternalChildren { get { return _children; } }
+        protected ConcurrentDictionary<string, IChildStats> InternalChildren { get { return _children; } }
 
         public bool TryGetByName(string name, out IChildStats stats)
         {

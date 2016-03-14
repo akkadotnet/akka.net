@@ -5,8 +5,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Text;
+using Akka.Event;
 using Akka.Util.Internal;
 using Akka.Util.Internal.Collections;
 
@@ -19,25 +21,32 @@ namespace Akka.Actor.Internal
     /// </summary>
     public class NormalChildrenContainer : ChildrenContainerBase
     {
-        private NormalChildrenContainer(IImmutableDictionary<string, IChildStats> children)
+        private NormalChildrenContainer(ConcurrentDictionary<string, IChildStats> children)
             : base(children)
         {
         }
 
-        public static IChildrenContainer Create(IImmutableDictionary<string, IChildStats> children)
+        public static IChildrenContainer Create(ConcurrentDictionary<string, IChildStats> children)
         {
-            if (children.Count == 0) return EmptyChildrenContainer.Instance;
+            if (children.IsEmpty) return EmptyChildrenContainer.Instance;
             return new NormalChildrenContainer(children);
         }
 
         public override IChildrenContainer Add(string name, ChildRestartStats stats)
         {
-            return Create(InternalChildren.SetItem(name, stats));
+            var alreadyAdded = InternalChildren.TryAdd(name, stats);
+
+            //TODO I think this is safe, validate...
+            //System.Diagnostics.Debug.Assert(alreadyAdded, "If this occur, consider changing the above call to AddOrUpdate");
+
+            return this;
         }
 
         public override IChildrenContainer Remove(IActorRef child)
         {
-            return Create(InternalChildren.Remove(child.Path.Name));
+            IChildStats stats;
+            InternalChildren.TryRemove(child.Path.Name, out stats);
+            return this;
         }
 
         public override IChildrenContainer ShallDie(IActorRef actor)
@@ -47,9 +56,10 @@ namespace Akka.Actor.Internal
 
         public override IChildrenContainer Reserve(string name)
         {
-            if (InternalChildren.ContainsKey(name))
+            if (!InternalChildren.TryAdd(name, ChildNameReserved.Instance))
                 throw new InvalidActorNameException(string.Format("Actor name \"{0}\" is not unique!", name));
-            return new NormalChildrenContainer(InternalChildren.SetItem(name, ChildNameReserved.Instance));
+
+            return this;
         }
 
         public override IChildrenContainer Unreserve(string name)
@@ -57,7 +67,9 @@ namespace Akka.Actor.Internal
             IChildStats stats;
             if (InternalChildren.TryGetValue(name, out stats) && (stats is ChildNameReserved))
             {
-                return Create(InternalChildren.Remove(name));
+                //TODO Same behavior as with the ImmutableDictionary, but validate if this is thread safe
+                InternalChildren.TryRemove(name, out stats);
+                return this;
             }
             return this;
         }

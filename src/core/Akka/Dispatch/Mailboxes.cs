@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Util.Reflection;
 
 namespace Akka.Dispatch
 {
@@ -26,6 +27,7 @@ namespace Akka.Dispatch
         private readonly DeadLetterMailbox _deadLetterMailbox;
         public static readonly string DefaultMailboxId = "akka.actor.default-mailbox";
         private readonly Dictionary<Type, Config> _requirementsMapping;
+        private readonly Type _defaultMailboxType;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="Mailboxes" /> class.
@@ -50,6 +52,8 @@ namespace Akka.Dispatch
                 var config = system.Settings.Config.GetConfig(kvp.Value.GetString());
                 _requirementsMapping.Add(type, config);
             }
+
+            _defaultMailboxType = FromConfig(DefaultMailboxId);
         }
 
         public Type LookupByQueueType(Type queueType)
@@ -92,7 +96,7 @@ namespace Akka.Dispatch
             }
 
 
-            return FromConfig(DefaultMailboxId);
+            return _defaultMailboxType;
         }
 
         /// <summary>
@@ -111,7 +115,7 @@ namespace Akka.Dispatch
             var config = _system.Settings.Config.GetConfig(path);
             var type = config.GetString("mailbox-type");
 
-            var mailboxType = Type.GetType(type);
+            var mailboxType = TypeCache.GetType(type);
             return mailboxType;
             /*
 mailbox-capacity = 1000

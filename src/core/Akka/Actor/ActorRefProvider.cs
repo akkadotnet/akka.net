@@ -381,7 +381,6 @@ namespace Akka.Actor
                 {
                     // for consistency we check configuration of dispatcher and mailbox locally
                     var dispatcher = _system.Dispatchers.Lookup(props2.Dispatcher);
-                    var mailboxType = _system.Mailboxes.GetMailboxType(props2, ConfigurationFactory.Empty);
 
                     if (async)
                         return
