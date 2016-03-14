@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Text;
 using Akka.Util.Internal;
@@ -27,12 +28,12 @@ namespace Akka.Actor.Internal
         private readonly ImmutableHashSet<IActorRef> _toDie;
         private readonly SuspendReason _reason;
 
-        public TerminatingChildrenContainer(IImmutableDictionary<string, IChildStats> children, IActorRef toDie, SuspendReason reason)
+        public TerminatingChildrenContainer(ConcurrentDictionary<string, IChildStats> children, IActorRef toDie, SuspendReason reason)
             : this(children, ImmutableHashSet<IActorRef>.Empty.Add(toDie), reason)
         {
             //Intentionally left blank
         }
-        public TerminatingChildrenContainer(IImmutableDictionary<string, IChildStats> children, ImmutableHashSet<IActorRef> toDie, SuspendReason reason)
+        public TerminatingChildrenContainer(ConcurrentDictionary<string, IChildStats> children, ImmutableHashSet<IActorRef> toDie, SuspendReason reason)
             : base(children)
         {
             _toDie = toDie;
@@ -43,19 +44,27 @@ namespace Akka.Actor.Internal
 
         public override IChildrenContainer Add(string name, ChildRestartStats stats)
         {
-            var newMap = InternalChildren.SetItem(name, stats);
-            return new TerminatingChildrenContainer(newMap, _toDie, _reason);
+            var alreadyAdded = InternalChildren.TryAdd(name, stats);
+
+            //System.Diagnostics.Debug.Assert(alreadyAdded, "If this occur, consider changing the above call to AddOrUpdate");
+            return this;
         }
 
         public override IChildrenContainer Remove(IActorRef child)
         {
+            IChildStats stats;
             var set = _toDie.Remove(child);
             if (set.IsEmpty)
             {
                 if (_reason is SuspendReason.Termination) return TerminatedChildrenContainer.Instance;
-                return NormalChildrenContainer.Create(InternalChildren.Remove(child.Path.Name));
+
+                InternalChildren.TryRemove(child.Path.Name, out stats);
+                return NormalChildrenContainer.Create(InternalChildren);
             }
-            return new TerminatingChildrenContainer(InternalChildren.Remove(child.Path.Name), set, _reason);
+
+            InternalChildren.TryRemove(child.Path.Name, out stats);
+
+            return new TerminatingChildrenContainer(InternalChildren, set, _reason);
         }
 
         public override IChildrenContainer ShallDie(IActorRef actor)
@@ -66,18 +75,19 @@ namespace Akka.Actor.Internal
         public override IChildrenContainer Reserve(string name)
         {
             if (_reason is SuspendReason.Termination) throw new InvalidOperationException(string.Format("Cannot reserve actor name\"{0}\". Is terminating.", name));
-            if (InternalChildren.ContainsKey(name))
+
+            if (!InternalChildren.TryAdd(name, ChildNameReserved.Instance))
                 throw new InvalidActorNameException(string.Format("Actor name \"{0}\" is not unique!", name));
-            else
-                return new TerminatingChildrenContainer(InternalChildren.SetItem(name, ChildNameReserved.Instance), _toDie, _reason);
+
+            return this;
         }
 
         public override IChildrenContainer Unreserve(string name)
         {
             IChildStats stats;
-            if (!InternalChildren.TryGetValue(name, out stats))
-                return this;
-            return new TerminatingChildrenContainer(InternalChildren.Remove(name), _toDie, _reason);
+            InternalChildren.TryRemove(name, out stats);
+
+            return this;
         }
 
         public override bool IsTerminating
