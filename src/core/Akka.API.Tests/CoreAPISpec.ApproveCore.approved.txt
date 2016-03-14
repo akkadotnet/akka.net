@@ -2235,6 +2235,7 @@ namespace Akka.Dispatch
         protected override int GetNumberOfMessages() { }
         public override void Post(Akka.Actor.IActorRef receiver, Akka.Actor.Envelope envelope) { }
         protected override void Schedule() { }
+        protected bool TryDequeue(out Akka.Actor.Envelope envelope) { }
     }
     public class CurrentSynchronizationContextDispatcher : Akka.Dispatch.MessageDispatcher
     {
@@ -2660,7 +2661,7 @@ namespace Akka.Event
         public Debug(string logSource, System.Type logClass, object message) { }
         public override Akka.Event.LogLevel LogLevel() { }
     }
-    public class DefaultLogger : Akka.Actor.ActorBase
+    public class DefaultLogger : Akka.Actor.ActorBase, Akka.Dispatch.IRequiresMessageQueue<Akka.Event.ILoggerMessageQueueSemantics>
     {
         public DefaultLogger() { }
         protected virtual void Print(Akka.Event.LogEvent logEvent) { }
@@ -2710,6 +2711,7 @@ namespace Akka.Event
         public static bool Subscribe<TChannel>(this Akka.Event.EventStream eventStream, Akka.Actor.IActorRef subscriber) { }
         public static bool Unsubscribe<TChannel>(this Akka.Event.EventStream eventStream, Akka.Actor.IActorRef subscriber) { }
     }
+    public interface ILoggerMessageQueueSemantics : Akka.Dispatch.ISemantics { }
     public interface ILoggingAdapter
     {
         bool IsDebugEnabled { get; }
@@ -2754,6 +2756,11 @@ namespace Akka.Event
     public class LoggerInitialized : Akka.Actor.INoSerializationVerificationNeeded
     {
         public LoggerInitialized() { }
+    }
+    public class LoggerMailbox : Akka.Dispatch.UnboundedMailbox
+    {
+        public LoggerMailbox() { }
+        public override void CleanUp() { }
     }
     public class static Logging
     {
