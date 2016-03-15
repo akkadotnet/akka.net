@@ -397,7 +397,7 @@ namespace Akka.Configuration
         /// </summary>
         /// <param name="includeFallback">if true returns string with current config combined with fallback key-values else only current config key-values</param>
         /// <returns></returns>
-        public string ToString(Boolean includeFallback)
+        public string ToString(bool includeFallback)
         {
             if (includeFallback == false)
                 return ToString();

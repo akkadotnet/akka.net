@@ -1942,7 +1942,7 @@ namespace Akka.Configuration
         public virtual bool IsEmpty { get; }
         public Akka.Configuration.Hocon.HoconValue Root { get; }
         public System.Collections.Generic.IEnumerable<Akka.Configuration.Hocon.HoconSubstitution> Substitutions { get; set; }
-        [System.Runtime.CompilerServices.IteratorStateMachineAttribute(typeof(Akka.Configuration.Config.<AsEnumerable>d__45))]
+        [System.Runtime.CompilerServices.IteratorStateMachineAttribute(typeof(Akka.Configuration.Config.<AsEnumerable>d__46))]
         public virtual System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, Akka.Configuration.Hocon.HoconValue>> AsEnumerable() { }
         protected Akka.Configuration.Config Copy() { }
         public virtual bool GetBoolean(string path, bool default = False) { }
@@ -1968,6 +1968,7 @@ namespace Akka.Configuration
         public Akka.Configuration.Hocon.HoconValue GetValue(string path) { }
         public virtual bool HasPath(string path) { }
         public override string ToString() { }
+        public string ToString(bool includeFallback) { }
         public virtual Akka.Configuration.Config WithFallback(Akka.Configuration.Config fallback) { }
     }
     public class static ConfigExtensions
