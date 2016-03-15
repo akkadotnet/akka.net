@@ -10,14 +10,15 @@ using System.Threading.Tasks;
 
 namespace Akka.Util
 {
-    [StructLayout(LayoutKind.Explicit)]
+    //A generic type can't have a explicit layout
+    //[StructLayout(LayoutKind.Explicit)]
     public struct Result<T> : IEquatable<Result<T>>
     {
-        [FieldOffset(0)]
+        //[FieldOffset(0)]
         public readonly bool IsSuccess;
-        [FieldOffset(1)]
+        //[FieldOffset(1)]
         public readonly T Value;
-        [FieldOffset(1)]
+        //[FieldOffset(1)]
         public readonly Exception Exception;
 
         public Result(T value) : this()

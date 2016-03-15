@@ -42,6 +42,7 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StreamTestKit.cs" />
+    <Compile Include="TestGraphStage.cs" />
     <Compile Include="TestPublisher.cs" />
     <Compile Include="TestSink.cs" />
     <Compile Include="TestSource.cs" />

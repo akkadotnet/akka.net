@@ -70,6 +70,14 @@
     <Compile Include="Dsl\FlowMapSpec.cs" />
     <Compile Include="Implementation\ResizableMultiReaderRingBufferSpec.cs" />
     <Compile Include="Implementation\StreamLayoutSpec.cs" />
+    <Compile Include="IO\FileSinkSpec.cs" />
+    <Compile Include="IO\FileSourceSpec.cs" />
+    <Compile Include="IO\InputStreamSinkSpec.cs" />
+    <Compile Include="IO\InputStreamSourceSpec.cs" />
+    <Compile Include="IO\OutputStreamSinkSpec.cs" />
+    <Compile Include="IO\OutputStreamSourceSpec.cs" />
+    <Compile Include="IO\TcpHelper.cs" />
+    <Compile Include="IO\TcpSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Sample.cs" />
   </ItemGroup>
@@ -103,9 +111,7 @@
       <Name>Akka</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="IO\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <None Include="app.config" />
     <None Include="packages.config" />
