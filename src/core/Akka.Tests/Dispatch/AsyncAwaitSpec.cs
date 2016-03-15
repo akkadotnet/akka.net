@@ -23,7 +23,7 @@ namespace Akka.Tests.Dispatch
             {
                 _replyTo.Tell("GotIt");
             });
-            Receive<string>(async s =>
+            ReceiveAsync<string>(async s =>
             {
                 _replyTo = Sender;
 
@@ -36,7 +36,7 @@ namespace Akka.Tests.Dispatch
     {
         public AsyncActor()
         {
-            Receive<string>(async s =>
+            ReceiveAsync<string>(async s =>
             {
                 await Task.Yield();
                 await Task.Delay(TimeSpan.FromMilliseconds(100));
@@ -57,7 +57,7 @@ namespace Akka.Tests.Dispatch
             {
                 state = 1;
             });
-            Receive<string>(async m_ =>
+            ReceiveAsync<string>(async m_ =>
             {
                 Self.Tell("change");
                 await Task.Delay(TimeSpan.FromSeconds(1));
@@ -75,7 +75,7 @@ namespace Akka.Tests.Dispatch
     {
         public AsyncAwaitActor()
         {
-            Receive<string>(async _ =>
+            ReceiveAsync<string>(async _ =>
             {
                 var sender = Sender;
                 var self = Self;
@@ -84,6 +84,24 @@ namespace Akka.Tests.Dispatch
                 Assert.Same(sender, Sender);
                 Assert.Same(self, Self);
                 Sender.Tell("done");
+            });
+
+            ReceiveAsync<int>(async msg =>
+            {
+                await Task.Yield();
+                Sender.Tell("handled");
+            }, i => i > 10);
+
+            ReceiveAsync(typeof(double), async msg =>
+            {
+                await Task.Yield();
+                Sender.Tell("handled");
+            });
+
+            ReceiveAnyAsync(async msg =>
+            {
+                await Task.Yield();
+                Sender.Tell("receiveany");
             });
         }
     }
@@ -112,7 +130,7 @@ namespace Akka.Tests.Dispatch
     {
         public Asker(IActorRef other)
         {
-            Receive<string>(async _ =>
+            ReceiveAsync<string>(async _ =>
             {
                 var sender = Sender;
                 var self = Self;
@@ -189,7 +207,7 @@ namespace Akka.Tests.Dispatch
         public AsyncExceptionActor(IActorRef callback)
         {
             _callback = callback;
-            Receive<string>(async _ =>
+            ReceiveAsync<string>(async _ =>
             {
                 await Task.Yield();
                 ThrowException();
@@ -374,7 +392,7 @@ namespace Akka.Tests.Dispatch
 
             public AsyncExceptionCatcherActor()
             {
-                Receive<string>(async m =>
+                ReceiveAsync<string>(async m =>
                 {
                     _lastMessage = m;
                     try
@@ -410,7 +428,7 @@ namespace Akka.Tests.Dispatch
         {
             public AsyncFailingActor()
             {
-                Receive<string>(async m =>
+                ReceiveAsync<string>(async m =>
                 {
                     ThrowException();
                 });
@@ -443,7 +461,7 @@ namespace Akka.Tests.Dispatch
         {
             public AsyncPipeToDelayActor()
             {
-                Receive<string>(async msg =>
+                ReceiveAsync<string>(async msg =>
                 {
                     Task.Run(() =>
                     {
@@ -460,7 +478,7 @@ namespace Akka.Tests.Dispatch
         {
             public AsyncReentrantActor()
             {
-                Receive<string>(async msg =>
+                ReceiveAsync<string>(async msg =>
                 {
                     var sender = Sender;
                     Task.Run(() =>
@@ -491,6 +509,23 @@ namespace Akka.Tests.Dispatch
 
             actor.Tell("hello");
             ExpectMsg<string>(m => "hello".Equals(m), TimeSpan.FromMilliseconds(1000));
+        }
+
+        [Fact]
+        public async Task Actor_receiveasync_overloads_should_work()
+        {
+            var actor = Sys.ActorOf<AsyncAwaitActor>();
+
+            actor.Tell(11);
+            ExpectMsg<string>(m => "handled".Equals(m), TimeSpan.FromMilliseconds(1000));
+
+            actor.Tell(9);
+            ExpectMsg<string>(m => "receiveany".Equals(m), TimeSpan.FromMilliseconds(1000));
+
+            actor.Tell(1.0);
+            ExpectMsg<string>(m => "handled".Equals(m), TimeSpan.FromMilliseconds(1000));
+
+
         }
     }
 }
