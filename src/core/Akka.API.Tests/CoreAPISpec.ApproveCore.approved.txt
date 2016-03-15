@@ -1323,6 +1323,7 @@ namespace Akka.Actor
         protected void Become(System.Action configure, bool discardOld = True) { }
         protected void BecomeStacked(System.Action configure) { }
         protected virtual void OnReceive(object message) { }
+        [System.ObsoleteAttribute("Use ReceiveAsync instead. This method will be removed in future versions")]
         protected void Receive<T>(System.Func<T, System.Threading.Tasks.Task> handler) { }
         protected void Receive<T>(System.Action<T> handler, System.Predicate<T> shouldHandle = null) { }
         protected void Receive<T>(System.Predicate<T> shouldHandle, System.Action<T> handler) { }
@@ -1331,6 +1332,11 @@ namespace Akka.Actor
         protected void Receive<T>(System.Func<T, bool> handler) { }
         protected void Receive(System.Type messageType, System.Func<object, bool> handler) { }
         protected void ReceiveAny(System.Action<object> handler) { }
+        protected void ReceiveAnyAsync(System.Func<object, System.Threading.Tasks.Task> handler) { }
+        protected void ReceiveAsync<T>(System.Func<T, System.Threading.Tasks.Task> handler, System.Predicate<T> shouldHandle = null) { }
+        protected void ReceiveAsync<T>(System.Predicate<T> shouldHandle, System.Func<T, System.Threading.Tasks.Task> handler) { }
+        protected void ReceiveAsync(System.Type messageType, System.Func<object, System.Threading.Tasks.Task> handler, System.Predicate<object> shouldHandle = null) { }
+        protected void ReceiveAsync(System.Type messageType, System.Predicate<object> shouldHandle, System.Func<object, System.Threading.Tasks.Task> handler) { }
     }
     public class ReceiveTimeout : Akka.Actor.IPossiblyHarmful
     {
