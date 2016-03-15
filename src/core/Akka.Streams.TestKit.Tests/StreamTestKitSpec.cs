@@ -31,8 +31,12 @@ namespace Akka.Streams.TestKit.Tests
         [Fact]
         public void TestSink_Probe_ToStrict()
         {
-            Source.From(Enumerable.Range(1, 4)).RunWith(this.SinkProbe<int>(), _materializer)
-                .ToStrict(TimeSpan.FromMilliseconds(300)).Should().Equal(1, 2, 3, 4);
+            Source.From(Enumerable.Range(1, 4))
+                .RunWith(this.SinkProbe<int>(), _materializer)
+                .ToStrict(TimeSpan.FromMilliseconds(300))
+                .ToArray()
+                .Should()
+                .Equal(1, 2, 3, 4);
         }
 
         [Fact]
