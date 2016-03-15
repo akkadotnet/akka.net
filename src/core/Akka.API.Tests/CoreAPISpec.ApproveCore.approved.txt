@@ -4904,4 +4904,8 @@ namespace Akka.Util.Reflection
     {
         public static System.Collections.Generic.IEnumerable<object> GetArguments(this System.Linq.Expressions.NewExpression newExpression) { }
     }
+    public class static TypeCache
+    {
+        public static System.Type GetType(string typeName) { }
+    }
 }
