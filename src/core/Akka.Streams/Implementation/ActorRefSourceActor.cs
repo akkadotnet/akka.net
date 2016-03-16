@@ -5,27 +5,28 @@ using Akka.Streams.Actors;
 
 namespace Akka.Streams.Implementation
 {
-    public class ActorRefSourceActor : Actors.ActorPublisher<object>
+    internal class ActorRefSourceActor : Actors.ActorPublisher<object>
     {
-        public static Props Props(int bufferSize, OverflowStrategy overflowStrategy)
+        public static Props Props(int bufferSize, OverflowStrategy overflowStrategy, ActorMaterializerSettings settings)
         {
             if (overflowStrategy == OverflowStrategy.Backpressure)
                 throw new NotSupportedException("Backpressure overflow strategy not supported");
 
-            return Actor.Props.Create(() => new ActorRefSourceActor(bufferSize, overflowStrategy));
+            var maxFixedBufferSize = settings.MaxFixedBufferSize;
+            return Actor.Props.Create(() => new ActorRefSourceActor(bufferSize, overflowStrategy, maxFixedBufferSize));
         }
 
-        protected readonly FixedSizeBuffer<object> Buffer;
+        protected readonly IBuffer<object> Buffer;
 
         public readonly int BufferSize;
         public readonly OverflowStrategy OverflowStrategy;
         private ILoggingAdapter _log;
 
-        public ActorRefSourceActor(int bufferSize, OverflowStrategy overflowStrategy)
+        public ActorRefSourceActor(int bufferSize, OverflowStrategy overflowStrategy, int maxFixedBufferSize)
         {
             BufferSize = bufferSize;
             OverflowStrategy = overflowStrategy;
-            Buffer = bufferSize != 0 ? FixedSizeBuffer.Create<object>(bufferSize) : null;
+            Buffer = bufferSize != 0 ?  Implementation.Buffer.Create<object>(bufferSize, maxFixedBufferSize) : null;
         }
 
         protected ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }

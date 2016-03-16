@@ -557,13 +557,17 @@ namespace Akka.Streams.Implementation.Fusing
     {
         private readonly int _count;
         private readonly Func<IDetachedContext<T>, T, IUpstreamDirective> _enqueueAction;
-        private readonly FixedSizeBuffer<T> _buffer;
+        private IBuffer<T> _buffer;
 
         public Buffer(int count, OverflowStrategy overflowStrategy)
         {
             _count = count;
-            _buffer = FixedSizeBuffer.Create<T>(count);
             _enqueueAction = EnqueueAction(overflowStrategy);
+        }
+
+        public override void PreStart(ILifecycleContext context)
+        {
+            _buffer = Buffer.Create<T>(_count, Context.Materializer);
         }
 
         public override IUpstreamDirective OnPush(T element, IDetachedContext<T> context)
@@ -816,30 +820,33 @@ namespace Akka.Streams.Implementation.Fusing
         #region internal classes
         private sealed class MapAsyncGraphStageLogic : GraphStageLogic
         {
+            private class Holder<T> {public Result<T> Elem { get; set; }}
             private static readonly Result<TOut> NotYetThere = Result.Failure<TOut>(new Exception());
 
             private readonly MapAsync<TIn, TOut> _stage;
             private readonly Decider _decider;
-            private readonly FixedSizeBuffer<Result<TOut>> _buffer;
-            private readonly Action<Tuple<int, Result<TOut>>> _taskCallback;
+            private IBuffer<Holder<TOut>> _buffer;
+            private readonly Action<Tuple<Holder<TOut>, Result<TOut>>> _taskCallback;
 
             public MapAsyncGraphStageLogic(Shape shape, Attributes inheritedAttributes, MapAsync<TIn, TOut> stage) : base(shape)
             {
                 _stage = stage;
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                 _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
-                _buffer = FixedSizeBuffer.Create<Result<TOut>>(_stage.Parallelism);
-                _taskCallback = GetAsyncCallback<Tuple<int, Result<TOut>>>(t =>
+               
+                _taskCallback = GetAsyncCallback<Tuple<Holder<TOut>, Result<TOut>>>(t =>
                 {
-                    var idx = t.Item1;
+                    var holder = t.Item1;
                     var result = t.Item2;
-                    if (!result.IsSuccess) FailOrPull(idx, result.Exception);
+                    if (!result.IsSuccess)
+                        FailOrPull(holder, result);
                     else
                     {
-                        if (result.Value == null) FailOrPull(idx, ReactiveStreamsCompliance.ElementMustNotBeNullException);
+                        if (result.Value == null)
+                            FailOrPull(holder, Result.Failure<TOut>(ReactiveStreamsCompliance.ElementMustNotBeNullException));
                         else
                         {
-                            _buffer.Put(idx, result);
+                            holder.Elem = result;
                             if (IsAvailable(_stage.Out)) PushOne();
                         }
                     }
@@ -850,8 +857,9 @@ namespace Akka.Streams.Implementation.Fusing
                     try
                     {
                         var task = _stage.MapFunc(Grab(_stage.In));
-                        var idx = _buffer.Enqueue(NotYetThere);
-                        task.ContinueWith(t => _taskCallback(Tuple.Create(idx, Result.FromTask(t))), TaskContinuationOptions.AttachedToParent);
+                        var holder = new Holder<TOut>() {Elem = NotYetThere};
+                        _buffer.Enqueue(holder);
+                        task.ContinueWith(t => _taskCallback(Tuple.Create(holder, Result.FromTask(t))), TaskContinuationOptions.AttachedToParent);
                     }
                     catch (Exception e)
                     {
@@ -864,12 +872,17 @@ namespace Akka.Streams.Implementation.Fusing
 
             public int Todo { get { return _buffer.Used; } }
 
-            private void FailOrPull(int index, Exception failure)
+            public override void PreStart()
             {
-                if (_decider(failure) == Directive.Stop) FailStage(failure);
+                _buffer = Buffer.Create<Holder<TOut>>(_stage.Parallelism, Materializer);
+            }
+
+            private void FailOrPull(Holder<TOut> holder, Result<TOut> failure)
+            {
+                if (_decider(failure.Exception) == Directive.Stop) FailStage(failure.Exception);
                 else
                 {
-                    _buffer.Put(index, Result.Failure<TOut>(failure));
+                    holder.Elem = failure;
                     if (IsAvailable(_stage.Out)) PushOne();
                 }
             }
@@ -884,13 +897,13 @@ namespace Akka.Streams.Implementation.Fusing
                         if (IsClosed(inlet)) CompleteStage();
                         else if (!HasBeenPulled(inlet)) Pull(inlet);
                     }
-                    else if (_buffer.Peek() == NotYetThere)
+                    else if (_buffer.Peek().Elem == NotYetThere)
                     {
                         if (Todo < _stage.Parallelism && !HasBeenPulled(inlet)) TryPull(inlet);
                     }
                     else
                     {
-                        var result = _buffer.Dequeue();
+                        var result = _buffer.Dequeue().Elem;
                         if (!result.IsSuccess) continue;
                         else
                         {
@@ -933,7 +946,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             private readonly MapAsyncUnordered<TIn, TOut> _stage;
             private readonly Decider _decider;
-            private readonly FixedSizeBuffer<TOut> _buffer;
+            private IBuffer<TOut> _buffer;
             private readonly Action<Result<TOut>> _taskCallback;
             private int _inFlight = 0;
 
@@ -942,7 +955,6 @@ namespace Akka.Streams.Implementation.Fusing
                 _stage = stage;
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                 _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
-                _buffer = FixedSizeBuffer.Create<TOut>(_stage.Parallelism);
                 _taskCallback = GetAsyncCallback<Result<TOut>>(result =>
                 {
                     _inFlight--;
@@ -987,6 +999,11 @@ namespace Akka.Streams.Implementation.Fusing
             }
 
             public int Todo { get { return _inFlight + _buffer.Used; } }
+
+            public override void PreStart()
+            {
+                _buffer = Buffer.Create<TOut>(_stage.Parallelism, Materializer);
+            }
 
             private void FailOrPull(Exception failure)
             {
@@ -1223,14 +1240,15 @@ namespace Akka.Streams.Implementation.Fusing
         {
             private const string TimerName = "DelayedTimer";
             private readonly Delay<T> _stage;
-            private readonly FixedSizeBuffer<KeyValuePair<DateTime, T>> _buffer;   // buffer has pairs timestamp with upstream element
+            private IBuffer<KeyValuePair<DateTime, T>> _buffer;   // buffer has pairs timestamp with upstream element
             private bool _willStop = false;
+            private readonly int _size;
 
             public DelayGraphStageLogic(FlowShape<T, T> shape, Attributes inheritedAttributes, Delay<T> stage) : base(shape)
             {
                 _stage = stage;
-                var size = inheritedAttributes.GetAttribute<Attributes.InputBuffer>(new Attributes.InputBuffer(16, 16)).Max;
-                _buffer = FixedSizeBuffer.Create<KeyValuePair<DateTime, T>>(size);
+                _size = inheritedAttributes.GetAttribute<Attributes.InputBuffer>(new Attributes.InputBuffer(16, 16)).Max;
+                
                 var overflowStrategy = OnPushStrategy(_stage._strategy);
 
                 SetHandler(_stage.Inlet, onPush: () =>
@@ -1238,7 +1256,7 @@ namespace Akka.Streams.Implementation.Fusing
                     if (_buffer.IsFull) overflowStrategy();
                     else
                     {
-                        GrabAndPull(_stage._strategy != DelayOverflowStrategy.Backpressure || _buffer.Used < size - 1);
+                        GrabAndPull(_stage._strategy != DelayOverflowStrategy.Backpressure || _buffer.Used < _size - 1);
                         if (!IsTimerActive(TimerName)) ScheduleOnce(TimerName, _stage._delay);
                     }
                 },
@@ -1259,6 +1277,11 @@ namespace Akka.Streams.Implementation.Fusing
             private long NextElementWaitTime
             {
                 get { return (long)(_stage._delay.Ticks - (DateTime.UtcNow.Ticks - _buffer.Peek().Key.Ticks)) * TimeSpan.TicksPerSecond; }
+            }
+
+            public override void PreStart()
+            {
+                _buffer = Buffer.Create<KeyValuePair<DateTime, T>>(_size, Materializer);
             }
 
             private void CompleteIfReady()
