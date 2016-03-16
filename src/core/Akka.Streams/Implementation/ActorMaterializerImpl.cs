@@ -17,7 +17,7 @@ namespace Akka.Streams.Implementation
     {
         #region Materializer session implementation
 
-        private sealed class ActorMaterializerSession<TMat> : MaterializerSession<TMat>
+        private sealed class ActorMaterializerSession : MaterializerSession
         {
             private readonly ActorMaterializerImpl _materializer;
             private readonly Func<GraphInterpreterShell, IActorRef> _subflowFuser;
@@ -108,9 +108,12 @@ namespace Akka.Streams.Implementation
                 var outletsEnumerator = graph.Shape.Outlets.GetEnumerator();
                 while (outletsEnumerator.MoveNext())
                 {
-                    var publisher = new ActorGraphInterpreter.BoundaryPublisher<object>(impl, shell, i);
-                    impl.Tell(new ActorGraphInterpreter.ExposedPublisher<object>(shell, i, publisher));
-                    AssignPort(outletsEnumerator.Current, publisher);
+                    var outlet = outletsEnumerator.Current;
+                    var elementType = outlet.GetType().GetGenericArguments().First();
+                    var publisher = typeof(ActorGraphInterpreter.BoundaryPublisher<>).Instantiate(elementType, impl, shell, i);
+                    var message = new ActorGraphInterpreter.ExposedPublisher(shell, i, (IActorPublisher)publisher);
+                    impl.Tell(message);
+                    AssignPort(outletsEnumerator.Current, (IPublisher)publisher);
                     i++;
                 }
             }
@@ -226,7 +229,7 @@ namespace Akka.Streams.Implementation
 
             if (StreamLayout.IsDebug) StreamLayout.Validate(runnableGraph.Module);
 
-            var session = new ActorMaterializerSession<TMat>(this, runnableGraph.Module, InitialAttributes, subFlowFuser);
+            var session = new ActorMaterializerSession(this, runnableGraph.Module, InitialAttributes, subFlowFuser);
 
             return (TMat)session.Materialize();
         }

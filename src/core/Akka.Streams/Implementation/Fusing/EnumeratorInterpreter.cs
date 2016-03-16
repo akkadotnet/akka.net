@@ -38,8 +38,9 @@ namespace Akka.Streams.Implementation.Fusing
             public override Outlet<TIn> Out { get; }
         }
 
-        public sealed class EnumeratorDownstream<TOut> : GraphInterpreter.DownstreamBoundaryStageLogic<TOut>, IEnumerator<TOut>
+        public sealed class EnumeratorDownstream<TOut> : GraphInterpreter.DownstreamBoundaryStageLogic, IEnumerator<TOut>
         {
+            private readonly Inlet<TOut> _inlet;
             internal bool IsDone = false;
             internal TOut NextElement;
             internal bool NeedsPull = true;
@@ -47,10 +48,10 @@ namespace Akka.Streams.Implementation.Fusing
 
             public EnumeratorDownstream()
             {
-                In = new Inlet<TOut>("IteratorDownstream.in") { Id = 0 };
+                _inlet = new Inlet<TOut>("IteratorDownstream.in") { Id = 0 };
                 SetHandler(In, onPush: () =>
                 {
-                    NextElement = Grab(In);
+                    NextElement = Grab(_inlet);
                     NeedsPull = false;
                 }, 
                 onUpstreamFinish: () =>
@@ -66,7 +67,7 @@ namespace Akka.Streams.Implementation.Fusing
                 });
             }
 
-            public override Inlet<TOut> In { get; }
+            public override Inlet In { get { return _inlet; } }
             
             public void Dispose() { }
 
@@ -111,7 +112,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 if (NeedsPull)
                 {
-                    Pull(In);
+                    Pull(_inlet);
                     Interpreter.Execute(int.MaxValue);
                 }
             }

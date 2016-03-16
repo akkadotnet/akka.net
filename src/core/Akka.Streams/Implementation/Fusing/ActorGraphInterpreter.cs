@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Reactive.Streams;
-using System.Runtime.Serialization;
 using System.Threading;
 using Akka.Actor;
 using Akka.Event;
@@ -70,7 +69,7 @@ namespace Akka.Streams.Implementation.Fusing
         // Limits the number of events processed by the interpreter on an abort event.
         private readonly int _abortLimit;
         private readonly ActorGraphInterpreter.BatchingActorInputBoundary<object>[] _inputs;
-        private readonly ActorGraphInterpreter.ActorOutputBoundary<object>[] _outputs;
+        private readonly ActorGraphInterpreter.IActorOutputBoundary[] _outputs;
 
         private ILoggingAdapter _log;
         private GraphInterpreter _interpreter;
@@ -92,7 +91,7 @@ namespace Akka.Streams.Implementation.Fusing
             _materializer = materializer;
 
             _inputs = new ActorGraphInterpreter.BatchingActorInputBoundary<object>[shape.Inlets.Count()];
-            _outputs = new ActorGraphInterpreter.ActorOutputBoundary<object>[shape.Outlets.Count()];
+            _outputs = new ActorGraphInterpreter.IActorOutputBoundary[shape.Outlets.Count()];
             _subscribersPending = _inputs.Length;
             _publishersPending = _outputs.Length;
             _eventLimit = settings.MaxInputBufferSize * (assembly.Inlets.Length + assembly.Outlets.Length);
@@ -116,18 +115,19 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 var input = new ActorGraphInterpreter.BatchingActorInputBoundary<object>(_settings.MaxInputBufferSize, i);
                 _inputs[i] = input;
-                _interpreter.AttachUpstreamBoundary(i, input);
+                Interpreter.AttachUpstreamBoundary(i, input);
             }
 
             var offset = _assembly.ConnectionCount - _outputs.Length;
             for (int i = 0; i < _outputs.Length; i++)
             {
-                var output = new ActorGraphInterpreter.ActorOutputBoundary<object>(Self, this, i);
+                var outputType = _shape.Outlets[i].GetType().GetGenericArguments().First();
+                var output = (ActorGraphInterpreter.IActorOutputBoundary) typeof(ActorGraphInterpreter.ActorOutputBoundary<>).Instantiate(outputType, Self, this, i);
                 _outputs[i] = output;
-                _interpreter.AttachDownstreamBoundary<object>(i + offset, output);
+                Interpreter.AttachDownstreamBoundary(i + offset, (GraphInterpreter.DownstreamBoundaryStageLogic) output);
             }
 
-            _interpreter.Init(new SubFusingActorMaterializerImpl(_materializer, registerShell));
+            Interpreter.Init(new SubFusingActorMaterializerImpl(_materializer, registerShell));
             RunBatch();
         }
 
@@ -136,7 +136,7 @@ namespace Akka.Streams.Implementation.Fusing
             if (_waitingForShutdown)
             {
                 e.Match()
-                    .With<ActorGraphInterpreter.ExposedPublisher<object>>(exposed =>
+                    .With<ActorGraphInterpreter.ExposedPublisher>(exposed =>
                     {
                         _outputs[exposed.Id].ExposedPublisher(exposed.Publisher);
                         _publishersPending--;
@@ -172,11 +172,11 @@ namespace Akka.Streams.Implementation.Fusing
                     .With<ActorGraphInterpreter.Resume>(resume =>
                     {
                         _resumeScheduled = false;
-                        if (_interpreter.IsSuspended) RunBatch();
+                        if (Interpreter.IsSuspended) RunBatch();
                     })
                     .With<ActorGraphInterpreter.AsyncInput>(asyncInput =>
                     {
-                        if (!_interpreter.IsStageCompleted(asyncInput.Logic))
+                        if (!Interpreter.IsStageCompleted(asyncInput.Logic))
                         {
                             try
                             {
@@ -186,7 +186,7 @@ namespace Akka.Streams.Implementation.Fusing
                             {
                                 asyncInput.Logic.FailStage(cause);
                             }
-                            _interpreter.AfterStageHasRun(asyncInput.Logic);
+                            Interpreter.AfterStageHasRun(asyncInput.Logic);
                         }
                         RunBatch();
                     })
@@ -215,7 +215,7 @@ namespace Akka.Streams.Implementation.Fusing
                     {
                         _outputs[pending.Id].SubscribePending();
                     })
-                    .With<ActorGraphInterpreter.ExposedPublisher<object>>(exposed =>
+                    .With<ActorGraphInterpreter.ExposedPublisher>(exposed =>
                     {
                         _publishersPending--;
                         _outputs[exposed.Id].ExposedPublisher(exposed.Publisher);
@@ -238,8 +238,8 @@ namespace Akka.Streams.Implementation.Fusing
                 foreach (var input in _inputs)
                     input.OnInternalError(reason);
 
-                _interpreter.Execute(_abortLimit);
-                _interpreter.Finish();
+                Interpreter.Execute(_abortLimit);
+                Interpreter.Finish();
             }
             catch (Exception) { /* swallow? */ }
             finally
@@ -262,8 +262,8 @@ namespace Akka.Streams.Implementation.Fusing
                         ? (Thread.Yield() ? 1 : 0)
                         : ThreadLocalRandom.Current.Next(2));  // 1 or 0 events to be processed
 
-                _interpreter.Execute(effectiveLimit);
-                if (_interpreter.IsCompleted)
+                Interpreter.Execute(effectiveLimit);
+                if (Interpreter.IsCompleted)
                 {
                     // Cannot stop right away if not completely subscribed
                     if (CanShutdown) IsTerminated = true;
@@ -273,7 +273,7 @@ namespace Akka.Streams.Implementation.Fusing
                         _materializer.ScheduleOnce(_settings.SubscriptionTimeoutSettings.Timeout, () => Self.Tell(new ActorGraphInterpreter.Abort(this)));
                     }
                 }
-                else if (_interpreter.IsSuspended && !_resumeScheduled)
+                else if (Interpreter.IsSuspended && !_resumeScheduled)
                 {
                     _resumeScheduled = true;
                     Self.Tell(_resume);
@@ -398,11 +398,11 @@ namespace Akka.Streams.Implementation.Fusing
             public GraphInterpreterShell Shell { get; private set; }
         }
 
-        public struct ExposedPublisher<T> : IBoundaryEvent
+        public struct ExposedPublisher : IBoundaryEvent
         {
             public readonly int Id;
-            public readonly ActorPublisher<T> Publisher;
-            public ExposedPublisher(GraphInterpreterShell shell, int id, ActorPublisher<T> publisher)
+            public readonly IActorPublisher Publisher;
+            public ExposedPublisher(GraphInterpreterShell shell, int id, IActorPublisher publisher)
             {
                 Shell = shell;
                 Id = id;
@@ -693,7 +693,16 @@ namespace Akka.Streams.Implementation.Fusing
             }
         }
 
-        public class ActorOutputBoundary<T> : GraphInterpreter.DownstreamBoundaryStageLogic<T>
+        public interface IActorOutputBoundary
+        {
+            void SubscribePending();
+            void ExposedPublisher(IActorPublisher publisher);
+            void RequestMore(long demand);
+            void Cancel();
+            void Fail(Exception reason);
+        }
+
+        public class ActorOutputBoundary<T> : GraphInterpreter.DownstreamBoundaryStageLogic, IActorOutputBoundary
         {
             #region InHandler
             private sealed class AnonymousInHandler : InHandler
@@ -707,7 +716,7 @@ namespace Akka.Streams.Implementation.Fusing
 
                 public override void OnPush()
                 {
-                    var inlet = _that.In;
+                    var inlet = (Inlet<T>)_that.In;
                     _that.OnNext(_that.Grab(inlet));
                     if (_that._downstreamCompleted) _that.Cancel(inlet);
                     else if (_that._downstreamDemand > 0) _that.Pull(inlet);
@@ -751,13 +760,13 @@ namespace Akka.Streams.Implementation.Fusing
             }
 
             private readonly Inlet<T> _inlet;
-            public override Inlet<T> In { get { return _inlet; } }
+            public override Inlet In { get { return _inlet; } }
 
             public void RequestMore(long demand)
             {
                 if (demand < 1)
                 {
-                    Cancel(In);
+                    Cancel(_inlet);
                     Fail(ReactiveStreamsCompliance.NumberOfElementsInRequestMustBePositiveException);
                 }
                 else
@@ -765,7 +774,7 @@ namespace Akka.Streams.Implementation.Fusing
                     _downstreamDemand += demand;
                     if (_downstreamDemand < 0)
                         _downstreamDemand = long.MaxValue; // Long overflow, Reactive Streams Spec 3:17: effectively unbounded
-                    if (!HasBeenPulled(In) && !IsClosed(In)) Pull(In);
+                    if (!HasBeenPulled(_inlet) && !IsClosed(_inlet)) Pull(_inlet);
                 }
             }
 
@@ -782,13 +791,18 @@ namespace Akka.Streams.Implementation.Fusing
                 }
             }
 
+            void IActorOutputBoundary.ExposedPublisher(IActorPublisher publisher)
+            {
+                ExposedPublisher((ActorPublisher<T>) publisher);
+            }
+
             public void ExposedPublisher(ActorPublisher<T> publisher)
             {
+                _exposedPublisher = publisher;
                 if (_upstreamFailed != null) publisher.Shutdown(_upstreamFailed);
                 else
                 {
                     if (_upstreamCompleted) publisher.Shutdown(null);
-                    else _exposedPublisher = publisher;
                 }
             }
 
@@ -797,7 +811,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _downstreamCompleted = true;
                 _subscriber = null;
                 _exposedPublisher.Shutdown(new NormalShutdownException("UpstreamBoundary"));
-                Cancel(In);
+                Cancel(_inlet);
             }
 
             public void Fail(Exception reason)
@@ -840,7 +854,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly ISet<GraphInterpreterShell> _activeInterpreters = new HashSet<GraphInterpreterShell>();
 
-        private ActorGraphInterpreter(GraphInterpreterShell shell)
+        public ActorGraphInterpreter(GraphInterpreterShell shell)
         {
             _activeInterpreters.Add(shell);
         }

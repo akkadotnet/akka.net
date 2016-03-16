@@ -114,7 +114,7 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public ISubscriberEvent ExpectEvent(TimeSpan max)
             {
-                return _probe.ExpectMsg<ISubscriberEvent>();
+                return _probe.ExpectMsg<ISubscriberEvent>(max);
             }
 
             /// <summary>
@@ -393,10 +393,13 @@ namespace Akka.Streams.TestKit
 
                 while (true)
                 {
-                    var e = ExpectEvent(DateTime.UtcNow - deadline);
-                    if (e is OnError) throw new Exception(string.Format("ToStrict received OnError({0}) while draining stream!", ((OnError) e).Cause.Message));
-                    else if (e is OnComplete) yield break;
-                    else if (e is OnNext<T>) yield return ((OnNext<T>) e).Element;
+                    var e = ExpectEvent(TimeSpan.FromTicks(Math.Max(deadline.Ticks - DateTime.UtcNow.Ticks, 0)));
+                    if (e is OnError)
+                        throw new Exception(string.Format("ToStrict received OnError({0}) while draining stream!", ((OnError) e).Cause.Message));
+                    if (e is OnComplete)
+                        yield break;
+                    if (e is OnNext<T>)
+                        yield return ((OnNext<T>) e).Element;
                 }
             }
 

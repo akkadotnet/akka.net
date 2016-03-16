@@ -394,11 +394,11 @@ namespace Akka.Streams.Implementation
             if (SubModules.Contains(other))
                 throw new ArgumentException("An existing submodule cannot be added again. All contained modules must be unique.");
 
-            var modules1 = this.IsSealed ? ImmutableArray.Create<IModule>(this) : this.SubModules;
+            var modules1 = IsSealed ? ImmutableArray.Create<IModule>(this) : this.SubModules;
             var modules2 = other.IsSealed ? ImmutableArray.Create<IModule>(other) : other.SubModules;
 
             var matComputation1 = IsSealed ? new StreamLayout.Atomic(this) : MaterializedValueComputation;
-            var matComputation2 = IsSealed ? new StreamLayout.Atomic(other) : MaterializedValueComputation;
+            var matComputation2 = other.IsSealed ? new StreamLayout.Atomic(other) : MaterializedValueComputation;
 
             return new CompositeModule(
                 subModules: modules1.Union(modules2).ToImmutableArray(),
@@ -796,7 +796,7 @@ namespace Akka.Streams.Implementation
         }
     }
 
-    internal abstract class MaterializerSession<TMat>
+    internal abstract class MaterializerSession
     {
         public class MaterializationPanicException : Exception
         {
@@ -933,9 +933,9 @@ namespace Akka.Streams.Implementation
             {
                 var subEffectiveAttributes = MergeAttributes(effectiveAttributes, submodule.Attributes);
                 GraphStageModule graphStageModule;
-                if ((graphStageModule = submodule as GraphStageModule) != null && graphStageModule.MaterializedValueComputation is MaterializedValueSource<TMat>)
+                if ((graphStageModule = submodule as GraphStageModule) != null)
                 {
-                    var copy = ((MaterializedValueSource<TMat>)graphStageModule.MaterializedValueComputation).CopySource();
+                    var copy = new MaterializedValueSource<object>(graphStageModule.MaterializedValueComputation).CopySource();
                     RegisterSource(copy);
                     MaterializeAtomic(copy.Module, subEffectiveAttributes, materializedValues);
                 }

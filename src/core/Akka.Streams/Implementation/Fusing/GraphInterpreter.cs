@@ -114,9 +114,9 @@ namespace Akka.Streams.Implementation.Fusing
             protected UpstreamBoundaryStageLogic() : base(inCount: 0, outCount: 1) { }
         }
 
-        public abstract class DownstreamBoundaryStageLogic<T> : GraphStageLogic
+        public abstract class DownstreamBoundaryStageLogic : GraphStageLogic
         {
-            public abstract Inlet<T> In { get; }
+            public abstract Inlet In { get; }
             protected DownstreamBoundaryStageLogic() : base(inCount: 1, outCount: 0) { }
         }
 
@@ -468,7 +468,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// Assign the boundary logic to a given connection. This will serve as the interface to the external world
         /// (outside the interpreter) to process and inject events.
         /// </summary>
-        public void AttachDownstreamBoundary<T>(int connection, DownstreamBoundaryStageLogic<T> logic)
+        public void AttachDownstreamBoundary(int connection, DownstreamBoundaryStageLogic logic)
         {
             logic.PortToConn[logic.In.Id] = connection;
             logic.Interpreter = this;

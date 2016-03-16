@@ -72,6 +72,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>FanOutShape.tt</DependentUpon>
     </Compile>
+    <Compile Include="Construct.cs" />
     <Compile Include="Dsl\BidiFlow.cs" />
     <Compile Include="Dsl\FlowOperations.cs" />
     <Compile Include="Dsl\Graph.cs" />
