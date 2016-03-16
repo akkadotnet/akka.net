@@ -82,7 +82,8 @@ namespace Akka.Streams.Implementation.Fusing
      * be modeled, or even dissolved (if preempted and a "stealing" external event is injected; for example the non-cycle
      * edge of a balance is pulled, dissolving the original cycle).
      */
-    internal sealed class GraphInterpreter
+
+    public sealed class GraphInterpreter
     {
         #region internal classes
         /// <summary>
@@ -108,9 +109,9 @@ namespace Akka.Streams.Implementation.Fusing
             }
         }
 
-        public abstract class UpstreamBoundaryStageLogic<T> : GraphStageLogic
+        public abstract class UpstreamBoundaryStageLogic : GraphStageLogic
         {
-            public abstract Outlet<T> Out { get; }
+            public abstract Outlet Out { get; }
             protected UpstreamBoundaryStageLogic() : base(inCount: 0, outCount: 1) { }
         }
 
@@ -457,7 +458,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// Assign the boundary logic to a given connection. This will serve as the interface to the external world
         /// (outside the interpreter) to process and inject events.
         /// </summary>
-        public void AttachUpstreamBoundary<T>(int connection, UpstreamBoundaryStageLogic<T> logic)
+        public void AttachUpstreamBoundary(int connection, UpstreamBoundaryStageLogic logic)
         {
             logic.PortToConn[logic.Out.Id + logic.InCount] = connection;
             logic.Interpreter = this;

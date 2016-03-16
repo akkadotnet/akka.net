@@ -258,14 +258,18 @@ namespace Akka.Streams
         }
     }
 
+    public interface IFlowShape
+    {
+        Inlet Inlet { get; }
+        Outlet Outlet { get; }
+    }
+
     /// <summary>
     /// A Flow <see cref="Shape"/> has exactly one input and one output, it looks from the
     /// outside like a pipe (but it can be a complex topology of streams within of course).
     /// </summary>
-    public sealed class FlowShape<TIn, TOut> : Shape
+    public sealed class FlowShape<TIn, TOut> : Shape, IFlowShape
     {
-        public readonly Inlet<TIn> Inlet;
-        public readonly Outlet<TOut> Outlet;
 
         public FlowShape(Inlet<TIn> inlet, Outlet<TOut> outlet)
         {
@@ -277,6 +281,12 @@ namespace Akka.Streams
             Inlets = ImmutableArray.Create<Inlet>(inlet);
             Outlets = ImmutableArray.Create<Outlet>(outlet);
         }
+
+        Inlet IFlowShape.Inlet => Inlet;
+        Outlet IFlowShape.Outlet => Outlet;
+
+        public Inlet<TIn> Inlet { get; }
+        public Outlet<TOut> Outlet { get; }
 
         public override ImmutableArray<Inlet> Inlets { get; }
         public override ImmutableArray<Outlet> Outlets { get; }

@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Streams;
-using System.Runtime.Serialization;
 using Akka.Event;
 using Akka.Streams.Stage;
 
@@ -11,7 +10,7 @@ namespace Akka.Streams.Implementation.Fusing
 {
     internal static class EnumeratorInterpreter
     {
-        public sealed class EnumeratorUpstream<TIn> : GraphInterpreter.UpstreamBoundaryStageLogic<TIn>
+        public sealed class EnumeratorUpstream<TIn> : GraphInterpreter.UpstreamBoundaryStageLogic
         {
             public bool HasNext;
             public EnumeratorUpstream(IEnumerator<TIn> input)
@@ -35,12 +34,11 @@ namespace Akka.Streams.Implementation.Fusing
                 onDownstreamFinish: CompleteStage);
             }
 
-            public override Outlet<TIn> Out { get; }
+            public override Outlet Out { get; }
         }
 
         public sealed class EnumeratorDownstream<TOut> : GraphInterpreter.DownstreamBoundaryStageLogic, IEnumerator<TOut>
         {
-            private readonly Inlet<TOut> _inlet;
             internal bool IsDone = false;
             internal TOut NextElement;
             internal bool NeedsPull = true;
@@ -48,10 +46,10 @@ namespace Akka.Streams.Implementation.Fusing
 
             public EnumeratorDownstream()
             {
-                _inlet = new Inlet<TOut>("IteratorDownstream.in") { Id = 0 };
+                In = new Inlet<TOut>("IteratorDownstream.in") { Id = 0 };
                 SetHandler(In, onPush: () =>
                 {
-                    NextElement = Grab(_inlet);
+                    NextElement = Grab<TOut>(In);
                     NeedsPull = false;
                 }, 
                 onUpstreamFinish: () =>
@@ -67,8 +65,8 @@ namespace Akka.Streams.Implementation.Fusing
                 });
             }
 
-            public override Inlet In { get { return _inlet; } }
-            
+            public override Inlet In { get; }
+
             public void Dispose() { }
 
             public bool MoveNext()
@@ -112,7 +110,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 if (NeedsPull)
                 {
-                    Pull(_inlet);
+                    Pull<TOut>(In);
                     Interpreter.Execute(int.MaxValue);
                 }
             }

@@ -41,7 +41,7 @@ namespace Akka.Streams.Implementation.Fusing
      * corresponding segments of these arrays matches the exact same order of the ports in the [[Shape]].
      *
      */
-    internal sealed class GraphAssembly
+    public sealed class GraphAssembly
     {
         public static GraphAssembly Create(IEnumerable<Inlet> inlets, IEnumerable<Outlet> outlets, IEnumerable<IGraphStageWithMaterializedValue> stages)
         {

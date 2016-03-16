@@ -528,7 +528,7 @@ namespace Akka.Streams.Implementation.Fusing
             }
         }
 
-        public class BatchingActorInputBoundary<T> : GraphInterpreter.UpstreamBoundaryStageLogic<T>
+        public class BatchingActorInputBoundary<T> : GraphInterpreter.UpstreamBoundaryStageLogic
         {
             #region OutHandler
             private sealed class AnonymousOutHandler : OutHandler
@@ -544,18 +544,17 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     var elementsCount = _that._inputBufferElements;
                     var upstreamCompleted = _that._upstreamCompleted;
-                    var outlet = _that.Out;
-                    if (elementsCount > 1) _that.Push(outlet, _that.Dequeue());
+                    if (elementsCount > 1) _that.Push(_that.Out, _that.Dequeue());
                     else if (elementsCount == 1)
                     {
                         if (upstreamCompleted)
                         {
-                            _that.Push(outlet, _that.Dequeue());
-                            _that.Complete(outlet);
+                            _that.Push(_that.Out, _that.Dequeue());
+                            _that.Complete(_that.Out);
                         }
-                        else _that.Push(outlet, _that.Dequeue());
+                        else _that.Push(_that.Out, _that.Dequeue());
                     }
-                    else if (upstreamCompleted) _that.Complete(outlet);
+                    else if (upstreamCompleted) _that.Complete(_that.Out);
                 }
 
                 public override void OnDownstreamFinish()
@@ -596,7 +595,7 @@ namespace Akka.Streams.Implementation.Fusing
             protected int RequestBatchSize { get { return Math.Max(1, _inputBuffer.Length / 2); } }
 
             private readonly Outlet<T> _outlet;
-            public override Outlet<T> Out { get { return _outlet; } }
+            public override Outlet Out { get { return _outlet; } }
 
             // Call this when an error happens that does not come from the usual onError channel
             // (exceptions while calling RS interfaces, abrupt termination etc)
@@ -716,10 +715,9 @@ namespace Akka.Streams.Implementation.Fusing
 
                 public override void OnPush()
                 {
-                    var inlet = (Inlet<T>)_that.In;
-                    _that.OnNext(_that.Grab(inlet));
-                    if (_that._downstreamCompleted) _that.Cancel(inlet);
-                    else if (_that._downstreamDemand > 0) _that.Pull(inlet);
+                    _that.OnNext(_that.Grab<T>(_that.In));
+                    if (_that._downstreamCompleted) _that.Cancel(_that.In);
+                    else if (_that._downstreamDemand > 0) _that.Pull<T>(_that.In);
                 }
 
                 public override void OnUpstreamFinish()
@@ -766,7 +764,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 if (demand < 1)
                 {
-                    Cancel(_inlet);
+                    Cancel((Inlet<T>) In);
                     Fail(ReactiveStreamsCompliance.NumberOfElementsInRequestMustBePositiveException);
                 }
                 else
@@ -774,7 +772,7 @@ namespace Akka.Streams.Implementation.Fusing
                     _downstreamDemand += demand;
                     if (_downstreamDemand < 0)
                         _downstreamDemand = long.MaxValue; // Long overflow, Reactive Streams Spec 3:17: effectively unbounded
-                    if (!HasBeenPulled(_inlet) && !IsClosed(_inlet)) Pull(_inlet);
+                    if (!HasBeenPulled(In) && !IsClosed(In)) Pull<T>(In);
                 }
             }
 
@@ -811,7 +809,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _downstreamCompleted = true;
                 _subscriber = null;
                 _exposedPublisher.Shutdown(new NormalShutdownException("UpstreamBoundary"));
-                Cancel(_inlet);
+                Cancel(In);
             }
 
             public void Fail(Exception reason)
