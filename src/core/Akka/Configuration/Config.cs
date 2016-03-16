@@ -393,6 +393,33 @@ namespace Akka.Configuration
         }
 
         /// <summary>
+        /// Converts the current configuration to a string 
+        /// </summary>
+        /// <param name="includeFallback">if true returns string with current config combined with fallback key-values else only current config key-values</param>
+        /// <returns></returns>
+        public string ToString(bool includeFallback)
+        {
+            if (includeFallback == false)
+                return ToString();
+
+            Config current = this;
+
+            if (current.Fallback == null)
+                return current.ToString();
+
+            Config clone = Copy();
+
+            while (current.Fallback != null)
+            {
+                clone.Root.GetObject().Merge(current.Fallback.Root.GetObject());
+                current = current.Fallback;
+            }
+
+            return clone.ToString();
+        }
+
+
+        /// <summary>
         /// Configure the current configuration with a secondary source.
         /// </summary>
         /// <param name="fallback">The configuration to use as a secondary source.</param>
