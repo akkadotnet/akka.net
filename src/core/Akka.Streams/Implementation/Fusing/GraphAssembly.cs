@@ -43,11 +43,11 @@ namespace Akka.Streams.Implementation.Fusing
      */
     public sealed class GraphAssembly
     {
-        public static GraphAssembly Create(IEnumerable<Inlet> inlets, IEnumerable<Outlet> outlets, IEnumerable<IGraphStageWithMaterializedValue> stages)
+        public static GraphAssembly Create(IList<Inlet> inlets, IList<Outlet> outlets, IList<IGraphStageWithMaterializedValue> stages)
         {
             // add the contents of an iterator to an array starting at idx
-            var inletsCount = inlets.Count();
-            var outletsCount = outlets.Count();
+            var inletsCount = inlets.Count;
+            var outletsCount = outlets.Count;
             var connectionsCount = inletsCount + outletsCount;
 
             if (connectionsCount <= 0) throw new ArgumentException(string.Format("Sum of inlets ({0}) and outlets ({1}) must be > 0", inletsCount, outletsCount));
@@ -68,12 +68,11 @@ namespace Akka.Streams.Implementation.Fusing
             return owners;
         }
 
-        private static T[] Add<T>(IEnumerable<T> seq, T[] array, int idx)
+        private static T[] Add<T>(IList<T> seq, T[] array, int idx)
         {
-            var i = seq.GetEnumerator();
-            while (i.MoveNext())
+            foreach (var t in seq)
             {
-                array[idx] = i.Current;
+                array[idx++] = t;
                 idx++;
             }
             return array;
@@ -88,6 +87,13 @@ namespace Akka.Streams.Implementation.Fusing
 
         public GraphAssembly(IGraphStageWithMaterializedValue[] stages, Attributes[] originalAttributes, Inlet[] inlets, int[] inletOwners, Outlet[] outlets, int[] outletOwners)
         {
+            if (inlets.Length != inletOwners.Length)
+                throw new ArgumentException("'inlets' and 'inletOwners' must have the same length.", nameof(inletOwners));
+            if (inletOwners.Length != outlets.Length)
+                throw new ArgumentException("'inletOwners' and 'outlets' must have the same length.", nameof(outlets));
+            if (outlets.Length != outletOwners.Length)
+                throw new ArgumentException("'outlets' and 'outletOwners' must have the same length.", nameof(outletOwners));
+
             Stages = stages;
             OriginalAttributes = originalAttributes;
             Inlets = inlets;
@@ -119,12 +125,14 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 // Port initialization loops, these must come first
                 var shape = Stages[i].Shape;
+
                 var idx = 0;
                 var inletEnumerator = shape.Inlets.GetEnumerator();
                 while (inletEnumerator.MoveNext())
                 {
                     var inlet = inletEnumerator.Current;
-                    if (!(inlet.Id == -1 || inlet.Id == idx)) throw new ArgumentException(string.Format("Inlet {0} was shared among multiple stages. That is illegal.", inlet));
+                    if (inlet.Id != -1 && inlet.Id != idx)
+                        throw new ArgumentException(string.Format("Inlet {0} was shared among multiple stages. That is illegal.", inlet));
                     inlet.Id = idx;
                     idx++;
                 }
@@ -134,7 +142,8 @@ namespace Akka.Streams.Implementation.Fusing
                 while (outletEnumerator.MoveNext())
                 {
                     var outlet = outletEnumerator.Current;
-                    if (!(outlet.Id == -1 || outlet.Id == idx)) throw new ArgumentException(string.Format("Outlet {0} was shared among multiple stages. That is illegal.", outlet));
+                    if (outlet.Id != -1 && outlet.Id != idx)
+                        throw new ArgumentException(string.Format("Outlet {0} was shared among multiple stages. That is illegal.", outlet));
                     outlet.Id = idx;
                     idx++;
                 }
@@ -149,7 +158,7 @@ namespace Akka.Streams.Implementation.Fusing
 
                 object materialized;
                 var logic = stage.CreateLogicAndMaterializedValue(inheritedAttributes.And(OriginalAttributes[i]), out materialized);
-                materializedValues.Add(copiedModules[i], materialized);
+                materializedValues[copiedModules[i]] = materialized;
 
                 logics[i] = logic;
             }
@@ -188,6 +197,17 @@ namespace Akka.Streams.Implementation.Fusing
             }
 
             return Tuple.Create(inHandlers, outHandlers, logics);
+        }
+
+        public override string ToString()
+        {
+            return "GraphAssembly\n  " +
+                   "[" + string.Join<IGraphStageWithMaterializedValue>(",", Stages) + "]\n  " +
+                   "[" + string.Join<Attributes>(",", OriginalAttributes) + "]\n  " +
+                   "[" + string.Join<Inlet>(",", Inlets) + "]\n  " +
+                   "[" + string.Join(",", InletOwners) + "]\n  " +
+                   "[" + string.Join<Outlet>(",", Outlets) + "]\n  " +
+                   "[" + string.Join(",", OutletOwners) + "]";
         }
     }
 }

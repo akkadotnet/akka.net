@@ -628,7 +628,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Assigns callbacks for the events for an <see cref="Inlet{T}"/>.
         /// </summary>
-        internal protected void SetHandler(Inlet inlet, InHandler handler)
+        protected internal void SetHandler(Inlet inlet, InHandler handler)
         {
             Handlers[inlet.Id] = handler;
             if (Interpreter != null) Interpreter.SetHandler(GetConnection(inlet), handler);
@@ -637,7 +637,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Assigns callbacks for the events for an <see cref="Outlet{T}"/>.
         /// </summary>
-        internal protected void SetHandler(Inlet inlet, Action onPush, Action onUpstreamFinish = null, Action<Exception> onUpstreamFailure = null)
+        protected internal void SetHandler(Inlet inlet, Action onPush, Action onUpstreamFinish = null, Action<Exception> onUpstreamFailure = null)
         {
             if (onPush == null) throw new ArgumentNullException("onPush", "GraphStageLogic onPush handler must be provided");
             SetHandler(inlet, new LambdaInHandler(onPush, onUpstreamFinish, onUpstreamFailure));
@@ -863,6 +863,18 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
+        /// Controls whether this stage shall shut down when all its ports are closed, which
+        /// is the default. In order to have it keep going past that point this method needs
+        /// to be called with a `true` argument before all ports are closed, and afterwards
+        /// it will not be closed until this method is called with a `false` argument or the
+        /// stage is terminated via `completeStage()` or `failStage()`.
+        /// </summary>
+        protected void SetKeepGoing(bool enabled)
+        {
+            Interpreter.SetKeepGoing(this, enabled);
+        }
+
+        /// <summary>
         /// Signals that there will be no more elements emitted on the given port.
         /// </summary>
         protected void Complete(Outlet outlet)
@@ -880,7 +892,7 @@ namespace Akka.Streams.Stage
         /// </summary>
         protected void Fail(Outlet outlet, Exception reason)
         {
-            Interpreter.Fail(GetConnection(outlet), reason, isInternal: false);
+            Interpreter.Fail(GetConnection(outlet), reason);
         }
 
         /// <summary>
@@ -903,7 +915,7 @@ namespace Akka.Streams.Stage
                 }
             }
 
-            if (KeepGoingAfterAllPortsClosed) Interpreter.CloseKeepAliveStageIfNeeded(StageId);
+            SetKeepGoing(false);
         }
 
         /// <summary>
@@ -912,30 +924,19 @@ namespace Akka.Streams.Stage
         /// </summary>
         public void FailStage(Exception reason)
         {
-            FailStage(reason, isInternal: false);
-        }
-
-        /// <summary>
-        /// INTERNAL API
-        /// 
-        /// Used to signal errors caught by the interpreter itself. This method logs failures if the stage has been
-        /// already closed if <paramref name="isInternal"/> is set to true.
-        /// </summary>
-        internal void FailStage(Exception reason, bool isInternal)
-        {
             for (int i = 0; i < PortToConn.Length; i++)
             {
                 if (i < InCount) Interpreter.Cancel(PortToConn[i]);
-                else Interpreter.Fail(PortToConn[i], reason, isInternal);
+                else Interpreter.Fail(PortToConn[i], reason);
             }
 
-            if (KeepGoingAfterAllPortsClosed) Interpreter.CloseKeepAliveStageIfNeeded(StageId);
+            SetKeepGoing(false);
         }
 
         /// <summary>
         /// Return true if the given output port is ready to be pushed.
         /// </summary>
-        internal protected bool IsAvailable(Outlet outlet)
+        protected internal bool IsAvailable(Outlet outlet)
         {
             return (Interpreter.PortStates[GetConnection(outlet)] & (GraphInterpreter.OutReady | GraphInterpreter.OutClosed)) == GraphInterpreter.OutReady;
         }

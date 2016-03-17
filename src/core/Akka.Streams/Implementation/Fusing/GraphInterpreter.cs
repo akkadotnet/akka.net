@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using Akka.Event;
 using Akka.Streams.Stage;
 using Akka.Util;
@@ -8,11 +8,11 @@ using Akka.Util;
 namespace Akka.Streams.Implementation.Fusing
 {
     /**
-     * INERNAL API
+     * INTERNAL API
      *
      * From an external viewpoint, the GraphInterpreter takes an assembly of graph processing stages encoded as a
      * [[GraphInterpreter#GraphAssembly]] object and provides facilities to execute and interact with this assembly.
-     * The lifecylce of the Interpreter is roughly the following:
+     * The lifecycle of the Interpreter is roughly the following:
      *  - Boundary logics are attached via [[attachDownstreamBoundary()]] and [[attachUpstreamBoundary()]]
      *  - [[init()]] is called
      *  - [[execute()]] is called whenever there is need for execution, providing an upper limit on the processed events
@@ -146,12 +146,22 @@ namespace Akka.Streams.Implementation.Fusing
         public const int PushStartFlip = Pushing | OutReady;
         public const int PushEndFlip = InReady | Pushing;
 
-        [ThreadStatic]
-        private static GraphInterpreter _current;
+        public const int KeepGoingFlag = 0x4000000;
+        public const int KeepGoingMask = 0x3ffffff;
+
+        private static readonly ThreadLocal<GraphInterpreter> _currentInterpreter = new ThreadLocal<GraphInterpreter>(() => null);
+
         public static GraphInterpreter Current
         {
-            get { return _current; }
+            get
+            {
+                if (_currentInterpreter.Value == null)
+                    throw new ApplicationException("Something went terribly wrong!");
+                return _currentInterpreter.Value;
+            }
         }
+
+        public GraphInterpreter CurrentInterpreterOrNull => _currentInterpreter.Value;
 
         public static readonly Attributes[] SingleNoAttribute = { Attributes.None };
 
@@ -210,12 +220,12 @@ namespace Akka.Streams.Implementation.Fusing
             for (int i = 0; i < PortStates.Length; i++) PortStates[i] = InReady;
 
             RunningStagesCount = Assembly.Stages.Length;
+
             _shutdownCounter = new int[assembly.Stages.Length];
             for (int i = 0; i < _shutdownCounter.Length; i++)
             {
                 var shape = assembly.Stages[i].Shape;
-                var keepGoing = logics[i].KeepGoingAfterAllPortsClosed ? 1 : 0;
-                _shutdownCounter[i] = shape.Inlets.Count() + shape.Outlets.Count() + keepGoing;
+                _shutdownCounter[i] = shape.Inlets.Count() + shape.Outlets.Count();
             }
 
             _eventQueue = new int[1 << (32 - NumberOfLeadingZeros(assembly.ConnectionCount - 1))];
@@ -224,6 +234,57 @@ namespace Akka.Streams.Implementation.Fusing
 
         internal GraphStageLogic ActiveStage { get; private set; }
         internal IMaterializer SubFusingMaterializer { get; private set; }
+
+        private string QueueStatus()
+        {
+            var contents = Enumerable.Range(_queueHead, _queueTail - _queueHead).Select(i =>
+            {
+                var conn = _eventQueue[i & _mask];
+                return Tuple.Create(conn, PortStates[conn], ConnectionSlots[conn]);
+            });
+            return $"({_eventQueue.Length}, {_queueHead}, {_queueTail})({string.Join(", ", contents)})";
+        }
+
+        private string _name;
+        internal string Name => _name ?? (_name = GetHashCode() + "%08X");
+
+        /// <summary>
+        /// Assign the boundary logic to a given connection. This will serve as the interface to the external world
+        /// (outside the interpreter) to process and inject events.
+        /// </summary>
+        public void AttachUpstreamBoundary(int connection, UpstreamBoundaryStageLogic logic)
+        {
+            logic.PortToConn[logic.Out.Id + logic.InCount] = connection;
+            logic.Interpreter = this;
+            OutHandlers[connection] = (OutHandler)logic.Handlers[0];
+        }
+
+        /// <summary>
+        /// Assign the boundary logic to a given connection. This will serve as the interface to the external world
+        /// (outside the interpreter) to process and inject events.
+        /// </summary>
+        public void AttachDownstreamBoundary(int connection, DownstreamBoundaryStageLogic logic)
+        {
+            logic.PortToConn[logic.In.Id] = connection;
+            logic.Interpreter = this;
+            InHandlers[connection] = (InHandler)logic.Handlers[0];
+        }
+
+        /// <summary>
+        /// Dynamic handler changes are communicated from a GraphStageLogic by this method.
+        /// </summary>
+        public void SetHandler(int connection, InHandler handler)
+        {
+            InHandlers[connection] = handler;
+        }
+
+        /// <summary>
+        /// Dynamic handler changes are communicated from a GraphStageLogic by this method.
+        /// </summary>
+        public void SetHandler(int connection, OutHandler handler)
+        {
+            OutHandlers[connection] = handler;
+        }
 
         /// <summary>
         /// Returns true if there are pending unprocessed events in the event queue.
@@ -234,12 +295,6 @@ namespace Akka.Streams.Implementation.Fusing
         /// Returns true if there are no more running stages and pending events.
         /// </summary>
         public bool IsCompleted { get { return RunningStagesCount == 0 && !IsSuspended; } }
-
-        private string _name;
-        internal string Name
-        {
-            get { return _name ?? (_name = this.GetHashCode().ToString() + "%08X"); }
-        }
 
         /// <summary>
         /// Initializes the states of all the stage logics by calling <see cref="GraphStageLogic.PreStart"/>.
@@ -263,6 +318,8 @@ namespace Akka.Streams.Implementation.Fusing
                 }
                 catch (Exception e)
                 {
+                    if (Log.IsErrorEnabled)
+                        Log.Error(e, $"Error during PreStart in [{Assembly.Stages[logic.StageId]}]");
                     logic.FailStage(e);
                 }
                 AfterStageHasRun(logic);
@@ -274,11 +331,44 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         public void Finish()
         {
-            for (int i = 0; i < Logics.Length; i++)
+            foreach (var logic in Logics)
             {
-                var logic = Logics[i];
                 if (!IsStageCompleted(logic)) FinalizeStage(logic);
             }
+        }
+
+        // Debug name for a connections input part
+        private string InOwnerName(int connection)
+        {
+            var owner = Assembly.InletOwners[connection];
+            return owner == Boundary ? "DownstreamBoundary" : Assembly.Stages[owner].ToString();
+        }
+
+        // Debug name for a connections output part
+        private string OutOwnerName(int connection)
+        {
+            var owner = Assembly.OutletOwners[connection];
+            return owner == Boundary ? "UpstreamBoundary" : Assembly.Stages[owner].ToString();
+        }
+
+        // Debug name for a connections input part
+        private string InLogicName(int connection)
+        {
+            var owner = Assembly.InletOwners[connection];
+            return owner == Boundary ? "DownstreamBoundary" : Logics[owner].ToString();
+        }
+
+        // Debug name for a connections output part
+        private string OutLogicName(int connection)
+        {
+            var owner = Assembly.OutletOwners[connection];
+            return owner == Boundary ? "UpstreamBoundary" : Logics[owner].ToString();
+        }
+
+        private string ShutdownCounters()
+        {
+            return string.Join(",",
+                _shutdownCounter.Select(x => x >= KeepGoingFlag ? $"{x & KeepGoingMask}(KeepGoing)" : x.ToString()));
         }
 
         /// <summary>
@@ -286,12 +376,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         public void Execute(int eventLimit)
         {
-            var previousInterpreter = _current;
-            _current = this;
+            var previousInterpreter = _currentInterpreter.Value;
+            _currentInterpreter.Value = this;
             try
             {
-                var remaining = eventLimit;
-                while (remaining > 0 && _queueTail != _queueHead)
+                var eventsRemaining = eventLimit;
+                while (eventsRemaining > 0 && _queueTail != _queueHead)
                 {
                     var connection = Dequeue();
                     try
@@ -301,25 +391,50 @@ namespace Akka.Streams.Implementation.Fusing
                     catch (Exception e)
                     {
                         if (ActiveStage == null) throw e;
-                        else ActiveStage.FailStage(e, isInternal: true);
+                        else
+                        {
+                            var stage = Assembly.Stages[ActiveStage.StageId];
+                            if (Log.IsErrorEnabled)
+                                Log.Error(e, $"Error in stage [{stage}]: {e.Message}");
+
+                            ActiveStage.FailStage(e);
+                        }
                     }
                     AfterStageHasRun(ActiveStage);
-                    remaining--;
+                    eventsRemaining--;
                 }
             }
             finally
             {
-                _current = previousInterpreter;
+                _currentInterpreter.Value = previousInterpreter;
             }
+            // TODO: deadlock detection
         }
 
-        /// <summary>
-        /// Call only for keep-alive stages
-        /// </summary>
-        public void CloseKeepAliveStageIfNeeded(int stageId)
+        public void RunAsyncInput(GraphStageLogic logic, object evt, Action<object> handler)
         {
-            if (stageId != Boundary && _shutdownCounter[stageId] == 1)
-                _shutdownCounter[stageId] = 0;
+            if (!IsStageCompleted(logic))
+            {
+                var previousInterpreter = _currentInterpreter.Value;
+                _currentInterpreter.Value = this;
+                try
+                {
+                    ActiveStage = logic;
+                    try
+                    {
+                        handler(evt);
+                    }
+                    catch (Exception e)
+                    {
+                        logic.FailStage(e);
+                    }
+                    AfterStageHasRun(logic);
+                }
+                finally
+                {
+                    _currentInterpreter.Value = previousInterpreter;
+                }
+            }
         }
 
         /// <summary>
@@ -412,6 +527,23 @@ namespace Akka.Streams.Implementation.Fusing
             _queueTail++;
         }
 
+        internal void AfterStageHasRun(GraphStageLogic logic)
+        {
+            if (IsStageCompleted(logic))
+            {
+                RunningStagesCount--;
+                FinalizeStage(logic);
+            }
+        }
+
+        /// <summary>
+        /// Returns true if the given stage is alredy completed
+        /// </summary>
+        internal bool IsStageCompleted(GraphStageLogic stage)
+        {
+            return stage != null && _shutdownCounter[stage.StageId] == 0;
+        }
+
         /// <summary>
         ///  Register that a connection in which the given stage participated has been completed and therefore the stage itself might stop, too.
         /// </summary>
@@ -424,6 +556,12 @@ namespace Akka.Streams.Implementation.Fusing
             }
         }
 
+        internal void SetKeepGoing(GraphStageLogic logic, bool enabled)
+        {
+            if (enabled) _shutdownCounter[logic.StageId] |= KeepGoingFlag;
+            else _shutdownCounter[logic.StageId] &= KeepGoingMask;
+        }
+
         private void FinalizeStage(GraphStageLogic logic)
         {
             try
@@ -433,63 +571,9 @@ namespace Akka.Streams.Implementation.Fusing
             }
             catch (Exception err)
             {
-                Log.Error(err, "Error during PostStop in [{0}]", Assembly.Stages[logic.StageId]);
+                if (Log.IsErrorEnabled)
+                    Log.Error(err, "Error during PostStop in [{0}]", Assembly.Stages[logic.StageId]);
             }
-        }
-
-        /// <summary>
-        /// Returns true if the given stage is alredy completed
-        /// </summary>
-        internal bool IsStageCompleted(GraphStageLogic stage)
-        {
-            return stage != null && _shutdownCounter[stage.StageId] == 0;
-        }
-
-        internal void AfterStageHasRun(GraphStageLogic logic)
-        {
-            if (IsStageCompleted(logic))
-            {
-                RunningStagesCount--;
-                FinalizeStage(logic);
-            }
-        }
-
-        /// <summary>
-        /// Assign the boundary logic to a given connection. This will serve as the interface to the external world
-        /// (outside the interpreter) to process and inject events.
-        /// </summary>
-        public void AttachUpstreamBoundary(int connection, UpstreamBoundaryStageLogic logic)
-        {
-            logic.PortToConn[logic.Out.Id + logic.InCount] = connection;
-            logic.Interpreter = this;
-            OutHandlers[connection] = (OutHandler)logic.Handlers[0];
-        }
-
-        /// <summary>
-        /// Assign the boundary logic to a given connection. This will serve as the interface to the external world
-        /// (outside the interpreter) to process and inject events.
-        /// </summary>
-        public void AttachDownstreamBoundary(int connection, DownstreamBoundaryStageLogic logic)
-        {
-            logic.PortToConn[logic.In.Id] = connection;
-            logic.Interpreter = this;
-            InHandlers[connection] = (InHandler)logic.Handlers[0];
-        }
-
-        /// <summary>
-        /// Dynamic handler changes are communicated from a GraphStageLogic by this method.
-        /// </summary>
-        public void SetHandler(int connection, InHandler handler)
-        {
-            InHandlers[connection] = handler;
-        }
-
-        /// <summary>
-        /// Dynamic handler changes are communicated from a GraphStageLogic by this method.
-        /// </summary>
-        public void SetHandler(int connection, OutHandler handler)
-        {
-            OutHandlers[connection] = handler;
         }
 
         internal void Push(int connection, object element)
@@ -517,11 +601,11 @@ namespace Akka.Streams.Implementation.Fusing
         {
             var currentState = PortStates[connection];
             PortStates[connection] = currentState | OutClosed;
-            if ((currentState & (InClosed | Pushing | Pulling)) == 0) Enqueue(connection);
+            if ((currentState & (InClosed | Pushing | Pulling | OutClosed)) == 0) Enqueue(connection);
             if ((currentState & OutClosed) == 0) CompleteConnection(Assembly.OutletOwners[connection]);
         }
 
-        internal void Fail(int connection, Exception reason, bool isInternal)
+        internal void Fail(int connection, Exception reason)
         {
             var currentState = PortStates[connection];
             PortStates[connection] = currentState | OutClosed;
@@ -531,7 +615,6 @@ namespace Akka.Streams.Implementation.Fusing
                 ConnectionSlots[connection] = new Failed(reason, ConnectionSlots[connection]);
                 if ((currentState & (Pulling | Pushing)) == 0) Enqueue(connection);
             }
-            else if (isInternal) Log.Error("Error after stage was closed");
 
             if ((currentState & OutClosed) == 0) CompleteConnection(Assembly.OutletOwners[connection]);
         }
@@ -543,7 +626,7 @@ namespace Akka.Streams.Implementation.Fusing
             if ((currentState & OutClosed) == 0)
             {
                 ConnectionSlots[connection] = Empty.Instance;
-                if ((currentState & (Pulling | Pushing)) == 0) Enqueue(connection);
+                if ((currentState & (Pulling | Pushing | InClosed)) == 0) Enqueue(connection);
             }
 
             if ((currentState & InClosed) == 0) CompleteConnection(Assembly.InletOwners[connection]);
