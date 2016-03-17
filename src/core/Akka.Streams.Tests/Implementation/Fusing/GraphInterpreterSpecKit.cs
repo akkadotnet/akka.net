@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Streams.Implementation;
@@ -623,7 +622,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             }
         }
 
-        public abstract class OneBoundedSetup<T> : BaseBuilder
+        public class OneBoundedSetup<T> : BaseBuilder
         {
             public interface ITestEvent
             {
@@ -631,10 +630,44 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             public class OnComplete : ITestEvent
             {
+                protected bool Equals(OnComplete other)
+                {
+                    return true;
+                }
+
+                public override bool Equals(object obj)
+                {
+                    if (ReferenceEquals(null, obj)) return false;
+                    if (ReferenceEquals(this, obj)) return true;
+                    if (obj.GetType() != typeof (OnComplete)) return false;
+                    return Equals((OnComplete) obj);
+                }
+
+                public override int GetHashCode()
+                {
+                    return 0;
+                }
             }
 
             public class Cancel : ITestEvent
             {
+                protected bool Equals(Cancel other)
+                {
+                    return true;
+                }
+
+                public override bool Equals(object obj)
+                {
+                    if (ReferenceEquals(null, obj)) return false;
+                    if (ReferenceEquals(this, obj)) return true;
+                    if (obj.GetType() != typeof (Cancel)) return false;
+                    return Equals((Cancel) obj);
+                }
+
+                public override int GetHashCode()
+                {
+                    return 0;
+                }
             }
 
             public class OnError : ITestEvent
@@ -644,6 +677,24 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 public OnError(Exception cause)
                 {
                     Cause = cause;
+                }
+
+                protected bool Equals(OnError other)
+                {
+                    return Equals(Cause, other.Cause);
+                }
+
+                public override bool Equals(object obj)
+                {
+                    if (ReferenceEquals(null, obj)) return false;
+                    if (ReferenceEquals(this, obj)) return true;
+                    if (obj.GetType() != this.GetType()) return false;
+                    return Equals((OnError) obj);
+                }
+
+                public override int GetHashCode()
+                {
+                    return (Cause != null ? Cause.GetHashCode() : 0);
                 }
             }
 
@@ -655,17 +706,69 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 {
                     Element = element;
                 }
+
+                protected bool Equals(OnNext other)
+                {
+                    return Equals(Element, other.Element);
+                }
+
+                public override bool Equals(object obj)
+                {
+                    if (ReferenceEquals(null, obj)) return false;
+                    if (ReferenceEquals(this, obj)) return true;
+                    if (obj.GetType() != this.GetType()) return false;
+                    return Equals((OnNext) obj);
+                }
+
+                public override int GetHashCode()
+                {
+                    return (Element != null ? Element.GetHashCode() : 0);
+                }
             }
 
             public class RequestOne : ITestEvent
             {
+                protected bool Equals(RequestOne other)
+                {
+                    return true;
+                }
+
+                public override bool Equals(object obj)
+                {
+                    if (ReferenceEquals(null, obj)) return false;
+                    if (ReferenceEquals(this, obj)) return true;
+                    if (obj.GetType() != typeof (RequestOne)) return false;
+                    return Equals((RequestOne) obj);
+                }
+
+                public override int GetHashCode()
+                {
+                    return 0;
+                }
             }
 
             public class RequestAnother : ITestEvent
             {
+                protected bool Equals(RequestAnother other)
+                {
+                    return true;
+                }
+
+                public override bool Equals(object obj)
+                {
+                    if (ReferenceEquals(null, obj)) return false;
+                    if (ReferenceEquals(this, obj)) return true;
+                    if (obj.GetType() != typeof (RequestAnother)) return false;
+                    return Equals((RequestAnother) obj);
+                }
+
+                public override int GetHashCode()
+                {
+                    return 0;
+                }
             }
 
-            protected OneBoundedSetup(ActorSystem system, params IGraphStageWithMaterializedValue[] ops) : base(system)
+            public OneBoundedSetup(ActorSystem system, params IGraphStageWithMaterializedValue[] ops) : base(system)
             {
                 Ops = ops;
                 Upstream = new UpstreamOneBoundedProbe<T>(this);
@@ -695,8 +798,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 ins[Ops.Length] = null;
                 inOwners[Ops.Length] = GraphInterpreter.Boundary;
-                outs[Ops.Length] = null;
-                outOwners[Ops.Length] = GraphInterpreter.Boundary;
+                outs[0] = null;
+                outOwners[0] = GraphInterpreter.Boundary;
 
                 for (int i = 0; i < Ops.Length; i++)
                 {
@@ -800,10 +903,29 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             }
         }
 
-        public PushPullGraphStage<TIn, TOut, TExt> ToGraphStage<TIn, TOut, TExt>(IStage<TIn, TOut> stage)
+        public PushPullGraphStage<TIn, TOut, object> ToGraphStage<TIn, TOut>(IStage<TIn, TOut> stage)
         {
             var s = stage;
-            return new PushPullGraphStage<TIn, TOut, TExt>(_ => s, Attributes.None);
+            return new PushPullGraphStage<TIn, TOut, object>(_ => s, Attributes.None);
+        }
+
+        public void WithOneBoundedSetup<T>(IGraphStageWithMaterializedValue op,
+            Action
+                <Func<IList<OneBoundedSetup<T>.ITestEvent>>, OneBoundedSetup<T>.UpstreamOneBoundedProbe<T>,
+                    OneBoundedSetup<T>.DownstreamOneBoundedProbe<T>>
+                spec)
+        {
+            WithOneBoundedSetup(new[] {op}, spec);
+            
+        }
+
+        public void WithOneBoundedSetup<T>(IGraphStageWithMaterializedValue[] ops,
+            Action
+                <Func<IList<OneBoundedSetup<T>.ITestEvent>>, OneBoundedSetup<T>.UpstreamOneBoundedProbe<T>, OneBoundedSetup<T>.DownstreamOneBoundedProbe<T>>
+                spec)
+        {
+            var setup = new OneBoundedSetup<T>(Sys, ops);
+            spec(setup.LastEvents, setup.Upstream, setup.Downstream);
         }
     }
 }
