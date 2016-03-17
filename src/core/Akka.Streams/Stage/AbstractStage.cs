@@ -77,7 +77,7 @@ namespace Akka.Streams.Stage
         {
             if (IsClosed(_shape.Outlet))
             {
-                var exception = new NotSupportedException("It is not allowed to call AbsorbTermination() from onDownstreamFinish.");
+                var exception = new NotSupportedException("It is not allowed to call AbsorbTermination() from OnDownstreamFinish.");
                 // This MUST be logged here, since the downstream has cancelled, i.e. there is no one to send onError to, the
                 // stage is just about to finish so no one will catch it anyway just the interpreter
 

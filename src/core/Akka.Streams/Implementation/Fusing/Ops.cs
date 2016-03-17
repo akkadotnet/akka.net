@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Event;
 using Akka.Pattern;
+using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
+using Akka.Streams.Util;
 using Akka.Util;
 
 namespace Akka.Streams.Implementation.Fusing
@@ -479,7 +480,7 @@ namespace Akka.Streams.Implementation.Fusing
                 var result = _buffer;
                 _left = _count;
                 _buffer = new List<T>(_count);
-                return context.Push(result);
+                return context.PushAndFinish(result);
             }
             else return context.Pull();
         }
@@ -683,135 +684,310 @@ namespace Akka.Streams.Implementation.Fusing
         }
     }
 
-    internal sealed class Conflate<TIn, TOut> : DetachedStage<TIn, TOut>
+    internal sealed class Batch<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
-        private readonly Func<TIn, TOut> _seed;
-        private readonly Func<TOut, TIn, TOut> _aggregate;
-        private readonly Decider _decider;
-        private TOut _aggregated;
-        private bool _initialized = false;
-
-        public Conflate(Func<TIn, TOut> seed, Func<TOut, TIn, TOut> aggregate, Decider decider)
+        #region internal classes
+        private sealed class BatchGraphStageLogic : GraphStageLogic
         {
-            _seed = seed;
-            _aggregate = aggregate;
-            _decider = decider;
-        }
+            private readonly FlowShape<TIn, TOut> _shape;
+            private readonly Batch<TIn, TOut> _stage;
+            private readonly Decider _decider;
+            private readonly Holder<TOut> _aggregate = new Holder<TOut>();
+            private long _left;
+            private readonly Holder<TIn> _pending = new Holder<TIn>();
 
-        public override IUpstreamDirective OnPush(TIn element, IDetachedContext<TOut> context)
-        {
-            if (!_initialized)
+            public BatchGraphStageLogic(FlowShape<TIn, TOut> shape, Attributes inheritedAttributes, Batch<TIn, TOut> stage) : base(shape)
             {
-                _aggregated = _seed(element);
-                _initialized = true;
+                _shape = shape;
+                _stage = stage;
+                var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
+                _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
+                _left = stage.Max;
+
+                SetHandler(_shape.Inlet,
+                    onPush: () =>
+                    {
+                        var element = Grab(_shape.Inlet);
+                        var cost = _stage.CostFunc(element);
+                        if(!_aggregate.HasValue)
+                        {
+                            try
+                            {
+                                _aggregate.Value = _stage.Seed(element);
+                                _left -= cost;
+                            }
+                            catch (Exception ex)
+                            {
+                                switch (_decider(ex))
+                                {
+                                    case Directive.Stop:
+                                        FailStage(ex);
+                                        break;
+                                    case Directive.Restart:
+                                        RestartState();
+                                        break;
+                                    case Directive.Resume:
+                                        break;
+                                }
+                            }
+                        }
+                        else if (_left < cost)
+                        {
+                            _pending.Value = element;
+                        }
+                        else
+                        {
+                            try
+                            {
+                                _aggregate.Value = _stage.Aggregate(_aggregate.Value, element);
+                                _left -= cost;
+                            }
+                            catch (Exception ex)
+                            {
+                                switch (_decider(ex))
+                                {
+                                    case Directive.Stop:
+                                        FailStage(ex);
+                                        break;
+                                    case Directive.Restart:
+                                        RestartState();
+                                        break;
+                                    case Directive.Resume:
+                                        break;
+                                }
+                            }
+                        }
+
+                        if (IsAvailable(_shape.Outlet)) Flush();
+                        if(!_pending.HasValue) Pull(_shape.Inlet);
+                    },
+                    onUpstreamFinish: () =>
+                    {
+                        if (!_aggregate.HasValue) CompleteStage();
+                    });
+
+                SetHandler(_shape.Outlet, 
+                    onPull: () =>
+                    {
+                        if(!_aggregate.HasValue)
+                        {
+                            if (IsClosed(_shape.Inlet)) CompleteStage();
+                            else if (!HasBeenPulled(_shape.Inlet)) Pull(_shape.Inlet);
+                        }
+                        else if (IsClosed(_shape.Inlet))
+                        {
+                            Push(_shape.Outlet, _aggregate.Value);
+                            if(!_pending.HasValue) CompleteStage();
+                            else
+                            {
+                                try
+                                {
+                                    _aggregate.Value = _stage.Seed(_pending.Value);
+                                }
+                                catch (Exception ex)
+                                {
+                                    switch (_decider(ex))
+                                    {
+                                        case Directive.Stop:
+                                            FailStage(ex);
+                                            break;
+                                        case Directive.Restart:
+                                            RestartState();
+                                            if (!HasBeenPulled(_shape.Inlet)) Pull(_shape.Inlet);
+                                            break;
+                                        case Directive.Resume:
+                                            break;
+                                    }
+                                }
+                                _pending.Reset();
+                            }
+                        }
+                        else
+                        {
+                            Flush();
+                            if (!HasBeenPulled(_shape.Inlet)) Pull(_shape.Inlet);
+                        }
+                    });
             }
-            else _aggregated = _aggregate(_aggregated, element);
 
-            if (!context.IsHoldingDownstream) return context.Pull();
-            else
+            private void Flush()
             {
-                var result = _aggregate;
-                _initialized = false;
-                return context.PushAndPull(result);
-            }
-        }
-
-        public override IDownstreamDirective OnPull(IDetachedContext<TOut> context)
-        {
-            if (context.IsFinishing)
-            {
-                if (!_initialized) return context.Finish();
+                if (_aggregate.HasValue)
+                {
+                    Push(_shape.Outlet, _aggregate.Value);
+                    _left = _stage.Max;
+                }
+                if (_pending.HasValue)
+                {
+                    try
+                    {
+                        _aggregate.Value = _stage.Seed(_pending.Value);
+                        _left -= _stage.CostFunc(_pending.Value);
+                        _pending.Reset();
+                    }
+                    catch (Exception ex)
+                    {
+                        switch (_decider(ex))
+                        {
+                            case Directive.Stop:
+                                FailStage(ex);
+                                break;
+                            case Directive.Restart:
+                                RestartState();
+                                break;
+                            case Directive.Resume:
+                                _pending.Reset();
+                                break;
+                        }
+                    }
+                }
                 else
                 {
-                    var result = _aggregated;
-                    _initialized = false;
-                    return context.PushAndFinish(result);
+                    _aggregate.Reset();
                 }
             }
-            else if (!_initialized) return context.HoldDownstream();
-            else
+
+            public override void PreStart()
             {
-                var result = _aggregated;
-                _initialized = false;
-                return context.Push(result);
+                Pull(_shape.Inlet);
+            }
+
+            private void RestartState()
+            {
+                _aggregate.Reset();
+                _left = _stage.Max;
+                _pending.Reset();
             }
         }
+        #endregion
 
-        public override ITerminationDirective OnUpstreamFinish(IDetachedContext<TOut> context)
+        public readonly long Max;
+        public readonly Func<TIn, long> CostFunc;
+        public readonly Func<TIn, TOut> Seed;
+        public readonly Func<TOut, TIn, TOut> Aggregate;
+
+        public Batch(long max, Func<TIn, long> costFunc, Func<TIn, TOut> seed, Func<TOut, TIn, TOut> aggregate)
         {
-            return context.AbsorbTermination();
+            Max = max;
+            CostFunc = costFunc;
+            Seed = seed;
+            Aggregate = aggregate;
+
+            var inlet = new Inlet<TIn>("Batch.in");
+            var outlet = new Outlet<TOut>("Batch.out");
+
+            Shape = new FlowShape<TIn, TOut>(inlet, outlet);
         }
 
-        public override Directive Decide(Exception cause)
-        {
-            return _decider(cause);
-        }
+        public override FlowShape<TIn, TOut> Shape { get; }
 
-        public override IStage<TIn, TOut> Restart()
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new Conflate<TIn, TOut>(_seed, _aggregate, _decider);
+            return new BatchGraphStageLogic(Shape, inheritedAttributes, this);
         }
     }
 
-    internal sealed class Expand<TIn, TOut, TSeed> : DetachedStage<TIn, TOut>
+    internal sealed class Expand<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
-        private readonly Func<TIn, TSeed> _seedFunc;
-        private readonly Func<TSeed, Tuple<TOut, TSeed>> _extrapolate;
+        #region internal classes
 
-        private TSeed _seed;
-        private bool _hasStarted = false;
-        private bool _hasExpanded = false;
-
-        public Expand(Func<TIn, TSeed> seedFunc, Func<TSeed, Tuple<TOut, TSeed>> extrapolate)
+        private sealed class ExpandGraphStageLogic : GraphStageLogic
         {
-            _seedFunc = seedFunc;
-            _extrapolate = extrapolate;
-        }
+            private readonly FlowShape<TIn, TOut> _shape;
+            private readonly Expand<TIn, TOut> _stage;
+            private IIterator<TOut> _iterator;
+            private bool _expanded;
 
-        public override IUpstreamDirective OnPush(TIn element, IDetachedContext<TOut> context)
-        {
-            _seed = _seedFunc(element);
-            _hasStarted = true;
-            _hasExpanded = false;
-            if (context.IsHoldingDownstream)
+            public ExpandGraphStageLogic(FlowShape<TIn, TOut> shape, Expand<TIn, TOut> stage) : base(shape)
             {
-                var t = _extrapolate(_seed);
-                _seed = t.Item2;
-                _hasExpanded = true;
-                return context.PushAndPull(t.Item1);
-            }
-            else return context.HoldUpstream();
-        }
+                _shape = shape;
+                _stage = stage;
 
-        public override IDownstreamDirective OnPull(IDetachedContext<TOut> context)
-        {
-            if (context.IsFinishing)
+                _iterator = new IteratorAdapter<TOut>(Enumerable.Empty<TOut>().GetEnumerator());
+                SetHandler(shape.Inlet,
+                    onPush: () =>
+                    {
+                        _iterator = new IteratorAdapter<TOut>(_stage.Extrapolate(Grab(_shape.Inlet)));
+                        if (_iterator.HasNext())
+                        {
+                            if (IsAvailable(_shape.Outlet))
+                            {
+                                _expanded = true;
+                                Pull(_shape.Inlet);
+                                Push(_shape.Outlet, _iterator.Next());
+                            }
+                            else
+                            {
+                                _expanded = false;
+                            }
+                        }
+                        else
+                        {
+                            Pull(_shape.Inlet);
+                        }
+                    },
+                    onUpstreamFinish: () =>
+                    {
+                        if (_iterator.HasNext() && !_expanded)
+                        {
+                            // need to wait
+                        }
+                        else CompleteStage();
+                    });
+
+                SetHandler(shape.Outlet,
+                    onPull: () =>
+                    {
+                        if (_iterator.HasNext())
+                        {
+                            if (!_expanded)
+                            {
+                                _expanded = true;
+                                if (IsClosed(_shape.Inlet))
+                                {
+                                    Push(_shape.Outlet, _iterator.Next());
+                                    CompleteStage();
+                                }
+                                else
+                                {
+                                    // expand needs to pull first to be "fair" when upstream is not actually slow
+                                    Pull(_shape.Inlet);
+                                    Push(_shape.Outlet, _iterator.Next());
+                                }
+                            }
+                            else
+                            {
+                                Push(_shape.Outlet, _iterator.Next());
+                            }
+                        }
+                    });
+            }
+
+            public override void PreStart()
             {
-                return !_hasStarted ? context.Finish() : context.PushAndFinish(_extrapolate(_seed).Item1);
-            }
-            else if (!_hasStarted) return context.HoldDownstream();
-            else
-            {
-                var t = _extrapolate(_seed);
-                _seed = t.Item2;
-                _hasExpanded = true;
-                return context.IsHoldingUpstream ? context.PushAndPull(t.Item1) : context.Push(t.Item1);
+                Pull(_shape.Inlet);
             }
         }
+        #endregion
 
-        public override ITerminationDirective OnUpstreamFinish(IDetachedContext<TOut> context)
+        public Func<TIn, IEnumerator<TOut>> Extrapolate { get; }
+
+        public Expand(Func<TIn, IEnumerator<TOut>> extrapolate)
         {
-            return _hasExpanded ? context.Finish() : context.AbsorbTermination();
+            Extrapolate = extrapolate;
+
+            var inlet = new Inlet<TIn>("expand.in");
+            var outlet = new Outlet<TOut>("expand.out");
+
+            Shape = new FlowShape<TIn, TOut>(inlet, outlet);
         }
 
-        public override Directive Decide(Exception cause)
-        {
-            return Directive.Stop;
-        }
+        protected override Attributes InitialAttributes => DefaultAttributes.Expand;
+        public override FlowShape<TIn, TOut> Shape { get; }
 
-        public override IStage<TIn, TOut> Restart()
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            throw new NotSupportedException("Expand doesn't support restart");
+            return new ExpandGraphStageLogic(Shape, this);
         }
     }
 

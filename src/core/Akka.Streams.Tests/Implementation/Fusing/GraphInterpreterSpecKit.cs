@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
@@ -24,7 +25,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             protected BaseBuilder(ActorSystem system)
             {
-                _logger = Logging.GetLogger(system, "InterpreterSpecHit");
+                _logger = Logging.GetLogger(system, "InterpreterSpecKit");
             }
 
             protected GraphInterpreter Interpreter => _interpreter;
@@ -622,7 +623,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             }
         }
 
-        public class OneBoundedSetup<T> : BaseBuilder
+        public abstract class OneBoundedSetup : BaseBuilder
         {
             public interface ITestEvent
             {
@@ -709,7 +710,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 protected bool Equals(OnNext other)
                 {
-                    return Equals(Element, other.Element);
+                    return (Element is IEnumerable)
+                        ? ((IEnumerable) Element).Cast<object>().SequenceEqual(((IEnumerable) other.Element).Cast<object>())
+                        : Equals(Element, other.Element);
                 }
 
                 public override bool Equals(object obj)
@@ -768,22 +771,117 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 }
             }
 
+            protected OneBoundedSetup(ActorSystem system) : base(system)
+            {
+            }
+
+            protected IList<ITestEvent> LastEvent { get; private set; } = new List<ITestEvent>();
+
+            public IList<ITestEvent> LastEvents()
+            {
+                var events = LastEvent;
+                LastEvent = new List<ITestEvent>();
+                return events;
+            }
+
+            protected abstract void Run();
+
+            public class UpstreamOneBoundedProbe<T> : GraphInterpreter.UpstreamBoundaryStageLogic
+            {
+                private readonly OneBoundedSetup _setup;
+
+                public UpstreamOneBoundedProbe(OneBoundedSetup setup)
+                {
+                    _setup = setup;
+                    Out = new Outlet<T>("out") {Id = 0};
+
+                    SetHandler(Out, () =>
+                    {
+                        if (setup.LastEvent.OfType<RequestOne>().Any())
+                            setup.LastEvent.Add(new RequestAnother());
+                        else
+                            setup.LastEvent.Add(new RequestOne());
+                    }, () => setup.LastEvent.Add(new Cancel()));
+                }
+
+                public override Outlet Out { get; }
+
+                public void OnNext(T element)
+                {
+                    Push(Out, element);
+                    _setup.Run();
+                }
+
+                public void OnComplete()
+                {
+                    Complete(Out);
+                    _setup.Run();
+                }
+
+                public void OnNextAndComplete(T element)
+                {
+                    Push(Out, element);
+                    Complete(Out);
+                    _setup.Run();
+                }
+
+                public void OnError(Exception ex)
+                {
+                    Fail(Out, ex);
+                    _setup.Run();
+                }
+            }
+
+            public class DownstreamOneBoundedPortProbe<T> : GraphInterpreter.DownstreamBoundaryStageLogic
+            {
+                private readonly OneBoundedSetup _setup;
+
+                public DownstreamOneBoundedPortProbe(OneBoundedSetup setup)
+                {
+                    _setup = setup;
+                    In = new Inlet<T>("in") {Id = 0};
+
+                    SetHandler(In, () =>
+                    {
+                        setup.LastEvent.Add(new OnNext(Grab<T>(In)));
+                    },
+                    () => setup.LastEvent.Add(new OnComplete()),
+                    ex => setup.LastEvent.Add(new OnError(ex)));
+                }
+
+                public override Inlet In { get; }
+
+                public void RequestOne()
+                {
+                    Pull<T>(In);
+                    _setup.Run();
+                }
+
+                public void Cancel()
+                {
+                    Cancel(In);
+                    _setup.Run();
+                }
+            }
+        }
+
+        public class OneBoundedSetup<TIn, TOut> : OneBoundedSetup
+        {
             public OneBoundedSetup(ActorSystem system, params IGraphStageWithMaterializedValue[] ops) : base(system)
             {
                 Ops = ops;
-                Upstream = new UpstreamOneBoundedProbe<T>(this);
-                Downstream = new DownstreamOneBoundedProbe<T>(this);
+                Upstream = new UpstreamOneBoundedProbe<TIn>(this);
+                Downstream = new DownstreamOneBoundedPortProbe<TOut>(this);
 
                 Initialize();
                 Run(); // Detached stages need the prefetch
             }
 
             public IGraphStageWithMaterializedValue[] Ops { get; }
-            public UpstreamOneBoundedProbe<T> Upstream { get; }
-            public DownstreamOneBoundedProbe<T> Downstream { get; }
-            protected IList<ITestEvent> LastEvent { get; private set; } = new List<ITestEvent>();
+            public new UpstreamOneBoundedProbe<TIn> Upstream { get; }
+            public new DownstreamOneBoundedPortProbe<TOut> Downstream { get; }
 
-            private void Run()
+            protected sealed override void Run()
             {
                 Interpreter.Execute(int.MaxValue);
             }
@@ -816,90 +914,12 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 Interpreter.Init(null);
             }
+        }
 
-            public IList<ITestEvent> LastEvents()
+        public class OneBoundedSetup<T> : OneBoundedSetup<T, T>
+        {
+            public OneBoundedSetup(ActorSystem system, params IGraphStageWithMaterializedValue[] ops) : base(system, ops)
             {
-                var events = LastEvent;
-                LastEvent = new List<ITestEvent>();
-                return events;
-            }
-
-            public class UpstreamOneBoundedProbe<TT> : GraphInterpreter.UpstreamBoundaryStageLogic
-            {
-                private readonly OneBoundedSetup<T> _setup;
-
-                public UpstreamOneBoundedProbe(OneBoundedSetup<T> setup)
-                {
-                    _setup = setup;
-                    Out = new Outlet<TT>("out") {Id = 0};
-
-                    SetHandler(Out, () =>
-                    {
-                        if (setup.LastEvent.OfType<RequestOne>().Any())
-                            setup.LastEvent.Add(new RequestAnother());
-                        else
-                            setup.LastEvent.Add(new RequestOne());
-                    }, () => setup.LastEvent.Add(new Cancel()));
-                }
-
-                public override Outlet Out { get; }
-
-                public void OnNext(TT element)
-                {
-                    Push(Out, element);
-                    _setup.Run();
-                }
-
-                public void OnComplete()
-                {
-                    Complete(Out);
-                    _setup.Run();
-                }
-
-                public void OnNextAndComplete(TT element)
-                {
-                    Push(Out, element);
-                    Complete(Out);
-                    _setup.Run();
-                }
-
-                public void OnError(Exception ex)
-                {
-                    Fail(Out, ex);
-                    _setup.Run();
-                }
-            }
-
-            public class DownstreamOneBoundedProbe<TT> : GraphInterpreter.DownstreamBoundaryStageLogic
-            {
-                private readonly OneBoundedSetup<T> _setup;
-
-                public DownstreamOneBoundedProbe(OneBoundedSetup<T> setup)
-                {
-                    _setup = setup;
-                    In = new Inlet<TT>("in") {Id = 0};
-
-                    SetHandler(In, () =>
-                    {
-                        setup.LastEvent.Add(new OnNext(Grab<TT>(In)));
-                    },
-                    () => setup.LastEvent.Add(new OnComplete()),
-                    ex => setup.LastEvent.Add(new OnError(ex)));
-                }
-
-                public override Inlet In { get; }
-
-                public void RequestOne()
-                {
-                    Pull<TT>(In);
-                    _setup.Run();
-                }
-
-                public void Cancel()
-                {
-                    Cancel(In);
-                    _setup.Run();
-                }
             }
         }
 
@@ -909,22 +929,62 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             return new PushPullGraphStage<TIn, TOut, object>(_ => s, Attributes.None);
         }
 
+        public IGraphStageWithMaterializedValue[] ToGraphStage<TIn, TOut>(IStage<TIn, TOut>[] stages)
+        {
+            return stages.Select(ToGraphStage).Cast<IGraphStageWithMaterializedValue>().ToArray();
+        }
+
+        public void WithOneBoundedSetup<T>(IStage<T, T> op,
+            Action
+                <Func<IList<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>,
+                    OneBoundedSetup.DownstreamOneBoundedPortProbe<T>> spec)
+        {
+            WithOneBoundedSetup<T>(ToGraphStage(op), spec);
+        }
+
+        public void WithOneBoundedSetup<T>(IStage<T, T>[] ops,
+            Action
+                <Func<IList<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>,
+                    OneBoundedSetup.DownstreamOneBoundedPortProbe<T>> spec)
+        {
+            WithOneBoundedSetup<T>(ToGraphStage(ops), spec);
+        }
+
         public void WithOneBoundedSetup<T>(IGraphStageWithMaterializedValue op,
             Action
-                <Func<IList<OneBoundedSetup<T>.ITestEvent>>, OneBoundedSetup<T>.UpstreamOneBoundedProbe<T>,
-                    OneBoundedSetup<T>.DownstreamOneBoundedProbe<T>>
+                <Func<IList<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>,
+                    OneBoundedSetup.DownstreamOneBoundedPortProbe<T>>
+                spec)
+        {
+            WithOneBoundedSetup<T>(new[] {op}, spec);
+            
+        }
+
+        public void WithOneBoundedSetup<T>(IGraphStageWithMaterializedValue[] ops,
+            Action
+                <Func<IList<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>, OneBoundedSetup.DownstreamOneBoundedPortProbe<T>>
+                spec)
+        {
+            var setup = new OneBoundedSetup<T>(Sys, ops);
+            spec(setup.LastEvents, setup.Upstream, setup.Downstream);
+        }
+
+        public void WithOneBoundedSetup<TIn, TOut>(IGraphStageWithMaterializedValue op,
+            Action
+                <Func<IList<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<TIn>,
+                    OneBoundedSetup.DownstreamOneBoundedPortProbe<TOut>>
                 spec)
         {
             WithOneBoundedSetup(new[] {op}, spec);
             
         }
 
-        public void WithOneBoundedSetup<T>(IGraphStageWithMaterializedValue[] ops,
+        public void WithOneBoundedSetup<TIn, TOut>(IGraphStageWithMaterializedValue[] ops,
             Action
-                <Func<IList<OneBoundedSetup<T>.ITestEvent>>, OneBoundedSetup<T>.UpstreamOneBoundedProbe<T>, OneBoundedSetup<T>.DownstreamOneBoundedProbe<T>>
+                <Func<IList<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<TIn>, OneBoundedSetup.DownstreamOneBoundedPortProbe<TOut>>
                 spec)
         {
-            var setup = new OneBoundedSetup<T>(Sys, ops);
+            var setup = new OneBoundedSetup<TIn, TOut>(Sys, ops);
             spec(setup.LastEvents, setup.Upstream, setup.Downstream);
         }
     }

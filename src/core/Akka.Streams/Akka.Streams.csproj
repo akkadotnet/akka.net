@@ -160,6 +160,9 @@
     <Compile Include="Supervision\Supervision.cs" />
     <Compile Include="ThrottleMode.cs" />
     <Compile Include="Transformer.cs" />
+    <Compile Include="Util\Holder.cs" />
+    <Compile Include="Util\Int32Extensions.cs" />
+    <Compile Include="Util\IteratorAdapter.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\System.Reactive.Streams\System.Reactive.Streams.csproj">
