@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit.Internal;
 using Akka.TestKit.Internal.StringMatcher;
@@ -18,15 +19,23 @@ namespace Akka.TestKit
     {
         private readonly IReadOnlyList<EventFilterBase> _filters;
         private readonly TestKitBase _testkit;
+        private readonly ActorSystem _system;
 
         public EventFilterFactory(TestKitBase testkit)
         {
             _testkit = testkit;
+            _system = _testkit.Sys;
         }
-
-        public EventFilterFactory(TestKitBase testkit, IReadOnlyList<EventFilterBase> filters)
+        
+        public EventFilterFactory(TestKitBase testkit, ActorSystem system)
         {
             _testkit = testkit;
+            _system = system;
+        }
+
+        public EventFilterFactory(TestKitBase testkit, ActorSystem actorSystem, IReadOnlyList<EventFilterBase> filters)
+            : this(testkit, actorSystem)
+        {
             _filters = filters;
         }
 
@@ -133,7 +142,7 @@ namespace Akka.TestKit
         private IEventFilterApplier Exception(Type exceptionType, IStringMatcher messageMatcher, IStringMatcher sourceMatcher, bool checkInnerExceptions)
         {
             var filter = new ErrorFilter(exceptionType, messageMatcher, sourceMatcher, checkInnerExceptions);
-            return CreateApplier(filter);
+            return CreateApplier(filter, _system);
         }
 
         /// <summary>
@@ -145,7 +154,7 @@ namespace Akka.TestKit
         public IEventFilterApplier Custom(Predicate<LogEvent> predicate)
         {
             var filter = new CustomEventFilter(predicate);
-            return CreateApplier(filter);
+            return CreateApplier(filter, _system);
         }
 
 
@@ -158,7 +167,7 @@ namespace Akka.TestKit
         public IEventFilterApplier Custom<TLogEvent>(Predicate<TLogEvent> predicate) where TLogEvent : LogEvent
         {
             var filter = new CustomEventFilter(logEvent => logEvent is TLogEvent && predicate((TLogEvent)logEvent));
-            return CreateApplier(filter);
+            return CreateApplier(filter, _system);
         }
 
         /// <summary>
@@ -213,7 +222,7 @@ namespace Akka.TestKit
         public IEventFilterApplier DeadLetter()
         {
             var filter = new DeadLettersFilter(null, null);
-            return CreateApplier(filter);
+            return CreateApplier(filter, _system);
         }
 
         /// <summary>
@@ -257,7 +266,7 @@ namespace Akka.TestKit
         {
             var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new DeadLettersFilter(null, sourceMatcher, isMatch);
-            return CreateApplier(filter);
+            return CreateApplier(filter, _system);
         }
 
         protected static IStringMatcher CreateMessageMatcher(string message, string start, string contains)
@@ -268,7 +277,7 @@ namespace Akka.TestKit
             return MatchesAll.Instance;
         }
 
-        protected IEventFilterApplier CreateApplier(EventFilterBase filter)
+        protected IEventFilterApplier CreateApplier(EventFilterBase filter, ActorSystem system)
         {
             EventFilterBase[] allFilters;   //This will contain _filters + filter
             if(_filters == null || _filters.Count == 0)
@@ -286,7 +295,7 @@ namespace Akka.TestKit
                 }
                 allFilters[existingFiltersCount] = filter;
             }
-            return new InternalEventFilterApplier(_testkit, allFilters);
+            return new InternalEventFilterApplier(_testkit, system, allFilters);
         }
 
     }
