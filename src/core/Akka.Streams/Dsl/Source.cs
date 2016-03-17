@@ -301,6 +301,24 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
+        /// Create a `Source` which materializes a [[scala.concurrent.Promise]] which controls what element
+        /// will be emitted by the Source.
+        /// If the materialized promise is completed with a Some, that value will be produced downstream,
+        /// followed by completion.
+        /// If the materialized promise is completed with a None, no value will be produced downstream and completion will
+        /// be signalled immediately.
+        /// If the materialized promise is completed with a failure, then the returned source will terminate with that error.
+        /// If the downstream of this source cancels before the promise has been completed, then the promise will be completed
+        /// with None.
+        /// </summary>
+        public static Source<T, TaskCompletionSource<T>> Maybe<T>()
+        {
+            return new Source<T, TaskCompletionSource<T>>(new MaybeSource<T>(
+                DefaultAttributes.MaybeSource,
+                new SourceShape<T>(new Outlet<T>("MaybeSource"))));
+        }
+
+        /// <summary>
         /// Create a <see cref="Source{TOut,TMat}"/> that immediately ends the stream with the <paramref name="cause"/> error to every connected <see cref="Sink{TIn,TMat}"/>.
         /// </summary>
         public static Source<T, Unit> Failed<T>(Exception cause)

@@ -224,6 +224,29 @@ namespace Akka.Streams.Dsl
         {
             return graph as Flow<TIn, TOut, TMat> ?? new Flow<TIn, TOut, TMat>(graph.Module);
         }
+
+        /// <summary>
+        /// Creates a `Flow` from a `Sink` and a `Source` where the Flow's input
+        /// will be sent to the Sink and the Flow's output will come from the Source.
+        /// </summary>
+        public static Flow<TIn, TOut, Unit> FromSinkAndSource<TIn, TOut, TMat>(IGraph<SinkShape<TIn>, TMat> sink, IGraph<SourceShape<TOut>, TMat> source)
+        {
+            return FromSinkAndSource(sink, source, Keep.None);
+        }
+
+        /// <summary>
+        ///  Creates a `Flow` from a `Sink` and a `Source` where the Flow's input
+        /// will be sent to the Sink and the Flow's output will come from the Source.
+        /// 
+        /// The `combine` function is used to compose the materialized values of the `sink` and `source`
+        /// into the materialized value of the resulting [[Flow]].
+        /// </summary>
+        public static Flow<TIn, TOut, TMat> FromSinkAndSource<TIn, TOut, TMat1, TMat2, TMat>(IGraph<SinkShape<TIn>, TMat1> sink, IGraph<SourceShape<TOut>, TMat2> source, Func<TMat1, TMat2, TMat> combine)
+        {
+            return
+                FromGraph(GraphDsl.Create(sink, source, combine,
+                    (builder, @in, @out) => new FlowShape<TIn, TOut>(@in.Inlet, @out.Outlet)));
+        }
     }
 
     internal sealed class FlowProcessor<TIn, TOut> : IProcessor<TIn, TOut>
