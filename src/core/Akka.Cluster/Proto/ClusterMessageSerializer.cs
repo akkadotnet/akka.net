@@ -456,7 +456,7 @@ namespace Akka.Cluster.Proto
                 return new Reachability(recordBuilder.ToImmutable(), versionsBuilder.ToImmutable());
             };
 
-            Func<Msg.Member, Member> memberFromProto = member => Member.Create(addressMapping[member.AddressIndex], MemberStatusFromProto[member.Status],
+            Func<Msg.Member, Member> memberFromProto = member => Member.Create(addressMapping[member.AddressIndex], member.HasUpNumber ? member.UpNumber : 0, MemberStatusFromProto[member.Status],
                 member.RolesIndexesList.Select(x => roleMapping[x]).ToImmutableHashSet());
 
             var members = gossip.MembersList.Select(memberFromProto).ToImmutableSortedSet(Member.Ordering);

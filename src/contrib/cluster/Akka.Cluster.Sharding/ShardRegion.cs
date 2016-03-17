@@ -92,8 +92,8 @@ namespace Akka.Cluster.Sharding
 
             public int Compare(Member x, Member y)
             {
-                if (y.IsOlderThan(x)) return -1;
-                return x.IsOlderThan(y) ? 1 : 0;
+                if (x.IsOlderThan(y)) return -1;
+                return y.IsOlderThan(x) ? 1 : 0;
             }
         }
 
