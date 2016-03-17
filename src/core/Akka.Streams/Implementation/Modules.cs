@@ -214,73 +214,9 @@ namespace Akka.Streams.Implementation
 
         public override IPublisher<TOut> Create(MaterializationContext context, out IActorRef materializer)
         {
-            materializer = ActorMaterializer.Downcast(context.Materializer).ActorOf(context, ActorRefSourceActor.Props(_bufferSize, _overflowStrategy));
+            var mat = ActorMaterializer.Downcast(context.Materializer);
+            materializer = mat.ActorOf(context, ActorRefSourceActor.Props(_bufferSize, _overflowStrategy, mat.Settings));
             return new ActorPublisherImpl<TOut>(materializer);
-        }
-    }
-
-    internal sealed class AcknowledgeSource<TOut> : SourceModule<TOut, ISourceQueue<TOut>>
-    {
-        #region SourceQueue
-
-        private class SourceQueue : ISourceQueue<TOut>
-        {
-            private readonly IActorRef _aref;
-            private readonly TimeSpan _timeout;
-
-            public SourceQueue(IActorRef aref, TimeSpan timeout)
-            {
-                _aref = aref;
-                _timeout = timeout;
-            }
-
-            public Task<bool> OfferAsync(TOut element)
-            {
-                return _aref.Ask(element, _timeout)
-                    .ContinueWith(t =>
-                    {
-                        if (t.Exception == null)
-                        {
-                            if (t.Result is AcknowledgePublisher.Ok) return true;
-                            if (t.Result is AcknowledgePublisher.Rejected) return false;
-                            throw new IllegalActorStateException(string.Format("{0} received message of type {1}, which cannot be handled", this.GetType(), t.Result.GetType()));
-                        }
-                        else throw t.Exception;
-                    });
-            }
-        } 
-
-        #endregion
-
-        private readonly int _bufferSize;
-        private readonly OverflowStrategy _overflowStrategy;
-        private readonly Attributes _attributes;
-        private readonly TimeSpan _timeout;
-
-        public AcknowledgeSource(int bufferSize, OverflowStrategy overflowStrategy, Attributes attributes, SourceShape<TOut> shape, TimeSpan? timeout = null) : base(shape)
-        {
-            _bufferSize = bufferSize;
-            _overflowStrategy = overflowStrategy;
-            _attributes = attributes;
-            _timeout = timeout ?? TimeSpan.FromSeconds(5);
-        }
-
-        public override Attributes Attributes { get { return _attributes; } }
-        public override IModule WithAttributes(Attributes attributes)
-        {
-            return new AcknowledgeSource<TOut>(_bufferSize, _overflowStrategy, attributes, AmendShape(attributes), _timeout);
-        }
-
-        protected override SourceModule<TOut, ISourceQueue<TOut>> NewInstance(SourceShape<TOut> shape)
-        {
-            return new AcknowledgeSource<TOut>(_bufferSize, _overflowStrategy, _attributes, shape, _timeout);
-        }
-
-        public override IPublisher<TOut> Create(MaterializationContext context, out ISourceQueue<TOut> materializer)
-        {
-            var aref = ActorMaterializer.Downcast(context.Materializer).ActorOf(context, AcknowledgePublisher.Props(_bufferSize, _overflowStrategy));
-            materializer = new SourceQueue(aref, _timeout);
-            return new ActorPublisherImpl<TOut>(aref);
         }
     }
 }

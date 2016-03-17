@@ -457,8 +457,8 @@ namespace Akka.Streams.Implementation
             var maxBuffer = Module.Attributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;
             if (maxBuffer <= 0) throw new ArgumentException("Buffer must be greater than zero", nameof(inheritedAttributes));
 
-            var buffer = FixedSizeBuffer.Create<Result<T>>(maxBuffer);
-            var currentRequest = default(TaskCompletionSource<T>);  
+            //var buffer = FixedSizeBuffer.Create<Result<T>>(maxBuffer);
+            //var currentRequest = default(TaskCompletionSource<T>);  
             
             var stageLogic = new QueueStageLogic(Shape, this);
             materialized = new SinkQueue(stageLogic);

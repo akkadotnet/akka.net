@@ -174,7 +174,8 @@ namespace Akka.Streams
                 isDebugLogging: config.GetBoolean("debug-logging"),
                 outputBurstLimit: config.GetInt("output-burst-limit"),
                 isFuzzingMode: config.GetBoolean("debug.fuzzing-mode"),
-                isAutoFusing: config.GetBoolean("auto-fusing"));
+                isAutoFusing: config.GetBoolean("auto-fusing"),
+                maxFixedBufferSize: config.GetInt("max-fixed-buffer-size"));
         }
 
         public readonly int InitialInputBufferSize;
@@ -186,8 +187,9 @@ namespace Akka.Streams
         public readonly int OutputBurstLimit;
         public readonly bool IsFuzzingMode;
         public readonly bool IsAutoFusing;
+        public readonly int MaxFixedBufferSize;
 
-        public ActorMaterializerSettings(int initialInputBufferSize, int maxInputBufferSize, string dispatcher, Decider supervisionDecider, StreamSubscriptionTimeoutSettings subscriptionTimeoutSettings, bool isDebugLogging, int outputBurstLimit, bool isFuzzingMode, bool isAutoFusing)
+        public ActorMaterializerSettings(int initialInputBufferSize, int maxInputBufferSize, string dispatcher, Decider supervisionDecider, StreamSubscriptionTimeoutSettings subscriptionTimeoutSettings, bool isDebugLogging, int outputBurstLimit, bool isFuzzingMode, bool isAutoFusing, int maxFixedBufferSize)
         {
             InitialInputBufferSize = initialInputBufferSize;
             MaxInputBufferSize = maxInputBufferSize;
@@ -198,36 +200,42 @@ namespace Akka.Streams
             OutputBurstLimit = outputBurstLimit;
             IsFuzzingMode = isFuzzingMode;
             IsAutoFusing = isAutoFusing;
+            MaxFixedBufferSize = maxFixedBufferSize;
         }
 
         public ActorMaterializerSettings WithInputBuffer(int initialSize, int maxSize)
         {
-            return new ActorMaterializerSettings(initialSize, maxSize, Dispatcher, SupervisionDecider, SubscriptionTimeoutSettings, IsDebugLogging, OutputBurstLimit, IsFuzzingMode, IsAutoFusing);
+            return new ActorMaterializerSettings(initialSize, maxSize, Dispatcher, SupervisionDecider, SubscriptionTimeoutSettings, IsDebugLogging, OutputBurstLimit, IsFuzzingMode, IsAutoFusing, MaxFixedBufferSize);
         }
 
         public ActorMaterializerSettings WithDispatcher(string dispatcher)
         {
-            return new ActorMaterializerSettings(InitialInputBufferSize, MaxInputBufferSize, dispatcher, SupervisionDecider, SubscriptionTimeoutSettings, IsDebugLogging, OutputBurstLimit, IsFuzzingMode, IsAutoFusing);
+            return new ActorMaterializerSettings(InitialInputBufferSize, MaxInputBufferSize, dispatcher, SupervisionDecider, SubscriptionTimeoutSettings, IsDebugLogging, OutputBurstLimit, IsFuzzingMode, IsAutoFusing, MaxFixedBufferSize);
         }
         
         public ActorMaterializerSettings WithSupervisionStrategy(Decider decider)
         {
-            return new ActorMaterializerSettings(InitialInputBufferSize, MaxInputBufferSize, Dispatcher, decider, SubscriptionTimeoutSettings, IsDebugLogging, OutputBurstLimit, IsFuzzingMode, IsAutoFusing);
+            return new ActorMaterializerSettings(InitialInputBufferSize, MaxInputBufferSize, Dispatcher, decider, SubscriptionTimeoutSettings, IsDebugLogging, OutputBurstLimit, IsFuzzingMode, IsAutoFusing, MaxFixedBufferSize);
         }
 
         public ActorMaterializerSettings WithDebugLogging(bool isEnabled)
         {
-            return new ActorMaterializerSettings(InitialInputBufferSize, MaxInputBufferSize, Dispatcher, SupervisionDecider, SubscriptionTimeoutSettings, isEnabled, OutputBurstLimit, IsFuzzingMode, IsAutoFusing);
+            return new ActorMaterializerSettings(InitialInputBufferSize, MaxInputBufferSize, Dispatcher, SupervisionDecider, SubscriptionTimeoutSettings, isEnabled, OutputBurstLimit, IsFuzzingMode, IsAutoFusing, MaxFixedBufferSize);
         }
 
         public ActorMaterializerSettings WithFuzzingMode(bool isFuzzingMode)
         {
-            return new ActorMaterializerSettings(InitialInputBufferSize, MaxInputBufferSize, Dispatcher, SupervisionDecider, SubscriptionTimeoutSettings, IsDebugLogging, OutputBurstLimit, isFuzzingMode, IsAutoFusing);
+            return new ActorMaterializerSettings(InitialInputBufferSize, MaxInputBufferSize, Dispatcher, SupervisionDecider, SubscriptionTimeoutSettings, IsDebugLogging, OutputBurstLimit, isFuzzingMode, IsAutoFusing, MaxFixedBufferSize);
         }
 
         public ActorMaterializerSettings WithAutoFusing(bool isAutoFusing)
         {
-            return new ActorMaterializerSettings(InitialInputBufferSize, MaxInputBufferSize, Dispatcher, SupervisionDecider, SubscriptionTimeoutSettings, IsDebugLogging, OutputBurstLimit, IsFuzzingMode, isAutoFusing);
+            return new ActorMaterializerSettings(InitialInputBufferSize, MaxInputBufferSize, Dispatcher, SupervisionDecider, SubscriptionTimeoutSettings, IsDebugLogging, OutputBurstLimit, IsFuzzingMode, isAutoFusing, MaxFixedBufferSize);
+        }
+
+        public ActorMaterializerSettings WithMaxFixedBufferSize(int maxFixedBufferSize)
+        {
+            return new ActorMaterializerSettings(InitialInputBufferSize, MaxInputBufferSize, Dispatcher, SupervisionDecider, SubscriptionTimeoutSettings, IsDebugLogging, OutputBurstLimit, IsFuzzingMode, IsAutoFusing, maxFixedBufferSize);
         }
     }
 

@@ -23,7 +23,8 @@ namespace Akka.Streams.TestKit.Tests
             }
           }")
             .WithFallback(ConfigurationFactory.FromResource<AkkaSpec>("Akka.Streams.TestKit.Tests.reference.conf"))
-            .WithFallback(Akka.TestKit.Configs.TestConfigs.TestSchedulerConfig);
+            .WithFallback(Akka.TestKit.Configs.TestConfigs.TestSchedulerConfig)
+            .WithFallback(ConfigurationFactory.FromResource<ActorMaterializer>("Akka.Streams.reference.conf"));
 
         protected AkkaSpec(ActorSystem system, ITestOutputHelper output = null) : base(system, output)
         {
