@@ -257,7 +257,7 @@ namespace Akka.Streams.Implementation.Fusing
         }
     }
 
-    internal interface IMaterializedValueSource
+    public interface IMaterializedValueSource
     {
         IMaterializedValueSource CopySource();
         Outlet Outlet { get; }

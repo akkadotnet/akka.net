@@ -69,6 +69,8 @@
     <Compile Include="Dsl\FlowMapConcatSpec.cs" />
     <Compile Include="Dsl\FlowMapSpec.cs" />
     <Compile Include="Implementation\ResizableMultiReaderRingBufferSpec.cs" />
+    <Compile Include="Implementation\Fusing\GraphInterpreterSpecKit.cs" />
+    <Compile Include="Implementation\Fusing\InterpreterSpec.cs" />
     <Compile Include="Implementation\StreamLayoutSpec.cs" />
     <Compile Include="IO\FileSinkSpec.cs" />
     <Compile Include="IO\FileSourceSpec.cs" />

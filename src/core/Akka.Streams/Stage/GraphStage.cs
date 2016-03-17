@@ -4,7 +4,6 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Reactive.Streams;
 using System.Runtime.Serialization;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -288,7 +287,7 @@ namespace Akka.Streams.Stage
 
             public override void OnPush()
             {
-                var element = _logic.Grab(_inlet);
+                var element = _logic.Grab<T>(_inlet);
                 if (_n == 1) _logic.SetHandler(_inlet, Previous);
                 else
                 {
@@ -460,7 +459,7 @@ namespace Akka.Streams.Stage
 
             public override void OnPush()
             {
-                _logic.Emit(To, _logic.Grab(From), Apply);
+                _logic.Emit(To, _logic.Grab<TOut>(From), Apply);
             }
 
             public override void OnUpstreamFinish()
@@ -629,7 +628,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Assigns callbacks for the events for an <see cref="Inlet{T}"/>.
         /// </summary>
-        internal protected void SetHandler(Inlet inlet, InHandler handler)
+        protected internal void SetHandler(Inlet inlet, InHandler handler)
         {
             Handlers[inlet.Id] = handler;
             if (Interpreter != null) Interpreter.SetHandler(GetConnection(inlet), handler);
@@ -638,7 +637,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Assigns callbacks for the events for an <see cref="Outlet{T}"/>.
         /// </summary>
-        internal protected void SetHandler(Inlet inlet, Action onPush, Action onUpstreamFinish = null, Action<Exception> onUpstreamFailure = null)
+        protected internal void SetHandler(Inlet inlet, Action onPush, Action onUpstreamFinish = null, Action<Exception> onUpstreamFailure = null)
         {
             if (onPush == null) throw new ArgumentNullException("onPush", "GraphStageLogic onPush handler must be provided");
             SetHandler(inlet, new LambdaInHandler(onPush, onUpstreamFinish, onUpstreamFailure));
@@ -700,7 +699,7 @@ namespace Akka.Streams.Stage
         /// There can only be one outstanding request at any given time.The method <see cref="HasBeenPulled{T}"/> can be used
         /// query whether pull is allowed to be called or not.This method will also fail if the port is already closed.
         /// </summary>
-        internal protected void Pull<T>(Inlet<T> inlet)
+        protected internal void Pull<T>(Inlet inlet)
         {
             var conn = GetConnection(inlet);
             if ((Interpreter.PortStates[conn] & (GraphInterpreter.InReady | GraphInterpreter.InClosed)) == GraphInterpreter.InReady)
@@ -716,20 +715,41 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
+        /// Requests an element on the given port. Calling this method twice before an element arrived will fail.
+        /// There can only be one outstanding request at any given time.The method <see cref="HasBeenPulled{T}"/> can be used
+        /// query whether pull is allowed to be called or not.This method will also fail if the port is already closed.
+        /// </summary>
+        protected internal void Pull<T>(Inlet<T> inlet)
+        {
+            Pull<T>((Inlet) inlet);
+        }
+
+        /// <summary>
         /// Requests an element on the given port unless the port is already closed.
         /// Calling this method twice before an element arrived will fail.
         /// There can only be one outstanding request at any given time.The method <see cref="HasBeenPulled{T}"/> can be used
         /// query whether pull is allowed to be called or not.
         /// </summary>
-        internal protected void TryPull<T>(Inlet<T> inlet)
+        protected internal void TryPull<T>(Inlet inlet)
         {
-            if (!IsClosed(inlet)) Pull(inlet);
+            if (!IsClosed(inlet)) Pull<T>(inlet);
+        }
+
+        /// <summary>
+        /// Requests an element on the given port unless the port is already closed.
+        /// Calling this method twice before an element arrived will fail.
+        /// There can only be one outstanding request at any given time.The method <see cref="HasBeenPulled{T}"/> can be used
+        /// query whether pull is allowed to be called or not.
+        /// </summary>
+        protected internal void TryPull<T>(Inlet<T> inlet)
+        {
+            TryPull<T>((Inlet) inlet);
         }
 
         /// <summary>
         /// Requests to stop receiving events from a given input port. Cancelling clears any ungrabbed elements from the port.
         /// </summary>
-        protected void Cancel<T>(Inlet<T> inlet)
+        protected void Cancel(Inlet inlet)
         {
             Interpreter.Cancel(GetConnection(inlet));
         }
@@ -741,7 +761,7 @@ namespace Akka.Streams.Stage
         /// 
         /// The method <see cref="IsAvailable{T}"/> can be used to query if the port has an element that can be grabbed or not.
         /// </summary>
-        internal protected T Grab<T>(Inlet<T> inlet)
+        protected internal T Grab<T>(Inlet inlet)
         {
             var connection = GetConnection(inlet);
             var element = Interpreter.ConnectionSlots[connection];
@@ -763,10 +783,22 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
+        /// Once the callback <see cref="InHandler.OnPush"/> for an input port has been invoked, the element that has been pushed
+        /// can be retrieved via this method. After <see cref="Grab{T}"/> has been called the port is considered to be empty, and further
+        /// calls to <see cref="Grab{T}"/> will fail until the port is pulled again and a new element is pushed as a response.
+        /// 
+        /// The method <see cref="IsAvailable{T}"/> can be used to query if the port has an element that can be grabbed or not.
+        /// </summary>
+        protected internal T Grab<T>(Inlet<T> inlet)
+        {
+            return Grab<T>((Inlet) inlet);
+        }
+
+        /// <summary>
         /// Indicates whether there is already a pending pull for the given input port. If this method returns true 
         /// then <see cref="IsAvailable{T}"/> must return false for that same port.
         /// </summary>
-        protected bool HasBeenPulled<T>(Inlet<T> inlet)
+        protected bool HasBeenPulled(Inlet inlet)
         {
             return (Interpreter.PortStates[GetConnection(inlet)] & (GraphInterpreter.InReady | GraphInterpreter.InClosed)) == 0;
         }
@@ -777,7 +809,7 @@ namespace Akka.Streams.Stage
         /// 
         /// If this method returns true then <see cref="HasBeenPulled{T}"/> will return false for that same port.
         /// </summary>
-        internal protected bool IsAvailable<T>(Inlet<T> inlet)
+        protected internal bool IsAvailable(Inlet inlet)
         {
             var connection = GetConnection(inlet);
             var normalArrived = (Interpreter.PortStates[connection] & (GraphInterpreter.InReady & GraphInterpreter.InFailed)) == GraphInterpreter.InReady;
@@ -804,7 +836,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Indicates whether the port has been closed. A closed port cannot be pulled.
         /// </summary>
-        protected bool IsClosed<T>(Inlet<T> inlet)
+        protected bool IsClosed(Inlet inlet)
         {
             return (Interpreter.PortStates[GetConnection(inlet)] & GraphInterpreter.InClosed) != 0;
         }
@@ -814,7 +846,7 @@ namespace Akka.Streams.Stage
         /// will fail. There can be only one outstanding push request at any given time. The method <see cref="IsAvailable{T}"/> can be
         /// used to check if the port is ready to be pushed or not.
         /// </summary>
-        internal protected void Push<T>(Outlet<T> outlet, T element)
+        protected internal void Push<T>(Outlet outlet, T element)
         {
             var connection = GetConnection(outlet);
             if ((Interpreter.PortStates[connection] & (GraphInterpreter.OutReady | GraphInterpreter.OutClosed)) == GraphInterpreter.OutReady && (element != null))
@@ -828,6 +860,18 @@ namespace Akka.Streams.Stage
                 if (!IsAvailable(outlet)) throw new ArgumentException("Cannot push port twice");
                 if (IsClosed(outlet)) throw new ArgumentException("Cannot pull closed port");
             }
+        }
+
+        /// <summary>
+        /// Controls whether this stage shall shut down when all its ports are closed, which
+        /// is the default. In order to have it keep going past that point this method needs
+        /// to be called with a `true` argument before all ports are closed, and afterwards
+        /// it will not be closed until this method is called with a `false` argument or the
+        /// stage is terminated via `completeStage()` or `failStage()`.
+        /// </summary>
+        protected void SetKeepGoing(bool enabled)
+        {
+            Interpreter.SetKeepGoing(this, enabled);
         }
 
         /// <summary>
@@ -848,7 +892,7 @@ namespace Akka.Streams.Stage
         /// </summary>
         protected void Fail(Outlet outlet, Exception reason)
         {
-            Interpreter.Fail(GetConnection(outlet), reason, isInternal: false);
+            Interpreter.Fail(GetConnection(outlet), reason);
         }
 
         /// <summary>
@@ -871,7 +915,7 @@ namespace Akka.Streams.Stage
                 }
             }
 
-            if (KeepGoingAfterAllPortsClosed) Interpreter.CloseKeepAliveStageIfNeeded(StageId);
+            SetKeepGoing(false);
         }
 
         /// <summary>
@@ -880,30 +924,19 @@ namespace Akka.Streams.Stage
         /// </summary>
         public void FailStage(Exception reason)
         {
-            FailStage(reason, isInternal: false);
-        }
-
-        /// <summary>
-        /// INTERNAL API
-        /// 
-        /// Used to signal errors caught by the interpreter itself. This method logs failures if the stage has been
-        /// already closed if <paramref name="isInternal"/> is set to true.
-        /// </summary>
-        internal void FailStage(Exception reason, bool isInternal)
-        {
             for (int i = 0; i < PortToConn.Length; i++)
             {
                 if (i < InCount) Interpreter.Cancel(PortToConn[i]);
-                else Interpreter.Fail(PortToConn[i], reason, isInternal);
+                else Interpreter.Fail(PortToConn[i], reason);
             }
 
-            if (KeepGoingAfterAllPortsClosed) Interpreter.CloseKeepAliveStageIfNeeded(StageId);
+            SetKeepGoing(false);
         }
 
         /// <summary>
         /// Return true if the given output port is ready to be pushed.
         /// </summary>
-        internal protected bool IsAvailable<T>(Outlet<T> outlet)
+        protected internal bool IsAvailable(Outlet outlet)
         {
             return (Interpreter.PortStates[GetConnection(outlet)] & (GraphInterpreter.OutReady | GraphInterpreter.OutClosed)) == GraphInterpreter.OutReady;
         }
@@ -911,7 +944,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Indicates whether the port has been closed. A closed port cannot be pushed.
         /// </summary>
-        protected bool IsClosed<T>(Outlet<T> outlet)
+        protected bool IsClosed(Outlet outlet)
         {
             return (Interpreter.PortStates[GetConnection(outlet)] & GraphInterpreter.OutClosed) != 0;
         }
@@ -925,7 +958,7 @@ namespace Akka.Streams.Stage
         protected void ReadMany<T>(Inlet<T> inlet, int n, Action<IEnumerable<T>> andThen, Action<IEnumerable<T>> onClose)
         {
             if (n < 0) throw new ArgumentException("Cannot read negative number of elements");
-            else if (n == 0) andThen(null);
+            if (n == 0) andThen(null);
             else
             {
                 var result = new T[n];
@@ -941,7 +974,7 @@ namespace Akka.Streams.Stage
 
                 if (IsAvailable(inlet))
                 {
-                    var element = Grab(inlet);
+                    var element = Grab<T>(inlet);
                     result[0] = element;
                     if (n == 1) andThen(result);
                     else
@@ -971,7 +1004,7 @@ namespace Akka.Streams.Stage
         protected void Read<T>(Inlet<T> inlet, Action<T> andThen, Action onClose)
         {
             if (IsAvailable(inlet))
-                andThen(Grab(inlet));
+                andThen(Grab<T>(inlet));
             else if (IsClosed(inlet))
                 onClose();
             else
@@ -1115,7 +1148,7 @@ namespace Akka.Streams.Stage
             var passHandler = new PassAlongHandler<TOut, TIn>(from, to, this, doFinish, doFail);
             if (Interpreter == null)
             {
-                if (IsAvailable(from)) Emit(to, Grab(from), passHandler.Apply);
+                if (IsAvailable(from)) Emit(to, Grab<TIn>(from), passHandler.Apply);
                 if (doFinish && IsClosed(from)) CompleteStage();
             }
 
