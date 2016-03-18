@@ -164,7 +164,7 @@ namespace Akka.Streams.Implementation
 
             if (print)
             {
-                var indent = string.Empty.PadLeft(level*2);
+                var indent = string.Empty.PadLeft(level * 2);
                 Console.Out.WriteLine("{0}{1}({2}): {3} {4}", indent, typeof(StreamLayout).Name, shape, ins(inPorts), outs(outPorts));
                 foreach (var downstream in module.Downstreams)
                 {
@@ -416,7 +416,7 @@ namespace Akka.Streams.Implementation
             if (ReferenceEquals(this, that)) throw new ArgumentException("A module cannot be added to itself. You should pass a separate instance to Compose().");
             if (SubModules.Contains(that)) throw new ArgumentException("An existing submodule cannot be added again. All contained modules must be unique.");
 
-            var module1 = IsSealed ? ImmutableArray.Create <IModule>(this) : SubModules;
+            var module1 = IsSealed ? ImmutableArray.Create<IModule>(this) : SubModules;
             var module2 = that.IsSealed ? ImmutableArray.Create<IModule>(that) : that.SubModules;
 
             var matComputation = IsSealed ? new StreamLayout.Atomic(this) : MaterializedValueComputation;
@@ -455,7 +455,7 @@ namespace Akka.Streams.Implementation
 
         public bool IsSealed => IsAtomic || IsCopied;
         public virtual IImmutableDictionary<OutPort, InPort> Downstreams => ImmutableDictionary<OutPort, InPort>.Empty;
-        public virtual IImmutableDictionary<InPort, OutPort> Upstreams => ImmutableDictionary<InPort, OutPort>.Empty ;
+        public virtual IImmutableDictionary<InPort, OutPort> Upstreams => ImmutableDictionary<InPort, OutPort>.Empty;
         public virtual StreamLayout.IMaterializedValueNode MaterializedValueComputation => new StreamLayout.Atomic(this);
 
         public abstract Shape Shape { get; }
@@ -963,11 +963,15 @@ namespace Akka.Streams.Implementation
         private object ResolveMaterialized(StreamLayout.IMaterializedValueNode node, IDictionary<IModule, object> values, string indent)
         {
             object result;
-            if (node is StreamLayout.Atomic) result = values[((StreamLayout.Atomic)node).Module];
+            if (node is StreamLayout.Atomic)
+            {
+                if (!values.TryGetValue(((StreamLayout.Atomic)node).Module, out result)) result = null;
+            }
             else if (node is StreamLayout.Combine)
             {
                 var combine = node as StreamLayout.Combine;
-                result = combine.Combinator(ResolveMaterialized(combine.Left, values, indent + "  "), ResolveMaterialized(combine.Right, values, indent + "  "));
+                result = combine.Combinator(ResolveMaterialized(combine.Left, values, indent + "  "),
+                    ResolveMaterialized(combine.Right, values, indent + "  "));
             }
             else if (node is StreamLayout.Transform)
             {
