@@ -1071,12 +1071,17 @@ namespace Akka.Streams.Stage
                     Push(outlet, enumerator.Current);
 
                     if (enumerator.MoveNext())
-                        SetOrAddEmitting(outlet, new EmittingIterator<T>(outlet, enumerator, GetNonEmittingHandler(outlet), andThen, this));
+                        SetOrAddEmitting(outlet,
+                            new EmittingIterator<T>(outlet, enumerator, GetNonEmittingHandler(outlet), andThen, this));
                     else
                         andThen();
                 }
-                else SetOrAddEmitting(outlet, new EmittingIterator<T>(outlet, enumerator, GetNonEmittingHandler(outlet), andThen, this));
+                else
+                    SetOrAddEmitting(outlet,
+                        new EmittingIterator<T>(outlet, enumerator, GetNonEmittingHandler(outlet), andThen, this));
             }
+            else
+                andThen();
         }
 
         /// <summary>

@@ -4,6 +4,7 @@ using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Actors;
+using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Util;
 
@@ -395,6 +396,60 @@ namespace Akka.Streams.Implementation
             materialized = promise.Task;
             return new FirstOrDefaultLogic(Shape, promise, this);
         }
+    }
+
+    internal sealed class SeqStage<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<IImmutableList<T>>>
+    {
+        #region stage logic
+
+        private sealed class SeqStageLogic : GraphStageLogic
+        {
+            private readonly SeqStage<T> _stage;
+            private IImmutableList<T> _buf = ImmutableList<T>.Empty; 
+
+            public SeqStageLogic(SeqStage<T> stage, TaskCompletionSource<IImmutableList<T>> promise) : base(stage.Shape)
+            {
+                _stage = stage;
+
+                SetHandler(stage._in, onPush: () =>
+                {
+                    _buf = _buf.Add(Grab(stage._in));
+                    Pull(stage._in);
+                }, onUpstreamFinish: () =>
+                {
+                    promise.TrySetResult(_buf);
+                    CompleteStage();
+                }, onUpstreamFailure: ex =>
+                {
+                    promise.TrySetException(ex);
+                    FailStage(ex);
+                });
+            }
+
+            public override void PreStart() => Pull(_stage._in);
+        }
+
+        #endregion
+
+        private readonly Inlet<T> _in = new Inlet<T>("Seq.in");
+
+        public SeqStage()
+        {
+            Shape = new SinkShape<T>(_in);
+        }
+
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.SeqSink;
+
+        public override SinkShape<T> Shape { get; }
+
+        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Task<IImmutableList<T>> materialized)
+        {
+            var promise = new TaskCompletionSource<IImmutableList<T>>();
+            materialized = promise.Task;
+            return new SeqStageLogic(this, promise);
+        }
+
+        public override string ToString() => "SeqStage";
     }
 
     internal class QueueSink<T> : GraphStageWithMaterializedValue<SinkShape<T>, ISinkQueue<T>>

@@ -165,41 +165,41 @@ namespace Akka.Streams.Implementation.Fusing
     {
         private readonly Func<TIn, IEnumerable<TOut>> _func;
         private readonly Decider _decider;
-        private IEnumerator<TOut> _currentEnumerator;
+        private IIterator<TOut> _currentIterator;
 
         public MapConcat(Func<TIn, IEnumerable<TOut>> func, Decider decider)
         {
             _func = func;
             _decider = decider;
-            _currentEnumerator = Enumerable.Empty<TOut>().GetEnumerator();
+            _currentIterator = new IteratorAdapter<TOut>(Enumerable.Empty<TOut>().GetEnumerator());
         }
 
         public override ISyncDirective OnPush(TIn element, IContext<TOut> context)
         {
-            _currentEnumerator = _func(element).GetEnumerator();
-            return !_currentEnumerator.MoveNext() ? (ISyncDirective)context.Pull() : context.Push(_currentEnumerator.Current);
+            _currentIterator = new IteratorAdapter<TOut>(_func(element).GetEnumerator());
+            return !_currentIterator.HasNext() ? (ISyncDirective)context.Pull() : context.Push(_currentIterator.Next());
         }
 
         public override ISyncDirective OnPull(IContext<TOut> context)
         {
             if (context.IsFinishing)
             {
-                if (_currentEnumerator.MoveNext())
+                if (_currentIterator.HasNext())
                 {
-                    var element = _currentEnumerator.Current;
-                    return _currentEnumerator.MoveNext() ? context.Push(element) : context.PushAndFinish(element);
+                    var element = _currentIterator.Next();
+                    return _currentIterator.HasNext() ? context.Push(element) : context.PushAndFinish(element);
                 }
                 else return context.Finish();
             }
             else
             {
-                return _currentEnumerator.MoveNext() ? (ISyncDirective)context.Push(_currentEnumerator.Current) : context.Pull();
+                return _currentIterator.HasNext() ? (ISyncDirective)context.Push(_currentIterator.Next()) : context.Pull();
             }
         }
 
         public override ITerminationDirective OnUpstreamFinish(IContext<TOut> context)
         {
-            return _currentEnumerator.MoveNext() ? context.AbsorbTermination() : context.Finish();
+            return _currentIterator.HasNext() ? context.AbsorbTermination() : context.Finish();
         }
 
         public override Directive Decide(Exception cause)

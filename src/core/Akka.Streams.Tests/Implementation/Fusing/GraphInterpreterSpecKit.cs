@@ -168,6 +168,25 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             }
         }
 
+        public class BaseBuilderSetup<T> : BaseBuilder
+        {
+            public BaseBuilderSetup(ActorSystem system) : base(system)
+            {
+
+            }
+
+            public GraphInterpreter Build(GraphInterpreter.UpstreamBoundaryStageLogic upstream, GraphStage<FlowShape<T, T>>[] ops, GraphInterpreter.DownstreamBoundaryStageLogic downstream)
+            {
+                var b = Builder(ops).Connect(upstream, ops[0].Shape.Inlet);
+                for (var i = 0; i < ops.Length - 1; i++)
+                    b.Connect(ops[i].Shape.Outlet, ops[i + 1].Shape.Inlet);
+                b.Connect(ops[ops.Length - 1].Shape.Outlet, downstream);
+                b.Init();
+
+                return Interpreter;
+            }
+        }
+
         public abstract class TestSetup : BaseBuilder
         {
             public interface ITestEvent
@@ -986,6 +1005,12 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             var setup = new OneBoundedSetup<TIn, TOut>(Sys, ops);
             spec(setup.LastEvents, setup.Upstream, setup.Downstream);
+        }
+
+        public void WithBaseBuilderSetup<T>(GraphStage<FlowShape<T, T>>[] ops, Action<GraphInterpreter> spec)
+        {
+            var interpreter = new BaseBuilderSetup<T>(Sys).Build(new BaseBuilder.Upstream(), ops, new BaseBuilder.Downstream());
+            spec(interpreter);
         }
     }
 }

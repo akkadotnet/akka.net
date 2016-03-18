@@ -72,6 +72,7 @@
     <Compile Include="Implementation\Fusing\GraphInterpreterSpecKit.cs" />
     <Compile Include="Implementation\Fusing\InterpreterSpec.cs" />
     <Compile Include="Implementation\FixedBufferSpec.cs" />
+    <Compile Include="Implementation\GraphStageLogicSpec.cs" />
     <Compile Include="Implementation\StreamLayoutSpec.cs" />
     <Compile Include="IO\FileSinkSpec.cs" />
     <Compile Include="IO\FileSourceSpec.cs" />
