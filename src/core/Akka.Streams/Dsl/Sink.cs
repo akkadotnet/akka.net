@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Immutable;
 using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -113,6 +114,11 @@ namespace Akka.Streams.Dsl
         public static Sink<TIn, Task<TIn>> LastOrDefault<TIn>()
         {
             return FromGraph(new LastOrDefault<TIn>().WithAttributes(DefaultAttributes.LastOrDefaultSink));
+        }
+
+        public static Sink<TIn, Task<IImmutableList<TIn>>> Seq<TIn>()
+        {
+            return FromGraph(new SeqStage<TIn>());
         }
 
         /// <summary>

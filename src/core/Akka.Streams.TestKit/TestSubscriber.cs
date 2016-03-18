@@ -66,7 +66,7 @@ namespace Akka.Streams.TestKit
                 _probe = testKit.CreateTestProbe();
             }
 
-            public ISubscription Subscription { get; protected set; }
+            private volatile ISubscription _subscription;
 
             public void OnSubscribe(ISubscription subscription)
             {
@@ -98,7 +98,8 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public ISubscription ExpectSubscription()
             {
-                return Subscription = _probe.ExpectMsg<OnSubscribe>().Subscription;
+                _subscription = _probe.ExpectMsg<OnSubscribe>().Subscription;
+                return _subscription;
             }
 
             /// <summary>
@@ -163,7 +164,7 @@ namespace Akka.Streams.TestKit
                 var e = ExpectNextN(len).ToArray();
                 AssertEquals(e.Length, len, "expected to get {0} events, but got {1}", len, e.Length);
                 AssertEquals(e[0], e1, "expected [0] element to be {0} but found {1}", e1, e[0]);
-                AssertEquals(e[1], e2, "expected [1] element to be {0} but found {1}", e1, e[0]);
+                AssertEquals(e[1], e2, "expected [1] element to be {0} but found {1}", e2, e[1]);
                 for (int i = 0; i < elems.Length; i++)
                 {
                     var j = i + 2;
@@ -388,8 +389,8 @@ namespace Akka.Streams.TestKit
             {
                 var deadline = DateTime.UtcNow + atMost;
                 // if no subscription was obtained yet, we expect it
-                if (Subscription == null) ExpectSubscription();
-                Subscription.Request(long.MaxValue);
+                if (_subscription == null) ExpectSubscription();
+                _subscription.Request(long.MaxValue);
 
                 while (true)
                 {
@@ -419,40 +420,44 @@ namespace Akka.Streams.TestKit
         /// </summary>
         public class Probe<T> : ManualProbe<T>
         {
+            private readonly Lazy<ISubscription> _subscription;
+
             internal Probe(TestKitBase testKit) : base(testKit)
             {
+                _subscription = new Lazy<ISubscription>(ExpectSubscription);
             }
 
             /// <summary>
             /// Asserts that a subscription has been received or will be received
             /// </summary>
-            public void EnsureSubscription()
+            public Probe<T> EnsureSubscription()
             {
-                ExpectSubscription();
+                var _ = _subscription.Value; // initializes lazy val
+                return this;
             }
 
             public Probe<T> Request(long n)
             {
-                Subscription.Request(n);
+                _subscription.Value.Request(n);
                 return this;
             }
 
             public Probe<T> RequestNext(T element)
             {
-                Subscription.Request(1);
+                _subscription.Value.Request(1);
                 ExpectNext(element);
                 return this;
             }
 
             public Probe<T> Cancel()
             {
-                Subscription.Cancel();
+                _subscription.Value.Cancel();
                 return this;
             }
 
             public T RequestNext()
             {
-                Subscription.Request(1);
+                _subscription.Value.Request(1);
                 return ExpectNext();
             }
         }

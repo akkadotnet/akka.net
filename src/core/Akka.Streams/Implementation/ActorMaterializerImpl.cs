@@ -98,9 +98,10 @@ namespace Akka.Streams.Implementation
                 var inletsEnumerator = graph.Shape.Inlets.GetEnumerator();
                 while (inletsEnumerator.MoveNext())
                 {
-                    //TODO: objects are not valid here, we need to think how to overcome reified generics here :/
-                    var subscriber = new ActorGraphInterpreter.BoundarySubscriber<object>(impl, shell, i);
-                    AssignPort(inletsEnumerator.Current, subscriber);
+                    var inlet = inletsEnumerator.Current;
+                    var elementType = inlet.GetType().GetGenericArguments().First();
+                    var subscriber = typeof(ActorGraphInterpreter.BoundarySubscriber<>).Instantiate(elementType, impl, shell, i);
+                    AssignPort(inlet, (ISubscriber)subscriber);
                     i++;
                 }
 

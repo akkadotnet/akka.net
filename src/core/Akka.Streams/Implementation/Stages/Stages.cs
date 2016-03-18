@@ -88,6 +88,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes InputStreamSink = Attributes.CreateName("inputStreamSink").And(IODispatcher);
         public static readonly Attributes OutputStreamSink = Attributes.CreateName("outputStreamSink").And(IODispatcher);
         public static readonly Attributes FileSink = Attributes.CreateName("fileSink").And(IODispatcher);
+        public static readonly Attributes SeqSink = Attributes.CreateName("seqSink");
     }
     
     // FIXME: To be deprecated as soon as stream-of-stream operations are stages

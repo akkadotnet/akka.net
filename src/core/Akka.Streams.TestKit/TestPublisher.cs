@@ -145,7 +145,7 @@ namespace Akka.Streams.TestKit
             internal Probe(TestKitBase system, long initialPendingRequests) : base(system)
             {
                 _initialPendingRequests = Pending = initialPendingRequests;
-                _subscription = new Lazy<StreamTestKit.PublisherProbeSubscription<T>>(() => (StreamTestKit.PublisherProbeSubscription<T>)ExpectSubscription());
+                _subscription = new Lazy<StreamTestKit.PublisherProbeSubscription<T>>(ExpectSubscription);
             }
 
             /// <summary>
