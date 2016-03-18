@@ -2366,6 +2366,7 @@ namespace Akka.Dispatch
     public class Mailboxes
     {
         public static readonly string DefaultMailboxId;
+        public static readonly string NoMailboxRequirement;
         public Mailboxes(Akka.Actor.ActorSystem system) { }
         public Akka.Actor.DeadLetterMailbox DeadLetterMailbox { get; }
         public Akka.Dispatch.Mailbox CreateMailbox(Akka.Actor.Props props, Akka.Configuration.Config dispatcherConfig) { }
