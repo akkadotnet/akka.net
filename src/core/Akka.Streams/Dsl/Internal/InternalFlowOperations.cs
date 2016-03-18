@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Streams;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Akka.Event;
 using Akka.IO;
@@ -588,6 +589,9 @@ namespace Akka.Streams.Dsl.Internal
         /// until the subscriber is ready to accept them. For example a conflate step might average incoming numbers if the
         /// upstream publisher is faster.
         /// 
+        /// This version of conflate allows to derive a seed from the first element and change the aggregated type to
+        /// be different than the input type. See <see cref="Conflate{T,TMat}"/> for a simpler version that does not change types.
+        /// 
         /// This element only rolls up elements if the upstream is faster, but if the downstream is faster it will not
         /// duplicate elements.
         /// <para>
@@ -601,9 +605,34 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         /// <param name="seed">Provides the first state for a conflated value using the first unconsumed element as a start</param> 
         /// <param name="aggregate">Takes the currently aggregated value and the current pending element to produce a new aggregate</param>
-        public static IFlow<TSeed, TMat> Conflate<T, TMat, TSeed>(this IFlow<T, TMat> flow, Func<T, TSeed> seed, Func<TSeed, T, TSeed> aggregate)
+        public static IFlow<TSeed, TMat> ConflateWithSeed<T, TMat, TSeed>(this IFlow<T, TMat> flow, Func<T, TSeed> seed, Func<TSeed, T, TSeed> aggregate)
         {
-            return flow.AndThen(new Conflate<T, TSeed>(seed, aggregate));
+            return flow.Via(new Fusing.Batch<T, TSeed>(1L, elem => 0L, seed, aggregate));
+        }
+
+        /// <summary>
+        /// Allows a faster upstream to progress independently of a slower subscriber by conflating elements into a summary
+        /// until the subscriber is ready to accept them. For example a conflate step might average incoming numbers if the
+        /// upstream publisher is faster.
+        /// 
+        /// This version of conflate does not change the output type of the stream. See <see cref="ConflateWithSeed{T,TMat,TSeed}"/>
+        /// for a more flexible version that can take a seed function and transform elements while rolling up.
+        /// 
+        /// This element only rolls up elements if the upstream is faster, but if the downstream is faster it will not
+        /// duplicate elements.
+        /// <para>
+        /// '''Emits when''' downstream stops backpressuring and there is a conflated element available
+        /// </para>
+        /// '''Backpressures when''' never
+        /// <para>
+        /// '''Completes when''' upstream completes
+        /// </para>
+        /// '''Cancels when''' downstream cancels
+        /// </summary>
+        /// <param name="aggregate">Takes the currently aggregated value and the current pending element to produce a new aggregate</param>
+        public static IFlow<T, TMat> Conflate<T, TMat>(this IFlow<T, TMat> flow, Func<T, T, T> aggregate)
+        {
+            return ConflateWithSeed(flow, o => o, aggregate);
         }
 
         /// <summary>
@@ -626,11 +655,10 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        /// <param name="seed">Provides the first state for extrapolation using the first unconsumed element</param>
         /// <param name="extrapolate">Takes the current extrapolation state to produce an output element and the next extrapolation state.</param>
-        public static IFlow<TOut, TMat> Expand<TIn, TOut, TMat, TState>(this IFlow<TIn, TMat> flow, Func<TIn, TState> seed, Func<TState, Tuple<TOut, TState>> extrapolate)
+        public static IFlow<TOut, TMat> Expand<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, IEnumerator<TOut>> extrapolate)
         {
-            return flow.AndThen(new Expand<TIn, TOut, TState>(seed, extrapolate));
+            return flow.Via(new Fusing.Expand<TIn, TOut>(extrapolate));
         }
 
         /// <summary>

@@ -31,6 +31,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes Scan = Attributes.CreateName("scan");
         public static readonly Attributes Fold = Attributes.CreateName("fold");
         public static readonly Attributes Buffer = Attributes.CreateName("buffer");
+        public static readonly Attributes Batch = Attributes.CreateName("batch");
         public static readonly Attributes Conflate = Attributes.CreateName("conflate");
         public static readonly Attributes Expand = Attributes.CreateName("expand");
         public static readonly Attributes MapConcat = Attributes.CreateName("mapConcat");
@@ -364,40 +365,6 @@ namespace Akka.Streams.Implementation.Stages
         public override IStage<T, T> Create(Attributes effectiveAttributes)
         {
             return new Fusing.Buffer<T>(_size, _overflowStrategy);
-        }
-    }
-
-    internal sealed class Conflate<TIn, TOut> : SymbolicStage<TIn, TOut>
-    {
-        private readonly Func<TIn, TOut> _seed;
-        private readonly Func<TOut, TIn, TOut> _aggregate;
-
-        public Conflate(Func<TIn, TOut> seed, Func<TOut, TIn, TOut> aggregate, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Conflate)
-        {
-            _seed = seed;
-            _aggregate = aggregate;
-        }
-
-        public override IStage<TIn, TOut> Create(Attributes effectiveAttributes)
-        {
-            return new Fusing.Conflate<TIn, TOut>(_seed, _aggregate, Supervision(effectiveAttributes));
-        }
-    }
-
-    internal sealed class Expand<TIn, TOut, TSeed> : SymbolicStage<TIn, TOut>
-    {
-        private readonly Func<TIn, TSeed> _seed;
-        private readonly Func<TSeed, Tuple<TOut, TSeed>> _extrapolate;
-
-        public Expand(Func<TIn, TSeed> seed, Func<TSeed, Tuple<TOut, TSeed>> extrapolate, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Expand)
-        {
-            _seed = seed;
-            _extrapolate = extrapolate;
-        }
-
-        public override IStage<TIn, TOut> Create(Attributes effectiveAttributes)
-        {
-            return new Fusing.Expand<TIn, TOut, TSeed>(_seed, _extrapolate);
         }
     }
 

@@ -4,10 +4,8 @@ using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
-using Akka.IO;
 using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Stage;
-using Akka.Streams.Supervision;
 
 namespace Akka.Streams.Dsl
 {
@@ -506,6 +504,9 @@ namespace Akka.Streams.Dsl
         /// until the subscriber is ready to accept them. For example a conflate step might average incoming numbers if the
         /// upstream publisher is faster.
         /// 
+        /// This version of conflate allows to derive a seed from the first element and change the aggregated type to
+        /// be different than the input type. See <see cref="Conflate{TIn,TOut,TMat}"/> for a simpler version that does not change types.
+        /// 
         /// This element only rolls up elements if the upstream is faster, but if the downstream is faster it will not
         /// duplicate elements.
         /// <para>
@@ -519,9 +520,35 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="seed">Provides the first state for a conflated value using the first unconsumed element as a start</param> 
         /// <param name="aggregate">Takes the currently aggregated value and the current pending element to produce a new aggregate</param>
-        public static Source<TSeed, TMat> Conflate<TIn, TOut, TMat, TSeed>(this Source<TOut, TMat> flow, Func<TOut, TSeed> seed, Func<TSeed, TOut, TSeed> aggregate)
+        public static Source<TSeed, TMat> ConflateWithSeed<TIn, TOut, TMat, TSeed>(this Source<TOut, TMat> flow, Func<TOut, TSeed> seed, Func<TSeed, TOut, TSeed> aggregate)
         {
-            return (Source<TSeed, TMat>)InternalFlowOperations.Conflate(flow, seed, aggregate);
+            return (Source<TSeed, TMat>)InternalFlowOperations.ConflateWithSeed(flow, seed, aggregate);
+        }
+
+        /// <summary>
+        /// Allows a faster upstream to progress independently of a slower subscriber by conflating elements into a summary
+        /// until the subscriber is ready to accept them. For example a conflate step might average incoming numbers if the
+        /// upstream publisher is faster.
+        /// 
+        /// This version of conflate does not change the output type of the stream. See <see cref="ConflateWithSeed{TIn,TOut,TMat,TSeed}"/>
+        /// for a more flexible version that can take a seed function and transform elements while rolling up.
+        /// 
+        /// This element only rolls up elements if the upstream is faster, but if the downstream is faster it will not
+        /// duplicate elements.
+        /// <para>
+        /// '''Emits when''' downstream stops backpressuring and there is a conflated element available
+        /// </para>
+        /// '''Backpressures when''' never
+        /// <para>
+        /// '''Completes when''' upstream completes
+        /// </para>
+        /// '''Cancels when''' downstream cancels
+        /// </summary>
+        /// <param name="seed">Provides the first state for a conflated value using the first unconsumed element as a start</param> 
+        /// <param name="aggregate">Takes the currently aggregated value and the current pending element to produce a new aggregate</param>
+        public static Source<TOut, TMat> Conflate<TIn, TOut, TMat>(this Source<TOut, TMat> flow, Func<TOut, TOut, TOut> aggregate)
+        {
+            return (Source<TOut, TMat>)InternalFlowOperations.Conflate(flow, aggregate);
         }
 
         /// <summary>
@@ -544,11 +571,10 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        /// <param name="seed">Provides the first state for extrapolation using the first unconsumed element</param>
         /// <param name="extrapolate">Takes the current extrapolation state to produce an output element and the next extrapolation state.</param>
-        public static Source<TOut2, TMat> Expand<TIn, TOut1, TOut2, TMat, TState>(this Source<TOut1, TMat> flow, Func<TOut1, TState> seed, Func<TState, Tuple<TOut2, TState>> extrapolate)
+        public static Source<TOut2, TMat> Expand<TIn, TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, Func<TOut1, IEnumerator<TOut2>> extrapolate)
         {
-            return (Source<TOut2, TMat>)InternalFlowOperations.Expand(flow, seed, extrapolate);
+            return (Source<TOut2, TMat>)InternalFlowOperations.Expand<TOut1, TOut2, TMat>(flow, extrapolate);
         }
 
         /// <summary>

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using Akka.Event;
 using Akka.Streams.Stage;
+using Akka.Streams.Util;
 using Akka.Util;
 
 namespace Akka.Streams.Implementation.Fusing
@@ -228,7 +229,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _shutdownCounter[i] = shape.Inlets.Count() + shape.Outlets.Count();
             }
 
-            _eventQueue = new int[1 << (32 - NumberOfLeadingZeros(assembly.ConnectionCount - 1))];
+            _eventQueue = new int[1 << (32 - Int32Extensions.NumberOfLeadingZeros(assembly.ConnectionCount - 1))];
             _mask = _eventQueue.Length - 1;
         }
 
@@ -630,22 +631,6 @@ namespace Akka.Streams.Implementation.Fusing
             }
 
             if ((currentState & InClosed) == 0) CompleteConnection(Assembly.InletOwners[connection]);
-        }
-
-        /// <summary>
-        /// NOTE: Original Java implementation from JDK 1.8
-        /// </summary>
-        private int NumberOfLeadingZeros(int i)
-        {
-            if (i == 0)
-                return 32;
-            int n = 1;
-            if (i >> 16 == 0) { n += 16; i <<= 16; }
-            if (i >> 24 == 0) { n += 8; i <<= 8; }
-            if (i >> 28 == 0) { n += 4; i <<= 4; }
-            if (i >> 30 == 0) { n += 2; i <<= 2; }
-            n -= i >> 31;
-            return n;
         }
 
         /// <summary>
