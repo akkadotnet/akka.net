@@ -250,7 +250,7 @@ namespace Akka.Streams.Dsl
         /// '''Cancels when''' downstream cancels
         /// </summary>
         /// <exception cref="ArgumentException">Thrown, if <paramref name="n"/> is less than or equal zero.</exception>
-        public static Source<IEnumerable<TOut>, TMat> Grouped<TIn, TOut, TMat>(this Source<TOut, TMat> flow, int n)
+        public static Source<IEnumerable<TOut>, TMat> Grouped<TOut, TMat>(this Source<TOut, TMat> flow, int n)
         {
             return (Source<IEnumerable<TOut>, TMat>)InternalFlowOperations.Grouped(flow, n);
         }

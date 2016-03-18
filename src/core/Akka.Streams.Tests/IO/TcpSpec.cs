@@ -378,14 +378,14 @@ namespace Akka.Streams.Tests.IO
             {
                 var serverAddress = TestUtils.TemporaryServerAddress();
                 var writeButIgnoreRead = Flow.FromSinkAndSource(Sink.Ignore<ByteString>(),
-                    Source.Single(ByteString.FromString("Early response")), Keep.Right<Task, Unit, Unit> );
+                    Source.Single(ByteString.FromString("Early response")), Keep.Right);
 
                 var task = 
                     new Tcp().CreateExtension(Sys as ExtendedActorSystem)
                         .Bind(serverAddress.Address.ToString(), serverAddress.Port, halfClose: false)
                         .ToMaterialized(
                             Sink.ForEach<Tcp.IncomingConnection>(conn => conn.Flow.Join(writeButIgnoreRead)),
-                            Keep.Left<Task<Tcp.ServerBinding>, Task, Task<Tcp.ServerBinding>>)
+                            Keep.Left)
                         .Run(Materializer);
                 task.Wait(TimeSpan.FromSeconds(3));
                 var binding = task.Result;
@@ -416,7 +416,7 @@ namespace Akka.Streams.Tests.IO
                     .Bind(serverAddress.Address.ToString(), serverAddress.Port, halfClose: false)
                     .ToMaterialized(
                         Sink.ForEach<Tcp.IncomingConnection>(conn => conn.Flow.Join(Flow.Create<ByteString>())),
-                        Keep.Left<Task<Tcp.ServerBinding>, Task, Task<Tcp.ServerBinding>>)
+                        Keep.Left)
                     .Run(Materializer);
             task.Wait(TimeSpan.FromSeconds(3));
             var binding = task.Result;
@@ -620,7 +620,7 @@ namespace Akka.Streams.Tests.IO
                 var folder = Source.From(Enumerable.Range(0, 100).Select(_ => ByteString.Create(new byte[] {0})))
                     .Via(new Tcp().CreateExtension(Sys as ExtendedActorSystem).OutgoingConnection(serverAddress))
                     .Via(Flow.Create<ByteString>().Fold(0, (i, s) => i + s.Count))
-                    .ToMaterialized(Sink.First<int>(), Keep.Right<Unit, Task<int>, Task<int>>);
+                    .ToMaterialized(Sink.First<int>(), Keep.Right);
 
                 var total = folder.Run(Materializer);
 

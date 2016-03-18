@@ -145,7 +145,7 @@ namespace Akka.Streams.Dsl
         ///</summary>
         public BidiFlow<TIn1, TOut12, TIn21, TOut2, TMat> Atop<TOut12, TIn21, TMat2>(BidiFlow<TOut1, TOut12, TIn21, TIn2, TMat2> bidi)
         {
-            return AtopMat(bidi, Keep.Left<TMat, TMat2, TMat>);
+            return AtopMat(bidi, Keep.Left);
         }
 
         ///<summary>
@@ -175,8 +175,8 @@ namespace Akka.Streams.Dsl
             return new BidiFlow<TIn1, TOut12, TIn21, TOut2, TMat>(Module
                 .Compose(copy, combine)
                 .Wire(Shape.Outlet1, ins[0])
-                .Wire(outs[1], Shape.Inlet1)
-                .ReplaceShape(new BidiShape<TIn1, TOut12, TIn21, TOut2>((Inlet<TIn1>)Shape.Inlets.First(), (Outlet<TOut12>)outs[0], (Inlet<TIn21>)ins[1], (Outlet<TOut2>)Shape.Outlets.ElementAt(1))));
+                .Wire(outs[1], Shape.Inlet2)
+                .ReplaceShape(new BidiShape<TIn1, TOut12, TIn21, TOut2>(Shape.Inlet1, (Outlet<TOut12>)outs[0], (Inlet<TIn21>)ins[1], Shape.Outlet2)));
         }
 
         ///<summary>
@@ -200,7 +200,7 @@ namespace Akka.Streams.Dsl
         ///</summary>
         public Flow<TIn1, TOut2, TMat> Join<TMat2>(Flow<TOut1, TIn2, TMat2> flow)
         {
-            return JoinMat(flow, Keep.Left<TMat, TMat2, TMat>);
+            return JoinMat(flow, Keep.Left);
         }
 
         ///<summary>

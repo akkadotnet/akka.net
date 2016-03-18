@@ -32,7 +32,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public IRunnableGraph<TMat> To<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink)
         {
-            return ToMaterialized(sink, Keep.Left<TMat, TMat2, TMat>);
+            return ToMaterialized(sink, Keep.Left);
         }
 
         /// <summary>
@@ -84,7 +84,7 @@ namespace Akka.Streams.Dsl
 
         public Source<T2, TMat> Via<T2, TMat2>(IGraph<FlowShape<TOut, T2>, TMat2> flow)
         {
-            return ViaMaterialized(flow, Keep.Left<TMat, TMat2, TMat>);
+            return ViaMaterialized(flow, Keep.Left);
         }
 
         IFlow<T2, TMat> IFlow<TOut, TMat>.Via<T2, TMat2>(IGraph<FlowShape<TOut, T2>, TMat2> flow)
@@ -106,7 +106,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public TMat2 RunWith<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink, IMaterializer materializer)
         {
-            return ToMaterialized(sink, Keep.Right<TMat, TMat2, TMat2>).Run(materializer);
+            return ToMaterialized(sink, Keep.Right).Run(materializer);
         }
 
         /// <summary>
