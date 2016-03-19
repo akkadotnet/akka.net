@@ -57,7 +57,7 @@ namespace Akka.Streams.Dsl
             /// Convenience shortcut for: flow.join(handler).run().
             /// </summary>
             public TMat HandleWith<TMat>(Flow<ByteString, ByteString, TMat> handler, IMaterializer materializer)
-                => Flow.JoinMaterialized(handler, Keep.Right<Unit, TMat, TMat>).Run(materializer);
+                => Flow.JoinMaterialized(handler, Keep.Right).Run(materializer);
         }
 
         /// <summary>

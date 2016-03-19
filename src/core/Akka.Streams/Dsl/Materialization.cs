@@ -10,12 +10,12 @@ namespace Akka.Streams.Dsl
     /// </summary> 
     public static class Keep
     {
-        public static TResult Left<TLeft, TRight, TResult>(TLeft left, TRight right) where TLeft : TResult
+        public static TLeft Left<TLeft, TRight>(TLeft left, TRight right)
         {
             return left;
         }
 
-        public static TResult Right<TLeft, TRight, TResult>(TLeft left, TRight right) where TRight : TResult
+        public static TRight Right<TLeft, TRight>(TLeft left, TRight right)
         {
             return right;
         }

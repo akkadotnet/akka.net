@@ -159,7 +159,7 @@ namespace Akka.Streams.Dsl
             {
                 action(input);
                 return Unit.Instance;
-            }).ToMaterialized(Ignore<Unit>(), Keep.Right<Unit, Task, Task>).Named("foreachSink");
+            }).ToMaterialized(Ignore<Unit>(), Keep.Right).Named("foreachSink");
 
             return FromGraph(forEach);
         }
@@ -208,7 +208,7 @@ namespace Akka.Streams.Dsl
                     action(input);
                     return Unit.Instance;
                 })
-                .ToMaterialized(Ignore<Unit>(), Keep.Right<Unit, Task, Task>);
+                .ToMaterialized(Ignore<Unit>(), Keep.Right);
         }
 
         /// <summary>
@@ -222,7 +222,7 @@ namespace Akka.Streams.Dsl
         {
             var fold = Flow.Create<TIn>()
                 .Fold(init, aggregate)
-                .ToMaterialized(First<TOut>(), Keep.Right<Unit, Task<TOut>, Task<TOut>>)
+                .ToMaterialized(First<TOut>(), Keep.Right)
                 .Named("FoldSink");
 
             return FromGraph(fold);

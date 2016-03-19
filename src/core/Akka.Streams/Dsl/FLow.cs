@@ -28,12 +28,12 @@ namespace Akka.Streams.Dsl
 
         public Flow<TIn, T2, TMat> Via<T2, TMat2>(IGraph<FlowShape<TOut, T2>, TMat2> flow)
         {
-            return ViaMaterialized(flow, Keep.Left<TMat, TMat2, TMat>);
+            return ViaMaterialized(flow, Keep.Left);
         }
 
         IFlow<T2, TMat> IFlow<TOut, TMat>.Via<T2, TMat2>(IGraph<FlowShape<TOut, T2>, TMat2> flow)
         {
-            return ViaMaterialized(flow, Keep.Left<TMat, TMat2, TMat>);
+            return ViaMaterialized(flow, Keep.Left);
         }
 
         /// <summary>
@@ -89,7 +89,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public Sink<TIn, TMat> To<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink)
         {
-            return ToMaterialized(sink, Keep.Left<TMat, TMat2, TMat>);
+            return ToMaterialized(sink, Keep.Left);
         }
 
         /// <summary>
@@ -122,12 +122,12 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public IRunnableGraph<TMat> Join<TMat2>(IGraph<FlowShape<TOut, TIn>, TMat2> flow)
         {   
-            return JoinMaterialized(flow, Keep.Left<TMat, TMat2, TMat>);
+            return JoinMaterialized(flow, Keep.Left);
         }
 
         public Flow<TIn2, TOut2, TMat> Join<TIn2, TOut2, TMat2>(IGraph<BidiShape<TOut, TOut2, TIn2, TIn>, TMat2> bidi)
         {
-            return JoinMaterialized(bidi, Keep.Left<TMat, TMat2, TMat>);
+            return JoinMaterialized(bidi, Keep.Left);
         }
 
         public Flow<TIn2, TOut2, TMatRes> JoinMaterialized<TIn2, TOut2, TMat2, TMatRes>(IGraph<BidiShape<TOut, TOut2, TIn2, TIn>, TMat2> bidi, Func<TMat, TMat2, TMatRes> combine)

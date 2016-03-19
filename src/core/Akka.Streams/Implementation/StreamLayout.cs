@@ -326,7 +326,7 @@ namespace Akka.Streams.Implementation
 
         public virtual IModule Fuse(IModule other, OutPort @from, InPort to)
         {
-            return Fuse<object, object, object>(other, from, to, Keep.Left<object, object, object>);
+            return Fuse<object, object, object>(other, from, to, Keep.Left);
         }
 
         public virtual IModule Fuse<T1, T2, T3>(IModule other, OutPort @from, InPort to, Func<T1, T2, T3> matFunc)
@@ -381,7 +381,7 @@ namespace Akka.Streams.Implementation
 
         public virtual IModule Compose(IModule other)
         {
-            return Compose<object, object, object>(other, Keep.Left<object, object, object>);
+            return Compose<object, object, object>(other, Keep.Left);
         }
 
         public virtual IModule Compose<T1, T2, T3>(IModule other, Func<T1, T2, T3> matFunc)
@@ -530,15 +530,23 @@ namespace Akka.Streams.Implementation
 
         public override IModule ReplaceShape(Shape shape)
         {
-            if (!Shape.HasSamePortsAs(shape))
-                throw new ArgumentException("CopiedModule requires shape with same ports to replace", "shape");
-
-            return new CopiedModule(shape, Attributes, CopyOf);
+            if (!ReferenceEquals(shape, Shape))
+            {
+                if (!Shape.HasSamePortsAs(shape))
+                    throw new ArgumentException("CopiedModule requires shape with same ports to replace", nameof(shape));
+                return CompositeModule.Create(this, shape);
+            }
+            return this;
         }
 
-        public override IModule CarbonCopy() => new CopiedModule(Shape, Attributes, CopyOf);
+        public override IModule CarbonCopy() => new CopiedModule(Shape.DeepCopy(), Attributes, CopyOf);
 
-        public override IModule WithAttributes(Attributes attributes) => new CopiedModule(Shape, attributes, CopyOf);
+        public override IModule WithAttributes(Attributes attributes)
+        {
+            if (!ReferenceEquals(attributes, Attributes))
+                return new CopiedModule(Shape, attributes, CopyOf);
+            return this;
+        }
 
         public override string ToString() => $"Copy({CopyOf})";
     }
@@ -581,13 +589,22 @@ namespace Akka.Streams.Implementation
         public override IModule WithAttributes(Attributes attributes) => new CompositeModule(SubModules, Shape.DeepCopy(), Downstreams, Upstreams, MaterializedValueComputation, Attributes);
 
         public override string ToString() => $"Composite({string.Join(", ", SubModules)})";
+
+        public static CompositeModule Create(Module module, Shape shape)
+        {
+            return new CompositeModule(
+                new IModule[] {module}.ToImmutableArray(),
+                shape,
+                ImmutableDictionary<OutPort, InPort>.Empty,
+                ImmutableDictionary<InPort, OutPort>.Empty,
+                new StreamLayout.Atomic(module),
+                Attributes.None
+                );
+        }
     }
 
     public sealed class FusedModule : Module
     {
-        private readonly IImmutableDictionary<OutPort, InPort> _downstreams;
-        private readonly IImmutableDictionary<InPort, OutPort> _upstreams;
-
         public readonly Streams.Fusing.StructuralInfo Info;
 
         public FusedModule(
@@ -601,16 +618,16 @@ namespace Akka.Streams.Implementation
         {
             SubModules = subModules;
             Shape = shape;
-            _downstreams = downstreams;
-            _upstreams = upstreams;
+            Downstreams = downstreams;
+            Upstreams = upstreams;
             MaterializedValueComputation = materializedValueComputation;
             Attributes = attributes;
             Info = info;
         }
 
         public override bool IsFused => true;
-        public override IImmutableDictionary<OutPort, InPort> Downstreams => _downstreams;
-        public override IImmutableDictionary<InPort, OutPort> Upstreams => _upstreams;
+        public override IImmutableDictionary<OutPort, InPort> Downstreams { get; }
+        public override IImmutableDictionary<InPort, OutPort> Upstreams { get; }
         public override StreamLayout.IMaterializedValueNode MaterializedValueComputation { get; }
 
         public override Shape Shape { get; }
@@ -619,9 +636,15 @@ namespace Akka.Streams.Implementation
 
         public override IModule ReplaceShape(Shape shape)
         {
-            if (!shape.HasSamePortsAndShapeAs(Shape))
-                throw new ArgumentException("FusedModule requires shape with the same ports as existing one", nameof(shape));
-            return new FusedModule(SubModules, shape, Downstreams, Upstreams, MaterializedValueComputation, Attributes, Info);
+            if (!ReferenceEquals(shape, Shape))
+            {
+                if (!shape.HasSamePortsAndShapeAs(Shape))
+                    throw new ArgumentException("FusedModule requires shape with the same ports as existing one",
+                        nameof(shape));
+                return new FusedModule(SubModules, shape, Downstreams, Upstreams, MaterializedValueComputation,
+                    Attributes, Info);
+            }
+            return this;
         }
 
         public override IModule CarbonCopy() => new CopiedModule(Shape.DeepCopy(), Attributes, this);

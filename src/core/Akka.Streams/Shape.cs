@@ -293,7 +293,7 @@ namespace Akka.Streams
 
         public override Shape DeepCopy()
         {
-            return new FlowShape<TIn, TOut>(Inlet, Outlet);
+            return new FlowShape<TIn, TOut>((Inlet<TIn>) Inlet.CarbonCopy(), (Outlet<TOut>) Outlet.CarbonCopy());
         }
 
         public override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
@@ -324,7 +324,7 @@ namespace Akka.Streams
 
         public override Shape DeepCopy()
         {
-            return new SinkShape<TIn>(Inlet);
+            return new SinkShape<TIn>((Inlet<TIn>) Inlet.CarbonCopy());
         }
 
         public override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
@@ -373,7 +373,11 @@ namespace Akka.Streams
 
         public override Shape DeepCopy()
         {
-            return new BidiShape<TIn1, TOut1, TIn2, TOut2>(Inlet1, Outlet1, Inlet2, Outlet2);
+            return new BidiShape<TIn1, TOut1, TIn2, TOut2>(
+                (Inlet<TIn1>) Inlet1.CarbonCopy(),
+                (Outlet<TOut1>) Outlet1.CarbonCopy(),
+                (Inlet<TIn2>) Inlet2.CarbonCopy(),
+                (Outlet<TOut2>) Outlet2.CarbonCopy());
         }
 
         public override Shape CopyFromPorts(ImmutableArray<Inlet> i, ImmutableArray<Outlet> o)
