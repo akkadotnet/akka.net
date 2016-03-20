@@ -160,7 +160,11 @@ namespace Akka.Streams
     {
         public static ActorMaterializerSettings Create(ActorSystem system)
         {
-            return Create(system.Settings.Config.GetConfig("akka.stream.materializer"));
+            var config = system.Settings.Config.GetConfig("akka.stream.materializer");
+            if(config == null)
+                throw new ArgumentException("Couldn't build an actor materializer settings. `akka.stream.materializer` config path is not defined.");
+
+            return Create(config);
         }
 
         private static ActorMaterializerSettings Create(Config config)
