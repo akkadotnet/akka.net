@@ -584,7 +584,18 @@ namespace Akka.Streams.Stage
         internal readonly object[] Handlers;
         internal readonly int[] PortToConn;
         internal int StageId = int.MinValue;
-        internal GraphInterpreter Interpreter;
+        private GraphInterpreter _interpreter;
+
+        internal GraphInterpreter Interpreter
+        {
+            get
+            {
+                if (_interpreter == null)
+                    throw new IllegalStateException("Not yet initialized: only Sethandler is allowed in GraphStageLogic constructor");
+                return _interpreter;
+            }
+            set { _interpreter = value; }
+        }
 
         protected GraphStageLogic(int inCount, int outCount)
         {
@@ -632,7 +643,7 @@ namespace Akka.Streams.Stage
         protected internal void SetHandler(Inlet inlet, InHandler handler)
         {
             Handlers[inlet.Id] = handler;
-            if (Interpreter != null) Interpreter.SetHandler(GetConnection(inlet), handler);
+            _interpreter?.SetHandler(GetConnection(inlet), handler);
         }
 
         /// <summary>
@@ -655,16 +666,16 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Assigns callbacks for the events for an <see cref="Outlet{T}"/>.
         /// </summary>
-        internal protected void SetHandler(Outlet outlet, OutHandler handler)
+        protected internal void SetHandler(Outlet outlet, OutHandler handler)
         {
             Handlers[outlet.Id + InCount] = handler;
-            if (Interpreter != null) Interpreter.SetHandler(GetConnection(outlet), handler);
+            _interpreter?.SetHandler(GetConnection(outlet), handler);
         }
 
         /// <summary>
         /// Assigns callbacks for the events for an <see cref="Outlet{T}"/>.
         /// </summary>
-        internal protected void SetHandler(Outlet outlet, Action onPull, Action onDownstreamFinish = null)
+        protected internal void SetHandler(Outlet outlet, Action onPull, Action onDownstreamFinish = null)
         {
             if (onPull == null) throw new ArgumentNullException("onPull", "GraphStageLogic onPull handler must be provided");
             SetHandler(outlet, new LambdaOutHandler(onPull, onDownstreamFinish));
@@ -1152,9 +1163,9 @@ namespace Akka.Streams.Stage
             where TIn : TOut
         {
             var passHandler = new PassAlongHandler<TOut, TIn>(from, to, this, doFinish, doFail);
-            if (Interpreter == null)
+            if (_interpreter != null)
             {
-                if (IsAvailable(from)) Emit(to, Grab<TIn>(from), passHandler.Apply);
+                if (IsAvailable(from)) Emit(to, Grab(from), passHandler.Apply);
                 if (doFinish && IsClosed(from)) CompleteStage();
             }
 

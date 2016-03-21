@@ -32,41 +32,53 @@ namespace Akka.Streams.Implementation
                 _flowName = _materializer.CreateFlowName();
             }
 
-            protected override object MaterializeAtomic(IModule atomic, Attributes effectiveAttributes, IDictionary<IModule, object> materializedValues)
+            protected override object MaterializeAtomic(IModule atomic, Attributes effectiveAttributes,
+                IDictionary<IModule, object> materializedValues)
             {
-                atomic.Match()
-                    .With<ISinkModule>(sink =>
-                    {
-                        object materialized;
-                        var subscriber = sink.Create(CreateMaterializationContext(effectiveAttributes), out materialized);
-                        AssignPort(sink.Shape.Inlets.First(), subscriber);
-                        materializedValues.Add(atomic, materialized);
-                    })
-                    .With<ISourceModule>(source =>
-                    {
-                        object materialized;
-                        var publisher = source.Create(CreateMaterializationContext(effectiveAttributes), out materialized);
-                        AssignPort(source.Shape.Outlets.First(), publisher);
-                        materializedValues.Add(atomic, materialized);
-                    })
-                    .With<StageModule>(stage =>
-                    {
-                        object materialized;
-                        var processor = ProcessorFor(stage, effectiveAttributes, _materializer.EffectiveSettings(effectiveAttributes), out materialized);
-                        AssignPort(stage.In, processor);
-                        AssignPort(stage.Out, processor);
-                        materializedValues.Add(atomic, materialized);
-                    })
-                    //.With<TlsModule>(tls =>
-                    //{
-
-                    //})
-                    .With<GraphModule>(graph => MaterializeGraph(graph, effectiveAttributes, materializedValues))
-                    .With<GraphStageModule>(stage =>
-                    {
-                        var graph = new GraphModule(GraphAssembly.Create(stage.Shape.Inlets, stage.Shape.Outlets, new[] { stage.Stage }), stage.Shape, stage.Attributes, new IModule[] { stage });
-                        MaterializeGraph(graph, effectiveAttributes, materializedValues);
-                    });
+                if (atomic is ISinkModule)
+                {
+                    var sink = (ISinkModule) atomic;
+                    object materialized;
+                    var subscriber = sink.Create(CreateMaterializationContext(effectiveAttributes), out materialized);
+                    AssignPort(sink.Shape.Inlets.First(), subscriber);
+                    materializedValues.Add(atomic, materialized);
+                }
+                else if (atomic is ISourceModule)
+                {
+                    var source = (ISourceModule) atomic;
+                    object materialized;
+                    var publisher = source.Create(CreateMaterializationContext(effectiveAttributes), out materialized);
+                    AssignPort(source.Shape.Outlets.First(), publisher);
+                    materializedValues.Add(atomic, materialized);
+                }
+                else if (atomic is StageModule)
+                {
+                    // FIXME: Remove this, only stream-of-stream ops need it
+                    var stage = (StageModule) atomic;
+                    object materialized;
+                    var processor = ProcessorFor(stage, effectiveAttributes,
+                        _materializer.EffectiveSettings(effectiveAttributes), out materialized);
+                    AssignPort(stage.In, processor);
+                    AssignPort(stage.Out, processor);
+                    materializedValues.Add(atomic, materialized);
+                }
+                //else if (atomic is TlsModule)
+                //{
+                //})
+                else if (atomic is GraphModule)
+                {
+                    var graph = (GraphModule) atomic;
+                    MaterializeGraph(graph, effectiveAttributes, materializedValues);
+                }
+                else if (atomic is GraphStageModule)
+                {
+                    var stage = (GraphStageModule) atomic;
+                    var graph =
+                        new GraphModule(
+                            GraphAssembly.Create(stage.Shape.Inlets, stage.Shape.Outlets, new[] {stage.Stage}),
+                            stage.Shape, stage.Attributes, new IModule[] {stage});
+                    MaterializeGraph(graph, effectiveAttributes, materializedValues);
+                }
 
                 return Unit.Instance;
             }

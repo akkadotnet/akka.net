@@ -955,8 +955,17 @@ namespace Akka.Streams.Implementation
             foreach (var submodule in module.SubModules)
             {
                 var subEffectiveAttributes = MergeAttributes(effectiveAttributes, submodule.Attributes);
-                //TODO: akka 2.4.2 - IsAtomic has been changed to AtomicModule
-                if (submodule.IsAtomic)
+                GraphStageModule graphStageModule;
+                Type stageType;
+                if (((graphStageModule = submodule as GraphStageModule) != null) &&
+                    (stageType = graphStageModule.Stage.GetType()).IsGenericType &&
+                    stageType.GetGenericTypeDefinition() == typeof(MaterializedValueSource<>))
+                {
+                    var copy = new MaterializedValueSource<object>(graphStageModule.MaterializedValueComputation).CopySource();
+                    RegisterSource(copy);
+                    MaterializeAtomic(copy.Module, subEffectiveAttributes, materializedValues);
+                }
+                else if (submodule.IsAtomic)
                     MaterializeAtomic(submodule, subEffectiveAttributes, materializedValues);
                 else if (submodule is CopiedModule)
                 {
@@ -965,11 +974,11 @@ namespace Akka.Streams.Implementation
                     materializedValues.Add(copied, MaterializeModule(copied, subEffectiveAttributes));
                     ExitScope(copied);
                 }
-                else if(submodule is CompositeModule || submodule is FusedModule)
+                else
                     materializedValues.Add(submodule, MaterializeComposite(submodule, subEffectiveAttributes));
             }
 
-            return ResolveMaterialized(module.MaterializedValueComputation, materializedValues, string.Empty);
+            return ResolveMaterialized(module.MaterializedValueComputation, materializedValues, "  ");
         }
 
         protected virtual object MaterializeComposite(IModule composite, Attributes effectiveAttributes)

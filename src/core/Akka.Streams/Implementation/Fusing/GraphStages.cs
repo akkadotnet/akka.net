@@ -262,7 +262,7 @@ namespace Akka.Streams.Implementation.Fusing
         void SetValue(object result);
     }
 
-    internal class MaterializedValueSource<T> : GraphStage<SourceShape<T>>, IMaterializedValueSource
+    internal sealed class MaterializedValueSource<T> : GraphStage<SourceShape<T>>, IMaterializedValueSource
     {
         #region internal classes
         internal sealed class MaterializedValueGraphStageLogic : GraphStageLogic
@@ -299,7 +299,7 @@ namespace Akka.Streams.Implementation.Fusing
             Shape = new SourceShape<T>(Outlet);
         }
 
-        public MaterializedValueSource(StreamLayout.IMaterializedValueNode computation) : this(computation, new Outlet<T>("MaterializedValue.out")) { }
+        public MaterializedValueSource(StreamLayout.IMaterializedValueNode computation) : this(computation, new Outlet<T>("matValue")) { }
 
         protected override Attributes InitialAttributes { get { return Name; } }
         public override SourceShape<T> Shape { get; }
