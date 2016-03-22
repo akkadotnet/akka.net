@@ -118,6 +118,12 @@
     <Compile Include="Transport\FailureInjectorTransportAdapter.cs" />
     <Compile Include="Transport\Helios\HeliosHelpers.cs" />
     <Compile Include="Transport\Helios\HeliosTcpTransport.cs" />
+    <Compile Include="Transport\Streaming\AsyncQueue.cs" />
+    <Compile Include="Transport\Streaming\NamedPipeTransport.cs" />
+    <Compile Include="Transport\Streaming\NetworkStreamTransport.cs" />
+    <Compile Include="Transport\Streaming\SslStreamTransport.cs" />
+    <Compile Include="Transport\Streaming\StreamAssociationHandle.cs" />
+    <Compile Include="Transport\Streaming\StreamTransport.cs" />
     <Compile Include="Transport\ThrottleTransportAdapter.cs" />
     <Compile Include="Transport\TransportAdapters.cs" />
     <Compile Include="Transport\AkkaProtocolTransport.cs" />
