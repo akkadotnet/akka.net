@@ -647,7 +647,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             }
         }
 
-        public abstract class FailingStateSetup : TestSetup
+        public class FailingStageSetup : TestSetup
         {
             public UpstreamPortProbe<int> Upstream { get; }
             public DownstreamPortProbe<int> Downstream { get; }
@@ -659,11 +659,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             private readonly FlowShape<int, int> _stageShape;
             private GraphStage<FlowShape<int, int>> _sandwitchStage;
 
-            // Must be lzy because I turned this stage "inside-out" therefore changin initialization order
+            // Must be lazy because I turned this stage "inside-out" therefore changin initialization order
             // to make tests a bit more readable
-            private readonly Lazy<GraphStageLogic> _stage;
+            public Lazy<GraphStageLogic> Stage { get; }
 
-            protected FailingStateSetup(ActorSystem system, bool initFailOnNextEvent = false) : base(system)
+            public FailingStageSetup(ActorSystem system, bool initFailOnNextEvent = false) : base(system)
             {
                 Upstream = new UpstreamPortProbe<int>(this);
                 Downstream = new DownstreamPortProbe<int>(this);
@@ -675,7 +675,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 _stageOut = new Outlet<int>("sandwitch.out");
                 _stageShape = new FlowShape<int, int>(_stageIn, _stageOut);
 
-                _stage = new Lazy<GraphStageLogic>(() => new FailingGraphStageLogic(this, _stageShape));
+                Stage = new Lazy<GraphStageLogic>(() => new FailingGraphStageLogic(this, _stageShape));
 
                 _sandwitchStage = new SandwitchStage(this);
 
@@ -702,9 +702,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             public class FailingGraphStageLogic : GraphStageLogic
             {
-                private readonly FailingStateSetup _setup;
+                private readonly FailingStageSetup _setup;
 
-                public FailingGraphStageLogic(FailingStateSetup setup, Shape shape) : base(shape)
+                public FailingGraphStageLogic(FailingStageSetup setup, Shape shape) : base(shape)
                 {
                     _setup = setup;
 
@@ -720,7 +720,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 private void MayFail(Action task)
                 {
-                    if (_setup._failOnNextEvent)
+                    if (!_setup._failOnNextEvent)
                         task();
                     else
                     {
@@ -749,9 +749,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             public class SandwitchStage : GraphStage<FlowShape<int, int>>
             {
-                private readonly FailingStateSetup _setup;
+                private readonly FailingStageSetup _setup;
 
-                public SandwitchStage(FailingStateSetup setup)
+                public SandwitchStage(FailingStageSetup setup)
                 {
                     _setup = setup;
                 }
@@ -760,7 +760,12 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
                 {
-                    return _setup._stage.Value;
+                    return _setup.Stage.Value;
+                }
+
+                public override string ToString()
+                {
+                    return "stage";
                 }
             }
 
