@@ -922,14 +922,25 @@ namespace Akka.Streams.Implementation
                 // PANIC!!! THE END OF THE MATERIALIZATION IS NEAR!
                 // Cancels all intermediate Publishers and fails all intermediate Subscribers.
                 // (This is an attempt to clean up after an exception during materialization)
-                var errorPublisher = new ErrorPublisher<object>(new MaterializationPanicException(cause), string.Empty);
+                var ex = new MaterializationPanicException(cause);
+
                 foreach (var subMap in _subscribersStack)
                     foreach (var subscriber in subMap.Values)
-                        ((IPublisher)errorPublisher).Subscribe(subscriber);
+                    {
+                        var subscriptionType = subscriber.GetType().GetGenericArguments()[0];
+                        var publisher = typeof(ErrorPublisher<>).Instantiate(subscriptionType, ex, string.Empty);
+
+                        ((IPublisher)publisher).Subscribe(subscriber);
+                    }
 
                 foreach (var pubMap in _publishersStack)
                     foreach (var publisher in pubMap.Values)
-                        publisher.Subscribe(new CancellingSubscriber<object>());
+                    {
+                        var publisherType = publisher.GetType().GetGenericArguments()[0];
+                        var subscribe = typeof(CancellingSubscriber<>).Instantiate(publisherType);
+
+                        publisher.Subscribe((ISubscriber)subscribe);
+                    }
 
                 throw;
             }

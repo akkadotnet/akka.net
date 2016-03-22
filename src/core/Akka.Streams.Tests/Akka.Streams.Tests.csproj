@@ -68,6 +68,7 @@
     <Compile Include="Dsl\ActorRefSinkSpec.cs" />
     <Compile Include="Dsl\FlowMapConcatSpec.cs" />
     <Compile Include="Dsl\FlowMapSpec.cs" />
+    <Compile Include="Dsl\SubscriberSinkSpec.cs" />
     <Compile Include="Implementation\Fusing\ActorGraphInterpreterSpec.cs" />
     <Compile Include="Implementation\Fusing\GraphInterpreterSpec.cs" />
     <Compile Include="Implementation\ResizableMultiReaderRingBufferSpec.cs" />
@@ -76,6 +77,7 @@
     <Compile Include="Implementation\FixedBufferSpec.cs" />
     <Compile Include="Implementation\GraphStageLogicSpec.cs" />
     <Compile Include="Implementation\StreamLayoutSpec.cs" />
+    <Compile Include="Implementation\TimeoutsSpec.cs" />
     <Compile Include="IO\FileSinkSpec.cs" />
     <Compile Include="IO\FileSourceSpec.cs" />
     <Compile Include="IO\InputStreamSinkSpec.cs" />
