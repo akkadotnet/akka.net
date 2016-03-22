@@ -21,13 +21,24 @@ namespace Akka.Streams.Implementation.Fusing
         public static FusedGraph<TShape, TMat> Aggressive<TShape, TMat>(IGraph<TShape, TMat> graph)
             where TShape : Shape
         {
+            if (graph is FusedGraph<TShape, TMat>) return graph as FusedGraph<TShape, TMat>;
+            var graphType = graph.GetType();
+            if (graphType.IsGenericType && graphType.GetGenericTypeDefinition() == typeof(FusedGraph<,>)) return new FusedGraph<TShape, TMat>((FusedModule)graph.Module, graph.Shape);
+
+            return DoAggressive(graph);
+        }
+
+        private static FusedGraph<TShape, TMat> DoAggressive<TShape, TMat>(IGraph<TShape, TMat> graph) where TShape : Shape
+        {
             var structInfo = new BuildStructuralInfo();
 
             // First perform normalization by descending the module tree and recording information in the BuildStructuralInfo instance.
-            var materializedValue = Descend<TMat>(graph.Module, Attributes.None, structInfo, structInfo.CreateGroup(string.Empty), string.Empty);
+            var materializedValue = Descend<TMat>(graph.Module, Attributes.None, structInfo,
+                structInfo.CreateGroup(string.Empty), string.Empty);
 
             // Then create a copy of the original Shape with the new copied ports.
-            var shape = graph.Shape.CopyFromPorts(structInfo.NewInlets(graph.Shape.Inlets), structInfo.NewOutlets(graph.Shape.Outlets));
+            var shape = graph.Shape.CopyFromPorts(structInfo.NewInlets(graph.Shape.Inlets),
+                structInfo.NewOutlets(graph.Shape.Outlets));
 
             // Extract the full topological information from the builder before removing assembly -internal (fused) wirings in the next step.
             var info = structInfo.ToInfo();
@@ -49,7 +60,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             if (StreamLayout.IsDebug) StreamLayout.Validate(module);
 
-            return new FusedGraph<TShape, TMat>(module, (TShape)shape);
+            return new FusedGraph<TShape, TMat>(module, (TShape) shape);
         }
 
         /// <summary>

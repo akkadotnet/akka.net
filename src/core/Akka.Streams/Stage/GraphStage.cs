@@ -59,7 +59,7 @@ namespace Akka.Streams.Stage
             _module = new Lazy<IModule>(() => new GraphStageModule(Shape, InitialAttributes, this));
         }
 
-        protected virtual Attributes InitialAttributes { get { return Attributes.None; } }
+        protected virtual Attributes InitialAttributes => Attributes.None;
         public abstract TShape Shape { get; }
         Shape IGraphStageWithMaterializedValue.Shape => Shape;
 
@@ -77,7 +77,8 @@ namespace Akka.Streams.Stage
         }
 
 
-        public IModule Module { get { return _module.Value; } }
+        public IModule Module => _module.Value;
+
         public IGraph<TShape, TMat> Named(string name)
         {
             return WithAttributes(Attributes.CreateName(name));

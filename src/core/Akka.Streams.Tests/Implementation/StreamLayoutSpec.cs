@@ -5,10 +5,10 @@ using System.Linq;
 using System.Reactive.Streams;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
-using Akka.Streams.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using Fuse = Akka.Streams.Implementation.Fusing.Fusing;
 
 namespace Akka.Streams.Tests.Implementation
 {
@@ -131,7 +131,9 @@ namespace Akka.Streams.Tests.Implementation
 
         #endregion
 
-        const int TooDeepForStack = 50000;
+        const int TooDeepForStack = 200;
+
+        private readonly IMaterializer materializer;
 
         private static TestAtomicModule TestStage() => new TestAtomicModule(1, 1);
         private static TestAtomicModule TestSource() => new TestAtomicModule(0, 1);
@@ -139,7 +141,8 @@ namespace Akka.Streams.Tests.Implementation
 
         public StreamLayoutSpec(ITestOutputHelper output) : base(output: output)
         {
-            
+            Sys.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
+            materializer = ActorMaterializer.Create(Sys, ActorMaterializerSettings.Create(Sys).WithAutoFusing(false));
         }
 
         [Fact]
@@ -228,6 +231,97 @@ namespace Akka.Streams.Tests.Implementation
                 .Compose<object, object, object>(sink, Keep.None).Wire(stage2.OutPorts.First(), sink.InPorts.First());
 
             CheckMaterialized(runnable);
+        }
+
+        [Fact]
+        public void StreamLayout_should_not_fail_materialization_when_building_a_large_graph_with_simple_computation_when_starting_from_a_Source()
+        {
+            var g = Enumerable.Range(1, TooDeepForStack)
+                .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Map(x => x));
+
+            var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(materializer);
+            var materialized = t.Item1;
+            var result = t.Item2.Result;
+
+            materialized.Should().Be(1);
+            result.Count.Should().Be(1);
+            result.Should().Contain(42);
+        }
+
+        [Fact]
+        public void StreamLayout_should_not_fail_materialization_when_building_a_large_graph_with_simple_computation_when_starting_from_a_Flow()
+        {
+            var g = Enumerable.Range(1, TooDeepForStack)
+                .Aggregate(Flow.Create<int>().MapMaterializedValue(_ => 1), (source, i) => source.Map(x => x));
+
+            var t = g.RunWith(Source.Single(42).MapMaterializedValue(_ => 1), Sink.Seq<int>(), materializer);
+            var materialized = t.Item1;
+            var result = t.Item2.Result;
+
+            materialized.Should().Be(1);
+            result.Count.Should().Be(1);
+            result.Should().Contain(42);
+        }
+
+        [Fact]
+        public void StreamLayout_should_not_fail_materialization_when_building_a_large_graph_with_simple_computation_when_using_Via()
+        {
+            var g = Enumerable.Range(1, TooDeepForStack)
+                .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Via(Flow.Create<int>().Map(x => x)));
+
+            var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(materializer);
+            var materialized = t.Item1;
+            var result = t.Item2.Result;
+
+            materialized.Should().Be(1);
+            result.Count.Should().Be(1);
+            result.Should().Contain(42);
+        }
+
+        [Fact]
+        public void StreamLayout_should_not_fail_fusing_and_materialization_when_building_a_large_graph_with_simple_computation_when_starting_from_a_Source()
+        {
+            var g = Source.FromGraph(Fuse.Aggressive(Enumerable.Range(1, TooDeepForStack)
+                .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Map(x => x))));
+
+            var m = g.ToMaterialized(Sink.Seq<int>(), Keep.Both);
+            var t = m.Run(materializer);
+            var materialized = t.Item1;
+            var result = t.Item2.Result;
+
+            materialized.Should().Be(1);
+            result.Count.Should().Be(1);
+            result.Should().Contain(42);
+        }
+
+        [Fact]
+        public void StreamLayout_should_not_fail_fusing_and_materialization_when_building_a_large_graph_with_simple_computation_when_starting_from_a_Flow()
+        {
+            var g = Flow.FromGraph(Fuse.Aggressive(Enumerable.Range(1, TooDeepForStack)
+                .Aggregate(Flow.Create<int>().MapMaterializedValue(_ => 1), (source, i) => source.Map(x => x))));
+
+            var t = g.RunWith(Source.Single(42).MapMaterializedValue(_ => 1), Sink.Seq<int>(), materializer);
+            var materialized = t.Item1;
+            var result = t.Item2.Result;
+
+            materialized.Should().Be(1);
+            result.Count.Should().Be(1);
+            result.Should().Contain(42);
+        }
+
+        [Fact]
+        public void StreamLayout_should_not_fail_fusing_and_materialization_when_building_a_large_graph_with_simple_computation_when_using_Via()
+        {
+            var g = Source.FromGraph(Fuse.Aggressive(Enumerable.Range(1, TooDeepForStack)
+                .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Via(Flow.Create<int>().Map(x => x)))));
+
+            var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(materializer);
+            var materialized = t.Item1;
+            var result = t.Item2.Result;
+
+            materialized.Should().Be(1);
+            result.Count.Should().Be(1);
+            result.Should().Contain(42);
         }
 
         private void CheckMaterialized(IModule topLevel)

@@ -152,7 +152,7 @@ namespace Akka.Streams.Implementation
             if (!module.IsSealed && outset.Except(allOut).Any()) problems.Add("foreign outlets " + outs(outset.Except(allOut)));
             var unIn = allIn.Except(inset).Except(module.Upstreams.Keys);
             if (unIn.Any() && !module.IsCopied) problems.Add("unconnected inlets " + ins(unIn));
-            var unOut = allOut.Except(outset).ToImmutableHashSet().Except(module.Downstreams.Keys);
+            var unOut = allOut.Except(outset).Except(module.Downstreams.Keys);
             if (unOut.Any() && !module.IsCopied) problems.Add("unconnected outlets " + outs(unOut));
 
             var atomics = Atomics(module.MaterializedValueComputation);
@@ -955,14 +955,9 @@ namespace Akka.Streams.Implementation
             foreach (var submodule in module.SubModules)
             {
                 var subEffectiveAttributes = MergeAttributes(effectiveAttributes, submodule.Attributes);
-                GraphStageModule graphStageModule;
-                if ((graphStageModule = submodule as GraphStageModule) != null)
-                {
-                    var copy = new MaterializedValueSource<object>(graphStageModule.MaterializedValueComputation).CopySource();
-                    RegisterSource(copy);
-                    MaterializeAtomic(copy.Module, subEffectiveAttributes, materializedValues);
-                }
-                else if (submodule.IsAtomic) MaterializeAtomic(submodule, subEffectiveAttributes, materializedValues);
+                //TODO: akka 2.4.2 - IsAtomic has been changed to AtomicModule
+                if (submodule.IsAtomic)
+                    MaterializeAtomic(submodule, subEffectiveAttributes, materializedValues);
                 else if (submodule is CopiedModule)
                 {
                     var copied = submodule as CopiedModule;
@@ -970,7 +965,8 @@ namespace Akka.Streams.Implementation
                     materializedValues.Add(copied, MaterializeModule(copied, subEffectiveAttributes));
                     ExitScope(copied);
                 }
-                else materializedValues.Add(submodule, MaterializeComposite(submodule, subEffectiveAttributes));
+                else if(submodule is CompositeModule || submodule is FusedModule)
+                    materializedValues.Add(submodule, MaterializeComposite(submodule, subEffectiveAttributes));
             }
 
             return ResolveMaterialized(module.MaterializedValueComputation, materializedValues, string.Empty);
