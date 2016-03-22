@@ -1,10 +1,6 @@
 ﻿
-// --- auto generated: 2016-02-02 11:10:25 --- //
+// --- auto generated: 2016-03-22 4:27:43 AM --- //
 using System;
-using System.Linq;
-using System.Reactive.Streams;
-using Akka.Streams.Implementation;
-using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Stage;
 
 namespace Akka.Streams.Dsl
@@ -89,13 +85,13 @@ namespace Akka.Streams.Dsl
 	
 	public class ZipWith<TIn0, TIn1, TOut> : GraphStage<FanInShape<TIn0, TIn1, TOut>>
 	{
-		private sealed class ZipWithStageLogic : GraphStageLogic
+		private sealed class Logic : GraphStageLogic
 		{
 			private readonly ZipWith<TIn0, TIn1, TOut> _stage;
 			// Without this field the completion signalling would take one extra pull
-			private bool _willShutDown = false;
-			private int _pending = 1;
-			public ZipWithStageLogic(Shape shape, ZipWith<TIn0, TIn1, TOut> stage) : base(shape)
+			private bool _willShutDown;
+			private int _pending;
+			public Logic(Shape shape, ZipWith<TIn0, TIn1, TOut> stage) : base(shape)
 			{
 				_stage = stage;
 				
@@ -118,14 +114,8 @@ namespace Akka.Streams.Dsl
 				});
 				
 				SetHandler(_stage.Out, onPull: () => {
-					_pending = stage.Shape.Inlets.Count();
-					if (_willShutDown) CompleteStage();
-					else 
-					{
-						Pull(_stage.In0);
-						Pull(_stage.In1);
-						
-					}
+					_pending += stage.Shape.Inlets.Length;
+                    if (_pending == 0) PushAll();
 				});
 			}
 
@@ -133,7 +123,22 @@ namespace Akka.Streams.Dsl
 			{
 				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1)));
 				if (_willShutDown) CompleteStage();
+                else {
+                    Pull(_stage.In0);
+                    Pull(_stage.In1);
+                }
 			}
+
+            public override void PreStart()
+            {
+                Pull(_stage.In0);
+                Pull(_stage.In1);
+            }
+
+            public override string ToString()
+            {
+                return "ZipWith2";
+            }
 		}
 
 		private readonly Func<TIn0, TIn1, TOut> _zipper;
@@ -158,19 +163,19 @@ namespace Akka.Streams.Dsl
 		public sealed override FanInShape<TIn0, TIn1, TOut> Shape { get; }
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new ZipWithStageLogic(Shape, this);
+            return new Logic(Shape, this);
         }
 	}
 	
 	public class ZipWith<TIn0, TIn1, TIn2, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TOut>>
 	{
-		private sealed class ZipWithStageLogic : GraphStageLogic
+		private sealed class Logic : GraphStageLogic
 		{
 			private readonly ZipWith<TIn0, TIn1, TIn2, TOut> _stage;
 			// Without this field the completion signalling would take one extra pull
-			private bool _willShutDown = false;
-			private int _pending = 1;
-			public ZipWithStageLogic(Shape shape, ZipWith<TIn0, TIn1, TIn2, TOut> stage) : base(shape)
+			private bool _willShutDown;
+			private int _pending;
+			public Logic(Shape shape, ZipWith<TIn0, TIn1, TIn2, TOut> stage) : base(shape)
 			{
 				_stage = stage;
 				
@@ -202,15 +207,8 @@ namespace Akka.Streams.Dsl
 				});
 				
 				SetHandler(_stage.Out, onPull: () => {
-					_pending = stage.Shape.Inlets.Count();
-					if (_willShutDown) CompleteStage();
-					else 
-					{
-						Pull(_stage.In0);
-						Pull(_stage.In1);
-						Pull(_stage.In2);
-						
-					}
+					_pending += stage.Shape.Inlets.Length;
+                    if (_pending == 0) PushAll();
 				});
 			}
 
@@ -218,7 +216,24 @@ namespace Akka.Streams.Dsl
 			{
 				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2)));
 				if (_willShutDown) CompleteStage();
+                else {
+                    Pull(_stage.In0);
+                    Pull(_stage.In1);
+                    Pull(_stage.In2);
+                }
 			}
+
+            public override void PreStart()
+            {
+                Pull(_stage.In0);
+                Pull(_stage.In1);
+                Pull(_stage.In2);
+            }
+
+            public override string ToString()
+            {
+                return "ZipWith3";
+            }
 		}
 
 		private readonly Func<TIn0, TIn1, TIn2, TOut> _zipper;
@@ -245,19 +260,19 @@ namespace Akka.Streams.Dsl
 		public sealed override FanInShape<TIn0, TIn1, TIn2, TOut> Shape { get; }
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new ZipWithStageLogic(Shape, this);
+            return new Logic(Shape, this);
         }
 	}
 	
 	public class ZipWith<TIn0, TIn1, TIn2, TIn3, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TOut>>
 	{
-		private sealed class ZipWithStageLogic : GraphStageLogic
+		private sealed class Logic : GraphStageLogic
 		{
 			private readonly ZipWith<TIn0, TIn1, TIn2, TIn3, TOut> _stage;
 			// Without this field the completion signalling would take one extra pull
-			private bool _willShutDown = false;
-			private int _pending = 1;
-			public ZipWithStageLogic(Shape shape, ZipWith<TIn0, TIn1, TIn2, TIn3, TOut> stage) : base(shape)
+			private bool _willShutDown;
+			private int _pending;
+			public Logic(Shape shape, ZipWith<TIn0, TIn1, TIn2, TIn3, TOut> stage) : base(shape)
 			{
 				_stage = stage;
 				
@@ -298,16 +313,8 @@ namespace Akka.Streams.Dsl
 				});
 				
 				SetHandler(_stage.Out, onPull: () => {
-					_pending = stage.Shape.Inlets.Count();
-					if (_willShutDown) CompleteStage();
-					else 
-					{
-						Pull(_stage.In0);
-						Pull(_stage.In1);
-						Pull(_stage.In2);
-						Pull(_stage.In3);
-						
-					}
+					_pending += stage.Shape.Inlets.Length;
+                    if (_pending == 0) PushAll();
 				});
 			}
 
@@ -315,7 +322,26 @@ namespace Akka.Streams.Dsl
 			{
 				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3)));
 				if (_willShutDown) CompleteStage();
+                else {
+                    Pull(_stage.In0);
+                    Pull(_stage.In1);
+                    Pull(_stage.In2);
+                    Pull(_stage.In3);
+                }
 			}
+
+            public override void PreStart()
+            {
+                Pull(_stage.In0);
+                Pull(_stage.In1);
+                Pull(_stage.In2);
+                Pull(_stage.In3);
+            }
+
+            public override string ToString()
+            {
+                return "ZipWith4";
+            }
 		}
 
 		private readonly Func<TIn0, TIn1, TIn2, TIn3, TOut> _zipper;
@@ -344,19 +370,19 @@ namespace Akka.Streams.Dsl
 		public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TOut> Shape { get; }
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new ZipWithStageLogic(Shape, this);
+            return new Logic(Shape, this);
         }
 	}
 	
 	public class ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TOut>>
 	{
-		private sealed class ZipWithStageLogic : GraphStageLogic
+		private sealed class Logic : GraphStageLogic
 		{
 			private readonly ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TOut> _stage;
 			// Without this field the completion signalling would take one extra pull
-			private bool _willShutDown = false;
-			private int _pending = 1;
-			public ZipWithStageLogic(Shape shape, ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TOut> stage) : base(shape)
+			private bool _willShutDown;
+			private int _pending;
+			public Logic(Shape shape, ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TOut> stage) : base(shape)
 			{
 				_stage = stage;
 				
@@ -406,17 +432,8 @@ namespace Akka.Streams.Dsl
 				});
 				
 				SetHandler(_stage.Out, onPull: () => {
-					_pending = stage.Shape.Inlets.Count();
-					if (_willShutDown) CompleteStage();
-					else 
-					{
-						Pull(_stage.In0);
-						Pull(_stage.In1);
-						Pull(_stage.In2);
-						Pull(_stage.In3);
-						Pull(_stage.In4);
-						
-					}
+					_pending += stage.Shape.Inlets.Length;
+                    if (_pending == 0) PushAll();
 				});
 			}
 
@@ -424,7 +441,28 @@ namespace Akka.Streams.Dsl
 			{
 				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3), Grab(_stage.In4)));
 				if (_willShutDown) CompleteStage();
+                else {
+                    Pull(_stage.In0);
+                    Pull(_stage.In1);
+                    Pull(_stage.In2);
+                    Pull(_stage.In3);
+                    Pull(_stage.In4);
+                }
 			}
+
+            public override void PreStart()
+            {
+                Pull(_stage.In0);
+                Pull(_stage.In1);
+                Pull(_stage.In2);
+                Pull(_stage.In3);
+                Pull(_stage.In4);
+            }
+
+            public override string ToString()
+            {
+                return "ZipWith5";
+            }
 		}
 
 		private readonly Func<TIn0, TIn1, TIn2, TIn3, TIn4, TOut> _zipper;
@@ -455,19 +493,19 @@ namespace Akka.Streams.Dsl
 		public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TOut> Shape { get; }
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new ZipWithStageLogic(Shape, this);
+            return new Logic(Shape, this);
         }
 	}
 	
 	public class ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut>>
 	{
-		private sealed class ZipWithStageLogic : GraphStageLogic
+		private sealed class Logic : GraphStageLogic
 		{
 			private readonly ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut> _stage;
 			// Without this field the completion signalling would take one extra pull
-			private bool _willShutDown = false;
-			private int _pending = 1;
-			public ZipWithStageLogic(Shape shape, ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut> stage) : base(shape)
+			private bool _willShutDown;
+			private int _pending;
+			public Logic(Shape shape, ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut> stage) : base(shape)
 			{
 				_stage = stage;
 				
@@ -526,18 +564,8 @@ namespace Akka.Streams.Dsl
 				});
 				
 				SetHandler(_stage.Out, onPull: () => {
-					_pending = stage.Shape.Inlets.Count();
-					if (_willShutDown) CompleteStage();
-					else 
-					{
-						Pull(_stage.In0);
-						Pull(_stage.In1);
-						Pull(_stage.In2);
-						Pull(_stage.In3);
-						Pull(_stage.In4);
-						Pull(_stage.In5);
-						
-					}
+					_pending += stage.Shape.Inlets.Length;
+                    if (_pending == 0) PushAll();
 				});
 			}
 
@@ -545,7 +573,30 @@ namespace Akka.Streams.Dsl
 			{
 				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3), Grab(_stage.In4), Grab(_stage.In5)));
 				if (_willShutDown) CompleteStage();
+                else {
+                    Pull(_stage.In0);
+                    Pull(_stage.In1);
+                    Pull(_stage.In2);
+                    Pull(_stage.In3);
+                    Pull(_stage.In4);
+                    Pull(_stage.In5);
+                }
 			}
+
+            public override void PreStart()
+            {
+                Pull(_stage.In0);
+                Pull(_stage.In1);
+                Pull(_stage.In2);
+                Pull(_stage.In3);
+                Pull(_stage.In4);
+                Pull(_stage.In5);
+            }
+
+            public override string ToString()
+            {
+                return "ZipWith6";
+            }
 		}
 
 		private readonly Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut> _zipper;
@@ -578,19 +629,19 @@ namespace Akka.Streams.Dsl
 		public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut> Shape { get; }
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new ZipWithStageLogic(Shape, this);
+            return new Logic(Shape, this);
         }
 	}
 	
 	public class ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut>>
 	{
-		private sealed class ZipWithStageLogic : GraphStageLogic
+		private sealed class Logic : GraphStageLogic
 		{
 			private readonly ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut> _stage;
 			// Without this field the completion signalling would take one extra pull
-			private bool _willShutDown = false;
-			private int _pending = 1;
-			public ZipWithStageLogic(Shape shape, ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut> stage) : base(shape)
+			private bool _willShutDown;
+			private int _pending;
+			public Logic(Shape shape, ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut> stage) : base(shape)
 			{
 				_stage = stage;
 				
@@ -658,19 +709,8 @@ namespace Akka.Streams.Dsl
 				});
 				
 				SetHandler(_stage.Out, onPull: () => {
-					_pending = stage.Shape.Inlets.Count();
-					if (_willShutDown) CompleteStage();
-					else 
-					{
-						Pull(_stage.In0);
-						Pull(_stage.In1);
-						Pull(_stage.In2);
-						Pull(_stage.In3);
-						Pull(_stage.In4);
-						Pull(_stage.In5);
-						Pull(_stage.In6);
-						
-					}
+					_pending += stage.Shape.Inlets.Length;
+                    if (_pending == 0) PushAll();
 				});
 			}
 
@@ -678,7 +718,32 @@ namespace Akka.Streams.Dsl
 			{
 				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3), Grab(_stage.In4), Grab(_stage.In5), Grab(_stage.In6)));
 				if (_willShutDown) CompleteStage();
+                else {
+                    Pull(_stage.In0);
+                    Pull(_stage.In1);
+                    Pull(_stage.In2);
+                    Pull(_stage.In3);
+                    Pull(_stage.In4);
+                    Pull(_stage.In5);
+                    Pull(_stage.In6);
+                }
 			}
+
+            public override void PreStart()
+            {
+                Pull(_stage.In0);
+                Pull(_stage.In1);
+                Pull(_stage.In2);
+                Pull(_stage.In3);
+                Pull(_stage.In4);
+                Pull(_stage.In5);
+                Pull(_stage.In6);
+            }
+
+            public override string ToString()
+            {
+                return "ZipWith7";
+            }
 		}
 
 		private readonly Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut> _zipper;
@@ -713,19 +778,19 @@ namespace Akka.Streams.Dsl
 		public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut> Shape { get; }
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new ZipWithStageLogic(Shape, this);
+            return new Logic(Shape, this);
         }
 	}
 	
 	public class ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut>>
 	{
-		private sealed class ZipWithStageLogic : GraphStageLogic
+		private sealed class Logic : GraphStageLogic
 		{
 			private readonly ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut> _stage;
 			// Without this field the completion signalling would take one extra pull
-			private bool _willShutDown = false;
-			private int _pending = 1;
-			public ZipWithStageLogic(Shape shape, ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut> stage) : base(shape)
+			private bool _willShutDown;
+			private int _pending;
+			public Logic(Shape shape, ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut> stage) : base(shape)
 			{
 				_stage = stage;
 				
@@ -802,20 +867,8 @@ namespace Akka.Streams.Dsl
 				});
 				
 				SetHandler(_stage.Out, onPull: () => {
-					_pending = stage.Shape.Inlets.Count();
-					if (_willShutDown) CompleteStage();
-					else 
-					{
-						Pull(_stage.In0);
-						Pull(_stage.In1);
-						Pull(_stage.In2);
-						Pull(_stage.In3);
-						Pull(_stage.In4);
-						Pull(_stage.In5);
-						Pull(_stage.In6);
-						Pull(_stage.In7);
-						
-					}
+					_pending += stage.Shape.Inlets.Length;
+                    if (_pending == 0) PushAll();
 				});
 			}
 
@@ -823,7 +876,34 @@ namespace Akka.Streams.Dsl
 			{
 				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3), Grab(_stage.In4), Grab(_stage.In5), Grab(_stage.In6), Grab(_stage.In7)));
 				if (_willShutDown) CompleteStage();
+                else {
+                    Pull(_stage.In0);
+                    Pull(_stage.In1);
+                    Pull(_stage.In2);
+                    Pull(_stage.In3);
+                    Pull(_stage.In4);
+                    Pull(_stage.In5);
+                    Pull(_stage.In6);
+                    Pull(_stage.In7);
+                }
 			}
+
+            public override void PreStart()
+            {
+                Pull(_stage.In0);
+                Pull(_stage.In1);
+                Pull(_stage.In2);
+                Pull(_stage.In3);
+                Pull(_stage.In4);
+                Pull(_stage.In5);
+                Pull(_stage.In6);
+                Pull(_stage.In7);
+            }
+
+            public override string ToString()
+            {
+                return "ZipWith8";
+            }
 		}
 
 		private readonly Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut> _zipper;
@@ -860,19 +940,19 @@ namespace Akka.Streams.Dsl
 		public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut> Shape { get; }
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new ZipWithStageLogic(Shape, this);
+            return new Logic(Shape, this);
         }
 	}
 	
 	public class ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut>>
 	{
-		private sealed class ZipWithStageLogic : GraphStageLogic
+		private sealed class Logic : GraphStageLogic
 		{
 			private readonly ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut> _stage;
 			// Without this field the completion signalling would take one extra pull
-			private bool _willShutDown = false;
-			private int _pending = 1;
-			public ZipWithStageLogic(Shape shape, ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut> stage) : base(shape)
+			private bool _willShutDown;
+			private int _pending;
+			public Logic(Shape shape, ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut> stage) : base(shape)
 			{
 				_stage = stage;
 				
@@ -958,21 +1038,8 @@ namespace Akka.Streams.Dsl
 				});
 				
 				SetHandler(_stage.Out, onPull: () => {
-					_pending = stage.Shape.Inlets.Count();
-					if (_willShutDown) CompleteStage();
-					else 
-					{
-						Pull(_stage.In0);
-						Pull(_stage.In1);
-						Pull(_stage.In2);
-						Pull(_stage.In3);
-						Pull(_stage.In4);
-						Pull(_stage.In5);
-						Pull(_stage.In6);
-						Pull(_stage.In7);
-						Pull(_stage.In8);
-						
-					}
+					_pending += stage.Shape.Inlets.Length;
+                    if (_pending == 0) PushAll();
 				});
 			}
 
@@ -980,7 +1047,36 @@ namespace Akka.Streams.Dsl
 			{
 				Push(_stage.Out, _stage._zipper(Grab(_stage.In0), Grab(_stage.In1), Grab(_stage.In2), Grab(_stage.In3), Grab(_stage.In4), Grab(_stage.In5), Grab(_stage.In6), Grab(_stage.In7), Grab(_stage.In8)));
 				if (_willShutDown) CompleteStage();
+                else {
+                    Pull(_stage.In0);
+                    Pull(_stage.In1);
+                    Pull(_stage.In2);
+                    Pull(_stage.In3);
+                    Pull(_stage.In4);
+                    Pull(_stage.In5);
+                    Pull(_stage.In6);
+                    Pull(_stage.In7);
+                    Pull(_stage.In8);
+                }
 			}
+
+            public override void PreStart()
+            {
+                Pull(_stage.In0);
+                Pull(_stage.In1);
+                Pull(_stage.In2);
+                Pull(_stage.In3);
+                Pull(_stage.In4);
+                Pull(_stage.In5);
+                Pull(_stage.In6);
+                Pull(_stage.In7);
+                Pull(_stage.In8);
+            }
+
+            public override string ToString()
+            {
+                return "ZipWith9";
+            }
 		}
 
 		private readonly Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut> _zipper;
@@ -1019,7 +1115,7 @@ namespace Akka.Streams.Dsl
 		public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut> Shape { get; }
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new ZipWithStageLogic(Shape, this);
+            return new Logic(Shape, this);
         }
 	}
 	

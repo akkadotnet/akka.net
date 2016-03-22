@@ -981,9 +981,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Flow<TIn, KeyValuePair<T1, T2>, TMat> Zip<TIn, T1, T2, TMat>(this Flow<TIn, T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other)
+        public static Flow<TIn, Tuple<T1, T2>, TMat> Zip<TIn, T1, T2, TMat>(this Flow<TIn, T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other)
         {
-            return (Flow<TIn, KeyValuePair<T1, T2>, TMat>)InternalFlowOperations.Zip(flow, other);
+            return (Flow<TIn, Tuple<T1, T2>, TMat>)InternalFlowOperations.Zip(flow, other);
         }
 
         /// <summary>

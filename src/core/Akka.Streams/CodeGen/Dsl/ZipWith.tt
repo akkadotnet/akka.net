@@ -7,10 +7,6 @@
 
 // --- auto generated: <#= System.DateTime.UtcNow.ToString() #> --- //
 using System;
-using System.Linq;
-using System.Reactive.Streams;
-using Akka.Streams.Implementation;
-using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Stage;
 <# var count = 10; #>
 
@@ -41,13 +37,13 @@ namespace Akka.Streams.Dsl
 
 	public class ZipWith<<#= typeParams #>, TOut> : GraphStage<<#= fanInShape #>>
 	{
-		private sealed class ZipWithStageLogic : GraphStageLogic
+		private sealed class Logic : GraphStageLogic
 		{
 			private readonly ZipWith<<#= typeParams #>, TOut> _stage;
 			// Without this field the completion signalling would take one extra pull
-			private bool _willShutDown = false;
-			private int _pending = 1;
-			public ZipWithStageLogic(Shape shape, ZipWith<<#= typeParams #>, TOut> stage) : base(shape)
+			private bool _willShutDown;
+			private int _pending;
+			public Logic(Shape shape, ZipWith<<#= typeParams #>, TOut> stage) : base(shape)
 			{
 				_stage = stage;
 				<# for (var t = 0; t < i; t++) { #>
@@ -63,15 +59,8 @@ namespace Akka.Streams.Dsl
 				<# } #>
 
 				SetHandler(_stage.Out, onPull: () => {
-					_pending = stage.Shape.Inlets.Count();
-					if (_willShutDown) CompleteStage();
-					else 
-					{
-						<# for (int t = 0; t < i; t++) { #>
-Pull(_stage.In<#=t#>);
-						<# } #>
-
-					}
+					_pending += stage.Shape.Inlets.Length;
+                    if (_pending == 0) PushAll();
 				});
 			}
 
@@ -79,7 +68,24 @@ Pull(_stage.In<#=t#>);
 			{
 				Push(_stage.Out, _stage._zipper(<#= string.Join(", ", Enumerable.Range(0, i).Select(x => "Grab(_stage.In" + x + ")")) #>));
 				if (_willShutDown) CompleteStage();
+                else {
+<# for (var t = 0; t < i; t++) { #>
+                    Pull(_stage.In<#= t #>);
+<# } #>
+                }
 			}
+
+            public override void PreStart()
+            {
+<# for (var t = 0; t < i; t++) { #>
+                Pull(_stage.In<#= t #>);
+<# } #>
+            }
+
+            public override string ToString()
+            {
+                return "ZipWith<#= i #>";
+            }
 		}
 
 		private readonly Func<<#= typeParams #>, TOut> _zipper;
@@ -106,7 +112,7 @@ public Inlet<TIn<#= t #>> In<#= t #> { get; }
 		public sealed override <#= fanInShape #> Shape { get; }
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new ZipWithStageLogic(Shape, this);
+            return new Logic(Shape, this);
         }
 	}
 	<# } #>

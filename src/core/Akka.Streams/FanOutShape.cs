@@ -69,40 +69,41 @@ namespace Akka.Streams
         protected FanOutShape(IInit init) : this(init.Inlet, init.Outlets, init.Name) { }
 
         public Inlet<TIn> In { get; }
-        public override ImmutableArray<Outlet> Outlets { get { return _outlets; } }
+        public override ImmutableArray<Outlet> Outlets => _outlets;
         public override ImmutableArray<Inlet> Inlets { get; }
 
         protected abstract FanOutShape<TIn> Construct(IInit init);
 
         protected Outlet<T> NewOutlet<T>(string name)
         {
-            var p = _registered.MoveNext() ? Outlet.Create<T>(_registered.Current) : new Outlet<T>(_name + "." + name);
+            var p = _registered.MoveNext() ? (Outlet<T>)_registered.Current : new Outlet<T>($"{_name}.{name}");
             _outlets = _outlets.Add(p);
             return p;
         }
         public override Shape DeepCopy()
         {
-            return Construct(new InitPorts(Inlet.Create<TIn>(In), _outlets));
+            return Construct(new InitPorts((Inlet<TIn>)In.CarbonCopy(), _outlets.Select(o => o.CarbonCopy())));
         }
 
-        public sealed override Shape CopyFromPorts(ImmutableArray<Inlet> i, ImmutableArray<Outlet> o)
+        public sealed override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
         {
-            if (i.Length != 1) throw new ArgumentException(string.Format("Proposed inlets [{0}] do not fit FanOutShape", string.Join(", ", i)));
-            if (o.Length != _outlets.Length) throw new ArgumentException(string.Format("Proposed outlets [{0}] do not fit FanOutShape", string.Join(", ", o)));
+            if (inlets.Length != 1) throw new ArgumentException(
+                $"Proposed inlets [{string.Join(", ", inlets)}] do not fit FanOutShape");
+            if (outlets.Length != _outlets.Length) throw new ArgumentException(string.Format("Proposed outlets [{0}] do not fit FanOutShape", string.Join(", ", outlets)));
 
-            return Construct(new InitPorts(Inlet.Create<TIn>(i[0]), o));
+            return Construct(new InitPorts((Inlet<TIn>)inlets[0], outlets));
         }
     }
 
     public class UniformFanOutShape<TIn, TOut> : FanOutShape<TIn>
     {
         private readonly int _n;
-        private readonly Outlet<TOut>[] _outSeq;
+        private readonly Outlet<TOut>[] _out;
 
         public UniformFanOutShape(int n, IInit init) : base(init)
         {
             _n = n;
-            _outSeq = Enumerable.Range(0, n).Select(i => new Outlet<TOut>("out" + i)).ToArray();
+            _out = Enumerable.Range(0, n).Select(i => NewOutlet<TOut>($"out{i}")).ToArray();
         }
 
         public UniformFanOutShape(int n) : this(n, new InitName("UniformFanOut")) { }
@@ -111,7 +112,7 @@ namespace Akka.Streams
 
         public Outlet<TOut> Out(int n)
         {
-            return _outSeq[n];
+            return _out[n];
         }
 
         protected override FanOutShape<TIn> Construct(IInit init)

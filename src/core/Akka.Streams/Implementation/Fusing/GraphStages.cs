@@ -13,7 +13,7 @@ namespace Akka.Streams.Implementation.Fusing
     {
         internal static SimpleLinearGraphStage<T> Identity<T>()
         {
-            return Akka.Streams.Implementation.Fusing.Identity<T>.Instance;
+            return Implementation.Fusing.Identity<T>.Instance;
         }
     }
 
@@ -60,7 +60,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         protected SimpleLinearGraphStage()
         {
-            var name = this.GetType().Name;
+            var name = GetType().Name;
             Inlet = new Inlet<T>(name + ".in");
             Outlet = new Outlet<T>(name + ".out");
             _shape = new FlowShape<T, T>(Inlet, Outlet);
@@ -72,9 +72,9 @@ namespace Akka.Streams.Implementation.Fusing
     internal sealed class Identity<T> : SimpleLinearGraphStage<T>
     {
         #region internal classes
-        private sealed class AnonymousGraphStageLogic : GraphStageLogic
+        private sealed class Logic : GraphStageLogic
         {
-            public AnonymousGraphStageLogic(Shape shape, Identity<T> stage) : base(shape)
+            public Logic(Shape shape, Identity<T> stage) : base(shape)
             {
                 SetHandler(stage.Inlet, () =>
                 {
@@ -100,58 +100,77 @@ namespace Akka.Streams.Implementation.Fusing
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new AnonymousGraphStageLogic(Shape, this);
+            return new Logic(Shape, this);
         }
     }
 
     internal sealed class Detacher<T> : GraphStage<FlowShape<T, T>>
     {
         #region internal classes
-        private sealed class AnonymousGraphStageLogic : GraphStageLogic
+        private sealed class Logic : GraphStageLogic
         {
-            public AnonymousGraphStageLogic(Shape shape, Detacher<T> stage) : base(shape)
+            private readonly Detacher<T> _stage;
+
+            public Logic(Shape shape, Detacher<T> stage) : base(shape)
             {
-                SetHandler(stage.Inlet, () =>
-                {
-                    var inlet = stage.Inlet;
-                    var outlet = stage.Outlet;
-                    if (IsAvailable(outlet))
+                _stage = stage;
+                SetHandler(stage.Inlet,
+                    onPush: () =>
                     {
-                        Push(outlet, Grab(inlet));
-                        TryPull(inlet);
-                    }
-                });
-                SetHandler(stage.Outlet, () =>
-                {
-                    var inlet = stage.Inlet;
-                    var outlet = stage.Outlet;
-                    if (IsAvailable(inlet))
+                        var outlet = stage.Outlet;
+                        if (IsAvailable(outlet))
+                        {
+                            var inlet = stage.Inlet;
+                            Push(outlet, Grab(inlet));
+                            TryPull(inlet);
+                        }
+                    },
+                    onUpstreamFinish: () =>
                     {
-                        Push(outlet, Grab(inlet));
-                        TryPull(inlet);
-                    }
-                });
+                        if (!IsAvailable(stage.Inlet)) CompleteStage();
+                    });
+                SetHandler(stage.Outlet,
+                    onPull: () =>
+                    {
+                        var inlet = stage.Inlet;
+                        if (IsAvailable(inlet))
+                        {
+                            var outlet = stage.Outlet;
+                            Push(outlet, Grab(inlet));
+                            if (IsClosed(inlet)) CompleteStage();
+                            else Pull(inlet);
+                        }
+                    });
+            }
+
+            public override void PreStart()
+            {
+                TryPull(_stage.Inlet);
             }
         }
         #endregion
 
         public readonly Inlet<T> Inlet;
         public readonly Outlet<T> Outlet;
-        private Attributes _initialAttributes;
 
         public Detacher()
         {
-            _initialAttributes = Attributes.CreateName("Detacher");
+            InitialAttributes = Attributes.CreateName("Detacher");
             Inlet = new Inlet<T>("in");
             Outlet = new Outlet<T>("out");
             Shape = new FlowShape<T, T>(Inlet, Outlet);
         }
 
-        protected override Attributes InitialAttributes { get { return _initialAttributes; } }
+        protected override Attributes InitialAttributes { get; }
         public override FlowShape<T, T> Shape { get; }
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new AnonymousGraphStageLogic(Shape, this);
+            return new Logic(Shape, this);
+        }
+
+        public override string ToString()
+        {
+            return "Detacher";
         }
     }
 

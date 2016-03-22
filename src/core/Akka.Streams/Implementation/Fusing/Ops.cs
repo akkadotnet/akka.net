@@ -359,9 +359,9 @@ namespace Akka.Streams.Implementation.Fusing
         private sealed class StartInHandler : InHandler
         {
             private readonly Intersperse<T> _stage;
-            private readonly AnonymousGraphStageLogic _logic;
+            private readonly Logic _logic;
 
-            public StartInHandler(Intersperse<T> stage, AnonymousGraphStageLogic logic)
+            public StartInHandler(Intersperse<T> stage, Logic logic)
             {
                 _stage = stage;
                 _logic = logic;
@@ -384,9 +384,9 @@ namespace Akka.Streams.Implementation.Fusing
         private sealed class RestInHandler : InHandler
         {
             private readonly Intersperse<T> _stage;
-            private readonly AnonymousGraphStageLogic _logic;
+            private readonly Logic _logic;
 
-            public RestInHandler(Intersperse<T> stage, AnonymousGraphStageLogic logic)
+            public RestInHandler(Intersperse<T> stage, Logic logic)
             {
                 _stage = stage;
                 _logic = logic;
@@ -403,9 +403,9 @@ namespace Akka.Streams.Implementation.Fusing
                 _logic.CompleteStage();
             }
         }
-        private sealed class AnonymousGraphStageLogic : GraphStageLogic
+        private sealed class Logic : GraphStageLogic
         {
-            public AnonymousGraphStageLogic(Shape shape, Intersperse<T> stage) : base(shape)
+            public Logic(Shape shape, Intersperse<T> stage) : base(shape)
             {
                 SetHandler(stage.In, new StartInHandler(stage, this));
                 SetHandler(stage.Out, onPull: () => Pull(stage.In));
@@ -443,7 +443,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new AnonymousGraphStageLogic(Shape, this);
+            return new Logic(Shape, this);
         }
     }
 

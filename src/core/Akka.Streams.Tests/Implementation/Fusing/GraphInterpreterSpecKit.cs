@@ -28,14 +28,14 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 _logger = Logging.GetLogger(system, "InterpreterSpecKit");
             }
 
-            protected GraphInterpreter Interpreter => _interpreter;
+            public GraphInterpreter Interpreter => _interpreter;
 
-            protected void StepAll()
+            public void StepAll()
             {
                 Interpreter.Execute(int.MaxValue);
             }
 
-            protected void Step()
+            public void Step()
             {
                 Interpreter.Execute(1);
             }
@@ -103,27 +103,27 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 public GraphAssembly BuildAssembly()
                 {
-                    var ins = _upstreams.Select(u => u.Item2).Union(_connections.Select(c => c.Item2)).ToArray();
-                    var outs = _connections.Select(c => c.Item1).Union(_downstreams.Select(d => d.Item1)).ToArray();
+                    var ins = _upstreams.Select(u => u.Item2).Concat(_connections.Select(c => c.Item2)).ToArray();
+                    var outs = _connections.Select(c => c.Item1).Concat(_downstreams.Select(d => d.Item1)).ToArray();
                     var inOwners =
                         ins.Select(
                             inlet =>
-                                _stages.Select((s, i) => new {Shape = s, Index = i})
-                                    .First(s => s.Shape.Shape.Inlets.Contains(inlet))
-                                    .Index);
+                                _stages.Select((s, i) => new {Stage = s, Index = i})
+                                    .First(s => s.Stage.Shape.Inlets.Contains(inlet))
+                                    .Index).ToArray();
                     var outOwners =
                         outs.Select(
                             outlet =>
-                                _stages.Select((s, i) => new {Shape = s, Index = i})
-                                    .First(s => s.Shape.Shape.Outlets.Contains(outlet))
+                                _stages.Select((s, i) => new {Stage = s, Index = i})
+                                    .First(s => s.Stage.Shape.Outlets.Contains(outlet))
                                     .Index);
 
                     return new GraphAssembly(_stages.ToArray(),
                         Enumerable.Repeat(Attributes.None, _stages.Count).ToArray(),
-                        ins.Union(Enumerable.Repeat<Inlet>(null, _downstreams.Count)).ToArray(),
-                        inOwners.Union(Enumerable.Repeat(-1, _downstreams.Count)).ToArray(),
-                        Enumerable.Repeat<Outlet>(null, _upstreams.Count).Union(outs).ToArray(),
-                        Enumerable.Repeat(-1, _upstreams.Count).Union(outOwners).ToArray());
+                        ins.Concat(Enumerable.Repeat<Inlet>(null, _downstreams.Count)).ToArray(),
+                        inOwners.Concat(Enumerable.Repeat(-1, _downstreams.Count)).ToArray(),
+                        Enumerable.Repeat<Outlet>(null, _upstreams.Count).Concat(outs).ToArray(),
+                        Enumerable.Repeat(-1, _upstreams.Count).Concat(outOwners).ToArray());
                 }
 
                 public void Init()
@@ -187,8 +187,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             }
         }
 
-        public abstract class TestSetup : BaseBuilder
+        public class TestSetup : BaseBuilder
         {
+            #region Test Events
             public interface ITestEvent
             {
                 GraphStageLogic Source { get; }
@@ -202,6 +203,24 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 {
                     Source = source;
                 }
+
+                protected bool Equals(OnComplete other)
+                {
+                    return Equals(Source, other.Source);
+                }
+
+                public override bool Equals(object obj)
+                {
+                    if (ReferenceEquals(null, obj)) return false;
+                    if (ReferenceEquals(this, obj)) return true;
+                    if (obj.GetType() != GetType()) return false;
+                    return Equals((OnComplete) obj);
+                }
+
+                public override int GetHashCode()
+                {
+                    return Source?.GetHashCode() ?? 0;
+                }
             }
 
             public class Cancel : ITestEvent
@@ -211,6 +230,24 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 public Cancel(GraphStageLogic source)
                 {
                     Source = source;
+                }
+
+                protected bool Equals(Cancel other)
+                {
+                    return Equals(Source, other.Source);
+                }
+
+                public override bool Equals(object obj)
+                {
+                    if (ReferenceEquals(null, obj)) return false;
+                    if (ReferenceEquals(this, obj)) return true;
+                    if (obj.GetType() != GetType()) return false;
+                    return Equals((Cancel) obj);
+                }
+
+                public override int GetHashCode()
+                {
+                    return Source?.GetHashCode() ?? 0;
                 }
             }
 
@@ -224,6 +261,27 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     Source = source;
                     Cause = cause;
                 }
+
+                protected bool Equals(OnError other)
+                {
+                    return Equals(Source, other.Source) && Equals(Cause, other.Cause);
+                }
+
+                public override bool Equals(object obj)
+                {
+                    if (ReferenceEquals(null, obj)) return false;
+                    if (ReferenceEquals(this, obj)) return true;
+                    if (obj.GetType() != GetType()) return false;
+                    return Equals((OnError) obj);
+                }
+
+                public override int GetHashCode()
+                {
+                    unchecked
+                    {
+                        return ((Source?.GetHashCode() ?? 0)*397) ^ (Cause?.GetHashCode() ?? 0);
+                    }
+                }
             }
 
             public class OnNext : ITestEvent
@@ -236,6 +294,27 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     Source = source;
                     Element = element;
                 }
+
+                protected bool Equals(OnNext other)
+                {
+                    return Equals(Source, other.Source) && Equals(Element, other.Element);
+                }
+
+                public override bool Equals(object obj)
+                {
+                    if (ReferenceEquals(null, obj)) return false;
+                    if (ReferenceEquals(this, obj)) return true;
+                    if (obj.GetType() != GetType()) return false;
+                    return Equals((OnNext) obj);
+                }
+
+                public override int GetHashCode()
+                {
+                    unchecked
+                    {
+                        return ((Source?.GetHashCode() ?? 0)*397) ^ (Element?.GetHashCode() ?? 0);
+                    }
+                }
             }
 
             public class RequestOne : ITestEvent
@@ -245,6 +324,24 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 public RequestOne(GraphStageLogic source)
                 {
                     Source = source;
+                }
+
+                protected bool Equals(RequestOne other)
+                {
+                    return Equals(Source, other.Source);
+                }
+
+                public override bool Equals(object obj)
+                {
+                    if (ReferenceEquals(null, obj)) return false;
+                    if (ReferenceEquals(this, obj)) return true;
+                    if (obj.GetType() != GetType()) return false;
+                    return Equals((RequestOne) obj);
+                }
+
+                public override int GetHashCode()
+                {
+                    return Source?.GetHashCode() ?? 0;
                 }
             }
 
@@ -256,6 +353,24 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 {
                     Source = source;
                 }
+
+                protected bool Equals(RequestAnother other)
+                {
+                    return Equals(Source, other.Source);
+                }
+
+                public override bool Equals(object obj)
+                {
+                    if (ReferenceEquals(null, obj)) return false;
+                    if (ReferenceEquals(this, obj)) return true;
+                    if (obj.GetType() != GetType()) return false;
+                    return Equals((RequestAnother) obj);
+                }
+
+                public override int GetHashCode()
+                {
+                    return Source?.GetHashCode() ?? 0;
+                }
             }
 
             public class PreStart : ITestEvent
@@ -265,6 +380,24 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 public PreStart(GraphStageLogic source)
                 {
                     Source = source;
+                }
+
+                protected bool Equals(PreStart other)
+                {
+                    return Equals(Source, other.Source);
+                }
+
+                public override bool Equals(object obj)
+                {
+                    if (ReferenceEquals(null, obj)) return false;
+                    if (ReferenceEquals(this, obj)) return true;
+                    if (obj.GetType() != GetType()) return false;
+                    return Equals((PreStart) obj);
+                }
+
+                public override int GetHashCode()
+                {
+                    return Source?.GetHashCode() ?? 0;
                 }
             }
 
@@ -276,15 +409,34 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 {
                     Source = source;
                 }
-            }
 
-            protected TestSetup(ActorSystem system) : base(system)
+                protected bool Equals(PostStop other)
+                {
+                    return Equals(Source, other.Source);
+                }
+
+                public override bool Equals(object obj)
+                {
+                    if (ReferenceEquals(null, obj)) return false;
+                    if (ReferenceEquals(this, obj)) return true;
+                    if (obj.GetType() != GetType()) return false;
+                    return Equals((PostStop) obj);
+                }
+
+                public override int GetHashCode()
+                {
+                    return Source?.GetHashCode() ?? 0;
+                }
+            }
+            #endregion
+
+            public TestSetup(ActorSystem system) : base(system)
             {
             }
 
             public IList<ITestEvent> LastEvent = new List<ITestEvent>();
 
-            public IEnumerable<ITestEvent> LastEvents()
+            public IList<ITestEvent> LastEvents()
             {
                 var result = LastEvent;
                 ClearEvents();
@@ -294,6 +446,16 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             public void ClearEvents()
             {
                 LastEvent = new List<ITestEvent>();
+            }
+
+            public UpstreamProbe<T> NewUpstreamProbe<T>(string name)
+            {
+                return new UpstreamProbe<T>(this, name);
+            }
+
+            public DownstreamProbe<T> NewDownstreamProbe<T>(string name)
+            {
+                return new DownstreamProbe<T>(this, name);
             }
 
             public class UpstreamProbe<T> : GraphInterpreter.UpstreamBoundaryStageLogic
@@ -644,6 +806,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         public abstract class OneBoundedSetup : BaseBuilder
         {
+            #region Test Events
             public interface ITestEvent
             {
             }
@@ -708,13 +871,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 {
                     if (ReferenceEquals(null, obj)) return false;
                     if (ReferenceEquals(this, obj)) return true;
-                    if (obj.GetType() != this.GetType()) return false;
+                    if (obj.GetType() != GetType()) return false;
                     return Equals((OnError) obj);
                 }
 
                 public override int GetHashCode()
                 {
-                    return (Cause != null ? Cause.GetHashCode() : 0);
+                    return Cause?.GetHashCode() ?? 0;
                 }
             }
 
@@ -738,13 +901,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 {
                     if (ReferenceEquals(null, obj)) return false;
                     if (ReferenceEquals(this, obj)) return true;
-                    if (obj.GetType() != this.GetType()) return false;
+                    if (obj.GetType() != GetType()) return false;
                     return Equals((OnNext) obj);
                 }
 
                 public override int GetHashCode()
                 {
-                    return (Element != null ? Element.GetHashCode() : 0);
+                    return Element?.GetHashCode() ?? 0;
                 }
             }
 
@@ -789,6 +952,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     return 0;
                 }
             }
+            #endregion
 
             protected OneBoundedSetup(ActorSystem system) : base(system)
             {
@@ -951,6 +1115,30 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         public IGraphStageWithMaterializedValue[] ToGraphStage<TIn, TOut>(IStage<TIn, TOut>[] stages)
         {
             return stages.Select(ToGraphStage).Cast<IGraphStageWithMaterializedValue>().ToArray();
+        }
+
+        public void WithTestSetup(Action<TestSetup, Func<IList<TestSetup.ITestEvent>>> spec)
+        {
+            var setup = new TestSetup(Sys);
+            spec(setup, setup.LastEvents);
+        }
+
+        public void WithTestSetup(
+            Action
+                <TestSetup, Func<IGraphStageWithMaterializedValue, BaseBuilder.AssemblyBuilder>,
+                    Func<IList<TestSetup.ITestEvent>>> spec)
+        {
+            var setup = new TestSetup(Sys);
+            spec(setup, g => setup.Builder(g), setup.LastEvents);
+        }
+
+        public void WithTestSetup(
+            Action
+                <TestSetup, Func<IGraphStageWithMaterializedValue[], BaseBuilder.AssemblyBuilder>,
+                    Func<IList<TestSetup.ITestEvent>>> spec)
+        {
+            var setup = new TestSetup(Sys);
+            spec(setup, setup.Builder, setup.LastEvents);
         }
 
         public void WithOneBoundedSetup<T>(IStage<T, T> op,
