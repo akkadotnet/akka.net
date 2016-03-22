@@ -38,19 +38,19 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(0);
-                    lastEvents().Should().Equal(new OnNext(1));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(1));
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(1);
-                    lastEvents().Should().Equal(new OnNext(2));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(2));
 
                     upstream.OnComplete();
-                    lastEvents().Should().Equal(new OnComplete());
+                    lastEvents().Should().BeEquivalentTo(new OnComplete());
                 });
         }
 
@@ -68,19 +68,19 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(0);
-                    lastEvents().Should().Equal(new OnNext(3));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(3));
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(1);
-                    lastEvents().Should().Equal(new OnNext(5));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(5));
 
                     upstream.OnComplete();
-                    lastEvents().Should().Equal(new OnComplete());
+                    lastEvents().Should().BeEquivalentTo(new OnComplete());
                 });
         }
 
@@ -93,13 +93,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(0);
-                    lastEvents().Should().Equal(new OnNext(0));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(0));
 
                     upstream.OnComplete();
-                    lastEvents().Should().Equal(new OnComplete());
+                    lastEvents().Should().BeEquivalentTo(new OnComplete());
                 });
         }
 
@@ -116,22 +116,22 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(0);
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(1);
-                    lastEvents().Should().Equal(new OnNext(1));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(1));
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new OnNext(1));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(1));
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnComplete();
-                    lastEvents().Should().Equal(new OnComplete());
+                    lastEvents().Should().BeEquivalentTo(new OnComplete());
                 });
         }
 
@@ -148,22 +148,22 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(0);
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(1);
-                    lastEvents().Should().Equal(new OnNext(1));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(1));
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new OnNext(1));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(1));
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     downstream.Cancel();
-                    lastEvents().Should().Equal(new Cancel());
+                    lastEvents().Should().BeEquivalentTo(new Cancel());
                 });
         }
 
@@ -179,16 +179,16 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(0);
-                    lastEvents().Should().Equal(new OnNext(0));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(0));
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(1);
-                    lastEvents().Should().Equal(new OnNext(1), new Cancel(), new OnComplete());
+                    lastEvents().Should().BeEquivalentTo(new OnNext(1), new Cancel(), new OnComplete());
                 });
         }
 
@@ -206,19 +206,19 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(0);
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(1);
-                    lastEvents().Should().Equal(new OnNext(2));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(2));
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(2);
-                    lastEvents().Should().Equal(new OnNext(3), new Cancel(), new OnComplete());
+                    lastEvents().Should().BeEquivalentTo(new OnNext(3), new Cancel(), new OnComplete());
                 });
         }
 
@@ -234,19 +234,19 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(0);
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(1);
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(2);
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnComplete();
-                    lastEvents().Should().Equal(new OnNext(3), new OnComplete());
+                    lastEvents().Should().BeEquivalentTo(new OnNext(3), new OnComplete());
                 });
         }
 
@@ -262,19 +262,19 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(0);
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(1);
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(2);
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     downstream.Cancel();
-                    lastEvents().Should().Equal(new Cancel());
+                    lastEvents().Should().BeEquivalentTo(new Cancel());
                 });
         }
 
@@ -293,7 +293,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new OnNext(0), new OnComplete());
+                    lastEvents().Should().BeEquivalentTo(new OnNext(0), new OnComplete());
                 });
         }
 
@@ -308,25 +308,25 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(0);
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(1);
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(2);
-                    lastEvents().Should().Equal(new OnNext(new [] {0, 1, 2}));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(new [] {0, 1, 2}));
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(3);
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnComplete();
-                    lastEvents().Should().Equal(new OnNext(new [] {3}), new OnComplete());
+                    lastEvents().Should().BeEquivalentTo(new OnNext(new [] {3}), new OnComplete());
                 });
         }
 
@@ -336,31 +336,31 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             WithOneBoundedSetup<int>(new Batch<int, int>(1L, e => 0L, e => e, (agg, x) => agg + x),
                 (lastEvents, upstream, downstream) =>
                 {
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     downstream.RequestOne();
                     lastEvents().Should().BeEmpty();
 
                     upstream.OnNext(0);
-                    lastEvents().Should().Equal(new OnNext(0), new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new OnNext(0), new RequestOne());
 
                     upstream.OnNext(1);
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(2);
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new OnNext(3));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(3));
 
                     downstream.RequestOne();
                     lastEvents().Should().BeEmpty();
 
                     upstream.OnNext(4);
-                    lastEvents().Should().Equal(new OnNext(4), new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new OnNext(4), new RequestOne());
 
                     downstream.Cancel();
-                    lastEvents().Should().Equal(new Cancel());
+                    lastEvents().Should().BeEquivalentTo(new Cancel());
                 });
         }
 
@@ -370,28 +370,28 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             WithOneBoundedSetup<int>(new Expand<int, int>(e => Enumerable.Repeat(e, int.MaxValue).GetEnumerator()),
                 (lastEvents, upstream, downstream) =>
                 {
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(0);
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne(), new OnNext(0));
+                    lastEvents().Should().BeEquivalentTo(new RequestOne(), new OnNext(0));
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new OnNext(0));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(0));
 
                     upstream.OnNext(1);
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne(), new OnNext(1));
+                    lastEvents().Should().BeEquivalentTo(new RequestOne(), new OnNext(1));
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new OnNext(1));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(1));
 
                     upstream.OnComplete();
-                    lastEvents().Should().Equal(new OnComplete());
+                    lastEvents().Should().BeEquivalentTo(new OnComplete());
                 });
         }
 
@@ -405,31 +405,31 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             },
                 (lastEvents, upstream, downstream) =>
                 {
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     downstream.RequestOne();
                     lastEvents().Should().BeEmpty();
 
                     upstream.OnNext(0);
-                    lastEvents().Should().Equal(new RequestOne(), new OnNext(0));
+                    lastEvents().Should().BeEquivalentTo(new RequestOne(), new OnNext(0));
 
                     upstream.OnNext(1);
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(2);
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new OnNext(3));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(3));
 
                     downstream.RequestOne();
                     lastEvents().Should().BeEmpty();
 
                     upstream.OnNext(4);
-                    lastEvents().Should().Equal(new RequestOne(), new OnNext(4));
+                    lastEvents().Should().BeEquivalentTo(new RequestOne(), new OnNext(4));
 
                     downstream.Cancel();
-                    lastEvents().Should().Equal(new Cancel());
+                    lastEvents().Should().BeEquivalentTo(new Cancel());
                 });
         }
 
@@ -443,33 +443,33 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             },
                 (lastEvents, upstream, downstream) =>
                 {
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(0);
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new OnNext(0));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(0));
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new OnNext(1));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(1));
 
                     upstream.OnNext(10);
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new OnNext(2), new RequestOne()); // one element is still in the pipeline
+                    lastEvents().Should().BeEquivalentTo(new OnNext(2), new RequestOne()); // one element is still in the pipeline
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new OnNext(10));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(10));
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new OnNext(11));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(11));
 
                     upstream.OnComplete();
                     downstream.RequestOne();
                     // This is correct! If you don't believe, run the interpreter with Debug on
-                    lastEvents().Should().Equal(new OnNext(12), new OnComplete());
+                    lastEvents().Should().BeEquivalentTo(new OnNext(12), new OnComplete());
                 });
         }
 
@@ -483,31 +483,31 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             },
                 (lastEvents, upstream, downstream) =>
                 {
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(0);
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(1);
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new OnNext(0));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(0));
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new OnNext(1));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(1));
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new OnNext(1));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(1));
 
                     upstream.OnNext(2);
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new OnNext(2));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(2));
 
                     downstream.Cancel();
-                    lastEvents().Should().Equal(new Cancel());
+                    lastEvents().Should().BeEquivalentTo(new Cancel());
                 });
         }
 
@@ -521,16 +521,16 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             },
                 (lastEvents, upstream, downstream) =>
                 {
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(1);
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(2);
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new OnNext(6));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(6));
                 });
         }
 
@@ -551,25 +551,25 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(1);
-                    lastEvents().Should().Equal(new OnNext(1));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(1));
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(2);
-                    lastEvents().Should().Equal(new OnNext(2));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(2));
 
                     upstream.OnComplete();
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new OnNext(2));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(2));
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new OnNext(2));
+                    lastEvents().Should().BeEquivalentTo(new OnNext(2));
                 });
         }
 
@@ -582,10 +582,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNextAndComplete(1);
-                    lastEvents().Should().Equal(new OnNext(1), new OnComplete());
+                    lastEvents().Should().BeEquivalentTo(new OnNext(1), new OnComplete());
                 });
         }
 
@@ -603,10 +603,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNextAndComplete(1);
-                    lastEvents().Should().Equal(new OnNext(1), new OnComplete());
+                    lastEvents().Should().BeEquivalentTo(new OnNext(1), new OnComplete());
                 });
         }
 
@@ -623,10 +623,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNextAndComplete(1);
-                    lastEvents().Should().Equal(new OnNext(1), new OnComplete());
+                    lastEvents().Should().BeEquivalentTo(new OnNext(1), new OnComplete());
                 });
         }
 
@@ -639,7 +639,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     EventFilter.Exception<ArgumentException>(new Regex(".*Cannot pull a closed port.*"))
                         .ExpectOne(upstream.OnComplete);
@@ -664,10 +664,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNext(1);
-                    lastEvents().Should().Equal(new Cancel(), new OnNext(1), new OnComplete());
+                    lastEvents().Should().BeEquivalentTo(new Cancel(), new OnNext(1), new OnComplete());
                 });
         }
 
@@ -684,10 +684,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().Equal(new RequestOne());
+                    lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                     upstream.OnNextAndComplete(1);
-                    lastEvents().Should().Equal(new OnNext(1), new OnComplete());
+                    lastEvents().Should().BeEquivalentTo(new OnNext(1), new OnComplete());
                 });
         }
 
@@ -704,7 +704,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                         .ExpectOne(() =>
                         {
                             downstream.Cancel();
-                            lastEvents().Should().Equal(new Cancel());
+                            lastEvents().Should().BeEquivalentTo(new Cancel());
                         });
                 });
         }

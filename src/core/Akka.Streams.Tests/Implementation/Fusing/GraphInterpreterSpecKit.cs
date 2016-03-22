@@ -434,9 +434,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             {
             }
 
-            public IList<ITestEvent> LastEvent = new List<ITestEvent>();
+            public ISet<ITestEvent> LastEvent = new HashSet<ITestEvent>();
 
-            public IList<ITestEvent> LastEvents()
+            public ISet<ITestEvent> LastEvents()
             {
                 var result = LastEvent;
                 ClearEvents();
@@ -445,7 +445,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             public void ClearEvents()
             {
-                LastEvent = new List<ITestEvent>();
+                LastEvent = new HashSet<ITestEvent>();
             }
 
             public UpstreamProbe<T> NewUpstreamProbe<T>(string name)
@@ -1117,7 +1117,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             return stages.Select(ToGraphStage).Cast<IGraphStageWithMaterializedValue>().ToArray();
         }
 
-        public void WithTestSetup(Action<TestSetup, Func<IList<TestSetup.ITestEvent>>> spec)
+        public void WithTestSetup(Action<TestSetup, Func<ISet<TestSetup.ITestEvent>>> spec)
         {
             var setup = new TestSetup(Sys);
             spec(setup, setup.LastEvents);
@@ -1126,7 +1126,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         public void WithTestSetup(
             Action
                 <TestSetup, Func<IGraphStageWithMaterializedValue, BaseBuilder.AssemblyBuilder>,
-                    Func<IList<TestSetup.ITestEvent>>> spec)
+                    Func<ISet<TestSetup.ITestEvent>>> spec)
         {
             var setup = new TestSetup(Sys);
             spec(setup, g => setup.Builder(g), setup.LastEvents);
@@ -1135,7 +1135,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         public void WithTestSetup(
             Action
                 <TestSetup, Func<IGraphStageWithMaterializedValue[], BaseBuilder.AssemblyBuilder>,
-                    Func<IList<TestSetup.ITestEvent>>> spec)
+                    Func<ISet<TestSetup.ITestEvent>>> spec)
         {
             var setup = new TestSetup(Sys);
             spec(setup, setup.Builder, setup.LastEvents);
