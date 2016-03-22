@@ -114,7 +114,7 @@ namespace Akka.Streams.Stage
         FreeDirective PushAndPull(object element);
 
         IUpstreamDirective HoldUpstream();
-        IDownstreamDirective HoldUpstreamAndPush(object element);
+        IUpstreamDirective HoldUpstreamAndPush(object element);
 
         IDownstreamDirective HoldDownstream();
         IDownstreamDirective HoldDownstreamAndPull();
@@ -123,7 +123,7 @@ namespace Akka.Streams.Stage
     public interface IDetachedContext<in TOut> : IDetachedContext, IContext<TOut>
     {
         FreeDirective PushAndPull(TOut element);
-        IDownstreamDirective HoldUpstreamAndPush(TOut element);
+        IUpstreamDirective HoldUpstreamAndPush(TOut element);
     }
 
     public delegate void AsyncCallback(object element);

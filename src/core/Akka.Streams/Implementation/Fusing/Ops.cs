@@ -568,7 +568,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         public override void PreStart(ILifecycleContext context)
         {
-            _buffer = Buffer.Create<T>(_count, Context.Materializer);
+            _buffer = Buffer.Create<T>(_count, context.Materializer);
         }
 
         public override IUpstreamDirective OnPush(T element, IDetachedContext<T> context)
@@ -583,6 +583,7 @@ namespace Akka.Streams.Implementation.Fusing
                 var element = _buffer.Dequeue();
                 return _buffer.IsEmpty ? context.PushAndFinish(element) : context.Push(element);
             }
+            if (context.IsHoldingUpstream) return context.PushAndPull(_buffer.Dequeue());
             if (_buffer.IsEmpty) return context.HoldDownstream();
             return context.Push(_buffer.Dequeue());
         }
@@ -633,14 +634,12 @@ namespace Akka.Streams.Implementation.Fusing
                     return (context, element) =>
                     {
                         if (_buffer.IsFull)
-                            return context.Fail(new BufferOverflowException(string.Format("Buffer overflow (max capacity was {0})", _count)));
-                        else
-                        {
-                            _buffer.Enqueue(element);
-                            return context.Pull();
-                        }
+                            return context.Fail(new BufferOverflowException($"Buffer overflow (max capacity was {_count})"));
+                        _buffer.Enqueue(element);
+                        return context.Pull();
                     };
-                default: throw new NotSupportedException(string.Format("Overflow strategy {0} is not supported", overflowStrategy));
+                default:
+                    throw new NotSupportedException($"Overflow strategy {overflowStrategy} is not supported");
             }
         }
     }

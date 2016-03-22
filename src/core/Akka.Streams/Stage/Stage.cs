@@ -22,6 +22,7 @@ namespace Akka.Streams.Stage
     /// therefore you do not have to add any additional thread safety or memory
     /// visibility constructs to access the state from the callback methods.
     /// </summary>
+    [Obsolete("Please use GraphStage instead.")]
     public interface IStage<in TIn, out TOut> { }
     
     /// <summary>
@@ -76,11 +77,13 @@ namespace Akka.Streams.Stage
     /// <seealso cref="DetachedStage{TIn,TOut}"/>
     /// <seealso cref="StatefulStage{TIn,TOut}"/>
     /// <seealso cref="PushStage{TIn,TOut}"/>
+    [Obsolete("Please use GraphStage instead.")]
     public abstract class PushPullStage<TIn, TOut> : AbstractStage<TIn, TOut, ISyncDirective, ISyncDirective, IContext<TOut>, ILifecycleContext> { }
 
     /// <summary>
     /// <see cref="PushStage{TIn,TOut}"/> is a <see cref="PushPullStage{TIn,TOut}"/> that always perform transitive pull by calling <see cref="IContext.Pull"/> from <see cref="OnPull"/>.
     /// </summary>
+    [Obsolete("Please use GraphStage instead.")]
     public abstract class PushStage<TIn, TOut> : PushPullStage<TIn, TOut>
     {
         /// <summary>
@@ -114,9 +117,10 @@ namespace Akka.Streams.Stage
     /// 
     /// @see [[PushPullStage]]
     /// </summary>
+    [Obsolete("Please use GraphStage instead.")]
     public abstract class DetachedStage<TIn, TOut> : AbstractStage<TIn, TOut, IUpstreamDirective, IDownstreamDirective, IDetachedContext<TOut>, ILifecycleContext>
     {
-        internal protected override bool IsDetached => true;
+        protected internal override bool IsDetached => true;
 
         /**
          * If an exception is thrown from [[#onPush]] this method is invoked to decide how
@@ -193,6 +197,7 @@ namespace Akka.Streams.Stage
     /// 
     /// Use <see cref="TerminationEmit"/> to push final elements from <see cref="OnUpstreamFinish"/> or <see cref="OnUpstreamFailure"/>.
     /// </summary>
+    [Obsolete("Please use GraphStage instead.")]
     public abstract class StatefulStage<TIn, TOut> : PushPullStage<TIn, TOut>
     {
         private bool _isEmitting = false;

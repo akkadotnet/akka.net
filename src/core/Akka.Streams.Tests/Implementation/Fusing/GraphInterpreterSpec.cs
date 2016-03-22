@@ -426,7 +426,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 lastEvents().Should().BeEmpty();
 
                 source.OnNext("A");
-                lastEvents().Should().Equal(new RequestOne(source), new OnNext(sink, "A"));
+                lastEvents().Should().Equal(new OnNext(sink, "A"), new RequestOne(source));
 
                 source.OnNext("B");
                 lastEvents().Should().Equal(new RequestOne(source));
