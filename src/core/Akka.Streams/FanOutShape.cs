@@ -54,13 +54,14 @@ namespace Akka.Streams
         #endregion
 
         private readonly string _name;
-        private ImmutableArray<Outlet> _outlets = new ImmutableArray<Outlet>();
+        private ImmutableArray<Outlet> _outlets;
         private readonly IEnumerator<Outlet> _registered;
 
         protected FanOutShape(Inlet<TIn> inlet, IEnumerable<Outlet> registered, string name)
         {
             In = inlet;
             Inlets = ImmutableArray.Create<Inlet>(inlet);
+            _outlets = ImmutableArray<Outlet>.Empty;
             _name = name;
             _registered = registered.GetEnumerator();
         }

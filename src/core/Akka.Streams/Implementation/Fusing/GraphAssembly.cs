@@ -73,7 +73,6 @@ namespace Akka.Streams.Implementation.Fusing
             foreach (var t in seq)
             {
                 array[idx++] = t;
-                idx++;
             }
             return array;
         }

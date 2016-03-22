@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Streams;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
-using Akka.Streams.Implementation.Stages;
-using Akka.Streams.Stage;
 
 namespace Akka.Streams.Dsl
 {
@@ -41,7 +38,7 @@ namespace Akka.Streams.Dsl
             /// This is only used by the materialization-importing apply methods of Source,
             /// Flow, Sink and Graph.
             /// </summary>
-            internal TShape Add<TShape, TMat1, TMat2, TMat3>(IGraph<TShape, TMat1> graph, Func<TMat1, TMat2, TMat3> combine) where TShape : Shape
+            internal TShape Add<TShape, TMat1, TMat2, TMat3>(IGraph<TShape> graph, Func<TMat1, TMat2, TMat3> combine) where TShape : Shape
             {
                 var copy = graph.Module.CarbonCopy();
                 _moduleInProgress = _moduleInProgress.Compose(copy, combine);
@@ -85,7 +82,7 @@ namespace Akka.Streams.Dsl
                 }
             }
 
-            public IModule Module { get { return _moduleInProgress; } }
+            public IModule Module => _moduleInProgress;
 
             public ForwardOps<TOut, T> From<TOut>(Outlet<TOut> outlet)
             {
