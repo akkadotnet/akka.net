@@ -70,6 +70,7 @@
     <Compile Include="Dsl\FlowMapSpec.cs" />
     <Compile Include="Dsl\SubscriberSinkSpec.cs" />
     <Compile Include="Implementation\Fusing\ActorGraphInterpreterSpec.cs" />
+    <Compile Include="Implementation\Fusing\GraphInterpreterPortsSpec.cs" />
     <Compile Include="Implementation\Fusing\GraphInterpreterSpec.cs" />
     <Compile Include="Implementation\ResizableMultiReaderRingBufferSpec.cs" />
     <Compile Include="Implementation\Fusing\GraphInterpreterSpecKit.cs" />

@@ -543,7 +543,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             }
         }
 
-        public abstract class PortTestSetup : TestSetup
+        public class PortTestSetup : TestSetup
         {
             public UpstreamPortProbe<int> Out { get; }
             public DownstreamPortProbe<int> In { get; }
@@ -551,7 +551,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             private readonly GraphAssembly _assembly = new GraphAssembly(new IGraphStageWithMaterializedValue[0],
                 new Attributes[0], new Inlet[] {null}, new[] {-1}, new Outlet[] {null}, new[] {-1});
 
-            protected PortTestSetup(ActorSystem system) : base(system)
+            public PortTestSetup(ActorSystem system) : base(system)
             {
                 Out = new UpstreamPortProbe<int>(this);
                 In = new DownstreamPortProbe<int>(this);

@@ -777,7 +777,8 @@ namespace Akka.Streams.Stage
         {
             var connection = GetConnection(inlet);
             var element = Interpreter.ConnectionSlots[connection];
-            if ((Interpreter.PortStates[connection] & (GraphInterpreter.InReady | GraphInterpreter.OutReady)) == GraphInterpreter.InReady && (element != GraphInterpreter.Empty.Instance))
+            if ((Interpreter.PortStates[connection] & (GraphInterpreter.InReady | GraphInterpreter.InFailed)) ==
+                GraphInterpreter.InReady && !ReferenceEquals(element, GraphInterpreter.Empty.Instance))
             {
                 // fast path
                 Interpreter.ConnectionSlots[connection] = GraphInterpreter.Empty.Instance;
