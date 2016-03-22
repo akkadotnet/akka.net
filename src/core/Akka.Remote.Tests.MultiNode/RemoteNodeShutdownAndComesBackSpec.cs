@@ -24,6 +24,8 @@ namespace Akka.Remote.Tests.MultiNode
                   akka.remote.transport-failure-detector.acceptable-heartbeat-pause = 3 s
                   ## the acceptable pause is too long and therefore the test will fail, it pass when we use a lower value like the default one
                   ## akka.remote.watch-failure-detector.acceptable-heartbeat-pause = 60 s
+                  ## wee need to set this value because the default configuration isn't used as fallback and therefore a default TimeSpan is returned instead of 10 s
+                  akka.remote.watch-failure-detector.acceptable-heartbeat-pause = 10 s
             "));
 
             TestTransport = true;
