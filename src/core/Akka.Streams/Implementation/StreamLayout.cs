@@ -401,10 +401,10 @@ namespace Akka.Streams.Implementation
             var matComputation2 = other.IsSealed ? new StreamLayout.Atomic(other) : MaterializedValueComputation;
 
             return new CompositeModule(
-                subModules: modules1.Union(modules2).ToImmutableArray(),
+                subModules: modules1.Concat(modules2).ToImmutableArray(),
                 shape: new AmorphousShape(
-                    Shape.Inlets.Union(other.Shape.Inlets).ToImmutableArray(),
-                    Shape.Outlets.Union(other.Shape.Outlets).ToImmutableArray()),
+                    Shape.Inlets.Concat(other.Shape.Inlets).ToImmutableArray(),
+                    Shape.Outlets.Concat(other.Shape.Outlets).ToImmutableArray()),
                 downstreams: Downstreams.AddRange(other.Downstreams),
                 upstreams: Upstreams.AddRange(other.Upstreams),
                 materializedValueComputation: new StreamLayout.Combine((x, y) => matFunc((T1)x, (T2)y), matComputation1, matComputation2),
@@ -422,10 +422,10 @@ namespace Akka.Streams.Implementation
             var matComputation = IsSealed ? new StreamLayout.Atomic(this) : MaterializedValueComputation;
 
             return new CompositeModule(
-                subModules: module1.Union(module2).ToImmutableArray(),
+                subModules: module1.Concat(module2).ToImmutableArray(),
                 shape: new AmorphousShape(
-                    Shape.Inlets.Union(that.Shape.Inlets).ToImmutableArray(),
-                    Shape.Outlets.Union(that.Shape.Outlets).ToImmutableArray()),
+                    Shape.Inlets.Concat(that.Shape.Inlets).ToImmutableArray(),
+                    Shape.Outlets.Concat(that.Shape.Outlets).ToImmutableArray()),
                 downstreams: Downstreams.AddRange(that.Downstreams),
                 upstreams: Upstreams.AddRange(that.Upstreams),
                 materializedValueComputation: matComputation,

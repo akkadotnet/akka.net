@@ -1106,19 +1106,19 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<KeyValuePair<T1, T2>, TMat> Zip<T1, T2, TMat>(this IFlow<T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other)
+        public static IFlow<Tuple<T1, T2>, TMat> Zip<T1, T2, TMat>(this IFlow<T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other)
         {
             return flow.Via(ZipGraph<T1, T2, TMat>(other));
         }
 
-        private static IGraph<FlowShape<T1, KeyValuePair<T1, T2>>, TMat> ZipGraph<T1, T2, TMat>(IGraph<SourceShape<T2>, TMat> other)
+        private static IGraph<FlowShape<T1, Tuple<T1, T2>>, TMat> ZipGraph<T1, T2, TMat>(IGraph<SourceShape<T2>, TMat> other)
         {
             return GraphDsl.Create(other, (builder, shape) =>
             {
                 var zip = builder.Add(new Zip<T1, T2>());
                 var r = builder.From(shape);
                 r.To(zip.In1);
-                return new FlowShape<T1, KeyValuePair<T1, T2>>(zip.In0, zip.Out);
+                return new FlowShape<T1, Tuple<T1, T2>>(zip.In0, zip.Out);
             });
         }
 

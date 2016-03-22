@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
+using Akka.Streams.Implementation;
 using Akka.Streams.Stage;
 
 namespace Akka.Streams.Dsl
@@ -17,28 +19,24 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// '''Cancels when''' downstream cancels
     /// </summary>
-    public sealed class Merge<TIn, TOut> : GraphStage<UniformFanInShape<TIn, TOut>> where TIn : TOut
+    public class Merge<TIn, TOut> : GraphStage<UniformFanInShape<TIn, TOut>> where TIn : TOut
     {
         #region graph stage logic
 
-        private sealed class MergeStageLogic : GraphStageLogic
+        private sealed class Logic : GraphStageLogic
         {
             private readonly Merge<TIn, TOut> _stage;
-            private readonly Inlet<TIn>[] _pendingQueue;
-
+            private readonly FixedSizeBuffer<Inlet<TIn>> _pendingQueue;
             private int _runningUpstreams;
-            private int _pendingHead = 0;
-            private int _pendingTail = 0;
-            private bool _initialized = false;
 
-            public MergeStageLogic(Shape shape, Merge<TIn, TOut> stage) : base(shape)
+            public Logic(Shape shape, Merge<TIn, TOut> stage) : base(shape)
             {
                 _stage = stage;
                 _runningUpstreams = _stage._inputPorts;
-                _pendingQueue = new Inlet<TIn>[_stage._ins.Length];
+                _pendingQueue = FixedSizeBuffer.Create<Inlet<TIn>>(_stage._inputPorts);
 
-                var outlet = _stage._out;
-                foreach (var inlet in _stage._ins)
+                var outlet = _stage.Out;
+                foreach (var inlet in _stage.In)
                 {
                     SetHandler(inlet, onPush: () =>
                     {
@@ -50,20 +48,20 @@ namespace Akka.Streams.Dsl
                                 TryPull(inlet);
                             }
                         }
-                        else Enqeue(inlet);
+                        else _pendingQueue.Enqueue(inlet);
                     },
                     onUpstreamFinish: () =>
                     {
-                        if (_stage._eagerClose)
+                        if (_stage._eagerComplete)
                         {
-                            foreach (var i in _stage._ins) Cancel(i);
+                            foreach (var i in _stage.In) Cancel(i);
                             _runningUpstreams = 0;
                             if (!IsPending) CompleteStage();
                         }
                         else
                         {
                             _runningUpstreams--;
-                            if (IsUpstreamClosed && !IsPending) CompleteStage();
+                            if (AreUpstreamsClosed && !IsPending) CompleteStage();
                         }
                     });
                 }
@@ -74,26 +72,19 @@ namespace Akka.Streams.Dsl
                 });
             }
 
-            private bool IsUpstreamClosed { get { return _runningUpstreams == 0; } }
-            private bool IsPending { get { return _pendingHead != _pendingTail; } }
+            private bool AreUpstreamsClosed => _runningUpstreams == 0;
+            private bool IsPending => _pendingQueue.NonEmpty;
 
             public override void PreStart()
             {
-                foreach (var inlet in _stage._ins) TryPull(inlet);
-            }
-
-            private void Enqeue(Inlet<TIn> inlet)
-            {
-                _pendingQueue[_pendingTail % _stage._inputPorts] = inlet;
-                _pendingTail++;
+                foreach (var inlet in _stage.In) TryPull(inlet);
             }
 
             private void DequeueAndDispatch()
             {
-                var inlet = _pendingQueue[_pendingHead % _stage._inputPorts];
-                _pendingHead++;
-                Push(_stage._out, Grab(inlet));
-                if (IsUpstreamClosed && !IsPending) CompleteStage();
+                var inlet = _pendingQueue.Dequeue();
+                Push(_stage.Out, Grab(inlet));
+                if (AreUpstreamsClosed && !IsPending) CompleteStage();
                 else TryPull(inlet);
             }
         }
@@ -101,22 +92,23 @@ namespace Akka.Streams.Dsl
         #endregion
 
         private readonly int _inputPorts;
-        private readonly bool _eagerClose;
+        private readonly bool _eagerComplete;
 
-        private readonly Inlet<TIn>[] _ins;
-        private readonly Outlet<TOut> _out = new Outlet<TOut>("Merge.out");
+        public ImmutableArray<Inlet<TIn>> In { get; }
+        public Outlet<TOut> Out { get; } = new Outlet<TOut>("Merge.out");
 
-        public Merge(int inputPorts, bool eagerClose = false)
+        public Merge(int inputPorts, bool eagerComplete = false)
         {
             if (inputPorts <= 1) throw new ArgumentException("Merge must have more than 1 input port");
             _inputPorts = inputPorts;
-            _eagerClose = eagerClose;
+            _eagerComplete = eagerComplete;
 
-            _ins = new Inlet<TIn>[inputPorts];
+            var ins = ImmutableArray<Inlet<TIn>>.Empty.ToBuilder();
             for (int i = 0; i < inputPorts; i++)
-                _ins[i] = new Inlet<TIn>("Merge.in" + i);
+                ins.Add(new Inlet<TIn>("Merge.in" + i));
+            In = ins.ToImmutable();
 
-            Shape = new UniformFanInShape<TIn, TOut>(_out, _ins);
+            Shape = new UniformFanInShape<TIn, TOut>(Out, In.ToArray());
             InitialAttributes = Attributes.CreateName("Merge");
         }
 
@@ -124,7 +116,31 @@ namespace Akka.Streams.Dsl
         public override UniformFanInShape<TIn, TOut> Shape { get; }
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new MergeStageLogic(Shape, this);
+            return new Logic(Shape, this);
+        }
+
+        public override string ToString()
+        {
+            return "Merge";
+        }
+    }
+
+    /// <summary>
+    /// Merge several streams, taking elements as they arrive from input streams
+    /// (picking randomly when several have elements ready).
+    /// <para>
+    /// '''Emits when''' one of the inputs has an element available
+    /// </para>
+    /// '''Backpressures when''' downstream backpressures
+    /// <para>
+    /// '''Completes when''' all upstreams complete
+    /// </para>
+    /// '''Cancels when''' downstream cancels
+    /// </summary>
+    public sealed class Merge<T> : Merge<T, T>
+    {
+        public Merge(int inputPorts, bool eagerComplete = false) : base(inputPorts, eagerComplete)
+        {
         }
     }
 
@@ -139,7 +155,7 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// '''Backpressures when''' downstream backpressures
     /// <para>
-    /// '''Completes when''' all upstreams complete (eagerClose=false) or one upstream completes (eagerClose=true)
+    /// '''Completes when''' all upstreams complete (eagerComplete=false) or one upstream completes (eagerComplete=true)
     /// </para>
     /// '''Cancels when''' downstream cancels
     /// <para>
@@ -302,7 +318,7 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// '''Backpressures when''' downstream backpressures
     /// <para>
-    /// '''Completes when''' all upstreams complete (eagerClose=false) or one upstream completes (eagerClose=true)
+    /// '''Completes when''' all upstreams complete (eagerComplete=false) or one upstream completes (eagerComplete=true)
     /// </para>
     /// '''Cancels when''' downstream cancels
     /// </summary> 
@@ -531,40 +547,41 @@ namespace Akka.Streams.Dsl
     public sealed class Broadcast<T> : GraphStage<UniformFanOutShape<T, T>>
     {
         #region stage logic
-        private sealed class BroadcastStageLogic : GraphStageLogic
+        private sealed class Logic : GraphStageLogic
         {
             private readonly Broadcast<T> _stage;
             private readonly bool[] _pending;
             private int _pendingCount;
-            private int _downstreamRunning;
+            private int _downstreamsRunning;
 
-            public BroadcastStageLogic(Shape shape, Broadcast<T> stage) : base(shape)
+            public Logic(Shape shape, Broadcast<T> stage) : base(shape)
             {
                 _stage = stage;
-                _pendingCount = _downstreamRunning = stage._outputPorts;
+                _pendingCount = _downstreamsRunning = stage._outputPorts;
                 _pending = new bool[stage._outputPorts];
                 for (int i = 0; i < stage._outputPorts; i++) _pending[i] = true;
 
                 SetHandler(_stage.In, onPush: () =>
                 {
-                    _pendingCount = _downstreamRunning;
+                    _pendingCount = _downstreamsRunning;
                     var element = Grab(stage.In);
                     var idx = 0;
-                    var enumerator = (stage.Out as IEnumerable<Outlet>).GetEnumerator();
+                    var enumerator = stage.Out.GetEnumerator();
                     while (enumerator.MoveNext())
                     {
                         var o = (Outlet<T>)enumerator.Current;
+                        var i = idx;
                         if (!IsClosed(o))
                         {
                             Push(o, element);
-                            _pending[idx] = true;
+                            _pending[i] = true;
                         }
                         idx++;
                     }
                 });
 
                 var outIdx = 0;
-                var outEnumerator = (stage.Out as IEnumerable<Outlet>).GetEnumerator();
+                var outEnumerator = stage.Out.GetEnumerator();
                 while (outEnumerator.MoveNext())
                 {
                     var o = (Outlet<T>)outEnumerator.Current;
@@ -580,8 +597,8 @@ namespace Akka.Streams.Dsl
                         if (stage._eagerCancel) CompleteStage();
                         else
                         {
-                            _downstreamRunning--;
-                            if (_downstreamRunning == 0) CompleteStage();
+                            _downstreamsRunning--;
+                            if (_downstreamsRunning == 0) CompleteStage();
                             else if (_pending[i])
                             {
                                 _pending[i] = false;
@@ -625,7 +642,12 @@ namespace Akka.Streams.Dsl
         public override UniformFanOutShape<T, T> Shape { get; }
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new BroadcastStageLogic(Shape, this);
+            return new Logic(Shape, this);
+        }
+
+        public override string ToString()
+        {
+            return "Broadcast";
         }
     }
 
@@ -634,7 +656,7 @@ namespace Akka.Streams.Dsl
     /// It will not shut down until the subscriptions
     /// for at least two downstream subscribers have been established.
     /// 
-    /// A <see cref="Balance{T}"/> has one <see cref="In"/> port and 2 or more <see cref="Outs"/> ports.
+    /// A <see cref="Balance{T}"/> has one <see cref="In"/> port and 2 or more <see cref="Out"/> ports.
     /// <para>
     /// '''Emits when''' any of the outputs stops backpressuring; emits the element to the first available output
     /// </para>
@@ -647,32 +669,30 @@ namespace Akka.Streams.Dsl
     public sealed class Balance<T> : GraphStage<UniformFanOutShape<T, T>>
     {
         #region stage logic
-        private sealed class BalanceStageLogic : GraphStageLogic
+        private sealed class Logic : GraphStageLogic
         {
             private readonly Balance<T> _stage;
-            private readonly Outlet<T>[] _pendingQueue;
-            private int _pendingHead = 0;
-            private int _pendingTail = 0;
-            private int _needDownstreamPulls = 0;
+            private readonly FixedSizeBuffer<Outlet<T>> _pendingQueue;
+            private int _needDownstreamPulls;
             private int _downstreamsRunning;
-            public BalanceStageLogic(Shape shape, Balance<T> stage) : base(shape)
+            public Logic(Shape shape, Balance<T> stage) : base(shape)
             {
                 _stage = stage;
-                _pendingQueue = new Outlet<T>[_stage._outputPorts];
+                _pendingQueue = FixedSizeBuffer.Create<Outlet<T>>(_stage._outputPorts);
                 _downstreamsRunning = _stage._outputPorts;
 
-                if (_stage._waitForAllDownstreams) _needDownstreamPulls = _stage._outputPorts;
+                _needDownstreamPulls = _stage._waitForAllDownstreams ? _stage._outputPorts : 0;
 
                 SetHandler(_stage.In, onPush: DequeueAndDispatch);
 
-                foreach (var outlet in _stage.Outs)
+                foreach (var outlet in _stage.Out)
                 {
                     var hasPulled = false;
                     SetHandler(outlet, onPull: () =>
                     {
                         if (!hasPulled)
                         {
-                            hasPulled = false;
+                            hasPulled = true;
                             if (_needDownstreamPulls > 0) _needDownstreamPulls--;
                         }
 
@@ -685,10 +705,10 @@ namespace Akka.Streams.Dsl
                             else
                             {
                                 if (!HasBeenPulled(_stage.In)) Pull(_stage.In);
-                                Enqueue(outlet);
+                                _pendingQueue.Enqueue(outlet);
                             }
                         }
-                        else Enqueue(outlet);
+                        else _pendingQueue.Enqueue(outlet);
                     },
                     onDownstreamFinish: () =>
                     {
@@ -703,18 +723,11 @@ namespace Akka.Streams.Dsl
                 }
             }
 
-            private bool NoPending { get { return _pendingHead == _pendingTail; } }
-
-            private void Enqueue(Outlet<T> outlet)
-            {
-                _pendingQueue[_pendingTail % _stage._outputPorts] = outlet;
-                _pendingTail++;
-            }
+            private bool NoPending => _pendingQueue.IsEmpty;
 
             private void DequeueAndDispatch()
             {
-                var outlet = _pendingQueue[_pendingHead % _stage._outputPorts];
-                _pendingHead++;
+                var outlet = _pendingQueue.Dequeue();
                 Push(outlet, Grab(_stage.In));
                 if (!NoPending) Pull(_stage.In);
             }
@@ -730,22 +743,27 @@ namespace Akka.Streams.Dsl
             _outputPorts = outputPorts;
             _waitForAllDownstreams = waitForAllDownstreams;
 
-            Outs = new Outlet<T>[outputPorts];
-            for (int i = 0; i < outputPorts; i++) Outs[i] = new Outlet<T>("Balance.out" + i);
+            Out = new Outlet<T>[outputPorts];
+            for (int i = 0; i < outputPorts; i++) Out[i] = new Outlet<T>("Balance.out" + i);
 
             InitialAttributes = Attributes.CreateName("Balance");
-            Shape = new UniformFanOutShape<T, T>(In, Outs);
+            Shape = new UniformFanOutShape<T, T>(In, Out);
         }
 
         public Inlet<T> In { get; } = new Inlet<T>("Balance.in");
-        public Outlet<T>[] Outs { get; }
+        public Outlet<T>[] Out { get; }
 
         protected override Attributes InitialAttributes { get; }
         public override UniformFanOutShape<T, T> Shape { get; }
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new BalanceStageLogic(Shape, this);
+            return new Logic(Shape, this);
+        }
+
+        public override string ToString()
+        {
+            return "Balance";
         }
     }
 
@@ -762,9 +780,14 @@ namespace Akka.Streams.Dsl
     /// </para>
     /// '''Cancels when''' downstream cancels
     /// </summary>
-    public sealed class Zip<T1, T2> : ZipWith<T1, T2, KeyValuePair<T1, T2>>
+    public sealed class Zip<T1, T2> : ZipWith<T1, T2, Tuple<T1, T2>>
     {
-        public Zip() : base((a, b) => new KeyValuePair<T1, T2>(a, b)) { }
+        public Zip() : base((a, b) => new Tuple<T1, T2>(a, b)) { }
+
+        public override string ToString()
+        {
+            return "Zip";
+        }
     }
 
     /// <summary>

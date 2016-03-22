@@ -824,12 +824,12 @@ namespace Akka.Streams.Stage
         protected internal bool IsAvailable(Inlet inlet)
         {
             var connection = GetConnection(inlet);
-            var normalArrived = (Interpreter.PortStates[connection] & (GraphInterpreter.InReady & GraphInterpreter.InFailed)) == GraphInterpreter.InReady;
+            var normalArrived = (Interpreter.PortStates[connection] & (GraphInterpreter.InReady | GraphInterpreter.InFailed)) == GraphInterpreter.InReady;
 
             if (normalArrived)
             {
                 // fast path
-                return ReferenceEquals(Interpreter.ConnectionSlots[connection], GraphInterpreter.Empty.Instance);
+                return !ReferenceEquals(Interpreter.ConnectionSlots[connection], GraphInterpreter.Empty.Instance);
             }
             else
             {

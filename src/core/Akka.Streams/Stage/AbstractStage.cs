@@ -1,18 +1,18 @@
 ﻿using System;
 using System.Reactive.Streams;
-using Akka.Streams.Supervision;
+using Directive = Akka.Streams.Supervision.Directive;
 
 namespace Akka.Streams.Stage
 {
     internal class PushPullGraphLogic<TIn, TOut> : GraphStageLogic, IDetachedContext<TOut>
     {
-        private AbstractStage<TIn, TOut, ISyncDirective, ISyncDirective, IContext<TOut>, ILifecycleContext> _currentStage;
+        private AbstractStage<TIn, TOut> _currentStage;
         private readonly FlowShape<TIn, TOut> _shape;
 
         public PushPullGraphLogic(
             FlowShape<TIn, TOut> shape,
             Attributes attributes,
-            AbstractStage<TIn, TOut, ISyncDirective, ISyncDirective, IContext<TOut>, ILifecycleContext> stage)
+            AbstractStage<TIn, TOut> stage)
             : base(shape)
         {
             Attributes = attributes;
@@ -38,21 +38,26 @@ namespace Akka.Streams.Stage
                 onDownstreamFinish: () => _currentStage.OnDownstreamFinish(Context));
         }
 
-        public AbstractStage<TIn, TOut, ISyncDirective, ISyncDirective, IContext<TOut>, ILifecycleContext> Stage { get; }
+        public AbstractStage<TIn, TOut> Stage { get; }
         IMaterializer ILifecycleContext.Materializer => Materializer;
         public Attributes Attributes { get; }
         public IDetachedContext<TOut> Context => this;
 
-        public bool IsFinishing => IsClosed(_shape.Inlet);
-        
-        public IDownstreamDirective PushAndFinish(object element)
+        protected internal override void BeforePreStart()
         {
-            return PushAndFinish((TOut)element);
+            base.BeforePreStart();
+            if (_currentStage.IsDetached) Pull(_shape.Inlet);
         }
 
         public IDownstreamDirective Push(object element)
         {
             return Push((TOut)element);
+        }
+
+        public IDownstreamDirective Push(TOut element)
+        {
+            Push(_shape.Outlet, element);
+            return null;
         }
 
         public IUpstreamDirective Pull()
@@ -66,12 +71,26 @@ namespace Akka.Streams.Stage
             CompleteStage();
             return null;
         }
+        
+        public IDownstreamDirective PushAndFinish(object element)
+        {
+            return PushAndFinish((TOut) element);
+        }
+        
+        public IDownstreamDirective PushAndFinish(TOut element)
+        {
+            Push(_shape.Outlet, element);
+            CompleteStage();
+            return null;
+        }
 
         public FreeDirective Fail(Exception cause)
         {
             FailStage(cause);
             return null;
         }
+
+        public bool IsFinishing => IsClosed(_shape.Inlet);
 
         public ITerminationDirective AbsorbTermination()
         {
@@ -89,46 +108,9 @@ namespace Akka.Streams.Stage
             return null;
         }
 
-        public bool IsHoldingBoth { get; }
-        public bool IsHoldingUpstream => !(IsClosed(_shape.Inlet) || HasBeenPulled(_shape.Inlet));
-        public bool IsHoldingDownstream => IsAvailable(_shape.Outlet);
         public FreeDirective PushAndPull(object element)
         {
-            return PushAndPull((TOut)element);
-        }
-
-        public IUpstreamDirective HoldUpstream()
-        {
-            return null;
-        }
-
-        public IDownstreamDirective HoldUpstreamAndPush(object element)
-        {
-            return HoldUpstreamAndPush((TOut)element);
-        }
-
-        public IDownstreamDirective HoldDownstream()
-        {
-            return null;
-        }
-
-        public IDownstreamDirective HoldDownstreamAndPull()
-        {
-            Pull(_shape.Inlet);
-            return null;
-        }
-
-        public IDownstreamDirective PushAndFinish(TOut element)
-        {
-            Push(_shape.Outlet, element);
-            CompleteStage();
-            return null;
-        }
-
-        public IDownstreamDirective Push(TOut element)
-        {
-            Push(_shape.Outlet, element);
-            return null;
+            return PushAndPull((TOut) element);
         }
 
         public FreeDirective PushAndPull(TOut element)
@@ -138,16 +120,45 @@ namespace Akka.Streams.Stage
             return null;
         }
 
-        public IDownstreamDirective HoldUpstreamAndPush(TOut element)
+        public IUpstreamDirective HoldUpstreamAndPush(object element)
+        {
+            return HoldUpstreamAndPush((TOut) element);
+        }
+
+        public IUpstreamDirective HoldUpstreamAndPush(TOut element)
         {
             Push(_shape.Outlet, element);
             return null;
         }
 
-        protected internal override void BeforePreStart()
+        public IDownstreamDirective HoldDownstreamAndPull()
         {
-            base.BeforePreStart();
-            if (_currentStage.IsDetached) Pull(_shape.Inlet);
+            Pull(_shape.Inlet);
+            return null;
+        }
+
+        public bool IsHoldingBoth => IsHoldingUpstream && IsHoldingDownstream;
+        public bool IsHoldingDownstream => IsAvailable(_shape.Outlet);
+        public bool IsHoldingUpstream => !(IsClosed(_shape.Inlet) || HasBeenPulled(_shape.Inlet));
+
+        public IDownstreamDirective HoldDownstream()
+        {
+            return null;
+        }
+
+        public IUpstreamDirective HoldUpstream()
+        {
+            return null;
+        }
+
+        public override void PreStart()
+        {
+            _currentStage.PreStart(Context);
+        }
+
+        public override void PostStop()
+        {
+            _currentStage.PostStop();
         }
 
         private void OnSupervision(Exception exception)
@@ -164,7 +175,7 @@ namespace Akka.Streams.Stage
                 case Directive.Restart:
                     ResetAfterSupervise();
                     _currentStage.PostStop();
-                    _currentStage = (AbstractStage<TIn, TOut, ISyncDirective, ISyncDirective, IContext<TOut>, ILifecycleContext>)_currentStage.Restart();
+                    _currentStage = (AbstractStage<TIn, TOut>)_currentStage.Restart();
                     _currentStage.PreStart(Context);
                     break;
                 default:
@@ -201,7 +212,7 @@ namespace Akka.Streams.Stage
         {
             var stageAndMat = Factory(inheritedAttributes);
             materialized = stageAndMat.Item2;
-            return new PushPullGraphLogic<TIn, TOut>(Shape, inheritedAttributes, (AbstractStage<TIn, TOut, ISyncDirective, ISyncDirective, IContext<TOut>, ILifecycleContext>)stageAndMat.Item1);
+            return new PushPullGraphLogic<TIn, TOut>(Shape, inheritedAttributes, (AbstractStage<TIn, TOut>)stageAndMat.Item1);
         }
 
         public sealed override string ToString()
@@ -217,11 +228,10 @@ namespace Akka.Streams.Stage
         }
     }
 
-    public abstract class AbstractStage<TIn, TOut, TPushDirective, TPullDirective, TContext, TLifecycleContext> : IStage<TIn, TOut> where TPushDirective : IDirective where TPullDirective : IDirective where TContext : IContext where TLifecycleContext : ILifecycleContext
+    [Obsolete("Please use GraphStage instead.")]
+    public abstract class AbstractStage<TIn, TOut> : IStage<TIn, TOut>
     {
-        protected TContext Context;
-
-        internal protected virtual bool IsDetached => false;
+        protected internal virtual bool IsDetached => false;
         
         /// <summary>
         /// User overridable callback.
@@ -230,7 +240,7 @@ namespace Akka.Streams.Stage
         /// Empty default implementation.
         /// </para>
         /// </summary>
-        public virtual void PreStart(TLifecycleContext context)
+        public virtual void PreStart(ILifecycleContext context)
         {
         }
 
@@ -247,13 +257,139 @@ namespace Akka.Streams.Stage
         /// <see cref="IContext.Pull"/>.
         /// </para>
         /// </summary>
+        public abstract IDirective OnPush(TIn element, IContext context);
+
+        /// <summary>
+        /// This method is called when there is demand from downstream, i.e. you are allowed to push one element
+        /// downstreams with <see cref="IContext.Push"/>, or request elements from upstreams with <see cref="IContext.Pull"/>
+        /// </summary>
+        public abstract IDirective OnPull(IContext context);
+
+        /// <summary>
+        /// <para>
+        /// This method is called when upstream has signaled that the stream is successfully completed. 
+        /// Here you cannot call <see cref="IContext.Push"/>, because there might not be any demand from downstream. 
+        /// To emit additional elements before terminating you can use <see cref="IContext.AbsorbTermination"/> and push final elements
+        /// from <see cref="OnPull"/>. The stage will then be in finishing state, which can be checked
+        /// with <see cref="IContext.IsFinishing"/>.
+        /// </para>
+        /// <para>
+        /// By default the finish signal is immediately propagated with <see cref="IContext.Finish"/>.
+        /// </para>
+        /// <para>
+        /// IMPORTANT NOTICE: this signal is not back-pressured, it might arrive from upstream even though
+        /// the last action by this stage was a “push”.
+        /// </para>
+        /// </summary>
+        public virtual ITerminationDirective OnUpstreamFinish(IContext context)
+        {
+            return context.Finish();
+        }
+
+        /// <summary>
+        /// This method is called when downstream has cancelled. 
+        /// By default the cancel signal is immediately propagated with <see cref="IContext.Finish"/>.
+        /// </summary>
+        public virtual ITerminationDirective OnDownstreamFinish(IContext context)
+        {
+            return context.Finish();
+        }
+
+        /// <summary>
+        /// <para>
+        /// <see cref="OnUpstreamFailure"/> is called when upstream has signaled that the stream is completed
+        /// with failure. It is not called if <see cref="OnPull"/> or <see cref="OnPush"/> of the stage itself
+        /// throws an exception.
+        /// </para>
+        /// <para>
+        /// Note that elements that were emitted by upstream before the failure happened might
+        /// not have been received by this stage when <see cref="OnUpstreamFailure"/> is called, i.e.
+        /// failures are not backpressured and might be propagated as soon as possible.
+        /// </para>
+        /// <para>
+        /// Here you cannot call <see cref="IContext.Push"/>, because there might not
+        /// be any demand from  downstream. To emit additional elements before terminating you
+        /// can use <see cref="IContext.AbsorbTermination"/> and push final elements
+        /// from <see cref="OnPull"/>. The stage will then be in finishing state, which can be checked
+        /// with <see cref="IContext.IsFinishing"/>.
+        /// </para>
+        /// </summary>
+        public virtual ITerminationDirective OnUpstreamFailure(Exception cause, IContext context)
+        {
+            return context.Fail(cause);
+        }
+
+        // TODO need better wording here
+        /// <summary>
+        /// User overridable callback.
+        /// Is called after the Stages final action is performed.  
+        /// Empty default implementation.
+        /// </summary>
+        public virtual void PostStop()
+        {
+        }
+
+        /// <summary>
+        /// If an exception is thrown from <see cref="OnPush"/> this method is invoked to decide how
+        /// to handle the exception. By default this method returns <see cref="Directive.Stop"/>.
+        /// <para>
+        /// If an exception is thrown from <see cref="OnPull"/> the stream will always be completed with
+        /// failure, because it is not always possible to recover from that state.
+        /// In concrete stages it is of course possible to use ordinary try-catch-recover inside
+        /// <see cref="OnPull"/> when it is know how to recover from such exceptions.
+        /// </para>
+        /// </summary> 
+        public virtual Directive Decide(Exception cause)
+        {
+            return Directive.Stop;
+        }
+
+        /// <summary>
+        /// Used to create a fresh instance of the stage after an error resulting in a <see cref="Directive.Restart"/>
+        /// directive. By default it will return the same instance untouched, so you must override it
+        /// if there are any state that should be cleared before restarting, e.g. by returning a new instance.
+        /// </summary>
+        public virtual IStage<TIn, TOut> Restart()
+        {
+            return this;
+        }
+    }
+
+    [Obsolete("Please use GraphStage instead.")]
+    public abstract class AbstractStage<TIn, TOut, TPushDirective, TPullDirective, TContext, TLifecycleContext> : AbstractStage<TIn, TOut> where TPushDirective : IDirective where TPullDirective : IDirective where TContext : IContext where TLifecycleContext : ILifecycleContext
+    {
+        protected TContext Context;
+
+        /// <summary>
+        /// <para>
+        /// This method is called when an element from upstream is available and there is demand from downstream, i.e.
+        /// in <see cref="OnPush"/> you are allowed to call <see cref="IContext.Push"/> to emit one element downstreams,
+        /// or you can absorb the element by calling <see cref="IContext.Pull"/>. Note that you can only
+        /// emit zero or one element downstream from <see cref="OnPull"/>.
+        /// </para>
+        /// <para>
+        /// To emit more than one element you have to push the remaining elements from <see cref="OnPull"/>, one-by-one.
+        /// <see cref="OnPush"/> is not called again until <see cref="OnPull"/> has requested more elements with
+        /// <see cref="IContext.Pull"/>.
+        /// </para>
+        /// </summary>
         public abstract TPushDirective OnPush(TIn element, TContext context);
+
+        public sealed override IDirective OnPush(TIn element, IContext context)
+        {
+            return OnPush(element, (TContext) context);
+        }
 
         /// <summary>
         /// This method is called when there is demand from downstream, i.e. you are allowed to push one element
         /// downstreams with <see cref="IContext.Push"/>, or request elements from upstreams with <see cref="IContext.Pull"/>
         /// </summary>
         public abstract TPullDirective OnPull(TContext context);
+
+        public override IDirective OnPull(IContext context)
+        {
+            return OnPull((TContext) context);
+        }
 
         /// <summary>
         /// <para>
@@ -307,41 +443,6 @@ namespace Akka.Streams.Stage
         public virtual ITerminationDirective OnUpstreamFailure(Exception cause, TContext context)
         {
             return context.Fail(cause);
-        }
-
-        // TODO need better wording here
-        /// <summary>
-        /// User overridable callback.
-        /// Is called after the Stages final action is performed.  
-        /// Empty default implementation.
-        /// </summary>
-        public virtual void PostStop()
-        {
-        }
-
-        /// <summary>
-        /// If an exception is thrown from <see cref="OnPush"/> this method is invoked to decide how
-        /// to handle the exception. By default this method returns <see cref="Directive.Stop"/>.
-        /// <para>
-        /// If an exception is thrown from <see cref="OnPull"/> the stream will always be completed with
-        /// failure, because it is not always possible to recover from that state.
-        /// In concrete stages it is of course possible to use ordinary try-catch-recover inside
-        /// <see cref="OnPull"/> when it is know how to recover from such exceptions.
-        /// </para>
-        /// </summary> 
-        public virtual Directive Decide(Exception cause)
-        {
-            return Directive.Stop;
-        }
-
-        /// <summary>
-        /// Used to create a fresh instance of the stage after an error resulting in a <see cref="Directive.Restart"/>
-        /// directive. By default it will return the same instance untouched, so you must override it
-        /// if there are any state that should be cleared before restarting, e.g. by returning a new instance.
-        /// </summary>
-        public virtual IStage<TIn, TOut> Restart()
-        {
-            return this;
         }
     }
 }

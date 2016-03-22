@@ -1,4 +1,4 @@
-﻿// --- auto generated: 2016-02-26 09:05:39 --- //
+﻿// --- auto generated: 2016-03-22 1:06:14 AM --- //
 using System;
 using System.Linq;
 using System.Collections.Immutable;
@@ -21,7 +21,7 @@ namespace Akka.Streams
 
         public FanInShapeN(int n) : this(n, new InitName("FanInShape1N")) { }
         public FanInShapeN(int n, string name) : this(n, new InitName(name)) { }
-        public FanInShapeN(Outlet<TOut> outlet, Inlet<T0> in0, params Inlet<T1>[] inlets) : this(inlets.Length, new InitPorts(outlet, new Inlet[]{in0}.Union(inlets))) { }
+        public FanInShapeN(Outlet<TOut> outlet, Inlet<T0> in0, params Inlet<T1>[] inlets) : this(inlets.Length, new InitPorts(outlet, new Inlet[]{in0}.Concat(inlets))) { }
 
 		public Inlet<T1> In(int n)
 		{

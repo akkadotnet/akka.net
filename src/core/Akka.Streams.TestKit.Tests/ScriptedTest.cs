@@ -216,7 +216,7 @@ namespace Akka.Streams.TestKit.Tests
                     ? marker
                     : null);
 
-                return u.Union(d).Any(x => x == marker);
+                return u.Concat(d).Any(x => x == marker);
             }
 
             public void Run()
