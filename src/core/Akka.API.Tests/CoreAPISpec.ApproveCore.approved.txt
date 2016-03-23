@@ -1323,6 +1323,7 @@ namespace Akka.Actor
         protected void Become(System.Action configure, bool discardOld = True) { }
         protected void BecomeStacked(System.Action configure) { }
         protected virtual void OnReceive(object message) { }
+        [System.ObsoleteAttribute("Use ReceiveAsync instead. This method will be removed in future versions")]
         protected void Receive<T>(System.Func<T, System.Threading.Tasks.Task> handler) { }
         protected void Receive<T>(System.Action<T> handler, System.Predicate<T> shouldHandle = null) { }
         protected void Receive<T>(System.Predicate<T> shouldHandle, System.Action<T> handler) { }
@@ -1331,6 +1332,11 @@ namespace Akka.Actor
         protected void Receive<T>(System.Func<T, bool> handler) { }
         protected void Receive(System.Type messageType, System.Func<object, bool> handler) { }
         protected void ReceiveAny(System.Action<object> handler) { }
+        protected void ReceiveAnyAsync(System.Func<object, System.Threading.Tasks.Task> handler) { }
+        protected void ReceiveAsync<T>(System.Func<T, System.Threading.Tasks.Task> handler, System.Predicate<T> shouldHandle = null) { }
+        protected void ReceiveAsync<T>(System.Predicate<T> shouldHandle, System.Func<T, System.Threading.Tasks.Task> handler) { }
+        protected void ReceiveAsync(System.Type messageType, System.Func<object, System.Threading.Tasks.Task> handler, System.Predicate<object> shouldHandle = null) { }
+        protected void ReceiveAsync(System.Type messageType, System.Predicate<object> shouldHandle, System.Func<object, System.Threading.Tasks.Task> handler) { }
     }
     public class ReceiveTimeout : Akka.Actor.IPossiblyHarmful
     {
@@ -1769,11 +1775,11 @@ namespace Akka.Actor.Internal
     public abstract class ChildrenContainerBase : Akka.Actor.Internal.IChildrenContainer
     {
         protected ChildrenContainerBase(System.Collections.Immutable.IImmutableDictionary<string, Akka.Actor.Internal.IChildStats> children) { }
-        public System.Collections.Generic.IReadOnlyList<Akka.Actor.IInternalActorRef> Children { get; }
+        public System.Collections.Generic.IReadOnlyCollection<Akka.Actor.IInternalActorRef> Children { get; }
         protected System.Collections.Immutable.IImmutableDictionary<string, Akka.Actor.Internal.IChildStats> InternalChildren { get; }
         public virtual bool IsNormal { get; }
         public virtual bool IsTerminating { get; }
-        public System.Collections.Generic.IReadOnlyList<Akka.Actor.Internal.ChildRestartStats> Stats { get; }
+        public System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> Stats { get; }
         public abstract Akka.Actor.Internal.IChildrenContainer Add(string name, Akka.Actor.Internal.ChildRestartStats stats);
         protected void ChildStatsAppender(System.Text.StringBuilder sb, System.Collections.Generic.KeyValuePair<string, Akka.Actor.Internal.IChildStats> kvp, int index) { }
         public bool Contains(Akka.Actor.IActorRef actor) { }
@@ -1796,11 +1802,11 @@ namespace Akka.Actor.Internal
     public class EmptyChildrenContainer : Akka.Actor.Internal.IChildrenContainer
     {
         protected EmptyChildrenContainer() { }
-        public System.Collections.Generic.IReadOnlyList<Akka.Actor.IInternalActorRef> Children { get; }
+        public System.Collections.Generic.IReadOnlyCollection<Akka.Actor.IInternalActorRef> Children { get; }
         public static Akka.Actor.Internal.IChildrenContainer Instance { get; }
         public virtual bool IsNormal { get; }
         public virtual bool IsTerminating { get; }
-        public System.Collections.Generic.IReadOnlyList<Akka.Actor.Internal.ChildRestartStats> Stats { get; }
+        public System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> Stats { get; }
         public virtual Akka.Actor.Internal.IChildrenContainer Add(string name, Akka.Actor.Internal.ChildRestartStats stats) { }
         public bool Contains(Akka.Actor.IActorRef actor) { }
         public Akka.Actor.Internal.IChildrenContainer Remove(Akka.Actor.IActorRef child) { }
@@ -1813,10 +1819,10 @@ namespace Akka.Actor.Internal
     }
     public interface IChildrenContainer
     {
-        System.Collections.Generic.IReadOnlyList<Akka.Actor.IInternalActorRef> Children { get; }
+        System.Collections.Generic.IReadOnlyCollection<Akka.Actor.IInternalActorRef> Children { get; }
         bool IsNormal { get; }
         bool IsTerminating { get; }
-        System.Collections.Generic.IReadOnlyList<Akka.Actor.Internal.ChildRestartStats> Stats { get; }
+        System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> Stats { get; }
         Akka.Actor.Internal.IChildrenContainer Add(string name, Akka.Actor.Internal.ChildRestartStats stats);
         bool Contains(Akka.Actor.IActorRef actor);
         Akka.Actor.Internal.IChildrenContainer Remove(Akka.Actor.IActorRef child);
@@ -1928,6 +1934,7 @@ namespace Akka.Configuration
 {
     public class Config
     {
+        public static readonly Akka.Configuration.Config Empty;
         public Config() { }
         public Config(Akka.Configuration.Hocon.HoconRoot root) { }
         public Config(Akka.Configuration.Config source, Akka.Configuration.Config fallback) { }
@@ -1935,7 +1942,7 @@ namespace Akka.Configuration
         public virtual bool IsEmpty { get; }
         public Akka.Configuration.Hocon.HoconValue Root { get; }
         public System.Collections.Generic.IEnumerable<Akka.Configuration.Hocon.HoconSubstitution> Substitutions { get; set; }
-        [System.Runtime.CompilerServices.IteratorStateMachineAttribute(typeof(Akka.Configuration.Config.<AsEnumerable>d__45))]
+        [System.Runtime.CompilerServices.IteratorStateMachineAttribute(typeof(Akka.Configuration.Config.<AsEnumerable>d__46))]
         public virtual System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, Akka.Configuration.Hocon.HoconValue>> AsEnumerable() { }
         protected Akka.Configuration.Config Copy() { }
         public virtual bool GetBoolean(string path, bool default = False) { }
@@ -1961,6 +1968,7 @@ namespace Akka.Configuration
         public Akka.Configuration.Hocon.HoconValue GetValue(string path) { }
         public virtual bool HasPath(string path) { }
         public override string ToString() { }
+        public string ToString(bool includeFallback) { }
         public virtual Akka.Configuration.Config WithFallback(Akka.Configuration.Config fallback) { }
     }
     public class static ConfigExtensions
@@ -2234,6 +2242,7 @@ namespace Akka.Dispatch
         protected override int GetNumberOfMessages() { }
         public override void Post(Akka.Actor.IActorRef receiver, Akka.Actor.Envelope envelope) { }
         protected override void Schedule() { }
+        protected bool TryDequeue(out Akka.Actor.Envelope envelope) { }
     }
     public class CurrentSynchronizationContextDispatcher : Akka.Dispatch.MessageDispatcher
     {
@@ -2357,6 +2366,7 @@ namespace Akka.Dispatch
     public class Mailboxes
     {
         public static readonly string DefaultMailboxId;
+        public static readonly string NoMailboxRequirement;
         public Mailboxes(Akka.Actor.ActorSystem system) { }
         public Akka.Actor.DeadLetterMailbox DeadLetterMailbox { get; }
         public Akka.Dispatch.Mailbox CreateMailbox(Akka.Actor.Props props, Akka.Configuration.Config dispatcherConfig) { }
@@ -2659,7 +2669,7 @@ namespace Akka.Event
         public Debug(string logSource, System.Type logClass, object message) { }
         public override Akka.Event.LogLevel LogLevel() { }
     }
-    public class DefaultLogger : Akka.Actor.ActorBase
+    public class DefaultLogger : Akka.Actor.ActorBase, Akka.Dispatch.IRequiresMessageQueue<Akka.Event.ILoggerMessageQueueSemantics>
     {
         public DefaultLogger() { }
         protected virtual void Print(Akka.Event.LogEvent logEvent) { }
@@ -2709,6 +2719,7 @@ namespace Akka.Event
         public static bool Subscribe<TChannel>(this Akka.Event.EventStream eventStream, Akka.Actor.IActorRef subscriber) { }
         public static bool Unsubscribe<TChannel>(this Akka.Event.EventStream eventStream, Akka.Actor.IActorRef subscriber) { }
     }
+    public interface ILoggerMessageQueueSemantics : Akka.Dispatch.ISemantics { }
     public interface ILoggingAdapter
     {
         bool IsDebugEnabled { get; }
@@ -2753,6 +2764,11 @@ namespace Akka.Event
     public class LoggerInitialized : Akka.Actor.INoSerializationVerificationNeeded
     {
         public LoggerInitialized() { }
+    }
+    public class LoggerMailbox : Akka.Dispatch.UnboundedMailbox
+    {
+        public LoggerMailbox() { }
+        public override void CleanUp() { }
     }
     public class static Logging
     {
@@ -3616,7 +3632,7 @@ namespace Akka.Routing
     {
         public ActorRefRoutee(Akka.Actor.IActorRef actor) { }
         public Akka.Actor.IActorRef Actor { get; }
-        public override System.Threading.Tasks.Task Ask(object message, System.Nullable<System.TimeSpan> timeout) { }
+        public override System.Threading.Tasks.Task<object> Ask(object message, System.Nullable<System.TimeSpan> timeout) { }
         public override bool Equals(object obj) { }
         protected bool Equals(Akka.Routing.ActorRefRoutee other) { }
         public override int GetHashCode() { }
@@ -3626,7 +3642,7 @@ namespace Akka.Routing
     {
         public ActorSelectionRoutee(Akka.Actor.ActorSelection actor) { }
         public Akka.Actor.ActorSelection Selection { get; }
-        public override System.Threading.Tasks.Task Ask(object message, System.Nullable<System.TimeSpan> timeout) { }
+        public override System.Threading.Tasks.Task<object> Ask(object message, System.Nullable<System.TimeSpan> timeout) { }
         public override bool Equals(object obj) { }
         protected bool Equals(Akka.Routing.ActorSelectionRoutee other) { }
         public override int GetHashCode() { }
@@ -4023,7 +4039,7 @@ namespace Akka.Routing
     {
         public static readonly Akka.Routing.Routee NoRoutee;
         public Routee() { }
-        public virtual System.Threading.Tasks.Task Ask(object message, System.Nullable<System.TimeSpan> timeout) { }
+        public virtual System.Threading.Tasks.Task<object> Ask(object message, System.Nullable<System.TimeSpan> timeout) { }
         public static Akka.Routing.Routee FromActorRef(Akka.Actor.IActorRef actorRef) { }
         public virtual void Send(object message, Akka.Actor.IActorRef sender) { }
     }
@@ -4822,6 +4838,7 @@ namespace Akka.Util.Internal
         public static string Join(this System.Collections.Generic.IEnumerable<string> self, string separator) { }
         public static System.TimeSpan Max(this System.TimeSpan @this, System.TimeSpan other) { }
         public static System.TimeSpan Min(this System.TimeSpan @this, System.TimeSpan other) { }
+        public static System.Collections.Generic.IEnumerable<T> TakeRight<T>(this System.Collections.Generic.IEnumerable<T> self, int n) { }
     }
     public interface IAtomicCounter<T>
     {

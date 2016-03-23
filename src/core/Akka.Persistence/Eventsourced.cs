@@ -38,7 +38,7 @@ namespace Akka.Persistence
 
     /// <summary>
     /// Unlike <see cref="StashingHandlerInvocation"/> this one does not force actor to stash commands.
-    /// Originates from <see cref="Eventsourced.PersistAsync{TEvent}(TEvent,System.Action{TEvent})"/> 
+    /// Originates from <see cref="Eventsourced.PersistAsync{TEvent}(TEvent,System.Action{TEvent})"/>
     /// or <see cref="Eventsourced.DeferAsync{TEvent}"/> method calls.
     /// </summary>
     public sealed class AsyncHandlerInvocation : IPendingHandlerInvocation
@@ -76,6 +76,7 @@ namespace Akka.Persistence
 
         protected readonly PersistenceExtension Extension;
         private readonly ILoggingAdapter _log;
+        private IStash _stash;
 
         protected Eventsourced()
         {
@@ -102,7 +103,7 @@ namespace Akka.Persistence
         /// Called when the persistent actor is started for the first time.
         /// The returned <see cref="Akka.Persistence.Recovery"/> object defines how the actor
         /// will recover its persistent state behore handling the first incoming message.
-        /// 
+        ///
         /// To skip recovery completely return <see cref="Akka.Persistence.Recovery.None"/>.
         /// </summary>
         public virtual Recovery Recovery { get { return Recovery.Default;} }
@@ -112,7 +113,11 @@ namespace Akka.Persistence
             get { return Extension.DefaultInternalStashOverflowStrategy; }
         }
 
-        public IStash Stash { get; set; }
+        public IStash Stash
+        {
+            get { return _stash; }
+            set { _stash = new InternalStashAwareStash(value, _internalStash); }
+        }
 
         public string JournalPluginId { get; protected set; }
 
@@ -144,7 +149,7 @@ namespace Akka.Persistence
         public bool IsRecoveryFinished { get { return !IsRecovering; } }
 
         /// <summary>
-        /// Highest received sequence number so far or `0L` if this actor 
+        /// Highest received sequence number so far or `0L` if this actor
         /// hasn't replayed  or stored any persistent events yet.
         /// </summary>
         public long LastSequenceNr { get; private set; }
@@ -153,7 +158,7 @@ namespace Akka.Persistence
         /// Returns <see cref="LastSequenceNr"/>
         /// </summary>
         public long SnapshotSequenceNr { get { return LastSequenceNr; } }
-        
+
         /// <summary>
         /// Instructs the snapshot store to load the specified snapshot and send it via an
         /// <see cref="SnapshotOffer"/> to the running <see cref="PersistentActor"/>.
@@ -165,7 +170,7 @@ namespace Akka.Persistence
 
         /// <summary>
         /// Saves <paramref name="snapshot"/> of current <see cref="ISnapshotter"/> state.
-        /// 
+        ///
         /// The <see cref="PersistentActor"/> will be notified about the success or failure of this
         /// via an <see cref="SaveSnapshotSuccess"/> or <see cref="SaveSnapshotFailure"/> message.
         /// </summary>
@@ -176,7 +181,7 @@ namespace Akka.Persistence
 
         /// <summary>
         /// Deletes the snapshot identified by <paramref name="sequenceNr"/>.
-        /// 
+        ///
         /// The <see cref="PersistentActor"/> will be notified about the status of the deletion
         /// via an <see cref="DeleteSnapshotSuccess"/> or <see cref="DeleteSnapshotFailure"/> message.
         /// </summary>
@@ -187,7 +192,7 @@ namespace Akka.Persistence
 
         /// <summary>
         /// Deletes all snapshots matching <paramref name="criteria"/>.
-        /// 
+        ///
         /// The <see cref="PersistentActor"/> will be notified about the status of the deletion
         /// via an <see cref="DeleteSnapshotsSuccess"/> or <see cref="DeleteSnapshotsFailure"/> message.
         /// </summary>
@@ -196,14 +201,14 @@ namespace Akka.Persistence
             SnapshotStore.Tell(new DeleteSnapshots(SnapshotterId, criteria));
         }
 
-        /// <summary> 
-        /// Recovery handler that receives persistent events during recovery. If a state snapshot has been captured and saved, 
+        /// <summary>
+        /// Recovery handler that receives persistent events during recovery. If a state snapshot has been captured and saved,
         /// this handler will receive a <see cref="SnapshotOffer"/> message followed by events that are younger than offer itself.
-        /// 
+        ///
         /// This handler must not have side-effects other than changing persistent actor state i.e. it
         /// should not perform actions that may fail, such as interacting with external services,
         /// for example.
-        /// 
+        ///
         /// If there is a problem with recovering the state of the actor from the journal, the error
         /// will be logged and the actor will be stopped.
         /// </summary>
@@ -217,21 +222,21 @@ namespace Akka.Persistence
         /// <returns></returns>
         protected abstract bool ReceiveCommand(object message);
 
-        /// <summary> 
+        /// <summary>
         /// Asynchronously persists an <paramref name="event"/>. On successful persistence, the <paramref name="handler"/>
         /// is called with the persisted event. This method guarantees that no new commands will be received by a persistent actor
         /// between a call to <see cref="Persist{TEvent}(TEvent,System.Action{TEvent})"/> and execution of it's handler. It also
         /// holds multiple persist calls per received command. Internally this is done by stashing. The stash used
         /// for that is an internal stash which doesn't interfere with the inherited user stash.
-        /// 
-        /// 
+        ///
+        ///
         /// An event <paramref name="handler"/> may close over eventsourced actor state and modify it. Sender of the persistent event
         /// is considered a sender of the corresponding command. That means one can respond to sender from within an event handler.
-        /// 
-        /// 
-        /// Within an event handler, applications usually update persistent actor state using 
+        ///
+        ///
+        /// Within an event handler, applications usually update persistent actor state using
         /// persisted event data, notify listeners and reply to command senders.
-        /// 
+        ///
         ///
         /// If persistence of an event fails, <see cref="OnPersistFailure"> will be invoked and the actor will
         /// unconditionally be stopped. The reason that it cannot resume when persist fails is that it
@@ -276,24 +281,24 @@ namespace Akka.Persistence
             PersistAll(events, handler);
         }
 
-        /// <summary> 
+        /// <summary>
         /// Asynchronously persists an <paramref name="event"/>. On successful persistence, the <paramref name="handler"/>
         /// is called with the persisted event. Unlike <see cref="Persist{TEvent}(TEvent,System.Action{TEvent})"/> method,
         /// this one will continue to receive incoming commands between calls and executing it's event <paramref name="handler"/>.
-        /// 
-        /// 
-        /// This version should be used in favor of <see cref="Persist{TEvent}(TEvent,System.Action{TEvent})"/> 
+        ///
+        ///
+        /// This version should be used in favor of <see cref="Persist{TEvent}(TEvent,System.Action{TEvent})"/>
         /// method when throughput is more important that commands execution precedence.
-        /// 
-        /// 
+        ///
+        ///
         /// An event <paramref name="handler"/> may close over eventsourced actor state and modify it. Sender of the persistent event
         /// is considered a sender of the corresponding command. That means, one can respond to sender from within an event handler.
-        /// 
-        /// 
-        /// Within an event handler, applications usually update persistent actor state using 
+        ///
+        ///
+        /// Within an event handler, applications usually update persistent actor state using
         /// persisted event data, notify listeners and reply to command senders.
-        /// 
-        /// 
+        ///
+        ///
         /// If persistence of an event fails, <see cref="OnPersistFailure"> will be invoked and the actor will
         /// unconditionally be stopped. The reason that it cannot resume when persist fails is that it
         /// is unknown if the event was actually persisted or not, and therefore it is in an inconsistent
@@ -332,20 +337,20 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// Defer the <paramref name="handler"/> execution until all pending handlers have been executed. 
+        /// Defer the <paramref name="handler"/> execution until all pending handlers have been executed.
         /// Allows to define logic within the actor, which will respect the invocation-order-guarantee
         /// in respect to <see cref="PersistAsync{TEvent}(TEvent,System.Action{TEvent})"/> calls.
         /// That is, if <see cref="PersistAsync{TEvent}(TEvent,System.Action{TEvent})"/> was invoked before
         /// <see cref="DeferAsync{TEvent}"/>, the corresponding handlers will be
         /// invoked in the same order as they were registered in.
-        /// 
+        ///
         /// This call will NOT result in <paramref name="evt"/> being persisted, use
         /// <see cref="Persist{TEvent}(TEvent,System.Action{TEvent})"/> or
         /// <see cref="PersistAsync{TEvent}(TEvent,System.Action{TEvent})"/> instead if the given
         /// <paramref name="evt"/> should be possible to replay.
-        /// 
+        ///
         /// If there are no pending persist handler calls, the <paramref name="handler"/> will be called immediately.
-        /// 
+        ///
         /// If persistence of an earlier event fails, the persistent actor will stop, and the
         /// <paramref name="handler"/> will not be run.
         /// </summary>
@@ -382,15 +387,6 @@ namespace Akka.Persistence
             Journal.Tell(new DeleteMessagesTo(PersistenceId, toSequenceNr, Self));
         }
 
-        public void UnstashAll()
-        {
-            // Internally, all messages are processed by unstashing them from
-            // the internal stash one-by-one. Hence, an unstashAll() from the
-            // user stash must be prepended to the internal stash.
-
-            _internalStash.Prepend(Stash.ClearStash());
-        }
-
         /// <summary>
         /// Called whenever a message replay succeeds.
         /// </summary>
@@ -405,7 +401,7 @@ namespace Akka.Persistence
         {
             if (message != null)
             {
-               _log.Error(reason, "Exception in ReceiveRecover when replaying event type [{0}] with sequence number [{1}] for persistenceId [{2}]", 
+               _log.Error(reason, "Exception in ReceiveRecover when replaying event type [{0}] with sequence number [{1}] for persistenceId [{2}]",
                    message.GetType(), LastSequenceNr, PersistenceId);
             }
             else
@@ -509,6 +505,51 @@ namespace Akka.Persistence
             else
                 _internalStash.Unstash();
         }
+
+        private class InternalStashAwareStash : IStash
+        {
+            private readonly IStash _userStash;
+            private readonly IStash _internalStash;
+
+            public InternalStashAwareStash(IStash userStash, IStash internalStash)
+            {
+                _userStash = userStash;
+                _internalStash = internalStash;
+            }
+
+            public void Stash()
+            {
+                _userStash.Stash();
+            }
+
+            public void Unstash()
+            {
+                _userStash.Unstash();
+            }
+
+            public void UnstashAll()
+            {
+                // Internally, all messages are processed by unstashing them from
+                // the internal stash one-by-one. Hence, an unstashAll() from the
+                // user stash must be prepended to the internal stash.
+
+                _internalStash.Prepend(ClearStash());
+            }
+
+            public void UnstashAll(Func<Envelope, bool> predicate)
+            {
+                _userStash.UnstashAll(predicate);
+            }
+
+            public IEnumerable<Envelope> ClearStash()
+            {
+                return _userStash.ClearStash();
+            }
+
+            public void Prepend(IEnumerable<Envelope> envelopes)
+            {
+                _userStash.Prepend(envelopes);
+            }
+        }
     }
 }
-

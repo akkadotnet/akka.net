@@ -7,7 +7,6 @@ open System.IO
 open System.Text
 open Fake
 open Fake.FileUtils
-open Fake.MSTest
 open Fake.TaskRunnerHelper
 open Fake.ProcessHelper
 
@@ -62,7 +61,7 @@ let sourceBrowserDocsDir = binDir @@ "sourcebrowser"
 let msdeployPath = "C:\Program Files (x86)\IIS\Microsoft Web Deploy V3\msdeploy.exe"
 
 open Fake.RestorePackageHelper
-Target "RestorePackages" (fun _ -> 
+Target "RestorePackages" (fun _ ->
      "./src/Akka.sln"
      |> RestoreMSSolutionPackages (fun p ->
          { p with
@@ -77,7 +76,7 @@ Target "Clean" <| fun _ ->
     DeleteDir binDir
 
 //--------------------------------------------------------------------------------
-// Generate AssemblyInfo files with the version for release notes 
+// Generate AssemblyInfo files with the version for release notes
 
 open AssemblyInfoFile
 
@@ -96,7 +95,7 @@ Target "AssemblyInfo" <| fun _ ->
             |> Path.GetDirectoryName
             |> Path.GetFileName
 
-        CreateFSharpAssemblyInfo file [ 
+        CreateFSharpAssemblyInfo file [
             Attribute.Title title
             Attribute.Product product
             Attribute.Description description
@@ -138,13 +137,13 @@ Target "AzureDocsDeploy" (fun _ ->
         enableProcessTracing <- false
         let arguments = sprintf "/Source:%s /Dest:%s /DestKey:%s /S /Y /SetContentType" (Path.GetFullPath docDir) (azureUrl @@ container) azureKey
         tracefn "Pushing docs to %s. Attempts left: %d" (azureUrl) trialsLeft
-        try 
-            
+        try
+
             let result = ExecProcess(fun info ->
                 info.FileName <- AzCopyDir @@ "AzCopy.exe"
                 info.Arguments <- arguments) (TimeSpan.FromMinutes 120.0) //takes a very long time to upload
             if result <> 0 then failwithf "Error during AzCopy.exe upload to azure."
-        with exn -> 
+        with exn ->
             if (trialsLeft > 0) then (pushToAzure docDir azureUrl container azureKey (trialsLeft-1))
             else raise exn
     let canPush = hasBuildParam "azureKey" && hasBuildParam "azureUrl"
@@ -159,7 +158,7 @@ Target "AzureDocsDeploy" (fun _ ->
             pushToAzure docDir azureUrl release.NugetVersion azureKey 3
     if(not canPush) then
         printfn "Missing required paraments to push docs to Azure. Run build HelpDocs to find out!"
-            
+
 )
 
 Target "PublishDocs" DoNothing
@@ -173,11 +172,11 @@ Target "GenerateSourceBrowser" <| (fun _ ->
     let htmlGeneratorPath = "src/packages/Microsoft.SourceBrowser/tools/HtmlGenerator.exe"
     let arguments = sprintf "/out:%s %s" sourceBrowserDocsDir "src/Akka.sln"
     printfn "Using SourceBrowser: %s %s" htmlGeneratorPath arguments
-    
-    let result = ExecProcess(fun info -> 
+
+    let result = ExecProcess(fun info ->
         info.FileName <- htmlGeneratorPath
         info.Arguments <- arguments) (System.TimeSpan.FromMinutes 20.0)
-    
+
     if result <> 0 then failwithf "SourceBrowser failed. %s %s" htmlGeneratorPath arguments
 )
 
@@ -190,11 +189,11 @@ Target "PublishSourceBrowser" <| (fun _ ->
         let sourceBrowserPublishSettingsPath = getBuildParam "publishsettings"
         let arguments = sprintf "-verb:sync -source:contentPath=\"%s\" -dest:contentPath=sourcebrowser,publishSettings=\"%s\"" (Path.GetFullPath sourceBrowserDocsDir) sourceBrowserPublishSettingsPath
         printfn "Using MSDeploy: %s %s" msdeployPath arguments
-    
-        let result = ExecProcess(fun info -> 
+
+        let result = ExecProcess(fun info ->
             info.FileName <- msdeployPath
             info.Arguments <- arguments) (System.TimeSpan.FromMinutes 30.0) //takes a long time to upload
-    
+
         if result <> 0 then failwithf "MSDeploy failed. %s %s" msdeployPath arguments
     else
         printfn "Missing required parameter to publish SourceBrowser docs. Run build HelpSourceBrowserDocs to find out!"
@@ -205,7 +204,7 @@ Target "PublishSourceBrowser" <| (fun _ ->
 //--------------------------------------------------------------------------------
 
 Target "CopyOutput" <| fun _ ->
-    
+
     let copyOutput project =
         let src = "src" @@ project @@ @"bin/Release/"
         let dst = binDir @@ project
@@ -220,17 +219,15 @@ Target "CopyOutput" <| fun _ ->
       "core/Akka.Persistence"
       "core/Akka.Persistence.FSharp"
       "core/Akka.Persistence.TestKit"
-      "contrib/loggers/Akka.Logger.slf4net"
-      "contrib/loggers/Akka.Logger.CommonLogging"
       "contrib/dependencyinjection/Akka.DI.Core"
       "contrib/dependencyinjection/Akka.DI.AutoFac"
       "contrib/dependencyinjection/Akka.DI.CastleWindsor"
       "contrib/dependencyinjection/Akka.DI.Ninject"
       "contrib/dependencyinjection/Akka.DI.Unity"
       "contrib/dependencyinjection/Akka.DI.TestKit"
-      "contrib/testkits/Akka.TestKit.Xunit" 
-      "contrib/testkits/Akka.TestKit.Xunit2" 
-      "contrib/serializers/Akka.Serialization.Wire" 
+      "contrib/testkits/Akka.TestKit.Xunit"
+      "contrib/testkits/Akka.TestKit.Xunit2"
+      "contrib/serializers/Akka.Serialization.Wire"
       "contrib/cluster/Akka.Cluster.Tools"
       "contrib/cluster/Akka.Cluster.Sharding"
       ]
@@ -253,26 +250,22 @@ Target "CleanTests" <| fun _ ->
 // Run tests
 
 open Fake.Testing
-Target "RunTests" <| fun _ ->  
-    let msTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
-    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- 
-                                    "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
+Target "RunTests" <| fun _ ->
+    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll"
 
     mkdir testOutput
 
-    MSTest (fun p -> p) msTestAssemblies
-   
     let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
     let runSingleAssembly assembly =
         let assemblyName = Path.GetFileNameWithoutExtension(assembly)
         xUnit2
-            (fun p -> { p with XmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.xml"); HtmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization }) 
+            (fun p -> { p with XmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.xml"); HtmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization })
             (Seq.singleton assembly)
 
     xunitTestAssemblies |> Seq.iter (runSingleAssembly)
 
-Target "RunTestsMono" <| fun _ ->  
+Target "RunTestsMono" <| fun _ ->
     let xunitTestAssemblies = !! "src/**/bin/Release Mono/*.Tests.dll"
 
     mkdir testOutput
@@ -282,10 +275,20 @@ Target "RunTestsMono" <| fun _ ->
     let runSingleAssembly assembly =
         let assemblyName = Path.GetFileNameWithoutExtension(assembly)
         xUnit2
-            (fun p -> { p with XmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.xml"); HtmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization }) 
+            (fun p -> { p with XmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.xml"); HtmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization })
             (Seq.singleton assembly)
 
     xunitTestAssemblies |> Seq.iter (runSingleAssembly)
+
+
+
+(* Debug helper for troubleshooting an issue we had when we were running multi-node tests multiple times *)
+Target "PrintMultiNodeTests" <| fun _ ->
+    let testSearchPath =
+        let assemblyFilter = getBuildParamOrDefault "spec-assembly" String.Empty
+        sprintf "src/**/bin/Release/*%s*.Tests.MultiNode.dll" assemblyFilter
+    (!! testSearchPath) |> Seq.iter (printfn "%s")
+
 
 Target "MultiNodeTests" <| fun _ ->
     let testSearchPath =
@@ -307,16 +310,16 @@ Target "MultiNodeTests" <| fun _ ->
                 |> appendIfNotNullOrEmpty spec "-Dmultinode.test-spec="
                 |> toText
 
-        let result = ExecProcess(fun info -> 
+        let result = ExecProcess(fun info ->
             info.FileName <- multiNodeTestPath
             info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
             info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
         if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
-    
+
     multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
 
 //--------------------------------------------------------------------------------
-// NBench targets 
+// NBench targets
 //--------------------------------------------------------------------------------
 Target "NBench" <| fun _ ->
     let testSearchPath =
@@ -336,12 +339,12 @@ Target "NBench" <| fun _ ->
                 |> append (sprintf "output-directory=\"%s\"" perfOutput)
                 |> toText
 
-        let result = ExecProcess(fun info -> 
+        let result = ExecProcess(fun info ->
             info.FileName <- nbenchTestPath
             info.WorkingDirectory <- (Path.GetDirectoryName (FullName nbenchTestPath))
             info.Arguments <- args) (System.TimeSpan.FromMinutes 15.0) (* Reasonably long-running task. *)
         if result <> 0 then failwithf "NBench.Runner failed. %s %s" nbenchTestPath args
-    
+
     nbenchTestAssemblies |> Seq.iter (runNBench)
 
 //--------------------------------------------------------------------------------
@@ -351,10 +354,10 @@ Target "CleanPerf" <| fun _ ->
 
 
 //--------------------------------------------------------------------------------
-// Nuget targets 
+// Nuget targets
 //--------------------------------------------------------------------------------
 
-module Nuget = 
+module Nuget =
     // add Akka dependency for other projects
     let getAkkaDependency project =
         match project with
@@ -392,8 +395,8 @@ Target "CleanNuget" <| fun _ ->
 // Publish to nuget.org if nugetkey is specified
 
 let createNugetPackages _ =
-    let removeDir dir = 
-        let del _ = 
+    let removeDir dir =
+        let del _ =
             DeleteDir dir
             not (directoryExists dir)
         runWithRetries del 3 |> ignore
@@ -401,10 +404,10 @@ let createNugetPackages _ =
     ensureDirectory nugetDir
     for nuspec in !! "src/**/*.nuspec" do
         printfn "Creating nuget packages for %s" nuspec
-        
+
         CleanDir workingDir
 
-        let project = Path.GetFileNameWithoutExtension nuspec 
+        let project = Path.GetFileNameWithoutExtension nuspec
         let projectDir = Path.GetDirectoryName nuspec
         let projectFile = (!! (projectDir @@ project + ".*sproj")) |> Seq.head
         let releaseDir = projectDir @@ @"bin\Release"
@@ -446,20 +449,20 @@ let createNugetPackages _ =
         let isCs = hasExt ".cs"
         let isFs = hasExt ".fs"
         let isAssemblyInfo f = (filename f).Contains("AssemblyInfo")
-        let isSrc f = (isCs f || isFs f) && not (isAssemblyInfo f) 
+        let isSrc f = (isCs f || isFs f) && not (isAssemblyInfo f)
         CopyDir nugetSrcDir projectDir isSrc
-        
+
         //Remove workingDir/src/obj and workingDir/src/bin
         removeDir (nugetSrcDir @@ "obj")
         removeDir (nugetSrcDir @@ "bin")
 
-        // Create both normal nuget package and symbols nuget package. 
+        // Create both normal nuget package and symbols nuget package.
         // Uses the files we copied to workingDir and outputs to nugetdir
         pack nugetDir NugetSymbolPackage.Nuspec
-        
+
         removeDir workingDir
 
-let publishNugetPackages _ = 
+let publishNugetPackages _ =
     let rec publishPackage url accessKey trialsLeft packageFile =
         let tracing = enableProcessTracing
         enableProcessTracing <- false
@@ -469,24 +472,24 @@ let publishNugetPackages _ =
             | (pack, key, url) -> sprintf "push \"%s\" %s -source %s" pack key url
 
         tracefn "Pushing %s Attempts left: %d" (FullName packageFile) trialsLeft
-        try 
-            let result = ExecProcess (fun info -> 
+        try
+            let result = ExecProcess (fun info ->
                     info.FileName <- nugetExe
                     info.WorkingDirectory <- (Path.GetDirectoryName (FullName packageFile))
                     info.Arguments <- args (packageFile, accessKey,url)) (System.TimeSpan.FromMinutes 1.0)
             enableProcessTracing <- tracing
             if result <> 0 then failwithf "Error during NuGet symbol push. %s %s" nugetExe (args (packageFile, "key omitted",url))
-        with exn -> 
+        with exn ->
             if (trialsLeft > 0) then (publishPackage url accessKey (trialsLeft-1) packageFile)
             else raise exn
     let shouldPushNugetPackages = hasBuildParam "nugetkey"
     let shouldPushSymbolsPackages = (hasBuildParam "symbolspublishurl") && (hasBuildParam "symbolskey")
-    
+
     if (shouldPushNugetPackages || shouldPushSymbolsPackages) then
         printfn "Pushing nuget packages"
         if shouldPushNugetPackages then
-            let normalPackages= 
-                !! (nugetDir @@ "*.nupkg") 
+            let normalPackages=
+                !! (nugetDir @@ "*.nupkg")
                 -- (nugetDir @@ "*.symbols.nupkg") |> Seq.sortBy(fun x -> x.ToLower())
             for package in normalPackages do
                 try
@@ -503,20 +506,20 @@ let publishNugetPackages _ =
                     printfn "%s" exn.Message
 
 
-Target "Nuget" <| fun _ -> 
+Target "Nuget" <| fun _ ->
     createNugetPackages()
     publishNugetPackages()
 
-Target "CreateNuget" <| fun _ -> 
+Target "CreateNuget" <| fun _ ->
     createNugetPackages()
 
-Target "PublishNuget" <| fun _ -> 
+Target "PublishNuget" <| fun _ ->
     publishNugetPackages()
 
 
 
 //--------------------------------------------------------------------------------
-// Help 
+// Help
 //--------------------------------------------------------------------------------
 
 Target "Help" <| fun _ ->
@@ -532,8 +535,8 @@ Target "Help" <| fun _ ->
       " * All        Builds, run tests, creates and optionally publish nuget packages"
       ""
       " Other Targets"
-      " * Help       Display this help" 
-      " * HelpNuget  Display help about creating and pushing nuget packages" 
+      " * Help       Display this help"
+      " * HelpNuget  Display help about creating and pushing nuget packages"
       " * HelpDocs   Display help about creating and pushing API docs"
       " * HelpMultiNodeTests  Display help about running the multiple node specifications"
       ""]

@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -15,6 +16,41 @@ namespace Akka.Actor.Internal
 {
     public abstract class ChildrenContainerBase : IChildrenContainer
     {
+        private class LazyReadOnlyCollection<T> : IReadOnlyCollection<T>
+        {
+            private readonly IEnumerable<T> _enumerable;
+            private int _lazyCount;
+
+            public int Count
+            {
+                get
+                {
+                    int count = _lazyCount;
+
+                    if (count == -1)
+                        _lazyCount = count = _enumerable.Count();
+
+                    return count;
+                }
+            }
+
+            public LazyReadOnlyCollection(IEnumerable<T> enumerable)
+            {
+                _enumerable = enumerable;
+                _lazyCount = -1;
+            }
+
+            public IEnumerator<T> GetEnumerator()
+            {
+                return _enumerable.GetEnumerator();
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return GetEnumerator();
+            }
+        }
+
         private readonly IImmutableDictionary<string, IChildStats> _children;
 
         protected ChildrenContainerBase(IImmutableDictionary<string, IChildStats> children)
@@ -30,25 +66,26 @@ namespace Akka.Actor.Internal
         public abstract IChildrenContainer ShallDie(IActorRef actor);
         public abstract IChildrenContainer Unreserve(string name);
 
-        public IReadOnlyList<IInternalActorRef> Children
+        public IReadOnlyCollection<IInternalActorRef> Children
         {
             get
             {
-                return (from stat in InternalChildren.Values
-                        let childRestartStats = stat as ChildRestartStats
-                        where childRestartStats != null
-                        select childRestartStats.Child).ToList();
+                var children = InternalChildren.Values
+                    .OfType<ChildRestartStats>()
+                    .Select(item => item.Child);
+
+                // The children collection must stay lazy evaluated
+                return new LazyReadOnlyCollection<IInternalActorRef>(children);
             }
         }
 
-        public IReadOnlyList<ChildRestartStats> Stats
+        public IReadOnlyCollection<ChildRestartStats> Stats
         {
             get
             {
-                return (from stat in InternalChildren.Values
-                        let childRestartStats = stat as ChildRestartStats
-                        where childRestartStats != null
-                        select childRestartStats).ToList();
+                var children = InternalChildren.Values.OfType<ChildRestartStats>();
+
+                return new LazyReadOnlyCollection<ChildRestartStats>(children);
             }
         }
 
@@ -101,4 +138,3 @@ namespace Akka.Actor.Internal
         }
     }
 }
-

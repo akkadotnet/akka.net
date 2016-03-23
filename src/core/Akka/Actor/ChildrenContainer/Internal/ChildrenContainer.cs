@@ -15,8 +15,8 @@ namespace Akka.Actor.Internal
         IChildrenContainer Remove(IActorRef child);
         bool TryGetByName(string name, out IChildStats stats);
         bool TryGetByRef(IActorRef actor, out ChildRestartStats stats);
-        IReadOnlyList<IInternalActorRef> Children { get; }
-        IReadOnlyList<ChildRestartStats> Stats { get; }
+        IReadOnlyCollection<IInternalActorRef> Children { get; }
+        IReadOnlyCollection<ChildRestartStats> Stats { get; }
         IChildrenContainer ShallDie(IActorRef actor);
         IChildrenContainer Reserve(string name);
         IChildrenContainer Unreserve(string name);

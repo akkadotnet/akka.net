@@ -125,7 +125,7 @@ namespace PersistenceBenchmark
             {
                 var context = Context;
                 Persist("c", _ => context.UnbecomeStacked());
-                UnstashAll();
+                Stash.UnstashAll();
             }
             else Stash.Stash();
             return true;

@@ -19,7 +19,7 @@ namespace PingPong
         {
             var received = 0L;
             var sent = 0L;
-            Receive<Messages.Msg>(async m =>
+            ReceiveAsync<Messages.Msg>(async m =>
             {
                 received++;
                 if (sent < repeat)

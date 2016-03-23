@@ -52,9 +52,9 @@ namespace Akka.Cluster
         readonly ImmutableHashSet<string> _roles;
         public ImmutableHashSet<string> Roles { get { return _roles; } }
 
-        public static Member Create(UniqueAddress uniqueAddress, MemberStatus status, ImmutableHashSet<string> roles)
+        public static Member Create(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, ImmutableHashSet<string> roles)
         {
-            return new Member(uniqueAddress, 0, status, roles);
+            return new Member(uniqueAddress, upNumber, status, roles);
         }
 
         Member(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, ImmutableHashSet<string> roles)

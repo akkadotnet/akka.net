@@ -68,6 +68,10 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\core\Akka.Cluster.TestKit\Akka.Cluster.TestKit.csproj">
+      <Project>{b32850d2-e9cb-4638-83a4-164907595e56}</Project>
+      <Name>Akka.Cluster.TestKit</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Akka.Cluster.Sharding\Akka.Cluster.Sharding.csproj">
       <Project>{a05c31e8-0246-46a1-b3bc-4d6fe7a9aa49}</Project>
       <Name>Akka.Cluster.Sharding</Name>
@@ -88,10 +92,6 @@
       <Project>{7dbd5c17-5e9d-40c4-9201-d092751532a7}</Project>
       <Name>Akka.TestKit.Xunit2</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\core\Akka.Cluster.Tests.MultiNode\Akka.Cluster.Tests.MultiNode.csproj">
-      <Project>{f0781bea-5ba0-4af0-bb15-e3f209b681f5}</Project>
-      <Name>Akka.Cluster.Tests.MultiNode</Name>
-    </ProjectReference>
     <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj">
       <Project>{6ab00f61-269a-4501-b06a-026707f000a7}</Project>
       <Name>Akka.Cluster</Name>
@@ -103,10 +103,6 @@
     <ProjectReference Include="..\..\..\core\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj">
       <Project>{e5957c3e-2b1e-469f-a680-7953b4dea31b}</Project>
       <Name>Akka.Remote.TestKit</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\core\Akka.Remote.Tests.MultiNode\Akka.Remote.Tests.MultiNode.csproj">
-      <Project>{c9105c76-b084-4da1-9348-1c74a8f22f6b}</Project>
-      <Name>Akka.Remote.Tests.MultiNode</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\..\core\Akka.Remote\Akka.Remote.csproj">
       <Project>{ea4ff8fd-7c53-49c8-b9aa-02e458b3e6a7}</Project>

@@ -221,6 +221,11 @@ namespace Akka.Dispatch
             //       messageQueue.cleanUp(actor.self, actor.dispatcher.mailboxes.deadLetterMailbox.messageQueue)
             //   }
         }
+
+        protected bool TryDequeue(out Envelope envelope)
+        {
+            return _userMessages.TryDequeue(out envelope);
+        }
     }
 }
 
