@@ -83,12 +83,14 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes FanoutPublisherSink = Attributes.CreateName("fanoutPublisherSink");
         public static readonly Attributes IgnoreSink = Attributes.CreateName("ignoreSink");
         public static readonly Attributes ActorRefSink = Attributes.CreateName("actorRefSink");
+        public static readonly Attributes ActorRefWithAck = Attributes.CreateName("actorRefWithAckSink");
         public static readonly Attributes ActorSubscriberSink = Attributes.CreateName("actorSubscriberSink");
         public static readonly Attributes QueueSink = Attributes.CreateName("queueSink");
         public static readonly Attributes InputStreamSink = Attributes.CreateName("inputStreamSink").And(IODispatcher);
         public static readonly Attributes OutputStreamSink = Attributes.CreateName("outputStreamSink").And(IODispatcher);
         public static readonly Attributes FileSink = Attributes.CreateName("fileSink").And(IODispatcher);
         public static readonly Attributes SeqSink = Attributes.CreateName("seqSink");
+       
     }
     
     // FIXME: To be deprecated as soon as stream-of-stream operations are stages

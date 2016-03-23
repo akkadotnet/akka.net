@@ -92,6 +92,7 @@
     <Compile Include="FanOutShape.cs" />
     <Compile Include="Fusing.cs" />
     <Compile Include="Implementation\ActorMaterializerImpl.cs" />
+    <Compile Include="Implementation\ActorRefBackpressureSinkStage.cs" />
     <Compile Include="Implementation\ActorRefSinkActor.cs" />
     <Compile Include="Implementation\ActorRefSourceActor.cs" />
     <Compile Include="Implementation\Buffers.cs" />
