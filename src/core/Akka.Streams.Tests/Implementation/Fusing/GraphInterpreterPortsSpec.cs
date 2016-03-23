@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Akka.Streams.TestKit.Tests;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -8,7 +9,6 @@ using OnComplete = Akka.Streams.Tests.Implementation.Fusing.GraphInterpreterSpec
 using OnError = Akka.Streams.Tests.Implementation.Fusing.GraphInterpreterSpecKit.TestSetup.OnError;
 using OnNext = Akka.Streams.Tests.Implementation.Fusing.GraphInterpreterSpecKit.TestSetup.OnNext;
 using RequestOne = Akka.Streams.Tests.Implementation.Fusing.GraphInterpreterSpecKit.TestSetup.RequestOne;
-using TE = Akka.Streams.TestKit.Tests.Utils.TE;
 
 namespace Akka.Streams.Tests.Implementation.Fusing
 {
@@ -880,7 +880,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(false);
 
-            outlet.Fail(new TE("test"));
+            outlet.Fail(new TestException("test"));
 
             lastEvents().Should().BeEmpty();
             outlet.IsAvailable().Should().Be(false);
@@ -892,7 +892,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new OnError(inlet, new TE("test")));
+            lastEvents().Should().BeEquivalentTo(new OnError(inlet, new TestException("test")));
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -942,7 +942,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.HasBeenPulled().Should().Be(true);
             inlet.IsClosed().Should().Be(false);
 
-            outlet.Fail(new TE("test"));
+            outlet.Fail(new TestException("test"));
 
             lastEvents().Should().BeEmpty();
             outlet.IsAvailable().Should().Be(false);
@@ -954,7 +954,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new OnError(inlet, new TE("test")));
+            lastEvents().Should().BeEquivalentTo(new OnError(inlet, new TestException("test")));
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -1003,7 +1003,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.HasBeenPulled().Should().Be(true);
             inlet.IsClosed().Should().Be(false);
 
-            outlet.Fail(new TE("test"));
+            outlet.Fail(new TestException("test"));
 
             lastEvents().Should().BeEmpty();
             outlet.IsAvailable().Should().Be(false);
@@ -1015,7 +1015,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new OnError(inlet, new TE("test")));
+            lastEvents().Should().BeEquivalentTo(new OnError(inlet, new TestException("test")));
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -1068,7 +1068,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.HasBeenPulled().Should().Be(true);
             inlet.IsClosed().Should().Be(false);
 
-            outlet.Fail(new TE("test"));
+            outlet.Fail(new TestException("test"));
 
             lastEvents().Should().BeEmpty();
             outlet.IsAvailable().Should().Be(false);
@@ -1092,7 +1092,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             step();
 
-            lastEvents().Should().BeEquivalentTo(new OnError(inlet, new TE("test")));
+            lastEvents().Should().BeEquivalentTo(new OnError(inlet, new TestException("test")));
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -1124,13 +1124,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             clearEvents();
 
             outlet.Push(0);
-            outlet.Fail(new TE("test"));
+            outlet.Fail(new TestException("test"));
             step();
 
             lastEvents().Should().BeEquivalentTo(new OnNext(inlet, 0));
             step();
 
-            lastEvents().Should().BeEquivalentTo(new OnError(inlet, new TE("test")));
+            lastEvents().Should().BeEquivalentTo(new OnError(inlet, new TestException("test")));
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(true);
@@ -1142,13 +1142,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Port_states_should_ignore_pull_while_failing()
         {
-            outlet.Fail(new TE("test"));
+            outlet.Fail(new TestException("test"));
             inlet.Pull();
             inlet.HasBeenPulled().Should().Be(true);
 
             stepAll();
 
-            lastEvents().Should().BeEquivalentTo(new OnError(inlet, new TE("test")));
+            lastEvents().Should().BeEquivalentTo(new OnError(inlet, new TestException("test")));
             outlet.IsAvailable().Should().Be(false);
             outlet.IsClosed().Should().Be(true);
             inlet.IsAvailable().Should().Be(false);
@@ -1163,7 +1163,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         public void Port_states_should_ignore_any_failure_completion_if_they_are_concurrent_cancel_first()
         {
             inlet.Cancel();
-            outlet.Fail(new TE("test"));
+            outlet.Fail(new TestException("test"));
 
             stepAll();
 
@@ -1181,7 +1181,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Port_states_should_ignore_any_failure_completion_if_they_are_concurrent_complete_first()
         {
-            outlet.Fail(new TE("test"));
+            outlet.Fail(new TestException("test"));
             inlet.Cancel();
 
             stepAll();
@@ -1205,7 +1205,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             clearEvents();
 
             outlet.Push(0);
-            outlet.Fail(new TE("test"));
+            outlet.Fail(new TestException("test"));
             inlet.Cancel();
 
             stepAll();
@@ -1229,7 +1229,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             clearEvents();
 
             outlet.Push(0);
-            outlet.Fail(new TE("test"));
+            outlet.Fail(new TestException("test"));
 
             step();
 

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Streams;
 using Akka.Actor;
-using Akka.Streams.Actors;
 using Akka.TestKit;
 
 namespace Akka.Streams.TestKit
@@ -58,11 +57,10 @@ namespace Akka.Streams.TestKit
         /// </summary>
         public class ManualProbe<T> : ISubscriber<T>
         {
-            private readonly TestKitBase _testKit;
             private readonly TestProbe _probe;
+
             internal ManualProbe(TestKitBase testKit)
             {
-                _testKit = testKit;
                 _probe = testKit.CreateTestProbe();
             }
 
@@ -90,7 +88,7 @@ namespace Akka.Streams.TestKit
 
             public void OnNext(T element)
             {
-                _probe.Ref.Tell(new TestSubscriber.OnNext<T>(element));
+                _probe.Ref.Tell(new OnNext<T>(element));
             }
 
             /// <summary>
@@ -165,7 +163,7 @@ namespace Akka.Streams.TestKit
                 AssertEquals(e.Length, len, "expected to get {0} events, but got {1}", len, e.Length);
                 AssertEquals(e[0], e1, "expected [0] element to be {0} but found {1}", e1, e[0]);
                 AssertEquals(e[1], e2, "expected [1] element to be {0} but found {1}", e2, e[1]);
-                for (int i = 0; i < elems.Length; i++)
+                for (var i = 0; i < elems.Length; i++)
                 {
                     var j = i + 2;
                     AssertEquals(e[j], elems[i], "expected [{2}] element to be {0} but found {1}", elems[i], e[j], j);
@@ -182,10 +180,8 @@ namespace Akka.Streams.TestKit
                 var len = elems.Length + 2;
                 var e = ExpectNextN(len).ToArray();
                 AssertEquals(e.Length, len, "expected to get {0} events, but got {1}", len, e.Length);
-                
-                var expectedSet = new HashSet<T>(elems);
-                expectedSet.Add(e1);
-                expectedSet.Add(e2);
+
+                var expectedSet = new HashSet<T>(elems) {e1, e2};
                 expectedSet.ExceptWith(e);
 
                 Assert(expectedSet.Count == 0, "unexpected elemenents [{0}] found in the result", string.Join(", ", expectedSet));
@@ -223,8 +219,12 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNextUnorderedN(IEnumerable<T> all)
             {
                 var collection = new HashSet<T>(all);
-                foreach (var x in collection)
-                    _probe.ExpectMsg<OnNext<T>>(y => collection.Contains(y.Element));
+                while (collection.Count > 0)
+                {
+                    var next = ExpectNext();
+                    Assert(collection.Contains(next), $"expected one of (${string.Join(", ", collection)}), but received {next}");
+                    collection.Remove(next);
+                }
 
                 return this;
             }
@@ -295,9 +295,9 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public object ExpectNextOrError()
             {
-                var message = _probe.FishForMessage(m => m is OnNext || m is OnError, hint: "OnNext(_) or error");
-                if (message is OnNext)
-                    return ((OnNext) message).Element;
+                var message = _probe.FishForMessage(m => m is OnNext<T> || m is OnError, hint: "OnNext(_) or error");
+                if (message is OnNext<T>)
+                    return ((OnNext<T>) message).Element;
                 return ((OnError) message).Cause;
             }
 
@@ -308,9 +308,9 @@ namespace Akka.Streams.TestKit
             {
                 _probe.FishForMessage(
                     m =>
-                        (m is OnNext && ((OnNext) m).Element.Equals(element)) ||
+                        (m is OnNext<T> && ((OnNext<T>) m).Element.Equals(element)) ||
                         (m is OnError && ((OnError) m).Cause.Equals(cause)),
-                    hint: string.Format("OnNext({0}) or {1}", element, cause.GetType().Name));
+                    hint: $"OnNext({element}) or {cause.GetType().Name}");
                 return this;
             }
 
@@ -319,9 +319,9 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public object ExpectNextOrComplete()
             {
-                var message = _probe.FishForMessage(m => m is OnNext || m is OnComplete, hint: "OnNext(_) or OnComplete");
-                if (message is OnNext)
-                    return ((OnNext) message).Element;
+                var message = _probe.FishForMessage(m => m is OnNext<T> || m is OnComplete, hint: "OnNext(_) or OnComplete");
+                if (message is OnNext<T>)
+                    return ((OnNext<T>) message).Element;
                 return message;
             }
 
@@ -332,9 +332,9 @@ namespace Akka.Streams.TestKit
             {
                 _probe.FishForMessage(
                     m =>
-                        (m is OnNext && ((OnNext) m).Element.Equals(element)) ||
+                        (m is OnNext<T> && ((OnNext<T>) m).Element.Equals(element)) ||
                         m is OnComplete,
-                    hint: string.Format("OnNext({0}) or OnComplete", element));
+                    hint: $"OnNext({element}) or OnComplete");
                 return this;
             }
 
@@ -385,23 +385,27 @@ namespace Akka.Streams.TestKit
             /// <remarks>
             /// Use with caution: Be warned that this may not be a good idea if the stream is infinite or its elements are very large!
             /// </remarks>
-            public IEnumerable<T> ToStrict(TimeSpan atMost)
+            public IList<T> ToStrict(TimeSpan atMost)
             {
                 var deadline = DateTime.UtcNow + atMost;
                 // if no subscription was obtained yet, we expect it
                 if (_subscription == null) ExpectSubscription();
                 _subscription.Request(long.MaxValue);
 
+                var result = new List<T>();
                 while (true)
                 {
                     var e = ExpectEvent(TimeSpan.FromTicks(Math.Max(deadline.Ticks - DateTime.UtcNow.Ticks, 0)));
                     if (e is OnError)
-                        throw new Exception(string.Format("ToStrict received OnError({0}) while draining stream!", ((OnError) e).Cause.Message));
+                        throw new ArgumentException(
+                            $"ToStrict received OnError while draining stream! Accumulated elements: ${string.Join(", ", result)}",
+                            ((OnError) e).Cause);
                     if (e is OnComplete)
-                        yield break;
+                        break;
                     if (e is OnNext<T>)
-                        yield return ((OnNext<T>) e).Element;
+                        result.Add(((OnNext<T>) e).Element);
                 }
+                return result;
             }
 
             private void Assert(bool predicate, string format, params object[] args)

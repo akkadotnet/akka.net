@@ -42,12 +42,12 @@ namespace Akka.Streams.Tests.Implementation
             this.AssertAllStagesStopped(() =>
             {
                 var t = Source.From(Enumerable.Range(1, 100))
-                    .Concat(Source.Failed<int>(new Utils.TE("test")))
+                    .Concat(Source.Failed<int>(new TestException("test")))
                     .Via(Flow.Create<int>().InitialTimeout(TimeSpan.FromSeconds(2)).Grouped(200))
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Exception.Flatten().InnerExceptions.Any(e => e is Utils.TE && e.Message.Equals("test"));
+                t.Exception.Flatten().InnerExceptions.Any(e => e is TestException && e.Message.Equals("test"));
 
             }, Materializer);
         }
@@ -91,12 +91,12 @@ namespace Akka.Streams.Tests.Implementation
             this.AssertAllStagesStopped(() =>
             {
                 var t = Source.From(Enumerable.Range(1, 100))
-                    .Concat(Source.Failed<int>(new Utils.TE("test")))
+                    .Concat(Source.Failed<int>(new TestException("test")))
                     .Via(Flow.Create<int>().CompletionTimeout(TimeSpan.FromSeconds(2)).Grouped(200))
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Exception.Flatten().InnerExceptions.Any(e => e is Utils.TE && e.Message.Equals("test"));
+                t.Exception.Flatten().InnerExceptions.Any(e => e is TestException && e.Message.Equals("test"));
 
             }, Materializer);
         }
@@ -148,12 +148,12 @@ namespace Akka.Streams.Tests.Implementation
             this.AssertAllStagesStopped(() =>
             {
                 var t = Source.From(Enumerable.Range(1, 100))
-                    .Concat(Source.Failed<int>(new Utils.TE("test")))
+                    .Concat(Source.Failed<int>(new TestException("test")))
                     .Via(Flow.Create<int>().IdleTimeout(TimeSpan.FromSeconds(2)).Grouped(200))
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Exception.Flatten().InnerExceptions.Any(e => e is Utils.TE && e.Message.Equals("test"));
+                t.Exception.Flatten().InnerExceptions.Any(e => e is TestException && e.Message.Equals("test"));
 
             }, Materializer);
         }
@@ -314,7 +314,7 @@ namespace Akka.Streams.Tests.Implementation
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                var te = new Utils.TE("test");
+                var te = new TestException("test");
 
                 upWrite.SendError(te);
 

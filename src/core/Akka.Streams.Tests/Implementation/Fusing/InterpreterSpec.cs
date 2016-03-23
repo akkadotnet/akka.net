@@ -773,7 +773,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             public override ITerminationDirective OnUpstreamFinish(IContext<T> context)
             {
-                return context.Fail(new Utils.TE("Cannot happen"));
+                return context.Fail(new TestException("Cannot happen"));
             }
 
             public override void PostStop()

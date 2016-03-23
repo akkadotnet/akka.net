@@ -25,7 +25,7 @@ namespace Akka.Streams.TestKit.Tests
 
         private Exception Ex()
         {
-            return new ApplicationException("Boom!");
+            return new TestException("Boom!");
         }
 
         [Fact]
@@ -34,7 +34,6 @@ namespace Akka.Streams.TestKit.Tests
             Source.From(Enumerable.Range(1, 4))
                 .RunWith(this.SinkProbe<int>(), _materializer)
                 .ToStrict(TimeSpan.FromMilliseconds(300))
-                .ToArray()
                 .Should()
                 .Equal(1, 2, 3, 4);
         }
@@ -54,7 +53,7 @@ namespace Akka.Streams.TestKit.Tests
             });
 
             error.InnerException.Message.Should().Contain("Boom!");
-            error.Message.Should().Contain("List(1, 2)");
+            error.Message.Should().Contain("1, 2");
         }
 
         [Fact]
@@ -89,7 +88,7 @@ namespace Akka.Streams.TestKit.Tests
                 Source.From(Enumerable.Range(1, 4)).RunWith(this.SinkProbe<int>(), _materializer)
                     .Request(4)
                     .ExpectNextOrError(100, Ex());
-            }).Message.Should().Contain("OnNext(1)");
+            }).Message.Should().Contain("OnNext(100)");
         }
 
         [Fact]
