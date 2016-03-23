@@ -74,6 +74,7 @@
     <Compile Include="Implementation\Fusing\GraphInterpreterPortsSpec.cs" />
     <Compile Include="Implementation\Fusing\GraphInterpreterSpec.cs" />
     <Compile Include="Implementation\Fusing\InterpreterSupervisionSpec.cs" />
+    <Compile Include="Implementation\Fusing\IteratorInterpreterSpec.cs" />
     <Compile Include="Implementation\ResizableMultiReaderRingBufferSpec.cs" />
     <Compile Include="Implementation\Fusing\GraphInterpreterSpecKit.cs" />
     <Compile Include="Implementation\Fusing\InterpreterSpec.cs" />
