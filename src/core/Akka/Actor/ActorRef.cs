@@ -162,7 +162,7 @@ namespace Akka.Actor
                 Path = path;
             }
 
-            public string Path { get; private set; }
+            public string Path { get; }
 
             public ISurrogated FromSurrogate(ActorSystem system)
             {

@@ -172,6 +172,7 @@ namespace Akka.Actor
         public static bool IsValidPathElement(string s) { }
         public static Akka.Actor.ActorPath Parse(string path) { }
         public string ToSerializationFormat() { }
+        public string ToSerializationFormatWithAddress(Akka.Actor.Address address) { }
         public override string ToString() { }
         public string ToStringWithAddress() { }
         public string ToStringWithAddress(Akka.Actor.Address address) { }
