@@ -158,7 +158,7 @@ namespace Akka.Remote.Transport
             try
             {
                 var pdu = AkkaProtocolMessage.ParseFrom(raw);
-                if(pdu.HasPayload) return new Payload(pdu.Payload);
+                if (pdu.HasPayload) return new Payload(pdu.Payload);
                 else if (pdu.HasInstruction) return DecodeControlPdu(pdu.Instruction);
                 else throw new PduCodecException("Error decoding Akka PDU: Neither message nor control message were contained");
             }
@@ -239,7 +239,7 @@ namespace Akka.Remote.Transport
                     messageOption = new Message(recipient, recipientAddress, serializedMessage, senderOption, seqOption);
                 }
             }
-            
+
 
             return new AckAndMessage(ackOption, messageOption);
         }
@@ -247,9 +247,9 @@ namespace Akka.Remote.Transport
         private AcknowledgementInfo.Builder AckBuilder(Ack ack)
         {
             var ackBuilder = AcknowledgementInfo.CreateBuilder();
-            ackBuilder = ackBuilder.SetCumulativeAck((ulong) ack.CumulativeAck.RawValue);
+            ackBuilder = ackBuilder.SetCumulativeAck((ulong)ack.CumulativeAck.RawValue);
 
-            return ack.Nacks.Aggregate(ackBuilder, (current, nack) => current.AddNacks((ulong) nack.RawValue));
+            return ack.Nacks.Aggregate(ackBuilder, (current, nack) => current.AddNacks((ulong)nack.RawValue));
         }
 
         public override ByteString ConstructMessage(Address localAddress, IActorRef recipient, SerializedMessage serializedMessage,
@@ -336,7 +336,7 @@ namespace Akka.Remote.Transport
             return ActorRefData.CreateBuilder()
                 .SetPath((!string.IsNullOrEmpty(actorRef.Path.Address.Host))
                     ? actorRef.Path.ToSerializationFormat()
-                    : actorRef.Path.ToStringWithAddress(defaultAddress))
+                    : actorRef.Path.ToSerializationFormatWithAddress(defaultAddress))
                 .Build();
         }
 
