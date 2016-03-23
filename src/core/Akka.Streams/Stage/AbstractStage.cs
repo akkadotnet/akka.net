@@ -281,19 +281,13 @@ namespace Akka.Streams.Stage
         /// the last action by this stage was a “push”.
         /// </para>
         /// </summary>
-        public virtual ITerminationDirective OnUpstreamFinish(IContext context)
-        {
-            return context.Finish();
-        }
+        public abstract ITerminationDirective OnUpstreamFinish(IContext context);
 
         /// <summary>
         /// This method is called when downstream has cancelled. 
         /// By default the cancel signal is immediately propagated with <see cref="IContext.Finish"/>.
         /// </summary>
-        public virtual ITerminationDirective OnDownstreamFinish(IContext context)
-        {
-            return context.Finish();
-        }
+        public abstract ITerminationDirective OnDownstreamFinish(IContext context);
 
         /// <summary>
         /// <para>
@@ -314,10 +308,7 @@ namespace Akka.Streams.Stage
         /// with <see cref="IContext.IsFinishing"/>.
         /// </para>
         /// </summary>
-        public virtual ITerminationDirective OnUpstreamFailure(Exception cause, IContext context)
-        {
-            return context.Fail(cause);
-        }
+        public abstract ITerminationDirective OnUpstreamFailure(Exception cause, IContext context);
 
         // TODO need better wording here
         /// <summary>
@@ -375,6 +366,19 @@ namespace Akka.Streams.Stage
         /// </summary>
         public abstract TPushDirective OnPush(TIn element, TContext context);
 
+        /// <summary>
+        /// <para>
+        /// This method is called when an element from upstream is available and there is demand from downstream, i.e.
+        /// in <see cref="OnPush"/> you are allowed to call <see cref="IContext.Push"/> to emit one element downstreams,
+        /// or you can absorb the element by calling <see cref="IContext.Pull"/>. Note that you can only
+        /// emit zero or one element downstream from <see cref="OnPull"/>.
+        /// </para>
+        /// <para>
+        /// To emit more than one element you have to push the remaining elements from <see cref="OnPull"/>, one-by-one.
+        /// <see cref="OnPush"/> is not called again until <see cref="OnPull"/> has requested more elements with
+        /// <see cref="IContext.Pull"/>.
+        /// </para>
+        /// </summary>
         public sealed override IDirective OnPush(TIn element, IContext context)
         {
             return OnPush(element, (TContext) context);
@@ -386,9 +390,35 @@ namespace Akka.Streams.Stage
         /// </summary>
         public abstract TPullDirective OnPull(TContext context);
 
+
+        /// <summary>
+        /// This method is called when there is demand from downstream, i.e. you are allowed to push one element
+        /// downstreams with <see cref="IContext.Push"/>, or request elements from upstreams with <see cref="IContext.Pull"/>
+        /// </summary>
         public override IDirective OnPull(IContext context)
         {
             return OnPull((TContext) context);
+        }
+
+        /// <summary>
+        /// <para>
+        /// This method is called when upstream has signaled that the stream is successfully completed. 
+        /// Here you cannot call <see cref="IContext.Push"/>, because there might not be any demand from downstream. 
+        /// To emit additional elements before terminating you can use <see cref="IContext.AbsorbTermination"/> and push final elements
+        /// from <see cref="OnPull"/>. The stage will then be in finishing state, which can be checked
+        /// with <see cref="IContext.IsFinishing"/>.
+        /// </para>
+        /// <para>
+        /// By default the finish signal is immediately propagated with <see cref="IContext.Finish"/>.
+        /// </para>
+        /// <para>
+        /// IMPORTANT NOTICE: this signal is not back-pressured, it might arrive from upstream even though
+        /// the last action by this stage was a “push”.
+        /// </para>
+        /// </summary>
+        public sealed override ITerminationDirective OnUpstreamFinish(IContext context)
+        {
+            return OnUpstreamFinish((TContext) context);
         }
 
         /// <summary>
@@ -416,9 +446,42 @@ namespace Akka.Streams.Stage
         /// This method is called when downstream has cancelled. 
         /// By default the cancel signal is immediately propagated with <see cref="IContext.Finish"/>.
         /// </summary>
+        public sealed override ITerminationDirective OnDownstreamFinish(IContext context)
+        {
+            return OnDownstreamFinish((TContext) context);
+        }
+
+        /// <summary>
+        /// This method is called when downstream has cancelled. 
+        /// By default the cancel signal is immediately propagated with <see cref="IContext.Finish"/>.
+        /// </summary>
         public virtual ITerminationDirective OnDownstreamFinish(TContext context)
         {
             return context.Finish();
+        }
+
+        /// <summary>
+        /// <para>
+        /// <see cref="OnUpstreamFailure"/> is called when upstream has signaled that the stream is completed
+        /// with failure. It is not called if <see cref="OnPull"/> or <see cref="OnPush"/> of the stage itself
+        /// throws an exception.
+        /// </para>
+        /// <para>
+        /// Note that elements that were emitted by upstream before the failure happened might
+        /// not have been received by this stage when <see cref="OnUpstreamFailure"/> is called, i.e.
+        /// failures are not backpressured and might be propagated as soon as possible.
+        /// </para>
+        /// <para>
+        /// Here you cannot call <see cref="IContext.Push"/>, because there might not
+        /// be any demand from  downstream. To emit additional elements before terminating you
+        /// can use <see cref="IContext.AbsorbTermination"/> and push final elements
+        /// from <see cref="OnPull"/>. The stage will then be in finishing state, which can be checked
+        /// with <see cref="IContext.IsFinishing"/>.
+        /// </para>
+        /// </summary>
+        public sealed override ITerminationDirective OnUpstreamFailure(Exception cause, IContext context)
+        {
+            return OnUpstreamFailure(cause, (TContext) context);
         }
 
         /// <summary>

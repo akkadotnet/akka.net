@@ -434,9 +434,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             {
             }
 
-            public IList<ITestEvent> LastEvent = new List<ITestEvent>();
+            public ISet<ITestEvent> LastEvent = new HashSet<ITestEvent>();
 
-            public IList<ITestEvent> LastEvents()
+            public ISet<ITestEvent> LastEvents()
             {
                 var result = LastEvent;
                 ClearEvents();
@@ -445,7 +445,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             public void ClearEvents()
             {
-                LastEvent = new List<ITestEvent>();
+                LastEvent = new HashSet<ITestEvent>();
             }
 
             public UpstreamProbe<T> NewUpstreamProbe<T>(string name)
@@ -543,7 +543,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             }
         }
 
-        public abstract class PortTestSetup : TestSetup
+        public class PortTestSetup : TestSetup
         {
             public UpstreamPortProbe<int> Out { get; }
             public DownstreamPortProbe<int> In { get; }
@@ -551,7 +551,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             private readonly GraphAssembly _assembly = new GraphAssembly(new IGraphStageWithMaterializedValue[0],
                 new Attributes[0], new Inlet[] {null}, new[] {-1}, new Outlet[] {null}, new[] {-1});
 
-            protected PortTestSetup(ActorSystem system) : base(system)
+            public PortTestSetup(ActorSystem system) : base(system)
             {
                 Out = new UpstreamPortProbe<int>(this);
                 In = new DownstreamPortProbe<int>(this);
@@ -647,7 +647,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             }
         }
 
-        public abstract class FailingStateSetup : TestSetup
+        public class FailingStageSetup : TestSetup
         {
             public UpstreamPortProbe<int> Upstream { get; }
             public DownstreamPortProbe<int> Downstream { get; }
@@ -659,11 +659,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             private readonly FlowShape<int, int> _stageShape;
             private GraphStage<FlowShape<int, int>> _sandwitchStage;
 
-            // Must be lzy because I turned this stage "inside-out" therefore changin initialization order
+            // Must be lazy because I turned this stage "inside-out" therefore changin initialization order
             // to make tests a bit more readable
-            private readonly Lazy<GraphStageLogic> _stage;
+            public Lazy<GraphStageLogic> Stage { get; }
 
-            protected FailingStateSetup(ActorSystem system, bool initFailOnNextEvent = false) : base(system)
+            public FailingStageSetup(ActorSystem system, bool initFailOnNextEvent = false) : base(system)
             {
                 Upstream = new UpstreamPortProbe<int>(this);
                 Downstream = new DownstreamPortProbe<int>(this);
@@ -675,7 +675,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 _stageOut = new Outlet<int>("sandwitch.out");
                 _stageShape = new FlowShape<int, int>(_stageIn, _stageOut);
 
-                _stage = new Lazy<GraphStageLogic>(() => new FailingGraphStageLogic(this, _stageShape));
+                Stage = new Lazy<GraphStageLogic>(() => new FailingGraphStageLogic(this, _stageShape));
 
                 _sandwitchStage = new SandwitchStage(this);
 
@@ -702,9 +702,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             public class FailingGraphStageLogic : GraphStageLogic
             {
-                private readonly FailingStateSetup _setup;
+                private readonly FailingStageSetup _setup;
 
-                public FailingGraphStageLogic(FailingStateSetup setup, Shape shape) : base(shape)
+                public FailingGraphStageLogic(FailingStageSetup setup, Shape shape) : base(shape)
                 {
                     _setup = setup;
 
@@ -720,7 +720,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 private void MayFail(Action task)
                 {
-                    if (_setup._failOnNextEvent)
+                    if (!_setup._failOnNextEvent)
                         task();
                     else
                     {
@@ -749,9 +749,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             public class SandwitchStage : GraphStage<FlowShape<int, int>>
             {
-                private readonly FailingStateSetup _setup;
+                private readonly FailingStageSetup _setup;
 
-                public SandwitchStage(FailingStateSetup setup)
+                public SandwitchStage(FailingStageSetup setup)
                 {
                     _setup = setup;
                 }
@@ -760,7 +760,12 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
                 {
-                    return _setup._stage.Value;
+                    return _setup.Stage.Value;
+                }
+
+                public override string ToString()
+                {
+                    return "stage";
                 }
             }
 
@@ -958,12 +963,12 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             {
             }
 
-            protected IList<ITestEvent> LastEvent { get; private set; } = new List<ITestEvent>();
+            protected ISet<ITestEvent> LastEvent { get; private set; } = new HashSet<ITestEvent>();
 
-            public IList<ITestEvent> LastEvents()
+            public ISet<ITestEvent> LastEvents()
             {
                 var events = LastEvent;
-                LastEvent = new List<ITestEvent>();
+                LastEvent = new HashSet<ITestEvent>();
                 return events;
             }
 
@@ -1026,7 +1031,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                     SetHandler(In, () =>
                     {
-                        setup.LastEvent.Add(new OnNext(Grab<T>(In)));
+                        setup.LastEvent.Add(new OnNext(Grab<object>(In)));
                     },
                     () => setup.LastEvent.Add(new OnComplete()),
                     ex => setup.LastEvent.Add(new OnError(ex)));
@@ -1117,7 +1122,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             return stages.Select(ToGraphStage).Cast<IGraphStageWithMaterializedValue>().ToArray();
         }
 
-        public void WithTestSetup(Action<TestSetup, Func<IList<TestSetup.ITestEvent>>> spec)
+        public void WithTestSetup(Action<TestSetup, Func<ISet<TestSetup.ITestEvent>>> spec)
         {
             var setup = new TestSetup(Sys);
             spec(setup, setup.LastEvents);
@@ -1126,7 +1131,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         public void WithTestSetup(
             Action
                 <TestSetup, Func<IGraphStageWithMaterializedValue, BaseBuilder.AssemblyBuilder>,
-                    Func<IList<TestSetup.ITestEvent>>> spec)
+                    Func<ISet<TestSetup.ITestEvent>>> spec)
         {
             var setup = new TestSetup(Sys);
             spec(setup, g => setup.Builder(g), setup.LastEvents);
@@ -1135,7 +1140,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         public void WithTestSetup(
             Action
                 <TestSetup, Func<IGraphStageWithMaterializedValue[], BaseBuilder.AssemblyBuilder>,
-                    Func<IList<TestSetup.ITestEvent>>> spec)
+                    Func<ISet<TestSetup.ITestEvent>>> spec)
         {
             var setup = new TestSetup(Sys);
             spec(setup, setup.Builder, setup.LastEvents);
@@ -1143,7 +1148,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         public void WithOneBoundedSetup<T>(IStage<T, T> op,
             Action
-                <Func<IList<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>,
+                <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>,
                     OneBoundedSetup.DownstreamOneBoundedPortProbe<T>> spec)
         {
             WithOneBoundedSetup<T>(ToGraphStage(op), spec);
@@ -1151,7 +1156,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         public void WithOneBoundedSetup<T>(IStage<T, T>[] ops,
             Action
-                <Func<IList<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>,
+                <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>,
                     OneBoundedSetup.DownstreamOneBoundedPortProbe<T>> spec)
         {
             WithOneBoundedSetup<T>(ToGraphStage(ops), spec);
@@ -1159,7 +1164,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         public void WithOneBoundedSetup<T>(IGraphStageWithMaterializedValue op,
             Action
-                <Func<IList<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>,
+                <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>,
                     OneBoundedSetup.DownstreamOneBoundedPortProbe<T>>
                 spec)
         {
@@ -1169,7 +1174,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         public void WithOneBoundedSetup<T>(IGraphStageWithMaterializedValue[] ops,
             Action
-                <Func<IList<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>, OneBoundedSetup.DownstreamOneBoundedPortProbe<T>>
+                <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>, OneBoundedSetup.DownstreamOneBoundedPortProbe<T>>
                 spec)
         {
             var setup = new OneBoundedSetup<T>(Sys, ops);
@@ -1178,7 +1183,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         public void WithOneBoundedSetup<TIn, TOut>(IGraphStageWithMaterializedValue op,
             Action
-                <Func<IList<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<TIn>,
+                <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<TIn>,
                     OneBoundedSetup.DownstreamOneBoundedPortProbe<TOut>>
                 spec)
         {
@@ -1188,7 +1193,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         public void WithOneBoundedSetup<TIn, TOut>(IGraphStageWithMaterializedValue[] ops,
             Action
-                <Func<IList<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<TIn>, OneBoundedSetup.DownstreamOneBoundedPortProbe<TOut>>
+                <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<TIn>, OneBoundedSetup.DownstreamOneBoundedPortProbe<TOut>>
                 spec)
         {
             var setup = new OneBoundedSetup<TIn, TOut>(Sys, ops);

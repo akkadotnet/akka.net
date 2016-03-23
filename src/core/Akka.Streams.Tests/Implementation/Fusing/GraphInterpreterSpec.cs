@@ -47,10 +47,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 lastEvents().Should().BeEmpty();
 
                 sink.RequestOne();
-                lastEvents().Should().Equal(new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new RequestOne(source));
 
                 source.OnNext(1);
-                lastEvents().Should().Equal(new OnNext(sink, 1));
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink, 1));
             });
         }
 
@@ -80,10 +80,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 lastEvents().Should().BeEmpty();
 
                 sink.RequestOne();
-                lastEvents().Should().Equal(new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new RequestOne(source));
 
                 source.OnNext(1);
-                lastEvents().Should().Equal(new OnNext(sink, 1));
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink, 1));
             });
         }
 
@@ -103,10 +103,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 lastEvents().Should().BeEmpty();
 
                 sink.RequestOne();
-                lastEvents().Should().Equal(new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new RequestOne(source));
 
                 source.OnNext(1);
-                lastEvents().Should().Equal(new OnNext(sink, 1), new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink, 1), new RequestOne(source));
 
                 // Source waits
                 source.OnNext(2);
@@ -114,7 +114,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 // "PushAndPull
                 sink.RequestOne();
-                lastEvents().Should().Equal(new OnNext(sink, 2), new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink, 2), new RequestOne(source));
 
                 // Source waits
                 sink.RequestOne();
@@ -122,7 +122,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 // "PushAndPull
                 source.OnNext(3);
-                lastEvents().Should().Equal(new OnNext(sink, 3), new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink, 3), new RequestOne(source));
             });
         }
 
@@ -144,7 +144,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 lastEvents().Should().BeEmpty();
 
                 sink.RequestOne();
-                lastEvents().Should().Equal(new RequestOne(source1), new RequestOne(source2));
+                lastEvents().Should().BeEquivalentTo(new RequestOne(source1), new RequestOne(source2));
 
                 source1.OnNext(42);
                 lastEvents().Should().BeEmpty();
@@ -178,10 +178,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 lastEvents().Should().BeEmpty();
 
                 sink2.RequestOne();
-                lastEvents().Should().Equal(new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new RequestOne(source));
 
                 source.OnNext(1);
-                lastEvents().Should().Equal(new OnNext(sink1, 1), new OnNext(sink2, 1));
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink1, 1), new OnNext(sink2, 1));
             });
         }
 
@@ -204,14 +204,14 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 lastEvents().Should().BeEmpty();
 
                 sink.RequestOne();
-                lastEvents().Should().Equal(new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new RequestOne(source));
 
                 source.OnNext(1);
-                lastEvents().Should().Equal(new OnNext(sink, new Tuple<int, int>(1, 1)), new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink, new Tuple<int, int>(1, 1)), new RequestOne(source));
 
                 sink.RequestOne();
                 source.OnNext(2);
-                lastEvents().Should().Equal(new OnNext(sink, new Tuple<int, int>(2, 2)), new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink, new Tuple<int, int>(2, 2)), new RequestOne(source));
             });
         }
 
@@ -238,7 +238,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 lastEvents().Should().BeEmpty();
 
                 sink1.RequestOne();
-                lastEvents().Should().Equal(new RequestOne(source1), new RequestOne(source2));
+                lastEvents().Should().BeEquivalentTo(new RequestOne(source1), new RequestOne(source2));
 
                 sink2.RequestOne();
 
@@ -271,28 +271,28 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 lastEvents().Should().BeEmpty();
 
                 sink.RequestOne();
-                lastEvents().Should().Equal(new RequestOne(source1), new RequestOne(source2));
+                lastEvents().Should().BeEquivalentTo(new RequestOne(source1), new RequestOne(source2));
 
                 source1.OnNext(1);
-                lastEvents().Should().Equal(new OnNext(sink, 1), new RequestOne(source1));
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink, 1), new RequestOne(source1));
 
                 source2.OnNext(2);
                 lastEvents().Should().BeEmpty();
 
                 sink.RequestOne();
-                lastEvents().Should().Equal(new OnNext(sink, 2), new RequestOne(source2));
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink, 2), new RequestOne(source2));
 
                 sink.RequestOne();
                 lastEvents().Should().BeEmpty();
 
                 source2.OnNext(3);
-                lastEvents().Should().Equal(new OnNext(sink, 3), new RequestOne(source2));
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink, 3), new RequestOne(source2));
 
                 sink.RequestOne();
                 lastEvents().Should().BeEmpty();
 
                 source1.OnNext(4);
-                lastEvents().Should().Equal(new OnNext(sink, 4), new RequestOne(source1));
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink, 4), new RequestOne(source1));
             });
         }
 
@@ -314,16 +314,16 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 lastEvents().Should().BeEmpty();
 
                 sink1.RequestOne();
-                lastEvents().Should().Equal(new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new RequestOne(source));
 
                 sink2.RequestOne();
                 lastEvents().Should().BeEmpty();
 
                 source.OnNext(1);
-                lastEvents().Should().Equal(new OnNext(sink1, 1), new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink1, 1), new RequestOne(source));
 
                 source.OnNext(2);
-                lastEvents().Should().Equal(new OnNext(sink2, 2));
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink2, 2));
             });
         }
 
@@ -345,18 +345,18 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 lastEvents().Should().BeEmpty();
 
                 sink.RequestOne();
-                lastEvents().Should().Equal(new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new RequestOne(source));
 
                 source.OnNext(1);
-                lastEvents().Should().Equal(new RequestOne(source), new OnNext(sink, 1));
+                lastEvents().Should().BeEquivalentTo(new RequestOne(source), new OnNext(sink, 1));
 
                 // Token enters merge-balance cycle and gets stuck
                 source.OnNext(2);
-                lastEvents().Should().Equal(new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new RequestOne(source));
 
                 // Unstuck it
                 sink.RequestOne();
-                lastEvents().Should().Equal(new OnNext(sink, 2));
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink, 2));
             });
         }
 
@@ -379,15 +379,15 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 lastEvents().Should().BeEmpty();
 
                 sink.RequestOne();
-                lastEvents().Should().Equal(new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new RequestOne(source));
 
                 source.OnNext(1);
-                lastEvents().Should().Equal(new RequestOne(source), new OnNext(sink, 1));
+                lastEvents().Should().BeEquivalentTo(new RequestOne(source), new OnNext(sink, 1));
 
                 // Token enters merge-balance cycle and spins until event limit
                 // Without the limit this would spin forever (where forever = int.MaxValue iterations)
                 source.OnNext(2, eventLimit: 1000);
-                lastEvents().Should().Equal(new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new RequestOne(source));
 
                 // The cycle is still alive and kicking, just suspended due to the event limit
                 setup.Interpreter.IsSuspended.Should().BeTrue();
@@ -396,7 +396,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 // the element will eventually leave the cycle and reaches the sink.
                 // This should not hang even though we do not have an event limit set
                 sink.RequestOne();
-                lastEvents().Should().Equal(new OnNext(sink, 2));
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink, 2));
 
                 // The cycle is now empty
                 setup.Interpreter.IsSuspended.Should().BeFalse();
@@ -420,27 +420,27 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     .Init();
 
                 setup.StepAll();
-                lastEvents().Should().Equal(new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new RequestOne(source));
 
                 sink.RequestOne();
                 lastEvents().Should().BeEmpty();
 
                 source.OnNext("A");
-                lastEvents().Should().Equal(new OnNext(sink, "A"), new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink, "A"), new RequestOne(source));
 
                 source.OnNext("B");
-                lastEvents().Should().Equal(new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new RequestOne(source));
 
                 source.OnNext("C", eventLimit: 0);
                 sink.RequestOne();
-                lastEvents().Should().Equal(new OnNext(sink, "B"), new RequestOne(source));
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink, "B"), new RequestOne(source));
 
                 sink.RequestOne(eventLimit: 0);
                 source.OnComplete(eventLimit: 3);
-                lastEvents().Should().Equal(new OnNext(sink, "C"));
+                lastEvents().Should().BeEquivalentTo(new OnNext(sink, "C"));
 
                 sink.RequestOne();
-                lastEvents().Should().Equal(new OnComplete(sink));
+                lastEvents().Should().BeEquivalentTo(new OnComplete(sink));
             });
         }
     }
