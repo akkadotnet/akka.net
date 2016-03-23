@@ -75,8 +75,8 @@ namespace Akka.Streams.Implementation.Stages
 
         public static readonly Attributes SubscriberSink = Attributes.CreateName("subscriberSink");
         public static readonly Attributes CancelledSink = Attributes.CreateName("cancelledSink");
-        public static readonly Attributes HeadSink = Attributes.CreateName("headSink").And(Attributes.CreateInputBuffer(initial: 1, max: 1));
-        public static readonly Attributes HeadOrDefaultSink = Attributes.CreateName("headOrDefaultSink").And(Attributes.CreateInputBuffer(initial: 1, max: 1));
+        public static readonly Attributes FirstSink = Attributes.CreateName("firstSink").And(Attributes.CreateInputBuffer(initial: 1, max: 1));
+        public static readonly Attributes FirstOrDefaultSink = Attributes.CreateName("firstOrDefaultSink").And(Attributes.CreateInputBuffer(initial: 1, max: 1));
         public static readonly Attributes LastSink = Attributes.CreateName("lastSink");
         public static readonly Attributes LastOrDefaultSink = Attributes.CreateName("lastOrDefaultSink");
         public static readonly Attributes PublisherSink = Attributes.CreateName("publisherSink");
@@ -386,7 +386,7 @@ namespace Akka.Streams.Implementation.Stages
         }
     }
 
-    internal sealed class HeadOrDefault<TIn> : GraphStageWithMaterializedValue<SinkShape<TIn>, Task<TIn>>
+    internal sealed class FirstOrDefault<TIn> : GraphStageWithMaterializedValue<SinkShape<TIn>, Task<TIn>>
     {
         #region internal classes
         
@@ -432,9 +432,9 @@ namespace Akka.Streams.Implementation.Stages
         #endregion
         
         private readonly bool _throwOnDefault;
-        private readonly Inlet<TIn> _in = new Inlet<TIn>("headOption.in");
+        private readonly Inlet<TIn> _in = new Inlet<TIn>("firstOrDefault.in");
 
-        public HeadOrDefault(bool throwOnDefault = false)
+        public FirstOrDefault(bool throwOnDefault = false)
         {
             _throwOnDefault = throwOnDefault;
         }
@@ -448,7 +448,7 @@ namespace Akka.Streams.Implementation.Stages
             return logic;
         }
 
-        public override string ToString() => "HeadOrDefaultStage";
+        public override string ToString() => "FirstOrDefaultStage";
     }
 
     internal sealed class LastOrDefault<TIn> : GraphStageWithMaterializedValue<SinkShape<TIn>, Task<TIn>>
@@ -500,7 +500,7 @@ namespace Akka.Streams.Implementation.Stages
         #endregion
 
         private readonly bool _throwOnDefault;
-        private readonly Inlet<TIn> _in = new Inlet<TIn>("lastOption.in");
+        private readonly Inlet<TIn> _in = new Inlet<TIn>("lastOrDefault.in");
 
         public LastOrDefault(bool throwOnDefault = false)
         {

@@ -4,11 +4,9 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Reactive.Streams;
 using System.Runtime.Serialization;
-using System.Threading.Tasks;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Fusing;
-using Akka.Streams.Stage;
 using Akka.Util;
 using Akka.Util.Internal;
 
@@ -78,7 +76,7 @@ namespace Akka.Streams.Implementation
             public static readonly Ignore Instance = new Ignore();
             private Ignore() { }
 
-            public override string ToString() => $"Ignore";
+            public override string ToString() => "Ignore";
         }
 
         #endregion
@@ -98,12 +96,13 @@ namespace Akka.Streams.Implementation
                 }
                 return x;
             };
-            Func<InPort, string> inPort = i => string.Format("{0}@{1}", i.ToString(), id(i));
-            Func<OutPort, string> outPort = o => string.Format("{0}@{1}", o.ToString(), id(o));
-            Func<IEnumerable<InPort>, string> ins = i => string.Format("In[{0}]", string.Join(",", i.Select(inPort)));
-            Func<IEnumerable<OutPort>, string> outs = o => string.Format("Out[{0}]", string.Join(",", o.Select(outPort)));
-            Func<OutPort, InPort, string> pair = (o, i) => string.Format("{0}->{1}", inPort(i), outPort(o));
-            Func<IEnumerable<KeyValuePair<OutPort, InPort>>, string> pairs = i => string.Format("[{0}]", string.Join(",", i.Select(p => pair(p.Key, p.Value))));
+            Func<InPort, string> inPort = i => $"{i}@{id(i)}";
+            Func<OutPort, string> outPort = o => $"{o}@{id(o)}";
+            Func<IEnumerable<InPort>, string> ins = i => $"In[{string.Join(",", i.Select(inPort))}]";
+            Func<IEnumerable<OutPort>, string> outs = o => $"Out[{string.Join(",", o.Select(outPort))}]";
+            Func<OutPort, InPort, string> pair = (o, i) => $"{inPort(i)}->{outPort(o)}";
+            Func<IEnumerable<KeyValuePair<OutPort, InPort>>, string> pairs = i =>
+                $"[{string.Join(",", i.Select(p => pair(p.Key, p.Value)))}]";
 
             var shape = module.Shape;
             var inset = shape.Inlets.ToImmutableHashSet();
@@ -394,11 +393,11 @@ namespace Akka.Streams.Implementation
             if (SubModules.Contains(other))
                 throw new ArgumentException("An existing submodule cannot be added again. All contained modules must be unique.");
 
-            var modules1 = IsSealed ? ImmutableArray.Create<IModule>(this) : this.SubModules;
-            var modules2 = other.IsSealed ? ImmutableArray.Create<IModule>(other) : other.SubModules;
+            var modules1 = IsSealed ? ImmutableArray.Create<IModule>(this) : SubModules;
+            var modules2 = other.IsSealed ? ImmutableArray.Create(other) : other.SubModules;
 
             var matComputation1 = IsSealed ? new StreamLayout.Atomic(this) : MaterializedValueComputation;
-            var matComputation2 = other.IsSealed ? new StreamLayout.Atomic(other) : MaterializedValueComputation;
+            var matComputation2 = other.IsSealed ? new StreamLayout.Atomic(other) : other.MaterializedValueComputation;
 
             return new CompositeModule(
                 subModules: modules1.Concat(modules2).ToImmutableArray(),
@@ -408,7 +407,7 @@ namespace Akka.Streams.Implementation
                 downstreams: Downstreams.AddRange(other.Downstreams),
                 upstreams: Upstreams.AddRange(other.Upstreams),
                 materializedValueComputation: new StreamLayout.Combine((x, y) => matFunc((T1)x, (T2)y), matComputation1, matComputation2),
-                attributes: Attributes);
+                attributes: Attributes.None);
         }
 
         public IModule ComposeNoMaterialized(IModule that)
@@ -417,7 +416,7 @@ namespace Akka.Streams.Implementation
             if (SubModules.Contains(that)) throw new ArgumentException("An existing submodule cannot be added again. All contained modules must be unique.");
 
             var module1 = IsSealed ? ImmutableArray.Create<IModule>(this) : SubModules;
-            var module2 = that.IsSealed ? ImmutableArray.Create<IModule>(that) : that.SubModules;
+            var module2 = that.IsSealed ? ImmutableArray.Create(that) : that.SubModules;
 
             var matComputation = IsSealed ? new StreamLayout.Atomic(this) : MaterializedValueComputation;
 
@@ -578,15 +577,21 @@ namespace Akka.Streams.Implementation
 
         public override IModule ReplaceShape(Shape shape)
         {
-            if (!Shape.HasSamePortsAs(shape))
-                throw new ArgumentException("CombinedModule requires shape with same ports to replace", nameof(shape));
+            if (!ReferenceEquals(shape, Shape))
+            {
+                if (!Shape.HasSamePortsAs(shape))
+                    throw new ArgumentException("CombinedModule requires shape with same ports to replace",
+                        nameof(shape));
 
-            return new CompositeModule(SubModules, shape, Downstreams, Upstreams, MaterializedValueComputation, Attributes);
+                return new CompositeModule(SubModules, shape, Downstreams, Upstreams, MaterializedValueComputation,
+                    Attributes);
+            }
+            return this;
         }
 
         public override IModule CarbonCopy() => new CopiedModule(Shape.DeepCopy(), Attributes, this);
 
-        public override IModule WithAttributes(Attributes attributes) => new CompositeModule(SubModules, Shape.DeepCopy(), Downstreams, Upstreams, MaterializedValueComputation, Attributes);
+        public override IModule WithAttributes(Attributes attributes) => new CompositeModule(SubModules, Shape, Downstreams, Upstreams, MaterializedValueComputation, attributes);
 
         public override string ToString() => $"Composite({string.Join(", ", SubModules)})";
 
@@ -700,7 +705,7 @@ namespace Akka.Streams.Implementation
 
             public void Cancel()
             {
-                _subscriptionStatus.Value = (object)InnertSubscriber;
+                _subscriptionStatus.Value = InnertSubscriber;
                 _subscription.Cancel();
             }
 
@@ -1004,17 +1009,18 @@ namespace Akka.Streams.Implementation
             object result;
             if (node is StreamLayout.Atomic)
             {
-                if (!values.TryGetValue(((StreamLayout.Atomic)node).Module, out result)) result = null;
+                var atomic = (StreamLayout.Atomic) node;
+                result = values[atomic.Module];
             }
             else if (node is StreamLayout.Combine)
             {
-                var combine = node as StreamLayout.Combine;
+                var combine = (StreamLayout.Combine) node;
                 result = combine.Combinator(ResolveMaterialized(combine.Left, values, indent + "  "),
                     ResolveMaterialized(combine.Right, values, indent + "  "));
             }
             else if (node is StreamLayout.Transform)
             {
-                var transform = node as StreamLayout.Transform;
+                var transform = (StreamLayout.Transform) node;
                 result = transform.Transformator(ResolveMaterialized(transform.Node, values, indent + "  "));
             }
             else result = null;

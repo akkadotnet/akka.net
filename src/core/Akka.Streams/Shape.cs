@@ -246,7 +246,7 @@ namespace Akka.Streams
 
         public override Shape DeepCopy()
         {
-            return new SourceShape<TOut>(Outlet);
+            return new SourceShape<TOut>((Outlet<TOut>) Outlet.CarbonCopy());
         }
 
         public override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)

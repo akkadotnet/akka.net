@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Reactive.Streams;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
-using Akka.Pattern;
-using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
 using Akka.Util;
@@ -112,7 +109,7 @@ namespace Akka.Streams
         /// </summary>
         public abstract void Shutdown();
 
-        internal protected abstract IActorRef ActorOf(MaterializationContext context, Props props);
+        protected internal abstract IActorRef ActorOf(MaterializationContext context, Props props);
 
         public void Dispose()
         {
@@ -131,7 +128,7 @@ namespace Akka.Streams
         public readonly IActorRef Actor;
 
         public AbruptTerminationException(IActorRef actor)
-            : base(string.Format("Processor actor [{0}] terminated abruptly", actor))
+            : base($"Processor actor [{actor}] terminated abruptly")
         {
             Actor = actor;
         }

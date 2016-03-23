@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
@@ -34,7 +32,7 @@ namespace Akka.Streams.Tests
         public void ActorMaterializer_should_properly_shut_down_actors_associated_with_it()
         {
             var m = Sys.Materializer();
-            var f = Source.From(Enumerable.Empty<int>()).RunFold(0, (x, y) => x + y, m);
+            var f = Source.Maybe<int>().RunFold(0, (x, y) => x + y, m);
 
             m.Shutdown();
 
