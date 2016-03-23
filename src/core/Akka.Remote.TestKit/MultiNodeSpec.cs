@@ -28,7 +28,11 @@ namespace Akka.Remote.TestKit
     /// </summary>
     public abstract class MultiNodeConfig
     {
-        Config _commonConf = null;
+        // allows us to avoid NullReferenceExceptions if we make this empty rather than null
+        // so that way if a MultiNodeConfig doesn't explicitly set CommonConfig to some value
+        // it will remain safe by defaut
+        Config _commonConf = Akka.Configuration.Config.Empty; 
+
         ImmutableDictionary<RoleName, Config> _nodeConf = ImmutableDictionary.Create<RoleName, Config>();
         ImmutableList<RoleName> _roles = ImmutableList.Create<RoleName>();
         ImmutableDictionary<RoleName, ImmutableList<string>> _deployments = ImmutableDictionary.Create<RoleName, ImmutableList<string>>();

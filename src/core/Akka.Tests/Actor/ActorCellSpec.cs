@@ -32,7 +32,7 @@ namespace Akka.Tests.Actor
         {
             public DummyAsyncActor(AutoResetEvent autoResetEvent)
             {
-                Receive<string>(async m =>
+                ReceiveAsync<string>(async m =>
                 {
                     await Task.Delay(500);
                     autoResetEvent.Set();

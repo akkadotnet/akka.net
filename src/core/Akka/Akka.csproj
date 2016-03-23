@@ -224,11 +224,13 @@
     <Compile Include="Event\EventBusUnsubscriber.cs" />
     <Compile Include="Event\EventStream.cs" />
     <Compile Include="Event\EventStreamExtensions.cs" />
+    <Compile Include="Event\ILoggerMessageQueueSemantics.cs" />
     <Compile Include="Event\ILogMessageFormatter.cs" />
     <Compile Include="Event\Info.cs" />
     <Compile Include="Event\InitializeLogger.cs" />
     <Compile Include="Event\LogEvent.cs" />
     <Compile Include="Event\LoggerInitialized.cs" />
+    <Compile Include="Event\LoggerMailbox.cs" />
     <Compile Include="Event\Logging.cs" />
     <Compile Include="Event\ILoggingAdapter.cs" />
     <Compile Include="Event\LoggingAdapterBase.cs" />

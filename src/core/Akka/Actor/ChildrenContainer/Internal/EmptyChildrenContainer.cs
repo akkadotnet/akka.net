@@ -54,9 +54,9 @@ namespace Akka.Actor.Internal
             return false;
         }
 
-        public IReadOnlyList<IInternalActorRef> Children { get { return ImmutableList<IInternalActorRef>.Empty; } }
+        public IReadOnlyCollection<IInternalActorRef> Children { get { return ImmutableList<IInternalActorRef>.Empty; } }
 
-        public IReadOnlyList<ChildRestartStats> Stats { get { return ImmutableList<ChildRestartStats>.Empty; } }
+        public IReadOnlyCollection<ChildRestartStats> Stats { get { return ImmutableList<ChildRestartStats>.Empty; } }
 
         public IChildrenContainer ShallDie(IActorRef actor)
         {
@@ -82,4 +82,3 @@ namespace Akka.Actor.Internal
         public virtual bool IsNormal { get { return true; } }
     }
 }
-

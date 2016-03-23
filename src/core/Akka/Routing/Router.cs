@@ -33,7 +33,7 @@ namespace Akka.Routing
         {
         }
 
-        public virtual Task Ask(object message, TimeSpan? timeout)
+        public virtual Task<object> Ask(object message, TimeSpan? timeout)
         {
             return null;
         }
@@ -59,7 +59,7 @@ namespace Akka.Routing
             Actor.Tell(message, sender);
         }
 
-        public override Task Ask(object message, TimeSpan? timeout)
+        public override Task<object> Ask(object message, TimeSpan? timeout)
         {
             return Actor.Ask(message, timeout);
         }
@@ -99,7 +99,7 @@ namespace Akka.Routing
             _actor.Tell(message, sender);
         }
 
-        public override Task Ask(object message, TimeSpan? timeout)
+        public override Task<object> Ask(object message, TimeSpan? timeout)
         {
             return _actor.Ask(message, timeout);
         }

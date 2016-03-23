@@ -14,8 +14,7 @@ namespace Akka.Persistence.Snapshot
 {
     public abstract class SnapshotStore : ActorBase
     {
-        private readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously |
-                                                                        TaskContinuationOptions.AttachedToParent;
+        private readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously;
         private readonly bool _publish;
         private readonly CircuitBreaker _breaker;
 
@@ -196,28 +195,28 @@ namespace Akka.Persistence.Snapshot
 
         /// <summary>
         /// Asynchronously loads a snapshot.
-        /// 
+        ///
         /// This call is protected with a circuit-breaker
         /// </summary>
         protected abstract Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria);
 
         /// <summary>
         /// Asynchronously saves a snapshot.
-        /// 
+        ///
         /// This call is protected with a circuit-breaker
         /// </summary>
         protected abstract Task SaveAsync(SnapshotMetadata metadata, object snapshot);
 
         /// <summary>
         /// Deletes the snapshot identified by <paramref name="metadata"/>.
-        /// 
+        ///
         /// This call is protected with a circuit-breaker
         /// </summary>
         protected abstract Task DeleteAsync(SnapshotMetadata metadata);
 
         /// <summary>
         /// Deletes all snapshots matching provided <paramref name="criteria"/>.
-        /// 
+        ///
         /// This call is protected with a circuit-breaker
         /// </summary>
         protected abstract Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria);
@@ -232,4 +231,3 @@ namespace Akka.Persistence.Snapshot
         }
     }
 }
-

@@ -200,6 +200,11 @@ namespace Akka.MultiNodeTestRunner
             //Block until all Sinks have been terminated.
             TestRunSystem.WhenTerminated.Wait(TimeSpan.FromMinutes(1));
 
+            if (Debugger.IsAttached)
+            {
+                Console.ReadLine(); //block when debugging
+            }
+
             //Return the proper exit code
             Environment.Exit(ExitCodeContainer.ExitCode);
         }

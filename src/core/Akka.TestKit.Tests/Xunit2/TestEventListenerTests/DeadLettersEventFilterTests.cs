@@ -12,11 +12,12 @@ using Xunit;
 
 namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
 {
-    public class DeadLettersEventFilterTests : EventFilterTestBase
+    public abstract class DeadLettersEventFilterTestsBase : EventFilterTestBase
     {
         private readonly IActorRef _deadActor;
+
         // ReSharper disable ConvertToLambdaExpression
-        public DeadLettersEventFilterTests() : base("akka.loglevel=ERROR")
+        protected DeadLettersEventFilterTestsBase() : base("akka.loglevel=ERROR")
         {
             _deadActor = Sys.ActorOf(BlackHoleActor.Props, "dead-actor");
             Watch(_deadActor);
@@ -29,10 +30,13 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
             Sys.EventStream.Publish(new Error(null, "DeadLettersEventFilterTests", GetType(), message));
         }
 
+        protected abstract EventFilterFactory CreateTestingEventFilter();
+
         [Fact]
         public void Should_be_able_to_filter_dead_letters()
         {
-            EventFilter.DeadLetter().ExpectOne(() =>
+            var eventFilter = CreateTestingEventFilter();
+            eventFilter.DeadLetter().ExpectOne(() =>
             {
                 _deadActor.Tell("whatever");
             });
@@ -40,6 +44,22 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
 
 
         // ReSharper restore ConvertToLambdaExpression
+    }
+
+    public class DeadLettersEventFilterTests : DeadLettersEventFilterTestsBase
+    {
+        protected override EventFilterFactory CreateTestingEventFilter()
+        {
+            return EventFilter;
+        }
+    }
+
+    public class DeadLettersCustomEventFilterTests : DeadLettersEventFilterTestsBase
+    {
+        protected override EventFilterFactory CreateTestingEventFilter()
+        {
+            return CreateEventFilter(Sys);
+        }
     }
 }
 
