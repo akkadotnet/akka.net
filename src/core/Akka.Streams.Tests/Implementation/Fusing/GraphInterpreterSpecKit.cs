@@ -963,12 +963,12 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             {
             }
 
-            protected IList<ITestEvent> LastEvent { get; private set; } = new List<ITestEvent>();
+            protected ISet<ITestEvent> LastEvent { get; private set; } = new HashSet<ITestEvent>();
 
-            public IList<ITestEvent> LastEvents()
+            public ISet<ITestEvent> LastEvents()
             {
                 var events = LastEvent;
-                LastEvent = new List<ITestEvent>();
+                LastEvent = new HashSet<ITestEvent>();
                 return events;
             }
 
@@ -1031,7 +1031,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                     SetHandler(In, () =>
                     {
-                        setup.LastEvent.Add(new OnNext(Grab<T>(In)));
+                        setup.LastEvent.Add(new OnNext(Grab<object>(In)));
                     },
                     () => setup.LastEvent.Add(new OnComplete()),
                     ex => setup.LastEvent.Add(new OnError(ex)));
@@ -1148,7 +1148,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         public void WithOneBoundedSetup<T>(IStage<T, T> op,
             Action
-                <Func<IList<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>,
+                <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>,
                     OneBoundedSetup.DownstreamOneBoundedPortProbe<T>> spec)
         {
             WithOneBoundedSetup<T>(ToGraphStage(op), spec);
@@ -1156,7 +1156,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         public void WithOneBoundedSetup<T>(IStage<T, T>[] ops,
             Action
-                <Func<IList<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>,
+                <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>,
                     OneBoundedSetup.DownstreamOneBoundedPortProbe<T>> spec)
         {
             WithOneBoundedSetup<T>(ToGraphStage(ops), spec);
@@ -1164,7 +1164,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         public void WithOneBoundedSetup<T>(IGraphStageWithMaterializedValue op,
             Action
-                <Func<IList<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>,
+                <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>,
                     OneBoundedSetup.DownstreamOneBoundedPortProbe<T>>
                 spec)
         {
@@ -1174,7 +1174,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         public void WithOneBoundedSetup<T>(IGraphStageWithMaterializedValue[] ops,
             Action
-                <Func<IList<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>, OneBoundedSetup.DownstreamOneBoundedPortProbe<T>>
+                <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>, OneBoundedSetup.DownstreamOneBoundedPortProbe<T>>
                 spec)
         {
             var setup = new OneBoundedSetup<T>(Sys, ops);
@@ -1183,7 +1183,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         public void WithOneBoundedSetup<TIn, TOut>(IGraphStageWithMaterializedValue op,
             Action
-                <Func<IList<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<TIn>,
+                <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<TIn>,
                     OneBoundedSetup.DownstreamOneBoundedPortProbe<TOut>>
                 spec)
         {
@@ -1193,7 +1193,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         public void WithOneBoundedSetup<TIn, TOut>(IGraphStageWithMaterializedValue[] ops,
             Action
-                <Func<IList<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<TIn>, OneBoundedSetup.DownstreamOneBoundedPortProbe<TOut>>
+                <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<TIn>, OneBoundedSetup.DownstreamOneBoundedPortProbe<TOut>>
                 spec)
         {
             var setup = new OneBoundedSetup<TIn, TOut>(Sys, ops);

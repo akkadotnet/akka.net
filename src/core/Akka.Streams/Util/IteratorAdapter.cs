@@ -19,6 +19,7 @@ namespace Akka.Streams.Util
     {
         private readonly IEnumerator<T> _enumerator;
         private bool? _hasNext;
+        private Exception _exception;
 
         public IteratorAdapter(IEnumerator<T> enumerator)
         {
@@ -29,7 +30,17 @@ namespace Akka.Streams.Util
         {
             if (_hasNext == null)
             {
-                _hasNext = _enumerator.MoveNext();
+                try
+                {
+                    _hasNext = _enumerator.MoveNext();
+                    _exception = null;
+                }
+                catch (Exception e)
+                {
+                    // capture exception and throw it when Next() is called
+                    _exception = e;
+                    _hasNext = true;
+                }
             }
 
             return _hasNext.Value;
@@ -39,8 +50,11 @@ namespace Akka.Streams.Util
         {
             if (!HasNext())
                 throw new InvalidOperationException();
+            if (_exception != null)
+                throw _exception;
 
             _hasNext = null;
+            _exception = null;
 
             return _enumerator.Current;
         }

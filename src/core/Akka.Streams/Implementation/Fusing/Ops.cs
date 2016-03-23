@@ -106,7 +106,7 @@ namespace Akka.Streams.Implementation.Fusing
         }
     }
 
-    internal sealed class Collect<TIn, TOut> : PushStage<TIn, TOut> where TOut : class
+    internal sealed class Collect<TIn, TOut> : PushStage<TIn, TOut>
     {
         private readonly Func<TIn, TOut> _func;
         private readonly Decider _decider;
@@ -120,7 +120,9 @@ namespace Akka.Streams.Implementation.Fusing
         public override ISyncDirective OnPush(TIn element, IContext<TOut> context)
         {
             var result = _func(element);
-            return result == null ? (ISyncDirective)context.Pull() : context.Push(result);
+            return EqualityComparer<TOut>.Default.Equals(result, default(TOut))
+                ? (ISyncDirective) context.Pull()
+                : context.Push(result);
         }
 
         public override Directive Decide(Exception cause)
@@ -890,14 +892,14 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region internal classes
 
-        private sealed class ExpandGraphStageLogic : GraphStageLogic
+        private sealed class Logic : GraphStageLogic
         {
             private readonly FlowShape<TIn, TOut> _shape;
             private readonly Expand<TIn, TOut> _stage;
             private IIterator<TOut> _iterator;
             private bool _expanded;
 
-            public ExpandGraphStageLogic(FlowShape<TIn, TOut> shape, Expand<TIn, TOut> stage) : base(shape)
+            public Logic(FlowShape<TIn, TOut> shape, Expand<TIn, TOut> stage) : base(shape)
             {
                 _shape = shape;
                 _stage = stage;
@@ -986,7 +988,12 @@ namespace Akka.Streams.Implementation.Fusing
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new ExpandGraphStageLogic(Shape, this);
+            return new Logic(Shape, this);
+        }
+
+        public override string ToString()
+        {
+            return "Expand";
         }
     }
 
