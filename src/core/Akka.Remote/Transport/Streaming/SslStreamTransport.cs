@@ -12,7 +12,7 @@ using Akka.Configuration;
 namespace Akka.Remote.Transport.Streaming
 {
     // TODO Work in progress
-    public class SslStreamTransportSettings
+    public class SslStreamTransportSettings : NetworkStreamTransportSettings
     {
         private static readonly Config DefaultConfig = ConfigurationFactory.ParseString(@"
 enabled-ssl-protocols = [Tls ,Tls11, Tls12]
@@ -33,6 +33,7 @@ certificate {
         public RemoteCertificateValidationCallback CertificateValidationCallback { get; }
 
         public SslStreamTransportSettings(Config config)
+            : base(config)
         {
             string enabledProtocolsParameter = "enabled-ssl-protocols";
             IList<string> enabledProtocols = config.GetStringList(enabledProtocolsParameter);
@@ -65,7 +66,7 @@ certificate {
             if (!Enum.TryParse(storeLocationString, out location))
                 throw new ArgumentException($"Invalid StoreLocation '{storeLocationString}'", storeLocationParameter);
 
-            
+            //TODO Get the server certificate from thumbprint or subject name
         }
 
         public static X509Certificate2 GetCertificateFromThumbprint(StoreLocation location, string thumbprint)
@@ -123,7 +124,7 @@ certificate {
 
     public class SslStreamTransport : NetworkStreamTransport
     {
-        private readonly SslStreamTransportSettings _settings;
+        protected new SslStreamTransportSettings Settings { get; }
 
         public override string SchemeIdentifier
         {
@@ -131,25 +132,29 @@ certificate {
         }
 
         public SslStreamTransport(ActorSystem system, Config config)
-            : base(system, config)
+            :this(system, new SslStreamTransportSettings(config))
+        { }
+
+        public SslStreamTransport(ActorSystem system, SslStreamTransportSettings settings)
+            : base(system, settings)
         {
-            _settings = new SslStreamTransportSettings(config);
+            Settings = settings;
         }
 
-        public override async Task<AssociationHandle> CreateInboundAssociation(Stream stream, Address remoteAddress)
+        protected override async Task<AssociationHandle> CreateInboundAssociation(Stream stream, Address remoteAddress)
         {
             SslStream sslStream = new SslStream(stream, true);
 
-            await sslStream.AuthenticateAsServerAsync(_settings.Certificate, false, _settings.EnabledSslProtocols, false);
+            await sslStream.AuthenticateAsServerAsync(Settings.Certificate, false, Settings.EnabledSslProtocols, false);
 
             return await base.CreateInboundAssociation(sslStream, remoteAddress);
         }
 
-        public override async Task<AssociationHandle> CreateOutboundAssociation(Stream stream, Address localAddress, Address remoteAddress)
+        protected override async Task<AssociationHandle> CreateOutboundAssociation(Stream stream, Address localAddress, Address remoteAddress)
         {
-            SslStream sslStream = new SslStream(stream, true, _settings.CertificateValidationCallback);
+            SslStream sslStream = new SslStream(stream, true, Settings.CertificateValidationCallback);
 
-            await sslStream.AuthenticateAsClientAsync(remoteAddress.Host, null, _settings.EnabledSslProtocols, _settings.CheckServerCertificateRevocation);
+            await sslStream.AuthenticateAsClientAsync(remoteAddress.Host, null, Settings.EnabledSslProtocols, Settings.CheckServerCertificateRevocation);
 
             return await base.CreateOutboundAssociation(stream, localAddress, remoteAddress);
         }

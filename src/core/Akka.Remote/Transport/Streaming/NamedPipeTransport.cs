@@ -1,19 +1,19 @@
 ﻿using System;
-using System.IO;
 using System.IO.Pipes;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
-using Google.ProtocolBuffers;
 
 namespace Akka.Remote.Transport.Streaming
 {
-    public class NamedPipeTranspotSettings
+    //TODO Work in progress
+    public class NamedPipeTranspotSettings : StreamTransportSettings
     {
         public string PipeName { get; private set; }
 
         public NamedPipeTranspotSettings(Config config)
+            : base(config)
         {
             PipeName = config.GetString("pipe-name");
         }
@@ -26,7 +26,7 @@ namespace Akka.Remote.Transport.Streaming
     {
         public const string ProtocolName = "pipe";
 
-        public NamedPipeTranspotSettings Settings { get; private set; }
+        public new NamedPipeTranspotSettings Settings { get;  }
 
         public override string SchemeIdentifier
         {
@@ -34,9 +34,15 @@ namespace Akka.Remote.Transport.Streaming
         }
 
         public NamedPipeTransport(ActorSystem system, Config config)
-            : base(system, config)
+            : base(system, new NamedPipeTranspotSettings(config))
         {
-            Settings = new NamedPipeTranspotSettings(config);
+            
+        }
+
+        public NamedPipeTransport(ActorSystem system, NamedPipeTranspotSettings settings)
+            : base(system, settings)
+        {
+            Settings = settings;
         }
 
         protected override Address Initialize()
@@ -49,14 +55,14 @@ namespace Akka.Remote.Transport.Streaming
             Task.Run(() => ListenLoop(listener));
         }
 
-        public override void Cleanup()
+        protected override void Cleanup()
         {
             //TODO
         }
 
         private async Task ListenLoop(IAssociationEventListener listener)
         {
-            while (!CancelToken.IsCancellationRequested)
+            while (!ShutdownToken.IsCancellationRequested)
             {
                 NamedPipeServerStream stream = new NamedPipeServerStream(Settings.PipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
 
@@ -81,7 +87,9 @@ namespace Akka.Remote.Transport.Streaming
 
         public AssociationHandle CreateInboundAssociation(NamedPipeServerStream stream, Address remoteAddress)
         {
-            var association = new StreamAssociationHandle(stream, InboundAddress, remoteAddress);
+            //TODO Add unique id in InboundAddress?
+            var association = new StreamAssociationHandle(Settings, stream, InboundAddress, remoteAddress);
+            RegisterAssociation(association);
 
             association.ReadHandlerSource.Task.ContinueWith(task => association.Initialize(task.Result),
                 CancellationToken.None,
@@ -102,7 +110,8 @@ namespace Akka.Remote.Transport.Streaming
             string uniqueId = Guid.NewGuid().ToString("N");
             var localAddress = new Address(ProtocolName, System.Name, Settings.PipeName + "_" + uniqueId, 1);
 
-            var association = new StreamAssociationHandle(stream, localAddress, remoteAddress.WithPort(1));
+            var association = new StreamAssociationHandle(Settings, stream, localAddress, remoteAddress.WithPort(1));
+            RegisterAssociation(association);
 
             association.ReadHandlerSource.Task.ContinueWith(task => association.Initialize(task.Result),
                 CancellationToken.None,

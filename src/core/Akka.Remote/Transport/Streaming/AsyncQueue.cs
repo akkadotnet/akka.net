@@ -1,74 +1,138 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Akka.Remote.Transport.Streaming
 {
-    //TODO This queue can be optimized by making it single reader
-    // and using a custom awaiter instead of TaskCompletionSource
     internal sealed class AsyncQueue<T> : IDisposable
     {
-        private class Waiter
+        internal interface IFutureItem : INotifyCompletion
         {
-            private readonly TaskCompletionSource<T> _completion;
+            T Value { get; }
+            bool IsCanceled { get; }
+            bool IsCompleted { get; }
 
-            public Task<T> Task
+            IFutureItem GetAwaiter();
+            void GetResult();
+        }
+
+        internal class FutureItem : IFutureItem
+        {
+            private Action _continuation;
+            private T _value;
+            private volatile bool _isCanceled;
+            private volatile bool _isCompleted;
+
+            public bool IsCompleted => _isCompleted;
+
+            public bool IsCanceled => _isCanceled;
+
+            public T Value
             {
-                get { return _completion.Task; }
+                get
+                {
+                    lock (this)
+                    {
+                        if (!_isCompleted)
+                            throw new InvalidOperationException("Operation is not completed");
+
+                        if (_isCanceled)
+                            throw new OperationCanceledException();
+
+                        return _value;
+                    }
+                }
             }
 
-            public Waiter()
+            public void SetItem(T item)
             {
-                _completion = new TaskCompletionSource<T>();
-            }
+                lock (this)
+                {
+                    if (_isCompleted)
+                        return;
 
-            public void SetResult(T item)
-            {
-                _completion.TrySetResult(item);
+                    _value = item;
+                    InternalSetCompleted();
+                }
             }
 
             public void SetCanceled()
             {
-                _completion.TrySetCanceled();
+                lock (this)
+                {
+                    if (_isCompleted)
+                        return;
+
+                    _isCanceled = true;
+                    InternalSetCompleted();
+                }
+            }
+
+            private void InternalSetCompleted()
+            {
+                _isCompleted = true;
+
+                if (_continuation != null)
+                    ThreadPool.QueueUserWorkItem(state => ((Action)state).Invoke(), _continuation);
+            }
+
+            public IFutureItem GetAwaiter()
+            {
+                return this;
+            }
+
+            public void GetResult()
+            {
+                lock (this)
+                {
+                    if (!_isCompleted)
+                        throw new InvalidOperationException("Operation is not completed");
+                }
+            }
+
+            public void OnCompleted(Action continuation)
+            {
+                bool alreadyCompleted = false;
+                lock (this)
+                {
+                    _continuation = continuation;
+
+                    if (_isCompleted)
+                        alreadyCompleted = true;
+                }
+
+                if (alreadyCompleted)
+                    ThreadPool.QueueUserWorkItem(state => ((Action)state).Invoke(), continuation);
             }
         }
 
         private readonly Queue<T> _queue;
-        private readonly Queue<Waiter> _waiters;
+        private FutureItem _pendingDequeue;
 
-        public bool IsDisposed { get; private set; }
-
-        public int Count
-        {
-            get
-            {
-                lock (_queue)
-                {
-                    return _queue.Count;
-                }
-            }
-        }
+        private bool _addingCompleted;
+        private bool _isDisposed;
 
         public AsyncQueue()
         {
             _queue = new Queue<T>();
-            _waiters = new Queue<Waiter>();
         }
 
         public bool Enqueue(T item)
         {
-            Waiter completedWaiter = null;
+            FutureItem completedWaiter = null;
 
             lock (_queue)
             {
-                if (IsDisposed)
-                    return true;
+                if (_addingCompleted)
+                    return false;
 
-                if (_waiters.Count > 0)
+                if (_pendingDequeue != null)
                 {
-                    completedWaiter = _waiters.Dequeue();
+                    completedWaiter = _pendingDequeue;
+                    _pendingDequeue = null;
                 }
                 else
                 {
@@ -76,54 +140,70 @@ namespace Akka.Remote.Transport.Streaming
                 }
             }
 
-            if (completedWaiter != null)
-                ThreadPool.QueueUserWorkItem(_ => completedWaiter.SetResult(item));
+            completedWaiter?.SetItem(item);
 
             return true;
         }
 
-        public Task<T> Dequeue()
+        public IFutureItem Dequeue()
         {
-            Waiter waiter = new Waiter();
+            FutureItem futureItem = new FutureItem();
 
             lock (_queue)
             {
-                if (IsDisposed)
+                if (_pendingDequeue != null)
+                    throw new InvalidOperationException("Dequeue operation is already in progress. This class is single reader.");
+
+                if (_isDisposed)
                 {
-                    waiter.SetCanceled();
+                    futureItem.SetCanceled();
                 }
                 else if (_queue.Count > 0)
                 {
                     T value = _queue.Dequeue();
-                    waiter.SetResult(value);
+                    futureItem.SetItem(value);
+                }
+                else if (_addingCompleted)
+                {
+                    futureItem.SetCanceled();
                 }
                 else
                 {
-                    _waiters.Enqueue(waiter);
+                    _pendingDequeue = futureItem;
                 }
             }
 
-            return waiter.Task;
+            return futureItem;
+        }
+
+        public void CompleteAdding()
+        {
+            FutureItem pendingDequeue;
+
+            lock (_queue)
+            {
+                _addingCompleted = true;
+                pendingDequeue = _pendingDequeue;
+            }
+
+            pendingDequeue?.SetCanceled();
         }
 
         public void Dispose()
         {
-            List<Waiter> waiters;
+            FutureItem pendingDequeue;
             lock (_queue)
             {
-                if (IsDisposed)
+                if (_isDisposed)
                     return;
 
-                IsDisposed = true;
+                _isDisposed = true;
+                _addingCompleted = true;
 
-                waiters = _waiters.ToList();
+                pendingDequeue = _pendingDequeue;
             }
 
-            Task.Run(() =>
-            {
-                foreach (Waiter waiter in waiters)
-                    waiter.SetCanceled();
-            });
+            pendingDequeue?.SetCanceled();
         }
     }
 }

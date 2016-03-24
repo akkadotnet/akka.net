@@ -6,37 +6,95 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Util.Internal;
 
 namespace Akka.Remote.Transport.Streaming
 {
-    public class NetworkStreamTransportSettings
+    public class NetworkStreamTransportSettings : StreamTransportSettings
     {
-        private const int DefaultSendBufferSize = 128 * 1024;
-        private const int DefaultReceiveBufferSize = 128 * 1024;
-
         public string Hostname { get; }
 
         public int Port { get; }
+
+        public IPAddress BindIp { get; }
+
+        public int BindPort { get; }
+
+        public TimeSpan ConnectionTimeout { get; }
 
         public int SendBufferSize { get; }
 
         public int ReceiveBufferSize { get; }
 
+        public int Backlog { get; }
+
+        public bool TcpNoDelay { get; }
+
+        public bool TcpKeepAlive { get; }
+
         public NetworkStreamTransportSettings(Config config)
+            : base(config)
         {
             Hostname = config.GetString("hostname");
+
+            if (string.IsNullOrEmpty(Hostname))
+                Hostname = "localhost";
+
             Port = config.GetInt("port");
-            SendBufferSize = config.GetInt("send-buffer-size", DefaultSendBufferSize);
-            ReceiveBufferSize = config.GetInt("receive-buffer-size", DefaultReceiveBufferSize);
+
+            Hostname = config.GetString("hostname");
+            Port = config.GetInt("port");
+
+            string bindHostname = config.GetString("bind-hostname");
+
+            if (string.IsNullOrEmpty(bindHostname))
+                bindHostname = Hostname;
+
+            IPAddress ip;
+            if (Hostname.Equals("localhost", StringComparison.OrdinalIgnoreCase))
+            {
+                BindIp = IPAddress.Loopback;
+            }
+            else if (IPAddress.TryParse(bindHostname, out ip))
+            {
+                // The socket is using DualMode, if ipv6 is supported, listening on IPv6Any
+                // will work for any address (ipv4 and ipv6)
+                if (IPAddress.Any.Equals(ip) && Socket.OSSupportsIPv6)
+                    ip = IPAddress.IPv6Any;
+
+                BindIp = ip;
+            }
+            else
+            {
+                // If hostname is not localhost or an ip, bind to IPAny
+                BindIp = Socket.OSSupportsIPv6 ? IPAddress.IPv6Any : IPAddress.Any;
+            }
+
+            string bindPortString = config.GetString("bind-port");
+
+            BindPort = string.IsNullOrEmpty(bindPortString) ? Port : int.Parse(bindPortString);
+
+            ConnectionTimeout = config.GetTimeSpan("connection-timeout");
+            SendBufferSize = GetByteSize(config, "send-buffer-size");
+            ReceiveBufferSize = GetByteSize(config, "receive-buffer-size");
+            
+            Backlog = config.GetInt("backlog");
+            TcpNoDelay = config.GetBoolean("tcp-nodelay");
+            TcpKeepAlive = config.GetBoolean("tcp-keepalive");
         }
 
         public void ConfigureSocket(Socket s)
         {
-            s.NoDelay = true;
-
             s.SendBufferSize = SendBufferSize;
             s.ReceiveBufferSize = ReceiveBufferSize;
+            s.NoDelay = TcpNoDelay;
+
+            if (TcpKeepAlive)
+                s.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, 1);
+        }
+
+        public IPEndPoint GetBindEndPoint()
+        {
+            return new IPEndPoint(BindIp, BindPort);
         }
     }
 
@@ -46,27 +104,27 @@ namespace Akka.Remote.Transport.Streaming
 
         private readonly Socket _listener;
 
-        private readonly NetworkStreamTransportSettings _settings;
+        protected new NetworkStreamTransportSettings Settings { get; }
 
-        public override string SchemeIdentifier
-        {
-            get { return ProtocolName; }
-        }
+        public override string SchemeIdentifier => ProtocolName;
 
         public NetworkStreamTransport(ActorSystem system, Config config)
-            : base(system, config)
-        {
-            _settings = new NetworkStreamTransportSettings(config);
+            :this(system, new NetworkStreamTransportSettings(config))
+        { }
 
-            _listener = new Socket(SocketType.Stream, ProtocolType.Tcp);
+        public NetworkStreamTransport(ActorSystem system, NetworkStreamTransportSettings settings)
+            : base(system, settings)
+        {
+            Settings = settings;
+            _listener = CreateDualModeTcpSocket();
         }
 
         protected override Address Initialize()
         {
-            _listener.Bind(new IPEndPoint(IPAddress.IPv6Any, _settings.Port));
-            _listener.Listen(int.MaxValue);
+            _listener.Bind(Settings.GetBindEndPoint());
+            _listener.Listen(Settings.Backlog);
 
-            return new Address(ProtocolName, System.Name, _settings.Hostname, ((IPEndPoint)_listener.LocalEndPoint).Port);
+            return new Address(ProtocolName, System.Name, Settings.Hostname, ((IPEndPoint)_listener.LocalEndPoint).Port);
         }
 
         protected override void StartAcceptingConnections(IAssociationEventListener listener)
@@ -76,14 +134,15 @@ namespace Akka.Remote.Transport.Streaming
 
         private async Task ListenLoop(IAssociationEventListener listener)
         {
-            // Accept will throw when _listener is closed
-            while (!CancelToken.IsCancellationRequested)
+            while (!ShutdownToken.IsCancellationRequested)
             {
+                Socket socket = null;
                 try
                 {
-                    var socket = await Task<Socket>.Factory.FromAsync(_listener.BeginAccept, _listener.EndAccept, null);
+                    // Accept will throw when _listener is closed
+                    socket = await Task<Socket>.Factory.FromAsync(_listener.BeginAccept, _listener.EndAccept, null);
 
-                    _settings.ConfigureSocket(socket);
+                    Settings.ConfigureSocket(socket);
 
                     IPEndPoint remoteEndPoint = (IPEndPoint)socket.RemoteEndPoint;
                     string host = GetAddressString(remoteEndPoint.Address);
@@ -96,18 +155,99 @@ namespace Akka.Remote.Transport.Streaming
                     CreateInboundAssociation(networkStream, remoteAddress)
                         .ContinueWith(task =>
                         {
-                            //TODO Do we need to notify a failure?
-
                             if (task.Status == TaskStatus.RanToCompletion)
                                 listener.Notify(new InboundAssociation(task.Result));
                         });
 #pragma warning restore 4014
                 }
+                catch (SocketException ex)
+                when (ex.SocketErrorCode == SocketError.ConnectionReset && !ShutdownToken.IsCancellationRequested)
+                {
+                    // Tcp handshake failed on new connection, not fatal
+                    //TODO Log Info
+
+                    socket?.Close();
+                }
                 catch (Exception)
                 {
-                    //TODO Log and shutdown if fatal exception
+                    if (ShutdownToken.IsCancellationRequested)
+                        return;
+
+                    // Should not happen if listen on Loopback or IPAny
+                    // TODO Otherwise might need to rebind if network adapter was disabled/enabled
+                    //TODO Log Warning
+
+                    socket?.Close();
                 }
             }
+        }
+
+        public override Task<AssociationHandle> Associate(Address remoteAddress)
+        {
+            return CreateOutboundAssociation(remoteAddress);
+        }
+
+        protected override void Cleanup()
+        {
+            _listener.Close();
+        }
+
+        protected virtual Task<AssociationHandle> CreateInboundAssociation(Stream stream, Address remoteAddress)
+        {
+            var association = new StreamAssociationHandle(Settings, stream, InboundAddress, remoteAddress);
+            RegisterAssociation(association);
+
+            association.ReadHandlerSource.Task.ContinueWith(task => association.Initialize(task.Result),
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion,
+                TaskScheduler.Default);
+
+            return Task.FromResult((AssociationHandle)association);
+        }
+
+        protected async Task<AssociationHandle> CreateOutboundAssociation(Address remoteAddress)
+        {
+            Socket socket = CreateDualModeTcpSocket();
+            Settings.ConfigureSocket(socket);
+
+            //TODO Does it even work if the port is not set?
+            int port = remoteAddress.Port ?? 2552;
+
+            var connectTask = Task.Factory.FromAsync(socket.BeginConnect, socket.EndConnect, remoteAddress.Host, port, null);
+
+            var completedTask = await Task.WhenAny(connectTask, Task.Delay(Settings.ConnectionTimeout));
+
+            if (completedTask != connectTask)
+                throw new TimeoutException($"Unable to establish connection in {(int)Settings.ConnectionTimeout.TotalSeconds}s");
+
+            NetworkStream stream = new NetworkStream(socket, true);
+
+            int localPort = ((IPEndPoint) socket.LocalEndPoint).Port;
+
+            var association =  await CreateOutboundAssociation(stream, InboundAddress.WithPort(localPort), remoteAddress);
+
+            return association;
+        }
+
+        protected virtual Task<AssociationHandle> CreateOutboundAssociation(Stream stream, Address localAddress, Address remoteAddress)
+        {
+            var association = new StreamAssociationHandle(Settings, stream, localAddress, remoteAddress);
+            RegisterAssociation(association);
+
+#pragma warning disable CS4014
+            association.ReadHandlerSource.Task.ContinueWith(task => association.Initialize(task.Result),
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion,
+                TaskScheduler.Default);
+#pragma warning restore CS4014
+
+            return Task.FromResult((AssociationHandle)association);
+        }
+
+        private static Socket CreateDualModeTcpSocket()
+        {
+            // DualMode works with IPv6 and IPv4
+            return new Socket(SocketType.Stream, ProtocolType.Tcp);
         }
 
         private static string GetAddressString(IPAddress ip)
@@ -126,7 +266,7 @@ namespace Akka.Remote.Transport.Streaming
         /// IPAddress.MapToIPv4 is bugged.
         /// http://stackoverflow.com/questions/23608829/why-does-ipaddress-maptoipv4-throw-argumentoutofrangeexception
         /// </summary>
-        public static IPAddress SafeMapToIPv4(IPAddress address)
+        private static IPAddress SafeMapToIPv4(IPAddress address)
         {
             if (address.AddressFamily == AddressFamily.InterNetwork)
                 return address;
@@ -144,61 +284,6 @@ namespace Akka.Remote.Transport.Streaming
                 (((((uint)numbers[7] & 0x0000FF00u) >> 8) | (((uint)numbers[7] & 0x000000FFu) << 8)) << 16);
 
             return new IPAddress(addressValue);
-        }
-
-        public override Task<AssociationHandle> Associate(Address remoteAddress)
-        {
-            return CreateOutboundAssociation(remoteAddress);
-        }
-
-        public override void Cleanup()
-        {
-            _listener.Close();
-        }
-
-        public virtual Task<AssociationHandle> CreateInboundAssociation(Stream stream, Address remoteAddress)
-        {
-            var association = new StreamAssociationHandle(stream, InboundAddress, remoteAddress);
-
-            // TODO Can ReadHandlerSource.Task fail? If so what do we do
-
-            association.ReadHandlerSource.Task.ContinueWith(task => association.Initialize(task.Result),
-                CancellationToken.None,
-                TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion,
-                TaskScheduler.Default);
-
-            return Task.FromResult((AssociationHandle)association);
-        }
-
-        public async Task<AssociationHandle> CreateOutboundAssociation(Address remoteAddress)
-        {
-            Socket socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
-
-            _settings.ConfigureSocket(socket);
-
-            int port = remoteAddress.Port ?? 2552;
-
-            await Task.Factory.FromAsync(socket.BeginConnect, socket.EndConnect, remoteAddress.Host, port, null);
-
-            NetworkStream stream = new NetworkStream(socket, true);
-
-            return await CreateOutboundAssociation(stream, InboundAddress, remoteAddress);
-        }
-
-        public virtual Task<AssociationHandle> CreateOutboundAssociation(Stream stream, Address localAddress, Address remoteAddress)
-        {
-            var association = new StreamAssociationHandle(stream, localAddress, remoteAddress);
-
-            // TODO Can ReadHandlerSource.Task fail? If so what do we do
-
-#pragma warning disable CS4014
-            association.ReadHandlerSource.Task.ContinueWith(task => association.Initialize(task.Result),
-                CancellationToken.None,
-                TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion,
-                TaskScheduler.Default);
-#pragma warning restore CS4014
-
-            return Task.FromResult((AssociationHandle)association);
         }
     }
 }

@@ -22,7 +22,7 @@ namespace RemoteBenchmark
             ManualResetEventSlim start = new ManualResetEventSlim(false);
 
             if (args.Length == 1)
-                messageCount = int.Parse(args[0]);
+                concurrency = int.Parse(args[0]);
 
             var workers = new List<Task>();
             for (int i = 1; i <= concurrency; i++)

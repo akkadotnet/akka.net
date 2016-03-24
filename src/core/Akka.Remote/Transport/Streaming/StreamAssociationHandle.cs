@@ -8,39 +8,56 @@ namespace Akka.Remote.Transport.Streaming
 {
     public class StreamAssociationHandle : AssociationHandle
     {
-        private const int UserBufferSize = 1024*8;
-
         private readonly Stream _stream;
         private readonly AsyncQueue<ByteString> _writeQueue;
         private IHandleEventListener _eventListener;
 
-        private byte[] _readBuffer;
-        private byte[] _writeBuffer;
+        private readonly byte[] _readBuffer;
+        private readonly byte[] _writeBuffer;
+        private readonly TimeSpan _flushWaitOnShutdown;
 
-        public StreamAssociationHandle(Stream stream, Address localAddress, Address remoteAddress)
+        private readonly TaskCompletionSource<bool> _initialized;
+        private readonly TaskCompletionSource<bool> _stopped;
+        private readonly Task _writeLoop;
+
+        /// <summary>
+        /// Returns true if gracefully stopped, otherwise false.
+        /// </summary>
+        public Task<bool> Stopped => _stopped.Task;
+
+        public StreamAssociationHandle(StreamTransportSettings settings, Stream stream, Address localAddress, Address remoteAddress)
             : base(localAddress, remoteAddress)
         {
             _stream = stream;
             _writeQueue = new AsyncQueue<ByteString>();
+
+            _readBuffer = new byte[settings.StreamReadBufferSize];
+            _writeBuffer = new byte[settings.StreamWriteBufferSize];
+            _flushWaitOnShutdown = settings.FlushWaitTimeout;
+
+            _initialized = new TaskCompletionSource<bool>();
+            _stopped = new TaskCompletionSource<bool>();
+            _writeLoop = Task.Run(() => WriteLoop());
         }
 
         internal void Initialize(IHandleEventListener eventListener)
         {
-            _readBuffer = new byte[UserBufferSize];
-            _writeBuffer = new byte[UserBufferSize];
-
             _eventListener = eventListener;
             Task.Run(() => ReadLoop())
                 .ContinueWith(_ =>
                 {
+                    if (Stopped.IsCompleted)
+                        return;
+
                     _eventListener.Notify(new Disassociated(DisassociateInfo.Unknown));
                 }, TaskContinuationOptions.OnlyOnFaulted);
 
-            Task.Run(() => WriteLoop())
-                .ContinueWith(_ =>
-                {
-                    _eventListener.Notify(new Disassociated(DisassociateInfo.Unknown));
-                }, TaskContinuationOptions.OnlyOnFaulted);
+            _writeLoop.ContinueWith(_ =>
+            {
+                _eventListener.Notify(new Disassociated(DisassociateInfo.Unknown));
+            }, TaskContinuationOptions.OnlyOnFaulted);
+
+            _initialized.TrySetResult(true);
         }
 
         private async Task ReadLoop()
@@ -80,6 +97,8 @@ namespace Akka.Remote.Transport.Streaming
                 int payloadLength = BitConverter.ToInt32(readBuffer, readIndex);
                 readIndex += sizeof(int);
 
+                //TODO Protect against invalid payload length by chunking the payload buffer
+                //     if payloadLength is bigger than available data in the read buffer
                 byte[] payloadBuffer = new byte[payloadLength];
                 int payloadOffset = 0;
 
@@ -113,6 +132,7 @@ namespace Akka.Remote.Transport.Streaming
         {
             _writeQueue.Enqueue(payload);
 
+            // Always return true, we don't want to use the backoff in EndpointWriter
             return true;
         }
 
@@ -120,75 +140,99 @@ namespace Akka.Remote.Transport.Streaming
         {
             //TODO Add 100% test coverage for this
 
+            if (!await _initialized.Task)
+                return;
+
             byte[] writeBuffer = _writeBuffer;
             int bufferLength = writeBuffer.Length;
             int bufferOffset = 0;
 
-            try
+            while (true)
             {
-                while (true)
+                var item = _writeQueue.Dequeue();
+
+                ByteString payload;
+
+                if (item.IsCompleted)
                 {
-                    var dequeueTask = _writeQueue.Dequeue();
+                    if (item.IsCanceled)
+                        break;
 
-                    ByteString payload;
-
-                    if (dequeueTask.IsCompleted)
-                        payload = dequeueTask.Result;
-                    else
+                    payload = item.Value;
+                }
+                else
+                {
+                    if (bufferOffset > 0)
                     {
-                        if (bufferOffset > 0)
-                        {
-                            // We are about to wait for data, flush the buffer
-                            await _stream.WriteAsync(writeBuffer, 0, bufferOffset).ConfigureAwait(false);
-                            bufferOffset = 0;
-                        }
-
-                        payload = await dequeueTask.ConfigureAwait(false);
-                    }
-
-
-                    if (bufferLength - bufferOffset < sizeof (int))
-                    {
-                        // Not enough space to write payload length, flush the buffer
+                        // We are about to wait for data, flush the buffer
                         await _stream.WriteAsync(writeBuffer, 0, bufferOffset).ConfigureAwait(false);
                         bufferOffset = 0;
                     }
 
-                    // Copy the length
-                    // We can assume that the write buffer length will always be greater than sizeof(int)!
-                    int payloadLength = payload.Length;
-                    byte[] lengthBuffer = BitConverter.GetBytes(payloadLength);
-                    Buffer.BlockCopy(lengthBuffer, 0, writeBuffer, bufferOffset, sizeof(int));
-                    bufferOffset += 4;
+                    await item;
 
-                    byte[] payloadBuffer = ByteString.Unsafe.GetBuffer(payload);
-                    int payloadOffset = 0;
+                    if (item.IsCanceled)
+                        break;
 
-                    while (payloadOffset < payloadLength)
+                    payload = item.Value;
+                }
+
+
+                if (bufferLength - bufferOffset < sizeof (int))
+                {
+                    // Not enough space to write payload length, flush the buffer
+                    await _stream.WriteAsync(writeBuffer, 0, bufferOffset).ConfigureAwait(false);
+                    bufferOffset = 0;
+                }
+
+                // Copy the length
+                int payloadLength = payload.Length;
+                byte[] lengthBuffer = BitConverter.GetBytes(payloadLength);
+                Buffer.BlockCopy(lengthBuffer, 0, writeBuffer, bufferOffset, sizeof(int));
+                bufferOffset += 4;
+
+                byte[] payloadBuffer = ByteString.Unsafe.GetBuffer(payload);
+                int payloadOffset = 0;
+
+                while (payloadOffset < payloadLength)
+                {
+                    if (bufferLength == bufferOffset)
                     {
-                        if (bufferLength == bufferOffset)
-                        {
-                            // Flush the buffer
-                            await _stream.WriteAsync(writeBuffer, 0, bufferOffset).ConfigureAwait(false);
-                            bufferOffset = 0;
-                        }
-
-                        int available = Math.Min(bufferLength - bufferOffset, payloadLength - payloadOffset);
-
-                        Buffer.BlockCopy(payloadBuffer, payloadOffset, writeBuffer, bufferOffset, available);
-                        payloadOffset += available;
-                        bufferOffset += available;
+                        // Flush the buffer
+                        await _stream.WriteAsync(writeBuffer, 0, bufferOffset).ConfigureAwait(false);
+                        bufferOffset = 0;
                     }
+
+                    int available = Math.Min(bufferLength - bufferOffset, payloadLength - payloadOffset);
+
+                    Buffer.BlockCopy(payloadBuffer, payloadOffset, writeBuffer, bufferOffset, available);
+                    payloadOffset += available;
+                    bufferOffset += available;
                 }
             }
-            catch (TaskCanceledException)
-            { }
         }
 
         public override void Disassociate()
         {
-            _writeQueue.Dispose();
-            _stream.Close();
+            _initialized.TrySetResult(false);
+            _writeQueue.CompleteAdding();
+
+            Task.WhenAny(_writeLoop, Task.Delay(_flushWaitOnShutdown))
+                .ContinueWith(completedTask =>
+            {
+                if (completedTask == _writeLoop)
+                {
+                    _stopped.TrySetResult(true);
+                }
+                else
+                {
+                    //TODO Add logging
+                    _stopped.TrySetResult(false);
+                }
+
+                _writeQueue.Dispose();
+                _stream.Close();
+            });
         }
     }
 }
