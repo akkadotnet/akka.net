@@ -23,7 +23,7 @@ namespace Akka.Streams.Dsl
             Module = module;
         }
 
-        public SourceShape<TOut> Shape { get { return (SourceShape<TOut>)Module.Shape; } }
+        public SourceShape<TOut> Shape => (SourceShape<TOut>)Module.Shape;
         public IModule Module { get; }
 
         /// <summary>
@@ -342,11 +342,11 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Creates a <see cref="Source{TOut,TMat}"/> that is materialized to an <see cref="IActorRef"/> which points to an Actor
         /// created according to the passed in <see cref="Props"/>. Actor created by the `props` must
-        /// be <see cref="ActorPublisher{T}"/>.
+        /// be <see cref="Actors.ActorPublisher{T}"/>.
         /// </summary>
         public static Source<T, IActorRef> ActorPublisher<T>(Props props)
         {
-            if (!(typeof(ActorPublisher<T>).IsAssignableFrom(props.Type))) throw new ArgumentException("Actor must be ActorPublisher");
+            if (!typeof(Actors.ActorPublisher<T>).IsAssignableFrom(props.Type)) throw new ArgumentException("Actor must be ActorPublisher");
             return new Source<T, IActorRef>(new ActorPublisherSource<T>(props, DefaultAttributes.ActorPublisherSource, Shape<T>("ActorPublisherSource")));
         }
 

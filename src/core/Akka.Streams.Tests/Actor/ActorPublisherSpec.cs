@@ -7,21 +7,37 @@ using Akka.Actor;
 using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
-using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Actor
 {
     public class ActorPublisherSpec : AkkaSpec
     {
         private const string Config = @"
-my-dispatcher1 = ""akka.test.stream-dispatcher""
-my-dispatcher2 = ""akka.test.stream-dispatcher""";
+my-dispatcher1 {
+  type = Dispatcher
+  executor = ""fork-join-executor""
+  fork-join-executor {
+    parallelism-min = 8
+    parallelism-max = 8
+  }
+  mailbox-requirement = ""Akka.Dispatch.IUnboundedMessageQueueSemantics""
+}
+my-dispatcher1 {
+  type = Dispatcher
+  executor = ""fork-join-executor""
+  fork-join-executor {
+    parallelism-min = 8
+    parallelism-max = 8
+  }
+  mailbox-requirement = ""Akka.Dispatch.IUnboundedMessageQueueSemantics""
+}";
 
-        public ActorPublisherSpec() : base(Config)
+        public ActorPublisherSpec(ITestOutputHelper output = null) : base(Config, output)
         {
             EventFilter.Exception<IllegalStateException>().Mute();
         }
@@ -31,7 +47,7 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
         {
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
-            var p = CreatePublisher<string>(actorRef);
+            var p = ActorPublisher.Create<string>(actorRef);
             var s = this.CreateProbe<string>();
 
             p.Subscribe(s);
@@ -47,7 +63,7 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
         {
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
-            var p = CreatePublisher<string>(actorRef);
+            var p = ActorPublisher.Create<string>(actorRef);
             var s = this.CreateProbe<string>();
             p.Subscribe(s);
             s.Request(2);
@@ -66,7 +82,7 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
             var s = this.CreateManualProbe<string>();
-            CreatePublisher<string>(actorRef).Subscribe(s);
+            ActorPublisher.Create<string>(actorRef).Subscribe(s);
             actorRef.Tell(new Err("wrong"));
             s.ExpectSubscription();
             s.ExpectError().Message.Should().Be("wrong");
@@ -78,7 +94,7 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
             var s = this.CreateManualProbe<string>();
-            CreatePublisher<string>(actorRef).Subscribe(s);
+            ActorPublisher.Create<string>(actorRef).Subscribe(s);
             s.ExpectSubscription();
             probe.Watch(actorRef);
             actorRef.Tell(new Err("wrong"));
@@ -87,12 +103,12 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
         }
 
         [Fact]
-        public void ActorPublisher_should_terminate_after_signalling_onErrorThenStop()
+        public void ActorPublisher_should_terminate_after_signalling_OnErrorThenStop()
         {
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
             var s = this.CreateManualProbe<string>();
-            CreatePublisher<string>(actorRef).Subscribe(s);
+            ActorPublisher.Create<string>(actorRef).Subscribe(s);
             s.ExpectSubscription();
             probe.Watch(actorRef);
             actorRef.Tell(new ErrThenStop("wrong"));
@@ -107,7 +123,7 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
             actorRef.Tell(new Err("early err"));
             var s = this.CreateManualProbe<string>();
-            new Streams.Implementation.ActorPublisher<string>(actorRef).Subscribe(s);
+            ActorPublisher.Create<string>(actorRef).Subscribe(s);
             s.ExpectSubscriptionAndError().Message.Should().Be("early err");
         }
 
@@ -116,7 +132,7 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
         {
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
-            var p = new Streams.Implementation.ActorPublisher<string>(actorRef);
+            var p = ActorPublisher.Create<string>(actorRef);
             var s = this.CreateProbe<string>();
             p.Subscribe(s);
             s.Request(2);
@@ -128,11 +144,11 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
         }
 
         [Fact]
-        public void ActorPublisher_should_remeber_requested_after_restart()
+        public void ActorPublisher_should_remember_requested_after_restart()
         {
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
-            var p = new Streams.Implementation.ActorPublisher<string>(actorRef);
+            var p = ActorPublisher.Create<string>(actorRef);
             var s = this.CreateProbe<string>();
             p.Subscribe(s);
             s.Request(3);
@@ -143,7 +159,7 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
             s.ExpectNext("elem-1");
             s.ExpectNext("elem-2");
             s.Request(5);
-            probe.ExpectMsg<TotalDemand>().Elements.Should().Be(5);
+            probe.ExpectMsg<TotalDemand>().Elements.Should().Be(6);
             s.Cancel();
         }
 
@@ -153,7 +169,7 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
             var s = this.CreateProbe<string>();
-            new Streams.Implementation.ActorPublisher<string>(actorRef).Subscribe(s);
+            ActorPublisher.Create<string>(actorRef).Subscribe(s);
             s.Request(3);
             actorRef.Tell(new Produce("elem-1"));
             actorRef.Tell(Complete.Instance);
@@ -167,7 +183,7 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
             var s = this.CreateProbe<string>();
-            new Streams.Implementation.ActorPublisher<string>(actorRef).Subscribe(s);
+            ActorPublisher.Create<string>(actorRef).Subscribe(s);
             var sub = s.ExpectSubscription();
             sub.Request(3);
             probe.ExpectMsg<TotalDemand>().Elements.Should().Be(3);
@@ -185,7 +201,7 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
             var s = this.CreateProbe<string>();
-            new Streams.Implementation.ActorPublisher<string>(actorRef).Subscribe(s);
+            ActorPublisher.Create<string>(actorRef).Subscribe(s);
             var sub = s.ExpectSubscription();
             sub.Request(3);
             probe.ExpectMsg<TotalDemand>().Elements.Should().Be(3);
@@ -204,7 +220,7 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
             actorRef.Tell(Complete.Instance);
             var s = this.CreateManualProbe<string>();
-            new Streams.Implementation.ActorPublisher<string>(actorRef).Subscribe(s);
+            ActorPublisher.Create<string>(actorRef).Subscribe(s);
             s.ExpectSubscriptionAndComplete();
         }
 
@@ -214,11 +230,11 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
             var s = this.CreateManualProbe<string>();
-            new Streams.Implementation.ActorPublisher<string>(actorRef).Subscribe(s);
+            ActorPublisher.Create<string>(actorRef).Subscribe(s);
             s.ExpectSubscription();
             var s2 = this.CreateManualProbe<string>();
-            new Streams.Implementation.ActorPublisher<string>(actorRef).Subscribe(s2);
-            s.ExpectSubscriptionAndError().Should().BeOfType<IllegalStateException>();
+            ActorPublisher.Create<string>(actorRef).Subscribe(s2);
+            s2.ExpectSubscriptionAndError().Should().BeOfType<IllegalStateException>();
         }
 
         [Fact]
@@ -227,7 +243,7 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
             var probe = CreateTestProbe();
             var actorRef = Sys.ActorOf(TestPublisher.Props(probe.Ref));
             var s = this.CreateManualProbe<string>();
-            new Streams.Implementation.ActorPublisher<string>(actorRef).Subscribe(s);
+            ActorPublisher.Create<string>(actorRef).Subscribe(s);
             s.ExpectSubscription();
             actorRef.Tell(PoisonPill.Instance);
             s.ExpectComplete();
@@ -274,14 +290,14 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
 
 
         [Fact]
-        public void ActorPublisher_should_work_in_a_GraphDSL()
+        public void ActorPublisher_should_work_in_a_GraphDsl()
         {
             var materializer = Sys.Materializer();
             var probe1 = CreateTestProbe();
             var probe2 = CreateTestProbe();
 
             var senderRef1 = ActorOf(Sender.Props);
-            var source1 = Source.FromPublisher<int, IActorRef>(CreatePublisher<int>(senderRef1));
+            var source1 = Source.FromPublisher<int, IActorRef>(ActorPublisher.Create<int>(senderRef1));
 
             var sink1 = Sink.FromSubscriber<string, IActorRef>(new ActorSubscriberImpl<string>(ActorOf(Receiver.Props(probe1.Ref))));
             var sink2 = Sink.ActorSubscriber<string>(Receiver.Props(probe2.Ref));
@@ -323,7 +339,7 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
             {
                 var timeout = TimeSpan.FromMilliseconds(150);
                 var a = ActorOf(TimeoutingPublisher.Props(TestActor, timeout));
-                var pub = CreatePublisher<int>(a);
+                var pub = ActorPublisher.Create<int>(a);
 
                 // don't subscribe for `timeout` millis, so it will shut itself down
                 ExpectMsg("timed-out");
@@ -346,16 +362,13 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
             var timeout = TimeSpan.FromMilliseconds(500);
             var sub = this.CreateManualProbe<int>();
 
-            Within(TimeSpan.FromSeconds(1), () =>
-            {
-                var pub = CreatePublisher<int>(ActorOf(TimeoutingPublisher.Props(TestActor, timeout)));
+            var pub = ActorPublisher.Create<int>(ActorOf(TimeoutingPublisher.Props(TestActor, timeout)));
 
-                // subscribe right away, should cancel subscription-timeout
-                pub.Subscribe(sub);
-                sub.ExpectSubscription();
+            // subscribe right away, should cancel subscription-timeout
+            pub.Subscribe(sub);
+            sub.ExpectSubscription();
 
-                ExpectNoMsg();
-            });
+            ExpectNoMsg(TimeSpan.FromSeconds(1));
         }
 
         [Fact]
@@ -398,16 +411,9 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
             actorRef.Tell(ThreadName.Instance);
             ExpectMsg<string>().Should().Contain("my-dispatcher1");
         }
-
-        private static Streams.Implementation.ActorPublisher<T> CreatePublisher<T>(IActorRef impl)
-        {
-            var p = new Streams.Implementation.ActorPublisher<T>(impl);
-            impl.Tell(new ExposedPublisher<T>(p));
-            return p;
-        }
     }
 
-    internal class TestPublisher : Actors.ActorPublisher<string>
+    internal class TestPublisher : ActorPublisher<string>
     {
         public static Props Props(IActorRef probe, bool useTestDispatcher = true)
         {
@@ -425,19 +431,19 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
         protected override bool Receive(object message)
         {
             return message.Match()
-                .With<Request>(request => _probe.Tell(new TotalDemand(request.Count)))
+                .With<Request>(request => _probe.Tell(new TotalDemand(TotalDemand)))
                 .With<Produce>(produce => OnNext(produce.Elem))
                 .With<Err>(err => OnError(new SystemException(err.Reason)))
                 .With<ErrThenStop>(err => OnErrorThenStop(new SystemException(err.Reason)))
                 .With<Complete>(OnComplete)
                 .With<CompleteThenStop>(OnCompleteThenStop)
                 .With<Boom>(() => { throw new SystemException("boom"); })
-                .With<ThreadName>(()=>_probe.Tell(Thread.CurrentThread.Name))
+                .With<ThreadName>(()=>_probe.Tell(Context.Props.Dispatcher /*Thread.CurrentThread.Name*/)) // TODO fix me when thread name is set by dispatcher
                 .WasHandled;
         }
     }
 
-    internal class Sender : Actors.ActorPublisher<int>
+    internal class Sender : ActorPublisher<int>
     {
         public static Props Props { get; } = Props.Create<Sender>().WithDispatcher("akka.test.stream-dispatcher");
 
@@ -484,7 +490,7 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
         }
     }
 
-    internal class TimeoutingPublisher : Actors.ActorPublisher<int>
+    internal class TimeoutingPublisher : ActorPublisher<int>
     {
         public static Props Props(IActorRef probe, TimeSpan timeout) =>
                 Akka.Actor.Props.Create(() => new TimeoutingPublisher(probe, timeout))
@@ -504,7 +510,7 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
                 .With<Request>(() => OnNext(1))
                 .With<SubscriptionTimeoutExceeded>(() =>
                 {
-                    _probe.Tell("time-out");
+                    _probe.Tell("timed-out");
                     Context.System.Scheduler.ScheduleTellOnce(SubscriptionTimeout, _probe, "cleaned-up", Self);
                     Context.System.Scheduler.ScheduleTellOnce(SubscriptionTimeout, Self, PoisonPill.Instance, Nobody.Instance);
                 })
@@ -564,10 +570,13 @@ my-dispatcher2 = ""akka.test.stream-dispatcher""";
         }
     }
 
-    internal class ErrThenStop : Err
+    internal class ErrThenStop
     {
-        public ErrThenStop(string reason) : base(reason)
+        public readonly string Reason;
+
+        public ErrThenStop(string reason)
         {
+            Reason = reason;
         }
     }
 
