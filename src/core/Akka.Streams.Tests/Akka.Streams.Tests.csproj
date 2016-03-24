@@ -72,6 +72,7 @@
     <Compile Include="Dsl\FlowTakeWhileSpec.cs" />
     <Compile Include="Dsl\FlowTakeWithinSpec.cs" />
     <Compile Include="Dsl\FlowZipSpec.cs" />
+    <Compile Include="Dsl\FlowZipWithSpec.cs" />
     <Compile Include="Dsl\SeqSinkSpec.cs" />
     <Compile Include="Dsl\SourceSpec.cs" />
     <Compile Include="Dsl\SubscriberSinkSpec.cs" />
