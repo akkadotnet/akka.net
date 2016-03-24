@@ -146,14 +146,14 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                         })
                         .With<FailStage>(() =>
                         {
-                            FailStage(new Utils.TE("test"));
+                            FailStage(new TestException("test"));
                             _listener.Tell(EndOfEventHandler.Instance);
                         })
                         .With<Throw>(() =>
                         {
                             try
                             {
-                                throw new Utils.TE("test");
+                                throw new TestException("test");
                             }
                             finally
                             {

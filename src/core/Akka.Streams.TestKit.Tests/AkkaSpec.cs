@@ -1,6 +1,5 @@
 ﻿using Akka.Actor;
 using Akka.Configuration;
-using Akka.Event;
 using Xunit.Abstractions;
 
 namespace Akka.Streams.TestKit.Tests
@@ -23,14 +22,14 @@ namespace Akka.Streams.TestKit.Tests
             }
           }")
             .WithFallback(ConfigurationFactory.FromResource<AkkaSpec>("Akka.Streams.TestKit.Tests.reference.conf"))
-            .WithFallback(Akka.TestKit.Configs.TestConfigs.TestSchedulerConfig)
+            .WithFallback(Akka.TestKit.Configs.TestConfigs.DefaultConfig)
             .WithFallback(ConfigurationFactory.FromResource<ActorMaterializer>("Akka.Streams.reference.conf"));
 
         protected AkkaSpec(ActorSystem system, ITestOutputHelper output = null) : base(system, output)
         {
         }
 
-        protected AkkaSpec(Config config, ITestOutputHelper output = null) : this(ActorSystem.Create("test", ConfigurationFactory.Load().WithFallback(TestConfig)), output)
+        protected AkkaSpec(Config config, ITestOutputHelper output = null) : this(ActorSystem.Create("test", ConfigurationFactory.Load().WithFallback(config).WithFallback(TestConfig)), output)
         {
         }
 
@@ -41,7 +40,5 @@ namespace Akka.Streams.TestKit.Tests
         protected AkkaSpec(ITestOutputHelper output = null) : this(TestConfig, output)
         {
         }
-
-
     }
 }

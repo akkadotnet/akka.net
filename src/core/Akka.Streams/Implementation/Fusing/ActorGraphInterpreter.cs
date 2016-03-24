@@ -1004,8 +1004,6 @@ namespace Akka.Streams.Implementation.Fusing
                 if (TryInit(shell))
                     shell.TryAbort(new AbruptTerminationException(Self));
             }
-
-            base.PostStop();
         }
     }
 }

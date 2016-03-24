@@ -182,7 +182,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 evilLatch.Signal();
                 var ex = downstream0.ExpectSubscriptionAndError();
-                ex.Should().BeOfType<Utils.TE>();
+                ex.Should().BeOfType<TestException>();
                 ex.Message.Should().Be("Test failure in PreStart");
 
                 // if an NRE would happen due to unset exposedPublisher (see #19338), this would receive a failure instead
@@ -364,7 +364,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 {
                     Pull(_shape.In);
                     _evilLatch.Wait(TimeSpan.FromSeconds(3));
-                    Fail(_shape.Out0, new Utils.TE("Test failure in PreStart"));
+                    Fail(_shape.Out0, new TestException("Test failure in PreStart"));
                 }
             }
 

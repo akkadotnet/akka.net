@@ -697,7 +697,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             public Exception TestException()
             {
-                return new Utils.TE("test");
+                return new TestException("test");
             }
 
             public class FailingGraphStageLogic : GraphStageLogic

@@ -114,14 +114,14 @@ namespace Akka.Streams.Actors
      */
     public abstract class ActorPublisher<T> : ActorBase
     {
-        protected readonly ActorPublisherState<T> State = new ActorPublisherState<T>(Context.System);
-        private long _demand = 0L;
+        protected readonly ActorPublisherState State = Context.System.WithExtension<ActorPublisherState, ActorPublisherState>();
+        private long _demand;
         private LifecycleState _lifecycleState = LifecycleState.PreSubscriber;
         private ISubscriber<T> _subscriber;
         private ICancelable _scheduledSubscriptionTimeout = NoopSubscriptionTimeout.Instance;
 
         // case and stop fields are used only when combined with LifecycleState.ErrorEmitted
-        private OnErrorBlock _onError = null;
+        private OnErrorBlock _onError;
 
         /**
          * Subscription timeout after which this actor will become Canceled and reject any incoming "late" subscriber.
@@ -140,36 +140,35 @@ namespace Akka.Streams.Actors
          * allowed to call [[#onNext]] in this state when [[#totalDemand]]
          * is greater than zero.
          */
+
         public bool IsActive
-        {
-            get { return _lifecycleState == LifecycleState.Active || _lifecycleState == LifecycleState.PreSubscriber; }
-        }
+            => _lifecycleState == LifecycleState.Active || _lifecycleState == LifecycleState.PreSubscriber;
 
         /**
          * Total number of requested elements from the stream subscriber.
          * This actor automatically keeps tracks of this amount based on
          * incoming request messages and outgoing `onNext`.
          */
-        public long TotalDemand { get { return _demand; } }
+        public long TotalDemand => _demand;
 
         /**
          * The terminal state after calling [[#onComplete]]. It is not allowed to
          * call [[#onNext]], [[#onError]], and [[#onComplete]] in this state.
          */
-        public bool IsCompleted { get { return _lifecycleState == LifecycleState.Completed; } }
+        public bool IsCompleted => _lifecycleState == LifecycleState.Completed;
 
         /**
          * The terminal state after calling [[#onError]]. It is not allowed to
          * call [[#onNext]], [[#onError]], and [[#onComplete]] in this state.
          */
-        public bool IsErrorEmitted { get { return _lifecycleState == LifecycleState.ErrorEmitted; } }
+        public bool IsErrorEmitted => _lifecycleState == LifecycleState.ErrorEmitted;
 
         /**
          * The state after the stream subscriber has canceled the subscription.
          * It is allowed to call [[#onNext]], [[#onError]], and [[#onComplete]] in
          * this state, but the calls will not perform anything.
          */
-        public bool IsCanceled { get { return _lifecycleState == LifecycleState.Canceled; } }
+        public bool IsCanceled => _lifecycleState == LifecycleState.Canceled;
 
 
         /**
@@ -196,8 +195,8 @@ namespace Akka.Streams.Actors
                             "OnNext is not allowed when the stream has not requested elements, total demand was 0");
                     }
                     break;
-                case LifecycleState.ErrorEmitted: throw new IllegalStateException("OnNext must not be called after OnError"); break;
-                case LifecycleState.Completed: throw new IllegalStateException("OnNext must not be called after OnComplete"); break;
+                case LifecycleState.ErrorEmitted: throw new IllegalStateException("OnNext must not be called after OnError");
+                case LifecycleState.Completed: throw new IllegalStateException("OnNext must not be called after OnComplete");
                 case LifecycleState.Canceled: break;
             }
         }
@@ -228,8 +227,8 @@ namespace Akka.Streams.Actors
                         }
                     }
                     break;
-                case LifecycleState.ErrorEmitted: throw new IllegalStateException("OnComplete must not be called after OnError"); break;
-                case LifecycleState.Completed: throw new IllegalStateException("OnComplete must only be called once"); break;
+                case LifecycleState.ErrorEmitted: throw new IllegalStateException("OnComplete must not be called after OnError");
+                case LifecycleState.Completed: throw new IllegalStateException("OnComplete must only be called once");
                 case LifecycleState.Canceled: break;
             }
         }
@@ -294,8 +293,8 @@ namespace Akka.Streams.Actors
                         }
                     }
                     break;
-                case LifecycleState.ErrorEmitted: throw new IllegalStateException("OnError must only be called once"); break;
-                case LifecycleState.Completed: throw new IllegalStateException("OnError must not be called after OnComplete"); break;
+                case LifecycleState.ErrorEmitted: throw new IllegalStateException("OnError must only be called once");
+                case LifecycleState.Completed: throw new IllegalStateException("OnError must not be called after OnComplete");
                 case LifecycleState.Canceled: break;
             }
         }
@@ -341,7 +340,7 @@ namespace Akka.Streams.Actors
         {
             if (message is Request)
             {
-                var req = message as Request;
+                var req = (Request) message;
                 if (req.Count < 1)
                 {
                     if (_lifecycleState == LifecycleState.Active)
@@ -358,15 +357,15 @@ namespace Akka.Streams.Actors
             }
             else if (message is Subscribe<T>)
             {
-                var sub = message as Subscribe<T>;
+                var sub = (Subscribe<T>) message;
                 var subscriber = sub.Subscriber;
                 switch (_lifecycleState)
                 {
                     case LifecycleState.PreSubscriber:
                         _scheduledSubscriptionTimeout.Cancel();
-                        _subscriber = (ISubscriber<T>)subscriber;
+                        _subscriber = subscriber;
                         _lifecycleState = LifecycleState.Active;
-                        ReactiveStreamsCompliance.TryOnSubscribe(subscriber, new ActorPublisherSubscription<T>(Self));
+                        ReactiveStreamsCompliance.TryOnSubscribe(subscriber, new ActorPublisherSubscription(Self));
                         break;
                     case LifecycleState.ErrorEmitted:
                         if (_onError.Stop) Context.Stop(Self);
@@ -430,7 +429,7 @@ namespace Akka.Streams.Actors
         public override void AroundPreRestart(Exception cause, object message)
         {
             // some state must survive restart
-            State.Set(Self, new ActorPublisherState<T>.State(_subscriber, _demand, _lifecycleState));
+            State.Set(Self, new ActorPublisherState.State(_subscriber, _demand, _lifecycleState));
             base.AroundPreRestart(cause, message);
         }
 
@@ -439,7 +438,7 @@ namespace Akka.Streams.Actors
             var s = State.Remove(Self);
             if (s != null)
             {
-                _subscriber = s.Subscriber as ISubscriber<T>;
+                _subscriber = (ISubscriber<T>) s.Subscriber;
                 _demand = s.Demand;
                 _lifecycleState = s.LifecycleState;
             }
@@ -466,35 +465,43 @@ namespace Akka.Streams.Actors
         #endregion
     }
 
+    public static class ActorPublisher
+    {
+        public static IPublisher<T> Create<T>(IActorRef @ref)
+        {
+            return new ActorPublisherImpl<T>(@ref);
+        }
+    }
+
     public sealed class ActorPublisherImpl<T> : IPublisher<T>
     {
         private readonly IActorRef _ref;
 
         public ActorPublisherImpl(IActorRef @ref)
         {
-            if(@ref == null) throw new ArgumentNullException("ref", "ActorPublisherImpl requires IActorRef to be defined");
+            if(@ref == null) throw new ArgumentNullException(nameof(@ref), "ActorPublisherImpl requires IActorRef to be defined");
             _ref = @ref;
         }
 
         public void Subscribe(ISubscriber<T> subscriber)
         {
-            if (subscriber == null) throw new ArgumentNullException("subscriber", "Subscriber must not be null");
+            if (subscriber == null) throw new ArgumentNullException(nameof(subscriber), "Subscriber must not be null");
             _ref.Tell(new Subscribe<T>(subscriber));
         }
 
         void IPublisher.Subscribe(ISubscriber subscriber)
         {
-            throw new NotImplementedException();
+            Subscribe((ISubscriber<T>) subscriber);
         }
     }
 
-    public sealed class ActorPublisherSubscription<T> : ISubscription
+    public sealed class ActorPublisherSubscription : ISubscription
     {
         private readonly IActorRef _ref;
 
         public ActorPublisherSubscription(IActorRef @ref)
         {
-            if (@ref == null) throw new ArgumentNullException("ref", "ActorPublisherSubscription requires IActorRef to be defined");
+            if (@ref == null) throw new ArgumentNullException(nameof(@ref), "ActorPublisherSubscription requires IActorRef to be defined");
             _ref = @ref;
         }
 
@@ -505,7 +512,7 @@ namespace Akka.Streams.Actors
 
         public void Cancel()
         {
-            _ref.Tell(Akka.Streams.Actors.Cancel.Instance);
+            _ref.Tell(Actors.Cancel.Instance);
         }
     }
 
@@ -521,15 +528,15 @@ namespace Akka.Streams.Actors
         }
     }
 
-    public class ActorPublisherState<T> : ExtensionIdProvider<ActorPublisherState<T>>, IExtension
+    public class ActorPublisherState : ExtensionIdProvider<ActorPublisherState>, IExtension
     {
         public sealed class State
         {
-            public readonly ISubscriber<T> Subscriber;
+            public readonly ISubscriber Subscriber;
             public readonly long Demand;
             public readonly LifecycleState LifecycleState;
 
-            public State(ISubscriber<T> subscriber, long demand, LifecycleState lifecycleState)
+            public State(ISubscriber subscriber, long demand, LifecycleState lifecycleState)
             {
                 Subscriber = subscriber;
                 Demand = demand;
@@ -556,13 +563,9 @@ namespace Akka.Streams.Actors
             return _state.TryRemove(actorRef, out s) ? s : null;
         }
 
-        public ActorPublisherState(ActorSystem system)
+        public override ActorPublisherState CreateExtension(ExtendedActorSystem system)
         {
-        }
-
-        public override ActorPublisherState<T> CreateExtension(ExtendedActorSystem system)
-        {
-            return new ActorPublisherState<T>(system);
+            return new ActorPublisherState();
         }
     }
 }

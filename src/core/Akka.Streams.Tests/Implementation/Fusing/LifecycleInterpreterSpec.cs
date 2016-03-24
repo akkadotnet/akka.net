@@ -96,7 +96,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 _onPostSTop = onPostSTop ?? (()=> {});
             }
 
-            public override ITerminationDirective OnUpstreamFinish(IContext<T> context) => context.Fail(new Utils.TE("Cannot happen"));
+            public override ITerminationDirective OnUpstreamFinish(IContext<T> context) => context.Fail(new TestException("Cannot happen"));
 
             public override void PostStop() => _onPostSTop();
 
@@ -154,7 +154,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             WithOneBoundedSetup(op, (lastEvents, upstream, downstream) =>
             {
                 var msg = "Boom! Boom! Boom!";
-                upstream.OnError(new Utils.TE(msg));
+                upstream.OnError(new TestException(msg));
                 ExpectMsg(msg);
                 ExpectMsg("stop-c");
                 ExpectNoMsg(300);
@@ -202,7 +202,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             var op = new PreStartFailer<string>(() =>
             {
-                throw new Utils.TE("Boom!");
+                throw new TestException("Boom!");
             });
             
             WithOneBoundedSetup(op, (lastEvents, upstream, downstream) =>
@@ -210,7 +210,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 var events = lastEvents().ToArray();
                 events[0].Should().Be(new Cancel());
                 events[1].Should().BeOfType<OnError>();
-                ((OnError) events[1]).Cause.Should().BeOfType<Utils.TE>();
+                ((OnError) events[1]).Cause.Should().BeOfType<TestException>();
                 ((OnError) events[1]).Cause.Message.Should().Be("Boom!");
             });
         }
@@ -220,7 +220,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             var op = new PostStopFailer<string>(() =>
             {
-                throw new Utils.TE("Boom!");
+                throw new TestException("Boom!");
             });
 
             WithOneBoundedSetup(op, (lastEvents, upstream, downstream) =>
@@ -238,7 +238,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 new Map<string, string>(x => x, Deciders.StoppingDecider),
                 new PreStartFailer<string>(() =>
                 {
-                    throw new Utils.TE("Boom!");
+                    throw new TestException("Boom!");
                 }),
                 new Map<string, string>(x => x, Deciders.StoppingDecider),
             };
@@ -248,7 +248,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 var events = lastEvents().ToArray();
                 events[0].Should().Be(new Cancel());
                 events[1].Should().BeOfType<OnError>();
-                ((OnError)events[1]).Cause.Should().BeOfType<Utils.TE>();
+                ((OnError)events[1]).Cause.Should().BeOfType<TestException>();
                 ((OnError)events[1]).Cause.Message.Should().Be("Boom!");
             });
         }
@@ -258,7 +258,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             var op = new PostStopFailer<string>(() =>
             {
-                throw new Utils.TE("Boom!");
+                throw new TestException("Boom!");
             });
 
             WithOneBoundedSetup(op, (lastEvents, upstream, downstream) =>

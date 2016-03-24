@@ -70,6 +70,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ScriptedTest.cs" />
     <Compile Include="StreamTestKitSpec.cs" />
+    <Compile Include="TestException.cs" />
     <Compile Include="TestPublisherSubscriberSpec.cs" />
     <Compile Include="TwoStreamsSetup.cs" />
     <Compile Include="Utils.cs" />

@@ -4,7 +4,6 @@ using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch;
-using Akka.Dispatch.MessageQueues;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
@@ -83,7 +82,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Sink<TIn, Task<TIn>> First<TIn>()
         {
-            return FromGraph(new HeadOrDefault<TIn>(throwOnDefault: true).WithAttributes(DefaultAttributes.HeadSink));
+            return FromGraph(new FirstOrDefault<TIn>(throwOnDefault: true).WithAttributes(DefaultAttributes.FirstOrDefaultSink));
         }
 
         /// <summary>
@@ -93,7 +92,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Sink<TIn, Task<TIn>> FirstOrDefault<TIn>()
         {
-            return FromGraph(new HeadOrDefault<TIn>().WithAttributes(DefaultAttributes.HeadOrDefaultSink));
+            return FromGraph(new FirstOrDefault<TIn>().WithAttributes(DefaultAttributes.FirstOrDefaultSink));
         }
 
         /// <summary>
@@ -103,7 +102,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Sink<TIn, Task<TIn>> Last<TIn>()
         {
-            return FromGraph(new LastOrDefault<TIn>(throwOnDefault: true).WithAttributes(DefaultAttributes.LastSink));
+            return FromGraph(new LastOrDefault<TIn>(throwOnDefault: true).WithAttributes(DefaultAttributes.LastOrDefaultSink));
         }
 
         /// <summary>
@@ -213,15 +212,15 @@ namespace Akka.Streams.Dsl
 
         /// <summary>
         /// A <see cref="Sink{TIn, Task}"/> that will invoke the given <paramref name="aggregate"/> function for every received element, 
-        /// giving it its previous output (or the given <paramref name="init"/> value) and the element as input.
+        /// giving it its previous output (or the given <paramref name="zero"/> value) and the element as input.
         /// The returned <see cref="Task"/> will be completed with value of the final
         /// function evaluation when the input stream ends, or completed with the streams exception
         /// if there is a failure signaled in the stream.
         /// </summary>
-        public static Sink<TIn, Task<TOut>> Fold<TIn, TOut>(TOut init, Func<TOut, TIn, TOut> aggregate)
+        public static Sink<TIn, Task<TOut>> Fold<TIn, TOut>(TOut zero, Func<TOut, TIn, TOut> aggregate)
         {
             var fold = Flow.Create<TIn>()
-                .Fold(init, aggregate)
+                .Fold(zero, aggregate)
                 .ToMaterialized(First<TOut>(), Keep.Right)
                 .Named("FoldSink");
 
@@ -319,7 +318,7 @@ namespace Akka.Streams.Dsl
         public static Sink<TIn, TMat> FromGraph<TIn, TMat>(IGraph<SinkShape<TIn>, TMat> graph)
         {
             return graph is Sink<TIn, TMat>
-                ? graph as Sink<TIn, TMat>
+                ? (Sink<TIn, TMat>) graph
                 : new Sink<TIn, TMat>(graph.Module);
         }
 

@@ -473,7 +473,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         private Exception TE()
         {
-            return new Utils.TE("TEST");
+            return new TestException("TEST");
         }
 
         public class RestartTestStage : PushPullStage<int, int>
@@ -549,7 +549,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 if (_buffer.Count == 0)
                     return context.Pull();
                 var element = _buffer.Dequeue();
-                if (element == 3) throw new Utils.TE("TEST");
+                if (element == 3) throw new TestException("TEST");
                 return context.Push(element);
             }
 

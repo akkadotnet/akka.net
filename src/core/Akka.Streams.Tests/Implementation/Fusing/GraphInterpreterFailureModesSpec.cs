@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Akka.Streams.Stage;
+using Akka.Streams.TestKit.Tests;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -8,7 +9,6 @@ using Cancel = Akka.Streams.Tests.Implementation.Fusing.GraphInterpreterSpecKit.
 using PreStart = Akka.Streams.Tests.Implementation.Fusing.GraphInterpreterSpecKit.TestSetup.PreStart;
 using PostStop = Akka.Streams.Tests.Implementation.Fusing.GraphInterpreterSpecKit.TestSetup.PostStop;
 using OnError = Akka.Streams.Tests.Implementation.Fusing.GraphInterpreterSpecKit.TestSetup.OnError;
-using TE = Akka.Streams.TestKit.Tests.Utils.TE;
 
 namespace Akka.Streams.Tests.Implementation.Fusing
 {
@@ -122,7 +122,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             lastEvents().Should().Equal(new PreStart(stage.Value));
 
-            upstream.Fail(new TE("another exception")); // this is not the exception that will be propagated
+            upstream.Fail(new TestException("another exception")); // this is not the exception that will be propagated
             failOnNextEvent();
             stepAll();
 

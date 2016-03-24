@@ -175,11 +175,11 @@ namespace Akka.Streams.Implementation
                 Logger.Warning("Fuzzing mode is enabled on this system. If you see this warning on your production system then set 'akka.materializer.debug.fuzzing-mode' to off.");
         }
 
-        public override bool IsShutdown { get { return _haveShutDown.Value; } }
-        public override ActorMaterializerSettings Settings { get { return _settings; } }
-        public override ActorSystem System { get { return _system; } }
-        public override IActorRef Supervisor { get { return _supervisor; } }
-        public override ILoggingAdapter Logger { get { return _logger ?? (_logger = GetLogger()); } }
+        public override bool IsShutdown => _haveShutDown.Value;
+        public override ActorMaterializerSettings Settings => _settings;
+        public override ActorSystem System => _system;
+        public override IActorRef Supervisor => _supervisor;
+        public override ILoggingAdapter Logger => _logger ?? (_logger = GetLogger());
 
         public override IMaterializer WithNamePrefix(string name)
         {
@@ -210,9 +210,9 @@ namespace Akka.Streams.Implementation
                     var inputBuffer = (Attributes.InputBuffer)attribute;
                     return settings.WithInputBuffer(inputBuffer.Initial, inputBuffer.Max);
                 }
-                else if (attribute is ActorAttributes.Dispatcher) return settings.WithDispatcher(((ActorAttributes.Dispatcher)attribute).Name);
-                else if (attribute is ActorAttributes.SupervisionStrategy) return settings.WithSupervisionStrategy(((ActorAttributes.SupervisionStrategy)attribute).Decider);
-                else return settings;
+                if (attribute is ActorAttributes.Dispatcher) return settings.WithDispatcher(((ActorAttributes.Dispatcher)attribute).Name);
+                if (attribute is ActorAttributes.SupervisionStrategy) return settings.WithSupervisionStrategy(((ActorAttributes.SupervisionStrategy)attribute).Decider);
+                return settings;
             });
         }
 
@@ -248,17 +248,14 @@ namespace Akka.Streams.Implementation
         }
 
         private readonly Lazy<MessageDispatcher> _executionContext;
-        public override MessageDispatcher ExecutionContext
-        {
-            get { return _executionContext.Value; }
-        }
+        public override MessageDispatcher ExecutionContext => _executionContext.Value;
 
         public override void Shutdown()
         {
             if (_haveShutDown.CompareAndSet(false, true)) Supervisor.Tell(PoisonPill.Instance);
         }
 
-        internal protected override IActorRef ActorOf(MaterializationContext context, Props props)
+        protected internal override IActorRef ActorOf(MaterializationContext context, Props props)
         {
             var dispatcher = props.Deploy.Dispatcher == Deploy.NoDispatcherGiven
                 ? EffectiveSettings(context.EffectiveAttributes).Dispatcher
@@ -274,19 +271,17 @@ namespace Akka.Streams.Implementation
                 var aref = (LocalActorRef)Supervisor;
                 return ((ActorCell)aref.Underlying).AttachChild(props.WithDispatcher(dispatcher), isSystemService: false, name: name);
             }
-            else if (Supervisor is RepointableActorRef)
+            if (Supervisor is RepointableActorRef)
             {
                 var aref = (RepointableActorRef)Supervisor;
                 if (aref.IsStarted)
                     return ((ActorCell)aref.Underlying).AttachChild(props.WithDispatcher(dispatcher), isSystemService: false, name: name);
-                else
-                {
-                    var timeout = aref.Underlying.System.Settings.CreationTimeout;
-                    var f = (Supervisor.Ask<IActorRef>(new StreamSupervisor.Materialize(props.WithDispatcher(dispatcher), name), timeout));
-                    return f.Result;
-                }
+
+                var timeout = aref.Underlying.System.Settings.CreationTimeout;
+                var f = Supervisor.Ask<IActorRef>(new StreamSupervisor.Materialize(props.WithDispatcher(dispatcher), name), timeout);
+                return f.Result;
             }
-            else throw new IllegalStateException(string.Format("Stream supervisor must be a local actor, was [{0}]", Supervisor.GetType()));
+            throw new IllegalStateException($"Stream supervisor must be a local actor, was [{Supervisor.GetType()}]");
         }
 
         private ILoggingAdapter GetLogger()
@@ -326,7 +321,7 @@ namespace Akka.Streams.Implementation
             return _delegateMaterializer.ScheduleRepeatedly(initialDelay, interval, action);
         }
 
-        public MessageDispatcher ExecutionContext { get { return _delegateMaterializer.ExecutionContext; } }
+        public MessageDispatcher ExecutionContext => _delegateMaterializer.ExecutionContext;
     }
 
     internal class FlowNameCounter : ExtensionIdProvider<FlowNameCounter>, IExtension
@@ -344,7 +339,7 @@ namespace Akka.Streams.Implementation
         }
     }
     
-    public class StreamSupervisor : ReceiveActor
+    public class StreamSupervisor : ActorBase
     {
         #region Messages
         
@@ -409,26 +404,37 @@ namespace Akka.Streams.Implementation
         {
             Settings = settings;
             HaveShutdown = haveShutdown;
+        }
 
-            Receive<Materialize>(materialize => Sender.Tell(Context.ActorOf(materialize.Props, materialize.Name)));
-            Receive<GetChildren>(_ => Sender.Tell(new Children(new HashSet<IActorRef>(Context.GetChildren()))));
-            Receive<StopChildren>(_ =>
+        protected override SupervisorStrategy SupervisorStrategy()
+        {
+            return Actor.SupervisorStrategy.StoppingStrategy;
+        }
+
+        protected override bool Receive(object message)
+        {
+            if (message is Materialize)
+            {
+                var materialize = (Materialize) message;
+                Sender.Tell(Context.ActorOf(materialize.Props, materialize.Name));
+            }
+            else if (message is GetChildren)
+            {
+                Sender.Tell(new Children(new HashSet<IActorRef>(Context.GetChildren())));
+            }
+            else if (message is StopChildren)
             {
                 foreach (var child in Context.GetChildren())
                     Context.Stop(child);
 
                 Sender.Tell(StoppedChildren.Instance);
-            });
-        }
-
-        protected override SupervisorStrategy SupervisorStrategy()
-        {
-            return Akka.Actor.SupervisorStrategy.StoppingStrategy;
+            }
+            else return false;
+            return true;
         }
 
         protected override void PostStop()
         {
-            base.PostStop();
             HaveShutdown.Value = true;
         }
     }
@@ -453,7 +459,7 @@ namespace Akka.Streams.Implementation
                 {
                     throw new ArgumentException("DirectProcessor cannot end up in ActorProcessorFactory");
                 })
-                .Default(_ => { throw new ArgumentException(string.Format("StageModule type {0} is not supported", op.GetType())); });
+                .Default(_ => { throw new ArgumentException($"StageModule type {op.GetType()} is not supported"); });
 
             return result;
         }
