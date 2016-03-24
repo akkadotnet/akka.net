@@ -143,6 +143,11 @@ namespace Akka.Streams.Actors
         // case and stop fields are used only when combined with LifecycleState.ErrorEmitted
         private OnErrorBlock _onError;
 
+        protected ActorPublisher()
+        {
+            SubscriptionTimeout = Timeout.InfiniteTimeSpan;
+        }
+
         /// <summary>
         /// Subscription timeout after which this actor will become Canceled and reject any incoming "late" subscriber.
         ///

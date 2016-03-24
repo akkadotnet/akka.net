@@ -249,7 +249,7 @@ namespace Akka.Streams.Implementation
         {
             var subscriberRef = ActorMaterializer.Downcast(context.Materializer).ActorOf(context, _props);
             materializer = subscriberRef;
-            return new ActorSubscriberImpl<TIn>(subscriberRef);
+            return ActorSubscriber.Create<TIn>(subscriberRef);
         }
 
         public override string ToString() => "ActorSubscriberSink";
