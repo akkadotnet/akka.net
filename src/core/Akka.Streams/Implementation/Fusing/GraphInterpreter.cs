@@ -162,7 +162,7 @@ namespace Akka.Streams.Implementation.Fusing
             }
         }
 
-        public GraphInterpreter CurrentInterpreterOrNull => _currentInterpreter.Value;
+        public static GraphInterpreter CurrentInterpreterOrNull => _currentInterpreter.Value;
 
         public static readonly Attributes[] SingleNoAttribute = { Attributes.None };
 
@@ -170,8 +170,8 @@ namespace Akka.Streams.Implementation.Fusing
         public readonly GraphAssembly Assembly;
         public readonly IMaterializer Materializer;
         public readonly ILoggingAdapter Log;
-        public readonly InHandler[] InHandlers;
-        public readonly OutHandler[] OutHandlers;
+        public readonly IInHandler[] InHandlers;
+        public readonly IOutHandler[] OutHandlers;
         public readonly Action<GraphStageLogic, object, Action<object>> OnAsyncInput;
         public readonly bool FuzzingMode;
 
@@ -274,7 +274,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Dynamic handler changes are communicated from a GraphStageLogic by this method.
         /// </summary>
-        public void SetHandler(int connection, InHandler handler)
+        public void SetHandler(int connection, IInHandler handler)
         {
             InHandlers[connection] = handler;
         }
@@ -282,7 +282,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Dynamic handler changes are communicated from a GraphStageLogic by this method.
         /// </summary>
-        public void SetHandler(int connection, OutHandler handler)
+        public void SetHandler(int connection, IOutHandler handler)
         {
             OutHandlers[connection] = handler;
         }
