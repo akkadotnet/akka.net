@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Streams;
@@ -8,6 +7,7 @@ using Akka.Actor;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
+using Akka.Streams.Util;
 
 namespace Akka.Streams.Dsl
 {
@@ -103,7 +103,7 @@ namespace Akka.Streams.Dsl
 
         /// <summary>
         /// Connect this `Source` to a `Sink` and run it. The returned value is the materialized value
-        /// of the `Sink`, e.g. the `Publisher` of a <see cref="Sink{TIn,TMat}.Publisher"/>.
+        /// of the `Sink`, e.g. the `Publisher` of a <see cref="Publisher"/>.
         /// </summary>
         public TMat2 RunWith<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink, IMaterializer materializer)
         {
@@ -185,7 +185,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Source<T, Unit> FromEnumerator<T>(Func<IEnumerator<T>> enumeratorFactory)
         {
-            return From(new EnumeratorFactorySource<T>(enumeratorFactory));
+            return From(new EnumeratorEnumerable<T>(enumeratorFactory));
         }
 
         /// <summary>
