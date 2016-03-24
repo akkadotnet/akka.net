@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
+using Akka.Streams.Dsl.Internal;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using FluentAssertions;
@@ -14,7 +15,7 @@ namespace Akka.Streams.Tests.Dsl
 {
     public class SourceSpec : AkkaSpec
     {
-        public ActorMaterializer Materializer { get; }
+        private ActorMaterializer Materializer { get; }
 
         public SourceSpec(ITestOutputHelper helper) : base(helper)
         {
@@ -319,7 +320,7 @@ namespace Akka.Streams.Tests.Dsl
                 var b = tuple.Item2;
                 return Tuple.Create(Tuple.Create(b, a + b), a);
             })
-            .Via(Flow.Create<int>().Take(36))
+            .Take(36)
             .RunFold(new List<int>(), (ints, i) =>
             {
                 ints.Add(i);

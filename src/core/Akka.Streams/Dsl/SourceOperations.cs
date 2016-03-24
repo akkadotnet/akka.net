@@ -4,8 +4,10 @@ using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
+using Akka.IO;
 using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Stage;
+using Akka.Streams.Supervision;
 
 namespace Akka.Streams.Dsl
 {
@@ -26,7 +28,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels 
         /// </summary>
-        public static Source<TOut, TMat> Recover<TIn, TOut, TMat>(this Source<TOut, TMat> flow, Func<Exception, TOut> partialFunc) where TOut : class
+        public static Source<TOut, TMat> Recover<TOut, TMat>(this Source<TOut, TMat> flow, Func<Exception, TOut> partialFunc) where TOut : class
         {
             return (Source<TOut, TMat>)InternalFlowOperations.Recover(flow, partialFunc);
         }
@@ -156,7 +158,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut, TMat> Filter<TIn, TOut, TMat>(this Source<TOut, TMat> flow, Predicate<TOut> predicate)
+        public static Source<TOut, TMat> Filter<TOut, TMat>(this Source<TOut, TMat> flow, Predicate<TOut> predicate)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.Filter(flow, predicate);
         }
@@ -174,7 +176,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut, TMat> FilterNot<TIn, TOut, TMat>(this Source<TOut, TMat> flow, Predicate<TOut> predicate)
+        public static Source<TOut, TMat> FilterNot<TOut, TMat>(this Source<TOut, TMat> flow, Predicate<TOut> predicate)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.FilterNot(flow, predicate);
         }
@@ -196,7 +198,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' predicate returned false or downstream cancels
         /// </summary>
-        public static Source<TOut, TMat> TakeWhile<TIn, TOut, TMat>(this Source<TOut, TMat> flow, Predicate<TOut> predicate)
+        public static Source<TOut, TMat> TakeWhile<TOut, TMat>(this Source<TOut, TMat> flow, Predicate<TOut> predicate)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.TakeWhile(flow, predicate);
         }
@@ -213,7 +215,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut, TMat> DropWhile<TIn, TOut, TMat>(this Source<TOut, TMat> flow, Predicate<TOut> predicate)
+        public static Source<TOut, TMat> DropWhile<TOut, TMat>(this Source<TOut, TMat> flow, Predicate<TOut> predicate)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.DropWhile(flow, predicate);
         }
@@ -271,7 +273,7 @@ namespace Akka.Streams.Dsl
         /// '''Cancels when''' downstream cancels
         /// </summary>
         /// <exception cref="ArgumentException">Thrown when <paramref name="n"/> or <paramref name="step"/> is less than or equal zero.</exception>
-        public static Source<IEnumerable<TOut>, TMat> Sliding<TIn, TOut, TMat>(this Source<TOut, TMat> flow, int n, int step = 1)
+        public static Source<IEnumerable<TOut>, TMat> Sliding<TOut, TMat>(this Source<TOut, TMat> flow, int n, int step = 1)
         {
             return (Source<IEnumerable<TOut>, TMat>)InternalFlowOperations.Sliding(flow, n, step);
         }
@@ -294,7 +296,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut2, TMat> Scan<TIn, TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, TOut2 zero, Func<TOut2, TOut1, TOut2> scan)
+        public static Source<TOut2, TMat> Scan<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, TOut2 zero, Func<TOut2, TOut1, TOut2> scan)
         {
             return (Source<TOut2, TMat>)InternalFlowOperations.Scan(flow, zero, scan);
         }
@@ -316,7 +318,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut2, TMat> Fold<TIn, TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, TOut2 zero, Func<TOut2, TOut1, TOut2> fold)
+        public static Source<TOut2, TMat> Fold<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, TOut2 zero, Func<TOut2, TOut1, TOut2> fold)
         {
             return (Source<TOut2, TMat>)InternalFlowOperations.Fold(flow, zero, fold);
         }
@@ -329,7 +331,7 @@ namespace Akka.Streams.Dsl
         /// 
         /// In case you want to only prepend or only append an element (yet still use the `intercept` feature
         /// to inject a separator between elements, you may want to use the following pattern instead of the 3-argument
-        /// version of intersperse (See <see cref="Concat{T}"/> for semantics details). 
+        /// version of intersperse (See <see cref="Concat{TIn,TOut}"/> for semantics details). 
         /// <para>
         /// '''Emits when''' upstream emits (or before with the `start` element if provided)
         /// </para>
@@ -340,7 +342,7 @@ namespace Akka.Streams.Dsl
         /// '''Cancels when''' downstream cancels
         /// </summary>
         /// <exception cref="ArgumentNullException">Thrown when any of the <paramref name="start"/>, <paramref name="inject"/> or <paramref name="end"/> is null.</exception>
-        public static Source<TOut, TMat> Intersperse<TIn, TOut, TMat>(this Source<TOut, TMat> flow, TOut start, TOut inject, TOut end)
+        public static Source<TOut, TMat> Intersperse<TOut, TMat>(this Source<TOut, TMat> flow, TOut start, TOut inject, TOut end)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.Intersperse(flow, start, inject, end);
         }
@@ -353,7 +355,7 @@ namespace Akka.Streams.Dsl
         /// 
         /// In case you want to only prepend or only append an element (yet still use the `intercept` feature
         /// to inject a separator between elements, you may want to use the following pattern instead of the 3-argument
-        /// version of intersperse (See <see cref="Concat{T}"/> for semantics details). 
+        /// version of intersperse (See <see cref="Concat{TIn,TOut}"/> for semantics details). 
         /// <para>
         /// '''Emits when''' upstream emits (or before with the `start` element if provided)
         /// </para>
@@ -364,7 +366,7 @@ namespace Akka.Streams.Dsl
         /// '''Cancels when''' downstream cancels
         /// </summary>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="inject"/> is null.</exception>
-        public static Source<TOut, TMat> Intersperse<TIn, TOut, TMat>(this Source<TOut, TMat> flow, TOut inject)
+        public static Source<TOut, TMat> Intersperse<TOut, TMat>(this Source<TOut, TMat> flow, TOut inject)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.Intersperse(flow, inject);
         }
@@ -388,7 +390,7 @@ namespace Akka.Streams.Dsl
         /// '''Cancels when''' downstream completes
         /// </summary>
         /// <exception cref="ArgumentException">Thrown if <paramref name="n"/> is less than or equal zero or <paramref name="timeout"/> is <see cref="TimeSpan.Zero"/>.</exception>
-        public static Source<IEnumerable<TOut>, TMat> GroupedWithin<TIn, TOut, TMat>(this Source<TOut, TMat> flow, int n, TimeSpan timeout)
+        public static Source<IEnumerable<TOut>, TMat> GroupedWithin<TOut, TMat>(this Source<TOut, TMat> flow, int n, TimeSpan timeout)
         {
             return (Source<IEnumerable<TOut>, TMat>)InternalFlowOperations.GroupedWithin(flow, n, timeout);
         }
@@ -417,7 +419,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="of">Time to shift all messages.</param>
         /// <param name="strategy">Strategy that is used when incoming elements cannot fit inside the buffer</param>
-        public static Source<TOut, TMat> Delay<TIn, TOut, TMat>(this Source<TOut, TMat> flow, TimeSpan of, DelayOverflowStrategy? strategy = null)
+        public static Source<TOut, TMat> Delay<TOut, TMat>(this Source<TOut, TMat> flow, TimeSpan of, DelayOverflowStrategy? strategy = null)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.Delay(flow, of, strategy);
         }
@@ -434,7 +436,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut, TMat> Drop<TIn, TOut, TMat>(this Source<TOut, TMat> flow, long n)
+        public static Source<TOut, TMat> Drop<TOut, TMat>(this Source<TOut, TMat> flow, long n)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.Drop(flow, n);
         }
@@ -450,7 +452,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut, TMat> DropWithin<TIn, TOut, TMat>(this Source<TOut, TMat> flow, TimeSpan duration)
+        public static Source<TOut, TMat> DropWithin<TOut, TMat>(this Source<TOut, TMat> flow, TimeSpan duration)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.DropWithin(flow, duration);
         }
@@ -472,7 +474,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' the defined number of elements has been taken or downstream cancels
         /// </summary>
-        public static Source<TOut, TMat> Take<TIn, TOut, TMat>(this Source<TOut, TMat> flow, long n)
+        public static Source<TOut, TMat> Take<TOut, TMat>(this Source<TOut, TMat> flow, long n)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.Take(flow, n);
         }
@@ -494,7 +496,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels or timer fires
         /// </summary>
-        public static Source<TOut, TMat> TakeWithin<TIn, TOut, TMat>(this Source<TOut, TMat> flow, TimeSpan duration)
+        public static Source<TOut, TMat> TakeWithin<TOut, TMat>(this Source<TOut, TMat> flow, TimeSpan duration)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.TakeWithin(flow, duration);
         }
@@ -505,7 +507,7 @@ namespace Akka.Streams.Dsl
         /// upstream publisher is faster.
         /// 
         /// This version of conflate allows to derive a seed from the first element and change the aggregated type to
-        /// be different than the input type. See <see cref="Conflate{TIn,TOut,TMat}"/> for a simpler version that does not change types.
+        /// be different than the input type. See <see cref="Conflate{TOut,TMat}"/> for a simpler version that does not change types.
         /// 
         /// This element only rolls up elements if the upstream is faster, but if the downstream is faster it will not
         /// duplicate elements.
@@ -520,7 +522,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="seed">Provides the first state for a conflated value using the first unconsumed element as a start</param> 
         /// <param name="aggregate">Takes the currently aggregated value and the current pending element to produce a new aggregate</param>
-        public static Source<TSeed, TMat> ConflateWithSeed<TIn, TOut, TMat, TSeed>(this Source<TOut, TMat> flow, Func<TOut, TSeed> seed, Func<TSeed, TOut, TSeed> aggregate)
+        public static Source<TSeed, TMat> ConflateWithSeed<TOut, TMat, TSeed>(this Source<TOut, TMat> flow, Func<TOut, TSeed> seed, Func<TSeed, TOut, TSeed> aggregate)
         {
             return (Source<TSeed, TMat>)InternalFlowOperations.ConflateWithSeed(flow, seed, aggregate);
         }
@@ -530,7 +532,7 @@ namespace Akka.Streams.Dsl
         /// until the subscriber is ready to accept them. For example a conflate step might average incoming numbers if the
         /// upstream publisher is faster.
         /// 
-        /// This version of conflate does not change the output type of the stream. See <see cref="ConflateWithSeed{TIn,TOut,TMat,TSeed}"/>
+        /// This version of conflate does not change the output type of the stream. See <see cref="ConflateWithSeed{TOut,TMat,TSeed}"/>
         /// for a more flexible version that can take a seed function and transform elements while rolling up.
         /// 
         /// This element only rolls up elements if the upstream is faster, but if the downstream is faster it will not
@@ -544,9 +546,8 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        /// <param name="seed">Provides the first state for a conflated value using the first unconsumed element as a start</param> 
         /// <param name="aggregate">Takes the currently aggregated value and the current pending element to produce a new aggregate</param>
-        public static Source<TOut, TMat> Conflate<TIn, TOut, TMat>(this Source<TOut, TMat> flow, Func<TOut, TOut, TOut> aggregate)
+        public static Source<TOut, TMat> Conflate<TOut, TMat>(this Source<TOut, TMat> flow, Func<TOut, TOut, TOut> aggregate)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.Conflate(flow, aggregate);
         }
@@ -572,9 +573,9 @@ namespace Akka.Streams.Dsl
         /// '''Cancels when''' downstream cancels
         /// </summary>
         /// <param name="extrapolate">Takes the current extrapolation state to produce an output element and the next extrapolation state.</param>
-        public static Source<TOut2, TMat> Expand<TIn, TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, Func<TOut1, IEnumerator<TOut2>> extrapolate)
+        public static Source<TOut2, TMat> Expand<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, Func<TOut1, IEnumerator<TOut2>> extrapolate)
         {
-            return (Source<TOut2, TMat>)InternalFlowOperations.Expand<TOut1, TOut2, TMat>(flow, extrapolate);
+            return (Source<TOut2, TMat>)InternalFlowOperations.Expand(flow, extrapolate);
         }
 
         /// <summary>
@@ -595,7 +596,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="size">The size of the buffer in element count</param>
         /// <param name="strategy">Strategy that is used when incoming elements cannot fit inside the buffer</param>
-        public static Source<TOut, TMat> Buffer<TIn, TOut, TMat>(this Source<TOut, TMat> flow, int size, OverflowStrategy strategy)
+        public static Source<TOut, TMat> Buffer<TOut, TMat>(this Source<TOut, TMat> flow, int size, OverflowStrategy strategy)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.Buffer(flow, size, strategy);
         }
@@ -605,7 +606,7 @@ namespace Akka.Streams.Dsl
         /// This operator makes it possible to extend the <see cref="Flow"/> API when there is no specialized
         /// operator that performs the transformation.
         /// </summary>
-        public static Source<TOut2, TMat> Transform<TIn, TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, Func<IStage<TOut1, TOut2>> stageFactory)
+        public static Source<TOut2, TMat> Transform<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, Func<IStage<TOut1, TOut2>> stageFactory)
         {
             return (Source<TOut2, TMat>)InternalFlowOperations.Transform(flow, stageFactory);
         }
@@ -624,7 +625,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels or substream cancels
         /// </summary> 
-        public static Source<Tuple<IEnumerable<TOut>, Source<TOut, Unit>>, TMat> PrefixAndTail<TIn, TOut, TMat>(this Source<TOut, TMat> flow, int n)
+        public static Source<Tuple<IEnumerable<TOut>, Source<TOut, Unit>>, TMat> PrefixAndTail<TOut, TMat>(this Source<TOut, TMat> flow, int n)
         {
             return (Source<Tuple<IEnumerable<TOut>, Source<TOut, Unit>>, TMat>)InternalFlowOperations.PrefixAndTail(flow, n);
         }
@@ -657,7 +658,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels and all substreams cancel
         /// </summary> 
-        public static Source<KeyValuePair<TKey, Source<TVal, TMat>>, TMat> GroupBy<TIn, TOut, TMat, TKey, TVal>(this Source<TOut, TMat> flow, Func<TOut, TKey> groupingFunc) where TVal : TOut
+        public static Source<KeyValuePair<TKey, Source<TVal, TMat>>, TMat> GroupBy<TOut, TMat, TKey, TVal>(this Source<TOut, TMat> flow, Func<TOut, TKey> groupingFunc) where TVal : TOut
         {
             return (Source<KeyValuePair<TKey, Source<TVal, TMat>>, TMat>)InternalFlowOperations.GroupBy<TOut, TMat, TKey, TVal>(flow, groupingFunc);
         }
@@ -713,7 +714,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels and substreams cancel
         /// </summary>
-        public static Source<Source<TVal, TMat>, TMat> SplitWhen<TIn, TOut, TMat, TVal>(this Source<TOut, TMat> flow, Predicate<TOut> predicate) where TVal : TOut
+        public static Source<Source<TVal, TMat>, TMat> SplitWhen<TOut, TMat, TVal>(this Source<TOut, TMat> flow, Predicate<TOut> predicate) where TVal : TOut
         {
             return (Source<Source<TVal, TMat>, TMat>)InternalFlowOperations.SplitWhen<TOut, TMat, TVal>(flow, predicate);
         }
@@ -760,7 +761,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels and substreams cancel
         /// </summary>
-        public static Source<Source<TVal, TMat>, TMat> SplitAfter<TIn, TOut, TMat, TVal>(this Source<TOut, TMat> flow, Predicate<TOut> predicate) where TVal : TOut
+        public static Source<Source<TVal, TMat>, TMat> SplitAfter<TOut, TMat, TVal>(this Source<TOut, TMat> flow, Predicate<TOut> predicate) where TVal : TOut
         {
             return (Source<Source<TVal, TMat>, TMat>)InternalFlowOperations.SplitAfter<TOut, TMat, TVal>(flow, predicate);
         }
@@ -778,7 +779,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut2, TMat> FlatMapConcat<TIn, TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, Func<TOut1, IGraph<SourceShape<TOut2>, TMat>> flatten)
+        public static Source<TOut2, TMat> FlatMapConcat<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, Func<TOut1, IGraph<SourceShape<TOut2>, TMat>> flatten)
         {
             return (Source<TOut2, TMat>)InternalFlowOperations.FlatMapConcat(flow, flatten);
         }
@@ -796,7 +797,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut2, TMat> FlatMapMerge<TIn, TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, int breadth, Func<TOut1, IGraph<SourceShape<TOut2>, TMat>> flatten)
+        public static Source<TOut2, TMat> FlatMapMerge<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, int breadth, Func<TOut1, IGraph<SourceShape<TOut2>, TMat>> flatten)
         {
             return (Source<TOut2, TMat>)InternalFlowOperations.FlatMapMerge(flow, breadth, flatten);
         }
@@ -813,7 +814,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut, TMat> InitialTimeout<TIn, TOut, TMat>(this Source<TOut, TMat> flow, TimeSpan timeout)
+        public static Source<TOut, TMat> InitialTimeout<TOut, TMat>(this Source<TOut, TMat> flow, TimeSpan timeout)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.InitialTimeout(flow, timeout);
         }
@@ -830,7 +831,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut, TMat> CompletionTimeout<TIn, TOut, TMat>(this Source<TOut, TMat> flow, TimeSpan timeout)
+        public static Source<TOut, TMat> CompletionTimeout<TOut, TMat>(this Source<TOut, TMat> flow, TimeSpan timeout)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.CompletionTimeout(flow, timeout);
         }
@@ -847,7 +848,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut, TMat> IdleTimeout<TIn, TOut, TMat>(this Source<TOut, TMat> flow, TimeSpan timeout)
+        public static Source<TOut, TMat> IdleTimeout<TOut, TMat>(this Source<TOut, TMat> flow, TimeSpan timeout)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.IdleTimeout(flow, timeout);
         }
@@ -869,7 +870,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TInjected, TMat> KeepAlive<TIn, TOut, TInjected, TMat>(this Source<TOut, TMat> flow, TimeSpan timeout, Func<TInjected> injectElement) where TOut : TInjected
+        public static Source<TInjected, TMat> KeepAlive<TOut, TInjected, TMat>(this Source<TOut, TMat> flow, TimeSpan timeout, Func<TInjected> injectElement) where TOut : TInjected
         {
             return (Source<TInjected, TMat>)InternalFlowOperations.KeepAlive(flow, timeout, injectElement);
         }
@@ -900,7 +901,7 @@ namespace Akka.Streams.Dsl
         /// <exception cref="ArgumentException">Thow when <paramref name="elements"/> is less than or equal zero, 
         /// or <paramref name="per"/> timeout is equal <see cref="TimeSpan.Zero"/> 
         /// or <paramref name="maximumBurst"/> is less than or equal zero in in <see cref="ThrottleMode.Enforcing"/> <paramref name="mode"/>.</exception>
-        public static Source<TOut, TMat> Throttle<TIn, TOut, TMat>(this Source<TOut, TMat> flow, int elements, TimeSpan per, int maximumBurst, ThrottleMode mode)
+        public static Source<TOut, TMat> Throttle<TOut, TMat>(this Source<TOut, TMat> flow, int elements, TimeSpan per, int maximumBurst, ThrottleMode mode)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.Throttle(flow, elements, per, maximumBurst, mode);
         }
@@ -931,7 +932,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut, TMat> Throttle<TIn, TOut, TMat>(this Source<TOut, TMat> flow, int cost, TimeSpan per, int maximumBurst, Func<TOut, int> calculateCost, ThrottleMode mode)
+        public static Source<TOut, TMat> Throttle<TOut, TMat>(this Source<TOut, TMat> flow, int cost, TimeSpan per, int maximumBurst, Func<TOut, int> calculateCost, ThrottleMode mode)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.Throttle(flow, cost, per, maximumBurst, calculateCost, mode);
         }
@@ -947,7 +948,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut, TMat> InitialDelay<TIn, TOut, TMat>(this Source<TOut, TMat> flow, TimeSpan delay)
+        public static Source<TOut, TMat> InitialDelay<TOut, TMat>(this Source<TOut, TMat> flow, TimeSpan delay)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.InitialDelay(flow, delay);
         }
@@ -966,7 +967,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut, TMat> Log<TIn, TOut, TMat>(this Source<TOut, TMat> flow, string name, ILoggingAdapter log, Func<TOut, object> extract = null)
+        public static Source<TOut, TMat> Log<TOut, TMat>(this Source<TOut, TMat> flow, string name, ILoggingAdapter log, Func<TOut, object> extract = null)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.Log(flow, name, log, extract);
         }
@@ -982,7 +983,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<Tuple<T1, T2>, TMat> Zip<TIn, T1, T2, TMat>(this Source<T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other)
+        public static Source<Tuple<T1, T2>, TMat> Zip<T1, T2, TMat>(this Source<T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other)
         {
             return (Source<Tuple<T1, T2>, TMat>)InternalFlowOperations.Zip(flow, other);
         }
@@ -999,7 +1000,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<T3, TMat> ZipWith<TIn, T1, T2, T3, TMat>(this Source<T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other, Func<T1, T2, T3> combine)
+        public static Source<T3, TMat> ZipWith<T1, T2, T3, TMat>(this Source<T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other, Func<T1, T2, T3> combine)
         {
             return (Source<T3, TMat>)InternalFlowOperations.ZipWith(flow, other, combine);
         }
@@ -1027,7 +1028,7 @@ namespace Akka.Streams.Dsl
         /// Source(List(1, 2, 3)).Interleave(List(4, 5, 6, 7), 2) // 1, 2, 4, 5, 3, 6, 7
         /// </code>
         /// </example>
-        public static Source<T2, TMat> Interleave<TIn, T1, T2, TMat>(this Source<T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other, int segmentSize) where T1 : T2
+        public static Source<T2, TMat> Interleave<T1, T2, TMat>(this Source<T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other, int segmentSize) where T1 : T2
         {
             return (Source<T2, TMat>)InternalFlowOperations.Interleave(flow, other, segmentSize);
         }
@@ -1044,7 +1045,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut2, TMat> Merge<TIn, TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, IGraph<SourceShape<TOut2>, TMat> other) where TOut1 : TOut2
+        public static Source<TOut2, TMat> Merge<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, IGraph<SourceShape<TOut2>, TMat> other) where TOut1 : TOut2
         {
             return (Source<TOut2, TMat>)InternalFlowOperations.Merge(flow, other);
         }

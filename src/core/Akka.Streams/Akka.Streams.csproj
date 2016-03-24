@@ -86,6 +86,7 @@
     <Compile Include="Dsl\StreamConverters.cs" />
     <Compile Include="Dsl\SubFlow.cs" />
     <Compile Include="Dsl\Tcp.cs" />
+    <Compile Include="Dsl\TestConfig.cs" />
     <Compile Include="Extra\Implicits.cs" />
     <Compile Include="Extra\Timed.cs" />
     <Compile Include="FanInShape.cs" />

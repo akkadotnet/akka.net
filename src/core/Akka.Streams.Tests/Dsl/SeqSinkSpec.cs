@@ -9,7 +9,7 @@ namespace Akka.Streams.Tests.Dsl
 {
     public class SeqSinkSpec : AkkaSpec
     {
-        public ActorMaterializer Materializer { get; }
+        private ActorMaterializer Materializer { get; }
 
         public SeqSinkSpec(ITestOutputHelper helper) : base(helper)
         {
