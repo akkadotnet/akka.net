@@ -68,6 +68,7 @@
     <Compile Include="Dsl\ActorRefSinkSpec.cs" />
     <Compile Include="Dsl\FlowMapConcatSpec.cs" />
     <Compile Include="Dsl\FlowMapSpec.cs" />
+    <Compile Include="Dsl\SeqSinkSpec.cs" />
     <Compile Include="Dsl\SubscriberSinkSpec.cs" />
     <Compile Include="Implementation\Fusing\ActorGraphInterpreterSpec.cs" />
     <Compile Include="Implementation\Fusing\GraphInterpreterFailureModesSpec.cs" />

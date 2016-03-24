@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Streams;
@@ -167,7 +168,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Source<T, Unit> FromEnumerator<T>(Func<IEnumerator<T>> enumFactory)
         {
-            throw new NotImplementedException();
+            return From(new EnumFactorySource<T>(enumFactory));
         }
 
         /// <summary>
