@@ -158,6 +158,7 @@
     <Compile Include="Stage\Stage.cs" />
     <Compile Include="StreamLimitReachedException.cs" />
     <Compile Include="StreamTcpException.cs" />
+    <Compile Include="SubstreamCancelStrategy.cs" />
     <Compile Include="Supervision\Supervision.cs" />
     <Compile Include="ThrottleMode.cs" />
     <Compile Include="Transformer.cs" />

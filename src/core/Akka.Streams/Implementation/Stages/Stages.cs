@@ -45,6 +45,7 @@ namespace Akka.Streams.Implementation.Stages
 
         public static readonly Attributes Merge = Attributes.CreateName("merge");
         public static readonly Attributes MergePreferred = Attributes.CreateName("mergePreferred");
+        public static readonly Attributes FlattenMerge = Attributes.CreateName("flattenMerge");
         public static readonly Attributes Broadcast = Attributes.CreateName("broadcast");
         public static readonly Attributes Balance = Attributes.CreateName("balance");
         public static readonly Attributes Zip = Attributes.CreateName("zip");

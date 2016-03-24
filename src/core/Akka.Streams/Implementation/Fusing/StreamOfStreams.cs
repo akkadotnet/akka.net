@@ -1,479 +1,225 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Reactive.Streams;
-using System.Threading;
-using System.Threading.Tasks;
 using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
+using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
-using Akka.Util.Internal;
+using Akka.Util;
 
 namespace Akka.Streams.Implementation.Fusing
 {
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
     internal sealed class FlattenMerge<T, TMat> : GraphStage<FlowShape<IGraph<SourceShape<T>, TMat>, T>>
     {
         #region internal classes
+
         private sealed class FlattenStageLogic : GraphStageLogic
         {
-            private readonly FlattenMerge<T, TMat> _stage;
-            private IImmutableSet<StreamOfStreams.LocalSource<T>> _sources = ImmutableHashSet<StreamOfStreams.LocalSource<T>>.Empty;
-            private IQueue _queue = new FixedQueue();
+            private readonly FlattenMerge<T, TMat> _flattenMerge;
+            private readonly HashSet<SubSinkInlet<T>> _sources = new HashSet<SubSinkInlet<T>>();
+            private IBuffer<SubSinkInlet<T>> _q;
+            private readonly Action _outHandler;
 
-            public FlattenStageLogic(Shape shape, FlattenMerge<T, TMat> stage) : base(shape)
+            public FlattenStageLogic(FlattenMerge<T, TMat> flattenMerge) : base(flattenMerge.Shape)
             {
-                _stage = stage;
-
-                SetHandler(_stage.In, onPush: () =>
+                _flattenMerge = flattenMerge;
+                _outHandler = () =>
                 {
-                    var source = Grab(_stage.In);
+                    // could be unavailable due to async input having been executed before this notification
+                    if (_q.NonEmpty && IsAvailable(flattenMerge._out))
+                        PushOut();
+                };
+
+                SetHandler(flattenMerge._in, onPush: () =>
+                {
+                    var source = Grab(flattenMerge._in);
                     AddSource(source);
-                    if (ActiveSources < _stage.Breadth) TryPull(_stage.In);
-                },
-                onUpstreamFinish: () =>
+                    if (ActiveSource < flattenMerge._breadth)
+                        TryPull(flattenMerge._in);
+                }, onUpstreamFinish: () =>
                 {
-                    if (ActiveSources == 0) CompleteStage();
+                    if (ActiveSource == 0)
+                        CompleteStage();
                 });
-                SetHandler(_stage.Out, onPull: () =>
+
+                SetHandler(flattenMerge._out, onPull: () =>
                 {
-                    Pull(_stage.In);
-                    SetHandler(_stage.Out, onPull: () =>
-                    {
-                        // could be unavailable due to async input having been executed before this notification
-                        if (_queue.HasData && IsAvailable(_stage.Out)) PushOut();
-                    });
+                    Pull(flattenMerge._in);
+                    SetHandler(flattenMerge._out, _outHandler);
                 });
             }
 
-            public int ActiveSources { get { return _sources.Count; } }
+            private int ActiveSource => _sources.Count;
 
-            public void PushOut()
+            public override void PreStart()
+                => _q = Buffer.Create<SubSinkInlet<T>>(_flattenMerge._breadth, Interpreter.Materializer);
+
+            private void PushOut()
             {
-                var source = _queue.Dequeue();
-                Push(_stage.Out, (T)source.Element);
-                source.Element = null;
-                if (source.IsActive) source.Pull();
-                else RemoveSource(source);
-            }
-
-            public void AddSource(IGraph<SourceShape<T>, TMat> source)
-            {
-                var localSource = new StreamOfStreams.LocalSource<T>();
-                _sources = _sources.Add(localSource);
-                var subFlow = Source.FromGraph<T, TMat>(source)
-                    .RunWith<Task<Action<IActorPublisherMessage>>>(new StreamOfStreams.LocalSink<T>(GetAsyncCallback<IActorSubscriberMessage>(msg =>
-                    {
-                        msg.Match()
-                            .With<OnNext>(next =>
-                            {
-                                var element = (T)next.Element;
-                                if (IsAvailable(_stage.Out))
-                                {
-                                    Push(_stage.Out, element);
-                                    localSource.Pull();
-                                }
-                                else
-                                {
-                                    localSource.Element = element;
-                                    _queue.Enqueue(localSource);
-                                }
-                            })
-                            .With<OnComplete>(_ =>
-                            {
-                                localSource.Deactivate();
-                                if (localSource.Element == null) RemoveSource(localSource);
-                            })
-                            .With<OnError>(err => FailStage(err.Cause));
-                    })), Interpreter.SubFusingMaterializer);
-
-                localSource.Activate(subFlow);
-            }
-
-            public void RemoveSource(StreamOfStreams.LocalSource<T> source)
-            {
-                var pullSuppressed = ActiveSources == _stage.Breadth;
-                _sources = _sources.Remove(source);
-                if (pullSuppressed) TryPull(_stage.In);
-                if (ActiveSources == 0 && IsClosed(_stage.In)) CompleteStage();
-            }
-
-            public override void PostStop()
-            {
-                foreach (var source in _sources)
-                    source.Cancel();
-            }
-        }
-
-        private interface IQueue
-        {
-            bool HasData { get; }
-            IQueue Enqueue(StreamOfStreams.LocalSource<T> source);
-            StreamOfStreams.LocalSource<T> Dequeue();
-        }
-
-        private sealed class FixedQueue : IQueue
-        {
-            private const int Size = 15;
-            private const int Mask = 16;
-
-            private readonly StreamOfStreams.LocalSource<T>[] _queue = new StreamOfStreams.LocalSource<T>[Size];
-            private int _head = 0;
-            private int _tail = 0;
-
-            public bool HasData { get { return _head != _tail; } }
-
-            public IQueue Enqueue(StreamOfStreams.LocalSource<T> source)
-            {
-                if (_tail - _head == Size)
-                {
-                    var queue = new DynamicQueue();
-                    while (HasData)
-                        queue.Enqueue(Dequeue());
-
-                    queue.Enqueue(source);
-                    return queue;
-                }
+                var src = _q.Dequeue();
+                Push(_flattenMerge._out, src.Grab());
+                if (!src.IsClosed)
+                    src.Pull();
                 else
+                    RemoveSource(src);
+            }
+
+            private void RemoveSource(SubSinkInlet<T> src)
+            {
+                var pulledSuppressed = ActiveSource == _flattenMerge._breadth;
+                _sources.Remove(src);
+
+                if (pulledSuppressed)
+                    TryPull(_flattenMerge._in);
+                if (ActiveSource == 0 && IsClosed(_flattenMerge._in))
+                    CompleteStage();
+            }
+
+            private void AddSource(IGraph<SourceShape<T>, TMat> source)
+            {
+                var sinkIn = new SubSinkInlet<T>("FlattenMergeSink");
+                sinkIn.SetHandler(new LambdaInHandler(onPush: () =>
                 {
-                    _queue[_tail & Mask] = source;
-                    _tail++;
-                    return this;
-                }
+                    if (IsAvailable(_flattenMerge._out))
+                    {
+                        Push(_flattenMerge._out, sinkIn.Grab());
+                        sinkIn.Pull();
+                    }
+                    else
+                        _q.Enqueue(sinkIn);
+                }, onUpstreamFinish: () =>
+                {
+                    if (!sinkIn.IsAvailable)
+                        RemoveSource(sinkIn);
+                }));
+
+                sinkIn.Pull();
+                _sources.Add(sinkIn);
+                Source.FromGraph(source).RunWith(sinkIn.Sink, Interpreter.SubFusingMaterializer);
             }
 
-            public StreamOfStreams.LocalSource<T> Dequeue()
-            {
-                var result = _queue[_head & Mask];
-                _head++;
-                return result;
-            }
+            public override string ToString() => $"FlattenMerge({_flattenMerge._breadth})";
         }
 
-        private sealed class DynamicQueue : LinkedList<StreamOfStreams.LocalSource<T>>, IQueue
-        {
-            public bool HasData { get { return Count != 0; } }
-            public IQueue Enqueue(StreamOfStreams.LocalSource<T> source)
-            {
-                AddLast(source);
-                return this;
-            }
-
-            public StreamOfStreams.LocalSource<T> Dequeue()
-            {
-                var e = this.FirstOrDefault();
-                RemoveFirst();
-                return e;
-            }
-        }
         #endregion
 
-        public readonly int Breadth;
-        public readonly Inlet<IGraph<SourceShape<T>, TMat>> In = new Inlet<IGraph<SourceShape<T>, TMat>>("flatten.in");
-        public readonly Outlet<T> Out = new Outlet<T>("flatten.out");
+        private readonly Inlet<IGraph<SourceShape<T>, TMat>> _in = new Inlet<IGraph<SourceShape<T>, TMat>>("flatten.in");
+        private readonly Outlet<T> _out = new Outlet<T>("flatten.out");
+
+        private readonly int _breadth;
 
         public FlattenMerge(int breadth)
         {
-            Breadth = breadth;
-            InitialAttributes = Attributes.CreateName("FlattenMerge");
-            Shape = new FlowShape<IGraph<SourceShape<T>, TMat>, T>(In, Out);
+            _breadth = breadth;
+
+            InitialAttributes = DefaultAttributes.FlattenMerge;
+            Shape = new FlowShape<IGraph<SourceShape<T>, TMat>, T>(_in, _out);
         }
 
         protected override Attributes InitialAttributes { get; }
+
         public override FlowShape<IGraph<SourceShape<T>, TMat>, T> Shape { get; }
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
-        {
-            return new FlattenStageLogic(Shape, this);
-        }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new FlattenStageLogic(this);
     }
 
-    public static class StreamOfStreams
-    {
-        private static readonly Request RequestSingle = new Request(1);
-
-        internal sealed class LocalSource<T>
-        {
-            private Task<Action<IActorPublisherMessage>> _subscriptionTask;
-            private Action<IActorPublisherMessage> _subscription;
-
-            public object Element { get; set; }
-            public bool IsActive { get { return !ReferenceEquals(_subscription, null); } }
-
-            public void Deactivate()
-            {
-                _subscription = null;
-                _subscriptionTask = null;
-            }
-
-            public void Activate(Task<Action<IActorPublisherMessage>> future)
-            {
-                _subscriptionTask = future;
-                /*
-                 * The subscription is communicated to the FlattenMerge stage by way of completing
-                 * the future. Encoding it like this means that the `sub` field will be written
-                 * either by us (if the future has already been completed) or by the LocalSink (when
-                 * it eventually completes the future in its `preStart`). The important part is that
-                 * either way the `sub` field is populated before we get the first `OnNext` message
-                 * and the value is safely published in either case as well (since AsyncCallback is
-                 * based on an Actor message send).
-                 */
-                future.ContinueWith(t => _subscription = t.Result, TaskContinuationOptions.AttachedToParent | TaskContinuationOptions.ExecuteSynchronously);
-            }
-
-            public void Pull()
-            {
-                if (!ReferenceEquals(_subscription, null)) _subscription(RequestSingle);
-                else if (ReferenceEquals(_subscriptionTask, null)) throw new IllegalStateException("Not yet initialized, subscription task not set");
-                else throw new IllegalStateException("Not yet initialized, subscription task has " + _subscriptionTask.Result);
-            }
-
-            public void Cancel()
-            {
-                if (!ReferenceEquals(_subscriptionTask, null))
-                    _subscriptionTask.ContinueWith(t => Actors.Cancel.Instance, TaskContinuationOptions.AttachedToParent | TaskContinuationOptions.ExecuteSynchronously);
-            }
-        }
-
-        internal sealed class LocalSink<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<Action<IActorPublisherMessage>>>
-        {
-            #region internal classes
-            private sealed class SinkStageLogic : GraphStageLogic
-            {
-                private readonly TaskCompletionSource<Action<IActorPublisherMessage>> _subscriptionPromise;
-                private readonly LocalSink<T> _stage;
-
-                public SinkStageLogic(Shape shape, TaskCompletionSource<Action<IActorPublisherMessage>> subscriptionPromise, LocalSink<T> stage) : base(shape)
-                {
-                    _subscriptionPromise = subscriptionPromise;
-                    _stage = stage;
-
-                    SetHandler(stage.In, onPush: () => _stage.Notifier(new OnNext(Grab(_stage.In))),
-                    onUpstreamFinish: () => _stage.Notifier(OnComplete.Instance),
-                    onUpstreamFailure: cause => _stage.Notifier(new OnError(cause)));
-                }
-
-                public override void PreStart()
-                {
-                    Pull(_stage.In);
-                    _subscriptionPromise.SetResult(GetAsyncCallback<IActorPublisherMessage>(msg =>
-                    {
-                        if (msg == RequestSingle) TryPull(_stage.In);
-                        else if (msg is Cancel) CompleteStage();
-                        else throw new IllegalStateException(string.Format("Invalid message {0} send throug the local sink task", msg.GetType()));
-                    }));
-                }
-            }
-            #endregion
-
-            public readonly Action<IActorSubscriberMessage> Notifier;
-            public readonly Inlet<T> In = new Inlet<T>("LocalSink.in");
-
-            public LocalSink(Action<IActorSubscriberMessage> notifier)
-            {
-                Notifier = notifier;
-                InitialAttributes = Attributes.CreateName("LocalSink");
-                Shape = new SinkShape<T>(In);
-            }
-
-            protected override Attributes InitialAttributes { get; }
-            public override SinkShape<T> Shape { get; }
-
-            public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Task<Action<IActorPublisherMessage>> materialized)
-            {
-                var sub = new TaskCompletionSource<Action<IActorPublisherMessage>>();
-                var logic = new SinkStageLogic(Shape, sub, this);
-                materialized = sub.Task;
-                return logic;
-            }
-        }
-    }
-
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
     internal sealed class PrefixAndTail<T> : GraphStage<FlowShape<T, Tuple<IEnumerable<T>, Source<T, Unit>>>>
     {
         #region internal classes
-
-        public const int NotMaterialized = 0;
-        public const int AlreadyMaterialized = 1;
-        public const int TimedOut = 2;
-        public const int NormalCompletion = 3;
-        public const int FailureCompletion = 4;
-
-        public interface ITail
-        {
-            void PushSubstream(T element);
-            void CompleteSubstream();
-            void FailSubstream(Exception cause);
-        }
-
-        private sealed class TailSource : GraphStage<SourceShape<T>>
-        {
-            private sealed class TailSourceLogic : GraphStageLogic, ITail
-            {
-                private readonly TailSource _stage;
-                private readonly Action<T> _onParentPush;
-                private readonly Action<Unit> _onParentFinish;
-                private readonly Action<Exception> _onParentFailure;
-
-                public TailSourceLogic(Shape shape, TailSource stage) : base(shape)
-                {
-                    _stage = stage;
-                    _onParentPush = GetAsyncCallback<T>(element => Push(stage.Out, element));
-                    _onParentFinish = GetAsyncCallback<Unit>(_ => CompleteStage());
-                    _onParentFailure = GetAsyncCallback<Exception>(FailStage);
-
-                    SetHandler(stage.Out,
-                        onPull: stage.PullParent,
-                        onDownstreamFinish: stage.CancelParent);
-                }
-
-                public override void PreStart()
-                {
-                    var materializedStae = _stage.MaterializationState.GetAndSet(AlreadyMaterialized);
-                    switch (materializedStae)
-                    {
-                        case AlreadyMaterialized:
-                            FailStage(new IllegalStateException("Tail source cannot be materialized more than once"));
-                            break;
-                        case TimedOut:  // already detached from the parent
-                            FailStage(new SubscriptionTimeoutException(string.Format("Tail source has not been materialized in {0}", _stage.Timeout)));
-                            break;
-                        case NormalCompletion:  // already detached from parent
-                            CompleteStage();
-                            break;
-                        case FailureCompletion: // already detached from parent
-                            FailStage(_stage.MaterializationFailure);
-                            break;
-                        case NotMaterialized:
-                            _stage.Register(this);
-                            break;
-                    }
-                }
-
-                public void PushSubstream(T element)
-                {
-                    _onParentPush(element);
-                }
-
-                public void CompleteSubstream()
-                {
-                    _onParentFinish(Unit.Instance);
-                }
-
-                public void FailSubstream(Exception cause)
-                {
-                    _onParentFailure(cause);
-                }
-            }
-
-            public readonly TimeSpan Timeout;
-            public readonly Action<ITail> Register;
-            public readonly Action PullParent;
-            public readonly Action CancelParent;
-
-            public readonly Outlet<T> Out = new Outlet<T>("Tail.out");
-            public AtomicCounter MaterializationState = new AtomicCounter(NotMaterialized);
-            public Exception MaterializationFailure = null;
-
-            public TailSource(TimeSpan timeout, Action<ITail> register, Action pullParent, Action cancelParent)
-            {
-                Timeout = timeout;
-                Register = register;
-                PullParent = pullParent;
-                CancelParent = cancelParent;
-                Shape = new SourceShape<T>(Out);
-            }
-
-            public override SourceShape<T> Shape { get; }
-            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
-            {
-                return new TailSourceLogic(Shape, this);
-            }
-        }
-
+        
         private sealed class PrefixAndTailLogic : TimerGraphStageLogic
         {
             private const string SubscriptionTimer = "SubstreamSubscriptionTimer";
 
             private readonly PrefixAndTail<T> _stage;
+            private readonly LambdaOutHandler _subHandler;
             private int _left;
             private List<T> _builder;
-            private TailSource _tailSource = null;
-            private ITail _tail = null;
-            private int? _pendingCompletion = NotMaterialized;
-            private Exception _completionFailure = null;
+            private SubSourceOutlet<T> _tailSource;
 
-            private readonly Action _onSubstreamPull;
-            private readonly Action _onSubstreamFinish;
-            private readonly Action<ITail> _onSubstreamRegister;
-
-            public PrefixAndTailLogic(Shape shape, PrefixAndTail<T> stage) : base(shape)
+            public PrefixAndTailLogic(PrefixAndTail<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                _left = _stage.Count < 0 ? 0 : _stage.Count;
+                _left = _stage._count < 0 ? 0 : _stage._count;
                 _builder = new List<T>(_left);
 
-                _onSubstreamPull = GetAsyncCallback(() => Pull(_stage.In));
-                _onSubstreamFinish = GetAsyncCallback(CompleteStage);
-                _onSubstreamRegister = GetAsyncCallback<ITail>(tailIf =>
+                _subHandler = new LambdaOutHandler(onPull: () =>
                 {
-                    _tail = tailIf;
+                    SetKeepGoing(false);
                     CancelTimer(SubscriptionTimer);
-                    if (_pendingCompletion == NormalCompletion)
-                    {
-                        _tail.CompleteSubstream();
-                        CompleteStage();
-                    }
-                    else if (_pendingCompletion == FailureCompletion)
-                    {
-                        _tail.FailSubstream(_completionFailure);
-                        CompleteStage();
-                    }
+                    Pull(_stage._in);
+                    _tailSource.SetHandler(new LambdaOutHandler(onPull: () => Pull(_stage._in)));
                 });
-
-                SetHandler(_stage.In,
+                
+                SetHandler(_stage._in,
                     onPush: OnPush,
                     onUpstreamFinish: OnUpstreamFinish,
                     onUpstreamFailure: OnUpstreamFailure);
 
-                SetHandler(_stage.Out,
+                SetHandler(_stage._out,
                     onPull: OnPull,
                     onDownstreamFinish: OnDownstreamFinish);
             }
             
-            // Needs to keep alive if upstream completes but substream has been not yet materialized
-            public override bool KeepGoingAfterAllPortsClosed { get { return true; } }
-
-            private bool IsPrefixComplete { get { return ReferenceEquals(_builder, null); } }
-            private bool IsWaitingSubstreamRegistration { get { return ReferenceEquals(_tail, null); } }
-
             protected internal override void OnTimer(object timerKey)
             {
-                if (_tailSource.MaterializationState.CompareAndSet(NotMaterialized, TimedOut)) CompleteStage();
+                var materializer = ActorMaterializer.Downcast(Interpreter.Materializer);
+                var timeoutSettings = materializer.Settings.SubscriptionTimeoutSettings;
+                var timeout = timeoutSettings.Timeout;
+
+                switch (timeoutSettings.Mode)
+                {
+                    case StreamSubscriptionTimeoutTerminationMode.CancelTermination:
+                        _tailSource.Timeout(timeout);
+                        if (_tailSource.IsClosed)
+                            CompleteStage();
+                        break;
+                    case StreamSubscriptionTimeoutTerminationMode.NoopTermination:
+                        // do nothing
+                        break;
+                    case StreamSubscriptionTimeoutTerminationMode.WarnTermination:
+                        materializer.Logger.Warning(
+                            $"Substream subscription timeout triggered after {timeout} in PrefixAndTail({_stage._count})");
+                        break;
+                }
             }
+
+            private bool IsPrefixComplete => ReferenceEquals(_builder, null);
 
             private Source<T, Unit> OpenSubstream()
             {
                 var timeout = ActorMaterializer.Downcast(Interpreter.Materializer).Settings.SubscriptionTimeoutSettings.Timeout;
-                _tailSource = new TailSource(timeout, _onSubstreamRegister, _onSubstreamPull, _onSubstreamFinish);
+                _tailSource = new SubSourceOutlet<T>("TailSource");
+                _tailSource.SetHandler(_subHandler);
+                SetKeepGoing(true);
                 ScheduleOnce(SubscriptionTimer, timeout);
                 _builder = null;
-                return Source.FromGraph(_tailSource);
+                return Source.FromGraph(_tailSource.Source);
             }
 
             private void OnPush()
             {
-                if (IsPrefixComplete) _tail.PushSubstream(Grab(_stage.In));
+                if (IsPrefixComplete) 
+                    _tailSource.Push(Grab(_stage._in));
                 else
                 {
-                    _builder.Add(Grab(_stage.In));
+                    _builder.Add(Grab(_stage._in));
                     _left--;
                     if (_left == 0)
                     {
-                        Push(_stage.Out, Tuple.Create(_builder as IEnumerable<T>, OpenSubstream()));
-                        Complete(_stage.Out);
+                        Push(_stage._out, Tuple.Create(_builder, OpenSubstream()));
+                        Complete(_stage._out);
                     }
-                    else Pull(_stage.In);
+                    else
+                        Pull(_stage._in);
                 }
             }
 
@@ -481,10 +227,11 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 if (_left == 0)
                 {
-                    Push(_stage.Out, Tuple.Create(Enumerable.Empty<T>(), OpenSubstream()));
-                    Complete(_stage.Out);
+                    Push(_stage._out, Tuple.Create(Enumerable.Empty<T>(), OpenSubstream()));
+                    Complete(_stage._out);
                 }
-                else Pull(_stage.In);
+                else
+                    Pull(_stage._in);
             }
 
             private void OnUpstreamFinish()
@@ -492,85 +239,571 @@ namespace Akka.Streams.Implementation.Fusing
                 if (!IsPrefixComplete)
                 {
                     // This handles the unpulled out case as well
-                    Emit(_stage.Out, Tuple.Create(_builder as IEnumerable<T>, Source.Empty<T>()), CompleteStage);
+                    Emit(_stage._out, Tuple.Create(_builder.AsEnumerable(), Source.Empty<T>()), CompleteStage);
                 }
                 else
                 {
-                    if (IsWaitingSubstreamRegistration)
-                    {
-                        // Detach if possible.
-                        // This allows this stage to complete without waiting for the substream to be materialized, since that
-                        // is empty anyway. If it is already being registered (state was not NotMaterialized) then we will be
-                        // able to signal completion normally soon.
-                        if (_tailSource.MaterializationState.CompareAndSet(NotMaterialized, NormalCompletion))
-                            CompleteStage();
-                        else _pendingCompletion = NormalCompletion;
-                    }
-                    else
-                    {
-                        _tail.CompleteSubstream();
-                        CompleteStage();
-                    }
+                    if(!_tailSource.IsClosed)
+                        _tailSource.Complete();
+                    CompleteStage();
                 }
             }
 
-            private void OnUpstreamFailure(Exception cause)
+            private void OnUpstreamFailure(Exception ex)
             {
                 if (IsPrefixComplete)
                 {
-                    if (IsWaitingSubstreamRegistration)
-                    {
-                        // Detach if possible.
-                        // This allows this stage to complete without waiting for the substream to be materialized, since that
-                        // is empty anyway. If it is already being registered (state was not NotMaterialized) then we will be
-                        // able to signal completion normally soon.
-
-                        //TODO: on JVM side setting materialization state and exception is one atomic operation, this may cause some races
-                        if (_tailSource.MaterializationState.CompareAndSet(NotMaterialized, FailureCompletion))
-                        {
-                            _tailSource.MaterializationFailure = cause;
-                            FailStage(cause);
-                        }
-                        else
-                        {
-                            _pendingCompletion = FailureCompletion;
-                            _completionFailure = cause;
-                        }
-                    }
-                    else
-                    {
-                        _tail.FailSubstream(cause);
-                        CompleteStage();
-                    }
+                    if (!_tailSource.IsClosed)
+                        _tailSource.Fail(ex);
+                    CompleteStage();
                 }
-                else FailStage(cause);
+                else
+                    FailStage(ex);
             }
 
             private void OnDownstreamFinish()
             {
-                if(!IsPrefixComplete) CompleteStage();
+                if (!IsPrefixComplete)
+                    CompleteStage();
                 // Otherwise substream is open, ignore
             }
         }
 
         #endregion
 
-        public readonly int Count;
-        public readonly Inlet<T> In = new Inlet<T>("PrefixAndTail.in");
-        public readonly Outlet<Tuple<IEnumerable<T>, Source<T, Unit>>> Out = new Outlet<Tuple<IEnumerable<T>, Source<T, Unit>>>("PrefixAndTail.out");
+        private readonly int _count;
+        private readonly Inlet<T> _in = new Inlet<T>("PrefixAndTail.in");
+        private readonly Outlet<Tuple<IEnumerable<T>, Source<T, Unit>>> _out = new Outlet<Tuple<IEnumerable<T>, Source<T, Unit>>>("PrefixAndTail.out");
 
         public PrefixAndTail(int count)
         {
-            Count = count;
-            InitialAttributes = Attributes.CreateName("PrefixAndTail");
-            Shape = new FlowShape<T, Tuple<IEnumerable<T>, Source<T, Unit>>>(In, Out);
+            _count = count;
+
+            Shape = new FlowShape<T, Tuple<IEnumerable<T>, Source<T, Unit>>>(_in, _out);
+        }
+
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.PrefixAndTail;
+
+        public override FlowShape<T, Tuple<IEnumerable<T>, Source<T, Unit>>> Shape { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new PrefixAndTailLogic(this);
+
+        public override string ToString() => $"PrefixAndTail({_count})";
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal static class Split
+    {
+        internal enum SplitDecision
+        {
+            SplitBefore,
+            SplitAfter
+        }
+
+        public static IGraph<FlowShape<T, Source<T, Unit>>, Unit> When<T>(Func<T, bool> p, SubstreamCancelStrategy substreamCancelStrategy) where T : class => new Split<T>(SplitDecision.SplitBefore, p, substreamCancelStrategy);
+
+
+        public static IGraph<FlowShape<T, Source<T, Unit>>, Unit> After<T>(Func<T, bool> p, SubstreamCancelStrategy substreamCancelStrategy) where T : class => new Split<T>(SplitDecision.SplitAfter, p, substreamCancelStrategy);
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    internal sealed class Split<T> : GraphStage<FlowShape<T, Source<T, Unit>>> where T : class
+    {
+        #region internal classes
+
+        private sealed class SplitLogic : TimerGraphStageLogic
+        {
+            #region internal classes 
+
+            private sealed class SubstreamHandler : InAndOutHandler
+            {
+                private readonly SplitLogic _logic;
+                private bool _willCompleteAfterInitialElement;
+
+                public SubstreamHandler(SplitLogic logic)
+                {
+                    _logic = logic;
+                }
+
+                public bool HasInitialElement => FirstElement != null;
+
+                public T FirstElement { private get; set; }
+
+                private void CloseThis(SubstreamHandler handler, T currentElem)
+                {
+                    var decision = _logic._split._decision;
+                    if (decision == Split.SplitDecision.SplitAfter)
+                    {
+                        if (!_logic._substreamCancelled)
+                        {
+                            _logic._substreamSource.Push(currentElem);
+                            _logic._substreamSource.Complete();
+                        }
+                    }
+                    else if (decision == Split.SplitDecision.SplitBefore)
+                    {
+                        handler.FirstElement = currentElem;
+                        if (!_logic._substreamCancelled)
+                            _logic._substreamSource.Complete();
+                    }
+                }
+
+                public override void OnPull()
+                {
+                    if (HasInitialElement)
+                    {
+                        _logic._substreamSource.Push(FirstElement);
+                        FirstElement = null;
+                        _logic.SetKeepGoing(false);
+
+                        if (_willCompleteAfterInitialElement)
+                        {
+                            _logic._substreamSource.Complete();
+                            _logic.CompleteStage();
+                        }
+                    }
+                    else
+                        _logic.Pull(_logic._split._in);
+                }
+
+                public override void OnDownstreamFinish()
+                {
+                    _logic._substreamCancelled = true;
+                    if (_logic.IsClosed(_logic._split._in) || _logic._split._propagateSubstreamCancel)
+                        _logic.CompleteStage();
+                    else
+                    // Start draining
+                        if (!_logic.HasBeenPulled(_logic._split._in))
+                            _logic.Pull(_logic._split._in);
+                }
+
+                public override void OnPush()
+                {
+                    var elem = _logic.Grab(_logic._split._in);
+                    try
+                    {
+                        if (_logic._split._p(elem))
+                        {
+                            var handler = new SubstreamHandler(_logic);
+                            CloseThis(handler, elem);
+                            _logic.HandOver(handler);
+                        }
+                        else
+                        {
+                            // Drain into the void
+                            if (_logic._substreamCancelled)
+                                _logic.Pull(_logic._split._in);
+                            else
+                                _logic._substreamSource.Push(elem);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        OnUpstreamFailure(ex);
+                    }
+                }
+
+                public override void OnUpstreamFinish()
+                {
+                    if (HasInitialElement)
+                        _willCompleteAfterInitialElement = true;
+                    else
+                    {
+                        _logic._substreamSource.Complete();
+                        _logic.CompleteStage();
+                    }
+                }
+
+                public override void OnUpstreamFailure(Exception ex)
+                {
+                    _logic._substreamSource.Fail(ex);
+                    _logic.FailStage(ex);
+                }
+            }
+
+            #endregion
+
+            private const string SubscriptionTimer = "SubstreamSubscriptionTimer";
+
+            private TimeSpan _timeout;
+            private SubSourceOutlet<T> _substreamSource;
+            private bool _substreamPushed;
+            private bool _substreamCancelled;
+            private readonly Split<T> _split;
+
+            public SplitLogic(Split<T> split) : base(split.Shape)
+            {
+                _split = split;
+                SetHandler(split._out, onPull: () =>
+                {
+                    if (_substreamSource == null)
+                        Pull(split._in);
+                    else if (!_substreamPushed)
+                    {
+                        Push(split._out, Source.FromGraph(_substreamSource.Source));
+                        ScheduleOnce(SubscriptionTimer, _timeout);
+                        _substreamPushed = true;
+                    }
+                }, onDownstreamFinish: () =>
+                {
+                    // If the substream is already cancelled or it has not been handed out, we can go away
+                    if (!_substreamPushed || _substreamCancelled)
+                        CompleteStage();
+                });
+
+                // initial input handler
+                SetHandler(split._in, onPush: () =>
+                {
+                    var handler = new SubstreamHandler(this);
+                    var elem = Grab(_split._in);
+
+                    if (_split._decision == Split.SplitDecision.SplitAfter)
+                    {
+                        if (_split._p(elem))
+                            Push(_split._out, Source.Single(elem));
+                    }
+                    // Next pull will come from the next substream that we will open
+                    else
+                        handler.FirstElement = elem;
+
+                    HandOver(handler);
+                }, onUpstreamFinish: CompleteStage);
+            }
+
+            public override void PreStart() => _timeout = ActorMaterializer.Downcast(Interpreter.Materializer).Settings.SubscriptionTimeoutSettings.Timeout;
+
+            private void HandOver(SubstreamHandler handler)
+            {
+                if (IsClosed(_split._out))
+                    CompleteStage();
+                else
+                {
+                    _substreamSource = new SubSourceOutlet<T>("SplitSource");
+                    _substreamSource.SetHandler(handler);
+                    _substreamCancelled = false;
+                    SetHandler(_split._in, handler);
+                    SetKeepGoing(handler.HasInitialElement);
+
+                    if (IsAvailable(_split._out))
+                    {
+                        Push(_split._out, Source.FromGraph(_substreamSource.Source));
+                        ScheduleOnce(SubscriptionTimer, _timeout);
+                        _substreamPushed = true;
+                    }
+                    else
+                        _substreamPushed = false;
+                }
+            }
+
+            protected internal override void OnTimer(object timerKey) => _substreamSource.Timeout(_timeout);
+        }
+
+        #endregion
+
+        private readonly Inlet<T> _in = new Inlet<T>("Split.in");
+        private readonly Outlet<Source<T, Unit>> _out = new Outlet<Source<T, Unit>>("Split.out");
+
+        private readonly Split.SplitDecision _decision;
+        private readonly Func<T, bool> _p;
+        private readonly bool _propagateSubstreamCancel;
+
+        public Split(Split.SplitDecision decision, Func<T, bool> p, SubstreamCancelStrategy substreamCancelStrategy)
+        {
+            _decision = decision;
+            _p = p;
+            _propagateSubstreamCancel = substreamCancelStrategy == SubstreamCancelStrategy.Propagate;
+
+            Shape = new FlowShape<T, Source<T, Unit>>(_in, _out);
+        }
+
+        public override FlowShape<T, Source<T, Unit>> Shape { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new SplitLogic(this);
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal static class SubSink
+    {
+        internal enum Command
+        {
+            RequestOne,
+            Cancel
+        }
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal sealed class SubSink<T> : GraphStage<SinkShape<T>>
+    {
+        #region internal classes
+
+        private sealed class SubSinkLogic : GraphStageLogic
+        {
+            private readonly SubSink<T> _subSink;
+
+            public SubSinkLogic(SubSink<T> subSink) : base(subSink.Shape)
+            {
+                _subSink = subSink;
+
+                var ec = subSink._externalCallback;
+
+                SetHandler(subSink._in, onPush: () => ec(new OnNext(Grab(subSink._in))), onUpstreamFinish: () => ec(OnComplete.Instance), onUpstreamFailure: ex => ec(new OnError(ex)));
+            }
+
+            private void SetCallback(Action<SubSink.Command> cb)
+            {
+                var status = _subSink._status.Value;
+                if (status == null)
+                {
+                    if (!_subSink._status.CompareAndSet(null, cb))
+                        SetCallback(cb);
+                }
+
+                var cmd = status as SubSink.Command?;
+                if (cmd.HasValue)
+                {
+                    if (cmd.Value == SubSink.Command.RequestOne)
+                    {
+                        Pull(_subSink._in);
+                        if (!_subSink._status.CompareAndSet(SubSink.Command.RequestOne, cb))
+                            SetCallback(cb);
+                    }
+                    else
+                    {
+                        CompleteStage();
+                        if (!_subSink._status.CompareAndSet(SubSink.Command.Cancel, cb))
+                            SetCallback(cb);
+                    }
+                }
+
+                if (status is Action)
+                    FailStage(new IllegalStateException("Substream Source cannot be materialized more than once"));
+            }
+
+            public override void PreStart()
+            {
+                SetCallback(cmd =>
+                {
+                    switch (cmd)
+                    {
+                        case SubSink.Command.RequestOne:
+                            TryPull(_subSink._in);
+                            break;
+                        case SubSink.Command.Cancel:
+                            CompleteStage();
+                            break;
+                        default:
+                            throw new IllegalStateException("Bug");
+                    }
+                });
+            }
+        }
+
+        #endregion
+
+        private readonly Inlet<T> _in = new Inlet<T>("SubSink.in");
+        private readonly AtomicReference<object> _status = new AtomicReference<object>();
+        private readonly string _name;
+        private readonly Action<IActorSubscriberMessage> _externalCallback;
+
+        public SubSink(string name, Action<IActorSubscriberMessage> externalCallback)
+        {
+            _name = name;
+            _externalCallback = externalCallback;
+
+            InitialAttributes = Attributes.CreateName($"SubSink({name})");
+            Shape = new SinkShape<T>(_in);
         }
 
         protected override Attributes InitialAttributes { get; }
-        public override FlowShape<T, Tuple<IEnumerable<T>, Source<T, Unit>>> Shape { get; }
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+
+        public override SinkShape<T> Shape { get; }
+
+        public void PullSubstream()
         {
-            return new PrefixAndTailLogic(Shape, this);
+            var s = _status.Value;
+            var f = s as Action<SubSink.Command>;
+
+            if (f != null)
+                f(SubSink.Command.RequestOne);
+            else if (s == null)
+            {
+                if (!_status.CompareAndSet(null, SubSink.Command.RequestOne))
+                    ((Action<SubSink.Command>) _status.Value)(SubSink.Command.RequestOne);
+            }
         }
+
+        public void CancelSubstream()
+        {
+            var s = _status.Value;
+            var f = s as Action<SubSink.Command>;
+
+            if (f != null)
+                f(SubSink.Command.Cancel);
+            else if (!_status.CompareAndSet(s, SubSink.Command.Cancel))
+                ((Action<SubSink.Command>) _status.Value)(SubSink.Command.Cancel);
+        }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new SubSinkLogic(this);
+
+        public override string ToString() => _name;
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal static class SubSource
+    {
+        /// <summary>
+        /// INTERNAL API
+        /// 
+        /// HERE ACTUALLY ARE DRAGONS, YOU HAVE BEEN WARNED!
+        /// 
+        /// FIXME #19240 (jvm)
+        /// </summary>
+        public static void Kill<T, TMat>(Source<T, TMat> s)
+        {
+            var module = s.Module as GraphStageModule;
+            if (module?.Stage is SubSource<T>)
+            {
+                ((SubSource<T>) module.Stage).ExternalCallback(SubSink.Command.Cancel);
+                return;
+            }
+
+            var pub = s.Module as PublisherSource<T>;
+            if (pub != null)
+            {
+                Unit _;
+                pub.Create(default(MaterializationContext), out _).Subscribe(CancelingSubscriber<T>.Instance);
+                return;
+            }
+
+            var intp = GraphInterpreter.CurrentInterpreterOrNull;
+            if (intp == null)
+                throw new NotSupportedException($"cannot drop Source of type {s.Module.GetType().Name}");
+            s.RunWith(Sink.Ignore<T>(), intp.SubFusingMaterializer);
+        }
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal sealed class SubSource<T> : GraphStage<SourceShape<T>>
+    {
+        #region internal classes 
+
+        private sealed class SubSourceLogic : GraphStageLogic
+        {
+            private readonly SubSource<T> _sub;
+
+            public SubSourceLogic(SubSource<T> sub) : base(sub.Shape)
+            {
+                _sub = sub;
+
+                SetHandler(sub._out, onPull: () => sub.ExternalCallback(SubSink.Command.RequestOne), onDownstreamFinish: () => sub.ExternalCallback(SubSink.Command.Cancel));
+            }
+
+            private void SetCallback(Action<IActorSubscriberMessage> cb)
+            {
+                var s = _sub._status.Value;
+
+                if (s == null)
+                {
+                    if (!_sub._status.CompareAndSet(null, cb))
+                        SetCallback(cb);
+                    return;
+                }
+
+                var complete = s as OnComplete;
+                if (complete != null)
+                {
+                    CompleteStage();
+                    return;
+                }
+
+                var error = s as OnError;
+                if (error != null)
+                {
+                    FailStage(error.Cause);
+                    return;
+                }
+
+                if (s is Action<IActorSubscriberMessage>)
+                    throw new IllegalStateException("Substream Source cannot be materialized more than once");
+            }
+
+            public override void PreStart()
+            {
+                SetCallback(message => { message.Match().With<OnComplete>(CompleteStage).With<OnError>(e => FailStage(e.Cause)).With<OnNext>(n => Push(_sub._out, (T) n.Element)); });
+            }
+        }
+
+        #endregion
+
+        private readonly string _name;
+        private readonly Outlet<T> _out = new Outlet<T>("SubSource.out");
+        private readonly AtomicReference<object> _status = new AtomicReference<object>();
+
+        public SubSource(string name, Action<SubSink.Command> externalCallback)
+        {
+            _name = name;
+
+            Shape = new SourceShape<T>(_out);
+            InitialAttributes = Attributes.CreateName($"SubSource({name})");
+            ExternalCallback = externalCallback;
+        }
+
+        public override SourceShape<T> Shape { get; }
+
+        protected override Attributes InitialAttributes { get; }
+
+        public Action<SubSink.Command> ExternalCallback { get; }
+
+        public void PushSubstream(T elem)
+        {
+            var s = _status.Value;
+            var f = s as Action<IActorSubscriberMessage>;
+
+            if (f == null)
+                throw new IllegalStateException("cannot push to uninitialized substream");
+            f(new OnNext(elem));
+        }
+
+        public void CompleteSubstream()
+        {
+            var s = _status.Value;
+            var f = s as Action<IActorSubscriberMessage>;
+
+            if (f != null)
+                f(OnComplete.Instance);
+            else if (!_status.CompareAndSet(null, OnComplete.Instance))
+                ((Action<IActorSubscriberMessage>) _status.Value)(OnComplete.Instance);
+        }
+
+        public void FailSubstream(Exception ex)
+        {
+            var s = _status.Value;
+            var f = s as Action<IActorSubscriberMessage>;
+            var failure = new OnError(ex);
+
+            if (f != null)
+                f(failure);
+            else if (!_status.CompareAndSet(null, failure))
+                ((Action<IActorSubscriberMessage>) _status.Value)(failure);
+        }
+
+        public bool Timeout(TimeSpan d) => _status.CompareAndSet(null, new OnError(new SubscriptionTimeoutException($"Substream Source has not been materialized in {d}")));
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new SubSourceLogic(this);
+
+        public override string ToString() => _name;
     }
 }
