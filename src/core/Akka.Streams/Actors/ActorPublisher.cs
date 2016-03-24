@@ -1,9 +1,16 @@
-﻿using System;
+﻿// <copyright file="ActorPublisher.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Concurrent;
 using System.Reactive.Streams;
 using System.Threading;
 using Akka.Actor;
 using Akka.Pattern;
+using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 
 namespace Akka.Streams.Actors
@@ -35,11 +42,10 @@ namespace Akka.Streams.Actors
 
     public interface IActorPublisherMessage { }
 
-    /**
-     * This message is delivered to the [[ActorPublisher]] actor when the stream subscriber requests
-     * more elements.
-     * @param n number of requested elements
-     */
+    /// <summary>
+    /// This message is delivered to the <see cref="ActorPublisher{T}"/> actor when the stream
+    /// subscriber requests more elements.
+    /// </summary>
     [Serializable]
     public sealed class Request : IActorPublisherMessage
     {
@@ -50,10 +56,10 @@ namespace Akka.Streams.Actors
         }
     }
 
-    /**
-     * This message is delivered to the [[ActorPublisher]] actor when the stream subscriber cancels the
-     * subscription.
-     */
+    /// <summary>
+    /// This message is delivered to the <see cref="ActorPublisher{T}"/> actor when the stream
+    /// subscriber cancels the subscription.
+    /// </summary>
     [Serializable]
     public sealed class Cancel : IActorPublisherMessage
     {
@@ -61,10 +67,11 @@ namespace Akka.Streams.Actors
         private Cancel() { }
     }
 
-    /**
-     * This message is delivered to the [[ActorPublisher]] actor in order to signal the exceeding of an subscription timeout.
-     * Once the actor receives this message, this publisher will already be in cancelled state, thus the actor should clean-up and stop itself.
-     */
+    /// <summary>
+    /// This message is delivered to the <see cref="ActorPublisher{T}"/> actor in order to signal
+    /// the exceeding of an subscription timeout. Once the actor receives this message, this
+    /// publisher will already be in cancelled state, thus the actor should clean-up and stop itself.
+    /// </summary>
     [Serializable]
     public sealed class SubscriptionTimeoutExceeded : IActorPublisherMessage
     {
@@ -72,49 +79,62 @@ namespace Akka.Streams.Actors
         private SubscriptionTimeoutExceeded() { }
     }
 
-    /**
-     * Extend/mixin this trait in your [[akka.actor.Actor]] to make it a
-     * stream publisher that keeps track of the subscription life cycle and
-     * requested elements.
-     *
-     * Create a [[org.reactivestreams.Publisher]] backed by this actor with Scala API [[ActorPublisher#apply]],
-     * or Java API [[UntypedActorPublisher#create]] or Java API compatible with lambda expressions
-     * [[AbstractActorPublisher#create]].
-     *
-     * It can be attached to a [[org.reactivestreams.Subscriber]] or be used as an input source for a
-     * [[akka.stream.scaladsl.Flow]]. You can only attach one subscriber to this publisher.
-     *
-     * The life cycle state of the subscription is tracked with the following boolean members:
-     * [[#isActive]], [[#isCompleted]], [[#isErrorEmitted]], and [[#isCanceled]].
-     *
-     * You send elements to the stream by calling [[#onNext]]. You are allowed to send as many
-     * elements as have been requested by the stream subscriber. This amount can be inquired with
-     * [[#totalDemand]]. It is only allowed to use `onNext` when `isActive` and `totalDemand > 0`,
-     * otherwise `onNext` will throw `IllegalStateException`.
-     *
-     * When the stream subscriber requests more elements the [[ActorPublisher#Request]] message
-     * is delivered to this actor, and you can act on that event. The [[#totalDemand]]
-     * is updated automatically.
-     *
-     * When the stream subscriber cancels the subscription the [[ActorPublisher#Cancel]] message
-     * is delivered to this actor. After that subsequent calls to `onNext` will be ignored.
-     *
-     * You can complete the stream by calling [[#onComplete]]. After that you are not allowed to
-     * call [[#onNext]], [[#onError]] and [[#onComplete]].
-     *
-     * You can terminate the stream with failure by calling [[#onError]]. After that you are not allowed to
-     * call [[#onNext]], [[#onError]] and [[#onComplete]].
-     *
-     * If you suspect that this [[ActorPublisher]] may never get subscribed to, you can override the [[#subscriptionTimeout]]
-     * method to provide a timeout after which this Publisher should be considered canceled. The actor will be notified when
-     * the timeout triggers via an [[akka.stream.actor.ActorPublisherMessage.SubscriptionTimeoutExceeded]] message and MUST then perform cleanup and stop itself.
-     *
-     * If the actor is stopped the stream will be completed, unless it was not already terminated with
-     * failure, completed or canceled.
-     */
+    /// <summary>
+    /// <para>
+    /// Extend this actor to make it a stream publisher that keeps track of the subscription life cycle and
+    /// requested elements.
+    /// </para>
+    /// <para>
+    /// Create a <see cref="IPublisher{T}"/> backed by this actor with <see cref="ActorPublisher.Create{T}"/>.
+    /// </para>
+    /// <para>
+    /// It can be attached to a <see cref="ISubscriber{T}"/> or be used as an input source for a
+    /// <see cref="IFlow{T,TMat}"/>. You can only attach one subscriber to this publisher.
+    /// </para>
+    /// <para>
+    /// The life cycle state of the subscription is tracked with the following boolean members:
+    /// <see cref="IsActive"/>, <see cref="IsCompleted"/>, <see cref="IsErrorEmitted"/>,
+    /// and <see cref="IsCanceled"/>.
+    /// </para>
+    /// <para>
+    /// You send elements to the stream by calling <see cref="OnNext"/>. You are allowed to send as many
+    /// elements as have been requested by the stream subscriber. This amount can be inquired with
+    /// <see cref="TotalDemand"/>. It is only allowed to use <see cref="OnNext"/> when <see cref="IsActive"/>
+    /// <see cref="TotalDemand"/> &gt; 0, otherwise <see cref="OnNext"/> will throw
+    /// <see cref="IllegalStateException"/>.
+    /// </para>
+    /// <para>
+    /// When the stream subscriber requests more elements the <see cref="Request"/> message
+    /// is delivered to this actor, and you can act on that event. The <see cref="TotalDemand"/>
+    /// is updated automatically.
+    /// </para>
+    /// <para>
+    /// When the stream subscriber cancels the subscription the <see cref="Cancel"/> message
+    /// is delivered to this actor. After that subsequent calls to <see cref="OnNext"/> will be ignored.
+    /// </para>
+    /// <para>
+    /// You can complete the stream by calling <see cref="OnComplete"/>. After that you are not allowed to
+    /// call <see cref="OnNext"/>, <see cref="OnError"/> and <see cref="OnComplete"/>.
+    /// </para>
+    /// <para>
+    /// You can terminate the stream with failure by calling <see cref="OnError"/>. After that you are not allowed to
+    /// call <see cref="OnNext"/>, <see cref="OnError"/> and <see cref="OnComplete"/>.
+    /// </para>
+    /// <para>
+    /// If you suspect that this <see cref="ActorPublisher{T}"/> may never get subscribed to,
+    /// you can override the <see cref="SubscriptionTimeout"/> method to provide a timeout after which
+    /// this Publisher should be considered canceled. The actor will be notified when
+    /// the timeout triggers via an <see cref="SubscriptionTimeoutExceeded"/> message and MUST then
+    /// perform cleanup and stop itself.
+    /// </para>
+    /// <para>
+    /// If the actor is stopped the stream will be completed, unless it was not already terminated with
+    /// failure, completed or canceled.
+    /// </para>
+    /// </summary>
     public abstract class ActorPublisher<T> : ActorBase
     {
-        protected readonly ActorPublisherState State = Context.System.WithExtension<ActorPublisherState, ActorPublisherState>();
+        protected readonly ActorPublisherState State = ActorPublisherState.Instance.Apply(Context.System);
         private long _demand;
         private LifecycleState _lifecycleState = LifecycleState.PreSubscriber;
         private ISubscriber<T> _subscriber;
@@ -123,60 +143,73 @@ namespace Akka.Streams.Actors
         // case and stop fields are used only when combined with LifecycleState.ErrorEmitted
         private OnErrorBlock _onError;
 
-        /**
-         * Subscription timeout after which this actor will become Canceled and reject any incoming "late" subscriber.
-         *
-         * The actor will receive an [[SubscriptionTimeoutExceeded]] message upon which it
-         * MUST react by performing all necessary cleanup and stopping itself.
-         *
-         * Use this feature in order to avoid leaking actors when you suspect that this Publisher may never get subscribed to by some Subscriber.
-         */
+        /// <summary>
+        /// Subscription timeout after which this actor will become Canceled and reject any incoming "late" subscriber.
+        ///
+        /// The actor will receive an [[SubscriptionTimeoutExceeded]] message upon which it
+        /// MUST react by performing all necessary cleanup and stopping itself.
+        ///
+        /// Use this feature in order to avoid leaking actors when you suspect that this Publisher may never get subscribed to by some Subscriber.
+        /// </summary>
+        /// <summary>
+        /// <para>
+        /// Subscription timeout after which this actor will become Canceled and reject any incoming "late" subscriber.
+        /// </para>
+        /// <para>
+        /// The actor will receive an <see cref="SubscriptionTimeoutExceeded"/> message upon which it
+        /// MUST react by performing all necessary cleanup and stopping itself.
+        /// </para>
+        /// <para>
+        /// Use this feature in order to avoid leaking actors when you suspect that this Publisher
+        /// may never get subscribed to by some Subscriber.
+        /// </para>
+        /// </summary>
         public TimeSpan SubscriptionTimeout { get; protected set; }
 
-        /**
-         * The state when the publisher is active, i.e. before the subscriber is attached
-         * and when an subscriber is attached. It is allowed to
-         * call [[#onComplete]] and [[#onError]] in this state. It is
-         * allowed to call [[#onNext]] in this state when [[#totalDemand]]
-         * is greater than zero.
-         */
-
+        /// <summary>
+        /// The state when the publisher is active, i.e. before the subscriber is attached
+        /// and when an subscriber is attached. It is allowed to
+        /// call <see cref="OnComplete"/> and <see cref="OnError"/> in this state. It is
+        /// allowed to call <see cref="OnNext"/> in this state when <see cref="TotalDemand"/>
+        /// is greater than zero.
+        /// </summary>
         public bool IsActive
             => _lifecycleState == LifecycleState.Active || _lifecycleState == LifecycleState.PreSubscriber;
 
-        /**
-         * Total number of requested elements from the stream subscriber.
-         * This actor automatically keeps tracks of this amount based on
-         * incoming request messages and outgoing `onNext`.
-         */
+        /// <summary>
+        /// Total number of requested elements from the stream subscriber.
+        /// This actor automatically keeps tracks of this amount based on
+        /// incoming request messages and outgoing <see cref="OnNext"/>.
+        /// </summary>
         public long TotalDemand => _demand;
 
-        /**
-         * The terminal state after calling [[#onComplete]]. It is not allowed to
-         * call [[#onNext]], [[#onError]], and [[#onComplete]] in this state.
-         */
+        /// <summary>
+        /// The terminal state after calling <see cref="OnComplete"/>. It is not allowed to
+        /// <see cref="OnNext"/>, <see cref="OnError"/>, and <see cref="OnComplete"/> in this state.
+        /// </summary>
         public bool IsCompleted => _lifecycleState == LifecycleState.Completed;
 
-        /**
-         * The terminal state after calling [[#onError]]. It is not allowed to
-         * call [[#onNext]], [[#onError]], and [[#onComplete]] in this state.
-         */
+        /// <summary>
+        /// The terminal state after calling <see cref="OnError"/>. It is not allowed to
+        /// call <see cref="OnNext"/>, <see cref="OnError"/>, and <see cref="OnComplete"/> in this state.
+        /// </summary>
         public bool IsErrorEmitted => _lifecycleState == LifecycleState.ErrorEmitted;
 
-        /**
-         * The state after the stream subscriber has canceled the subscription.
-         * It is allowed to call [[#onNext]], [[#onError]], and [[#onComplete]] in
-         * this state, but the calls will not perform anything.
-         */
+        /// <summary>
+        /// The state after the stream subscriber has canceled the subscription.
+        /// It is allowed to call <see cref="OnNext"/>, <see cref="OnError"/>, and <see cref="OnComplete"/> in
+        /// this state, but the calls will not perform anything.
+        /// </summary>
         public bool IsCanceled => _lifecycleState == LifecycleState.Canceled;
 
 
-        /**
-         * Send an element to the stream subscriber. You are allowed to send as many elements
-         * as have been requested by the stream subscriber. This amount can be inquired with
-         * [[#totalDemand]]. It is only allowed to use `onNext` when `isActive` and `totalDemand > 0`,
-         * otherwise `onNext` will throw `IllegalStateException`.
-         */
+        /// <summary>
+        /// Send an element to the stream subscriber. You are allowed to send as many elements
+        /// as have been requested by the stream subscriber. This amount can be inquired with
+        /// <see cref="TotalDemand"/>. It is only allowed to use <see cref="OnNext"/> when
+        /// <see cref="IsActive"/> and <see cref="TotalDemand"/> &gt; 0,
+        /// otherwise <see cref="OnNext"/> will throw <see cref="IllegalStateException"/>.
+        /// </summary>
         public void OnNext(T element)
         {
             switch (_lifecycleState)
@@ -201,10 +234,10 @@ namespace Akka.Streams.Actors
             }
         }
 
-        /**
-         * Complete the stream. After that you are not allowed to
-         * call [[#onNext]], [[#onError]] and [[#onComplete]].
-         */
+        /// <summary>
+        /// Complete the stream. After that you are not allowed to
+        /// call <see cref="OnNext"/>, <see cref="OnError"/> and <see cref="OnComplete"/>.
+        /// </summary>
         public void OnComplete()
         {
             switch (_lifecycleState)
@@ -233,15 +266,18 @@ namespace Akka.Streams.Actors
             }
         }
 
-        /**
-         * Complete the stream. After that you are not allowed to
-         * call [[#onNext]], [[#onError]] and [[#onComplete]].
-         *
-         * After signalling completion the Actor will then stop itself as it has completed the protocol.
-         * When [[#onComplete]] is called before any [[Subscriber]] has had the chance to subscribe
-         * to this [[ActorPublisher]] the completion signal (and therefore stopping of the Actor as well)
-         * will be delayed until such [[Subscriber]] arrives.
-         */
+        /// <summary>
+        /// <para>
+        /// Complete the stream. After that you are not allowed to
+        /// call <see cref="OnNext"/>, <see cref="OnError"/> and <see cref="OnComplete"/>.
+        /// </para>
+        /// <para>
+        /// After signalling completion the Actor will then stop itself as it has completed the protocol.
+        /// When <see cref="OnComplete"/> is called before any <see cref="ISubscriber{T}"/> has had the chance to subscribe
+        /// to this <see cref="ActorPublisher{T}"/> the completion signal (and therefore stopping of the Actor as well)
+        /// will be delayed until such <see cref="ISubscriber{T}"/> arrives.
+        /// </para>
+        /// </summary>
         public void OnCompleteThenStop()
         {
             switch (_lifecycleState)
@@ -267,10 +303,10 @@ namespace Akka.Streams.Actors
             }
         }
 
-        /**
-         * Terminate the stream with failure. After that you are not allowed to
-         * call [[#onNext]], [[#onError]] and [[#onComplete]].
-         */
+        /// <summary>
+        /// Terminate the stream with failure. After that you are not allowed to
+        /// call <see cref="OnNext"/>, <see cref="OnError"/> and <see cref="OnComplete"/>.
+        /// </summary>
         public void OnError(Exception cause)
         {
             switch (_lifecycleState)
@@ -299,15 +335,18 @@ namespace Akka.Streams.Actors
             }
         }
 
-        /**
-         * Terminate the stream with failure. After that you are not allowed to
-         * call [[#onNext]], [[#onError]] and [[#onComplete]].
-         *
-         * After signalling the Error the Actor will then stop itself as it has completed the protocol.
-         * When [[#onError]] is called before any [[Subscriber]] has had the chance to subscribe
-         * to this [[ActorPublisher]] the error signal (and therefore stopping of the Actor as well)
-         * will be delayed until such [[Subscriber]] arrives.
-         */
+        /// <summary>
+        /// <para>
+        /// Terminate the stream with failure. After that you are not allowed to
+        /// call <see cref="OnNext"/>, <see cref="OnError"/> and <see cref="OnComplete"/>.
+        /// </para>
+        /// <para>
+        /// After signalling the Error the Actor will then stop itself as it has completed the protocol.
+        /// When <see cref="OnError"/> is called before any <see cref="ISubscriber{T}"/> has had the chance to subscribe
+        /// to this <see cref="ActorPublisher{T}"/> the error signal (and therefore stopping of the Actor as well)
+        /// will be delayed until such <see cref="ISubscriber{T}"/> arrives.
+        /// </para>
+        /// </summary>
         public void OnErrorThenStop(Exception cause)
         {
             switch (_lifecycleState)
@@ -545,6 +584,10 @@ namespace Akka.Streams.Actors
         }
 
         private readonly ConcurrentDictionary<IActorRef, State> _state = new ConcurrentDictionary<IActorRef, State>();
+
+        public static readonly ActorPublisherState Instance = new ActorPublisherState();
+
+        private ActorPublisherState() { }
 
         public State Get(IActorRef actorRef)
         {

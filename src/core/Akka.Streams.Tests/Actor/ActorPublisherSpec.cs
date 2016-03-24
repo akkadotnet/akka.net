@@ -299,7 +299,7 @@ my-dispatcher1 {
             var senderRef1 = ActorOf(Sender.Props);
             var source1 = Source.FromPublisher<int, IActorRef>(ActorPublisher.Create<int>(senderRef1));
 
-            var sink1 = Sink.FromSubscriber<string, IActorRef>(new ActorSubscriberImpl<string>(ActorOf(Receiver.Props(probe1.Ref))));
+            var sink1 = Sink.FromSubscriber<string, IActorRef>(ActorSubscriber.Create<string>(ActorOf(Receiver.Props(probe1.Ref))));
             var sink2 = Sink.ActorSubscriber<string>(Receiver.Props(probe2.Ref));
             var senderRef2 = RunnableGraph<IActorRef>.FromGraph(GraphDsl.Create(
                 Source.ActorPublisher<int>(Sender.Props),
@@ -307,6 +307,7 @@ my-dispatcher1 {
                 {
                     var merge = builder.Add(new Merge<int, int>(2));
                     var bcast = builder.Add(new Broadcast<string>(2));
+
                     builder.From(source1).To(merge.In(0));
                     builder.From(source2.Outlet).To(merge.In(1));
                     

@@ -1,28 +1,35 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RequestStrategies.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 
 namespace Akka.Streams.Actors
 {
-    /**
-     * An [[ActorSubscriber]] defines a `RequestStrategy` to control the stream back pressure.
-     */
+    ///<summary>
+    /// An <see cref="ActorSubscriber"/> defines a <see cref="IRequestStrategy"/>
+    /// to control the stream back pressure.
+    /// </summary>
     public interface IRequestStrategy
     {
-        /**
-         * Invoked by the [[ActorSubscriber]] after each incoming message to
-         * determine how many more elements to request from the stream.
-         *
-         * @param remainingRequested current remaining number of elements that
-         *   have been requested from upstream but not received yet
-         * @return demand of more elements from the stream, returning 0 means that no
-         *   more elements will be requested for now
-         */
+         /// <summary>
+         /// Invoked by the <see cref="ActorSubscriber"/> after each incoming message to
+         /// determine how many more elements to request from the stream.
+         /// </summary>
+         /// <param name="remainingRequested">current remaining number of elements
+         /// that have been requested from upstream but not received yet</param>
+         /// <returns>demand of more elements from the stream, returning 0 means that no
+         /// more elements will be requested for now</returns>
         int RequestDemand(int remainingRequested);
     }
 
-    /**
-     * Requests one more element when `remainingRequested` is 0, i.e.
-     * max one element in flight.
-     */
+    /// <summary>
+    /// Requests one more element when `remainingRequested` is 0, i.e.
+    /// * max one element in flight.
+    /// </summary>
     public sealed class OneByOneRequestStrategy : IRequestStrategy
     {
         public static readonly OneByOneRequestStrategy Instance = new OneByOneRequestStrategy();
@@ -34,10 +41,9 @@ namespace Akka.Streams.Actors
         }
     }
 
-    /**
-     * When request is only controlled with manual calls to
-     * [[ActorSubscriber#request]].
-     */
+    /// <summary>
+    /// When request is only controlled with manual calls to <see cref="ActorSubscriber.Request"/>.
+    /// </summary>
     public sealed class ZeroRequestStrategy : IRequestStrategy
     {
         public static readonly ZeroRequestStrategy Instance = new ZeroRequestStrategy();
@@ -49,10 +55,10 @@ namespace Akka.Streams.Actors
         }
     }
 
-    /**
-     * Requests up to the `highWatermark` when the `remainingRequested` is
-     * below the `lowWatermark`. This a good strategy when the actor performs work itself.
-     */
+    /// <summary>
+    /// Requests up to the `highWatermark` when the `remainingRequested` is
+    /// below the `lowWatermark`. This a good strategy when the actor performs work itself.
+    /// </summary>
     public sealed class WatermarkRequestStrategy : IRequestStrategy
     {
         public readonly int HighWatermark;
@@ -76,12 +82,12 @@ namespace Akka.Streams.Actors
         }
     }
 
-    /**
-     * Requests up to the `max` and also takes the number of messages
-     * that have been queued internally or delegated to other actors into account.
-     * Concrete subclass must implement [[#inFlightInternally]].
-     * It will request elements in minimum batches of the defined [[#batchSize]].
-     */
+    /// <summary>
+    /// Requests up to the `max` and also takes the number of messages
+    /// that have been queued internally or delegated to other actors into account.
+    /// Concrete subclass must implement <see cref="InFlight"/>.
+    /// It will request elements in minimum batches of the defined <see cref="BatchSize"/>.
+    /// </summary>
     public abstract class MaxInFlightRequestStrategy : IRequestStrategy
     {
         public readonly int Max;
@@ -91,22 +97,22 @@ namespace Akka.Streams.Actors
             Max = max;
         }
 
-        /**
-         * Concrete subclass must implement this method to define how many
-         * messages that are currently in progress or queued.
-         */
+        /// <summary>
+        /// Concrete subclass must implement this method to define how many
+        /// messages that are currently in progress or queued.
+        /// </summary>
         public abstract int InFlight { get; }
 
-        /**
-         * Elements will be requested in minimum batches of this size.
-         * Default is 5. Subclass may override to define the batch size.
-         */
-        public virtual int BatchSize { get { return 5; } }
+        /// <summary>
+        /// Elements will be requested in minimum batches of this size.
+        /// Default is 5. Subclass may override to define the batch size.
+        /// </summary>
+        public virtual int BatchSize => 5;
 
         public int RequestDemand(int remainingRequested)
         {
             var batch = Math.Min(BatchSize, Max);
-            return (remainingRequested + InFlight) <= (Max - batch) 
+            return remainingRequested + InFlight <= (Max - batch) 
                 ? Math.Max(0, Max - remainingRequested - InFlight) 
                 : 0;
         }
