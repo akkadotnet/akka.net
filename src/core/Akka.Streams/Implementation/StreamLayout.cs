@@ -7,6 +7,7 @@ using System.Runtime.Serialization;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Fusing;
+using Akka.Streams.Util;
 using Akka.Util;
 using Akka.Util.Internal;
 
@@ -932,8 +933,8 @@ namespace Akka.Streams.Implementation
                 foreach (var subMap in _subscribersStack)
                     foreach (var subscriber in subMap.Values)
                     {
-                        var subscriptionType = subscriber.GetType().GetGenericArguments()[0];
-                        var publisher = typeof(ErrorPublisher<>).Instantiate(subscriptionType, ex, string.Empty);
+                        var subscribedType = subscriber.GetType().GetSubscribedType();
+                        var publisher = typeof(ErrorPublisher<>).Instantiate(subscribedType, ex, string.Empty);
 
                         ((IPublisher)publisher).Subscribe(subscriber);
                     }
@@ -941,8 +942,8 @@ namespace Akka.Streams.Implementation
                 foreach (var pubMap in _publishersStack)
                     foreach (var publisher in pubMap.Values)
                     {
-                        var publisherType = publisher.GetType().GetGenericArguments()[0];
-                        var subscribe = typeof(CancellingSubscriber<>).Instantiate(publisherType);
+                        var publishedType = publisher.GetType().GetPublishedType();
+                        var subscribe = typeof(CancellingSubscriber<>).Instantiate(publishedType);
 
                         publisher.Subscribe((ISubscriber)subscribe);
                     }
@@ -1010,7 +1011,7 @@ namespace Akka.Streams.Implementation
             if (node is StreamLayout.Atomic)
             {
                 var atomic = (StreamLayout.Atomic) node;
-                result = values[atomic.Module];
+                values.TryGetValue(atomic.Module, out result);
             }
             else if (node is StreamLayout.Combine)
             {
