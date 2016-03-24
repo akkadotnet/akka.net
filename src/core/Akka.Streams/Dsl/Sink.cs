@@ -263,6 +263,29 @@ namespace Akka.Streams.Dsl
             return new Sink<TIn, object>(new ActorRefSink<TIn>(actorRef, onCompleteMessage, DefaultAttributes.ActorRefSink, Shape<TIn>("ActorRefSink")));
         }
 
+        /// <summary>
+        /// Sends the elements of the stream to the given <see cref="IActorRef"/> that sends back back-pressure signal.
+        /// First element is always <paramref name="onInitMessage"/>, then stream is waiting for acknowledgement message
+        /// <paramref name="ackMessage"/> from the given actor which means that it is ready to process
+        /// elements.It also requires <paramref name="ackMessage"/> message after each stream element
+        /// to make backpressure work.
+        ///
+        /// If the target actor terminates the stream will be canceled.
+        /// When the stream is completed successfully the given <paramref name="onCompleteMessage"/>
+        /// will be sent to the destination actor.
+        /// When the stream is completed with failure - result of <paramref name="onFailureMessage"/>
+        /// function will be sent to the destination actor.
+        /// </summary>
+        public static Sink<TIn, Unit> ActorRefWithAck<TIn>(IActorRef actorRef, object onInitMessage, object ackMessage,
+            object onCompleteMessage, Func<Exception, object> onFailureMessage = null)
+        {
+            onFailureMessage = onFailureMessage ?? (ex => new Status.Failure(ex));
+
+            return
+                Sink.FromGraph(new ActorRefBackpressureSinkStage<TIn>(actorRef, onInitMessage, ackMessage,
+                    onCompleteMessage, onFailureMessage));
+        }
+
         ///<summary>
         /// Creates a <see cref="Sink{TIn,TMat}"/> that is materialized to an <see cref="IActorRef"/> which points to an Actor
         /// created according to the passed in <see cref="Props"/>. Actor created by the <paramref name="props"/> should
