@@ -183,9 +183,9 @@ namespace Akka.Streams.Dsl
         /// Elements are pulled out of the iterator in accordance with the demand coming
         /// from the downstream transformation steps.
         /// </summary>
-        public static Source<T, Unit> FromEnumerator<T>(Func<IEnumerator<T>> enumFactory)
+        public static Source<T, Unit> FromEnumerator<T>(Func<IEnumerator<T>> enumeratorFactory)
         {
-            return From(new EnumFactorySource<T>(enumFactory));
+            return From(new EnumeratorFactorySource<T>(enumeratorFactory));
         }
 
         /// <summary>

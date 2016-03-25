@@ -222,11 +222,11 @@ namespace Akka.Streams.Implementation
         }
     }
 
-    internal sealed class EnumFactorySource<T> : IEnumerable<T>
+    internal sealed class EnumeratorFactorySource<T> : IEnumerable<T>
     {
         private readonly Func<IEnumerator<T>> _enumFactory;
 
-        public EnumFactorySource(Func<IEnumerator<T>> enumFactory)
+        public EnumeratorFactorySource(Func<IEnumerator<T>> enumFactory)
         {
             _enumFactory = enumFactory;
         }
