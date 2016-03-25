@@ -132,7 +132,7 @@ namespace Akka.MultiNodeTestRunner
                             continue;
                         }
 
-                        if (!string.IsNullOrWhiteSpace(specName) && !test.Value.First().MethodName.Contains(specName))
+                        if (!string.IsNullOrWhiteSpace(specName) && !test.Value[0].MethodName.Contains(specName))
                             continue;
 
                         PublishRunnerMessage(string.Format("Starting test {0}", test.Value.First().MethodName));
