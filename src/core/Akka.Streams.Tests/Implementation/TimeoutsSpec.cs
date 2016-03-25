@@ -23,7 +23,7 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public void InitialTimeout_must_pass_through_elemnts_unmodified()
+        public void InitialTimeout_must_pass_through_elements_unmodified()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -41,19 +41,19 @@ namespace Akka.Streams.Tests.Implementation
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = Source.From(Enumerable.Range(1, 100))
+                var task = Source.From(Enumerable.Range(1, 100))
                     .Concat(Source.Failed<int>(new TestException("test")))
                     .InitialTimeout(TimeSpan.FromSeconds(2)).Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-                t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Exception.Flatten().InnerExceptions.Any(e => e is TestException && e.Message.Equals("test"));
+                task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
+                    .ShouldThrow<TestException>().WithMessage("test");
 
             }, Materializer);
         }
 
         [Fact]
-        public void InitialTimeout_must_fail_if_no_inital_element_passes_until_timeout()
+        public void InitialTimeout_must_fail_if_no_initial_element_passes_until_timeout()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -61,12 +61,12 @@ namespace Akka.Streams.Tests.Implementation
                 Source.Maybe<int>()
                 .InitialTimeout(TimeSpan.FromSeconds(1))
                 .RunWith(Sink.FromSubscriber<int, Unit>(downstreamProbe), Materializer);
-               
+
                 downstreamProbe.ExpectSubscription();
                 downstreamProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
 
                 var ex = downstreamProbe.ExpectError();
-                ex.Message.Should().Be("The first element has not yet passed through in 1 second.");
+                ex.Message.Should().Be($"The first element has not yet passed through in {TimeSpan.FromSeconds(1)}.");
             }, Materializer);
         }
 
@@ -90,14 +90,13 @@ namespace Akka.Streams.Tests.Implementation
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = Source.From(Enumerable.Range(1, 100))
+                var task = Source.From(Enumerable.Range(1, 100))
                     .Concat(Source.Failed<int>(new TestException("test")))
                     .CompletionTimeout(TimeSpan.FromSeconds(2)).Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-                t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Exception.Flatten().InnerExceptions.Any(e => e is TestException && e.Message.Equals("test"));
-
+                task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
+                    .ShouldThrow<TestException>().WithMessage("test");
             }, Materializer);
         }
         
@@ -123,13 +122,13 @@ namespace Akka.Streams.Tests.Implementation
                 downstreamProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(500)); // No timeout yet
 
                 var ex = downstreamProbe.ExpectError();
-                ex.Message.Should().Be("The stream has not been completed in 2 seconds.");
+                ex.Message.Should().Be($"The stream has not been completed in {TimeSpan.FromSeconds(2)}.");
             }, Materializer);
         }
 
 
         [Fact]
-        public void IdleTimeout_must_pass_through_elemnts_unmodified()
+        public void IdleTimeout_must_pass_through_elements_unmodified()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -147,14 +146,13 @@ namespace Akka.Streams.Tests.Implementation
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = Source.From(Enumerable.Range(1, 100))
+                var task = Source.From(Enumerable.Range(1, 100))
                     .Concat(Source.Failed<int>(new TestException("test")))
                     .IdleTimeout(TimeSpan.FromSeconds(2)).Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-                t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Exception.Flatten().InnerExceptions.Any(e => e is TestException && e.Message.Equals("test"));
-
+                task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
+                    .ShouldThrow<TestException>().WithMessage("test");
             }, Materializer);
         }
 
@@ -180,7 +178,7 @@ namespace Akka.Streams.Tests.Implementation
                 }
                 
                 var ex = downstreamProbe.ExpectError();
-                ex.Message.Should().Be("No elements passed in the last 1 second.");
+                ex.Message.Should().Be($"No elements passed in the last {TimeSpan.FromSeconds(1)}.");
             }, Materializer);
         }
 
@@ -193,7 +191,7 @@ namespace Akka.Streams.Tests.Implementation
                 var timeoutIdentity = BidiFlow.BidirectionalIdleTimeout<int, int>(TimeSpan.FromSeconds(2)).Join(Flow.Create<int>());
 
                 var t = Source.From(Enumerable.Range(1, 100))
-                    .Via(timeoutIdentity.Grouped(200))
+                    .Via(timeoutIdentity).Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -283,7 +281,7 @@ namespace Akka.Streams.Tests.Implementation
                 var error2 = downRead.ExpectError();
 
                 error1.Should().BeOfType<TimeoutException>();
-                error1.Message.Should().Be("No elements passed in the last 2 seconds.");
+                error1.Message.Should().Be($"No elements passed in the last {TimeSpan.FromSeconds(2)}.");
                 error2.ShouldBeEquivalentTo(error1);
 
                 upWrite.ExpectCancellation();

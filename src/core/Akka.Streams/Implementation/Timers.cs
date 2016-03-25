@@ -29,8 +29,7 @@ namespace Akka.Streams.Implementation
         private sealed class InitialStageLogic : TimerGraphStageLogic
         {
             private readonly Initial<T> _stage;
-
-            public bool InitialHasPassed { get; private set; }
+            private bool _initialHasPassed;
 
             public InitialStageLogic(Shape shape, Initial<T> stage) : base(shape)
             {
@@ -38,7 +37,7 @@ namespace Akka.Streams.Implementation
 
                 SetHandler(stage.Inlet, onPush: () =>
                 {
-                    InitialHasPassed = true;
+                    _initialHasPassed = true;
                     Push(stage.Outlet, Grab(stage.Inlet));
                 });
                 SetHandler(stage.Outlet, onPull: () => Pull(stage.Inlet));
@@ -46,8 +45,8 @@ namespace Akka.Streams.Implementation
 
             protected internal override void OnTimer(object timerKey)
             {
-                if (!InitialHasPassed)
-                    FailStage(new TimeoutException("The first element has not yet passed through " + _stage.Timeout));
+                if (!_initialHasPassed)
+                    FailStage(new TimeoutException($"The first element has not yet passed through in {_stage.Timeout}."));
             }
 
             public override void PreStart()
@@ -86,7 +85,7 @@ namespace Akka.Streams.Implementation
 
             protected internal override void OnTimer(object timerKey)
             {
-                FailStage(new TimeoutException("The stream has not been completed in " + _stage.Timeout));
+                FailStage(new TimeoutException($"The stream has not been completed in {_stage.Timeout}."));
             }
 
             public override void PreStart()
@@ -131,7 +130,7 @@ namespace Akka.Streams.Implementation
             protected internal override void OnTimer(object timerKey)
             {
                 if (_nextDeadline <= DateTime.UtcNow)
-                    FailStage(new TimeoutException("No elements passed in the last " + _stage.Timeout));
+                    FailStage(new TimeoutException($"No elements passed in the last {_stage.Timeout}."));
             }
 
             public override void PreStart()
@@ -193,7 +192,7 @@ namespace Akka.Streams.Implementation
             protected internal override void OnTimer(object timerKey)
             {
                 if (_nextDeadline <= DateTime.UtcNow)
-                    FailStage(new TimeoutException("No elements passed in the last " + _stage.Timeout));
+                    FailStage(new TimeoutException($"No elements passed in the last {_stage.Timeout}."));
             }
 
             public override void PreStart()
