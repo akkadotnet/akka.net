@@ -234,7 +234,7 @@ namespace Akka.Actor
         public void Tell(object message, Akka.Actor.IActorRef sender) { }
         protected abstract void TellInternal(object message, Akka.Actor.IActorRef sender);
         public override string ToString() { }
-        public Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
+        public virtual Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
         public class Surrogate : Akka.Util.ISurrogate
         {
             public Surrogate(string path) { }
@@ -1212,6 +1212,12 @@ namespace Akka.Actor
         public static Akka.Actor.Nobody Instance;
         public override Akka.Actor.ActorPath Path { get; }
         public override Akka.Actor.IActorRefProvider Provider { get; }
+        public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
+        public class NobodySurrogate : Akka.Util.ISurrogate
+        {
+            public NobodySurrogate() { }
+            public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
+        }
     }
     public class OneForOneStrategy : Akka.Actor.SupervisorStrategy
     {
