@@ -244,7 +244,7 @@ namespace Akka.Remote.TestKit
         public sealed class WrongBarrierException : Exception
         {
             public WrongBarrierException(string barrier, IActorRef client, Data barrierData)
-                : base(string.Format("tried"))
+                : base($"tried to enter '{barrier}' while we were waiting for '{barrierData.Barrier}'")
             {
                 BarrierData = barrierData;
                 Client = client;

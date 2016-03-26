@@ -328,7 +328,7 @@ namespace Akka.Remote.TestKit
                 }
                 if (@event.FsmEvent is StateTimeout)
                 {
-                    _log.Error("connect timeout to TestConductor");
+                    _log.Error($"Failed to connect to test conductor within {_settings.ConnectTimeout.TotalMilliseconds} ms.");
                     return GoTo(State.Failed);
                 }
 
