@@ -1,0 +1,126 @@
+﻿using System;
+using System.Linq;
+using System.Reactive.Streams;
+using Akka.Streams.Dsl;
+using Akka.Streams.TestKit;
+using Akka.Streams.TestKit.Tests;
+using FluentAssertions;
+using Xunit;
+
+namespace Akka.Streams.Tests.Dsl
+{
+    public class FlowWatchTerminationSpec : AkkaSpec
+    {
+        private ActorMaterializer Materializer { get; }
+
+        public FlowWatchTerminationSpec()
+        {
+            var settings = ActorMaterializerSettings.Create(Sys);
+            Materializer = ActorMaterializer.Create(Sys, settings);
+        }
+
+        [Fact]
+        public void A_WatchTermination_must_complete_the_future_when_stream_is_completed()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var t =
+                    Source.From(Enumerable.Range(1, 4))
+                        .WatchTermination(Keep.Right)
+                        .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                        .Run(Materializer);
+                var future = t.Item1;
+                var p = t.Item2;
+
+                p.Request(4).ExpectNext(1, 2, 3, 4);
+                future.Result.Should().Be(Unit.Instance);
+                p.ExpectComplete();
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_WatchTermination_must_complete_the_future_when_stream_is_cancelled_from_downstream()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var t =
+                    Source.From(Enumerable.Range(1, 4))
+                        .WatchTermination(Keep.Right)
+                        .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                        .Run(Materializer);
+                var future = t.Item1;
+                var p = t.Item2;
+
+                p.Request(3).ExpectNext(1, 2, 3);
+                p.Cancel();
+                future.Result.Should().Be(Unit.Instance);
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_WatchTermination_must_fail_the_future_when_stream_is_failed()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var ex = new SystemException("Stream failed.");
+                var t = this.SourceProbe<int>().WatchTermination(Keep.Both).To(Sink.Ignore<int>()).Run(Materializer);
+                var p = t.Item1;
+                var future = t.Item2;
+                p.SendNext(1);
+                p.SendError(ex);
+                future.Invoking(f => f.Wait()).ShouldThrow<SystemException>().WithMessage("Stream failed.");
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_WatchTermination_must_complete_the_future_for_an_empty_stream()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var t =
+                    Source.Empty<int>()
+                        .WatchTermination(Keep.Right)
+                        .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                        .Run(Materializer);
+                var future = t.Item1;
+                var p = t.Item2;
+                p.Request(1);
+                future.Result.Should().Be(Unit.Instance);
+            }, Materializer);
+        }
+
+        [Fact(Skip = "We need a way to combine multiple sources with different materializer types")]
+        public void A_WatchTermination_must_complete_the_future_for_graph()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                //var first = this.SourceProbe<int>().WatchTermination(Keep.Both);
+                //var second = Source.From(Enumerable.Range(2, 4)).MapMaterializedValue(new Func<Unit, Tuple<TestPublisher.Probe<int>, Task<Unit>>>(_ => null));
+                
+                //var t = Source.FromGraph(
+                //    GraphDsl.Create<SourceShape<int>, Tuple<TestPublisher.Probe<int>, Task<Unit>>>(b =>
+                //    {
+                //        var c = b.Add(new Merge<int, int>(2));
+                //        b.From(first).To(c.In(0));
+                //        b.From(second).To(c.In(1));
+
+                //        return new SourceShape<int>(c.Out);
+                //    }))
+                //    .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                //    .Run(Materializer);
+
+                //var sourceProbe = t.Item1.Item1;
+                //var future = t.Item1.Item2;
+                //var sinkProbe = t.Item2;
+
+                //sinkProbe.Request(5);
+                //sourceProbe.SendNext(1);
+                //sinkProbe.ExpectNext(1);
+                //ExpectNoMsg(TimeSpan.FromMilliseconds(300));
+
+                //sourceProbe.SendComplete();
+                //sinkProbe.ExpectNextN(new[] {2, 3, 4, 5}).ExpectComplete();
+            }, Materializer);
+        }
+    }
+}

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.NetworkInformation;
 using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Event;
@@ -20,7 +21,8 @@ namespace Akka.Streams.Dsl.Internal
             return arg => arg;
         }
 
-        internal static IFlow<TOut2, TMat> AndThen<TOut2, TOut, TMat>(this IFlow<TOut, TMat> flow, SymbolicStage<TOut, TOut2> op)
+        internal static IFlow<TOut2, TMat> AndThen<TOut2, TOut, TMat>(this IFlow<TOut, TMat> flow,
+            SymbolicStage<TOut, TOut2> op)
         {
             return flow.Via(new SymbolicGraphStage<TOut, TOut2, object>(op));
         }
@@ -40,7 +42,8 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels 
         /// </summary>
-        public static IFlow<TOut, TMat> Recover<TOut, TMat>(this IFlow<TOut, TMat> flow, Func<Exception, TOut> partialFunc) where TOut : class
+        public static IFlow<TOut, TMat> Recover<TOut, TMat>(this IFlow<TOut, TMat> flow,
+            Func<Exception, TOut> partialFunc) where TOut : class
         {
             return flow.AndThen(new Recover<TOut>(partialFunc));
         }
@@ -85,7 +88,8 @@ namespace Akka.Streams.Dsl.Internal
         /// '''Cancels when''' downstream cancels
         /// </para>
         /// </summary>
-        public static IFlow<TOut, TMat> MapConcat<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, IEnumerable<TOut>> mapConcater)
+        public static IFlow<TOut, TMat> MapConcat<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
+            Func<TIn, IEnumerable<TOut>> mapConcater)
         {
             return flow.AndThen(new MapConcat<TIn, TOut>(mapConcater));
         }
@@ -120,7 +124,8 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// </summary>
         /// <seealso cref="MapAsyncUnordered{TIn,TOut,TMat}"/>
-        public static IFlow<TOut, TMat> MapAsync<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int parallelism, Func<TIn, Task<TOut>> asyncMapper)
+        public static IFlow<TOut, TMat> MapAsync<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int parallelism,
+            Func<TIn, Task<TOut>> asyncMapper)
         {
             return flow.Via(new Fusing.MapAsync<TIn, TOut>(parallelism, asyncMapper));
         }
@@ -154,7 +159,8 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// </summary>
         /// <seealso cref="MapAsync{TIn,TOut,TMat}"/>
-        public static IFlow<TOut, TMat> MapAsyncUnordered<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int parallelism, Func<TIn, Task<TOut>> asyncMapper)
+        public static IFlow<TOut, TMat> MapAsyncUnordered<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int parallelism,
+            Func<TIn, Task<TOut>> asyncMapper)
         {
             return flow.Via(new Fusing.MapAsyncUnordered<TIn, TOut>(parallelism, asyncMapper));
         }
@@ -247,7 +253,8 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<TOut, TMat> Collect<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> collector) where TOut : class
+        public static IFlow<TOut, TMat> Collect<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> collector)
+            where TOut : class
         {
             return flow.AndThen(new Collect<TIn, TOut>(collector));
         }
@@ -367,7 +374,8 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<TOut, TMat> Scan<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, TOut zero, Func<TOut, TIn, TOut> scan)
+        public static IFlow<TOut, TMat> Scan<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, TOut zero,
+            Func<TOut, TIn, TOut> scan)
         {
             return flow.AndThen(new Scan<TIn, TOut>(zero, scan));
         }
@@ -389,7 +397,8 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<TOut, TMat> Fold<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, TOut zero, Func<TOut, TIn, TOut> fold)
+        public static IFlow<TOut, TMat> Fold<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, TOut zero,
+            Func<TOut, TIn, TOut> fold)
         {
             return flow.AndThen(new Fold<TIn, TOut>(zero, fold));
         }
@@ -467,12 +476,14 @@ namespace Akka.Streams.Dsl.Internal
         /// '''Cancels when''' downstream completes
         /// </summary>
         /// <exception cref="ArgumentException">Thrown if <paramref name="n"/> is less than or equal zero or <paramref name="timeout"/> is <see cref="TimeSpan.Zero"/>.</exception>
-        public static IFlow<IEnumerable<T>, TMat> GroupedWithin<T, TMat>(this IFlow<T, TMat> flow, int n, TimeSpan timeout)
+        public static IFlow<IEnumerable<T>, TMat> GroupedWithin<T, TMat>(this IFlow<T, TMat> flow, int n,
+            TimeSpan timeout)
         {
             if (n <= 0) throw new ArgumentException("n must be > 0", nameof(n));
             if (timeout == TimeSpan.Zero) throw new ArgumentException("Timeout must be non-zero", nameof(timeout));
 
-            return flow.Via(new Fusing.GroupedWithin<T>(n, timeout).WithAttributes(Attributes.CreateName("groupedWithin")));
+            return
+                flow.Via(new Fusing.GroupedWithin<T>(n, timeout).WithAttributes(Attributes.CreateName("groupedWithin")));
         }
 
         /// <summary>
@@ -499,9 +510,13 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         /// <param name="of">Time to shift all messages.</param>
         /// <param name="strategy">Strategy that is used when incoming elements cannot fit inside the buffer</param>
-        public static IFlow<T, TMat> Delay<T, TMat>(this IFlow<T, TMat> flow, TimeSpan of, DelayOverflowStrategy? strategy = null)
+        public static IFlow<T, TMat> Delay<T, TMat>(this IFlow<T, TMat> flow, TimeSpan of,
+            DelayOverflowStrategy? strategy = null)
         {
-            return flow.Via(new Fusing.Delay<T>(of, strategy ?? DelayOverflowStrategy.DropTail).WithAttributes(Attributes.CreateName("delay")));
+            return
+                flow.Via(
+                    new Fusing.Delay<T>(of, strategy ?? DelayOverflowStrategy.DropTail).WithAttributes(
+                        Attributes.CreateName("delay")));
         }
 
         /// <summary>
@@ -602,7 +617,8 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         /// <param name="seed">Provides the first state for a conflated value using the first unconsumed element as a start</param> 
         /// <param name="aggregate">Takes the currently aggregated value and the current pending element to produce a new aggregate</param>
-        public static IFlow<TSeed, TMat> ConflateWithSeed<T, TMat, TSeed>(this IFlow<T, TMat> flow, Func<T, TSeed> seed, Func<TSeed, T, TSeed> aggregate)
+        public static IFlow<TSeed, TMat> ConflateWithSeed<T, TMat, TSeed>(this IFlow<T, TMat> flow, Func<T, TSeed> seed,
+            Func<TSeed, T, TSeed> aggregate)
         {
             return flow.Via(new Fusing.Batch<T, TSeed>(1L, elem => 0L, seed, aggregate));
         }
@@ -653,7 +669,8 @@ namespace Akka.Streams.Dsl.Internal
         /// '''Cancels when''' downstream cancels
         /// </summary>
         /// <param name="extrapolate">Takes the current extrapolation state to produce an output element and the next extrapolation state.</param>
-        public static IFlow<TOut, TMat> Expand<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, IEnumerator<TOut>> extrapolate)
+        public static IFlow<TOut, TMat> Expand<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
+            Func<TIn, IEnumerator<TOut>> extrapolate)
         {
             return flow.Via(new Fusing.Expand<TIn, TOut>(extrapolate));
         }
@@ -686,7 +703,8 @@ namespace Akka.Streams.Dsl.Internal
         /// This operator makes it possible to extend the <see cref="Flow"/> API when there is no specialized
         /// operator that performs the transformation.
         /// </summary>
-        public static IFlow<TOut, TMat> Transform<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<IStage<TIn, TOut>> stageFactory)
+        public static IFlow<TOut, TMat> Transform<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
+            Func<IStage<TIn, TOut>> stageFactory)
         {
             return flow.Via(new PushPullGraphStage<TIn, TOut, object>(attr => stageFactory(), Attributes.None));
         }
@@ -705,7 +723,8 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels or substream cancels
         /// </summary> 
-        public static IFlow<Tuple<IEnumerable<T>, Source<T, Unit>>, TMat> PrefixAndTail<T, TMat>(this IFlow<T, TMat> flow, int n)
+        public static IFlow<Tuple<IEnumerable<T>, Source<T, Unit>>, TMat> PrefixAndTail<T, TMat>(
+            this IFlow<T, TMat> flow, int n)
         {
             return flow.Via(new Fusing.PrefixAndTail<T>(n));
         }
@@ -738,7 +757,8 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels and all substreams cancel
         /// </summary> 
-        public static IFlow<KeyValuePair<TKey, Source<TVal, TMat>>, TMat> GroupBy<T, TMat, TKey, TVal>(this IFlow<T, TMat> flow, Func<T, TKey> groupingFunc) where TVal : T
+        public static IFlow<KeyValuePair<TKey, Source<TVal, TMat>>, TMat> GroupBy<T, TMat, TKey, TVal>(
+            this IFlow<T, TMat> flow, Func<T, TKey> groupingFunc) where TVal : T
         {
             //implicit def mat = GraphInterpreter.currentInterpreter.materializer
             //val merge = new SubFlowImpl.MergeBack[Out, Repr] {
@@ -806,7 +826,8 @@ namespace Akka.Streams.Dsl.Internal
         /// '''Cancels when''' downstream cancels and substreams cancel
         /// </summary>
         /// <seealso cref="SplitAfter{T,TMat,TVal}"/> 
-        public static IFlow<Source<TVal, TMat>, TMat> SplitWhen<T, TMat, TVal>(this IFlow<T, TMat> flow, Predicate<T> predicate) where TVal : T
+        public static IFlow<Source<TVal, TMat>, TMat> SplitWhen<T, TMat, TVal>(this IFlow<T, TMat> flow,
+            Predicate<T> predicate) where TVal : T
         {
             //val merge = new SubFlowImpl.MergeBack[Out, Repr] {
             //  override def apply[T](flow: Flow[Out, T, Unit], breadth: Int): Repr[T] =
@@ -864,7 +885,8 @@ namespace Akka.Streams.Dsl.Internal
         /// '''Cancels when''' downstream cancels and substreams cancel
         /// </summary>
         /// <seealso cref="SplitWhen{T,TMat,TVal}"/> 
-        public static IFlow<Source<TVal, TMat>, TMat> SplitAfter<T, TMat, TVal>(this IFlow<T, TMat> flow, Predicate<T> predicate) where TVal : T
+        public static IFlow<Source<TVal, TMat>, TMat> SplitAfter<T, TMat, TVal>(this IFlow<T, TMat> flow,
+            Predicate<T> predicate) where TVal : T
         {
             //val merge = new SubFlowImpl.MergeBack[Out, Repr] {
             //  override def apply[T](flow: Flow[Out, T, Unit], breadth: Int): Repr[T] =
@@ -892,7 +914,8 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<TOut, TMat> FlatMapConcat<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, IGraph<SourceShape<TOut>, TMat>> flatten)
+        public static IFlow<TOut, TMat> FlatMapConcat<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
+            Func<TIn, IGraph<SourceShape<TOut>, TMat>> flatten)
         {
             return flow.Map(flatten).Via(new Fusing.FlattenMerge<TOut, TMat>(1));
         }
@@ -910,7 +933,8 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<TOut, TMat> FlatMapMerge<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int breadth, Func<TIn, IGraph<SourceShape<TOut>, TMat>> flatten)
+        public static IFlow<TOut, TMat> FlatMapMerge<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int breadth,
+            Func<TIn, IGraph<SourceShape<TOut>, TMat>> flatten)
         {
             return flow.Map(flatten).Via(new Fusing.FlattenMerge<TOut, TMat>(breadth));
         }
@@ -983,7 +1007,8 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<TIn2, TMat> KeepAlive<TIn, TIn2, TMat>(this IFlow<TIn, TMat> flow, TimeSpan timeout, Func<TIn2> injectElement) where TIn : TIn2
+        public static IFlow<TIn2, TMat> KeepAlive<TIn, TIn2, TMat>(this IFlow<TIn, TMat> flow, TimeSpan timeout,
+            Func<TIn2> injectElement) where TIn : TIn2
         {
             return flow.Via(new IdleInject<TIn, TIn2>(timeout, injectElement));
         }
@@ -1014,11 +1039,13 @@ namespace Akka.Streams.Dsl.Internal
         /// <exception cref="ArgumentException">Thow when <paramref name="elements"/> is less than or equal zero, 
         /// or <paramref name="per"/> timeout is equal <see cref="TimeSpan.Zero"/> 
         /// or <paramref name="maximumBurst"/> is less than or equal zero in in <see cref="ThrottleMode.Enforcing"/> <paramref name="mode"/>.</exception>
-        public static IFlow<T, TMat> Throttle<T, TMat>(this IFlow<T, TMat> flow, int elements, TimeSpan per, int maximumBurst, ThrottleMode mode)
+        public static IFlow<T, TMat> Throttle<T, TMat>(this IFlow<T, TMat> flow, int elements, TimeSpan per,
+            int maximumBurst, ThrottleMode mode)
         {
             if (elements <= 0) throw new ArgumentException("Throttle elements must be > 0", nameof(elements));
             if (per == TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be zero", nameof(per));
-            if (mode == ThrottleMode.Enforcing && maximumBurst < 0) throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
+            if (mode == ThrottleMode.Enforcing && maximumBurst < 0)
+                throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
 
             return flow.Via(new Throttle<T>(elements, per, maximumBurst, _ => 1, mode));
         }
@@ -1049,10 +1076,12 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<T, TMat> Throttle<T, TMat>(this IFlow<T, TMat> flow, int cost, TimeSpan per, int maximumBurst, Func<T, int> calculateCost, ThrottleMode mode)
+        public static IFlow<T, TMat> Throttle<T, TMat>(this IFlow<T, TMat> flow, int cost, TimeSpan per,
+            int maximumBurst, Func<T, int> calculateCost, ThrottleMode mode)
         {
             if (per == TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be zero", nameof(per));
-            if (mode == ThrottleMode.Enforcing && maximumBurst < 0) throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
+            if (mode == ThrottleMode.Enforcing && maximumBurst < 0)
+                throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
 
             return flow.Via(new Throttle<T>(cost, per, maximumBurst, calculateCost, mode));
         }
@@ -1087,7 +1116,8 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<T, TMat> Log<T, TMat>(this IFlow<T, TMat> flow, string name, ILoggingAdapter log, Func<T, object> extract = null)
+        public static IFlow<T, TMat> Log<T, TMat>(this IFlow<T, TMat> flow, string name, ILoggingAdapter log,
+            Func<T, object> extract = null)
         {
             return flow.AndThen(new Log<T>(name, extract ?? Identity<T>(), log));
         }
@@ -1103,12 +1133,14 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<Tuple<T1, T2>, TMat> Zip<T1, T2, TMat>(this IFlow<T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other)
+        public static IFlow<Tuple<T1, T2>, TMat> Zip<T1, T2, TMat>(this IFlow<T1, TMat> flow,
+            IGraph<SourceShape<T2>, TMat> other)
         {
             return flow.Via(ZipGraph<T1, T2, TMat>(other));
         }
 
-        private static IGraph<FlowShape<T1, Tuple<T1, T2>>, TMat> ZipGraph<T1, T2, TMat>(IGraph<SourceShape<T2>, TMat> other)
+        private static IGraph<FlowShape<T1, Tuple<T1, T2>>, TMat> ZipGraph<T1, T2, TMat>(
+            IGraph<SourceShape<T2>, TMat> other)
         {
             return GraphDsl.Create(other, (builder, shape) =>
             {
@@ -1130,12 +1162,14 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<T3, TMat> ZipWith<T1, T2, T3, TMat>(this IFlow<T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other, Func<T1, T2, T3> combine)
+        public static IFlow<T3, TMat> ZipWith<T1, T2, T3, TMat>(this IFlow<T1, TMat> flow,
+            IGraph<SourceShape<T2>, TMat> other, Func<T1, T2, T3> combine)
         {
             return flow.Via(ZipWithGraph(other, combine));
         }
 
-        private static IGraph<FlowShape<T1, T3>, TMat> ZipWithGraph<T1, T2, T3, TMat>(IGraph<SourceShape<T2>, TMat> other, Func<T1, T2, T3> combine)
+        private static IGraph<FlowShape<T1, T3>, TMat> ZipWithGraph<T1, T2, T3, TMat>(
+            IGraph<SourceShape<T2>, TMat> other, Func<T1, T2, T3> combine)
         {
             return GraphDsl.Create(other, (builder, shape) =>
             {
@@ -1169,12 +1203,14 @@ namespace Akka.Streams.Dsl.Internal
         /// Source(List(1, 2, 3)).Interleave(List(4, 5, 6, 7), 2) // 1, 2, 4, 5, 3, 6, 7
         /// </code>
         /// </example>
-        public static IFlow<T2, TMat> Interleave<T1, T2, TMat>(this IFlow<T1, TMat> flow, IGraph<SourceShape<T2>, TMat> graph, int segmentSize) where T1 : T2
+        public static IFlow<T2, TMat> Interleave<T1, T2, TMat>(this IFlow<T1, TMat> flow,
+            IGraph<SourceShape<T2>, TMat> graph, int segmentSize) where T1 : T2
         {
             return flow.Via(InterleaveGraph<T1, T2, TMat>(graph, segmentSize));
         }
 
-        private static IGraph<FlowShape<T1, T2>, TMat> InterleaveGraph<T1, T2, TMat>(IGraph<SourceShape<T2>, TMat> graph, int segmentSize) where T1 : T2
+        private static IGraph<FlowShape<T1, T2>, TMat> InterleaveGraph<T1, T2, TMat>(
+            IGraph<SourceShape<T2>, TMat> graph, int segmentSize) where T1 : T2
         {
             return GraphDsl.Create(graph, (builder, shape) =>
             {
@@ -1197,12 +1233,14 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<TOut, TMat> Merge<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, IGraph<SourceShape<TOut>, TMat> other, bool eagerComplete = false) where TIn : TOut
+        public static IFlow<TOut, TMat> Merge<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
+            IGraph<SourceShape<TOut>, TMat> other, bool eagerComplete = false) where TIn : TOut
         {
             return flow.Via(MergeGraph<TIn, TOut, TMat>(other, eagerComplete));
         }
 
-        private static IGraph<FlowShape<TIn, TOut>, TMat> MergeGraph<TIn, TOut, TMat>(IGraph<SourceShape<TOut>, TMat> other, bool eagerComplete = false) where TIn : TOut
+        private static IGraph<FlowShape<TIn, TOut>, TMat> MergeGraph<TIn, TOut, TMat>(
+            IGraph<SourceShape<TOut>, TMat> other, bool eagerComplete = false) where TIn : TOut
         {
             return GraphDsl.Create(other, (builder, shape) =>
             {
@@ -1228,7 +1266,8 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<T, TMat> MergeOrdered<T, TMat>(this IFlow<T, TMat> flow, IGraph<SourceShape<T>, TMat> other, Func<T, T, int> orderFunc)
+        public static IFlow<T, TMat> MergeOrdered<T, TMat>(this IFlow<T, TMat> flow, IGraph<SourceShape<T>, TMat> other,
+            Func<T, T, int> orderFunc)
         {
             return flow.Via(MergeOrderedGraph(other, orderFunc));
         }
@@ -1269,12 +1308,14 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<T, TMat> MergeOrdered<T, TMat>(this IFlow<T, TMat> flow, IGraph<SourceShape<T>, TMat> other, IComparer<T> comparer)
+        public static IFlow<T, TMat> MergeOrdered<T, TMat>(this IFlow<T, TMat> flow, IGraph<SourceShape<T>, TMat> other,
+            IComparer<T> comparer)
         {
             return flow.Via(MergeOrderedGraph(other, comparer.Compare));
         }
 
-        private static IGraph<FlowShape<T, T>, TMat> MergeOrderedGraph<T, TMat>(IGraph<SourceShape<T>, TMat> other, Func<T, T, int> compare)
+        private static IGraph<FlowShape<T, T>, TMat> MergeOrderedGraph<T, TMat>(IGraph<SourceShape<T>, TMat> other,
+            Func<T, T, int> compare)
         {
             return GraphDsl.Create(other, (builder, shape) =>
             {
@@ -1303,12 +1344,29 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<TOut, TMat> Concat<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, IGraph<SourceShape<TOut>, TMat> other) where TIn : TOut
+        public static IFlow<TOut, TMat> Concat<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
+            IGraph<SourceShape<TOut>, TMat> other) where TIn : TOut
         {
             return flow.Via(ConcatGraph<TIn, TOut, TMat>(other));
         }
 
-        private static IGraph<FlowShape<TIn, TOut>, TMat> ConcatGraph<TIn, TOut, TMat>(IGraph<SourceShape<TOut>, TMat> other) where TIn : TOut
+        ///<summary>
+        /// Materializes to `Future[Done]` that completes on getting termination message.
+        /// The Future completes with success when received complete message from upstream or cancel
+        /// from downstream. It fails with the same error when received error message from
+        /// downstream.
+        ///
+        /// It is recommended to use the internally optimized `Keep.left` and `Keep.right` combiners
+        /// where appropriate instead of manually writing functions that pass through one of the values.
+        ///</summary>    
+        public static IFlow<T, TMat2> WatchTermination<T, TMat, TMat2>(this IFlow<T, TMat> flow,
+            Func<TMat, Task<Unit>, TMat2> materializerFunction)
+        {
+            return flow.ViaMaterialized(Fusing.GraphStages.TerminationWatcher<T>(), materializerFunction);
+        }
+
+        private static IGraph<FlowShape<TIn, TOut>, TMat> ConcatGraph<TIn, TOut, TMat>(
+            IGraph<SourceShape<TOut>, TMat> other) where TIn : TOut
         {
             return GraphDsl.Create(other, (builder, shape) =>
             {
@@ -1320,5 +1378,6 @@ namespace Akka.Streams.Dsl.Internal
         }
 
         //TODO: there is no HKT in .NET, so we cannot simply do `to` method, which evaluates to either Source ⇒ IRunnableGraph, or Flow ⇒ Sink
+
     }
 }

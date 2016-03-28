@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Akka.Event;
 using Akka.IO;
 using Akka.Streams.Dsl.Internal;
+using Akka.Streams.Implementation;
 using Akka.Streams.Stage;
 
 namespace Akka.Streams.Dsl
@@ -933,6 +934,16 @@ namespace Akka.Streams.Dsl
         public static Flow<TIn, TOut, TMat> Throttle<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, int cost, TimeSpan per, int maximumBurst, Func<TOut, int> calculateCost, ThrottleMode mode)
         {
             return (Flow<TIn, TOut, TMat>)InternalFlowOperations.Throttle(flow, cost, per, maximumBurst, calculateCost, mode);
+        }
+
+        /// <summary>
+        /// Materializes to `Future[Done]` that completes on getting termination message.
+        /// The Future completes with success when received complete message from upstream or cancel
+        /// from downstream. It fails with the same error when received error message from downstream.
+        /// </summary>
+        public static Flow<TIn, TOut, TMat2> WatchTermination<TIn, TOut, TMat, TMat2>(this Flow<TIn, TOut, TMat> flow, Func<TMat, Task, TMat2> materializerFunction) where TIn : TOut
+        {
+            return (Flow<TIn, TOut, TMat2>)InternalFlowOperations.WatchTermination(flow, materializerFunction);
         }
 
         /// <summary>

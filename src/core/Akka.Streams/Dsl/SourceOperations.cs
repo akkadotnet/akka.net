@@ -936,6 +936,16 @@ namespace Akka.Streams.Dsl
         {
             return (Source<TOut, TMat>)InternalFlowOperations.Throttle(flow, cost, per, maximumBurst, calculateCost, mode);
         }
+        
+        /// <summary>
+        /// Materializes to `Future[Done]` that completes on getting termination message.
+        /// The Future completes with success when received complete message from upstream or cancel
+        /// from downstream. It fails with the same error when received error message from downstream.
+        /// </summary>
+        public static Source<TOut, TMat2> WatchTermination<TOut, TMat, TMat2>(this Source<TOut, TMat> flow, Func<TMat, Task<Unit>, TMat2> materializerFunction)
+        {
+            return (Source<TOut, TMat2>) InternalFlowOperations.WatchTermination(flow, materializerFunction);
+        }
 
         /// <summary>
         /// Delays the initial element by the specified duration.
