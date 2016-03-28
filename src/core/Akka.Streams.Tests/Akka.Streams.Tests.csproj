@@ -67,6 +67,7 @@
     <Compile Include="Dsl\ActorRefBackpressureSinkSpec.cs" />
     <Compile Include="Dsl\ActorRefSinkSpec.cs" />
     <Compile Include="Dsl\FlowBufferSpec.cs" />
+    <Compile Include="Dsl\FlowDropWhithinSpec.cs" />
     <Compile Include="Dsl\FlowDropWhileSpec.cs" />
     <Compile Include="Dsl\FlowDropSpec.cs" />
     <Compile Include="Dsl\FlowMapConcatSpec.cs" />

@@ -11,13 +11,12 @@ namespace Akka.Streams.Tests.Dsl
 {
     public class FlowDropWhileSpec : AkkaSpec
     {
-        private ActorMaterializerSettings Settings { get; }
         private ActorMaterializer Materializer { get; }
 
         public FlowDropWhileSpec(ITestOutputHelper helper) : base(helper)
         {
-            Settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 16);
-            Materializer = ActorMaterializer.Create(Sys, Settings);
+            var settings = ActorMaterializerSettings.Create(Sys);
+            Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
         [Fact]
