@@ -21,8 +21,21 @@ namespace Akka.Streams.Dsl
             Module = module;
         }
 
-        public SinkShape<TIn> Shape { get { return (SinkShape<TIn>)Module.Shape; } }
+        public SinkShape<TIn> Shape => (SinkShape<TIn>)Module.Shape;
         public IModule Module { get; }
+
+        /// <summary>
+        /// Transform this <see cref="Sink"/> by applying a function to each *incoming* upstream element before
+        /// it is passed to the <see cref="Sink"/>
+        /// 
+        /// '''Backpressures when''' original <see cref="Sink"/> backpressures
+        /// 
+        /// '''Cancels when''' original <see cref="Sink"/> backpressures
+        /// </summary>
+        public Sink<TIn2, TMat> ContraMap<TIn2>(Func<TIn2, TIn> function)
+        {
+            return Flow.FromFunction(function).ToMaterialized(this, Keep.Right);
+        }
 
         /// <summary>
         /// Connect this <see cref="Sink{TIn,TMat}"/> to a <see cref="Source{T,TMat}"/> and run it. The returned value is the materialized value
