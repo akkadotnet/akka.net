@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Akka.Streams.Tests.Actor
 {
-    public class RequestStragySpecs
+    public class RequestStrategySpecs
     {
         [Fact]
         public void Provided_RequestStragies_should_implement_OneByOne_correctly()

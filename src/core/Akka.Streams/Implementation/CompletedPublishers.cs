@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Reactive.Streams;
 using System.Threading.Tasks;
-using Akka.Util;
+using Akka.Streams.Util;
 
 namespace Akka.Streams.Implementation
 {
@@ -79,7 +79,7 @@ namespace Akka.Streams.Implementation
         {
             private readonly ISubscriber<T> _subscriber;
             private readonly TaskCompletionSource<T> _promise;
-            private bool _done;
+            private bool _done = false;
 
             public MaybeSubscription(ISubscriber<T> subscriber, TaskCompletionSource<T> promise)
             {
@@ -93,15 +93,18 @@ namespace Akka.Streams.Implementation
                 if (!_done)
                 {
                     _done = true;
-                    if (_promise.Task.IsFaulted || _promise.Task.IsCanceled)
+                    _promise.Task.ContinueWith(t =>
                     {
-                        ReactiveStreamsCompliance.TryOnComplete(_subscriber);
-                    }
-                    else if (_promise.Task.IsCompleted)
-                    {
-                        ReactiveStreamsCompliance.TryOnNext(_subscriber, _promise.Task.Result);
-                        ReactiveStreamsCompliance.TryOnComplete(_subscriber);
-                    }
+                        if (!_promise.Task.Result.IsDefaultForType())
+                        {
+                            ReactiveStreamsCompliance.TryOnNext(_subscriber, _promise.Task.Result);
+                            ReactiveStreamsCompliance.TryOnComplete(_subscriber);
+                        }
+                        else
+                        {
+                            ReactiveStreamsCompliance.TryOnComplete(_subscriber);
+                        }
+                    }, TaskContinuationOptions.OnlyOnRanToCompletion);
                 }
             }
 
@@ -129,9 +132,8 @@ namespace Akka.Streams.Implementation
                 ReactiveStreamsCompliance.TryOnSubscribe(subscriber, new MaybeSubscription(subscriber, Promise));
                 Promise.Task.ContinueWith(t =>
                 {
-                    if(t.IsFaulted || t.IsCanceled)
-                        ReactiveStreamsCompliance.TryOnError(subscriber, t.Exception);
-                });
+                    ReactiveStreamsCompliance.TryOnError(subscriber, t.Exception);
+                }, TaskContinuationOptions.NotOnRanToCompletion);
             }
             catch (Exception)
             {
@@ -143,6 +145,11 @@ namespace Akka.Streams.Implementation
         void IPublisher.Subscribe(ISubscriber subscriber)
         {
             Subscribe((ISubscriber<T>)subscriber);
+        }
+
+        public override string ToString()
+        {
+            return Name;
         }
     }
 

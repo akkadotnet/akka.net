@@ -122,14 +122,12 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                         () => Pull(_pingable.Shape.Inlet),
                         //Ignore finish
                         () => { _listener.Tell(UpstreamCompleted.Instance); });
-
-                    
                 }
 
                 public override void PreStart()
                 {
                     SetKeepGoing(_pingable._keepAlive);
-                    _pingable._promise.TrySetResult(new PingRef(OnCommand));
+                    _pingable._promise.TrySetResult(new PingRef(GetAsyncCallback<IPingCmd>(OnCommand)));
                 }
 
                 public override void PostStop() => _listener.Tell(KeepGoingStageSpec.PostStop.Instance);
@@ -293,7 +291,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 pinger.Ping();
                 ExpectMsg<Pong>();
 
-                // We need to catch the exception otherwise the test failes
+                // We need to catch the exception otherwise the test fails
                 // ReSharper disable once EmptyGeneralCatchClause
                 try { pinger.ThrowEx();} catch { }
                 // PostStop should not be concurrent with the event handler. This event here tests this.

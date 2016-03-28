@@ -61,7 +61,7 @@
   <ItemGroup>
     <Compile Include="ActorMaterializerSpec.cs" />
     <Compile Include="Actor\ActorSubscriberSpec.cs" />
-    <Compile Include="Actor\RequestStragySpecs.cs" />
+    <Compile Include="Actor\RequestStrategySpecs.cs" />
     <Compile Include="Dsl\AcknowledgeSourceSpec.cs" />
     <Compile Include="Actor\ActorPublisherSpec.cs" />
     <Compile Include="Dsl\ActorRefBackpressureSinkSpec.cs" />

@@ -120,7 +120,7 @@ namespace Akka.Streams.Implementation.Fusing
         public override ISyncDirective OnPush(TIn element, IContext<TOut> context)
         {
             var result = _func(element);
-            return EqualityComparer<TOut>.Default.Equals(result, default(TOut))
+            return result.IsDefaultForType()
                 ? (ISyncDirective) context.Pull()
                 : context.Push(result);
         }

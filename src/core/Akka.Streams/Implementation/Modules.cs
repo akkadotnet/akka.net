@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Reactive.Streams;
 using System.Threading.Tasks;
@@ -220,21 +218,5 @@ namespace Akka.Streams.Implementation
             materializer = mat.ActorOf(context, ActorRefSourceActor.Props(_bufferSize, _overflowStrategy, mat.Settings));
             return new ActorPublisherImpl<TOut>(materializer);
         }
-    }
-
-    internal sealed class EnumeratorFactorySource<T> : IEnumerable<T>
-    {
-        private readonly Func<IEnumerator<T>> _enumFactory;
-
-        public EnumeratorFactorySource(Func<IEnumerator<T>> enumFactory)
-        {
-            _enumFactory = enumFactory;
-        }
-
-        public IEnumerator<T> GetEnumerator() => _enumFactory();
-
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
-        public override string ToString() => "Iterator";
     }
 }

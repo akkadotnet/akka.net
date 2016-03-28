@@ -168,66 +168,66 @@ namespace Akka.Streams.Implementation.Fusing
             else
             {
                 // Cases that are most likely on the hot path, in decreasing order of frequency
-                    if (e is ActorGraphInterpreter.OnNext)
-                    {
-                        var onNext = (ActorGraphInterpreter.OnNext) e;
-                        _inputs[onNext.Id].OnNext(onNext.Event);
-                        RunBatch();
-                    }
-                    else if (e is ActorGraphInterpreter.RequestMore)
-                    {
-                        var requestMore = (ActorGraphInterpreter.RequestMore) e;
-                        _outputs[requestMore.Id].RequestMore(requestMore.Demand);
-                        RunBatch();
-                    }
-                    else if (e is ActorGraphInterpreter.Resume)
-                    {
-                        _resumeScheduled = false;
-                        if (Interpreter.IsSuspended) RunBatch();
-                    }
-                    else if (e is ActorGraphInterpreter.AsyncInput)
-                    {
-                        var asyncInput = (ActorGraphInterpreter.AsyncInput) e;
-                        Interpreter.RunAsyncInput(asyncInput.Logic, asyncInput.Event, asyncInput.Handler);
-                        RunBatch();
-                    }
-                    // Initialization and completion messages
-                    else if (e is ActorGraphInterpreter.OnError)
-                    {
-                    var onError = (ActorGraphInterpreter.OnError)e;
-                        _inputs[onError.Id].OnError(onError.Cause);
-                        RunBatch();
-                    }
-                    else if (e is ActorGraphInterpreter.OnComplete)
-                    {
-                        var onComplete = (ActorGraphInterpreter.OnComplete) e;
-                        _inputs[onComplete.Id].OnComplete();
-                        RunBatch();
-                    }
-                    else if (e is ActorGraphInterpreter.OnSubscribe)
-                    {
-                    var onSubscribe = (ActorGraphInterpreter.OnSubscribe)e;
-                        _subscribersPending--;
-                        _inputs[onSubscribe.Id].OnSubscribe(onSubscribe.Subscription);
-                        RunBatch();
-                    }
-                    else if (e is ActorGraphInterpreter.Cancel)
-                    {
-                        var cancel = (ActorGraphInterpreter.Cancel) e;
-                        _outputs[cancel.Id].Cancel();
-                        RunBatch();
-                    }
-                    else if (e is ActorGraphInterpreter.SubscribePending)
-                    {
-                        var subscribePending = (ActorGraphInterpreter.SubscribePending) e;
-                        _outputs[subscribePending.Id].SubscribePending();
-                    }
-                    else if (e is ActorGraphInterpreter.ExposedPublisher)
-                    {
-                        var exposedPublisher = (ActorGraphInterpreter.ExposedPublisher) e;
-                        _publishersPending--;
-                        _outputs[exposedPublisher.Id].ExposedPublisher(exposedPublisher.Publisher);
-                    }
+                if (e is ActorGraphInterpreter.OnNext)
+                {
+                    var onNext = (ActorGraphInterpreter.OnNext) e;
+                    _inputs[onNext.Id].OnNext(onNext.Event);
+                    RunBatch();
+                }
+                else if (e is ActorGraphInterpreter.RequestMore)
+                {
+                    var requestMore = (ActorGraphInterpreter.RequestMore) e;
+                    _outputs[requestMore.Id].RequestMore(requestMore.Demand);
+                    RunBatch();
+                }
+                else if (e is ActorGraphInterpreter.Resume)
+                {
+                    _resumeScheduled = false;
+                    if (Interpreter.IsSuspended) RunBatch();
+                }
+                else if (e is ActorGraphInterpreter.AsyncInput)
+                {
+                    var asyncInput = (ActorGraphInterpreter.AsyncInput) e;
+                    Interpreter.RunAsyncInput(asyncInput.Logic, asyncInput.Event, asyncInput.Handler);
+                    RunBatch();
+                }
+                // Initialization and completion messages
+                else if (e is ActorGraphInterpreter.OnError)
+                {
+                    var onError = (ActorGraphInterpreter.OnError) e;
+                    _inputs[onError.Id].OnError(onError.Cause);
+                    RunBatch();
+                }
+                else if (e is ActorGraphInterpreter.OnComplete)
+                {
+                    var onComplete = (ActorGraphInterpreter.OnComplete) e;
+                    _inputs[onComplete.Id].OnComplete();
+                    RunBatch();
+                }
+                else if (e is ActorGraphInterpreter.OnSubscribe)
+                {
+                    var onSubscribe = (ActorGraphInterpreter.OnSubscribe) e;
+                    _subscribersPending--;
+                    _inputs[onSubscribe.Id].OnSubscribe(onSubscribe.Subscription);
+                    RunBatch();
+                }
+                else if (e is ActorGraphInterpreter.Cancel)
+                {
+                    var cancel = (ActorGraphInterpreter.Cancel) e;
+                    _outputs[cancel.Id].Cancel();
+                    RunBatch();
+                }
+                else if (e is ActorGraphInterpreter.SubscribePending)
+                {
+                    var subscribePending = (ActorGraphInterpreter.SubscribePending) e;
+                    _outputs[subscribePending.Id].SubscribePending();
+                }
+                else if (e is ActorGraphInterpreter.ExposedPublisher)
+                {
+                    var exposedPublisher = (ActorGraphInterpreter.ExposedPublisher) e;
+                    _publishersPending--;
+                    _outputs[exposedPublisher.Id].ExposedPublisher(exposedPublisher.Publisher);
+                }
             }
         }
 
