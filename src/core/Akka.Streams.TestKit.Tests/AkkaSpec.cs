@@ -1,5 +1,11 @@
-﻿using Akka.Actor;
+﻿using System;
+using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
+using Akka.TestKit;
+using Akka.TestKit.Internal.StringMatcher;
+using Akka.TestKit.TestEvent;
+using Akka.Util.Internal;
 using Xunit.Abstractions;
 
 namespace Akka.Streams.TestKit.Tests
@@ -39,6 +45,24 @@ namespace Akka.Streams.TestKit.Tests
 
         protected AkkaSpec(ITestOutputHelper output = null) : this(TestConfig, output)
         {
+        }
+
+        protected void MuteDeadLetters(params Type[] messageClasses)
+        {
+            if (!Sys.Log.IsDebugEnabled)
+                return;
+
+            Action<Type> mute =
+                clazz =>
+                    Sys.EventStream.Publish(
+                        new Mute(new DeadLettersFilter(new PredicateMatcher(_ => true),
+                            new PredicateMatcher(_ => true),
+                            letter => clazz == typeof (object) || letter.Message.GetType() == clazz)));
+
+            if (messageClasses.Length == 0)
+                mute(typeof (object));
+            else
+                messageClasses.ForEach(mute);
         }
     }
 }

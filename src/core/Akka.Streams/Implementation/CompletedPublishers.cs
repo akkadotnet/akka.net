@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reactive.Streams;
 using System.Threading.Tasks;
+using Akka.Util;
 
 namespace Akka.Streams.Implementation
 {
@@ -78,7 +79,7 @@ namespace Akka.Streams.Implementation
         {
             private readonly ISubscriber<T> _subscriber;
             private readonly TaskCompletionSource<T> _promise;
-            private bool _done = false;
+            private bool _done;
 
             public MaybeSubscription(ISubscriber<T> subscriber, TaskCompletionSource<T> promise)
             {
@@ -92,7 +93,7 @@ namespace Akka.Streams.Implementation
                 if (!_done)
                 {
                     _done = true;
-                    if (_promise.Task.IsFaulted || _promise.Task.IsCanceled || Equals(_promise.Task.Result, default(T)))
+                    if (_promise.Task.IsFaulted || _promise.Task.IsCanceled)
                     {
                         ReactiveStreamsCompliance.TryOnComplete(_subscriber);
                     }

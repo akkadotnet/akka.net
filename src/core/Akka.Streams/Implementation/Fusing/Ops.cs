@@ -69,7 +69,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         public override ISyncDirective OnPush(T element, IContext<T> context)
         {
-            return _predicate(element) ? (ISyncDirective)context.Push(element) : context.Finish();
+            return _predicate(element) ? context.Push(element) : context.Finish();
         }
 
         public override Directive Decide(Exception cause)

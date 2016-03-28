@@ -28,7 +28,7 @@ namespace Akka.Streams.Tests.Implementation
             this.AssertAllStagesStopped(() =>
             {
                 var t = Source.From(Enumerable.Range(1, 100))
-                    .Via(Flow.Create<int>().InitialTimeout(TimeSpan.FromSeconds(2)).Grouped(200))
+                    .InitialTimeout(TimeSpan.FromSeconds(2)).Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -43,7 +43,7 @@ namespace Akka.Streams.Tests.Implementation
             {
                 var t = Source.From(Enumerable.Range(1, 100))
                     .Concat(Source.Failed<int>(new TestException("test")))
-                    .Via(Flow.Create<int>().InitialTimeout(TimeSpan.FromSeconds(2)).Grouped(200))
+                    .InitialTimeout(TimeSpan.FromSeconds(2)).Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -59,7 +59,7 @@ namespace Akka.Streams.Tests.Implementation
             {
                 var downstreamProbe = this.CreateProbe<int>();
                 Source.Maybe<int>()
-                .Via(Flow.Create<int>().InitialTimeout(TimeSpan.FromSeconds(1)))
+                .InitialTimeout(TimeSpan.FromSeconds(1))
                 .RunWith(Sink.FromSubscriber<int, Unit>(downstreamProbe), Materializer);
                
                 downstreamProbe.ExpectSubscription();
@@ -77,7 +77,7 @@ namespace Akka.Streams.Tests.Implementation
             this.AssertAllStagesStopped(() =>
             {
                 var t = Source.From(Enumerable.Range(1, 100))
-                    .Via(Flow.Create<int>().CompletionTimeout(TimeSpan.FromSeconds(2)).Grouped(200))
+                    .CompletionTimeout(TimeSpan.FromSeconds(2)).Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -92,7 +92,7 @@ namespace Akka.Streams.Tests.Implementation
             {
                 var t = Source.From(Enumerable.Range(1, 100))
                     .Concat(Source.Failed<int>(new TestException("test")))
-                    .Via(Flow.Create<int>().CompletionTimeout(TimeSpan.FromSeconds(2)).Grouped(200))
+                    .CompletionTimeout(TimeSpan.FromSeconds(2)).Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -110,7 +110,7 @@ namespace Akka.Streams.Tests.Implementation
                 var downstreamProbe = this.CreateProbe<int>();
 
                 Source.FromPublisher<int, Unit>(upstreamProbe)
-                    .Via(Flow.Create<int>().CompletionTimeout(TimeSpan.FromSeconds(2)))
+                    .CompletionTimeout(TimeSpan.FromSeconds(2))
                     .RunWith(Sink.FromSubscriber<int, Unit>(downstreamProbe), Materializer);
 
 
@@ -134,7 +134,7 @@ namespace Akka.Streams.Tests.Implementation
             this.AssertAllStagesStopped(() =>
             {
                 var t = Source.From(Enumerable.Range(1, 100))
-                    .Via(Flow.Create<int>().IdleTimeout(TimeSpan.FromSeconds(2)).Grouped(200))
+                    .IdleTimeout(TimeSpan.FromSeconds(2)).Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -149,7 +149,7 @@ namespace Akka.Streams.Tests.Implementation
             {
                 var t = Source.From(Enumerable.Range(1, 100))
                     .Concat(Source.Failed<int>(new TestException("test")))
-                    .Via(Flow.Create<int>().IdleTimeout(TimeSpan.FromSeconds(2)).Grouped(200))
+                    .IdleTimeout(TimeSpan.FromSeconds(2)).Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -167,7 +167,7 @@ namespace Akka.Streams.Tests.Implementation
                 var downstreamProbe = this.CreateProbe<int>();
 
                 Source.FromPublisher<int, Unit>(upstreamProbe)
-                    .Via(Flow.Create<int>().IdleTimeout(TimeSpan.FromSeconds(1)))
+                    .IdleTimeout(TimeSpan.FromSeconds(1))
                     .RunWith(Sink.FromSubscriber<int, Unit>(downstreamProbe), Materializer);
 
                 // Two seconds in overall, but won't timeout until time between elements is large enough

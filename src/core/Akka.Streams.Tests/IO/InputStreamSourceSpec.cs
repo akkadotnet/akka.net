@@ -169,8 +169,7 @@ namespace Akka.Streams.Tests.IO
             {
                 var f = StreamConverters.FromInputStream(() => new ConstInputStream());
 
-                f.TakeWithin<ByteString, ByteString, Task<IOResult>>(TimeSpan.FromSeconds(5))
-                    .RunForeach(it => { }, _materializer).Wait(TimeSpan.FromSeconds(10));
+                f.TakeWithin(TimeSpan.FromSeconds(5)).RunForeach(it => { }, _materializer).Wait(TimeSpan.FromSeconds(10));
             }, _materializer);
         }
 

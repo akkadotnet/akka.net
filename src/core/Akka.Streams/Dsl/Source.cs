@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Streams;
@@ -133,6 +134,23 @@ namespace Akka.Streams.Dsl
         {
             return RunWith(Sink.ForEach(action), materializer);
         }
+
+        /// <summary>
+        /// Combines several sources with fun-in strategy like `Merge` or `Concat` and returns `Source`.
+        /// </summary>
+        public Source<U, Unit> Combine<T, U>(Source<T, Unit> first, Source<T, Unit> second, Source<T, Unit>[] rest, Func<int, IGraph<UniformFanInShape<T,U>, Unit>> strategy)
+        {
+            return Source.FromGraph(GraphDsl.Create<SourceShape<U>, Unit>(b =>
+            {
+                var c = b.Add(strategy(rest.Length + 2));
+                b.From(first).To(c.In(0));
+                b.From(second).To(c.In(1));
+
+                for (var i = 0; i < rest.Length; i++)
+                    b.From(rest[i]).To(c.In(i + 2));
+                return new SourceShape<U>(c.Out);
+            }));
+        }
     }
 
     public static class Source
@@ -165,9 +183,9 @@ namespace Akka.Streams.Dsl
         /// Elements are pulled out of the iterator in accordance with the demand coming
         /// from the downstream transformation steps.
         /// </summary>
-        public static Source<T, Unit> FromEnumerator<T>(Func<IEnumerator<T>> enumFactory)
+        public static Source<T, Unit> FromEnumerator<T>(Func<IEnumerator<T>> enumeratorFactory)
         {
-            throw new NotImplementedException();
+            return From(new EnumeratorFactorySource<T>(enumeratorFactory));
         }
 
         /// <summary>
@@ -231,7 +249,8 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Source<T, Unit> Repeat<T>(T element)
         {
-            throw new NotImplementedException();
+            var next = new Tuple<T, T>(element, element);
+            return Unfold(element, _ => next).WithAttributes(DefaultAttributes.Repeat);
         }
 
         /// <summary>
@@ -386,6 +405,25 @@ namespace Akka.Streams.Dsl
 
             return new Source<T, IActorRef>(new ActorRefSource<T>(bufferSize, overflowStrategy, DefaultAttributes.ActorRefSource, Shape<T>("ActorRefSource")));
         }
+
+
+        /// <summary>
+        /// Combines several sources with fun-in strategy like `Merge` or `Concat` and returns `Source`.
+        /// </summary>
+        public static Source<U, Unit> Combine<T, U>(Source<T, Unit> first, Source<T, Unit> second, Func<int, IGraph<UniformFanInShape<T, U>, Unit>> strategy, params Source<T, Unit>[] rest)
+        {
+            return FromGraph(GraphDsl.Create<SourceShape<U>, Unit>(b =>
+            {
+                var c = b.Add(strategy(rest.Length + 2));
+                b.From(first).To(c.In(0));
+                b.From(second).To(c.In(1));
+
+                for (var i = 0; i < rest.Length; i++)
+                    b.From(rest[i]).To(c.In(i + 2));
+                return new SourceShape<U>(c.Out);
+            }));
+        }
+
 
         /// <summary>
         /// Creates a <see cref="Source{TOut,TMat}"/> that is materialized as an <see cref="ISourceQueue{T}"/>.

@@ -583,7 +583,7 @@ namespace Akka.Streams.Tests.IO
                 var serverAddress = TestUtils.TemporaryServerAddress();
                 new Tcp().CreateExtension(Sys as ExtendedActorSystem)
                     .Bind(serverAddress.Address.ToString(), serverAddress.Port)
-                    .Via(Flow.Create<Tcp.IncomingConnection>().Take(1)).RunForeach(c =>
+                    .Take(1).RunForeach(c =>
                     {
                         Thread.Sleep(1000);
                         c.Flow.Join(Flow.Create<ByteString>()).Run(Materializer);
@@ -619,7 +619,7 @@ namespace Akka.Streams.Tests.IO
 
                 var folder = Source.From(Enumerable.Range(0, 100).Select(_ => ByteString.Create(new byte[] {0})))
                     .Via(new Tcp().CreateExtension(Sys as ExtendedActorSystem).OutgoingConnection(serverAddress))
-                    .Via(Flow.Create<ByteString>().Fold(0, (i, s) => i + s.Count))
+                    .Fold(0, (i, s) => i + s.Count)
                     .ToMaterialized(Sink.First<int>(), Keep.Right);
 
                 var total = folder.Run(Materializer);

@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reactive.Streams;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Akka.Event;
 using Akka.IO;
@@ -10,11 +8,10 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
-using Microsoft.Win32;
 
 namespace Akka.Streams.Dsl.Internal
 {
-    using Fusing = Akka.Streams.Implementation.Fusing;
+    using Fusing = Implementation.Fusing;
 
     internal static class InternalFlowOperations
     {
@@ -45,7 +42,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<TOut, TMat> Recover<TOut, TMat>(this IFlow<TOut, TMat> flow, Func<Exception, TOut> partialFunc) where TOut : class
         {
-            return flow.AndThen(new Implementation.Stages.Recover<TOut>(partialFunc));
+            return flow.AndThen(new Recover<TOut>(partialFunc));
         }
 
         /// <summary>
@@ -64,7 +61,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<TOut, TMat> Map<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> mapper)
         {
-            return flow.AndThen(new Implementation.Stages.Map<TIn, TOut>(mapper));
+            return flow.AndThen(new Map<TIn, TOut>(mapper));
         }
 
         /// <summary>
@@ -90,7 +87,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<TOut, TMat> MapConcat<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, IEnumerable<TOut>> mapConcater)
         {
-            return flow.AndThen(new Implementation.Stages.MapConcat<TIn, TOut>(mapConcater));
+            return flow.AndThen(new MapConcat<TIn, TOut>(mapConcater));
         }
 
         /// <summary>
@@ -405,7 +402,7 @@ namespace Akka.Streams.Dsl.Internal
         /// 
         /// In case you want to only prepend or only append an element (yet still use the `intercept` feature
         /// to inject a separator between elements, you may want to use the following pattern instead of the 3-argument
-        /// version of intersperse (See <see cref="Concat{T}"/> for semantics details). 
+        /// version of intersperse (See <see cref="Concat{TIn,TOut}"/> for semantics details). 
         /// <para>
         /// '''Emits when''' upstream emits (or before with the `start` element if provided)
         /// </para>
@@ -433,7 +430,7 @@ namespace Akka.Streams.Dsl.Internal
         /// 
         /// In case you want to only prepend or only append an element (yet still use the `intercept` feature
         /// to inject a separator between elements, you may want to use the following pattern instead of the 3-argument
-        /// version of intersperse (See <see cref="Concat{T}"/> for semantics details). 
+        /// version of intersperse (See <see cref="Concat{TIn,TOut}"/> for semantics details). 
         /// <para>
         /// '''Emits when''' upstream emits (or before with the `start` element if provided)
         /// </para>
@@ -472,8 +469,8 @@ namespace Akka.Streams.Dsl.Internal
         /// <exception cref="ArgumentException">Thrown if <paramref name="n"/> is less than or equal zero or <paramref name="timeout"/> is <see cref="TimeSpan.Zero"/>.</exception>
         public static IFlow<IEnumerable<T>, TMat> GroupedWithin<T, TMat>(this IFlow<T, TMat> flow, int n, TimeSpan timeout)
         {
-            if (n <= 0) throw new ArgumentException("n must be > 0", "n");
-            if (timeout == TimeSpan.Zero) throw new ArgumentException("Timeout must be non-zero", "timeout");
+            if (n <= 0) throw new ArgumentException("n must be > 0", nameof(n));
+            if (timeout == TimeSpan.Zero) throw new ArgumentException("Timeout must be non-zero", nameof(timeout));
 
             return flow.Via(new Fusing.GroupedWithin<T>(n, timeout).WithAttributes(Attributes.CreateName("groupedWithin")));
         }
@@ -1019,9 +1016,9 @@ namespace Akka.Streams.Dsl.Internal
         /// or <paramref name="maximumBurst"/> is less than or equal zero in in <see cref="ThrottleMode.Enforcing"/> <paramref name="mode"/>.</exception>
         public static IFlow<T, TMat> Throttle<T, TMat>(this IFlow<T, TMat> flow, int elements, TimeSpan per, int maximumBurst, ThrottleMode mode)
         {
-            if (elements <= 0) throw new ArgumentException("Throttle elements must be > 0", "elements");
-            if (per == TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be zero", "per");
-            if (mode == ThrottleMode.Enforcing && maximumBurst < 0) throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", "maximumBurst");
+            if (elements <= 0) throw new ArgumentException("Throttle elements must be > 0", nameof(elements));
+            if (per == TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be zero", nameof(per));
+            if (mode == ThrottleMode.Enforcing && maximumBurst < 0) throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
 
             return flow.Via(new Throttle<T>(elements, per, maximumBurst, _ => 1, mode));
         }
@@ -1054,8 +1051,8 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<T, TMat> Throttle<T, TMat>(this IFlow<T, TMat> flow, int cost, TimeSpan per, int maximumBurst, Func<T, int> calculateCost, ThrottleMode mode)
         {
-            if (per == TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be zero", "per");
-            if (mode == ThrottleMode.Enforcing && maximumBurst < 0) throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", "maximumBurst");
+            if (per == TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be zero", nameof(per));
+            if (mode == ThrottleMode.Enforcing && maximumBurst < 0) throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
 
             return flow.Via(new Throttle<T>(cost, per, maximumBurst, calculateCost, mode));
         }
@@ -1136,7 +1133,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<T3, TMat> ZipWith<T1, T2, T3, TMat>(this IFlow<T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other, Func<T1, T2, T3> combine)
         {
-            return flow.Via(ZipWithGraph<T1, T2, T3, TMat>(other, combine));
+            return flow.Via(ZipWithGraph(other, combine));
         }
 
         private static IGraph<FlowShape<T1, T3>, TMat> ZipWithGraph<T1, T2, T3, TMat>(IGraph<SourceShape<T2>, TMat> other, Func<T1, T2, T3> combine)
@@ -1234,7 +1231,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<T, TMat> MergeOrdered<T, TMat>(this IFlow<T, TMat> flow, IGraph<SourceShape<T>, TMat> other, Func<T, T, int> orderFunc)
         {
-            return flow.Via(MergeOrderedGraph<T, TMat>(other, orderFunc));
+            return flow.Via(MergeOrderedGraph(other, orderFunc));
         }
 
         /// <summary>
@@ -1255,7 +1252,7 @@ namespace Akka.Streams.Dsl.Internal
         public static IFlow<T, TMat> MergeOrdered<T, TMat>(this IFlow<T, TMat> flow, IGraph<SourceShape<T>, TMat> other)
             where T : IComparable<T>
         {
-            return flow.Via(MergeOrderedGraph<T, TMat>(other, (x, y) => x.CompareTo(y)));
+            return flow.Via(MergeOrderedGraph(other, (x, y) => x.CompareTo(y)));
         }
 
         /// <summary>
@@ -1275,7 +1272,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<T, TMat> MergeOrdered<T, TMat>(this IFlow<T, TMat> flow, IGraph<SourceShape<T>, TMat> other, IComparer<T> comparer)
         {
-            return flow.Via(MergeOrderedGraph<T, TMat>(other, comparer.Compare));
+            return flow.Via(MergeOrderedGraph(other, comparer.Compare));
         }
 
         private static IGraph<FlowShape<T, T>, TMat> MergeOrderedGraph<T, TMat>(IGraph<SourceShape<T>, TMat> other, Func<T, T, int> compare)
