@@ -76,6 +76,7 @@
     <Compile Include="Dsl\FlowWatchTerminationSpec.cs" />
     <Compile Include="Dsl\FlowZipSpec.cs" />
     <Compile Include="Dsl\FlowZipWithSpec.cs" />
+    <Compile Include="Dsl\HeadSinkSpec.cs" />
     <Compile Include="Dsl\SeqSinkSpec.cs" />
     <Compile Include="Dsl\SinkSpec.cs" />
     <Compile Include="Dsl\SourceSpec.cs" />
