@@ -67,6 +67,7 @@
     <Compile Include="Dsl\ActorRefBackpressureSinkSpec.cs" />
     <Compile Include="Dsl\ActorRefSinkSpec.cs" />
     <Compile Include="Dsl\FlowBufferSpec.cs" />
+    <Compile Include="Dsl\FlowDropSpec.cs" />
     <Compile Include="Dsl\FlowMapConcatSpec.cs" />
     <Compile Include="Dsl\FlowMapSpec.cs" />
     <Compile Include="Dsl\FlowSupervisionSpec.cs" />
@@ -83,6 +84,7 @@
     <Compile Include="Dsl\SinkSpec.cs" />
     <Compile Include="Dsl\SourceSpec.cs" />
     <Compile Include="Dsl\SubscriberSinkSpec.cs" />
+    <Compile Include="Dsl\TestConfig.cs" />
     <Compile Include="Implementation\Fusing\ActorGraphInterpreterSpec.cs" />
     <Compile Include="Implementation\Fusing\GraphInterpreterFailureModesSpec.cs" />
     <Compile Include="Implementation\Fusing\GraphInterpreterPortsSpec.cs" />

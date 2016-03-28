@@ -2,7 +2,7 @@
 using System.Linq;
 using Akka.Actor;
 
-namespace Akka.Streams.Dsl
+namespace Akka.Streams.Tests.Dsl
 {
     internal static class TestConfig
     {
