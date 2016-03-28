@@ -69,7 +69,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes SubscriberSource = Attributes.CreateName("subscriberSource");
         public static readonly Attributes ActorPublisherSource = Attributes.CreateName("actorPublisherSource");
         public static readonly Attributes ActorRefSource = Attributes.CreateName("actorRefSource");
-        public static readonly Attributes AcknowledgeSource = Attributes.CreateName("acknowledgeSource");
+        public static readonly Attributes QueueSource = Attributes.CreateName("queueSource");
         public static readonly Attributes InputStreamSource = Attributes.CreateName("inputStreamSource").And(IODispatcher);
         public static readonly Attributes OutputStreamSource = Attributes.CreateName("outputStreamSource").And(IODispatcher);
         public static readonly Attributes FileSource = Attributes.CreateName("fileSource").And(IODispatcher);

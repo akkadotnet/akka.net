@@ -449,11 +449,9 @@ namespace Akka.Streams.Dsl
         /// <param name="timeout">Timeout for ``SourceQueue.offer(T):Future[Boolean]``</param>
         public static Source<T, ISourceQueue<T>> Queue<T>(int bufferSize, OverflowStrategy overflowStrategy, TimeSpan? timeout = null)
         {
-            if (bufferSize < 0) throw new ArgumentException("Buffer size must be greater than or equal 0", "bufferSize");
-            var t = timeout ?? TimeSpan.FromSeconds(5);
+            if (bufferSize < 0) throw new ArgumentException("Buffer size must be greater than or equal 0", nameof(bufferSize));
 
-            //return new Source<T, ISourceQueue<T>>(new AcknowledgeSource<T>(bufferSize, overflowStrategy, DefaultAttributes.AcknowledgeSource, Shape<T>("AcknowledgeSource")));
-            throw new NotImplementedException();
+            return Source.FromGraph(new QueueSource<T>(bufferSize, overflowStrategy).WithAttributes(DefaultAttributes.QueueSource));
         }
     }
 }

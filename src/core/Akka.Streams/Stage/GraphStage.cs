@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Reactive.Streams;
 using System.Runtime.Serialization;
+using System.Threading;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -1838,6 +1839,119 @@ namespace Akka.Streams.Stage
                 }
 
                 break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// <para>
+    /// This class wraps callback for <see cref="GraphStage{TShape}"/> instances and gracefully handles
+    /// cases when stage is not yet initialized or already finished.
+    /// </para>
+    /// <para>
+    /// While <see cref="GraphStage{TShape}"/> is not initialized it adds all requests to list.
+    /// As soon as <see cref="GraphStage{TShape}"/> is started it stops collecting requests (pointing
+    /// to real callback function) and runs all callbacks from the list.
+    /// </para>
+    /// <para>
+    /// Intended to be used by <see cref="GraphStage{TShape}"/> that share callback with outer world.
+    /// </para>
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    internal class GraphStageLogicWithCallbackWrapper<T> : GraphStageLogic
+    {
+        private interface ICallbackState { }
+
+        private sealed class NotInitialized : ICallbackState
+        {
+            public IList<T> Args { get; }
+
+            public NotInitialized(IList<T> args)
+            {
+                Args = args;
+            }
+        }
+
+        private sealed class Initialized : ICallbackState
+        {
+            public Action<T> Callback { get; }
+
+            public Initialized(Action<T> callback)
+            {
+                Callback = callback;
+            }
+        }
+
+        private sealed class Stopped : ICallbackState
+        {
+            public Action<T> Callback { get; }
+
+            public Stopped(Action<T> callback)
+            {
+                Callback = callback;
+            }
+        }
+
+        private readonly AtomicReference<ICallbackState> _callbackState =
+            new AtomicReference<ICallbackState>(new NotInitialized(new List<T>()));
+
+        public GraphStageLogicWithCallbackWrapper(int inCount, int outCount) : base(inCount, outCount)
+        {
+        }
+
+        public GraphStageLogicWithCallbackWrapper(Shape shape) : base(shape)
+        {
+        }
+
+        protected void StopCallback(Action<T> callback)
+        {
+            Locked(() =>
+            {
+                _callbackState.Value = new Stopped(callback);
+            });
+        }
+
+        protected void InitCallback(Action<T> callback)
+        {
+            Locked(() =>
+            {
+                var state = _callbackState.GetAndSet(new Initialized(callback));
+                (state as NotInitialized)?.Args.ForEach(callback);
+            });
+        }
+
+        protected void InvokeCallbacks(T arg)
+        {
+            Locked(() =>
+            {
+                var state = _callbackState.Value;
+                if (state is Initialized)
+                {
+                    ((Initialized) state).Callback(arg);
+                }
+                else if (state is NotInitialized)
+                {
+                    ((NotInitialized) state).Args.Add(arg);
+                }
+                else if (state is Stopped)
+                {
+                    Monitor.Exit(this);
+                    ((Stopped) state).Callback(arg);
+                }
+            });
+        }
+
+        private void Locked(Action body)
+        {
+            Monitor.Enter(this);
+            try
+            {
+                body();
+            }
+            finally
+            {
+                if (Monitor.IsEntered(this))
+                    Monitor.Exit(this);
             }
         }
     }

@@ -125,6 +125,7 @@
     <Compile Include="Implementation\ResizableMultiReaderRingBuffer.cs" />
     <Compile Include="Implementation\SinkholeSubscriber.cs" />
     <Compile Include="Implementation\Sinks.cs" />
+    <Compile Include="Implementation\Sources.cs" />
     <Compile Include="Implementation\SplitDecisionWhereImpl.cs" />
     <Compile Include="Implementation\StreamOfStreamProcessors.cs" />
     <Compile Include="Implementation\SubFlowImpl.cs" />
@@ -151,6 +152,7 @@
     <Compile Include="Attributes.cs" />
     <Compile Include="OverflowStrategy.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="QueueOfferResult.cs" />
     <Compile Include="Shape.cs" />
     <Compile Include="StageException.cs" />
     <Compile Include="Stage\AbstractStage.cs" />

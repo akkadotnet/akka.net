@@ -9,12 +9,26 @@ namespace Akka.Streams
     {
         /// <summary>
         /// Method offers next element to a stream and returns task that:
-        /// <para>- competes with true if element is consumed by a stream</para>
-        /// <para>- competes with false when stream dropped offered element</para>
-        /// <para>- fails if stream is completed or cancelled.</para>
+        /// <para>- competes with <see cref="QueueOfferResult.Enqueued"/> if element
+        /// is consumed by a stream</para>
+        /// <para>- competes with <see cref="QueueOfferResult.Dropped"/> when stream
+        /// dropped offered element</para>
+        /// <para>- competes with <see cref="QueueOfferResult.QueueClosed"/> when
+        /// stream is completed while task is active</para>
+        /// <para>- competes with <see cref="QueueOfferResult.Failure"/> when failure
+        /// to enqueue element from upstream</para>
+        /// <para>- fails if stream is completed or you cannot call offer in this moment
+        /// because of implementation rules (like for backpressure mode and full buffer
+        /// you need to wait for last offer call task completion.</para>
         /// </summary>
         /// <param name="element">element to send to a stream</param>
-        Task<bool> OfferAsync(T element);
+        Task<IQueueOfferResult> OfferAsync(T element);
+
+        /// <summary>
+        /// Method returns task that completes when stream is completed and fails
+        /// when stream failed.
+        /// </summary>
+        Task WatchCompletionAsync();
     }
 
     /// <summary>
