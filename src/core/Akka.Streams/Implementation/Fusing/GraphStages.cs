@@ -4,6 +4,7 @@ using System.Reactive.Streams;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Util;
 
@@ -11,10 +12,10 @@ namespace Akka.Streams.Implementation.Fusing
 {
     public static class GraphStages
     {
-        internal static SimpleLinearGraphStage<T> Identity<T>()
-        {
-            return Implementation.Fusing.Identity<T>.Instance;
-        }
+        internal static SimpleLinearGraphStage<T> Identity<T>() => Implementation.Fusing.Identity<T>.Instance;
+
+        internal static GraphStageWithMaterializedValue<FlowShape<T, T>, Task<Unit>> TerminationWatcher<T>()
+            => Implementation.Fusing.TerminationWatcher<T>.Instance;
     }
 
     internal class GraphStageModule : Module
@@ -172,6 +173,58 @@ namespace Akka.Streams.Implementation.Fusing
         {
             return "Detacher";
         }
+    }
+
+    internal sealed class TerminationWatcher<T> : GraphStageWithMaterializedValue<FlowShape<T, T>, Task<Unit>>
+    {
+        public static readonly TerminationWatcher<T> Instance = new TerminationWatcher<T>();
+
+        #region internal classes 
+
+        private sealed class TerminationWatcherLogic : GraphStageLogic
+        {
+            public TerminationWatcherLogic(TerminationWatcher<T> watcher, TaskCompletionSource<Unit> finishPromise) : base(watcher.Shape)
+            {
+                SetHandler(watcher._inlet, onPush: ()=> Push(watcher._outlet, Grab(watcher._inlet)),onUpstreamFinish:()=>
+                {
+                    finishPromise.TrySetResult(Unit.Instance);
+                    CompleteStage();
+                }, onUpstreamFailure: ex=>
+                {
+                    finishPromise.TrySetException(ex);
+                    FailStage(ex);
+                });
+
+                SetHandler(watcher._outlet, onPull: ()=> Pull(watcher._inlet), onDownstreamFinish: ()=> 
+                {
+                    finishPromise.TrySetResult(Unit.Instance);
+                    CompleteStage();
+                });
+            }
+        }
+
+        #endregion
+
+        private readonly Inlet<T> _inlet = new Inlet<T>("terminationWatcher.in");
+        private readonly Outlet<T> _outlet = new Outlet<T>("terminationWatcher.out");
+
+        private TerminationWatcher()
+        {
+            Shape = new FlowShape<T, T>(_inlet, _outlet);
+        }
+
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.TerminationWatcher;
+
+        public override FlowShape<T, T> Shape { get; }
+
+        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Task<Unit> materialized)
+        {
+            var finishPromise = new TaskCompletionSource<Unit>();
+            materialized = finishPromise.Task;
+            return new TerminationWatcherLogic(this, finishPromise);
+        }
+
+        public override string ToString() => "TerminationWatcher";
     }
 
     internal sealed class TickSource<T> : GraphStageWithMaterializedValue<SourceShape<T>, ICancelable>

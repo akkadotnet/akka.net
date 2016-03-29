@@ -6,6 +6,7 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.IO;
 using Akka.Streams.Dsl.Internal;
+using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
 
@@ -255,6 +256,63 @@ namespace Akka.Streams.Dsl
         public static Source<IEnumerable<TOut>, TMat> Grouped<TOut, TMat>(this Source<TOut, TMat> flow, int n)
         {
             return (Source<IEnumerable<TOut>, TMat>)InternalFlowOperations.Grouped(flow, n);
+        }
+
+        /// <summary>
+        /// Ensure stream boundedness by limiting the number of elements from upstream.
+        /// If the number of incoming elements exceeds max, it will signal
+        /// upstream failure <see cref="StreamLimitException"/> downstream.
+        /// 
+        /// Due to input buffering some elements may have been
+        /// requested from upstream publishers that will then not be processed downstream
+        /// of this step.
+        /// 
+        /// The stream will be completed without producing any elements if `n` is zero
+        /// or negative.
+        /// <para>
+        /// '''Emits when''' the specified number of elements to take has not yet been reached
+        /// </para>
+        /// '''Backpressures when''' downstream backpressures
+        /// <para>
+        /// '''Completes when''' the defined number of elements has been taken or upstream completes
+        /// </para>
+        /// '''Cancels when''' the defined number of elements has been taken or downstream cancels
+        /// </summary>
+        /// <seealso cref="Take{T,TMat}"/>
+        /// <seealso cref="TakeWithin{T,TMat}"/>
+        /// <seealso cref="TakeWhile{T,TMat}"/>
+        public static Source<T, TMat> Limit<T, TMat>(this Source<T, TMat> flow, long max)
+        {
+            return LimitWeighted(flow, max, _ => 1L);
+        }
+
+        /// <summary>
+        /// Ensure stream boundedness by evaluating the cost of incoming elements
+        /// using a cost function. Exactly how many elements will be allowed to travel downstream depends on the
+        /// evaluated cost of each element. If the accumulated cost exceeds max, it will signal
+        /// upstream failure <see cref="StreamLimitException"/> downstream.
+        /// 
+        /// Due to input buffering some elements may have been
+        /// requested from upstream publishers that will then not be processed downstream
+        /// of this step.
+        /// 
+        /// The stream will be completed without producing any elements if `n` is zero
+        /// or negative.
+        /// <para>
+        /// '''Emits when''' the specified number of elements to take has not yet been reached
+        /// </para>
+        /// '''Backpressures when''' downstream backpressures
+        /// <para>
+        /// '''Completes when''' the defined number of elements has been taken or upstream completes
+        /// </para>
+        /// '''Cancels when''' the defined number of elements has been taken or downstream cancels
+        /// </summary>
+        /// <seealso cref="Take{T,TMat}"/>
+        /// <seealso cref="TakeWithin{T,TMat}"/>
+        /// <seealso cref="TakeWhile{T,TMat}"/>
+        private static Source<T, TMat> LimitWeighted<T, TMat>(this Source<T, TMat> flow, long max, Func<T, long> costFunc)
+        {
+            return (Source<T, TMat>)flow.AndThen(new LimitWeighted<T>(max, costFunc));
         }
 
         /// <summary>
@@ -935,6 +993,16 @@ namespace Akka.Streams.Dsl
         public static Source<TOut, TMat> Throttle<TOut, TMat>(this Source<TOut, TMat> flow, int cost, TimeSpan per, int maximumBurst, Func<TOut, int> calculateCost, ThrottleMode mode)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.Throttle(flow, cost, per, maximumBurst, calculateCost, mode);
+        }
+        
+        /// <summary>
+        /// Materializes to `Future[Done]` that completes on getting termination message.
+        /// The Future completes with success when received complete message from upstream or cancel
+        /// from downstream. It fails with the same error when received error message from downstream.
+        /// </summary>
+        public static Source<TOut, TMat2> WatchTermination<TOut, TMat, TMat2>(this Source<TOut, TMat> flow, Func<TMat, Task<Unit>, TMat2> materializerFunction)
+        {
+            return (Source<TOut, TMat2>) InternalFlowOperations.WatchTermination(flow, materializerFunction);
         }
 
         /// <summary>

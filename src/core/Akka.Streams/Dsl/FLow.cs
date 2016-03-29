@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Reactive.Streams;
 using System.Security.Policy;
+using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
@@ -226,6 +227,15 @@ namespace Akka.Streams.Dsl
         {
             return Identity<T>();
         }
+
+        /// <summary>
+        /// Creates a [Flow] which will use the given function to transform its inputs to outputs. It is equivalent
+        /// to Flow.Create<TIn>().Map(function);
+        /// </summary>
+        public static Flow<TIn, TOut, Unit> FromFunction<TIn, TOut>(Func<TIn, TOut> function)
+        {
+            return Create<TIn>().Map(function);
+        } 
 
         /// <summary>
         /// A graph with the shape of a flow logically is a flow, this method makes it so also in type.
