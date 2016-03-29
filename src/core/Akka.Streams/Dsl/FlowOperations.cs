@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.Reactive.Streams;
 using System.Threading.Tasks;
+using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.IO;
 using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Implementation;
+using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 
 namespace Akka.Streams.Dsl
@@ -284,7 +286,7 @@ namespace Akka.Streams.Dsl
         /// emitting the next current value.
         /// 
         /// If the function <paramref name="scan"/> throws an exception and the supervision decision is
-        /// <see cref="Directive.Restart"/> current value starts at <paramref name="zero"/> again
+        /// <see cref="Restart"/> current value starts at <paramref name="zero"/> again
         /// the stream will continue.
         /// <para>
         /// '''Emits when''' the function scanning the element returns a new element
@@ -549,6 +551,66 @@ namespace Akka.Streams.Dsl
         public static Flow<TIn, TOut, TMat> Conflate<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Func<TOut, TOut, TOut> aggregate)
         {
             return (Flow<TIn, TOut, TMat>)InternalFlowOperations.Conflate(flow, aggregate);
+        }
+
+        /// <summary>
+        /// Allows a faster upstream to progress independently of a slower subscriber by aggregating elements into batches
+        /// until the subscriber is ready to accept them.For example a batch step might store received elements in
+        /// an array up to the allowed max limit if the upstream publisher is faster.
+        ///
+        /// This only rolls up elements if the upstream is faster, but if the downstream is faster it will not
+        /// duplicate elements.
+        ///
+        /// '''Emits when''' downstream stops backpressuring and there is an aggregated element available
+        ///
+        /// '''Backpressures when''' there are `max` batched elements and 1 pending element and downstream backpressures
+        ///
+        /// '''Completes when''' upstream completes and there is no batched/pending element waiting
+        ///
+        /// '''Cancels when''' downstream cancels
+        ///
+        /// See also <seealso cref="ConflateWithSeed{TIn,TOut,TMat,TSeed}"/>, <seealso cref="BatchWeighted{TIn,TOut,TOut2,TMat}"/>
+        /// </summary>
+        /// <param name="max">maximum number of elements to batch before backpressuring upstream (must be positive non-zero)</param>
+        /// <param name="seed">Provides the first state for a batched value using the first unconsumed element as a start</param>
+        /// <param name="aggregate">Takes the currently batched value and the current pending element to produce a new aggregate</param>
+        public static Flow<TIn,TOut2, TMat> Batch<TIn, TOut, TOut2, TMat>(this Flow<TIn, TOut, TMat> flow, long max,
+            Func<TOut, TOut2> seed, Func<TOut2, TOut, TOut2> aggregate)
+        {
+            return (Flow<TIn, TOut2, TMat>)InternalFlowOperations.Batch(flow, max, seed, aggregate);
+        }
+
+        ///  <summary>
+        /// Allows a faster upstream to progress independently of a slower subscriber by aggregating elements into batches
+        /// until the subscriber is ready to accept them.For example a batch step might concatenate `ByteString`
+        /// elements up to the allowed max limit if the upstream publisher is faster.
+        ///
+        /// This element only rolls up elements if the upstream is faster, but if the downstream is faster it will not
+        /// duplicate elements.
+        ///
+        /// Batching will apply for all elements, even if a single element cost is greater than the total allowed limit.
+        /// In this case, previous batched elements will be emitted, then the "heavy" element will be emitted (after
+        /// being applied with the `seed` function) without batching further elements with it, and then the rest of the
+        /// incoming elements are batched.
+        ///
+        /// '''Emits when''' downstream stops backpressuring and there is a batched element available
+        ///
+        /// '''Backpressures when''' there are `max` weighted batched elements + 1 pending element and downstream backpressures
+        ///
+        /// '''Completes when''' upstream completes and there is no batched/pending element waiting
+        ///
+        /// '''Cancels when''' downstream cancels
+        ///
+        /// See also <seealso cref="ConflateWithSeed{TIn,TOut,TMat,TSeed}"/>, <seealso cref="Batch{TIn,TOut,TOut2,TMat}"/>
+        /// </summary>
+        /// <param name="max">maximum weight of elements to batch before backpressuring upstream (must be positive non-zero)</param>
+        /// <param name="costFunction">a function to compute a single element weight</param>
+        /// <param name="seed">Provides the first state for a batched value using the first unconsumed element as a start</param>
+        /// <param name="aggregate">Takes the currently batched value and the current pending element to produce a new aggregate</param>
+        public static Flow<TIn, TOut2, TMat> BatchWeighted<TIn, TOut, TOut2, TMat>(this Flow<TIn, TOut, TMat> flow, long max, Func<TOut, long> costFunction,
+            Func<TOut, TOut2> seed, Func<TOut2, TOut, TOut2> aggregate)
+        {
+            return (Flow<TIn, TOut2, TMat>)InternalFlowOperations.BatchWeighted(flow, max, costFunction, seed, aggregate);
         }
 
         /// <summary>

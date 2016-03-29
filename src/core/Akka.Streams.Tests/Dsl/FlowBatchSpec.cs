@@ -1,0 +1,130 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reactive.Streams;
+using System.Threading;
+using Akka.Streams.Dsl;
+using Akka.Streams.TestKit;
+using Akka.Streams.TestKit.Tests;
+using FluentAssertions;
+using Xunit;
+using Xunit.Abstractions;
+// ReSharper disable InvokeAsExtensionMethod
+
+namespace Akka.Streams.Tests.Dsl
+{
+    public class FlowBatchSpec : AkkaSpec
+    {
+        private ActorMaterializer Materializer { get; }
+
+        public FlowBatchSpec(ITestOutputHelper helper) : base(helper)
+        {
+            var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 2);
+            Materializer = ActorMaterializer.Create(Sys, settings);
+        }
+
+        [Fact]
+        public void Batch_must_pass_through_elements_unchanged_when_there_is_no_rate_difference()
+        {
+            var publisher = TestPublisher.CreateProbe<int>(this);
+            var subscriber = TestSubscriber.CreateProbe<int>(this);
+
+            Source.FromPublisher<int, Unit>(publisher)
+                .Batch(max: 2, seed: i => i, aggregate: (sum, i) => sum + i)
+                .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                .Run(Materializer);
+
+            var sub = subscriber.ExpectSubscription();
+
+            for (var i = 1; i <= 100; i++)
+            {
+                sub.Request(1);
+                publisher.SendNext(i);
+                subscriber.ExpectNext(i);
+            }
+
+            sub.Cancel();
+        }
+
+        [Fact]
+        public void Batch_must_aggregate_elements_while_downstream_is_silent()
+        {
+            var publisher = TestPublisher.CreateProbe<int>(this);
+            var subscriber = TestSubscriber.CreateProbe<List<int>>(this);
+
+            Source.FromPublisher<int, Unit>(publisher).Batch(long.MaxValue, i => new List<int> {i}, (ints, i) =>
+            {
+                ints.Add(i);
+                return ints;
+            }).To(Sink.FromSubscriber<List<int>, Unit>(subscriber)).Run(Materializer);
+            var sub = subscriber.ExpectSubscription();
+
+            for (var i = 1; i <= 10; i++)
+                publisher.SendNext(i);
+
+            subscriber.ExpectNoMsg(TimeSpan.FromSeconds(1));
+            sub.Request(1);
+            subscriber.ExpectNext().ShouldAllBeEquivalentTo(new [] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+            sub.Cancel();
+        }
+
+        [Fact]
+        public void Batch_must_work_on_a_variable_rate_chain()
+        {
+            var random = new ThreadLocal<Random>(() => new Random());
+            var future = Source.From(Enumerable.Range(1, 1000)).Batch(100, i => i, (sum, i) => sum + i).Map(i =>
+            {
+                if (random.Value.Next(1, 3) == 1)
+                    Thread.Sleep(10);
+                return i;
+            }).RunFold(0, (i, i1) => i + i1, Materializer);
+            future.Wait(TimeSpan.FromSeconds(10));
+            future.Result.Should().Be(500500);
+        }
+
+        [Fact]
+        public void Batch_must_backpressure_subscriber_when_upstream_is_slower()
+        {
+            var publisher = TestPublisher.CreateProbe<int>(this);
+            var subscriber = TestSubscriber.CreateProbe<int>(this);
+
+            Source.FromPublisher<int, Unit>(publisher)
+                .Batch(2, i => i, (sum, i) => sum + i)
+                .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                .Run(Materializer);
+            var sub = subscriber.EnsureSubscription();
+
+            sub.Request(1);
+            publisher.SendNext(1);
+            subscriber.ExpectNext(1);
+
+            sub.Request(1);
+            subscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+            publisher.SendNext(2);
+            subscriber.ExpectNext(2);
+
+            publisher.SendNext(3);
+            publisher.SendNext(4);
+            // The request can be in race with the above onNext(4) so the result would be either 3 or 7.
+            subscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+            sub.Request(1);
+            subscriber.ExpectNext(7);
+
+            sub.Request(1);
+            subscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+            sub.Cancel();
+        }
+
+        [Fact]
+        public void Batch_must_work_with_a_buffer_and_fold()
+        {
+            var future =
+                Source.From(Enumerable.Range(1, 50))
+                    .Batch(long.MaxValue, i => i, (sum, i) => sum + i)
+                    .Buffer(50, OverflowStrategy.Backpressure)
+                    .RunFold(0, (sum, i) => sum + i, Materializer);
+            future.Wait(TimeSpan.FromSeconds(3));
+            future.Result.Should().Be(Enumerable.Range(1, 50).Sum());
+        }
+    }
+}

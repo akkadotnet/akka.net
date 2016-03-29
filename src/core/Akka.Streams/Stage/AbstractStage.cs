@@ -192,7 +192,7 @@ namespace Akka.Streams.Stage
         public override string ToString() => $"PushPullGraphLogic({_currentStage})";
     }
 
-    public class PushPullGraphStageWithMaterializedValue<TIn, TOut, TExt, TMat> : GraphStageWithMaterializedValue<FlowShape<TIn, TOut>, TMat>
+    public class PushPullGraphStageWithMaterializedValue<TIn, TOut, TMat> : GraphStageWithMaterializedValue<FlowShape<TIn, TOut>, TMat>
     {
         public readonly Func<Attributes, Tuple<IStage<TIn, TOut>, TMat>> Factory;
 
@@ -221,7 +221,7 @@ namespace Akka.Streams.Stage
         }
     }
 
-    public class PushPullGraphStage<TIn, TOut, TExt> : PushPullGraphStageWithMaterializedValue<TIn, TOut, TExt, Unit>
+    public class PushPullGraphStage<TIn, TOut> : PushPullGraphStageWithMaterializedValue<TIn, TOut, Unit>
     {
         public PushPullGraphStage(Func<Attributes, IStage<TIn, TOut>> factory, Attributes stageAttributes) : base(attributes => Tuple.Create(factory(attributes), Unit.Instance), stageAttributes)
         {

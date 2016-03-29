@@ -1111,10 +1111,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             }
         }
 
-        public PushPullGraphStage<TIn, TOut, object> ToGraphStage<TIn, TOut>(IStage<TIn, TOut> stage)
+        public PushPullGraphStage<TIn, TOut> ToGraphStage<TIn, TOut>(IStage<TIn, TOut> stage)
         {
             var s = stage;
-            return new PushPullGraphStage<TIn, TOut, object>(_ => s, Attributes.None);
+            return new PushPullGraphStage<TIn, TOut>(_ => s, Attributes.None);
         }
 
         public IGraphStageWithMaterializedValue[] ToGraphStage<TIn, TOut>(IStage<TIn, TOut>[] stages)

@@ -32,6 +32,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes Fold = Attributes.CreateName("fold");
         public static readonly Attributes Buffer = Attributes.CreateName("buffer");
         public static readonly Attributes Batch = Attributes.CreateName("batch");
+        public static readonly Attributes BatchWeighted = Attributes.CreateName("batchWeighted");
         public static readonly Attributes Conflate = Attributes.CreateName("conflate");
         public static readonly Attributes Expand = Attributes.CreateName("expand");
         public static readonly Attributes MapConcat = Attributes.CreateName("mapConcat");
@@ -91,7 +92,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes InputStreamSink = Attributes.CreateName("inputStreamSink").And(IODispatcher);
         public static readonly Attributes OutputStreamSink = Attributes.CreateName("outputStreamSink").And(IODispatcher);
         public static readonly Attributes FileSink = Attributes.CreateName("fileSink").And(IODispatcher);
-        public static readonly Attributes SeqSink = Attributes.CreateName("seqSink");        
+        public static readonly Attributes SeqSink = Attributes.CreateName("seqSink");
     }
     
     // FIXME: To be deprecated as soon as stream-of-stream operations are stages
@@ -102,7 +103,7 @@ namespace Akka.Streams.Implementation.Stages
     /// <summary>
     /// Stage that is backed by a GraphStage but can be symbolically introspected
     /// </summary>
-    internal sealed class SymbolicGraphStage<TIn, TOut, TExt> : PushPullGraphStage<TIn, TOut, TExt>
+    internal sealed class SymbolicGraphStage<TIn, TOut> : PushPullGraphStage<TIn, TOut>
     {
         public SymbolicGraphStage(ISymbolicStage<TIn, TOut> symbolicStage) : base(symbolicStage.Create, symbolicStage.Attributes)
         {

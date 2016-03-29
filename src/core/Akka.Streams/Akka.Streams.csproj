@@ -96,6 +96,7 @@
     <Compile Include="Implementation\ActorRefSinkActor.cs" />
     <Compile Include="Implementation\ActorRefSourceActor.cs" />
     <Compile Include="Implementation\Buffers.cs" />
+    <Compile Include="Implementation\ConstantFunctions.cs" />
     <Compile Include="Implementation\EnumerableActorName.cs" />
     <Compile Include="Implementation\ExposedPublisherReceive.cs" />
     <Compile Include="Implementation\FanIn.cs" />
