@@ -66,6 +66,7 @@
     <Compile Include="Dsl\FlowBatchWeightedSpec.cs" />
     <Compile Include="Dsl\FlowCollectSpec.cs" />
     <Compile Include="Dsl\FlowCompileSpec.cs" />
+    <Compile Include="Dsl\FlowConcatAllSpec.cs" />
     <Compile Include="Dsl\FlowSpec.cs" />
     <Compile Include="Dsl\QueueSourceSpec.cs" />
     <Compile Include="Actor\ActorPublisherSpec.cs" />
