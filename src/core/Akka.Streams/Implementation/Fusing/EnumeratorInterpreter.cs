@@ -154,7 +154,7 @@ namespace Akka.Streams.Implementation.Fusing
             while (opsEnumerator.MoveNext())
             {
                 var op = opsEnumerator.Current;
-                var stage = new PushPullGraphStage<TIn, TOut, Unit>(_ => op, Attributes.None);
+                var stage = new PushPullGraphStage<TIn, TOut>(_ => op, Attributes.None);
                 stages[i] = stage;
                 ins[i] = stage.Shape.Inlet;
                 inOwners[i] = i;

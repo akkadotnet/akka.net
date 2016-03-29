@@ -102,7 +102,7 @@ namespace Akka.Streams.Implementation.Stages
     /// <summary>
     /// Stage that is backed by a GraphStage but can be symbolically introspected
     /// </summary>
-    internal sealed class SymbolicGraphStage<TIn, TOut, TExt> : PushPullGraphStage<TIn, TOut, TExt>
+    internal sealed class SymbolicGraphStage<TIn, TOut> : PushPullGraphStage<TIn, TOut>
     {
         public SymbolicGraphStage(ISymbolicStage<TIn, TOut> symbolicStage) : base(symbolicStage.Create, symbolicStage.Attributes)
         {

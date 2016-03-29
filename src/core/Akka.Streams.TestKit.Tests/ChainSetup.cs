@@ -9,7 +9,6 @@ namespace Akka.Streams.TestKit.Tests
     public class ChainSetup<TIn, TOut, TMat>
     {
         protected readonly TestKitBase System;
-        protected readonly ActorMaterializerSettings Settings;
 
         public ChainSetup(
             Func<Flow<TIn, TIn, Unit>, Flow<TIn, TOut, TMat>> stream,
@@ -27,7 +26,7 @@ namespace Akka.Streams.TestKit.Tests
 
             var s = Source.FromPublisher<TIn, Unit>(Upstream).Via(stream((Flow<TIn, TIn, Unit>)(Flow.Identity<TIn>().Map(x => x).Named("buh"))));
             Publisher = toPublisher(s, materializer);
-            UpstreamSubscription = Upstream.ExpectSubscription() as StreamTestKit.PublisherProbeSubscription<TIn>;
+            UpstreamSubscription = Upstream.ExpectSubscription();
             Publisher.Subscribe(Downstream);
             DownstreamSubscription = Downstream.ExpectSubscription();
         }
@@ -51,6 +50,7 @@ namespace Akka.Streams.TestKit.Tests
         {
         }
 
+        public ActorMaterializerSettings Settings { get; }
         public TestPublisher.ManualProbe<TIn> Upstream { get; }
         public TestSubscriber.ManualProbe<TOut> Downstream { get; }
         public IPublisher<TOut> Publisher { get; }

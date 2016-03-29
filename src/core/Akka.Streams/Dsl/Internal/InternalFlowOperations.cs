@@ -24,7 +24,7 @@ namespace Akka.Streams.Dsl.Internal
         internal static IFlow<TOut2, TMat> AndThen<TOut2, TOut, TMat>(this IFlow<TOut, TMat> flow,
             SymbolicStage<TOut, TOut2> op)
         {
-            return flow.Via(new SymbolicGraphStage<TOut, TOut2, object>(op));
+            return flow.Via(new SymbolicGraphStage<TOut, TOut2>(op));
         }
 
         /// <summary>
@@ -706,7 +706,7 @@ namespace Akka.Streams.Dsl.Internal
         public static IFlow<TOut, TMat> Transform<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
             Func<IStage<TIn, TOut>> stageFactory)
         {
-            return flow.Via(new PushPullGraphStage<TIn, TOut, object>(attr => stageFactory(), Attributes.None));
+            return flow.Via(new PushPullGraphStage<TIn, TOut>(attr => stageFactory(), Attributes.None));
         }
 
         /// <summary>

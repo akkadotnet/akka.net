@@ -411,7 +411,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 var source = setup.NewUpstreamProbe<string>("source");
                 var sink = setup.NewDownstreamProbe<string>("sink");
                 var buffer =
-                    new PushPullGraphStage<string, string, Unit>(
+                    new PushPullGraphStage<string, string>(
                         a => new Buffer<string>(2, OverflowStrategy.Backpressure), Attributes.None);
 
                 builder(buffer)
