@@ -14,12 +14,22 @@ namespace Akka.Streams.Dsl.Internal
         public IModule Module { get; }
         public IGraph<TShape, TMat> WithAttributes(Attributes attributes)
         {
-            return new GraphImpl<TShape, TMat>(Shape, Module.WithAttributes(attributes).Nest());
+            return new GraphImpl<TShape, TMat>(Shape, Module.WithAttributes(attributes));
+        }
+
+        public IGraph<TShape, TMat> AddAttributes(Attributes attributes)
+        {
+            return WithAttributes(Module.Attributes.And(attributes));
         }
 
         public IGraph<TShape, TMat> Named(string name)
         {
-            return WithAttributes(Attributes.CreateName(name));
+            return AddAttributes(Attributes.CreateName(name));
+        }
+
+        public IGraph<TShape, TMat> Async()
+        {
+            return AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
         }
     }
 }

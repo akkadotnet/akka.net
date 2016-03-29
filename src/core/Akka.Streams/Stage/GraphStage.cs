@@ -24,9 +24,11 @@ namespace Akka.Streams.Stage
         GraphStageLogic CreateLogicAndMaterializedValue(Attributes attributes, out object materialized);
     }
 
-    public abstract class GraphStageWithMaterializedValue<TShape, TMat> : IGraph<TShape, TMat>, IGraphStageWithMaterializedValue where TShape : Shape
+    public abstract class GraphStageWithMaterializedValue<TShape, TMat> : IGraph<TShape, TMat>,
+        IGraphStageWithMaterializedValue where TShape : Shape
     {
         #region anonymous graph class
+
         private sealed class Graph : IGraph<TShape, TMat>
         {
             private readonly TShape _shape;
@@ -40,18 +42,37 @@ namespace Akka.Streams.Stage
                 _attributes = attributes;
             }
 
-            public TShape Shape { get { return _shape; } }
-            public IModule Module { get { return _module; } }
+            public TShape Shape
+            {
+                get { return _shape; }
+            }
+
+            public IModule Module
+            {
+                get { return _module; }
+            }
+
             public IGraph<TShape, TMat> WithAttributes(Attributes attributes)
             {
                 return new Graph(_shape, _module, attributes);
             }
 
+            public IGraph<TShape, TMat> AddAttributes(Attributes attributes)
+            {
+                return WithAttributes(Module.Attributes.And(attributes));
+            }
+
             public IGraph<TShape, TMat> Named(string name)
             {
-                return WithAttributes(Attributes.CreateName(name));
+                return AddAttributes(Attributes.CreateName(name));
+            }
+
+            public IGraph<TShape, TMat> Async()
+            {
+                return AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
             }
         }
+
         #endregion
 
         private readonly Lazy<IModule> _module;
@@ -69,8 +90,12 @@ namespace Akka.Streams.Stage
         {
             return new Graph(Shape, Module, attributes);
         }
-        public abstract GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out TMat materialized);
-        GraphStageLogic IGraphStageWithMaterializedValue.CreateLogicAndMaterializedValue(Attributes attributes, out object materialized)
+
+        public abstract GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes,
+            out TMat materialized);
+
+        GraphStageLogic IGraphStageWithMaterializedValue.CreateLogicAndMaterializedValue(Attributes attributes,
+            out object materialized)
         {
             TMat m;
             var result = CreateLogicAndMaterializedValue(attributes, out m);
@@ -81,9 +106,19 @@ namespace Akka.Streams.Stage
 
         public IModule Module => _module.Value;
 
+        public IGraph<TShape, TMat> AddAttributes(Attributes attributes)
+        {
+            return WithAttributes(Module.Attributes.And(attributes));
+        }
+
         public IGraph<TShape, TMat> Named(string name)
         {
-            return WithAttributes(Attributes.CreateName(name));
+            return AddAttributes(Attributes.CreateName(name));
+        }
+
+        public IGraph<TShape, TMat> Async()
+        {
+            return AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
         }
     }
 

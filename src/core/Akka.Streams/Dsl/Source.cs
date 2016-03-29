@@ -51,9 +51,19 @@ namespace Akka.Streams.Dsl
             return WithAttributes(attributes);
         }
 
+        public IGraph<SourceShape<TOut>, TMat> AddAttributes(Attributes attributes)
+        {
+            return WithAttributes(Module.Attributes.And(attributes));
+        }
+
         public IGraph<SourceShape<TOut>, TMat> Named(string name)
         {
-            return WithAttributes(Attributes.CreateName(name));
+            return AddAttributes(Attributes.CreateName(name));
+        }
+
+        public IGraph<SourceShape<TOut>, TMat> Async()
+        {
+            return AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
         }
 
         /// <summary>
@@ -63,7 +73,7 @@ namespace Akka.Streams.Dsl
         /// <returns>A new Source with the added attributes</returns>
         public Source<TOut, TMat> WithAttributes(Attributes attributes)
         {
-            return new Source<TOut, TMat>(Module.WithAttributes(attributes).Nest());
+            return new Source<TOut, TMat>(Module.WithAttributes(attributes));
         }
 
         public Source<TOut2, TMat3> ViaMaterialized<TOut2, TMat2, TMat3>(IGraph<FlowShape<TOut, TOut2>, TMat2> flow, Func<TMat, TMat2, TMat3> combine)

@@ -108,12 +108,22 @@ namespace Akka.Streams.Dsl
 
         public IGraph<BidiShape<TIn1, TOut1, TIn2, TOut2>, TMat> WithAttributes(Attributes attributes)
         {
-            return new BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat>(_module.WithAttributes(attributes).Nest());
+            return new BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat>(_module.WithAttributes(attributes));
+        }
+
+        public IGraph<BidiShape<TIn1, TOut1, TIn2, TOut2>, TMat> AddAttributes(Attributes attributes)
+        {
+            return WithAttributes(Module.Attributes.And(attributes));
         }
 
         public IGraph<BidiShape<TIn1, TOut1, TIn2, TOut2>, TMat> Named(string name)
         {
-            return WithAttributes(Attributes.CreateName(name));
+            return AddAttributes(Attributes.CreateName(name));
+        }
+
+        public IGraph<BidiShape<TIn1, TOut1, TIn2, TOut2>, TMat> Async()
+        {
+            return AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
         }
 
         ///<summary>
