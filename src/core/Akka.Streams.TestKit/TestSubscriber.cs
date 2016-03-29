@@ -130,7 +130,8 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public T ExpectNext()
             {
-                var message = _probe.ReceiveOne(_probe.Remaining);
+                var t = _probe.RemainingOrDilated(null);
+                var message = _probe.ReceiveOne(t);
                 if (message is OnNext<T>) return ((OnNext<T>) message).Element;
                 else throw new Exception("expected OnNext, found " + message);
             }
