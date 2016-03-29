@@ -814,9 +814,19 @@ namespace Akka.Streams.Implementation.Fusing
             return new FusedGraph<TShape, TMat>(Module.WithAttributes(attributes) as FusedModule, Shape);
         }
 
+        public IGraph<TShape, TMat> AddAttributes(Attributes attributes)
+        {
+            return WithAttributes(Module.Attributes.And(attributes));
+        }
+
         public IGraph<TShape, TMat> Named(string name)
         {
-            return WithAttributes(Attributes.CreateName(name));
+            return AddAttributes(Attributes.CreateName(name));
+        }
+
+        public IGraph<TShape, TMat> Async()
+        {
+            return AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
         }
     }
 }

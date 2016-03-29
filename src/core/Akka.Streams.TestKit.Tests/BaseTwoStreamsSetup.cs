@@ -19,7 +19,7 @@ namespace Akka.Streams.TestKit.Tests
     {
         protected readonly ActorMaterializer Materializer;
 
-        public BaseTwoStreamsSetup(ITestOutputHelper output = null) : base(output)
+        protected BaseTwoStreamsSetup(ITestOutputHelper output = null) : base(output)
         {
             var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(initialSize: 2, maxSize: 2);
             Materializer = ActorMaterializer.Create(Sys, settings);
@@ -27,7 +27,7 @@ namespace Akka.Streams.TestKit.Tests
 
         protected Exception TestException()
         {
-            return new ApplicationException("test");
+            return new TestException("test");
         }
 
         protected virtual TestSubscriber.Probe<TOutputs> Setup(IPublisher<int> p1, IPublisher<int> p2)
@@ -61,7 +61,7 @@ namespace Akka.Streams.TestKit.Tests
         }
 
         [Fact]
-        public void Should_work_with_two_immediately_completed_pulishers()
+        public void Should_work_with_two_immediately_completed_publishers()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -71,7 +71,7 @@ namespace Akka.Streams.TestKit.Tests
         }
 
         [Fact]
-        public void Should_work_with_two_delayed_completed_pulishers()
+        public void Should_work_with_two_delayed_completed_publishers()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -81,7 +81,7 @@ namespace Akka.Streams.TestKit.Tests
         }
 
         [Fact]
-        public void Should_work_with_one_immediately_completed_and_one_delayed_completed_pulisher()
+        public void Should_work_with_one_immediately_completed_and_one_delayed_completed_publisher()
         {
             this.AssertAllStagesStopped(() =>
             {

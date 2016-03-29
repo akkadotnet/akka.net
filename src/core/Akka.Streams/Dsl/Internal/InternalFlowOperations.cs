@@ -1113,8 +1113,7 @@ namespace Akka.Streams.Dsl.Internal
             return GraphDsl.Create(other, (builder, shape) =>
             {
                 var zip = builder.Add(new Zip<T1, T2>());
-                var r = builder.From(shape);
-                r.To(zip.In1);
+                builder.From(shape).To(zip.In1);
                 return new FlowShape<T1, Tuple<T1, T2>>(zip.In0, zip.Out);
             });
         }

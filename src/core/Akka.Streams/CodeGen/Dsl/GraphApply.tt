@@ -41,8 +41,6 @@ namespace Akka.Streams.Dsl
 		}
 		<# for (int i = 2; i < 6; i++) { 
 		   var matTypes = string.Join(", ", Enumerable.Range(0, i).Select(x => "TMat"+x));
-		   var tailMatTypes = string.Join(", ", Enumerable.Range(1, i-1).Select(x => "TMat"+x));
-		   var tailMats = string.Join(", ", Enumerable.Range(1, i-1).Select(x => "m"+x));
 		   var shapeTypes = string.Join(", ", Enumerable.Range(0, i).Select(x => "TShape"+x));
 		   var graphParams = string.Join(", ", Enumerable.Range(0, i).Select(x => string.Format("IGraph<TShape{0}, TMat{0}> g{0}", x)));
 		#>
@@ -63,9 +61,9 @@ where TShape<#= t #>: Shape
 		{
 			var builder = new Builder<TMatOut>();
 			
-            var shape0 = builder.Add<TShape0, TMat0, Func<<#= tailMatTypes #>, TMatOut>>(g0, m0 => ((<#= tailMats #>) => combineMaterializers(m0, <#= tailMats #>)));
+            var shape0 = builder.Add<TShape0, TMat0, <#= CurriedSig(1, i) #>>(g0, m0 => <#= CurriedMat(1, i) #>);
 			<# for (var t = 1; t < i; t++) { #>
-var shape<#= t #> = builder.Add<TShape<#= t #>, Func<TMat<#= t #>, TMatOut>, TMat<#= t #>, TMatOut>(g<#= t #>, (f, m<#= t #>) => f(m<#= t #>));
+var shape<#= t #> = builder.Add<TShape<#= t #>, <#= CurriedSig(t, i) #>, TMat<#= t #>, <#= CurriedSig(t+1, i) #>>(g<#= t #>, (f, m<#= t #>) => f(m<#= t #>));
 			<# } #>
 
 			var shape = buildBlock(builder, <#= string.Join(", ", Enumerable.Range(0, i).Select(x => "shape"+x)) #>);
@@ -77,3 +75,20 @@ var shape<#= t #> = builder.Add<TShape<#= t #>, Func<TMat<#= t #>, TMatOut>, TMa
 
 	}
 }
+<#+
+   public string CurriedSig(int from, int to)
+   {
+      if (from < to)
+         return string.Format("Func<TMat{0}, {1}>", from, CurriedSig(from+1, to));
+      else
+         return "TMatOut";
+   }
+
+   public string CurriedMat(int from, int to)
+   {
+      if (from < to)
+         return string.Format("(m{0} => {1})", from, CurriedMat(from+1, to));
+      else
+         return string.Format("combineMaterializers({0})", string.Join(", ", Enumerable.Range(0, to).Select(x => "m"+x)));
+   }
+#>

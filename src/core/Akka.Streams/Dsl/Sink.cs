@@ -40,12 +40,22 @@ namespace Akka.Streams.Dsl
 
         public IGraph<SinkShape<TIn>, TMat> WithAttributes(Attributes attributes)
         {
-            return new Sink<TIn, TMat>(Module.WithAttributes(attributes).Nest());
+            return new Sink<TIn, TMat>(Module.WithAttributes(attributes));
+        }
+
+        public IGraph<SinkShape<TIn>, TMat> AddAttributes(Attributes attributes)
+        {
+            return WithAttributes(Module.Attributes.And(attributes));
         }
 
         public IGraph<SinkShape<TIn>, TMat> Named(string name)
         {
-            return WithAttributes(Attributes.CreateName(name));
+            return AddAttributes(Attributes.CreateName(name));
+        }
+
+        public IGraph<SinkShape<TIn>, TMat> Async()
+        {
+            return AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
         }
     }
 

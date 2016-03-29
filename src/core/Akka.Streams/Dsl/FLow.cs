@@ -44,12 +44,22 @@ namespace Akka.Streams.Dsl
         public IGraph<FlowShape<TIn, TOut>, TMat> WithAttributes(Attributes attributes)
         {
             if (Module is EmptyModule) return this;
-            else return new Flow<TIn, TOut, TMat>(Module.WithAttributes(attributes).Nest());
+            return new Flow<TIn, TOut, TMat>(Module.WithAttributes(attributes));
+        }
+
+        public IGraph<FlowShape<TIn, TOut>, TMat> AddAttributes(Attributes attributes)
+        {
+            return WithAttributes(Module.Attributes.And(attributes));
         }
 
         public IGraph<FlowShape<TIn, TOut>, TMat> Named(string name)
         {
-            return WithAttributes(Attributes.CreateName(name));
+            return AddAttributes(Attributes.CreateName(name));
+        }
+
+        public IGraph<FlowShape<TIn, TOut>, TMat> Async()
+        {
+            return AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
         }
 
         /// <summary>

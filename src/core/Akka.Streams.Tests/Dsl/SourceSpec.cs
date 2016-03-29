@@ -4,7 +4,6 @@ using System.Linq;
 using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
-using Akka.Streams.Dsl.Internal;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using FluentAssertions;
@@ -110,7 +109,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var neverSource = Source.Maybe<int>();
+                var neverSource = Source.Maybe<int>().Filter(_ => false);
                 var counterSink = Sink.Fold<int, int>(0, (acc, _) => acc + 1);
 
                 var t = neverSource.ToMaterialized(counterSink, Keep.Both).Run(Materializer);
@@ -118,10 +117,10 @@ namespace Akka.Streams.Tests.Dsl
                 var counterFuture = t.Item2;
                 
                 //external cancellation
-                neverPromise.TrySetResult(-1).Should().BeTrue();
+                neverPromise.TrySetResult(0).Should().BeTrue();
 
                 counterFuture.Wait(500).Should().BeTrue();
-                counterFuture.Result.Should().Be(-1);
+                counterFuture.Result.Should().Be(0);
             }, Materializer);
         }
 
@@ -146,6 +145,26 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        public void Maybe_Source_must_allow_external_triggering_of_OnError()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var neverSource = Source.Maybe<int>();
+                var counterSink = Sink.First<int>();
+
+                var t = neverSource.ToMaterialized(counterSink, Keep.Both).Run(Materializer);
+                var neverPromise = t.Item1;
+                var counterFuture = t.Item2;
+
+                //external cancellation
+                neverPromise.SetException(new Exception("Boom"));
+
+                counterFuture.Invoking(f => f.Wait(500)).ShouldThrow<Exception>()
+                    .WithMessage("Boom");
+            }, Materializer);
+        }
+
+        [Fact]
         public void Composite_Source_must_merge_from_many_inputs()
         {
             var probes = Enumerable.Range(1, 5).Select(_ => TestPublisher.CreateManualProbe<int>(this)).ToList();
@@ -164,7 +183,7 @@ namespace Akka.Streams.Tests.Dsl
                         b.From(i3.Outlet).To(m.In(3));
                         b.From(i4.Outlet).To(m.In(4));
                         return new SourceShape<int>(m.Out);
-                    })).To(Sink.FromSubscriber<int, IEnumerable<ISubscriber<int>>>(outProbe)).Run(Materializer);
+                    })).To(Sink.FromSubscriber<int, Unit>(outProbe)).Run(Materializer);
 
             for (var i = 0; i < 5; i++)
                 probes[i].Subscribe(s[i]);
@@ -266,9 +285,9 @@ namespace Akka.Streams.Tests.Dsl
                 if (a > 10000000)
                     return null;
                 return Tuple.Create(Tuple.Create(b, a + b), a);
-            }).RunFold(new List<int>(), (ints, i) =>
+            }).RunFold(new LinkedList<int>(), (ints, i) =>
             {
-                ints.Add(i);
+                ints.AddFirst(i);
                 return ints;
             }, Materializer).Result.Should().Equal(Expected);
         }
@@ -276,21 +295,23 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Unfold_Source_must_terminate_with_a_failure_if_there_is_an_exception_thrown()
         {
-            var t = new SystemException("expected");
             EventFilter.Exception<SystemException>(message: "expected").ExpectOne(() =>
             {
-                Source.Unfold(Tuple.Create(0, 1), tuple =>
+                var task = Source.Unfold(Tuple.Create(0, 1), tuple =>
                 {
                     var a = tuple.Item1;
                     var b = tuple.Item2;
                     if (a > 10000000)
-                        throw t;
+                        throw new SystemException("expected");
                     return Tuple.Create(Tuple.Create(b, a + b), a);
-                }).RunFold(new List<int>(), (ints, i) =>
+                }).RunFold(new LinkedList<int>(), (ints, i) =>
                 {
-                    ints.Add(i);
+                    ints.AddFirst(i);
                     return ints;
-                }, Materializer).Exception.Flatten().InnerExceptions.Any(x => x is SystemException).Should().BeTrue();
+                }, Materializer);
+                task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
+                    .ShouldThrow<SystemException>()
+                    .WithMessage("expected");
             });
         }
 
@@ -304,9 +325,9 @@ namespace Akka.Streams.Tests.Dsl
                 if (a > 10000000)
                     return Task.FromResult<Tuple<Tuple<int, int>, int>>(null);
                 return Task.FromResult(Tuple.Create(Tuple.Create(b, a + b), a));
-            }).RunFold(new List<int>(), (ints, i) =>
+            }).RunFold(new LinkedList<int>(), (ints, i) =>
             {
-                ints.Add(i);
+                ints.AddFirst(i);
                 return ints;
             }, Materializer).Result.Should().Equal(Expected);
         }
@@ -321,9 +342,9 @@ namespace Akka.Streams.Tests.Dsl
                 return Tuple.Create(Tuple.Create(b, a + b), a);
             })
             .Take(36)
-            .RunFold(new List<int>(), (ints, i) =>
+            .RunFold(new LinkedList<int>(), (ints, i) =>
             {
-                ints.Add(i);
+                ints.AddFirst(i);
                 return ints;
             }, Materializer).Result.Should().Equal(Expected);
         }
@@ -337,6 +358,12 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.First<IEnumerable<bool>>(), Materializer)
                 .Result.Should()
                 .Equal(expected);
+        }
+
+        [Fact]
+        public void A_Source_must_suitably_override_attribute_handling_methods()
+        {
+            Source.Single(42).Async().AddAttributes(Attributes.None).Named("");
         }
     }
 }

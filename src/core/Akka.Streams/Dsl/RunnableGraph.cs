@@ -32,12 +32,22 @@ namespace Akka.Streams.Dsl
 
         public IGraph<ClosedShape, TMat> WithAttributes(Attributes attributes)
         {
-            return new RunnableGraph<TMat>(Module.WithAttributes(attributes).Nest());
+            return new RunnableGraph<TMat>(Module.WithAttributes(attributes));
+        }
+
+        public IGraph<ClosedShape, TMat> AddAttributes(Attributes attributes)
+        {
+            return WithAttributes(Module.Attributes.And(attributes));
         }
 
         public IGraph<ClosedShape, TMat> Named(string name)
         {
-            return WithAttributes(Attributes.CreateName(name));
+            return AddAttributes(Attributes.CreateName(name));
+        }
+
+        public IGraph<ClosedShape, TMat> Async()
+        {
+            return AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
         }
 
         public IRunnableGraph<TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> func)
