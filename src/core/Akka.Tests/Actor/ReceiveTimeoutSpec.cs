@@ -6,107 +6,161 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
 using Xunit;
-
+using Akka.Actor.Dsl;
 
 namespace Akka.Tests.Actor
 {
     public class ReceiveTimeoutSpec : AkkaSpec
     {
-        private static readonly object Tick = new object();
-
-        public class TimeoutActor : ActorBase
+        public class Tick
         {
-            private TestLatch _timeoutLatch;
-
-            public TimeoutActor(TestLatch timeoutLatch)
-                : this(timeoutLatch, TimeSpan.FromMilliseconds(500))
-            {
-            }
-
-            public TimeoutActor(TestLatch timeoutLatch, TimeSpan? timeout)
-            {
-                _timeoutLatch = timeoutLatch;
-                Context.SetReceiveTimeout(timeout.GetValueOrDefault());
-            }
-            protected override bool Receive(object message)
-            {
-                if (message is ReceiveTimeout)
-                {
-                    _timeoutLatch.Open();
-                    return true;
-                }
-                if (message == Tick)
-                {
-                    return true;
-                }
-                return false;
-            }
         }
 
-        public class NoTimeoutActor : ActorBase
+        public class TransperentTick : INotInfluenceReceiveTimeout
         {
-            private TestLatch _timeoutLatch;
-
-            public NoTimeoutActor(TestLatch timeoutLatch)
-            {
-                _timeoutLatch = timeoutLatch;
-            }
-            protected override bool Receive(object message)
-            {
-                if (message is ReceiveTimeout)
-                {
-                    _timeoutLatch.Open();
-                    return true;
-                }
-                if (message == Tick)
-                {
-                    return true;
-                }
-                return false;
-            }
         }
 
-        [Fact(DisplayName="An actor with receive timeout must get timeout")]
+        [Fact]
         public void Get_timeout()
         {
             var timeoutLatch = new TestLatch();
-            var timeoutActor = Sys.ActorOf(Props.Create(() => new TimeoutActor(timeoutLatch)));
 
-            timeoutLatch.Ready(TestLatch.DefaultTimeout);
-            Sys.Stop(timeoutActor);
-        }
+            var timeoutActor = Sys.ActorOf((act, context) =>
+            {
+                context.SetReceiveTimeout(TimeSpan.FromMilliseconds(500));
 
-        //TODO: how does this prove that there was a reschedule?? see ReceiveTimeoutSpec.scala 
-        [Fact(DisplayName = "An actor with receive timeout must reschedule timeout after regular receive")]
-        public void Reschedule_timeout()
-        {
-            var timeoutLatch = new TestLatch();
-            var timeoutActor = Sys.ActorOf(Props.Create(() => new TimeoutActor(timeoutLatch)));
-            timeoutActor.Tell(Tick);
-            timeoutLatch.Ready(TestLatch.DefaultTimeout);
-            Sys.Stop(timeoutActor);
-        }
+                act.Receive<ReceiveTimeout>((timeout, ctx) =>
+                {
+                    timeoutLatch.Open();
+                });
+            });
 
-        [Fact(DisplayName = "An actor with receive timeout must not receive timeout message when not specified")]
-        public void Not_get_timeout()
-        {
-            var timeoutLatch = new TestLatch();
-            var timeoutActor = Sys.ActorOf(Props.Create(() => new NoTimeoutActor(timeoutLatch)));
-            Assert.Throws<TimeoutException>(() => timeoutLatch.Ready(TestLatch.DefaultTimeout));
+            timeoutLatch.Ready(TestKitSettings.DefaultTimeout);
             Sys.Stop(timeoutActor);
         }
 
         [Fact]
-        public void Cancel_ReceiveTimeout_When_terminated()
+        public void Reschedule_timeout_after_regular_receive()
         {
-            //This test verifies that bug #469 "ReceiveTimeout isn't cancelled when actor terminates" has been fixed
+            var timeoutLatch = new TestLatch();
+
+            var timeoutActor = Sys.ActorOf((act, context) =>
+            {
+                context.SetReceiveTimeout(TimeSpan.FromMilliseconds(500));
+
+                act.Receive<Tick>((timeout, ctx) =>
+                {
+                    
+                });
+
+                act.Receive<ReceiveTimeout>((timeout, ctx) =>
+                {
+                    timeoutLatch.Open();
+                });
+            });
+
+            timeoutActor.Tell(new Tick());
+
+            timeoutLatch.Ready(TestKitSettings.DefaultTimeout);
+            Sys.Stop(timeoutActor);
+        }
+
+        [Fact]
+        public void Be_able_to_turn_off_timeout_if_desired()
+        {
+            int count = 0;
+            var timeoutLatch = new TestLatch();
+
+            var timeoutActor = Sys.ActorOf((act, context) =>
+            {
+                context.SetReceiveTimeout(TimeSpan.FromMilliseconds(500));
+
+                act.Receive<Tick>((timeout, ctx) =>
+                {
+
+                });
+
+                act.Receive<ReceiveTimeout>((timeout, ctx) =>
+                {
+                    Interlocked.Increment(ref count);
+                    timeoutLatch.Open();
+                    context.SetReceiveTimeout(null);
+                });
+            });
+
+            timeoutActor.Tell(new Tick());
+
+            timeoutLatch.Ready(TestKitSettings.DefaultTimeout);
+            Assert.Equal(1, count);
+            Sys.Stop(timeoutActor);
+        }
+
+        [Fact]
+        public void Not_receive_timeout_message_when_not_specified()
+        {
+            var timeoutLatch = new TestLatch();
+
+            var timeoutActor = Sys.ActorOf((act, context) =>
+            {
+                act.Receive<ReceiveTimeout>((timeout, ctx) =>
+                {
+                    timeoutLatch.Open();
+                });
+            });
+
+            Assert.Throws<TimeoutException>(() => timeoutLatch.Ready(TimeSpan.FromSeconds(1)));
+            Sys.Stop(timeoutActor);
+        }
+
+        [Fact]
+        public void Get_timeout_while_receiving_NotInfluenceReceiveTimeout_messages()
+        {
+            var timeoutLatch = CreateTestLatch();
+
+            var timeoutActor = Sys.ActorOf((act, context) =>
+            {
+                context.SetReceiveTimeout(TimeSpan.FromSeconds(1));
+
+                act.Receive<ReceiveTimeout>((timeout, ctx) =>
+                {
+                    timeoutLatch.Open();
+                });
+
+                act.Receive<TransperentTick>((timeout, ctx) =>
+                {
+
+                });
+            });
+
+            var ticks = Sys.Scheduler.ScheduleTellRepeatedlyCancelable(TimeSpan.FromMilliseconds(100),
+                TimeSpan.FromMilliseconds(100), timeoutActor, new TransperentTick(), TestActor);
+
+            timeoutLatch.Ready(TestKitSettings.DefaultTimeout);
+            ticks.Cancel();
+            Sys.Stop(timeoutActor);
+        }
+
+
+        [Fact]
+        public void Issue469_Cancel_ReceiveTimeout_When_terminated()
+        {
             var timeoutLatch = CreateTestLatch();
             Sys.EventStream.Subscribe(TestActor, typeof(DeadLetter));
-            var timeoutActor = Sys.ActorOf(Props.Create(() => new TimeoutActor(timeoutLatch, TimeSpan.FromMilliseconds(500))));
+
+            IActorRef timeoutActor = Sys.ActorOf((act, context) =>
+            {
+                context.SetReceiveTimeout(TimeSpan.FromMilliseconds(500));
+
+                act.Receive<ReceiveTimeout>((timeout, ctx) =>
+                {
+                    timeoutLatch.Open();
+                });
+            });
 
             //make sure TestActor gets a notification when timeoutActor terminates
             Watch(timeoutActor);
