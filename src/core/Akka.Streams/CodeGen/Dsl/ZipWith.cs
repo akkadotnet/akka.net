@@ -88,9 +88,10 @@ namespace Akka.Streams.Dsl
 		private sealed class Logic : GraphStageLogic
 		{
 			private readonly ZipWith<TIn0, TIn1, TOut> _stage;
+			private int _pending;
 			// Without this field the completion signalling would take one extra pull
 			private bool _willShutDown;
-			private int _pending;
+
 			public Logic(Shape shape, ZipWith<TIn0, TIn1, TOut> stage) : base(shape)
 			{
 				_stage = stage;

@@ -16,7 +16,7 @@ namespace Akka.Streams.Tests.Dsl
             var subscriber = TestSubscriber.CreateProbe<Tuple<int, int>>(this);
             Source.FromPublisher<int, Unit>(p1)
                 .Zip(Source.FromPublisher<int, Unit>(p2))
-                .RunWith(Sink.FromSubscriber<Tuple<int, int>, int>(subscriber), Materializer);
+                .RunWith(Sink.FromSubscriber<Tuple<int, int>, Unit>(subscriber), Materializer);
             return subscriber;
         }
 
@@ -68,20 +68,20 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Zip_for_Flow_must_work_with_one_immediately_failed_and_one_nonempty_publisher()
         {
             var subscriber1 = Setup(FailedPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
-            subscriber1.ExpectSubscriptionAndError().Should().BeOfType<ApplicationException>();
+            subscriber1.ExpectSubscriptionAndError().Should().Be(TestException());
 
             var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), FailedPublisher<int>());
-            subscriber2.ExpectSubscriptionAndComplete().Should().BeOfType<ApplicationException>();
+            subscriber2.ExpectSubscriptionAndError().Should().Be(TestException());
         }
 
         [Fact]
         public void A_Zip_for_Flow_must_work_with_one_delayed_failed_and_one_nonempty_publisher()
         {
             var subscriber1 = Setup(SoonToFailPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
-            subscriber1.ExpectSubscriptionAndError().Should().BeOfType<ApplicationException>();
+            subscriber1.ExpectSubscriptionAndError().Should().Be(TestException());
 
             var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), SoonToFailPublisher<int>());
-            subscriber2.ExpectSubscriptionAndComplete().Should().BeOfType<ApplicationException>();
+            subscriber2.ExpectSubscriptionAndError().Should().Be(TestException());
         }
     }
 }

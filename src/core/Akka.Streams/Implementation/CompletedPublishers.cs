@@ -43,8 +43,9 @@ namespace Akka.Streams.Implementation
 
         public ErrorPublisher(Exception cause, string name)
         {
-            Name = name;
+            ReactiveStreamsCompliance.RequireNonNullElement(cause);
             Cause = cause;
+            Name = name;
         }
 
         public void Subscribe(ISubscriber<T> subscriber)
