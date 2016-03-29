@@ -1,4 +1,4 @@
-﻿// --- auto generated: 2016-03-24 9:49:56 PM --- //
+﻿// --- auto generated: 2016-03-28 10:17:20 PM --- //
 using System;
 using Akka.Streams.Dsl.Internal;
 
@@ -49,7 +49,7 @@ namespace Akka.Streams.Dsl
 		{
 			var builder = new Builder<TMatOut>();
 			
-            var shape0 = builder.Add<TShape0, TMat0, Func<TMat1, TMatOut>>(g0, m0 => ((m1) => combineMaterializers(m0, m1)));
+            var shape0 = builder.Add<TShape0, TMat0, Func<TMat1, TMatOut>>(g0, m0 => (m1 => combineMaterializers(m0, m1)));
 			var shape1 = builder.Add<TShape1, Func<TMat1, TMatOut>, TMat1, TMatOut>(g1, (f, m1) => f(m1));
 			
 			var shape = buildBlock(builder, shape0, shape1);
@@ -74,8 +74,8 @@ namespace Akka.Streams.Dsl
 		{
 			var builder = new Builder<TMatOut>();
 			
-            var shape0 = builder.Add<TShape0, TMat0, Func<TMat1, TMat2, TMatOut>>(g0, m0 => ((m1, m2) => combineMaterializers(m0, m1, m2)));
-			var shape1 = builder.Add<TShape1, Func<TMat1, TMatOut>, TMat1, TMatOut>(g1, (f, m1) => f(m1));
+            var shape0 = builder.Add<TShape0, TMat0, Func<TMat1, Func<TMat2, TMatOut>>>(g0, m0 => (m1 => (m2 => combineMaterializers(m0, m1, m2))));
+			var shape1 = builder.Add<TShape1, Func<TMat1, Func<TMat2, TMatOut>>, TMat1, Func<TMat2, TMatOut>>(g1, (f, m1) => f(m1));
 			var shape2 = builder.Add<TShape2, Func<TMat2, TMatOut>, TMat2, TMatOut>(g2, (f, m2) => f(m2));
 			
 			var shape = buildBlock(builder, shape0, shape1, shape2);
@@ -101,9 +101,9 @@ namespace Akka.Streams.Dsl
 		{
 			var builder = new Builder<TMatOut>();
 			
-            var shape0 = builder.Add<TShape0, TMat0, Func<TMat1, TMat2, TMat3, TMatOut>>(g0, m0 => ((m1, m2, m3) => combineMaterializers(m0, m1, m2, m3)));
-			var shape1 = builder.Add<TShape1, Func<TMat1, TMatOut>, TMat1, TMatOut>(g1, (f, m1) => f(m1));
-			var shape2 = builder.Add<TShape2, Func<TMat2, TMatOut>, TMat2, TMatOut>(g2, (f, m2) => f(m2));
+            var shape0 = builder.Add<TShape0, TMat0, Func<TMat1, Func<TMat2, Func<TMat3, TMatOut>>>>(g0, m0 => (m1 => (m2 => (m3 => combineMaterializers(m0, m1, m2, m3)))));
+			var shape1 = builder.Add<TShape1, Func<TMat1, Func<TMat2, Func<TMat3, TMatOut>>>, TMat1, Func<TMat2, Func<TMat3, TMatOut>>>(g1, (f, m1) => f(m1));
+			var shape2 = builder.Add<TShape2, Func<TMat2, Func<TMat3, TMatOut>>, TMat2, Func<TMat3, TMatOut>>(g2, (f, m2) => f(m2));
 			var shape3 = builder.Add<TShape3, Func<TMat3, TMatOut>, TMat3, TMatOut>(g3, (f, m3) => f(m3));
 			
 			var shape = buildBlock(builder, shape0, shape1, shape2, shape3);
@@ -130,10 +130,10 @@ namespace Akka.Streams.Dsl
 		{
 			var builder = new Builder<TMatOut>();
 			
-            var shape0 = builder.Add<TShape0, TMat0, Func<TMat1, TMat2, TMat3, TMat4, TMatOut>>(g0, m0 => ((m1, m2, m3, m4) => combineMaterializers(m0, m1, m2, m3, m4)));
-			var shape1 = builder.Add<TShape1, Func<TMat1, TMatOut>, TMat1, TMatOut>(g1, (f, m1) => f(m1));
-			var shape2 = builder.Add<TShape2, Func<TMat2, TMatOut>, TMat2, TMatOut>(g2, (f, m2) => f(m2));
-			var shape3 = builder.Add<TShape3, Func<TMat3, TMatOut>, TMat3, TMatOut>(g3, (f, m3) => f(m3));
+            var shape0 = builder.Add<TShape0, TMat0, Func<TMat1, Func<TMat2, Func<TMat3, Func<TMat4, TMatOut>>>>>(g0, m0 => (m1 => (m2 => (m3 => (m4 => combineMaterializers(m0, m1, m2, m3, m4))))));
+			var shape1 = builder.Add<TShape1, Func<TMat1, Func<TMat2, Func<TMat3, Func<TMat4, TMatOut>>>>, TMat1, Func<TMat2, Func<TMat3, Func<TMat4, TMatOut>>>>(g1, (f, m1) => f(m1));
+			var shape2 = builder.Add<TShape2, Func<TMat2, Func<TMat3, Func<TMat4, TMatOut>>>, TMat2, Func<TMat3, Func<TMat4, TMatOut>>>(g2, (f, m2) => f(m2));
+			var shape3 = builder.Add<TShape3, Func<TMat3, Func<TMat4, TMatOut>>, TMat3, Func<TMat4, TMatOut>>(g3, (f, m3) => f(m3));
 			var shape4 = builder.Add<TShape4, Func<TMat4, TMatOut>, TMat4, TMatOut>(g4, (f, m4) => f(m4));
 			
 			var shape = buildBlock(builder, shape0, shape1, shape2, shape3, shape4);
