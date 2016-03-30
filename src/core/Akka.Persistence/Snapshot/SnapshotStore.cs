@@ -14,8 +14,7 @@ namespace Akka.Persistence.Snapshot
 {
     public abstract class SnapshotStore : ActorBase
     {
-        private readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously |
-                                                                        TaskContinuationOptions.AttachedToParent;
+        private readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously;
         private readonly bool _publish;
         private readonly CircuitBreaker _breaker;
 

@@ -1100,7 +1100,7 @@ namespace Akka.Remote
             else
             {
                 _smallBackoffCount += 1;
-                var backoffDeadlineNanoTime = TimeSpan.FromTicks((MonotonicClock.GetNanos() + _adaptiveBackoffNanos).ToTicks());
+                var backoffDeadlineNanoTime = TimeSpan.FromTicks(_adaptiveBackoffNanos.ToTicks());
 
                 Context.System.Scheduler.ScheduleTellOnce(backoffDeadlineNanoTime, Self, BackoffTimer.Instance, Self);
             }

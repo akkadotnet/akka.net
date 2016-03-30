@@ -79,17 +79,13 @@ namespace Akka.Remote.Transport
                 {
                     return r.Result is SetThrottleAck;
                 }, 
-                    TaskContinuationOptions.AttachedToParent | 
-                    TaskContinuationOptions.ExecuteSynchronously |
-                    TaskContinuationOptions.OnlyOnRanToCompletion);
+                    TaskContinuationOptions.ExecuteSynchronously);
             }
 
             if (message is ForceDisassociate || message is ForceDisassociateExplicitly)
             {
                 return manager.Ask(message, AskTimeout).ContinueWith(r => r.Result is ForceDisassociateAck,
-                    TaskContinuationOptions.AttachedToParent |
-                    TaskContinuationOptions.ExecuteSynchronously |
-                    TaskContinuationOptions.OnlyOnRanToCompletion);
+                    TaskContinuationOptions.ExecuteSynchronously);
             }
 
             return WrappedTransport.ManagementCommand(message);
@@ -437,7 +433,7 @@ namespace Akka.Remote.Transport
                 //        internalTarget.Tell(new Unwatch(target, promiseRef));
                 //       return SetThrottleAck.Instance;
                 //    }
-                //}, TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously);
+                //}, TaskContinuationOptions.ExecuteSynchronously);
 
             }
         }

@@ -25,7 +25,7 @@ namespace Akka.Tests.Routing
 
             public TailChopTestActor(int sleepTime)
             {
-                Receive<string>(async command =>
+                ReceiveAsync<string>(async command =>
                 {
                     switch (command)
                     {

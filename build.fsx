@@ -7,7 +7,6 @@ open System.IO
 open System.Text
 open Fake
 open Fake.FileUtils
-open Fake.MSTest
 open Fake.TaskRunnerHelper
 open Fake.ProcessHelper
 
@@ -220,8 +219,6 @@ Target "CopyOutput" <| fun _ ->
       "core/Akka.Persistence"
       "core/Akka.Persistence.FSharp"
       "core/Akka.Persistence.TestKit"
-      "contrib/loggers/Akka.Logger.slf4net"
-      "contrib/loggers/Akka.Logger.CommonLogging"
       "contrib/dependencyinjection/Akka.DI.Core"
       "contrib/dependencyinjection/Akka.DI.AutoFac"
       "contrib/dependencyinjection/Akka.DI.CastleWindsor"
@@ -254,13 +251,9 @@ Target "CleanTests" <| fun _ ->
 
 open Fake.Testing
 Target "RunTests" <| fun _ ->  
-    let msTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
-    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- 
-                                    "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
+    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll"
 
     mkdir testOutput
-
-    MSTest (fun p -> p) msTestAssemblies
    
     let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
@@ -286,6 +279,16 @@ Target "RunTestsMono" <| fun _ ->
             (Seq.singleton assembly)
 
     xunitTestAssemblies |> Seq.iter (runSingleAssembly)
+
+
+(* Debug helper for troubleshooting an issue we had when we were running multi-node tests multiple times *)
+Target "PrintMultiNodeTests" <| fun _ ->
+    let testSearchPath =
+        let assemblyFilter = getBuildParamOrDefault "spec-assembly" String.Empty
+        sprintf "src/**/bin/Release/*%s*.Tests.MultiNode.dll" assemblyFilter
+    (!! testSearchPath) |> Seq.iter (printfn "%s")
+    
+
 
 Target "MultiNodeTests" <| fun _ ->
     let testSearchPath =

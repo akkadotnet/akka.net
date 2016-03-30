@@ -52,7 +52,7 @@ namespace Akka.Persistence.Tests
                         else if (cmd.Data.ToString() == "b") Persist(new Evt("b"), evt => Sender.Tell(evt.Data));
                         else if (cmd.Data.ToString() == "c")
                         {
-                            UnstashAll();
+                            Stash.UnstashAll();
                             Sender.Tell("c");
                         }
                         else return false;
@@ -69,7 +69,7 @@ namespace Akka.Persistence.Tests
                     var cmd = message as Cmd;
                     if (cmd.Data.ToString() == "c")
                     {
-                        UnstashAll();
+                        Stash.UnstashAll();
                         Sender.Tell("c");
                     }
                     else return false;
@@ -95,7 +95,7 @@ namespace Akka.Persistence.Tests
                         Persist(new Evt("c"), e =>
                         {
                             Sender.Tell(e.Data);
-                            UnstashAll();
+                            Stash.UnstashAll();
                         });
                     }
                     else return false;
@@ -159,7 +159,7 @@ namespace Akka.Persistence.Tests
                         UpdateState(evt);
                         Context.UnbecomeStacked();
                     });
-                    UnstashAll();
+                    Stash.UnstashAll();
                 }
                 else return false;
                 return true;
@@ -181,7 +181,7 @@ namespace Akka.Persistence.Tests
                     {
                         UpdateState(evt);
                         Context.UnbecomeStacked();
-                        UnstashAll();
+                        Stash.UnstashAll();
                     });
                 }
                 else return false;
@@ -237,7 +237,7 @@ namespace Akka.Persistence.Tests
                         UpdateState(evt);
                         Context.UnbecomeStacked();
                     });
-                    UnstashAll();
+                    Stash.UnstashAll();
                 }
                 else return false;
                 return true;
@@ -259,7 +259,7 @@ namespace Akka.Persistence.Tests
                     {
                         UpdateState(evt);
                         Context.UnbecomeStacked();
-                        UnstashAll();
+                        Stash.UnstashAll();
                     });
                 }
                 else return false;
