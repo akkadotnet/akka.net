@@ -52,7 +52,7 @@ namespace Akka.Streams.Tests.Dsl
             var probe =
                 Source.From(Enumerable.Range(1, 3))
                     .Collect(throwOnTwo)
-                    .WithAttributes(new Attributes(new ActorAttributes.SupervisionStrategy(Deciders.RestartingDecider)))
+                    .WithAttributes(Attributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
                     .RunWith(this.SinkProbe<string>(), Materializer);
             probe.Request(1);
             probe.ExpectNext("1");

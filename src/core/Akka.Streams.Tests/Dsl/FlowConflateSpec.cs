@@ -201,7 +201,7 @@ namespace Akka.Streams.Tests.Dsl
                 }
 
                 return state + elem;
-            }).WithAttributes(new Attributes(new ActorAttributes.SupervisionStrategy(Deciders.RestartingDecider)));
+            }).WithAttributes(Attributes.CreateSupervisionStrategy(Deciders.RestartingDecider));
 
             var graph = Source.FromPublisher<string, Unit>(sourceProbe)
                 .Via(conflate)
@@ -241,7 +241,7 @@ namespace Akka.Streams.Tests.Dsl
                     state.Add(elem);
                     return state;
                 })
-                .WithAttributes(new Attributes(new ActorAttributes.SupervisionStrategy(Deciders.RestartingDecider)))
+                .WithAttributes(Attributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
                 .To(Sink.FromSubscriber<List<int>, Unit>(sinkProbe))
                 .WithAttributes(Attributes.CreateInputBuffer(1, 1));
             RunnableGraph<Unit>.FromGraph(graph).Run(Materializer);
@@ -291,7 +291,7 @@ namespace Akka.Streams.Tests.Dsl
                     state.Add(elem);
                     return state;
                 })
-                .WithAttributes(new Attributes(new ActorAttributes.SupervisionStrategy(Deciders.ResumingDecider)))
+                .WithAttributes(Attributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                 .To(Sink.FromSubscriber<List<int>, Unit>(sinkProbe))
                 .WithAttributes(Attributes.CreateInputBuffer(1, 1));
             RunnableGraph<Unit>.FromGraph(graph).Run(Materializer);
