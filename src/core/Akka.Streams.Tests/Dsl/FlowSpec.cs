@@ -323,7 +323,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Limit(100)
                 .RunWith(Sink.Seq<int>(), Materializer);
 
-            task.Wait(TimeSpan.FromSeconds(3));
+            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1,10));
 
             // Reusable:
@@ -332,7 +332,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Limit(100)
                 .RunWith(Sink.Seq<int>(), Materializer);
 
-            task.Wait(TimeSpan.FromSeconds(3));
+            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
         }
 

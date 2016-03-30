@@ -48,7 +48,7 @@ namespace Akka.Streams.Tests.IO
                 {
                     var completion = Source.From(_testByteStrings).RunWith(FileIO.ToFile(f), _materializer);
 
-                    completion.Wait(TimeSpan.FromSeconds(3));
+                    completion.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                     var result = completion.Result;
                     result.Count.Should().Be(6006);
                     CheckFileContent(f, _testLines.Aggregate((s, s1) => s + s1));
@@ -64,7 +64,7 @@ namespace Akka.Streams.Tests.IO
                 TargetFile(f =>
                 {
                     var completion = Source.From(_testByteStrings).RunWith(FileIO.ToFile(f), _materializer);
-                    completion.Wait(TimeSpan.FromSeconds(3));
+                    completion.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                     var result = completion.Result;
                     result.Count.Should().Be(6006);
                     CheckFileContent(f, _testLines.Aggregate((s, s1) => s + s1));
@@ -84,14 +84,14 @@ namespace Akka.Streams.Tests.IO
                         .RunWith(FileIO.ToFile(f), _materializer);
 
                     var completion1 = write(_testLines);
-                    completion1.Wait(TimeSpan.FromSeconds(3));
+                    completion1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
 
                     var lastWrite = new List<string>();
                     for (var i = 0; i < 100; i++)
                         lastWrite.Add("x");
 
                     var completion2 = write(lastWrite);
-                    completion2.Wait(TimeSpan.FromSeconds(3));
+                    completion2.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                     var result = completion2.Result;
 
                     result.Count.Should().Be(100);
@@ -112,7 +112,7 @@ namespace Akka.Streams.Tests.IO
                         .RunWith(FileIO.ToFile(f, append: true), _materializer);
 
                     var completion1 = write(_testLines);
-                    completion1.Wait(TimeSpan.FromSeconds(3));
+                    completion1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                     var result1 = completion1.Result;
 
                     var lastWrite = new List<string>();
@@ -120,7 +120,7 @@ namespace Akka.Streams.Tests.IO
                         lastWrite.Add("x");
 
                     var completion2 = write(lastWrite);
-                    completion2.Wait(TimeSpan.FromSeconds(3));
+                    completion2.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                     var result2 = completion2.Result;
 
                     f.Length.Should().Be(result1.Count + result2.Count);

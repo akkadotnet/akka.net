@@ -160,7 +160,7 @@ namespace Akka.Streams.Tests.Dsl
                         .ConcatMaterialized(Source.From(Enumerable.Range(6, 5)), Keep.Both)
                         .Grouped(1000);
                 var task = testSource.RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-                task.Wait(TimeSpan.FromSeconds(3));
+                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1,10));
 
                 var runnable = testSource.ToMaterialized(Sink.Ignore<IEnumerable<int>>(), Keep.Left);
@@ -183,7 +183,7 @@ namespace Akka.Streams.Tests.Dsl
                 var task = Source.From(Enumerable.Range(1, 5))
                     .ViaMaterialized(testFlow, Keep.Both)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-                task.Wait(TimeSpan.FromSeconds(3));
+                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
 
                 var runnable =
@@ -210,7 +210,7 @@ namespace Akka.Streams.Tests.Dsl
                 var task = Source.From(Enumerable.Range(1, 5))
                     .ViaMaterialized(testFlow, Keep.Both)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-                task.Wait(TimeSpan.FromSeconds(3));
+                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
 
                 //var sink = testFlow.ConcatMaterialized(Source.From(Enumerable.Range(1, 5)), Keep.Both)

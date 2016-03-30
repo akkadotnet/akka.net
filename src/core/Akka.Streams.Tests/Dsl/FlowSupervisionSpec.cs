@@ -37,7 +37,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Limit(1000)
                     .RunWith(Sink.Seq<int>(), Materializer);
             
-            task.Wait(TimeSpan.FromSeconds(3));
+            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             return task.Result;
         }
 
@@ -92,7 +92,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Via(nullMap)
                 .Limit(1000)
                 .RunWith(Sink.Seq<string>(), Materializer);
-            task.Wait(TimeSpan.FromSeconds(3));
+            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             task.Result.ShouldAllBeEquivalentTo(new [] {"a", "c"});
         }
     }
