@@ -69,6 +69,7 @@
     <Compile Include="Dsl\FlowConcatAllSpec.cs" />
     <Compile Include="Dsl\FlowAppendSpec.cs" />
     <Compile Include="Dsl\FlowConcatSpec.cs" />
+    <Compile Include="Dsl\FlowConflateSpec.cs" />
     <Compile Include="Dsl\FlowSpec.cs" />
     <Compile Include="Dsl\QueueSourceSpec.cs" />
     <Compile Include="Actor\ActorPublisherSpec.cs" />
