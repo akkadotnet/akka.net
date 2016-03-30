@@ -254,7 +254,8 @@ namespace Akka.Actor
             var a = path;
             foreach (string element in name)
             {
-                a = a / element;
+                if(!string.IsNullOrEmpty(element))
+                    a = a / element;
             }
             return a;
         }

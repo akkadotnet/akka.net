@@ -57,7 +57,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             })
             .ContinueWith(task => 
                 task.IsFaulted || task.IsCanceled ? (IQueryReply)new QueryFailure(queryId, task.Exception) : new QuerySuccess(queryId), 
-                TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent)
+                TaskContinuationOptions.ExecuteSynchronously)
             .PipeTo(Context.Sender);
         }
 

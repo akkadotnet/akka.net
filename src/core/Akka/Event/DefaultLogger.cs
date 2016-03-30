@@ -6,13 +6,14 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
+using Akka.Dispatch;
 
 namespace Akka.Event
 {
     /// <summary>
     /// Default logger implementation that outputs logs to the Console.
     /// </summary>
-    public class DefaultLogger : ActorBase
+    public class DefaultLogger : ActorBase, IRequiresMessageQueue<ILoggerMessageQueueSemantics>
     {
         protected override bool Receive(object message)
         {

@@ -92,7 +92,10 @@ routees.paths = [
                     roundRobinPool.Tell(i);
                 }
 
+                var scatterGatherGroup = system.ActorOf(new ScatterGatherFirstCompletedPool(5).Props(Props.Create<ReplyWorker>()));
 
+                var reply = scatterGatherGroup.Ask<string>("test");
+                reply.Wait();
                 Console.ReadLine();
             }
         }
@@ -103,6 +106,14 @@ routees.paths = [
         protected override void OnReceive(object message)
         {
             Console.WriteLine("{0} received {1}", Self.Path.Name, message);
+        }
+    }
+
+    public class ReplyWorker : UntypedActor
+    {
+        protected override void OnReceive(object message)
+        {
+            Sender.Tell(string.Format("{0} received {1}", Self.Path.Name, message), Self);
         }
     }
 }

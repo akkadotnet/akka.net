@@ -1,19 +1,14 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="AssemblyInfo.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
-
-using System.Reflection;
+﻿using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Akka.Logger.slf4net")]
+[assembly: AssemblyTitle("Akka.Cluster.TestKit")]
 [assembly: AssemblyDescription("")]
-[assembly: AssemblyProduct("Akka.Logger.slf4net")]
+[assembly: AssemblyConfiguration("")]
+[assembly: AssemblyProduct("Akka.Cluster.TestKit")]
 [assembly: AssemblyCulture("")]
 
 // Setting ComVisible to false makes the types in this assembly not visible 
@@ -22,5 +17,4 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("c86383ae-bba9-4478-8d20-1e54d67d7731")]
-
+[assembly: Guid("b32850d2-e9cb-4638-83a4-164907595e56")]
