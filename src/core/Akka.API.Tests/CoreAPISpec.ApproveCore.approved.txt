@@ -1046,7 +1046,7 @@ namespace Akka.Actor
         public abstract Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name);
         public abstract void Restart(System.Exception cause);
         public abstract void Resume(System.Exception causedByFailure = null);
-        public void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message, Akka.Actor.IActorRef sender) { }
+        public virtual void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message, Akka.Actor.IActorRef sender) { }
         public abstract void Start();
         public abstract void Stop();
         public abstract void Suspend();
@@ -2835,6 +2835,22 @@ namespace Akka.Event
         public string Format { get; }
         public override string ToString() { }
     }
+    public sealed class NoLogger : Akka.Event.ILoggingAdapter
+    {
+        public static readonly Akka.Event.ILoggingAdapter Instance;
+        public bool IsDebugEnabled { get; }
+        public bool IsErrorEnabled { get; }
+        public bool IsInfoEnabled { get; }
+        public bool IsWarningEnabled { get; }
+        public void Debug(string format, params object[] args) { }
+        public void Error(string format, params object[] args) { }
+        public void Error(System.Exception cause, string format, params object[] args) { }
+        public void Info(string format, params object[] args) { }
+        public bool IsEnabled(Akka.Event.LogLevel logLevel) { }
+        public void Log(Akka.Event.LogLevel logLevel, string format, params object[] args) { }
+        public void Warn(string format, params object[] args) { }
+        public void Warning(string format, params object[] args) { }
+    }
     public class StandardOutLogger : Akka.Actor.MinimalActorRef
     {
         public StandardOutLogger() { }
@@ -4560,6 +4576,12 @@ namespace Akka.Util
         public System.Collections.Generic.IEnumerator<T> GetEnumerator() { }
         public Akka.Util.ILinearSeq<T> Tail() { }
     }
+    public class AtomicBoolean
+    {
+        public AtomicBoolean(bool initialValue = False) { }
+        public bool Value { get; set; }
+        public bool CompareAndSet(bool expected, bool newValue) { }
+    }
     public class AtomicReference<T>
         where T :  class
     {
@@ -4734,6 +4756,24 @@ namespace Akka.Util
         public object[] Arguments { get; }
         public override Akka.Actor.ActorBase Produce() { }
     }
+    public class static Result
+    {
+        public static Akka.Util.Result<T> Failure<T>(System.Exception exception) { }
+        public static Akka.Util.Result<T> From<T>(System.Func<T> func) { }
+        public static Akka.Util.Result<T> FromTask<T>(System.Threading.Tasks.Task<T> task) { }
+        public static Akka.Util.Result<T> Success<T>(T value) { }
+    }
+    public struct Result<T> : System.IEquatable<Akka.Util.Result<T>>
+    {
+        public readonly System.Exception Exception;
+        public readonly bool IsSuccess;
+        public readonly T Value;
+        public Result(T value) { }
+        public Result(System.Exception exception) { }
+        public bool Equals(Akka.Util.Result<T> other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+    }
     public class Right<T>
     {
         public Right(T value) { }
@@ -4812,8 +4852,10 @@ namespace Akka.Util.Internal
         public AtomicCounter() { }
         public int Current { get; }
         public int AddAndGet(int amount) { }
+        public bool CompareAndSet(int expected, int newValue) { }
         public int GetAndAdd(int amount) { }
         public int GetAndIncrement() { }
+        public int GetAndSet(int value) { }
         public int IncrementAndGet() { }
         public int Next() { }
         public void Reset() { }
@@ -4824,11 +4866,19 @@ namespace Akka.Util.Internal
         public AtomicCounterLong() { }
         public long Current { get; }
         public long AddAndGet(long amount) { }
+        public bool CompareAndSet(long expected, long newValue) { }
+        public long DecrementAndGet() { }
         public long GetAndAdd(long amount) { }
         public long GetAndIncrement() { }
+        public long GetAndSet(long value) { }
         public long IncrementAndGet() { }
         public long Next() { }
         public void Reset() { }
+    }
+    public class static DictionaryExtensions
+    {
+        public static void Put<TKey, TVal>(this System.Collections.Generic.IDictionary<TKey, TVal> dict, TKey key, TVal value) { }
+        public static bool TryAdd<TKey, TVal>(this System.Collections.Generic.IDictionary<TKey, TVal> dict, TKey key, TVal value) { }
     }
     public class static Extensions
     {
