@@ -77,6 +77,7 @@
     <Compile Include="Dsl\FlowFilterSpec.cs" />
     <Compile Include="Dsl\FlowFlattenMergeSpec.cs" />
     <Compile Include="Dsl\FlowFoldSpec.cs" />
+    <Compile Include="Dsl\FlowForeachSpec.cs" />
     <Compile Include="Dsl\FlowSpec.cs" />
     <Compile Include="Dsl\QueueSourceSpec.cs" />
     <Compile Include="Actor\ActorPublisherSpec.cs" />
