@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Streams;
+using System.Security.Policy;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
@@ -44,6 +46,27 @@ namespace Akka.Streams.Dsl
         {
             var sinkCopy = sink.Module.CarbonCopy();
             return new RunnableGraph<TMat3>(Module.Fuse(sinkCopy, Shape.Outlet, sinkCopy.Shape.Inlets.First(), combine));
+        }
+        
+        /// <summary>
+        /// Concatenate the given <seealso cref="Source{TOut,TMat}"/> to this <seealso cref="Flow{TIn,TOut,TMat}"/>, meaning that once this
+        /// Flow’s input is exhausted and all result elements have been generated,
+        /// the Source’s elements will be produced.
+        ///
+        /// Note that the <seealso cref="Source{TOut,TMat}"/> is materialized together with this Flow and just kept
+        /// from producing elements by asserting back-pressure until its time comes.
+        ///
+        /// If this <seealso cref="Flow{TIn,TOut,TMat}"/> gets upstream error - no elements from the given <seealso cref="Source{TOut,TMat}"/> will be pulled.
+        ///
+        /// @see <seealso cref="Concat{TIn,TOut}"/>.
+        ///
+        /// It is recommended to use the internally optimized `Keep.left` and `Keep.right` combiners
+        /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// </summary>
+        public Source<TOut, TMat3> ConcatMaterialized<TMat2, TMat3>(IGraph<SourceShape<TOut>, TMat2> that,
+            Func<TMat, TMat2, TMat3> materializedFunction)
+        {
+            return ViaMaterialized(InternalFlowOperations.ConcatGraph<TOut, TOut, TMat2>(that), materializedFunction);
         }
 
         IGraph<SourceShape<TOut>, TMat> IGraph<SourceShape<TOut>, TMat>.WithAttributes(Attributes attributes)

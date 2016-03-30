@@ -1204,5 +1204,29 @@ namespace Akka.Streams.Dsl
         {
             return (Flow<TIn, TOut2, TMat>)InternalFlowOperations.Concat(flow, other);
         }
+
+        /// <summary>
+        /// Prepend the given <seealso cref="Source"/> to this <seealso cref="Flow"/>, meaning that before elements
+        /// are generated from this <seealso cref="Flow"/>, the Source's elements will be produced until it
+        /// is exhausted, at which point Flow elements will start being produced.
+        ///
+        /// Note that this <seealso cref="Flow"/> will be materialized together with the <seealso cref="Source"/> and just kept
+        /// from producing elements by asserting back-pressure until its time comes.
+        ///
+        /// If the given <seealso cref="Source"/> gets upstream error - no elements from this <seealso cref="Flow"/> will be pulled.
+        ///
+        /// '''Emits when''' element is available from the given <seealso cref="Source"/> or from current stream when the <seealso cref="Source"/> is completed
+        ///
+        /// '''Backpressures when''' downstream backpressures
+        ///
+        /// '''Completes when''' this <seealso cref="Flow"/> completes
+        ///
+        /// '''Cancels when''' downstream cancels
+        /// </summary>
+        public static Flow<TIn, TOut2, TMat> Prepend<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow,
+            IGraph<SourceShape<TOut2>, TMat> that) where TOut1 : TOut2
+        {
+            return (Flow<TIn, TOut2, TMat>) InternalFlowOperations.Prepend(flow, that);
+        }
     }
 }
