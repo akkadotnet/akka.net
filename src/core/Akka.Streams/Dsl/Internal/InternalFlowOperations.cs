@@ -497,12 +497,12 @@ namespace Akka.Streams.Dsl.Internal
         /// Internal buffer has default capacity 16. You can set buffer size by calling <see cref="Attributes.CreateInputBuffer"/>
         /// <para>
         /// '''Emits when''' there is a pending element in the buffer and configured time for this element elapsed
-        ///  * EmitEarly - strategy do not wait to emit element if buffer is full
+        ///  /// EmitEarly - strategy do not wait to emit element if buffer is full
         /// </para>
         /// '''Backpressures when''' depending on OverflowStrategy
-        ///  * Backpressure - backpressures when buffer is full
-        ///  * DropHead, DropTail, DropBuffer - never backpressures
-        ///  * Fail - fails the stream if buffer gets full
+        ///  /// Backpressure - backpressures when buffer is full
+        ///  /// DropHead, DropTail, DropBuffer - never backpressures
+        ///  /// Fail - fails the stream if buffer gets full
         /// <para>
         /// '''Completes when''' upstream completes and buffered elements has been drained
         /// </para>
@@ -743,9 +743,9 @@ namespace Akka.Streams.Dsl.Internal
         /// '''Emits when''' downstream stops backpressuring and there is a pending element in the buffer
         /// </para>
         /// '''Backpressures when''' depending on OverflowStrategy
-        ///  * Backpressure - backpressures when buffer is full
-        ///  * DropHead, DropTail, DropBuffer - never backpressures
-        ///  * Fail - fails the stream if buffer gets full
+        ///  /// Backpressure - backpressures when buffer is full
+        ///  /// DropHead, DropTail, DropBuffer - never backpressures
+        ///  /// Fail - fails the stream if buffer gets full
         /// <para>
         /// '''Completes when''' upstream completes and buffered elements has been drained
         /// </para>
@@ -847,7 +847,7 @@ namespace Akka.Streams.Dsl.Internal
         /// true, false, false // elements go into third substream
         /// }}}
         /// 
-        /// In case the *first* element of the stream matches the predicate, the first
+        /// In case the ///first/// element of the stream matches the predicate, the first
         /// substream emitted by splitWhen will start from that element. For example:
         /// 
         /// {{{
@@ -904,7 +904,7 @@ namespace Akka.Streams.Dsl.Internal
 
         /// <summary>
         /// This operation applies the given predicate to all incoming elements and
-        /// emits them to a stream of output streams.It* ends* the current substream when the
+        /// emits them to a stream of output streams.It/// ends/// the current substream when the
         /// predicate is true. This means that for the following series of predicate values,
         /// three substreams will be produced with lengths 2, 2, and 3:
         ///
@@ -1144,6 +1144,23 @@ namespace Akka.Streams.Dsl.Internal
                 throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
 
             return flow.Via(new Throttle<T>(cost, per, maximumBurst, calculateCost, mode));
+        }
+
+        /// <summary>
+        /// Detaches upstream demand from downstream demand without detaching the
+        /// stream rates; in other words acts like a buffer of size 1.
+        ///
+        /// '''Emits when''' upstream emits an element
+        ///
+        /// '''Backpressures when''' downstream backpressures
+        ///
+        /// '''Completes when''' upstream completes
+        ///
+        /// '''Cancels when''' downstream cancels
+        /// </summary>
+        public static IFlow<T, TMat> Detach<T, TMat>(this IFlow<T, TMat> flow)
+        {
+            return flow.Via(new Fusing.Detacher<T>());
         }
 
         /// <summary>

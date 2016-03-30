@@ -1007,6 +1007,23 @@ namespace Akka.Streams.Dsl
         {
             return (Flow<TIn, TOut, TMat2>)InternalFlowOperations.WatchTermination(flow, materializerFunction);
         }
+        
+        /// <summary>
+        /// Detaches upstream demand from downstream demand without detaching the
+        /// stream rates; in other words acts like a buffer of size 1.
+        ///
+        /// '''Emits when''' upstream emits an element
+        ///
+        /// '''Backpressures when''' downstream backpressures
+        ///
+        /// '''Completes when''' upstream completes
+        ///
+        /// '''Cancels when''' downstream cancels
+        /// </summary>
+        public static Flow<TIn, TOut, TMat> Detach<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow)
+        {
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.Detach(flow);
+        }
 
         /// <summary>
         /// Delays the initial element by the specified duration.
