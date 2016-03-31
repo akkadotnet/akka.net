@@ -19,13 +19,7 @@ namespace Akka.Streams.Implementation
         //TODO: Special case linear composites
         //TODO: Cycles
 
-#if !DEBUG
-        public const bool IsDebug = false;
-#endif
-
-#if DEBUG
-        public const bool IsDebug = true;
-#endif
+        public static readonly bool IsDebug = false;
 
         #region Materialized Value Node types
 

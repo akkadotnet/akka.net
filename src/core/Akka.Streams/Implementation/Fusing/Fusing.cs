@@ -12,15 +12,9 @@ using Transform = Akka.Streams.Implementation.StreamLayout.Transform;
 
 namespace Akka.Streams.Implementation.Fusing
 {
-    // ReSharper disable ConditionIsAlwaysTrueOrFalse
     internal static class Fusing
     {
-
-#if !DEBUG
-        public const bool IsDebug = false;
-#else
-        public const bool IsDebug = true;
-#endif
+        public static readonly bool IsDebug = false;
 
         /// <summary>
         /// Fuse everything that is not forbidden via AsyncBoundary attribute.

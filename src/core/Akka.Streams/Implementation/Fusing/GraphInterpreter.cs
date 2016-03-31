@@ -129,11 +129,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         #endregion
 
-#if !DEBUG
-        public const bool IsDebug = false;
-#else
-        public const bool IsDebug = true;
-#endif
+        public static readonly bool IsDebug = false;
 
         public const int NoEvent = -1;
         public const int Boundary = -1;
