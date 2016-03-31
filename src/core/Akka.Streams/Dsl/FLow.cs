@@ -125,6 +125,27 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
+        /// Concatenate the given <seealso cref="Source{TOut,TMat}"/> to this <seealso cref="Flow{TIn,TOut,TMat}"/>, meaning that once this
+        /// Flow’s input is exhausted and all result elements have been generated,
+        /// the Source’s elements will be produced.
+        ///
+        /// Note that the <seealso cref="Source{TOut,TMat}"/> is materialized together with this Flow and just kept
+        /// from producing elements by asserting back-pressure until its time comes.
+        ///
+        /// If this <seealso cref="Flow{TIn,TOut,TMat}"/> gets upstream error - no elements from the given <seealso cref="Source{TOut,TMat}"/> will be pulled.
+        ///
+        /// @see <seealso cref="Concat{TIn,TOut}"/>.
+        ///
+        /// It is recommended to use the internally optimized `Keep.left` and `Keep.right` combiners
+        /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// </summary>
+        public Flow<TIn, TOut, TMat3> ConcatMaterialized<TMat2, TMat3>(IGraph<SourceShape<TOut>, TMat2> that,
+            Func<TMat, TMat2, TMat3> materializedFunction)
+        {
+            return ViaMaterialized(InternalFlowOperations.ConcatGraph<TOut, TOut, TMat2>(that), materializedFunction);
+        }
+
+        /// <summary>
         /// Join this <see cref="Flow{TIn,TOut,TMat}"/> to another <see cref="Flow{TOut,TIn,TMat2}"/>, by cross connecting the inputs and outputs,
         /// creating a <see cref="IRunnableGraph{TMat}"/>.
         /// The materialized value of the combined <see cref="Flow{TIn,TOut,TMat}"/> will be the materialized

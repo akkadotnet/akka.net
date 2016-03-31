@@ -30,7 +30,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1001)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            future.Wait(TimeSpan.FromSeconds(3));
+            future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             future.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1,1000));
         }
 
@@ -42,7 +42,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1001)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            future.Wait(TimeSpan.FromSeconds(3));
+            future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             future.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 1000));
         }
 
@@ -61,7 +61,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Grouped(1001)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-                future.Wait(TimeSpan.FromSeconds(3));
+                future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 future.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 1000));
             }, Materializer);
         }

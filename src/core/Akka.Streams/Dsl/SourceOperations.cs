@@ -1,17 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
 using System.Reactive.Streams;
 using System.Threading.Tasks;
-using Akka.Dispatch.SysMsg;
 using Akka.Event;
-using Akka.IO;
 using Akka.Streams.Dsl.Internal;
-using Akka.Streams.Implementation;
-using Akka.Streams.Implementation.Fusing;
-using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
-using Akka.Streams.Supervision;
 
 namespace Akka.Streams.Dsl
 {
@@ -1067,6 +1060,23 @@ namespace Akka.Streams.Dsl
         {
             return (Source<TOut, TMat2>) InternalFlowOperations.WatchTermination(flow, materializerFunction);
         }
+        
+        /// <summary>
+        /// Detaches upstream demand from downstream demand without detaching the
+        /// stream rates; in other words acts like a buffer of size 1.
+        ///
+        /// '''Emits when''' upstream emits an element
+        ///
+        /// '''Backpressures when''' downstream backpressures
+        ///
+        /// '''Completes when''' upstream completes
+        ///
+        /// '''Cancels when''' downstream cancels
+        /// </summary>
+        public static Source<TOut, TMat> Detach<TOut, TMat>(this Source<TOut, TMat> flow)
+        {
+            return (Source<TOut, TMat>)InternalFlowOperations.Detach(flow);
+        }
 
         /// <summary>
         /// Delays the initial element by the specified duration.
@@ -1263,6 +1273,30 @@ namespace Akka.Streams.Dsl
         public static Source<TOut2, TMat> Concat<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, IGraph<SourceShape<TOut2>, TMat> other) where TOut1 : TOut2
         {
             return (Source<TOut2, TMat>)InternalFlowOperations.Concat(flow, other);
+        }
+
+        /// <summary>
+        /// Prepend the given <seealso cref="Source"/> to this <seealso cref="Flow"/>, meaning that before elements
+        /// are generated from this <seealso cref="Flow"/>, the Source's elements will be produced until it
+        /// is exhausted, at which point Flow elements will start being produced.
+        ///
+        /// Note that this <seealso cref="Flow"/> will be materialized together with the <seealso cref="Source"/> and just kept
+        /// from producing elements by asserting back-pressure until its time comes.
+        ///
+        /// If the given <seealso cref="Source"/> gets upstream error - no elements from this <seealso cref="Flow"/> will be pulled.
+        ///
+        /// '''Emits when''' element is available from the given <seealso cref="Source"/> or from current stream when the <seealso cref="Source"/> is completed
+        ///
+        /// '''Backpressures when''' downstream backpressures
+        ///
+        /// '''Completes when''' this <seealso cref="Flow"/> completes
+        ///
+        /// '''Cancels when''' downstream cancels
+        /// </summary>
+        public static Source<TOut2, TMat> Prepend<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow,
+            IGraph<SourceShape<TOut2>, TMat> that) where TOut1 : TOut2
+        {
+            return (Source<TOut2, TMat>)InternalFlowOperations.Prepend(flow, that);
         }
     }
 }

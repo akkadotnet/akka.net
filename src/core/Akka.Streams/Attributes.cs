@@ -154,6 +154,15 @@ namespace Akka.Streams
             return new Attributes(new LogLevels(onElement, onFinish, onError));
         }
 
+        /**
+         * Specifies the SupervisionStrategy.
+         * Decides how exceptions from user are to be handled
+         */
+        public static Attributes CreateSupervisionStrategy(Decider strategy)
+        {
+            return new Attributes(new ActorAttributes.SupervisionStrategy(strategy));
+        }
+
         public bool Contains<TAttr>() where TAttr : IAttribute
         {
             return _attributes.Any(attr => attr is TAttr);

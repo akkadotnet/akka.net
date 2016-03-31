@@ -6,6 +6,7 @@ using System.Threading;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.Util;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -71,14 +72,13 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Batch_must_work_on_a_variable_rate_chain()
         {
-            var random = new ThreadLocal<Random>(() => new Random());
             var future = Source.From(Enumerable.Range(1, 1000)).Batch(100, i => i, (sum, i) => sum + i).Map(i =>
             {
-                if (random.Value.Next(1, 3) == 1)
+                if (ThreadLocalRandom.Current.Next(1, 3) == 1)
                     Thread.Sleep(10);
                 return i;
             }).RunFold(0, (i, i1) => i + i1, Materializer);
-            future.Wait(TimeSpan.FromSeconds(10));
+            future.Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
             future.Result.Should().Be(500500);
         }
 
@@ -123,7 +123,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Batch(long.MaxValue, i => i, (sum, i) => sum + i)
                     .Buffer(50, OverflowStrategy.Backpressure)
                     .RunFold(0, (sum, i) => sum + i, Materializer);
-            future.Wait(TimeSpan.FromSeconds(3));
+            future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             future.Result.Should().Be(Enumerable.Range(1, 50).Sum());
         }
     }

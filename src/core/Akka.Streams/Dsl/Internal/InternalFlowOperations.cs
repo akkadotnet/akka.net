@@ -847,7 +847,7 @@ namespace Akka.Streams.Dsl.Internal
         /// true, false, false // elements go into third substream
         /// }}}
         /// 
-        /// In case the *first* element of the stream matches the predicate, the first
+        /// In case the * first * element of the stream matches the predicate, the first
         /// substream emitted by splitWhen will start from that element. For example:
         /// 
         /// {{{
@@ -904,7 +904,7 @@ namespace Akka.Streams.Dsl.Internal
 
         /// <summary>
         /// This operation applies the given predicate to all incoming elements and
-        /// emits them to a stream of output streams.It* ends* the current substream when the
+        /// emits them to a stream of output streams.It * ends * the current substream when the
         /// predicate is true. This means that for the following series of predicate values,
         /// three substreams will be produced with lengths 2, 2, and 3:
         ///
@@ -1144,6 +1144,23 @@ namespace Akka.Streams.Dsl.Internal
                 throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
 
             return flow.Via(new Throttle<T>(cost, per, maximumBurst, calculateCost, mode));
+        }
+
+        /// <summary>
+        /// Detaches upstream demand from downstream demand without detaching the
+        /// stream rates; in other words acts like a buffer of size 1.
+        ///
+        /// '''Emits when''' upstream emits an element
+        ///
+        /// '''Backpressures when''' downstream backpressures
+        ///
+        /// '''Completes when''' upstream completes
+        ///
+        /// '''Cancels when''' downstream cancels
+        /// </summary>
+        public static IFlow<T, TMat> Detach<T, TMat>(this IFlow<T, TMat> flow)
+        {
+            return flow.Via(new Fusing.Detacher<T>());
         }
 
         /// <summary>
@@ -1410,6 +1427,41 @@ namespace Akka.Streams.Dsl.Internal
             return flow.Via(ConcatGraph<TIn, TOut, TMat>(other));
         }
 
+        /// <summary>
+        /// Prepend the given <seealso cref="Source"/> to this <seealso cref="Flow"/>, meaning that before elements
+        /// are generated from this <seealso cref="Flow"/>, the Source's elements will be produced until it
+        /// is exhausted, at which point Flow elements will start being produced.
+        ///
+        /// Note that this <seealso cref="Flow"/> will be materialized together with the <seealso cref="Source"/> and just kept
+        /// from producing elements by asserting back-pressure until its time comes.
+        ///
+        /// If the given <seealso cref="Source"/> gets upstream error - no elements from this <seealso cref="Flow"/> will be pulled.
+        ///
+        /// '''Emits when''' element is available from the given <seealso cref="Source"/> or from current stream when the <seealso cref="Source"/> is completed
+        ///
+        /// '''Backpressures when''' downstream backpressures
+        ///
+        /// '''Completes when''' this <seealso cref="Flow"/> completes
+        ///
+        /// '''Cancels when''' downstream cancels
+        /// </summary>
+        public static IFlow<TOut, TMat> Prepend<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
+            IGraph<SourceShape<TOut>, TMat> that) where TIn : TOut
+        {
+            return flow.Via(PrependGraph<TIn, TOut, TMat>(that));
+        }
+
+        private static IGraph<FlowShape<TIn, TOut>, TMat> PrependGraph<TIn, TOut, TMat>(
+            IGraph<SourceShape<TOut>, TMat> that) where TIn : TOut
+        {
+            return GraphDsl.Create(that, (builder, shape) =>
+            {
+                var merge = builder.Add(new Concat<TIn, TOut>());
+                builder.From(shape).To(merge.In(0));
+                return new FlowShape<TIn, TOut>(merge.In(1), merge.Out);
+            });
+        }
+
         ///<summary>
         /// Materializes to `Future[Done]` that completes on getting termination message.
         /// The Future completes with success when received complete message from upstream or cancel
@@ -1425,7 +1477,7 @@ namespace Akka.Streams.Dsl.Internal
             return flow.ViaMaterialized(Fusing.GraphStages.TerminationWatcher<T>(), materializerFunction);
         }
 
-        private static IGraph<FlowShape<TIn, TOut>, TMat> ConcatGraph<TIn, TOut, TMat>(
+        internal static IGraph<FlowShape<TIn, TOut>, TMat> ConcatGraph<TIn, TOut, TMat>(
             IGraph<SourceShape<TOut>, TMat> other) where TIn : TOut
         {
             return GraphDsl.Create(other, (builder, shape) =>

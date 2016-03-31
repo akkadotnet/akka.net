@@ -163,7 +163,7 @@ namespace Akka.Streams.Tests.IO
                 Sink.Fold<ByteString, int>(0, (acc, l) => acc + l.DecodeString(Encoding.UTF8).Count(c => c == '\n')),
                 _materializer);
 
-            f.Wait(TimeSpan.FromSeconds(3));
+            f.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             var lineCount = f.Result;
             lineCount.Should().Be(LinesCount);
         }

@@ -37,7 +37,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Limit(1000)
                     .RunWith(Sink.Seq<int>(), Materializer);
             
-            task.Wait(TimeSpan.FromSeconds(3));
+            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             return task.Result;
         }
 
@@ -52,8 +52,7 @@ namespace Akka.Streams.Tests.Dsl
         public void Stream_superviosion_must_support_resume()
         {
             var withAttributes =
-                FailingMap.WithAttributes(
-                    new Attributes(new ActorAttributes.SupervisionStrategy(Deciders.ResumingDecider)));
+                FailingMap.WithAttributes(Attributes.CreateSupervisionStrategy(Deciders.ResumingDecider));
             var result = Run(withAttributes);
             result.ShouldAllBeEquivalentTo(new [] {1,2,4,5,1,2,4,5});
         }
@@ -62,8 +61,7 @@ namespace Akka.Streams.Tests.Dsl
         public void Stream_superviosion_must_support_restart()
         {
             var withAttributes =
-                FailingMap.WithAttributes(
-                    new Attributes(new ActorAttributes.SupervisionStrategy(Deciders.RestartingDecider)));
+                FailingMap.WithAttributes(Attributes.CreateSupervisionStrategy(Deciders.RestartingDecider));
             var result = Run(withAttributes);
             result.ShouldAllBeEquivalentTo(new[] { 1, 2, 4, 5, 1, 2, 4, 5 });
         }
@@ -87,12 +85,12 @@ namespace Akka.Streams.Tests.Dsl
                 if (element == "b")
                     return null;
                 return element;
-            }).WithAttributes(new Attributes(new ActorAttributes.SupervisionStrategy(Deciders.ResumingDecider)));
+            }).WithAttributes(Attributes.CreateSupervisionStrategy(Deciders.ResumingDecider));
             var task = Source.From(new[] {"a", "b", "c"})
                 .Via(nullMap)
                 .Limit(1000)
                 .RunWith(Sink.Seq<string>(), Materializer);
-            task.Wait(TimeSpan.FromSeconds(3));
+            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             task.Result.ShouldAllBeEquivalentTo(new [] {"a", "c"});
         }
     }

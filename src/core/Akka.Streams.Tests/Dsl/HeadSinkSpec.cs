@@ -117,7 +117,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var task = Source.Empty<int>().RunWith(Sink.FirstOrDefault<int>(), Materializer);
-                task.Wait(TimeSpan.FromSeconds(1));
+                task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
                 task.Result.Should().Be(0);
             }, Materializer);
         }

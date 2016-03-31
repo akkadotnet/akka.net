@@ -78,7 +78,7 @@ namespace Akka.Streams.Tests.IO
                 serverConnection.Write(input);
 
             serverConnection.ConfirmedClose();
-            resultFuture.Wait(TimeSpan.FromSeconds(3));
+            resultFuture.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             resultFuture.Result.ShouldBeEquivalentTo(expectedOutput);
         }
 
@@ -355,8 +355,8 @@ namespace Akka.Streams.Tests.IO
             ValidateServerClientCommunication(testData, serverConnection1, tcpReadProbe1, tcpWriteProbe1);
             ValidateServerClientCommunication(testData, serverConnection2, tcpReadProbe2, tcpWriteProbe2);
 
-            conn1F.Wait(TimeSpan.FromSeconds(1));
-            conn2F.Wait(TimeSpan.FromSeconds(1));
+            conn1F.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
+            conn2F.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
             var conn1 = conn1F.Result;
             var conn2 = conn2F.Result;
 
@@ -387,7 +387,7 @@ namespace Akka.Streams.Tests.IO
                             Sink.ForEach<Tcp.IncomingConnection>(conn => conn.Flow.Join(writeButIgnoreRead)),
                             Keep.Left)
                         .Run(Materializer);
-                task.Wait(TimeSpan.FromSeconds(3));
+                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 var binding = task.Result;
 
                 var t = Source.Maybe<ByteString>()
@@ -397,7 +397,7 @@ namespace Akka.Streams.Tests.IO
                 var promise = t.Item1;
                 var result = t.Item2;
 
-                result.Wait(TimeSpan.FromSeconds(3));
+                result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 result.Result.ShouldBeEquivalentTo(ByteString.FromString("Early response"));
 
                 promise.SetResult(null);
@@ -418,7 +418,7 @@ namespace Akka.Streams.Tests.IO
                         Sink.ForEach<Tcp.IncomingConnection>(conn => conn.Flow.Join(Flow.Create<ByteString>())),
                         Keep.Left)
                     .Run(Materializer);
-            task.Wait(TimeSpan.FromSeconds(3));
+            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             var binding = task.Result;
 
             var result = Source.From(Enumerable.Repeat(0, 1000)
@@ -426,7 +426,7 @@ namespace Akka.Streams.Tests.IO
                 .Via(new Tcp().CreateExtension(Sys as ExtendedActorSystem).OutgoingConnection(serverAddress))
                 .RunFold(0, (i, s) => i + s.Count, Materializer);
 
-            result.Wait(TimeSpan.FromSeconds(3));
+            result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             result.Result.Should().Be(1000);
 
             binding.Unbind();
@@ -449,7 +449,7 @@ namespace Akka.Streams.Tests.IO
             // Getting rid of existing connection actors by using a blunt instrument
             system2.ActorSelection(Akka.IO.Tcp.Manager(system2).Path/"selectors"/"$a"/"*").Tell(Kill.Instance);
 
-            result.Wait(TimeSpan.FromSeconds(3));
+            result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             result.Exception.InnerExceptions.Any(e => e is StreamTcpException).Should().BeTrue();
 
             binding.Result.Unbind().Wait();
