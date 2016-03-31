@@ -55,7 +55,7 @@ namespace Akka.Streams.Implementation
                 Module = module;
             }
 
-            public override string ToString() => $"Atomic({Module})";
+            public override string ToString() => $"Atomic({Module.Attributes.GetNameOrDefault(Module.GetType().Name)}[{Module.GetHashCode()}])";
         }
 
         public sealed class Transform : IMaterializedValueNode
@@ -656,6 +656,15 @@ namespace Akka.Streams.Implementation
         public override IModule CarbonCopy() => new CopiedModule(Shape.DeepCopy(), Attributes, this);
 
         public override IModule WithAttributes(Attributes attributes) => new FusedModule(SubModules, Shape, Downstreams, Upstreams, MaterializedValueComputation, attributes, Info);
+
+        public override string ToString()
+        {
+            return $"\n  Name: {Attributes.GetNameOrDefault("unnamed")}" +
+                   "\n  Modules:" +
+                   $"\n    {string.Join("\n    ", SubModules.Select(m => m.Attributes.GetNameLifted() ?? m.ToString().Replace("\n", "\n    ")))}" +
+                   $"\n  Downstreams: {string.Join("", Downstreams.Select(kvp => $"\n    {kvp.Key} -> {kvp.Value}"))}" +
+                   $"\n  Upstreams: {string.Join("", Upstreams.Select(kvp => $"\n    {kvp.Key} -> {kvp.Value}"))}";
+        }
     }
 
     internal sealed class VirtualProcessor<T> : IProcessor<T, T>

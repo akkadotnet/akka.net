@@ -95,6 +95,11 @@ namespace Akka.Streams.Implementation.Fusing
         {
             public static readonly Empty Instance = new Empty();
             private Empty() { }
+
+            public override string ToString()
+            {
+                return "Empty";
+            }
         }
 
 
@@ -247,7 +252,7 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         private string _name;
-        internal string Name => _name ?? (_name = GetHashCode() + "%08X");
+        internal string Name => _name ?? (_name = GetHashCode().ToString("x"));
 
         /// <summary>
         /// Assign the boundary logic to a given connection. This will serve as the interface to the external world
@@ -276,6 +281,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         public void SetHandler(int connection, IInHandler handler)
         {
+            if (IsDebug) Console.WriteLine($"{Name} SETHANDLER {OutOwnerName(connection)} (in) {handler}");
             InHandlers[connection] = handler;
         }
 
@@ -284,6 +290,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         public void SetHandler(int connection, IOutHandler handler)
         {
+            if (IsDebug) Console.WriteLine($"{Name} SETHANDLER {OutOwnerName(connection)} (out) {handler}");
             OutHandlers[connection] = handler;
         }
 
@@ -377,6 +384,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         public void Execute(int eventLimit)
         {
+            if (IsDebug) Console.WriteLine($"{Name} ---------------- EXECUTE {QueueStatus()} (running={RunningStagesCount}, shutdown={ShutdownCounters()})");
             var previousInterpreter = _currentInterpreter.Value;
             _currentInterpreter.Value = this;
             try
@@ -409,6 +417,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 _currentInterpreter.Value = previousInterpreter;
             }
+            if (IsDebug) Console.WriteLine($"{Name} ---------------- {QueueStatus()} (running={RunningStagesCount}, shutdown={ShutdownCounters()})");
             // TODO: deadlock detection
         }
 
@@ -416,6 +425,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             if (!IsStageCompleted(logic))
             {
+                if (IsDebug) Console.WriteLine($"{Name} ASYNC {evt} ({handler}) [{logic}]");
                 var previousInterpreter = _currentInterpreter.Value;
                 _currentInterpreter.Value = this;
                 try
@@ -457,6 +467,7 @@ namespace Akka.Streams.Implementation.Fusing
             else if ((code & (Pulling | OutClosed | InClosed)) == Pulling)
             {
                 // PULL
+                if (IsDebug) Console.WriteLine($"{Name} PULL {InOwnerName(connection)} -> {OutOwnerName(connection)} ({OutHandlers[connection]}) [{OutLogicName(connection)}]");
                 PortStates[connection] ^= PullEndFlip;
                 ActiveStage = SafeLogics(Assembly.OutletOwners[connection]);
                 OutHandlers[connection].OnPull();
@@ -466,6 +477,7 @@ namespace Akka.Streams.Implementation.Fusing
                 // CANCEL
                 var stageId = Assembly.OutletOwners[connection];
                 ActiveStage = SafeLogics(stageId);
+                if (IsDebug) Console.WriteLine($"{Name} CANCEL {InOwnerName(connection)} -> {OutOwnerName(connection)} ({OutHandlers[connection]}) [{OutLogicName(connection)}]");
                 PortStates[connection] |= OutClosed;
                 CompleteConnection(stageId);
                 OutHandlers[connection].OnDownstreamFinish();
@@ -475,6 +487,8 @@ namespace Akka.Streams.Implementation.Fusing
                 // COMPLETIONS
                 if ((code & Pushing) == 0)
                 {
+                    // Normal completion (no push pending)
+                    if (IsDebug) Console.WriteLine($"{Name} COMPLETE {OutOwnerName(connection)} -> {InOwnerName(connection)} ({InHandlers[connection]}) [{InLogicName(connection)}]");
                     PortStates[connection] |= InClosed;
                     var stageId = Assembly.InletOwners[connection];
                     ActiveStage = SafeLogics(stageId);
@@ -501,6 +515,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         public void ProcessElement(int connection)
         {
+            if (IsDebug) Console.WriteLine($"{Name} PUSH {OutOwnerName(connection)} -> {InOwnerName(connection)},  {ConnectionSlots[connection]} ({InHandlers[connection]}) [{InLogicName(connection)}]");
             ActiveStage = SafeLogics(Assembly.InletOwners[connection]);
             PortStates[connection] ^= PushEndFlip;
             InHandlers[connection].OnPush();
@@ -524,6 +539,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         private void Enqueue(int connection)
         {
+            if (IsDebug && _queueTail - _queueHead > _mask) throw new Exception($"{Name} internal queue full ({QueueStatus()}) + {connection}");
             _eventQueue[_queueTail & _mask] = connection;
             _queueTail++;
         }
@@ -601,6 +617,7 @@ namespace Akka.Streams.Implementation.Fusing
         internal void Complete(int connection)
         {
             var currentState = PortStates[connection];
+            if (IsDebug) Console.WriteLine($"{Name}   Complete({connection}) [{currentState}]");
             PortStates[connection] = currentState | OutClosed;
             if ((currentState & (InClosed | Pushing | Pulling | OutClosed)) == 0) Enqueue(connection);
             if ((currentState & OutClosed) == 0) CompleteConnection(Assembly.OutletOwners[connection]);
@@ -609,6 +626,7 @@ namespace Akka.Streams.Implementation.Fusing
         internal void Fail(int connection, Exception reason)
         {
             var currentState = PortStates[connection];
+            if (IsDebug) Console.WriteLine($"{Name}   Fail({connection}, {reason}) [{currentState}]");
             PortStates[connection] = currentState | OutClosed;
             if ((currentState & (InClosed | OutClosed)) == 0)
             {
@@ -623,6 +641,7 @@ namespace Akka.Streams.Implementation.Fusing
         internal void Cancel(int connection)
         {
             var currentState = PortStates[connection];
+            if (IsDebug) Console.WriteLine($"{Name}   Cancel({connection}) [{currentState}]");
             PortStates[connection] = currentState | InClosed;
             if ((currentState & OutClosed) == 0)
             {
