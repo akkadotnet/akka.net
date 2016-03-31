@@ -103,7 +103,7 @@ namespace Akka.Util.Internal
         /// <summary>
         /// Returns current counter value and sets a new value on it's place in one operation.
         /// </summary>
-        public long GetAndSet(int value)
+        public int GetAndSet(int value)
         {
             return Interlocked.Exchange(ref _value, value);
         }
