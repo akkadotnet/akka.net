@@ -19,7 +19,7 @@ namespace Akka.Streams.TestKit.Tests
     {
         protected readonly ActorMaterializer Materializer;
 
-        protected BaseTwoStreamsSetup(ITestOutputHelper output = null) : base(output)
+        public BaseTwoStreamsSetup(ITestOutputHelper output = null) : base(output)
         {
             var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(initialSize: 2, maxSize: 2);
             Materializer = ActorMaterializer.Create(Sys, settings);

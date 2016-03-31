@@ -6,11 +6,16 @@ using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
     public class FlowZipSpec : BaseTwoStreamsSetup<Tuple<int, int>>
     {
+        public FlowZipSpec(ITestOutputHelper output = null) : base(output)
+        {
+        }
+
         protected override TestSubscriber.Probe<Tuple<int, int>> Setup(IPublisher<int> p1, IPublisher<int> p2)
         {
             var subscriber = TestSubscriber.CreateProbe<Tuple<int, int>>(this);
