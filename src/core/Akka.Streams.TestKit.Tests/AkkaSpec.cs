@@ -83,14 +83,27 @@ namespace Akka.Streams.TestKit.Tests
 
             public override void Write(string value)
             {
-                _helper.WriteLine(value + "\b");
-                base.Write(value);
+                try
+                {
+                    _helper.WriteLine(value + "\b");
+                }
+                finally 
+                {
+                    base.Write(value);
+                }
             }
 
             public override void WriteLine(string value)
             {
-                _helper.WriteLine(value);
-                base.WriteLine();
+                try
+                {
+                    _helper.WriteLine(value);
+
+                }
+                finally
+                {
+                    base.WriteLine();
+                }
             }
         }
     }
