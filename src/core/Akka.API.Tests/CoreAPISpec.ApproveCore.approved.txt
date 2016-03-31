@@ -2345,7 +2345,7 @@ namespace Akka.Dispatch
         public void Resume() { }
         public void Resume(Akka.Dispatch.MailboxSuspendStatus reason) { }
         protected abstract void Schedule();
-        public void SetActor(Akka.Actor.ActorCell actorCell) { }
+        public virtual void SetActor(Akka.Actor.ActorCell actorCell) { }
         public void Setup(Akka.Dispatch.MessageDispatcher dispatcher) { }
         public void Start() { }
         public void Suspend() { }
