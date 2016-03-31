@@ -2,91 +2,96 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using Akka.Dispatch;
 using Akka.Pattern;
 using Akka.Streams.Stage;
 using Akka.Util.Internal;
+using Atomic = Akka.Streams.Implementation.StreamLayout.Atomic;
+using Combine = Akka.Streams.Implementation.StreamLayout.Combine;
+using IMaterializedValueNode = Akka.Streams.Implementation.StreamLayout.IMaterializedValueNode;
+using Transform = Akka.Streams.Implementation.StreamLayout.Transform;
 
 namespace Akka.Streams.Implementation.Fusing
 {
     internal static class Fusing
     {
+        public static readonly bool IsDebug = false;
 
-#if !DEBUG
-        public const bool IsDebug = false;
-#else
-        public const bool IsDebug = true;
-#endif
-
+        /// <summary>
+        /// Fuse everything that is not forbidden via AsyncBoundary attribute.
+        /// </summary>
+        /// <returns></returns>
         public static FusedGraph<TShape, TMat> Aggressive<TShape, TMat>(IGraph<TShape, TMat> graph)
             where TShape : Shape
-        {
-            if (graph is FusedGraph<TShape, TMat>) return graph as FusedGraph<TShape, TMat>;
-            var graphType = graph.GetType();
-            if (graphType.IsGenericType && graphType.GetGenericTypeDefinition() == typeof(FusedGraph<,>)) return new FusedGraph<TShape, TMat>((FusedModule)graph.Module, graph.Shape);
-
-            return DoAggressive(graph);
-        }
-
-        private static FusedGraph<TShape, TMat> DoAggressive<TShape, TMat>(IGraph<TShape, TMat> graph) where TShape : Shape
         {
             var structInfo = new BuildStructuralInfo();
 
             // First perform normalization by descending the module tree and recording information in the BuildStructuralInfo instance.
-            var materializedValue = Descend<TMat>(graph.Module, Attributes.None, structInfo,
-                structInfo.CreateGroup(string.Empty), string.Empty);
+            IEnumerable<KeyValuePair<IModule, IMaterializedValueNode>> materializedValue;
+
+            try
+            {
+                materializedValue = Descend<TMat>(graph.Module, Attributes.None, structInfo,
+                    structInfo.CreateGroup(0), 0);
+            }
+            catch
+            {
+                if (IsDebug)
+                    structInfo.Dump();
+                throw;
+            }
 
             // Then create a copy of the original Shape with the new copied ports.
             var shape = graph.Shape.CopyFromPorts(structInfo.NewInlets(graph.Shape.Inlets),
                 structInfo.NewOutlets(graph.Shape.Outlets));
 
-            // Extract the full topological information from the builder before removing assembly -internal (fused) wirings in the next step.
+            // Extract the full topological information from the builder before removing assembly-internal (fused) wirings in the next step.
             var info = structInfo.ToInfo();
 
             // Perform the fusing of `structInfo.groups` into GraphModules (leaving them as they are for non - fusable modules).
             structInfo.RemoveInternalWires();
             structInfo.BreakUpGroupsByDispatcher();
-            var modules = Fuse<TMat>(structInfo);
+            var modules = Fuse(structInfo);
 
             // Now we have everything ready for a FusedModule.
             var module = new FusedModule(
-                subModules: modules,
-                shape: shape,
-                downstreams: ImmutableDictionary.CreateRange(structInfo.Downstreams),
-                upstreams: ImmutableDictionary.CreateRange(structInfo.Upstreams),
-                materializedValueComputation: materializedValue.First().Value,
-                attributes: Attributes.None,
-                info: info);
+                modules,
+                shape,
+                ImmutableDictionary.CreateRange(structInfo.Downstreams),
+                ImmutableDictionary.CreateRange(structInfo.Upstreams),
+                materializedValue.First().Value,
+                Attributes.None,
+                info);
 
             if (StreamLayout.IsDebug) StreamLayout.Validate(module);
+            if (IsDebug) Console.WriteLine(module.ToString());
 
             return new FusedGraph<TShape, TMat>(module, (TShape) shape);
         }
 
         /// <summary>
-        /// Take the fusable islands identified by <see cref="Descend"/> in the `groups` list 
+        /// Take the fusable islands identified by <see cref="Descend{T}"/> in the <see cref="BuildStructuralInfo.Groups"/> list 
         /// and execute their fusion; only fusable islands will have multiple modules in their set.
         /// </summary>
-        private static ImmutableArray<IModule> Fuse<T>(BuildStructuralInfo info)
+        private static ImmutableArray<IModule> Fuse(BuildStructuralInfo info)
         {
             return info.Groups.SelectMany(group =>
             {
                 if (group.Count == 0) return Enumerable.Empty<IModule>();
                 if (group.Count == 1) return new[] {group.First()};
-                return new[] {FuseGroup<T>(info, group)};
-            }).Distinct().ToImmutableArray();
+                return new[] {FuseGroup(info, group)};
+            }).ToImmutableArray();
         }
 
         /// <summary>
         /// Transform a set of GraphStageModules into a single GraphModule. This is done
         /// by performing a traversal of all their Inlets, sorting them into those without
         /// internal connections(the exposed inlets) and those with internal connections
-        ///(where the corresponding Outlet is recorded in a map so that it will be wired
+        /// (where the corresponding Outlet is recorded in a map so that it will be wired
         /// to the same slot number in the GraphAssembly). Then all Outlets are traversed,
         /// completing internal connections using the aforementioned maps and appending
         /// the others to the list of exposed Outlets.
         /// </summary>
-        private static GraphModule FuseGroup<T>(BuildStructuralInfo info, ISet<IModule> group)
+        private static GraphModule FuseGroup(BuildStructuralInfo info, ISet<IModule> group)
         {
             var stages = new IGraphStageWithMaterializedValue[group.Count];
             var materializedValueIds = new IModule[group.Count];
@@ -131,25 +136,29 @@ namespace Akka.Streams.Implementation.Fusing
                     materializedValueIds[pos] = copy;
                     attributes[pos] = copy.Attributes.And(graphStageModule.Attributes);
 
-                    var cinlets = copy.Shape.Inlets.GetEnumerator();
-                    var orig = graphStageModule.Shape.Inlets.GetEnumerator();
-                    while (cinlets.MoveNext() && orig.MoveNext())
+                    var copyInlets = copy.Shape.Inlets.GetEnumerator();
+                    var originalInlets = graphStageModule.Shape.Inlets.GetEnumerator();
+                    while (copyInlets.MoveNext() && originalInlets.MoveNext())
                     {
+                        var copyInlet = copyInlets.Current;
+                        var originalInlet = originalInlets.Current;
                         OutPort outport;
                         ISet<IModule> g;
-                        if (ups.TryGetValue(cinlets.Current, out outport) && outGroup.TryGetValue(outport, out g) && g == group)
+                        var isInternal = ups.TryGetValue(copyInlet, out outport) && outGroup.TryGetValue(outport, out g) &&
+                                         g == group;
+                        if (isInternal)
                         {
-                            ups.Remove(cinlets.Current);
+                            ups.Remove(copyInlet);
                             downs.Remove(outport);
-                            outConns.Add(outport, insB2.Count);
-                            insB2.Add(orig.Current);
+                            outConns[outport] = insB2.Count;
+                            insB2.Add(originalInlet);
                             inOwnersB2.Add(pos);
                         }
                         else
                         {
-                            insB1.Add(orig.Current);
+                            insB1.Add(originalInlet);
                             inOwnersB1.Add(pos);
-                            inlets.Add(cinlets.Current);
+                            inlets.Add(copyInlet);
                         }
                     }
                 }
@@ -170,22 +179,24 @@ namespace Akka.Streams.Implementation.Fusing
                 GraphStageModule graphStageModule;
                 if ((copy = enumerator.Current as CopiedModule) != null && (graphStageModule = copy.CopyOf as GraphStageModule) != null)
                 {
-                    var outEnumerator = copy.Shape.Outlets.GetEnumerator();
-                    var gsmEnumerator = graphStageModule.Shape.Outlets.GetEnumerator();
-                    while (outEnumerator.MoveNext() && gsmEnumerator.MoveNext())
+                    var copyOutlets = copy.Shape.Outlets.GetEnumerator();
+                    var originalOutlets = graphStageModule.Shape.Outlets.GetEnumerator();
+                    while (copyOutlets.MoveNext() && originalOutlets.MoveNext())
                     {
+                        var copyOutlet = copyOutlets.Current;
+                        var originalOutlet = originalOutlets.Current;
                         int idx;
-                        if (outConns.TryGetValue(outEnumerator.Current, out idx))
+                        if (outConns.TryGetValue(copyOutlet, out idx))
                         {
-                            outConns.Remove(outEnumerator.Current);
-                            outsB2[idx] = gsmEnumerator.Current;
+                            outConns.Remove(copyOutlet);
+                            outsB2[idx] = originalOutlet;
                             outOwnersB2[idx] = pos;
                         }
                         else
                         {
-                            outsB3.Add(gsmEnumerator.Current);
+                            outsB3.Add(originalOutlet);
                             outOwnersB3.Add(pos);
-                            outlets.Add(outEnumerator.Current);
+                            outlets.Add(copyOutlet);
                         }
                     }
                 }
@@ -220,7 +231,7 @@ namespace Akka.Streams.Implementation.Fusing
             outOwnersB3.CopyTo(outOwners, outStart);
 
             var firstModule = group.First();
-            var asyncAttrs = IsAsync(firstModule) ? new Attributes(Attributes.AsyncBoundary.Instance) : Attributes.None;
+            var asyncAttrs = IsAsync((CopiedModule) firstModule) ? new Attributes(Attributes.AsyncBoundary.Instance) : Attributes.None;
             var dispatcher = GetDispatcher(firstModule);
             var dispatcherAttrs = dispatcher == null ? Attributes.None : new Attributes(dispatcher);
             var attr = asyncAttrs.And(dispatcherAttrs);
@@ -245,14 +256,20 @@ namespace Akka.Streams.Implementation.Fusing
         /// correspondence is then used during materialization to trigger these sources
         /// when “their” node has received its value.
         /// </summary>
-        private static IEnumerable<KeyValuePair<IModule, StreamLayout.IMaterializedValueNode>> Descend<T>(
+        private static LinkedList<KeyValuePair<IModule, IMaterializedValueNode>> Descend<T>(
             IModule module,
             Attributes inheritedAttributes,
             BuildStructuralInfo structInfo,
             ISet<IModule> openGroup,
-            string indent)
+            int indent)
         {
-            var isAsync = IsAsync<T>(module);
+
+            var isAsync = module is GraphStageModule || module is GraphModule
+                ? module.Attributes.Contains<Attributes.AsyncBoundary>()
+                : module.IsAtomic || module.Attributes.Contains<Attributes.AsyncBoundary>();
+            if (IsDebug)
+                Log(indent,
+                    $"entering {module.GetType().Name} (hash={module.GetHashCode()}, async={isAsync}, name={module.Attributes.GetNameLifted()}, dispatcher={GetDispatcher(module)})");
             var localGroup = isAsync ? structInfo.CreateGroup(indent) : openGroup;
 
             if (module.IsAtomic)
@@ -262,9 +279,14 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     if (!isAsync)
                     {
+                        if (IsDebug)
+                            Log(indent,
+                                $"dissolving graph module {module.ToString().Replace("\n", $"\n{string.Empty.PadLeft(indent*2)}")}");
                         // need to dissolve previously fused GraphStages to allow further fusion
                         var attributes = inheritedAttributes.And(module.Attributes);
-                        return graphModule.MaterializedValueIds.SelectMany(sub => Descend<T>(sub, attributes, structInfo, localGroup, indent + "    "));
+                        return new LinkedList<KeyValuePair<IModule, IMaterializedValueNode>>(
+                            graphModule.MaterializedValueIds.SelectMany(
+                                sub => Descend<T>(sub, attributes, structInfo, localGroup, indent + 1)));
                     }
                     else
                     {
@@ -277,13 +299,18 @@ namespace Akka.Streams.Implementation.Fusing
                          *  - we need to register the contained modules but take care to not include the internal
                          *    wirings into the final result, see also `struct.removeInternalWires()`
                          */
+                        if (IsDebug)
+                            Log(indent,
+                                $"graph module {module.ToString().Replace("\n", $"\n{string.Empty.PadLeft(indent*2)}")}");
 
                         var oldShape = graphModule.Shape;
                         var mvids = graphModule.MaterializedValueIds;
+
                         // storing the old Shape in arrays for in-place updating as we clone the contained GraphStages
                         var oldIns = oldShape.Inlets.ToArray();
                         var oldOuts = oldShape.Outlets.ToArray();
-                        var newIds = mvids.Where(x => x is CopiedModule).Cast<CopiedModule>().Select(x =>
+
+                        var newIds = mvids.OfType<CopiedModule>().Select(x =>
                         {
                             var newShape = x.Shape.DeepCopy();
                             IModule copy = new CopiedModule(newShape, x.Attributes, x.CopyOf);
@@ -294,7 +321,7 @@ namespace Akka.Streams.Implementation.Fusing
                             while (oldIn.MoveNext() && newIn.MoveNext())
                             {
                                 var idx = Array.IndexOf(oldIns, oldIn.Current);
-                                if (idx != -1) oldIns[idx] = newIn.Current;
+                                if (idx >= 0) oldIns[idx] = newIn.Current;
                             }
 
                             // ... then the outlets
@@ -303,7 +330,7 @@ namespace Akka.Streams.Implementation.Fusing
                             while (oldOut.MoveNext() && newOut.MoveNext())
                             {
                                 var idx = Array.IndexOf(oldOuts, oldOut.Current);
-                                if (idx != -1) oldOuts[idx] = newOut.Current;
+                                if (idx >= 0) oldOuts[idx] = newOut.Current;
                             }
 
                             // need to add the module so that the structural (internal) wirings can be rewritten as well
@@ -312,39 +339,45 @@ namespace Akka.Streams.Implementation.Fusing
                             structInfo.RegisterInternal(newShape, indent);
                             return copy;
                         }).ToArray();
-                        
-                        var newGraphModule = new GraphModule(graphModule.Assembly, oldShape.CopyFromPorts(oldIns.ToImmutableArray(), oldOuts.ToImmutableArray()), graphModule.Attributes, newIds);
+
+                        var newGraphModule = new GraphModule(graphModule.Assembly,
+                            oldShape.CopyFromPorts(oldIns.ToImmutableArray(), oldOuts.ToImmutableArray()),
+                            graphModule.Attributes, newIds);
                         // make sure to add all the port mappings from old GraphModule Shape to new shape
                         structInfo.AddModule(newGraphModule, localGroup, inheritedAttributes, indent, oldShape);
                         // now compute the list of all materialized value computation updates
-                        var result = new List<KeyValuePair<IModule, StreamLayout.IMaterializedValueNode>>(mvids.Length + 1);
-                        for (int i = 0; i < mvids.Length; i++)
-                        {
-                            result.Add(new KeyValuePair<IModule, StreamLayout.IMaterializedValueNode>(mvids[i], new StreamLayout.Atomic(newIds[i])));
-                        }
-                        result.Add(new KeyValuePair<IModule, StreamLayout.IMaterializedValueNode>(module, new StreamLayout.Atomic(newGraphModule)));
+                        var result = new LinkedList<KeyValuePair<IModule, IMaterializedValueNode>>(
+                            mvids.Select(
+                                (t, i) =>
+                                    new KeyValuePair<IModule, IMaterializedValueNode>(t,
+                                        new Atomic(newIds[i]))));
+                        result.AddLast(new KeyValuePair<IModule, IMaterializedValueNode>(module,
+                            new Atomic(newGraphModule)));
                         return result;
                     }
                 }
                 else
                 {
-                    return new[]
-                    {
-                        new KeyValuePair<IModule, StreamLayout.IMaterializedValueNode>(module, structInfo.AddModule(module, localGroup, inheritedAttributes, indent))
-                    };
+                    if (IsDebug) Log(indent, $"atomic module {module}");
+                    var result = new LinkedList<KeyValuePair<IModule, IMaterializedValueNode>>();
+                    result.AddFirst(
+                        new KeyValuePair<IModule, IMaterializedValueNode>(module,
+                            structInfo.AddModule(module, localGroup, inheritedAttributes, indent))
+                        );
+                    return result;
                 }
             }
             else
             {
-                var attributes = inheritedAttributes.And(module.Attributes);
-                CopiedModule copied;
-                if ((copied = module as CopiedModule) != null)
+                var allAttributes = inheritedAttributes.And(module.Attributes);
+                if (module is CopiedModule)
                 {
-                    var result = Descend<T>(copied.CopyOf, attributes, structInfo, localGroup, indent + "    ").ToArray();
-                    if(result.Length == 0) 
+                    var copied = (CopiedModule) module;
+                    var result = Descend<T>(copied.CopyOf, allAttributes, structInfo, localGroup, indent + 1);
+                    if (result.Count == 0)
                         throw new IllegalStateException("Descend returned empty result from CopiedModule");
-                    else
-                        result[0] = new KeyValuePair<IModule, StreamLayout.IMaterializedValueNode>(module, result[0].Value);
+
+                    result.AddFirst(new KeyValuePair<IModule, IMaterializedValueNode>(module, result.First.Value.Value));
 
                     structInfo.Rewire(copied.CopyOf.Shape, copied.Shape, indent);
                     return result;
@@ -354,18 +387,21 @@ namespace Akka.Streams.Implementation.Fusing
                     // we need to keep track of all MaterializedValueSource nodes that get pushed into the current
                     // computation context (i.e. that need the same value).
                     structInfo.EnterMaterializationContext();
-                    
+
                     // now descend into submodules and collect their computations (plus updates to `struct`)
-                    var subMatBuilder = ImmutableDictionary.CreateBuilder<IModule, StreamLayout.IMaterializedValueNode>();
+                    var subMatBuilder = ImmutableDictionary.CreateBuilder<IModule, IMaterializedValueNode>();
                     foreach (var sub in module.SubModules)
                     {
-                        var res = Descend<T>(sub, attributes, structInfo, localGroup, indent + "    ");
+                        var res = Descend<T>(sub, allAttributes, structInfo, localGroup, indent + 1);
                         subMatBuilder.AddRange(res);
                     }
                     var subMat = subMatBuilder.ToImmutable();
+                    if (IsDebug)
+                        Log(indent,
+                            $"subMat\n  {string.Empty.PadLeft(indent*2)}{string.Join("\n  " + string.Empty.PadLeft(indent*2), subMat.Select(p => $"{p.Key.GetType().Name}[{p.Key.GetHashCode()}] -> {p.Value}"))}");
 
                     // we need to remove all wirings that this module copied from nested modules so that we don’t do wirings twice
-                    var oldDownstreams = 
+                    var oldDownstreams =
                         (module as FusedModule)?.Info.Downstreams.ToImmutableHashSet()
                         ?? module.Downstreams.ToImmutableHashSet();
 
@@ -376,55 +412,57 @@ namespace Akka.Streams.Implementation.Fusing
                     }
 
                     // now rewrite the materialized value computation based on the copied modules and their computation nodes
-                    var matNodeMapping = new Dictionary<StreamLayout.IMaterializedValueNode, StreamLayout.IMaterializedValueNode>();
+                    var matNodeMapping = new Dictionary<IMaterializedValueNode, IMaterializedValueNode>();
                     var newMat = RewriteMaterializer(subMat, module.MaterializedValueComputation, matNodeMapping);
                     // and finally rewire all MaterializedValueSources to their new computation nodes
                     var materializedSources = structInfo.ExitMaterializationContext();
                     foreach (var c in materializedSources)
                     {
-                        var ms = (IMaterializedValueSource)((GraphStageModule)c.CopyOf).Stage;
-                        var mapped = ms.Computation is StreamLayout.Atomic
-                            ? subMat[((StreamLayout.Atomic) ms.Computation).Module]
+                        if (IsDebug) Log(indent, $"materialized value source: {structInfo.Hash(c)}");
+                        var ms = (IMaterializedValueSource) ((GraphStageModule) c.CopyOf).Stage;
+                        var mapped = ms.Computation is Atomic
+                            ? subMat[((Atomic) ms.Computation).Module]
                             : matNodeMapping[ms.Computation];
-                        
-                        var newSrc = new MaterializedValueSource<T>(mapped, Outlet.Create<T>(ms.Outlet));
+
+                        var newSrc = new MaterializedValueSource<T>(mapped, (Outlet<T>) ms.Outlet);
                         var replacement = new CopiedModule(c.Shape, c.Attributes, newSrc.Module);
                         structInfo.Replace(c, replacement, localGroup);
                     }
 
                     // the result for each level is the materialized value computation
-                    return new[] {new KeyValuePair<IModule, StreamLayout.IMaterializedValueNode>(module, newMat)};
+                    var result = new LinkedList<KeyValuePair<IModule, IMaterializedValueNode>>();
+                    result.AddFirst(new KeyValuePair<IModule, IMaterializedValueNode>(module, newMat));
+                    return result;
                 }
             }
         }
 
-        private static bool IsAsync<T>(IModule module)
+        /// <summary>
+        /// Given a mapping from old modules to new MaterializedValueNode, rewrite the given
+        /// computation while also populating a mapping from old computation nodes to new ones.
+        /// That mapping is needed to rewrite the MaterializedValueSource stages later-on in
+        /// descend().
+        /// </summary>
+        private static IMaterializedValueNode RewriteMaterializer(IDictionary<IModule, IMaterializedValueNode> subMat, IMaterializedValueNode mat, Dictionary<IMaterializedValueNode, IMaterializedValueNode> mapping)
         {
-            return module is GraphStageModule || module is GraphModule
-                ? module.Attributes.Contains<Attributes.AsyncBoundary>()
-                : module.IsAtomic || module.Attributes.Contains<Attributes.AsyncBoundary>();
-        }
-
-        private static StreamLayout.IMaterializedValueNode RewriteMaterializer(IDictionary<IModule, StreamLayout.IMaterializedValueNode> subMat, StreamLayout.IMaterializedValueNode mat, Dictionary<StreamLayout.IMaterializedValueNode, StreamLayout.IMaterializedValueNode> mapping)
-        {
-            if (mat is StreamLayout.Atomic)
+            if (mat is Atomic)
             {
-                var atomic = (StreamLayout.Atomic) mat;
+                var atomic = (Atomic) mat;
                 var result = subMat[atomic.Module];
                 mapping.Put(mat, result);
                 return result;
             }
-            if (mat is StreamLayout.Combine)
+            if (mat is Combine)
             {
-                var combine = (StreamLayout.Combine) mat;
-                var result = new StreamLayout.Combine(combine.Combinator, RewriteMaterializer(subMat, combine.Left, mapping), RewriteMaterializer(subMat, combine.Right, mapping));
+                var combine = (Combine) mat;
+                var result = new Combine(combine.Combinator, RewriteMaterializer(subMat, combine.Left, mapping), RewriteMaterializer(subMat, combine.Right, mapping));
                 mapping.Put(mat, result);
                 return result;
             }
-            if (mat is StreamLayout.Transform)
+            if (mat is Transform)
             {
-                var transform = (StreamLayout.Transform) mat;
-                var result = new StreamLayout.Transform(transform.Transformator, RewriteMaterializer(subMat, transform.Node, mapping));
+                var transform = (Transform) mat;
+                var result = new Transform(transform.Transformator, RewriteMaterializer(subMat, transform.Node, mapping));
                 mapping.Put(mat, result);
                 return result;
             }
@@ -432,16 +470,10 @@ namespace Akka.Streams.Implementation.Fusing
             return mat;
         }
 
-        internal static bool IsAsync(IModule module)
+        private static bool IsAsync(CopiedModule module)
         {
-            CopiedModule copied;
-            if ((copied = module as CopiedModule) != null)
-            {
-                var attrs = copied.Attributes.And(copied.CopyOf.Attributes);
-                return attrs.GetAttribute<Attributes.AsyncBoundary>(null) != null;
-            }
-
-            return module.Attributes.GetAttribute<Attributes.AsyncBoundary>(null) != null;
+            var attrs = module.Attributes.And(module.CopyOf.Attributes);
+            return attrs.Contains<Attributes.AsyncBoundary>();
         }
 
         /// <summary>
@@ -455,20 +487,12 @@ namespace Akka.Streams.Implementation.Fusing
                 var attrs = copied.Attributes.And(copied.CopyOf.Attributes);
                 return attrs.GetAttribute<ActorAttributes.Dispatcher>(null);
             }
-            else
-            {
-                return module.Attributes.GetAttribute<ActorAttributes.Dispatcher>(null);
-            }
+            return module.Attributes.GetAttribute<ActorAttributes.Dispatcher>(null);
         }
 
-        /// <summary>
-        /// See through copied modules to the “real” module.
-        /// </summary>
-        internal static IModule GetRealModule(IModule module)
+        internal static void Log(int indent, string msg)
         {
-            return module is CopiedModule
-                ? GetRealModule(((CopiedModule)module).CopyOf)
-                : module;
+            Console.WriteLine("{0}{1}", string.Empty.PadLeft(indent*2), msg);
         }
     }
 
@@ -554,11 +578,11 @@ namespace Akka.Streams.Implementation.Fusing
         public Streams.Fusing.StructuralInfo ToInfo()
         {
             return new Streams.Fusing.StructuralInfo(
-                upstreams: ImmutableDictionary.CreateRange(Upstreams),
-                downstreams: ImmutableDictionary.CreateRange(Downstreams),
-                inOwners: ImmutableDictionary.CreateRange(InOwners),
-                outOwners: ImmutableDictionary.CreateRange(OutOwners),
-                allModules: ImmutableHashSet.CreateRange(Modules));
+                ImmutableDictionary.CreateRange(Upstreams),
+                ImmutableDictionary.CreateRange(Downstreams),
+                ImmutableDictionary.CreateRange(InOwners),
+                ImmutableDictionary.CreateRange(OutOwners),
+                ImmutableHashSet.CreateRange(Modules));
         }
 
         public void Replace(IModule oldModule, IModule newModule, ISet<IModule> localGroup)
@@ -587,8 +611,7 @@ namespace Akka.Streams.Implementation.Fusing
                         group.Clear();
                         foreach (var subgroup in subgroups)
                         {
-                            var values = new HashSet<IModule>(subgroup);
-                            newGroups.AddLast(values);
+                            newGroups.AddLast(new HashSet<IModule>(subgroup));
                         }
                     }
                 }
@@ -602,8 +625,9 @@ namespace Akka.Streams.Implementation.Fusing
         /// Register the outlets of the given Shape as sources for internal connections within imported 
         /// (and not dissolved) GraphModules. See also the comment in addModule where this is partially undone.
         /// </summary>
-        public void RegisterInternal(Shape shape, string indent)
+        public void RegisterInternal(Shape shape, int indent)
         {
+            if (Fusing.IsDebug) Fusing.Log(indent, $"registerInternals({string.Join(",", shape.Outlets.Select(Hash))}");
             foreach (var outlet in shape.Outlets) InternalOuts.Add(outlet);
         }
 
@@ -628,9 +652,10 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Create and return a new grouping (i.e. an AsyncBoundary-delimited context)
         /// </summary>
-        public ISet<IModule> CreateGroup(string indent)
+        public ISet<IModule> CreateGroup(int indent)
         {
             var group = new HashSet<IModule>();
+            if (Fusing.IsDebug) Fusing.Log(indent, $"creating new group {Hash(@group)}");
             Groups.AddLast(group);
             return group;
         }
@@ -638,12 +663,13 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Add a module to the given group, performing normalization (i.e. giving it a unique port identity).
         /// </summary>
-        public StreamLayout.Atomic AddModule(IModule module, ISet<IModule> group, Attributes inheritedAttributes, string indent, Shape oldShape = null)
+        public Atomic AddModule(IModule module, ISet<IModule> group, Attributes inheritedAttributes, int indent, Shape oldShape = null)
         {
             var copy = oldShape == null
-                ? new CopiedModule(module.Shape.DeepCopy(), inheritedAttributes, Fusing.GetRealModule(module))
+                ? new CopiedModule(module.Shape.DeepCopy(), inheritedAttributes, GetRealModule(module))
                 : module;
             oldShape = oldShape ?? module.Shape;
+            if (Fusing.IsDebug) Fusing.Log(indent, $"adding copy {Hash(copy)} {PrintShape(copy.Shape)} of {PrintShape(oldShape)}");
             group.Add(copy);
             Modules.Add(copy);
 
@@ -687,23 +713,24 @@ namespace Akka.Streams.Implementation.Fusing
             else if (copy is GraphModule)
             {
                 var mvids = ((GraphModule)copy).MaterializedValueIds;
-                for (int i = 0; i < mvids.Length; i++)
+                foreach (IModule mvid in mvids)
                 {
-                    if (IsCopiedModuleWithGraphStageAndMaterializedValue(mvids[i]))
+                    if (IsCopiedModuleWithGraphStageAndMaterializedValue(mvid))
                     {
-                        PushMaterializationSource((CopiedModule)mvids[i]);
+                        PushMaterializationSource((CopiedModule)mvid);
                     }
                 }
             }
 
-            return new StreamLayout.Atomic(copy);
+            return new Atomic(copy);
         }
 
         /// <summary>
         /// Record a wiring between two copied ports, using (and reducing) the port mappings.
         /// </summary>
-        public void Wire(OutPort outPort, InPort inPort, string indent)
+        public void Wire(OutPort outPort, InPort inPort, int indent)
         {
+            if (Fusing.IsDebug) Fusing.Log(indent, $"wiring {outPort} ({Hash(outPort)}) -> {inPort} ({Hash(inPort)})");
             var newOut = RemoveMapping(outPort, NewOutputs);
             if (newOut == null) throw new ArgumentException($"wiring {outPort} -> {inPort}", nameof(outPort));
             var newIn = RemoveMapping(inPort, NewInputs);
@@ -715,8 +742,9 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Replace all mappings for a given shape with its new (copied) form.
         /// </summary>
-        public void Rewire(Shape oldShape, Shape newShape, string indent)
+        public void Rewire(Shape oldShape, Shape newShape, int indent)
         {
+            if (Fusing.IsDebug) Fusing.Log(indent, $"rewiring {PrintShape(oldShape)} -> {PrintShape(newShape)}");
             {
                 var oins = oldShape.Inlets.GetEnumerator();
                 var nins = newShape.Inlets.GetEnumerator();
@@ -789,6 +817,36 @@ namespace Akka.Streams.Implementation.Fusing
                 }
             }
             return null;
+        }
+
+        /// <summary>
+        /// See through copied modules to the “real” module.
+        /// </summary>
+        private static IModule GetRealModule(IModule module)
+        {
+            return module is CopiedModule
+                ? GetRealModule(((CopiedModule)module).CopyOf)
+                : module;
+        }
+
+        internal void Dump()
+        {
+            Console.WriteLine("StructuralInfo:");
+            Console.WriteLine("  newIns:");
+            NewInputs.ForEach(kvp => Console.WriteLine($"    {kvp.Key} ({Hash(kvp.Key)}) -> {string.Join(",", kvp.Value.Select(Hash))}"));
+            Console.WriteLine("  newOuts:");
+            NewInputs.ForEach(kvp => Console.WriteLine($"    {kvp.Key} ({Hash(kvp.Key)}) -> {string.Join(",", kvp.Value.Select(Hash))}"));
+        }
+
+        internal string Hash(object obj)
+        {
+            return obj.GetHashCode().ToString("x");
+        }
+
+        private string PrintShape(Shape shape)
+        {
+            return
+                $"{shape.GetType().Name}(ins={string.Join(",", shape.Inlets.Select(Hash))} outs={string.Join(",", shape.Outlets.Select(Hash))}";
         }
     }
 

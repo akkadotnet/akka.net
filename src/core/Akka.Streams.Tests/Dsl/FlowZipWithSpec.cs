@@ -6,11 +6,16 @@ using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
     public class FlowZipWithSpec : BaseTwoStreamsSetup<int>
     {
+        public FlowZipWithSpec(ITestOutputHelper output = null) : base(output)
+        {
+        }
+
         protected override TestSubscriber.Probe<int> Setup(IPublisher<int> p1, IPublisher<int> p2)
         {
             var subscriber = TestSubscriber.CreateProbe<int>(this);
@@ -59,8 +64,7 @@ namespace Akka.Streams.Tests.Dsl
             EventFilter.Exception<DivideByZeroException>().ExpectOne(() => subscription.Request(2));
             var error = probe.ExpectError();
             error.Should().BeOfType<DivideByZeroException>();
-            //can't check for words because the message is localized
-            error.Message.Should().Contain("0 (null)");
+            error.Message.Should().Contain("Attempted to divide by zero.");
 
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
         }
@@ -89,20 +93,20 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Zip_for_Flow_must_work_with_one_immediately_failed_and_one_nonempty_publisher()
         {
             var subscriber1 = Setup(FailedPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
-            subscriber1.ExpectSubscriptionAndError().Should().BeOfType<ApplicationException>();
+            subscriber1.ExpectSubscriptionAndError().Should().Be(TestException());
 
             var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), FailedPublisher<int>());
-            subscriber2.ExpectSubscriptionAndError().Should().BeOfType<ApplicationException>();
+            subscriber2.ExpectSubscriptionAndError().Should().Be(TestException());
         }
 
         [Fact]
         public void A_Zip_for_Flow_must_work_with_one_delayed_failed_and_one_nonempty_publisher()
         {
             var subscriber1 = Setup(SoonToFailPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
-            subscriber1.ExpectSubscriptionAndError().Should().BeOfType<ApplicationException>();
+            subscriber1.ExpectSubscriptionAndError().Should().Be(TestException());
 
             var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), SoonToFailPublisher<int>());
-            subscriber2.ExpectSubscriptionAndError().Should().BeOfType<ApplicationException>();
+            subscriber2.ExpectSubscriptionAndError().Should().Be(TestException());
         }
     }
 }

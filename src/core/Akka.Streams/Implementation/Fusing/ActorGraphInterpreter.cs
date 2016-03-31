@@ -171,17 +171,20 @@ namespace Akka.Streams.Implementation.Fusing
                 if (e is ActorGraphInterpreter.OnNext)
                 {
                     var onNext = (ActorGraphInterpreter.OnNext) e;
+                    if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  OnNext {onNext.Event} id={onNext.Id}");
                     _inputs[onNext.Id].OnNext(onNext.Event);
                     RunBatch();
                 }
                 else if (e is ActorGraphInterpreter.RequestMore)
                 {
                     var requestMore = (ActorGraphInterpreter.RequestMore) e;
+                    if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  Request {requestMore.Demand} id={requestMore.Id}");
                     _outputs[requestMore.Id].RequestMore(requestMore.Demand);
                     RunBatch();
                 }
                 else if (e is ActorGraphInterpreter.Resume)
                 {
+                    if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  Resume");
                     _resumeScheduled = false;
                     if (Interpreter.IsSuspended) RunBatch();
                 }
@@ -195,18 +198,21 @@ namespace Akka.Streams.Implementation.Fusing
                 else if (e is ActorGraphInterpreter.OnError)
                 {
                     var onError = (ActorGraphInterpreter.OnError) e;
+                    if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  OnError id={onError.Id}");
                     _inputs[onError.Id].OnError(onError.Cause);
                     RunBatch();
                 }
                 else if (e is ActorGraphInterpreter.OnComplete)
                 {
                     var onComplete = (ActorGraphInterpreter.OnComplete) e;
+                    if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  OnComplete id={onComplete.Id}");
                     _inputs[onComplete.Id].OnComplete();
                     RunBatch();
                 }
                 else if (e is ActorGraphInterpreter.OnSubscribe)
                 {
                     var onSubscribe = (ActorGraphInterpreter.OnSubscribe) e;
+                    if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  OnSubscribe id={onSubscribe.Id}");
                     _subscribersPending--;
                     _inputs[onSubscribe.Id].OnSubscribe(onSubscribe.Subscription);
                     RunBatch();
@@ -214,6 +220,7 @@ namespace Akka.Streams.Implementation.Fusing
                 else if (e is ActorGraphInterpreter.Cancel)
                 {
                     var cancel = (ActorGraphInterpreter.Cancel) e;
+                    if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  Cancel id={cancel.Id}");
                     _outputs[cancel.Id].Cancel();
                     RunBatch();
                 }
@@ -717,7 +724,7 @@ namespace Akka.Streams.Implementation.Fusing
             public override string ToString()
             {
                 return
-                    $"BatchingActorInputBoundary(id={_id}, fill={_inputBufferElements/_size}, completed={_upstreamCompleted}, canceled={_downstreamCanceled})";
+                    $"BatchingActorInputBoundary(id={_id}, fill={_inputBufferElements}/{_size}, completed={_upstreamCompleted}, canceled={_downstreamCanceled})";
             }
         }
 
@@ -818,6 +825,7 @@ namespace Akka.Streams.Implementation.Fusing
                     {
                         _subscriber = subscriber;
                         ReactiveStreamsCompliance.TryOnSubscribe(_subscriber, new BoundarySubscription(_actor, _shell, _id));
+                        if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name} Subscribe subscriber={subscriber}");
                     }
                     else ReactiveStreamsCompliance.RejectAdditionalSubscriber(subscriber, GetType().FullName);
                 }
@@ -904,6 +912,7 @@ namespace Akka.Streams.Implementation.Fusing
             try
             {
                 shell.Init(Self, _subFusingMaterializerImpl);
+                if (GraphInterpreter.IsDebug) Console.WriteLine($"registering new shell in {_initial}\n  {shell.ToString().Replace("\n", "\n  ")}");
                 if (shell.IsTerminated)
                     return false;
                 _activeInterpreters.Add(shell);

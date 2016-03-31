@@ -1,7 +1,8 @@
 ﻿using System;
+using System.IO;
+using System.Text;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
@@ -33,6 +34,10 @@ namespace Akka.Streams.TestKit.Tests
 
         protected AkkaSpec(ActorSystem system, ITestOutputHelper output = null) : base(system, output)
         {
+#if DEBUG
+            if (output != null)
+                Console.SetOut(new TestOutputHelperWriter(output));
+#endif
         }
 
         protected AkkaSpec(Config config, ITestOutputHelper output = null) : this(ActorSystem.Create("test", ConfigurationFactory.Load().WithFallback(config).WithFallback(TestConfig)), output)
@@ -63,6 +68,43 @@ namespace Akka.Streams.TestKit.Tests
                 mute(typeof (object));
             else
                 messageClasses.ForEach(mute);
+        }
+
+        private class TestOutputHelperWriter : TextWriter
+        {
+            private readonly ITestOutputHelper _helper;
+
+            public TestOutputHelperWriter(ITestOutputHelper helper)
+            {
+                _helper = helper;
+            }
+
+            public override Encoding Encoding => Encoding.UTF8;
+
+            public override void Write(string value)
+            {
+                try
+                {
+                    _helper.WriteLine(value + "\b");
+                }
+                finally 
+                {
+                    base.Write(value);
+                }
+            }
+
+            public override void WriteLine(string value)
+            {
+                try
+                {
+                    _helper.WriteLine(value);
+
+                }
+                finally
+                {
+                    base.WriteLine();
+                }
+            }
         }
     }
 }
