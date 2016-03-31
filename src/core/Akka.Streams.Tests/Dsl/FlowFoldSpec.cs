@@ -38,7 +38,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var task = InputSource.RunFold(0, (sum, i) => sum + i, Materializer);
-                task.Wait(TimeSpan.FromSeconds(3));
+                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 task.Result.Should().Be(Expected);
             }, Materializer);
         }
@@ -49,7 +49,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var task = FoldSource.RunWith(Sink.First<int>(), Materializer);
-                task.Wait(TimeSpan.FromSeconds(3));
+                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 task.Result.Should().Be(Expected);
             }, Materializer);
         }
@@ -60,7 +60,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var task = InputSource.RunWith(FoldSink, Materializer);
-                task.Wait(TimeSpan.FromSeconds(3));
+                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 task.Result.Should().Be(Expected);
             }, Materializer);
 
@@ -72,7 +72,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var task = InputSource.Via(FoldFlow).RunWith(Sink.First<int>(), Materializer);
-                task.Wait(TimeSpan.FromSeconds(3));
+                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 task.Result.Should().Be(Expected);
             }, Materializer);
 
@@ -84,7 +84,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var task = FoldSource.Via(FoldFlow).RunWith(FoldSink, Materializer);
-                task.Wait(TimeSpan.FromSeconds(3));
+                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 task.Result.Should().Be(Expected);
             }, Materializer);
 
