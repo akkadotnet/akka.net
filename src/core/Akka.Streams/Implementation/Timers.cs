@@ -286,87 +286,89 @@ namespace Akka.Streams.Implementation
         #region stage logic
         private sealed class IdleInjectStageLogic : TimerGraphStageLogic
         {
-            public const string IdleTimer = "IdleInjectTimer";
+            private const string IdleTimer = "IdleInjectTimer";
             private readonly IdleInject<TIn, TOut> _stage;
             private DateTime _nextDeadline;
 
             public IdleInjectStageLogic(Shape shape, IdleInject<TIn, TOut> stage) : base(shape)
             {
                 _stage = stage;
-                _nextDeadline = DateTime.UtcNow + _stage.Timeout;
+                _nextDeadline = DateTime.UtcNow + _stage._timeout;
 
-                SetHandler(_stage.In, onPush: () =>
+                SetHandler(_stage._in, onPush: () =>
                 {
-                    _nextDeadline = DateTime.UtcNow + _stage.Timeout;
+                    _nextDeadline = DateTime.UtcNow + _stage._timeout;
                     CancelTimer(IdleTimer);
-                    if (IsAvailable(_stage.Out))
+                    if (IsAvailable(_stage._out))
                     {
-                        Push(_stage.Out, Grab(_stage.In));
-                        Pull(_stage.In);
+                        Push(_stage._out, Grab(_stage._in));
+                        Pull(_stage._in);
                     }
                 },
                 onUpstreamFinish: () =>
                 {
-                    if(!IsAvailable(_stage.In)) CompleteStage();
+                    if(!IsAvailable(_stage._in))
+                        CompleteStage();
                 });
 
-                SetHandler(_stage.Out, onPull: () =>
+                SetHandler(_stage._out, onPull: () =>
                 {
-                    if (IsAvailable(_stage.In))
+                    if (IsAvailable(_stage._in))
                     {
-                        Push(_stage.Out, Grab(_stage.In));
-                        if (IsClosed(_stage.In)) CompleteStage();
-                        else Pull(_stage.In);
+                        Push(_stage._out, Grab(_stage._in));
+                        if (IsClosed(_stage._in))
+                            CompleteStage();
+                        else
+                            Pull(_stage._in);
                     }
                     else
                     {
-                        if (_nextDeadline <= DateTime.UtcNow)
+                        var timeLeft = _nextDeadline - DateTime.UtcNow;
+                        if (timeLeft <= TimeSpan.Zero)
                         {
-                            _nextDeadline = DateTime.UtcNow + _stage.Timeout;
-                            Push(_stage.Out, _stage.Inject());
+                            _nextDeadline = DateTime.UtcNow + _stage._timeout;
+                            Push(_stage._out, _stage._inject());
                         }
-                        else ScheduleOnce(IdleTimer, DateTime.UtcNow - _nextDeadline);
+                        else
+                            ScheduleOnce(IdleTimer, timeLeft);
                     }
                 });
             }
 
             protected internal override void OnTimer(object timerKey)
             {
-                if (_nextDeadline <= DateTime.UtcNow && IsAvailable(_stage.Out))
+                if (_nextDeadline <= DateTime.UtcNow && IsAvailable(_stage._out))
                 {
-                    Push(_stage.Out, _stage.Inject());
-                    _nextDeadline = DateTime.UtcNow + _stage.Timeout;
+                    Push(_stage._out, _stage._inject());
+                    _nextDeadline = DateTime.UtcNow + _stage._timeout;
                 }
             }
 
             public override void PreStart()
             {
                 // Prefetching to ensure priority of actual upstream elements
-                Pull(_stage.In);
+                Pull(_stage._in);
             }
         }
         #endregion
 
-        public readonly TimeSpan Timeout;
-        public readonly Func<TOut> Inject;
-        public readonly Inlet<TIn> In = new Inlet<TIn>("IdleInject.in");
-        public readonly Outlet<TOut> Out = new Outlet<TOut>("IdleInject.out");
+        private readonly TimeSpan _timeout;
+        private readonly Func<TOut> _inject;
+        private readonly Inlet<TIn> _in = new Inlet<TIn>("IdleInject.in");
+        private readonly Outlet<TOut> _out = new Outlet<TOut>("IdleInject.out");
 
         public IdleInject(TimeSpan timeout, Func<TOut> inject)
         {
-            Timeout = timeout;
-            Inject = inject;
-
-            InitialAttributes = Attributes.CreateName("IdleInject");
-            Shape = new FlowShape<TIn, TOut>(In, Out);
+            _timeout = timeout;
+            _inject = inject;
+            
+            Shape = new FlowShape<TIn, TOut>(_in, _out);
         }
 
-        protected override Attributes InitialAttributes { get; }
+        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("IdleInject");
+
         public override FlowShape<TIn, TOut> Shape { get; }
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
-        {
-            return new IdleInjectStageLogic(Shape, this);
-        }
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new IdleInjectStageLogic(Shape, this);
     }
 }
