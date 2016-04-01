@@ -95,11 +95,12 @@ namespace Akka.Streams.Dsl
         private readonly bool _eagerComplete;
 
         public ImmutableArray<Inlet<TIn>> In { get; }
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("Merge.out");
+        public Outlet<TOut> Out { get; }
 
         public Merge(int inputPorts, bool eagerComplete = false)
         {
-            if (inputPorts <= 1) throw new ArgumentException("Merge must have more than 1 input port");
+            // one input might seem counter intuitive but saves us from special handling in other places
+            if (inputPorts < 1) throw new ArgumentException("Merge must have one or more input ports");
             _inputPorts = inputPorts;
             _eagerComplete = eagerComplete;
 
@@ -107,7 +108,8 @@ namespace Akka.Streams.Dsl
             for (int i = 0; i < inputPorts; i++)
                 ins.Add(new Inlet<TIn>("Merge.in" + i));
             In = ins.ToImmutable();
-
+            Out = new Outlet<TOut>("Merge.out");
+                 
             Shape = new UniformFanInShape<TIn, TOut>(Out, In.ToArray());
             InitialAttributes = Attributes.CreateName("Merge");
         }
