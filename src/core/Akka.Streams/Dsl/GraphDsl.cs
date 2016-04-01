@@ -28,6 +28,9 @@ namespace Akka.Streams.Dsl
             /// </summary>
             internal TShape Add<TShape, TMat, TMat2>(IGraph<TShape, TMat> graph, Func<TMat, TMat2> transform) where TShape : Shape
             {
+                if (StreamLayout.IsDebug)
+                    StreamLayout.Validate(graph.Module);
+
                 var copy = graph.Module.CarbonCopy();
                 _moduleInProgress = _moduleInProgress.Compose(copy.TransformMaterializedValue(transform));
                 return (TShape)graph.Shape.CopyFromPorts(copy.Shape.Inlets, copy.Shape.Outlets);
@@ -40,6 +43,9 @@ namespace Akka.Streams.Dsl
             /// </summary>
             internal TShape Add<TShape, TMat1, TMat2, TMat3>(IGraph<TShape> graph, Func<TMat1, TMat2, TMat3> combine) where TShape : Shape
             {
+                if (StreamLayout.IsDebug)
+                    StreamLayout.Validate(graph.Module);
+
                 var copy = graph.Module.CarbonCopy();
                 _moduleInProgress = _moduleInProgress.Compose(copy, combine);
                 return (TShape)graph.Shape.CopyFromPorts(copy.Shape.Inlets, copy.Shape.Outlets);
@@ -54,6 +60,9 @@ namespace Akka.Streams.Dsl
             public TShape Add<TShape, TMat>(IGraph<TShape, TMat> graph)
                 where TShape : Shape
             {
+                if (StreamLayout.IsDebug)
+                    StreamLayout.Validate(graph.Module);
+
                 var copy = graph.Module.CarbonCopy();
                 _moduleInProgress = _moduleInProgress.Compose(copy);
                 return (TShape)graph.Shape.CopyFromPorts(copy.Shape.Inlets, copy.Shape.Outlets);

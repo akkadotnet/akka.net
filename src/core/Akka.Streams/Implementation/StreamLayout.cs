@@ -362,6 +362,9 @@ namespace Akka.Streams.Implementation
 
         public virtual IModule TransformMaterializedValue<TMat, TMat2>(Func<TMat, TMat2> mapFunc)
         {
+            if (StreamLayout.IsDebug)
+                StreamLayout.Validate(this);
+
             return new CompositeModule(
                 subModules: IsSealed ? ImmutableArray.Create(this as IModule) : SubModules,
                 shape: Shape,
@@ -407,6 +410,9 @@ namespace Akka.Streams.Implementation
 
         public IModule ComposeNoMaterialized(IModule that)
         {
+            if (StreamLayout.IsDebug)
+                StreamLayout.Validate(this);
+
             if (ReferenceEquals(this, that)) throw new ArgumentException("A module cannot be added to itself. You should pass a separate instance to Compose().");
             if (SubModules.Contains(that)) throw new ArgumentException("An existing submodule cannot be added again. All contained modules must be unique.");
 
