@@ -447,7 +447,7 @@ namespace Akka.Streams.Implementation
                 attributes: Attributes.None);
         }
 
-        public bool IsSealed => IsAtomic || IsCopied;
+        public bool IsSealed => IsAtomic || IsCopied || IsFused || Attributes.AttributeList.Count() != 0;
         public virtual IImmutableDictionary<OutPort, InPort> Downstreams => ImmutableDictionary<OutPort, InPort>.Empty;
         public virtual IImmutableDictionary<InPort, OutPort> Upstreams => ImmutableDictionary<InPort, OutPort>.Empty;
         public virtual StreamLayout.IMaterializedValueNode MaterializedValueComputation => new StreamLayout.Atomic(this);

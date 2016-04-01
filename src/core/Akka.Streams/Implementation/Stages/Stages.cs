@@ -128,7 +128,7 @@ namespace Akka.Streams.Implementation.Stages
 
         protected Decider Supervision(Attributes attributes)
         {
-            return attributes.GetAttribute<ActorAttributes.SupervisionStrategy>(new ActorAttributes.SupervisionStrategy(Deciders.StoppingDecider)).Decider;
+            return attributes.GetAttribute(new ActorAttributes.SupervisionStrategy(Deciders.StoppingDecider)).Decider;
         }
     }
 
@@ -177,21 +177,6 @@ namespace Akka.Streams.Implementation.Stages
         public override IStage<T, T> Create(Attributes effectiveAttributes)
         {
             return new Fusing.Filter<T>(_predicate, Supervision(effectiveAttributes));
-        }
-    }
-
-    internal sealed class Collect<TIn, TOut> : SymbolicStage<TIn, TOut> where TOut : class
-    {
-        private readonly Func<TIn, TOut> _partialFunc;
-
-        public Collect(Func<TIn, TOut> partialFunc, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Collect)
-        {
-            _partialFunc = partialFunc;
-        }
-
-        public override IStage<TIn, TOut> Create(Attributes effectiveAttributes)
-        {
-            return new Fusing.Collect<TIn, TOut>(_partialFunc, Supervision(effectiveAttributes));
         }
     }
 

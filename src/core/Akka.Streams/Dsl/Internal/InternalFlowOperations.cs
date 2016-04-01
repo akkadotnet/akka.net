@@ -254,9 +254,8 @@ namespace Akka.Streams.Dsl.Internal
         /// '''Cancels when''' downstream cancels
         /// </summary>
         public static IFlow<TOut, TMat> Collect<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> collector)
-            where TOut : class
         {
-            return flow.AndThen(new Collect<TIn, TOut>(collector));
+            return flow.Via(new Fusing.Collect<TIn, TOut>(collector));
         }
 
         /// <summary>
@@ -482,8 +481,7 @@ namespace Akka.Streams.Dsl.Internal
             if (n <= 0) throw new ArgumentException("n must be > 0", nameof(n));
             if (timeout == TimeSpan.Zero) throw new ArgumentException("Timeout must be non-zero", nameof(timeout));
 
-            return
-                flow.Via(new Fusing.GroupedWithin<T>(n, timeout).WithAttributes(Attributes.CreateName("groupedWithin")));
+            return flow.Via(new Fusing.GroupedWithin<T>(n, timeout));
         }
 
         /// <summary>

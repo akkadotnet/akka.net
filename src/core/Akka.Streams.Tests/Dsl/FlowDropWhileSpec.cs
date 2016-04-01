@@ -58,7 +58,7 @@ namespace Akka.Streams.Tests.Dsl
                         return true;
                     throw testException;
                 })
-                    .WithAttributes(Attributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
+                    .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(1)
                     .ExpectComplete();
