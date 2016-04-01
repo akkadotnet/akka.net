@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Reactive.Streams;
@@ -319,17 +320,23 @@ my-dispatcher1 {
                     return ClosedShape.Instance;
                 })).Run(materializer);
 
-            for (var i = 0; i <= 10; i++)
+            // the scala test is wrong
+            const int noOfMessages = 10;
+            for (var i = 0; i < noOfMessages; i++)
             {
                 senderRef1.Tell(i);
-                senderRef2.Tell(i);
+                senderRef2.Tell(i+noOfMessages);
             }
 
-            for (var i = 0; i <= 10; i++)
+            var probe1Messages = new List<string>(noOfMessages*2);
+            var probe2Messages = new List<string>(noOfMessages*2);
+            for (var i = 0; i < noOfMessages * 2; i++)
             {
-                probe1.ExpectMsg(i + "mark");
-                probe2.ExpectMsg(i.ToString());
+                probe1Messages.Add(probe1.ExpectMsg<string>());
+                probe2Messages.Add(probe2.ExpectMsg<string>());
             }
+            probe1Messages.Should().BeEquivalentTo(Enumerable.Range(0, noOfMessages * 2).Select(i => i + "mark"));
+            probe2Messages.Should().BeEquivalentTo(Enumerable.Range(0, noOfMessages * 2).Select(i => i.ToString()));
         }
 
         [Fact]
