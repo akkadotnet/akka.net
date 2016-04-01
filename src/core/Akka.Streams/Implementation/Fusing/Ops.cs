@@ -1306,7 +1306,7 @@ namespace Akka.Streams.Implementation.Fusing
     internal sealed class Log<T> : PushStage<T, T>
     {
         private static readonly string DefaultLoggerName = "Akka.Streams.Log";
-        private static Attributes.LogLevels DefaultLogLevels = new Attributes.LogLevels(onElement: LogLevel.DebugLevel, onFinish: LogLevel.DebugLevel, onFailure: LogLevel.ErrorLevel);
+        private static readonly Attributes.LogLevels DefaultLogLevels = new Attributes.LogLevels(onElement: LogLevel.DebugLevel, onFinish: LogLevel.DebugLevel, onFailure: LogLevel.ErrorLevel);
 
         private readonly string _name;
         private readonly Func<T, object> _extract;
@@ -1325,7 +1325,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         public override void PreStart(ILifecycleContext context)
         {
-            _logLevels = context.Attributes.GetLogLevels() ?? DefaultLogLevels;
+            _logLevels = context.Attributes.GetAttribute(DefaultLogLevels);
             base.PreStart(context);
             _log = _adapter;
             if (_log == null)

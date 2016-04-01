@@ -85,7 +85,7 @@ namespace Akka.Streams.Implementation
 
             private string StageName(Attributes attr)
             {
-                return string.Format("{0}-{1}-{2}", _flowName, _nextId++, attr.GetNameOrDefault());
+                return $"{_flowName}-{_nextId++}-{attr.GetNameOrDefault()}";
             }
 
             private MaterializationContext CreateMaterializationContext(Attributes effectiveAttributes)
@@ -102,7 +102,7 @@ namespace Akka.Streams.Implementation
                 var logics = t.Item3;
 
                 var shell = new GraphInterpreterShell(graph.Assembly, inHandlers, outHandlers, logics, graph.Shape, calculatedSettings, _materializer);
-                var impl = _subflowFuser != null && !effectiveAttributes.Contains<Attributes.AsyncBoundary>()
+                var impl = _subflowFuser != null && !effectiveAttributes.Contains(Attributes.AsyncBoundary.Instance)
                     ? _subflowFuser(shell)
                     : _materializer.ActorOf(ActorGraphInterpreter.Props(shell), StageName(effectiveAttributes), calculatedSettings.Dispatcher);
 
