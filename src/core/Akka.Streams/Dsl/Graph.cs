@@ -327,11 +327,12 @@ namespace Akka.Streams.Dsl
     public sealed class Interleave<TIn, TOut> : GraphStage<UniformFanInShape<TIn, TOut>> where TIn : TOut
     {
         #region stage logic
+
         private sealed class InterleaveStageLogic : GraphStageLogic
         {
             private readonly Interleave<TIn, TOut> _stage;
-            private int _counter = 0;
-            private int _currentUpstreamIndex = 0;
+            private int _counter;
+            private int _currentUpstreamIndex;
             private int _runningUpstreams;
 
             public InterleaveStageLogic(Shape shape, Interleave<TIn, TOut> stage) : base(shape)
@@ -345,7 +346,8 @@ namespace Akka.Streams.Dsl
                     {
                         Push(_stage.Out, Grab(inlet));
                         _counter++;
-                        if (_counter == _stage._segmentSize) SwitchToNextInput();
+                        if (_counter == _stage._segmentSize)
+                            SwitchToNextInput();
                     },
                     onUpstreamFinish: () =>
                     {
@@ -357,7 +359,8 @@ namespace Akka.Streams.Dsl
                                 if (Equals(inlet, CurrentUpstream))
                                 {
                                     SwitchToNextInput();
-                                    if (IsAvailable(_stage.Out)) Pull(CurrentUpstream);
+                                    if (IsAvailable(_stage.Out))
+                                        Pull(CurrentUpstream);
                                 }
                             }
                             else CompleteStage();
@@ -368,12 +371,14 @@ namespace Akka.Streams.Dsl
 
                 SetHandler(_stage.Out, onPull: () =>
                 {
-                    if (!HasBeenPulled(CurrentUpstream)) TryPull(CurrentUpstream);
+                    if (!HasBeenPulled(CurrentUpstream))
+                        TryPull(CurrentUpstream);
                 });
             }
 
-            private bool IsUpstreamClosed { get { return _runningUpstreams == 0; } }
-            private Inlet<TIn> CurrentUpstream { get { return _stage.Inlets[_currentUpstreamIndex]; } }
+            private bool IsUpstreamClosed => _runningUpstreams == 0;
+
+            private Inlet<TIn> CurrentUpstream => _stage.Inlets[_currentUpstreamIndex];
 
             private void SwitchToNextInput()
             {
@@ -381,8 +386,10 @@ namespace Akka.Streams.Dsl
                 var index = _currentUpstreamIndex;
                 while (true)
                 {
-                    var successor = (index + 1) % _stage._inputPorts;
-                    if (!IsClosed(_stage.Inlets[successor])) _currentUpstreamIndex = successor;
+                    var successor = index + 1 == _stage._inputPorts ? 0 : index + 1;
+
+                    if (!IsClosed(_stage.Inlets[successor]))
+                        _currentUpstreamIndex = successor;
                     else
                     {
                         if (successor != _currentUpstreamIndex)
@@ -390,22 +397,24 @@ namespace Akka.Streams.Dsl
                             index = successor;
                             continue;
                         }
-                        else
-                        {
-                            CompleteStage();
-                            _currentUpstreamIndex = 0;
-                        }
+
+                        CompleteStage();
+                        _currentUpstreamIndex = 0; // return dummy/min value to exit stage logic gracefully
                     }
 
                     break;
                 }
             }
         }
+
         #endregion
 
         private readonly int _inputPorts;
         private readonly int _segmentSize;
         private readonly bool _eagerClose;
+
+        private Outlet<TOut> Out { get; }
+        private Inlet<TIn>[] Inlets { get; }
 
         public Interleave(int inputPorts, int segmentSize, bool eagerClose = false)
         {
@@ -424,14 +433,12 @@ namespace Akka.Streams.Dsl
             Shape = new UniformFanInShape<TIn, TOut>(Out, Inlets);
         }
 
-        public Outlet<TOut> Out { get; }
-        public Inlet<TIn>[] Inlets { get; }
-
         public override UniformFanInShape<TIn, TOut> Shape { get; }
+
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
-        {
-            return new InterleaveStageLogic(Shape, this);
-        }
+            => new InterleaveStageLogic(Shape, this);
+
+        public override string ToString() => "Interleave";
     }
 
     /// <summary>

@@ -2,12 +2,8 @@
 using System.Collections.Generic;
 using System.Reactive.Streams;
 using System.Threading.Tasks;
-using Akka.Dispatch.SysMsg;
 using Akka.Event;
-using Akka.IO;
 using Akka.Streams.Dsl.Internal;
-using Akka.Streams.Implementation;
-using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 
 namespace Akka.Streams.Dsl
@@ -1119,6 +1115,26 @@ namespace Akka.Streams.Dsl
         public static Flow<TIn, T2, TMat> Interleave<TIn, T1, T2, TMat>(this Flow<TIn, T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other, int segmentSize) where T1 : T2
         {
             return (Flow<TIn, T2, TMat>)InternalFlowOperations.Interleave(flow, other, segmentSize);
+        }
+
+        /// <summary>
+        /// Interleave is a deterministic merge of the given <see cref="Source{TOut,TMat}"/> with elements of this <see cref="IFlow{T,TMat}"/>.
+        /// It first emits `segmentSize` number of elements from this flow to downstream, then - same amount for `that` source,
+        /// then repeat process.
+        ///
+        /// After one of upstreams is complete than all the rest elements will be emitted from the second one
+        ///
+        /// If it gets error from one of upstreams - stream completes with failure.
+        ///
+        /// @see<see cref="Interleave{TIn,TOut}"/>.
+        ///
+        ///It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
+        /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// </summary>
+        public static Flow<TIn, T2, TMat3> InterleaveMaterialized<TIn, T1, T2, TMat, TMat2, TMat3>(this Flow<TIn, T1, TMat> flow,
+            IGraph<SourceShape<T2>, TMat2> graph, int segmentSize, Func<TMat, TMat2, TMat3> combine) where T1 : T2
+        {
+            return (Flow<TIn, T2, TMat3>)InternalFlowOperations.InterleaveMaterialized(flow, graph, segmentSize, combine);
         }
 
         /// <summary>

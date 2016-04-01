@@ -1284,6 +1284,26 @@ namespace Akka.Streams.Dsl.Internal
             return flow.Via(InterleaveGraph<T1, T2, TMat>(graph, segmentSize));
         }
 
+        /// <summary>
+        /// Interleave is a deterministic merge of the given <see cref="Source{TOut,TMat}"/> with elements of this <see cref="IFlow{T,TMat}"/>.
+        /// It first emits `segmentSize` number of elements from this flow to downstream, then - same amount for `that` source,
+        /// then repeat process.
+        ///
+        /// After one of upstreams is complete than all the rest elements will be emitted from the second one
+        ///
+        /// If it gets error from one of upstreams - stream completes with failure.
+        ///
+        /// @see<see cref="Interleave{TIn,TOut}"/>.
+        ///
+        ///It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
+        /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// </summary>
+        public static IFlow<T2, TMat3> InterleaveMaterialized<T1, T2, TMat, TMat2, TMat3>(this IFlow<T1, TMat> flow,
+            IGraph<SourceShape<T2>, TMat2> graph, int segmentSize, Func<TMat, TMat2, TMat3> combine) where T1 : T2
+        {
+            return flow.ViaMaterialized(InterleaveGraph<T1, T2, TMat2>(graph, segmentSize), combine);
+        }
+
         private static IGraph<FlowShape<T1, T2>, TMat> InterleaveGraph<T1, T2, TMat>(
             IGraph<SourceShape<T2>, TMat> graph, int segmentSize) where T1 : T2
         {
