@@ -1410,92 +1410,107 @@ namespace Akka.Streams.Implementation.Fusing
             // - buf is nonEmpty
             //       AND
             // - timer fired OR group is full
-            private bool _groupClosed = false;
-            private bool _finished = false;
-            private int _elements = 0;
+            private bool _groupClosed;
+            private bool _finished;
+            private int _elements;
 
             public GroupedTimerGraphStageLogic(Shape shape, GroupedWithin<T> stage) : base(shape)
             {
                 _stage = stage;
-                _buffer = new List<T>(_stage.Count);
+                _buffer = new List<T>(_stage._count);
 
-                SetHandler(_stage.In, onPush: () => { if (!_groupClosed) NextElement(Grab(_stage.In)); // otherwise keep the element for next round
+                SetHandler(_stage._in, onPush: () => 
+                {
+                    if (!_groupClosed)
+                        NextElement(Grab(_stage._in)); // otherwise keep the element for next round
                 }, onUpstreamFinish: () =>
                 {
                     _finished = true;
-                    if (!_groupClosed && _elements > 0) CloseGroup();
-                    else CompleteStage();
+                    if (!_groupClosed && _elements > 0)
+                        CloseGroup();
+                    else
+                        CompleteStage();
                 }, onUpstreamFailure: FailStage);
+
+                SetHandler(_stage._out, onPull: () =>
+                {
+                    if(_groupClosed)
+                        EmitGroup();
+                }, onDownstreamFinish: CompleteStage);
             }
 
             public override void PreStart()
             {
-                ScheduleRepeatedly(GroupedWithinTimer, _stage.Timeout);
-                Pull(_stage.In);
+                ScheduleRepeatedly(GroupedWithinTimer, _stage._timeout);
+                Pull(_stage._in);
             }
 
             private void NextElement(T element)
             {
                 _buffer.Add(element);
                 _elements++;
-                if (_elements == _stage.Count)
+                if (_elements == _stage._count)
                 {
-                    ScheduleRepeatedly(GroupedWithinTimer, _stage.Timeout);
+                    ScheduleRepeatedly(GroupedWithinTimer, _stage._timeout);
                     CloseGroup();
                 }
-                else Pull(_stage.In);
+                else
+                    Pull(_stage._in);
             }
 
             private void CloseGroup()
             {
                 _groupClosed = true;
-                if (IsAvailable(_stage.Out)) EmitGroup();
+                if (IsAvailable(_stage._out))
+                    EmitGroup();
             }
 
             private void EmitGroup()
             {
-                Push(_stage.Out, _buffer);
+                Push(_stage._out, _buffer);
                 _buffer = new List<T>();
-                if (!_finished) StartNewGroup();
-                else CompleteStage();
+                if (!_finished)
+                    StartNewGroup();
+                else
+                    CompleteStage();
             }
 
             private void StartNewGroup()
             {
                 _elements = 0;
                 _groupClosed = false;
-                if (IsAvailable(_stage.In)) NextElement(Grab(_stage.In));
-                else if (!HasBeenPulled(_stage.In)) Pull(_stage.In);
+                if (IsAvailable(_stage._in))
+                    NextElement(Grab(_stage._in));
+                else if (!HasBeenPulled(_stage._in))
+                    Pull(_stage._in);
             }
 
             protected internal override void OnTimer(object timerKey)
             {
-                if (_elements > 0) CloseGroup();
+                if (_elements > 0)
+                    CloseGroup();
             }
         }
 
         #endregion
 
-        public readonly Inlet<T> In = new Inlet<T>("in");
-        public readonly Outlet<IEnumerable<T>> Out = new Outlet<IEnumerable<T>>("out");
-        public readonly int Count;
-        public readonly TimeSpan Timeout;
+        private readonly Inlet<T> _in = new Inlet<T>("in");
+        private readonly Outlet<IEnumerable<T>> _out = new Outlet<IEnumerable<T>>("out");
+        private readonly int _count;
+        private readonly TimeSpan _timeout;
 
         public GroupedWithin(int count, TimeSpan timeout)
         {
-            Count = count;
-            Timeout = timeout;
-            Shape = new FlowShape<T, IEnumerable<T>>(In, Out);
-            InitialAttributes = Attributes.CreateName("GroupedWithin");
+            _count = count;
+            _timeout = timeout;
+            Shape = new FlowShape<T, IEnumerable<T>>(_in, _out);
         }
 
-        protected override Attributes InitialAttributes { get; }
+        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("GroupedWithin");
+
         public override FlowShape<T, IEnumerable<T>> Shape { get; }
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
-        {
-            return new GroupedTimerGraphStageLogic(Shape, this);
-        }
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new GroupedTimerGraphStageLogic(Shape, this);
     }
 
     internal sealed class Delay<T> : SimpleLinearGraphStage<T>

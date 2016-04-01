@@ -80,6 +80,7 @@
     <Compile Include="Dsl\FlowForeachSpec.cs" />
     <Compile Include="Dsl\FlowFromFutureSpec.cs" />
     <Compile Include="Dsl\FlowGroupedSpec.cs" />
+    <Compile Include="Dsl\FlowGroupedWithinSpec.cs" />
     <Compile Include="Dsl\FlowInitialDelaySpec.cs" />
     <Compile Include="Dsl\FlowSpec.cs" />
     <Compile Include="Dsl\QueueSourceSpec.cs" />

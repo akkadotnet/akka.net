@@ -481,8 +481,7 @@ namespace Akka.Streams.Dsl.Internal
             if (n <= 0) throw new ArgumentException("n must be > 0", nameof(n));
             if (timeout == TimeSpan.Zero) throw new ArgumentException("Timeout must be non-zero", nameof(timeout));
 
-            return
-                flow.Via(new Fusing.GroupedWithin<T>(n, timeout).WithAttributes(Attributes.CreateName("groupedWithin")));
+            return flow.Via(new Fusing.GroupedWithin<T>(n, timeout));
         }
 
         /// <summary>
