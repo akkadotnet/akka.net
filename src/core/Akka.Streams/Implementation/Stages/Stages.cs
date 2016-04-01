@@ -180,6 +180,22 @@ namespace Akka.Streams.Implementation.Stages
         }
     }
 
+
+    internal sealed class Collect<TIn, TOut> : SymbolicStage<TIn, TOut>
+    {
+        private readonly Func<TIn, TOut> _func;
+
+        public Collect(Func<TIn, TOut> func, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Collect)
+        {
+            _func = func;
+        }
+
+        public override IStage<TIn, TOut> Create(Attributes effectiveAttributes)
+        {
+            return new Fusing.Collect<TIn, TOut>(_func, Supervision(effectiveAttributes));
+        }
+    }
+
     internal sealed class Recover<T> : SymbolicStage<T, T> where T : class
     {
         private readonly Func<Exception, T> _func;
