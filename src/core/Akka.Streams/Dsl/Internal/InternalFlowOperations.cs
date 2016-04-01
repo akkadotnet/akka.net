@@ -254,9 +254,8 @@ namespace Akka.Streams.Dsl.Internal
         /// '''Cancels when''' downstream cancels
         /// </summary>
         public static IFlow<TOut, TMat> Collect<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> collector)
-            where TOut : class
         {
-            return flow.AndThen(new Collect<TIn, TOut>(collector));
+            return flow.Via(new Fusing.Collect<TIn, TOut>(collector));
         }
 
         /// <summary>

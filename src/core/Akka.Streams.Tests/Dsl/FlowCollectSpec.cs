@@ -42,22 +42,22 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Collect_must_restart_when_Collect_throws()
         {
-            Func<int, string> throwOnTwo = x =>
+            Func<int, int> throwOnTwo = x =>
             {
                 if (x == 2)
                     throw new TestException("");
-                return x.ToString();
+                return x;
             };
 
             var probe =
                 Source.From(Enumerable.Range(1, 3))
                     .Collect(throwOnTwo)
                     .WithAttributes(Attributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
-                    .RunWith(this.SinkProbe<string>(), Materializer);
+                    .RunWith(this.SinkProbe<int>(), Materializer);
             probe.Request(1);
-            probe.ExpectNext("1");
+            probe.ExpectNext(1);
             probe.Request(1);
-            probe.ExpectNext("3");
+            probe.ExpectNext(3);
             probe.Request(1);
             probe.ExpectComplete();
         }

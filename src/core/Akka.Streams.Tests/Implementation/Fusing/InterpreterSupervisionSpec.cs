@@ -309,27 +309,6 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         }
 
         [Fact]
-        public void Interpreter_error_handling_should_restart_when_Collect_throws()
-        {
-            WithOneBoundedSetup(new Collect<int, int>(x => { if (x == 0) throw TE(); return x; }, restartingDecider),
-                (lastEvents, upstream, downstream) =>
-                {
-                    downstream.RequestOne();
-                    lastEvents().Should().BeEquivalentTo(new RequestOne());
-                    upstream.OnNext(2);
-                    lastEvents().Should().BeEquivalentTo(new OnNext(2));
-
-                    downstream.RequestOne();
-                    lastEvents().Should().BeEquivalentTo(new RequestOne());
-                    upstream.OnNext(0); // boom
-                    lastEvents().Should().BeEquivalentTo(new RequestOne());
-
-                    upstream.OnNext(3);
-                    lastEvents().Should().BeEquivalentTo(new OnNext(3));
-                });
-        }
-
-        [Fact]
         public void Interpreter_error_handling_should_resume_when_Scan_throws()
         {
             WithOneBoundedSetup(new Scan<int, int>(1, (acc, x) => { if (x == 10) throw TE(); return acc + x; }, resumingDecider),
