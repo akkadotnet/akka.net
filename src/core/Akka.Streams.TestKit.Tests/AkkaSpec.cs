@@ -13,6 +13,7 @@ namespace Akka.Streams.TestKit.Tests
 {
     public abstract class AkkaSpec : Akka.TestKit.Xunit2.TestKit, IWatchedByCoroner
     {
+        private static readonly bool IsDebug = false;
         public static readonly Config TestConfig = ConfigurationFactory.ParseString(@"
           akka {
             loglevel = ""WARNING""
@@ -34,10 +35,8 @@ namespace Akka.Streams.TestKit.Tests
 
         protected AkkaSpec(ActorSystem system, ITestOutputHelper output = null) : base(system, output)
         {
-#if DEBUG
-            if (output != null)
+            if (IsDebug && output != null)
                 Console.SetOut(new TestOutputHelperWriter(output));
-#endif
         }
 
         protected AkkaSpec(Config config, ITestOutputHelper output = null) : this(ActorSystem.Create("test", ConfigurationFactory.Load().WithFallback(config).WithFallback(TestConfig)), output)

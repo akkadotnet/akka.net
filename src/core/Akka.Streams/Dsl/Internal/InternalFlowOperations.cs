@@ -255,7 +255,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<TOut, TMat> Collect<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> collector)
         {
-            return flow.Via(new Fusing.Collect<TIn, TOut>(collector));
+            return flow.AndThen<TOut, TIn, TMat>(new Collect<TIn, TOut>(collector));
         }
 
         /// <summary>

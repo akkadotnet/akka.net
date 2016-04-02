@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Event;
@@ -106,99 +107,27 @@ namespace Akka.Streams.Implementation.Fusing
         }
     }
 
-    internal abstract class SupervisedGraphStageLogic : GraphStageLogic
+    internal sealed class Collect<TIn, TOut> : PushStage<TIn, TOut>
     {
-        private readonly Lazy<Decider> _devider;
-
-        protected SupervisedGraphStageLogic(Attributes inheritedAttributes, Shape shape) : base(shape)
-        {
-            _devider = new Lazy<Decider>(() => inheritedAttributes.GetAttribute(new ActorAttributes.SupervisionStrategy(Deciders.StoppingDecider)).Decider);
-        }
-
-        protected Holder<T> WithSupervision<T>(Func<T> f)
-        {
-            try
-            {
-                return new Holder<T>(f());
-            }
-            catch (Exception ex)
-            {
-                var directive = _devider.Value(ex);
-                switch (directive)
-                {
-                    case Directive.Stop:
-                        OnStop(ex);
-                        break;
-                    case Directive.Resume:
-                        OnResume(ex);
-                        break;
-                    case Directive.Restart:
-                        OnRestart(ex);
-                        break;
-                }
-                return new Holder<T>();
-            }
-        }
-
-        protected virtual void OnStop(Exception ex) => FailStage(ex);
-
-        protected virtual void OnResume(Exception ex)
-        {
-
-        }
-
-        protected virtual void OnRestart(Exception ex) => OnResume(ex);
-    }
-
-    internal sealed class Collect<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
-    {
-        #region internal classes 
-
-        private sealed class CollectLogic : SupervisedGraphStageLogic
-        {
-            private readonly Collect<TIn, TOut> _collect;
-
-            public CollectLogic(Collect<TIn, TOut> collect, Attributes inheritedAttributes)
-                : base(inheritedAttributes, collect.Shape)
-            {
-                _collect = collect;
-                SetHandler(collect._inlet, onPush: () =>
-                {
-                    var result = WithSupervision(() => collect._func(Grab(collect._inlet)));
-                    if (result.HasValue)
-                        Push(collect._outlet, result.Value);
-                });
-
-                SetHandler(collect._outlet, onPull: () => Pull(collect._inlet));
-            }
-
-            protected override void OnResume(Exception ex)
-            {
-                if(!HasBeenPulled(_collect._inlet))
-                    Pull(_collect._inlet);
-            }
-        }
-
-        #endregion
-
-        private readonly Inlet<TIn> _inlet = new Inlet<TIn>("Collect.in");
-        private readonly Outlet<TOut> _outlet = new Outlet<TOut>("Collect.out");
         private readonly Func<TIn, TOut> _func;
+        private readonly Decider _decider;
 
-        public Collect(Func<TIn, TOut> func)
+        public Collect(Func<TIn, TOut> func, Decider decider)
         {
             _func = func;
-
-            Shape = new FlowShape<TIn, TOut>(_inlet, _outlet);
+            _decider = decider;
         }
 
-        protected override Attributes InitialAttributes { get; } = DefaultAttributes.Collect;
+        public override ISyncDirective OnPush(TIn element, IContext<TOut> context)
+        {
+            var result = _func(element);
+            return result.IsDefaultForType() ? (ISyncDirective) context.Pull() : context.Push(result);
+        }
 
-        public override FlowShape<TIn, TOut> Shape { get; }
-
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)=> new CollectLogic(this, inheritedAttributes);
-
-        public override string ToString() => "Collect";
+        public override Directive Decide(Exception cause)
+        {
+            return _decider(cause);
+        }
     }
 
     internal sealed class Recover<T> : PushPullStage<T, T> where T : class

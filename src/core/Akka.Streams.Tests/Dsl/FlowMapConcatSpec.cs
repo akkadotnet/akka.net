@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Streams;
 using System.Threading;
-using System.Threading.Tasks;
 using Akka.Streams.Dsl;
-using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -30,12 +28,12 @@ namespace Akka.Streams.Tests.Dsl
         public void MapConcat_should_map_and_concat()
         {
             var script = Script.Create(
-                Tuple.Create(new[] { 0 } as IEnumerable<int>, Enumerable.Empty<int>()),
-                Tuple.Create(new[] { 1 } as IEnumerable<int>, new[] { 1 } as IEnumerable<int>),
-                Tuple.Create(new[] { 2 } as IEnumerable<int>, new[] { 2, 2 } as IEnumerable<int>),
-                Tuple.Create(new[] { 3 } as IEnumerable<int>, new[] { 3, 3, 3 } as IEnumerable<int>),
-                Tuple.Create(new[] { 2 } as IEnumerable<int>, new[] { 2, 2 } as IEnumerable<int>),
-                Tuple.Create(new[] { 1 } as IEnumerable<int>, new[] { 1 } as IEnumerable<int>));
+                Tuple.Create<ICollection<int>, ICollection<int>>(new[] { 0 }, new int[0]),
+                Tuple.Create<ICollection<int>, ICollection<int>>(new[] { 1 }, new[] { 1 }),
+                Tuple.Create<ICollection<int>, ICollection<int>>(new[] { 2 }, new[] { 2, 2 }),
+                Tuple.Create<ICollection<int>, ICollection<int>>(new[] { 3 }, new[] { 3, 3, 3 }),
+                Tuple.Create<ICollection<int>, ICollection<int>>(new[] { 2 }, new[] { 2, 2 }),
+                Tuple.Create<ICollection<int>, ICollection<int>>(new[] { 1 }, new[] { 1 }));
 
             var random = ThreadLocalRandom.Current.Next(1, 10);
             for (int i = 0; i < random; i++)

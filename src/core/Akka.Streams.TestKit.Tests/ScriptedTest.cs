@@ -3,10 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Streams;
 using System.Runtime.Serialization;
-using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
 using Akka.TestKit;
 using Akka.Util;
@@ -15,22 +13,22 @@ using Xunit.Abstractions;
 namespace Akka.Streams.TestKit.Tests
 {
     [Serializable]
-    public class ScriptedException : Exception
+    public class ScriptException : Exception
     {
-        public ScriptedException() { }
-        public ScriptedException(string message) : base(message) { }
-        public ScriptedException(string message, Exception inner) : base(message, inner) { }
-        protected ScriptedException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+        public ScriptException() { }
+        public ScriptException(string message) : base(message) { }
+        public ScriptException(string message, Exception inner) : base(message, inner) { }
+        protected ScriptException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
     public abstract class ScriptedTest : AkkaSpec
     {
         protected static class Script
         {
-            public static ScriptedTest.Script<T1, T2> Create<T1, T2>(params Tuple<IEnumerable<T1>, IEnumerable<T2>>[] phases)
+            public static Script<TIn, TOut> Create<TIn, TOut>(params Tuple<ICollection<TIn>, ICollection<TOut>>[] phases)
             {
-                var providedInputs = new List<T1>();
-                var expectedOutputs = new List<T2>();
+                var providedInputs = new List<TIn>();
+                var expectedOutputs = new List<TOut>();
                 var jumps = new List<int>();
 
                 foreach (var phase in phases)
@@ -41,14 +39,14 @@ namespace Akka.Streams.TestKit.Tests
                     providedInputs.AddRange(ins);
                     expectedOutputs.AddRange(outs);
 
-                    var jump = new int[ins.Count()];
+                    var jump = new int[ins.Count];
                     jump.Initialize();
-                    jump[jump.Length - 1] = outs.Count();
+                    jump[jump.Length - 1] = outs.Count;
 
                     jumps.AddRange(jump);
                 }
 
-                return new Script<T1, T2>(providedInputs.ToArray(), expectedOutputs.ToArray(), jumps.ToArray(), 0, 0, 0, false);
+                return new Script<TIn, TOut>(providedInputs.ToArray(), expectedOutputs.ToArray(), jumps.ToArray(), 0, 0, 0, false);
             }
         }
 
@@ -84,22 +82,22 @@ namespace Akka.Streams.TestKit.Tests
             public bool NoInputsPending => PendingInputs == 0;
             public bool SomeInputsPending => !NoInputsPending;
 
-            public TIn ProvideInput(out Script<TIn, TOut> script)
+            public Tuple<TIn, Script<TIn, TOut>> ProvideInput()
             {
                 if (NoInputsPending)
-                    throw new ScriptedException("Script cannot provide more inputs");
+                    throw new ScriptException("Script cannot provide more inputs");
 
-                script = new Script<TIn, TOut>(ProvidedInputs, ExpectedOutputs, Jumps, InputCursor + 1, OutputCursor, OutputEndCursor + Jumps[InputCursor], Completed);
-                return ProvidedInputs[InputCursor];
+                var script = new Script<TIn, TOut>(ProvidedInputs, ExpectedOutputs, Jumps, InputCursor + 1, OutputCursor, OutputEndCursor + Jumps[InputCursor], Completed);
+                return Tuple.Create(ProvidedInputs[InputCursor], script);
             }
 
             public Script<TIn, TOut> ConsumeOutput(TOut output)
             {
                 if (NoOutputsPending)
-                    throw new ScriptedException($"Tried to produce element {output} but no elements should be produced right now");
+                    throw new ScriptException($"Tried to produce element {output} but no elements should be produced right now");
 
                 if (!Equals(output, ExpectedOutputs[OutputCursor]))
-                    throw new ArgumentException("Unexpected output", "output");
+                    throw new ArgumentException("Unexpected output", nameof(output));
 
                 return new Script<TIn, TOut>(ProvidedInputs, ExpectedOutputs, Jumps, InputCursor, OutputCursor + 1, OutputEndCursor, Completed);
             }
@@ -116,11 +114,16 @@ namespace Akka.Streams.TestKit.Tests
             {
                 throw e;
             }
+
+            public string Debug()
+            {
+                return
+                    $"Script(pending=({string.Join(",", PendingInputs)} in, {string.Join(",", PendingOutputs)} out), remainingIns={string.Join("/", ProvidedInputs.Skip(InputCursor))}, remainingOuts={string.Join("/", ExpectedOutputs.Skip(OutputCursor))})";
+            }
         }
 
         protected class ScriptRunner<TIn, TOut, TMat> : ChainSetup<TIn, TOut, TMat>
         {
-            private readonly int _maximumOverrun;
             private readonly int _maximumRequests;
             private readonly int _maximumBuffer;
 
@@ -128,9 +131,9 @@ namespace Akka.Streams.TestKit.Tests
 
             private Script<TIn, TOut> _currentScript;
             private int _remainingDemand;
-            private long _pendingRequests = 0L;
-            private long _outstandingDemand = 0L;
-            private bool _completed = false;
+            private long _pendingRequests;
+            private long _outstandingDemand;
+            private bool _completed;
 
             public ScriptRunner(
                 Func<Flow<TIn, TIn, Unit>, Flow<TIn, TOut, TMat>> op,
@@ -139,10 +142,9 @@ namespace Akka.Streams.TestKit.Tests
                 int maximumOverrun,
                 int maximumRequests,
                 int maximumBuffer,
-                TestKitBase system) : base(op, settings, ToPublisher<TIn, TOut>, system)
+                TestKitBase system) : base(op, settings, ToPublisher, system)
             {
                 _currentScript = script;
-                _maximumOverrun = maximumOverrun;
                 _maximumRequests = maximumRequests;
                 _maximumBuffer = maximumBuffer;
 
@@ -164,7 +166,7 @@ namespace Akka.Streams.TestKit.Tests
                 else
                 {
                     var demand = ThreadLocalRandom.Current.Next(1, max);
-                    _remainingDemand -= max;
+                    _remainingDemand -= demand;
                     return demand;
                 }
             }
@@ -221,21 +223,26 @@ namespace Akka.Streams.TestKit.Tests
 
             public void Run()
             {
-                DebugLog($"Running {_currentScript}");
-                Request(GetNextDemand());
-                var idleRounds = 0;
-                while (true)
+                try
                 {
-                    if (idleRounds > 250) throw new Exception("Too many idle rounds");
-                    if (!_currentScript.Completed)
-                    {
-                        idleRounds = ShakeIt() ? 0 : idleRounds + 1;
-                        var tieBreak = ThreadLocalRandom.Current.Next() % 2 == 0;
 
+                    DebugLog($"Running {_currentScript}");
+                    Request(GetNextDemand());
+                    var idleRounds = 0;
+                    while (true)
+                    {
+                        if (idleRounds > 250) throw new Exception("Too many idle rounds");
+                        if (_currentScript.Completed)
+                            break;
+
+                        idleRounds = ShakeIt() ? 0 : idleRounds + 1;
+
+                        var tieBreak = ThreadLocalRandom.Current.Next(0, 1) == 0;
                         if (MayProvideInput && (!MayRequestMore || tieBreak))
                         {
-                            Script<TIn, TOut> nextScript;
-                            var input = _currentScript.ProvideInput(out nextScript);
+                            var next = _currentScript.ProvideInput();
+                            var input = next.Item1;
+                            var nextScript = next.Item2;
                             DebugLog($"Test environment produces [{input}]");
                             _pendingRequests--;
                             _currentScript = nextScript;
@@ -249,13 +256,18 @@ namespace Akka.Streams.TestKit.Tests
                         {
                             if (_currentScript.NoInputsPending && !_completed)
                             {
-                                DebugLog("Test environment complete");
+                                DebugLog("Test environment completes");
                                 UpstreamSubscription.SendComplete();
                                 _completed = true;
                             }
                         }
                     }
-                    else break;
+                }
+                catch (Exception)
+                {
+                    Console.WriteLine(
+                        $"Steps leading to failure:\n{string.Join("\n", _debugLog)}\nCurrentScript: {_currentScript.Debug()}");
+                    throw;
                 }
             }
         }
@@ -283,7 +295,7 @@ namespace Akka.Streams.TestKit.Tests
             new ScriptRunner<TIn2, TOut2, TMat2>(op, settings, script, maximumOverrun, maximumRequest, maximumBuffer, this).Run();
         }
 
-        protected static IPublisher<TOut> ToPublisher<TIn, TOut>(Source<TOut, Unit> source, IMaterializer materializer)
+        protected static IPublisher<TOut> ToPublisher<TOut>(Source<TOut, Unit> source, IMaterializer materializer)
         {
             return source.RunWith(Sink.AsPublisher<TOut>(false), materializer);
         }

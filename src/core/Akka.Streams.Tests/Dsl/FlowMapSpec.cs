@@ -31,7 +31,7 @@ namespace Akka.Streams.Tests.Dsl
             var script = Script.Create(Enumerable.Range(1, ThreadLocalRandom.Current.Next(1, 10)).Select(_ =>
             {
                 var x = ThreadLocalRandom.Current.Next();
-                return Tuple.Create(new[] {x} as IEnumerable<int>, new[] {x.ToString()} as IEnumerable<string>);
+                return Tuple.Create<ICollection<int>, ICollection<string>>(new[] {x}, new[] {x.ToString()});
             }).ToArray());
 
             var n = ThreadLocalRandom.Current.Next(10);
@@ -50,12 +50,14 @@ namespace Akka.Streams.Tests.Dsl
                 .Map(x => x + 1)
                 .Map(x => x + 1)
                 .Map(x => x + 1)
-                .Map(x => x + 1)    
+                .Map(x => x + 1)
+                .Map(x => x + 1)
                 .RunWith(Sink.AsPublisher<int>(false), _materializer)
                 .Subscribe(probe);
 
             var subscription = probe.ExpectSubscription();
-            for (int i = 1; i <= 10000; i++)
+            // TODO increase to 10000 once performance is improved
+            for (int i = 1; i <= 1000; i++)
             {
                 subscription.Request(int.MaxValue);
             }
