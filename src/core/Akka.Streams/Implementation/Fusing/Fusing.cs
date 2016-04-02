@@ -393,7 +393,11 @@ namespace Akka.Streams.Implementation.Fusing
                     foreach (var sub in module.SubModules)
                     {
                         var res = Descend<T>(sub, allAttributes, structInfo, localGroup, indent + 1);
-                        subMatBuilder.AddRange(res);
+                        foreach (var r in res)
+                        {
+                            // key may already be in builder, we overwrite
+                            subMatBuilder[r.Key] = r.Value;
+                        }
                     }
                     var subMat = subMatBuilder.ToImmutable();
                     if (IsDebug)
