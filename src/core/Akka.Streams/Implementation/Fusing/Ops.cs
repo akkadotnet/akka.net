@@ -513,8 +513,10 @@ namespace Akka.Streams.Implementation.Fusing
         public override ISyncDirective OnPush(T element, IContext<T> context)
         {
             _left -= _costFunc(element);
-            if (_left >= 0) return context.Push(element);
-            else return context.Fail(new StreamLimitReachedException(_max));
+            if (_left >= 0)
+                return context.Push(element);
+
+            return context.Fail(new StreamLimitReachedException(_max));
         }
     }
 

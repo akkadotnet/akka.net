@@ -85,6 +85,7 @@
     <Compile Include="Dsl\FlowInitialDelaySpec.cs" />
     <Compile Include="Dsl\FlowInterleaveSpec.cs" />
     <Compile Include="Dsl\FlowIntersperseSpec.cs" />
+    <Compile Include="Dsl\FlowLimitSpec.cs" />
     <Compile Include="Dsl\FlowSpec.cs" />
     <Compile Include="Dsl\QueueSourceSpec.cs" />
     <Compile Include="Actor\ActorPublisherSpec.cs" />
