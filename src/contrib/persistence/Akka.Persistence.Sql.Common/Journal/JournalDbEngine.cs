@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Configuration;
@@ -15,6 +16,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
+using Akka.Persistence.Journal;
 using Akka.Persistence.Sql.Common.Queries;
 
 namespace Akka.Persistence.Sql.Common.Journal
@@ -48,6 +50,8 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// </summary>
     public abstract class JournalDbEngine : IDisposable
     {
+        public const string TagPersistenceIdPrefix = "$$$";
+
         /// <summary>
         /// Settings applied to journal mapped from HOCON config file.
         /// </summary>
@@ -57,6 +61,12 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// Timestamp provider used for generation of timestamps for incoming persistent messages.
         /// </summary>
         protected readonly ITimestampProvider TimestampProvider;
+
+        private readonly IDictionary<string, ISet<IActorRef>> _persistenceIdSubscribers = new Dictionary<string, ISet<IActorRef>>();
+        private readonly IDictionary<string, ISet<IActorRef>> _tagSubscribers = new Dictionary<string, ISet<IActorRef>>();
+        private readonly ISet<IActorRef> _allPersistenceIdSubscribers = new HashSet<IActorRef>();
+        private readonly IDictionary<string, long> _tagSequenceNr = new Dictionary<string, long>();
+        private readonly ConcurrentDictionary<string, int> _idMap = new ConcurrentDictionary<string, int>();
 
         private readonly ActorSystem _system;
         private readonly CancellationTokenSource _pendingRequestsCancellation;
@@ -71,6 +81,12 @@ namespace Akka.Persistence.Sql.Common.Journal
 
             _pendingRequestsCancellation = new CancellationTokenSource();
         }
+
+        public IEnumerable<string> AllPersistenceIds => _idMap.Keys;
+
+        protected bool HasPersistenceIdSubscribers => _persistenceIdSubscribers.Count != 0;
+        protected bool HasTagSubscribers => _tagSubscribers.Count != 0;
+        protected bool HasAllPersistenceIdSubscribers => _allPersistenceIdSubscribers.Count != 0;
 
         /// <summary>
         /// Returns a HOCON config path to associated journal.
@@ -126,6 +142,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// Performs
         /// </summary>
+        [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
         public async Task ReadEvents(object queryId, IEnumerable<IHint> hints, IActorRef sender, Action<IPersistentRepresentation> replayCallback)
         {
             using (var connection = CreateDbConnection())
@@ -214,6 +231,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         public async Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
         {
+            var persistenceIds = new HashSet<string>();
+            var allTags = new HashSet<string>();
+
             var writeTasks = messages.Select(async message =>
             {
                 using (var connection = CreateDbConnection())
@@ -221,6 +241,24 @@ namespace Akka.Persistence.Sql.Common.Journal
                     await connection.OpenAsync();
 
                     var persistentMessages = ((IImmutableList<IPersistentRepresentation>) message.Payload).ToArray();
+                    for (int i = 0; i < persistentMessages.Length; i++)
+                    {
+                        var p = persistentMessages[i];
+                        if (p.Payload is Tagged)
+                        {
+                            var tagged = (Tagged) p.Payload;
+                            persistentMessages[i] = p.WithPayload(tagged.Payload);
+                            if (tagged.Tags.Count != 0 && HasTagSubscribers)
+                            {
+                                allTags.UnionWith(tagged.Tags);
+                            }
+                        }
+
+                        if (HasPersistenceIdSubscribers)
+                        {
+                            persistenceIds.Add(p.PersistenceId);
+                        }
+                    }
                     var sqlCommand = QueryBuilder.InsertBatchMessages(persistentMessages);
                     CompleteCommand(sqlCommand, connection);
 
@@ -229,10 +267,28 @@ namespace Akka.Persistence.Sql.Common.Journal
                 }
             });
 
-            return await Task<IImmutableList<Exception>>
+            var result = await Task<IImmutableList<Exception>>
                 .Factory
                 .ContinueWhenAll(writeTasks.ToArray(),
                     tasks => tasks.Select(t => t.IsFaulted ? TryUnwrapException(t.Exception) : null).ToImmutableList());
+
+            if (HasPersistenceIdSubscribers)
+            {
+                foreach (var persistenceId in persistenceIds)
+                {
+                    NotifyPersistenceIdChange(persistenceId);
+                }
+            }
+
+            if (HasTagSubscribers && allTags.Count != 0)
+            {
+                foreach (var tag in allTags)
+                {
+                    NotifyTagChange(tag);
+                }
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -331,6 +387,89 @@ namespace Akka.Persistence.Sql.Common.Journal
                     throw;
                 }
             }
+        }
+
+        private void NotifyPersistenceIdChange(string persistenceId)
+        {
+            ISet<IActorRef> subscribers;
+            if (_persistenceIdSubscribers.TryGetValue(persistenceId, out subscribers))
+            {
+                var changed = new EventAppended(persistenceId);
+                foreach (var subscriber in subscribers)
+                    subscriber.Tell(changed);
+            }
+        }
+
+        private void NotifyTagChange(string tag)
+        {
+            ISet<IActorRef> subscribers;
+            if (_tagSubscribers.TryGetValue(tag, out subscribers))
+            {
+                var changed = new TaggedEventAppended(tag);
+                foreach (var subscriber in subscribers)
+                    subscriber.Tell(changed);
+            }
+        }
+
+        public void RemoveSubscriber(IActorRef subscriber)
+        {
+            var pidSubscriptions = _persistenceIdSubscribers.Values.Where(x => x.Contains(subscriber));
+            foreach (var subscription in pidSubscriptions)
+                subscription.Remove(subscriber);
+
+            var tagSubscriptions = _tagSubscribers.Values.Where(x => x.Contains(subscriber));
+            foreach (var subscription in tagSubscriptions)
+                subscription.Remove(subscriber);
+
+            _allPersistenceIdSubscribers.Remove(subscriber);
+        }
+
+        public void AddTagSubscriber(IActorRef subscriber, string tag)
+        {
+            ISet<IActorRef> subscriptions;
+            if (!_tagSubscribers.TryGetValue(tag, out subscriptions))
+            {
+                subscriptions = new HashSet<IActorRef>();
+                _tagSubscribers.Add(tag, subscriptions);
+            }
+
+            subscriptions.Add(subscriber);
+        }
+
+        public void AddAllPersistenceIdSubscriber(IActorRef subscriber)
+        {
+            _allPersistenceIdSubscribers.Add(subscriber);
+            subscriber.Tell(new CurrentPersistenceIds(AllPersistenceIds));
+        }
+
+        public void AddPersistenceIdSubscriber(IActorRef subscriber, string persistenceId)
+        {
+            ISet<IActorRef> subscriptions;
+            if (!_persistenceIdSubscribers.TryGetValue(persistenceId, out subscriptions))
+            {
+                subscriptions = new HashSet<IActorRef>();
+                _persistenceIdSubscribers.Add(persistenceId, subscriptions);
+            }
+
+            subscriptions.Add(subscriber);
+        }
+
+        public string TagAsPersistenceId(string tag) => TagPersistenceIdPrefix + tag;
+
+        public Task ReplayTaggedMessagesAsync(string tag, long fromSequenceNr, long toSeqNr, long max, Action<ReplayedTaggedMessage> callback)
+        {
+            var tagNumericId = TagNumericId(tag);
+            throw new NotImplementedException();
+        }
+
+        private string TagNumericId(string tag)
+        {
+            return NumericId(TagAsPersistenceId(tag));
+        }
+
+        private string NumericId(string tag)
+        {
+            throw new NotImplementedException();
         }
     }
 }

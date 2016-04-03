@@ -64,4 +64,13 @@ namespace Akka.Persistence.Query
             return new PersistenceQuery(system);
         }
     }
+
+    public static class PersistenceQueryExtensions
+    {
+        public static TJournal ReadJournalFor<TJournal>(this ActorSystem system, string readJournalPluginId)
+            where TJournal : IReadJournal
+        {
+            return PersistenceQuery.Get(system).ReadJournalFor<TJournal>(readJournalPluginId);
+        }
+    }
 }

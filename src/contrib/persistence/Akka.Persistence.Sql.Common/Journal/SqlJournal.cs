@@ -38,10 +38,56 @@ namespace Akka.Persistence.Sql.Common.Journal
             if (message is Query)
             {
                 HandleEventQuery(message as Query);
-                return true;
-            }
 
-            return false;
+            }
+            else if (message is ReplayTaggedMessages)
+            {
+                var replay = (ReplayTaggedMessages)message;
+                var readHighestSequenceNrFrom = Math.Max(0, replay.FromSequenceNr - 1);
+                ReadHighestSequenceNrAsync(DbEngine.TagAsPersistenceId(replay.Tag), readHighestSequenceNrFrom)
+                    .ContinueWith(async highestSequenceNrTask =>
+                    {
+                        var highestSequenceNr = highestSequenceNrTask.Result;
+                        var toSeqNr = Math.Min(replay.ToSequenceNr, highestSequenceNr);
+                        if (highestSequenceNr == 0 || replay.FromSequenceNr > toSeqNr)
+                        {
+                            return highestSequenceNr;
+                        }
+                        else
+                        {
+                            await DbEngine.ReplayTaggedMessagesAsync(replay.Tag, replay.FromSequenceNr, toSeqNr, replay.Max, tagged =>
+                            {
+                                foreach (var adapted in AdaptFromJournal(tagged.Persistent))
+                                    replay.ReplyTo.Tell(new ReplayedTaggedMessage(adapted, tagged.Tag, tagged.Offset), ActorRefs.NoSender);
+                            });
+
+                            return highestSequenceNr;
+                        }
+                    })
+                    .Unwrap()
+                    .PipeTo(replay.ReplyTo, success: h => new RecoverySuccess(h), failure: e => new ReplayMessagesFailure(e));
+            }
+            else if (message is SubscribePersistenceId)
+            {
+                DbEngine.AddPersistenceIdSubscriber(Sender, ((SubscribePersistenceId)message).PersistenceId);
+                Context.Watch(Sender);
+            }
+            else if (message is SubscribeAllPersistenceIds)
+            {
+                DbEngine.AddAllPersistenceIdSubscriber(Sender);
+                Context.Watch(Sender);
+            }
+            else if (message is SubscribeTag)
+            {
+                DbEngine.AddTagSubscriber(Sender, ((SubscribeTag)message).Tag);
+                Context.Watch(Sender);
+            }
+            else if (message is Terminated)
+            {
+                DbEngine.RemoveSubscriber(((Terminated)message).ActorRef);
+            }
+            else return false;
+            return true;
         }
 
         private void HandleEventQuery(Query query)
@@ -55,8 +101,8 @@ namespace Akka.Persistence.Sql.Common.Journal
                     sender.Tell(new QueryResponse(queryId, adapted));
                 }
             })
-            .ContinueWith(task => 
-                task.IsFaulted || task.IsCanceled ? (IQueryReply)new QueryFailure(queryId, task.Exception) : new QuerySuccess(queryId), 
+            .ContinueWith(task =>
+                task.IsFaulted || task.IsCanceled ? (IQueryReply)new QueryFailure(queryId, task.Exception) : new QuerySuccess(queryId),
                 TaskContinuationOptions.ExecuteSynchronously)
             .PipeTo(Context.Sender);
         }

@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Reactive.Streams;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
+using Akka.Pattern;
+using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
 using Akka.Util;

@@ -48,6 +48,7 @@
     <Compile Include="InternalExtensions.cs" />
     <Compile Include="Journal\ITimestampProvider.cs" />
     <Compile Include="Journal\JournalDbEngine.cs" />
+    <Compile Include="Journal\QueryApi.cs" />
     <Compile Include="Journal\QueryBuilder.cs" />
     <Compile Include="Journal\QueryMapper.cs" />
     <Compile Include="Journal\SqlJournal.cs" />
