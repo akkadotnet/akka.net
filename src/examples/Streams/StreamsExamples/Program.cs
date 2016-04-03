@@ -1,7 +1,14 @@
 ﻿using System;
+using System.IO;
+using System.Net;
 using Akka.Actor;
 using Akka.Streams;
 using Akka.Streams.Dsl;
+using CsQuery;
+using System.Linq;
+using System.Threading.Tasks;
+using Akka.Configuration;
+using Akka.IO;
 
 namespace StreamsExamples
 {
@@ -9,20 +16,23 @@ namespace StreamsExamples
     {
         static void Main(string[] args)
         {
+        }
+
+        static async Task Run(Stream instream)
+        {
+            var oneSecond = TimeSpan.FromSeconds(1);
+
             using (var system = ActorSystem.Create("system"))
             using (var materializer = system.Materializer())
             {
-                var flow = Source
-                    .From(new[] {1, 2, 3})
-                    .Select(x => x + 1);
+                var source = Source.Tick(oneSecond, oneSecond, "hello");
+                var flow = Flow.Create<string>()
+                    .Select(s => s.ToUpper())
+                    .Intersperse(", ");
+                var sink = Sink.ForEach<string>(Console.WriteLine);
 
-                var result = flow
-                    .RunForeach(x =>
-                    {
-                        Console.WriteLine(x);
-                    }, materializer);
-
-                result.Wait();
+                var runnableGraph = source.Via(flow).To(sink);
+                runnableGraph.Run(materializer);
             }
         }
     }
