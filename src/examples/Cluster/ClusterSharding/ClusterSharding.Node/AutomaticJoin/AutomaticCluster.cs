@@ -31,7 +31,7 @@ namespace ClusterSharding.Node.AutomaticJoin
             _persistence = SqlitePersistence.Get(system);
             _dbHelper = new DbHelper(() =>
             {
-                var conn = new SQLiteConnection(_persistence.JournalSettings.ConnectionString);
+                var conn = new SQLiteConnection(_persistence.DefaultJournalConfig.GetString("connection-string"));
                 conn.Open();
                 return conn;
             });

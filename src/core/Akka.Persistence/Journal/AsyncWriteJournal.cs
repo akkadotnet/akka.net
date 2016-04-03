@@ -282,7 +282,7 @@ namespace Akka.Persistence.Journal
                 }, _continuationOptions);
         }
 
-        private Exception TryUnwrapException(Exception e)
+        protected Exception TryUnwrapException(Exception e)
         {
             var aggregateException = e as AggregateException;
             if (aggregateException != null)

@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Reflection;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
@@ -33,12 +34,15 @@ namespace Akka.Persistence.Query
 
         public TJournal ReadJournalFor<TJournal>(string readJournalPluginId) where TJournal : IReadJournal
         {
-            var plugin = _readJournalPluginExtensionIds.GetOrAdd(readJournalPluginId, path => CreatePlugin(path).GetReadJournal());
-            return (TJournal) plugin;
+            var plugin = _readJournalPluginExtensionIds.GetOrAdd(readJournalPluginId, path => CreatePlugin(path, GetDefaultConfig<TJournal>()).GetReadJournal());
+            return (TJournal)plugin;
         }
 
-        private IReadJournalProvider CreatePlugin(string configPath)
+        private IReadJournalProvider CreatePlugin(string configPath, Config config)
         {
+            if (config != null)
+                _system.Settings.InjectTopLevelFallback(config);
+
             if (string.IsNullOrEmpty(configPath) || !_system.Settings.Config.HasPath(configPath))
                 throw new ArgumentException("HOCON config is missing persistence read journal plugin config path: " + configPath);
 
@@ -51,16 +55,22 @@ namespace Akka.Persistence.Query
 
         private IReadJournalProvider CreateType(Type pluginType, object[] parameters)
         {
-            var ctor = pluginType.GetConstructor(new Type[] {typeof (ExtendedActorSystem), typeof (Config)});
+            var ctor = pluginType.GetConstructor(new Type[] { typeof(ExtendedActorSystem), typeof(Config) });
             if (ctor != null) return (IReadJournalProvider)ctor.Invoke(parameters);
 
             ctor = pluginType.GetConstructor(new Type[] { typeof(ExtendedActorSystem) });
-            if (ctor != null) return (IReadJournalProvider)ctor.Invoke(new [] { parameters[0] });
+            if (ctor != null) return (IReadJournalProvider)ctor.Invoke(new[] { parameters[0] });
 
             ctor = pluginType.GetConstructor(new Type[0]);
             if (ctor != null) return (IReadJournalProvider)ctor.Invoke(new object[0]);
 
             throw new ArgumentException($"Unable to create read journal plugin instance type {pluginType}!");
+        }
+
+        public static Config GetDefaultConfig<TJournal>()
+        {
+            var defaultConfigMethod = typeof(TJournal).GetMethod("DefaultConfiguration", BindingFlags.Public | BindingFlags.Static);
+            return defaultConfigMethod?.Invoke(null, null) as Config;
         }
     }
 
