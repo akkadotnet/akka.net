@@ -306,7 +306,7 @@ namespace Akka.Streams.Dsl
         /// <seealso cref="Take{T,TMat}"/>
         /// <seealso cref="TakeWithin{T,TMat}"/>
         /// <seealso cref="TakeWhile{T,TMat}"/>
-        private static Source<T, TMat> LimitWeighted<T, TMat>(this Source<T, TMat> flow, long max, Func<T, long> costFunc)
+        public static Source<T, TMat> LimitWeighted<T, TMat>(this Source<T, TMat> flow, long max, Func<T, long> costFunc)
         {
             return (Source<T, TMat>)flow.AndThen(new Implementation.Stages.LimitWeighted<T>(max, costFunc));
         }
