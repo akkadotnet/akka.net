@@ -1108,9 +1108,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut, TMat> Log<TOut, TMat>(this Source<TOut, TMat> flow, string name, ILoggingAdapter log, Func<TOut, object> extract = null)
+        public static Source<TOut, TMat> Log<TOut, TMat>(this Source<TOut, TMat> flow, string name, Func<TOut, object> extract = null, ILoggingAdapter log = null)
         {
-            return (Source<TOut, TMat>)InternalFlowOperations.Log(flow, name, log, extract);
+            return (Source<TOut, TMat>)InternalFlowOperations.Log(flow, name, extract, log);
         }
 
         /// <summary>

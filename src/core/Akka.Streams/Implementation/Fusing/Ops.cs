@@ -1257,7 +1257,6 @@ namespace Akka.Streams.Implementation.Fusing
         public override void PreStart(ILifecycleContext context)
         {
             _logLevels = context.Attributes.GetAttribute(DefaultLogLevels);
-            base.PreStart(context);
             _log = _adapter;
             if (_log == null)
             {
@@ -1270,7 +1269,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     throw new Exception("Log stage can only provide LoggingAdapter when used with ActorMaterializer! Provide a LoggingAdapter explicitly or use the actor based flow materializer.", ex);
                 }
-
+                
                 _log = new BusLogging(materializer.System.EventStream, _name, GetType(), new DefaultLogMessageFormatter());
             }
         }
@@ -1315,7 +1314,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         private bool IsEnabled(LogLevel level)
         {
-            return (int) level != Attributes.LogLevels.Off;
+            return level != Attributes.LogLevels.Off;
         }
     }
 

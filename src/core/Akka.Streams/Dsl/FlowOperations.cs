@@ -1051,9 +1051,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Flow<TIn, TOut, TMat> Log<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, string name, ILoggingAdapter log, Func<TOut, object> extract = null)
+        public static Flow<TIn, TOut, TMat> Log<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, string name, Func<TOut, object> extract = null, ILoggingAdapter log = null)
         {
-            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.Log(flow, name, log, extract);
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.Log(flow, name, extract, log);
         }
 
         /// <summary>

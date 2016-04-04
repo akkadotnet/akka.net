@@ -1191,8 +1191,8 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<T, TMat> Log<T, TMat>(this IFlow<T, TMat> flow, string name, ILoggingAdapter log,
-            Func<T, object> extract = null)
+        public static IFlow<T, TMat> Log<T, TMat>(this IFlow<T, TMat> flow, string name, Func<T, object> extract = null,
+            ILoggingAdapter log = null)
         {
             return flow.AndThen(new Log<T>(name, extract ?? Identity<T>(), log));
         }
