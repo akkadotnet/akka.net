@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Akka.Event;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
+using Akka.Streams.Util;
 
 namespace Akka.Streams.Implementation.Stages
 {
@@ -196,16 +197,16 @@ namespace Akka.Streams.Implementation.Stages
         }
     }
 
-    internal sealed class Recover<T> : SymbolicStage<T, T> where T : class
+    internal sealed class Recover<T> : SymbolicStage<T, Option<T>>
     {
-        private readonly Func<Exception, T> _func;
+        private readonly Func<Exception, Option<T>> _func;
 
-        public Recover(Func<Exception, T> func, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Recover)
+        public Recover(Func<Exception, Option<T>> func, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Recover)
         {
             _func = func;
         }
 
-        public override IStage<T, T> Create(Attributes effectiveAttributes)
+        public override IStage<T, Option<T>> Create(Attributes effectiveAttributes)
         {
             return new Fusing.Recover<T>(_func);
         }

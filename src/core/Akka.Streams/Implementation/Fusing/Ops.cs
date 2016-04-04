@@ -130,35 +130,34 @@ namespace Akka.Streams.Implementation.Fusing
         }
     }
 
-    internal sealed class Recover<T> : PushPullStage<T, T> where T : class
+    internal sealed class Recover<T> : PushPullStage<T, Option<T>>
     {
-        private readonly Func<Exception, T> _recovery;
-        private T _recovered = null;
+        private readonly Func<Exception, Option<T>> _recovery;
+        private Option<T> _recovered;
 
-        public Recover(Func<Exception, T> recovery)
+        public Recover(Func<Exception, Option<T>> recovery)
         {
             _recovery = recovery;
         }
 
-        public override ISyncDirective OnPush(T element, IContext<T> context)
+        public override ISyncDirective OnPush(T element, IContext<Option<T>> context)
         {
-            return context.Push(element);
+            return context.Push(new Option<T>(element));
         }
 
-        public override ISyncDirective OnPull(IContext<T> context)
+        public override ISyncDirective OnPull(IContext<Option<T>> context)
         {
             return _recovered != null ? (ISyncDirective) context.PushAndFinish(_recovered) : context.Pull();
         }
 
-        public override ITerminationDirective OnUpstreamFailure(Exception cause, IContext<T> context)
+        public override ITerminationDirective OnUpstreamFailure(Exception cause, IContext<Option<T>> context)
         {
             var result = _recovery(cause);
-            if (result == null) return context.Fail(cause);
-            else
-            {
-                _recovered = result;
-                return context.AbsorbTermination();
-            }
+            if (result == null || !result.HasValue)
+                return context.Fail(cause);
+
+            _recovered = result;
+            return context.AbsorbTermination();
         }
     }
 
@@ -701,9 +700,9 @@ namespace Akka.Streams.Implementation.Fusing
             private readonly FlowShape<TIn, TOut> _shape;
             private readonly Batch<TIn, TOut> _stage;
             private readonly Decider _decider;
-            private readonly Holder<TOut> _aggregate = new Holder<TOut>();
+            private readonly Option<TOut> _aggregate = new Option<TOut>();
             private long _left;
-            private readonly Holder<TIn> _pending = new Holder<TIn>();
+            private readonly Option<TIn> _pending = new Option<TIn>();
 
             public BatchGraphStageLogic(FlowShape<TIn, TOut> shape, Attributes inheritedAttributes, Batch<TIn, TOut> stage) : base(shape)
             {

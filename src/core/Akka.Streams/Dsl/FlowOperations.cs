@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Akka.Event;
 using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Stage;
+using Akka.Streams.Util;
 
 namespace Akka.Streams.Dsl
 {
@@ -25,9 +26,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels 
         /// </summary>
-        public static Flow<TIn, TOut, TMat> Recover<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Func<Exception, TOut> partialFunc) where TOut : class
+        public static Flow<TIn, Option<TOut>, TMat> Recover<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Func<Exception, Option<TOut>> partialFunc)
         {
-            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.Recover(flow, partialFunc);
+            return (Flow<TIn, Option<TOut>, TMat>)InternalFlowOperations.Recover(flow, partialFunc);
         }
 
         /// <summary>

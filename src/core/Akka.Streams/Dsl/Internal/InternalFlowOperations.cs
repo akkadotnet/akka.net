@@ -9,6 +9,7 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
+using Akka.Streams.Util;
 
 namespace Akka.Streams.Dsl.Internal
 {
@@ -42,8 +43,8 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels 
         /// </summary>
-        public static IFlow<TOut, TMat> Recover<TOut, TMat>(this IFlow<TOut, TMat> flow,
-            Func<Exception, TOut> partialFunc) where TOut : class
+        public static IFlow<Option<TOut>, TMat> Recover<TOut, TMat>(this IFlow<TOut, TMat> flow,
+            Func<Exception, Option<TOut>> partialFunc)
         {
             return flow.AndThen(new Recover<TOut>(partialFunc));
         }

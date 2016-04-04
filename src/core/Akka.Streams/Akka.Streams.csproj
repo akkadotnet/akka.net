@@ -166,7 +166,7 @@
     <Compile Include="ThrottleMode.cs" />
     <Compile Include="Transformer.cs" />
     <Compile Include="Util\EnumeratorEnumerable.cs" />
-    <Compile Include="Util\Holder.cs" />
+    <Compile Include="Util\Option.cs" />
     <Compile Include="Util\Int32Extensions.cs" />
     <Compile Include="Util\IteratorAdapter.cs" />
     <Compile Include="Util\ObjectExtensions.cs" />
