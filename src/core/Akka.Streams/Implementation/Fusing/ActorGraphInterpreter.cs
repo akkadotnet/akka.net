@@ -467,6 +467,14 @@ namespace Akka.Streams.Implementation.Fusing
 
             public GraphInterpreterShell Shell { get; }
         }
+
+        private class ShellRegistered
+        {
+            public static readonly ShellRegistered Instance = new ShellRegistered();
+            private ShellRegistered()
+            {
+            }
+        }
         #endregion
 
         #region internal classes
@@ -929,7 +937,7 @@ namespace Akka.Streams.Implementation.Fusing
         public IActorRef RegisterShell(GraphInterpreterShell shell)
         {
             _newShells.Enqueue(shell);
-            Self.Tell(new Resume(shell));
+            Self.Tell(ShellRegistered.Instance);
             return Self;
         }
 
@@ -978,7 +986,7 @@ namespace Akka.Streams.Implementation.Fusing
                     }
                 }
             }
-            else if (message is Resume)
+            else if (message is ShellRegistered)
             {
                 FinishShellRegistration();
             }
