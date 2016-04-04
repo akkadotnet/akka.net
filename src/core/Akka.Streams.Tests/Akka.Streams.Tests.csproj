@@ -90,6 +90,7 @@
     <Compile Include="Dsl\FlowLimitSpec.cs" />
     <Compile Include="Dsl\FlowLimitWeightedSpec.cs" />
     <Compile Include="Dsl\FlowLogSpec.cs" />
+    <Compile Include="Dsl\FlowMapAsyncSpec.cs" />
     <Compile Include="Dsl\FlowSpec.cs" />
     <Compile Include="Dsl\QueueSourceSpec.cs" />
     <Compile Include="Actor\ActorPublisherSpec.cs" />

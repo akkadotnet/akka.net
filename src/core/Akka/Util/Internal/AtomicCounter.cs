@@ -50,6 +50,14 @@ namespace Akka.Util.Internal
         }
 
         /// <summary>
+        /// Decrements the counter and returns the next value
+        /// </summary>
+        public int Decrement()
+        {
+            return Interlocked.Decrement(ref _value);
+        }
+
+        /// <summary>
         /// Atomically increments the counter by one.
         /// </summary>
         /// <returns>The original value.</returns>
@@ -67,6 +75,25 @@ namespace Akka.Util.Internal
         {
             var nextValue = Next();
             return nextValue;
+        }
+
+        /// <summary>
+        /// Atomically decrements the counter by one.
+        /// </summary>
+        /// <returns>The original value.</returns>
+        public int GetAndDecrement()
+        {
+            var previousValue = Decrement();
+            return previousValue + 1;
+        }
+
+        /// <summary>
+        /// Atomically decrements the counter by one.
+        /// </summary>
+        /// <returns>The new value.</returns>
+        public int DecrementAndGet()
+        {
+            return Decrement();
         }
 
         /// <summary>
