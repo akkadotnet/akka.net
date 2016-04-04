@@ -1155,6 +1155,22 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
+        /// Merge the given <see cref="Source"/> to this <see cref="Flow"/>, taking elements as they arrive from input streams,
+        /// picking randomly when several elements ready.
+        /// 
+        /// @see <see cref="Merge{TIn,TOut1,TOut2,TMat}"/>
+        /// 
+        /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
+        /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// </summary>
+        public static Flow<TIn, TOut2, TMat3> MergeMaterialized<TIn, TOut1, TOut2, TMat, TMat2, TMat3>(this Flow<TIn, TOut1, TMat> flow,
+            IGraph<SourceShape<TOut2>, TMat2> that, Func<TMat, TMat2, TMat3> combine, bool eagerComplete = false)
+            where TOut1 : TOut2
+        {
+            return (Flow<TIn, TOut2, TMat3>)InternalFlowOperations.MergeMaterialized(flow, that, combine);
+        }
+
+        /// <summary>
         /// Merge the given [[Source]] to this [[Flow]], taking elements as they arrive from input streams,
         /// picking always the smallest of the available elements(waiting for one element from each side
         /// to be available). This means that possible contiguity of the input streams is not exploited to avoid

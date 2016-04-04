@@ -1317,7 +1317,7 @@ namespace Akka.Streams.Dsl.Internal
         }
 
         /// <summary>
-        /// Merge the given [[Source]] to this [[Flow]], taking elements as they arrive from input streams,
+        /// Merge the given <see cref="Source"/> to this <see cref="Flow"/>, taking elements as they arrive from input streams,
         /// picking randomly when several elements ready.
         /// <para>
         /// '''Emits when''' one of the inputs has an element available
@@ -1332,6 +1332,22 @@ namespace Akka.Streams.Dsl.Internal
             IGraph<SourceShape<TOut>, TMat> other, bool eagerComplete = false) where TIn : TOut
         {
             return flow.Via(MergeGraph<TIn, TOut, TMat>(other, eagerComplete));
+        }
+
+        /// <summary>
+        /// Merge the given <see cref="Source"/> to this <see cref="Flow"/>, taking elements as they arrive from input streams,
+        /// picking randomly when several elements ready.
+        /// 
+        /// @see <see cref="Merge{TIn,TOut,TMat}"/>
+        /// 
+        /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
+        /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// </summary>
+        public static IFlow<TOut, TMat3> MergeMaterialized<TIn, TOut, TMat, TMat2, TMat3>(this IFlow<TIn, TMat> flow,
+            IGraph<SourceShape<TOut>, TMat2> that, Func<TMat, TMat2, TMat3> combine, bool eagerComplete = false)
+            where TIn : TOut
+        {
+            return flow.ViaMaterialized(MergeGraph<TIn, TOut, TMat2>(that, eagerComplete), combine);
         }
 
         private static IGraph<FlowShape<TIn, TOut>, TMat> MergeGraph<TIn, TOut, TMat>(
