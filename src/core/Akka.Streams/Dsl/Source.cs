@@ -66,7 +66,7 @@ namespace Akka.Streams.Dsl
         public Source<TOut, TMat3> ConcatMaterialized<TMat2, TMat3>(IGraph<SourceShape<TOut>, TMat2> that,
             Func<TMat, TMat2, TMat3> materializedFunction)
         {
-            return ViaMaterialized(InternalFlowOperations.ConcatGraph<TOut, TOut, TMat2>(that), materializedFunction);
+            return ViaMaterialized(InternalFlowOperations.ConcatGraph(that), materializedFunction);
         }
 
         IGraph<SourceShape<TOut>, TMat> IGraph<SourceShape<TOut>, TMat>.WithAttributes(Attributes attributes)

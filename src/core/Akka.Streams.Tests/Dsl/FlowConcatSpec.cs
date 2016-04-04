@@ -9,12 +9,17 @@ using Akka.Streams.TestKit.Tests;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
-// ReSharper disable InvokeAsExtensionMethod
+using Xunit.Abstractions;
 
+// ReSharper disable InvokeAsExtensionMethod
 namespace Akka.Streams.Tests.Dsl
 {
     public class FlowConcatSpec : BaseTwoStreamsSetup<int>
     {
+        public FlowConcatSpec(ITestOutputHelper output = null) : base(output)
+        {
+        }
+
         protected override TestSubscriber.Probe<int> Setup(IPublisher<int> p1, IPublisher<int> p2)
         {
             var subscriber = TestSubscriber.CreateProbe<int>(this);
@@ -100,7 +105,7 @@ namespace Akka.Streams.Tests.Dsl
                 subscriber.ExpectSubscription().Request(5);
 
                 var errorSignalled = Enumerable.Range(1, 4)
-                    .Aggregate(false, (b, e) => b || subscriber.ExpectNextOrError() is int);
+                    .Aggregate(false, (b, e) => b || subscriber.ExpectNextOrError() is TestException);
                 if (!errorSignalled)
                     subscriber.ExpectSubscriptionAndError().Should().BeOfType<TestException>();
             }, Materializer);
@@ -125,7 +130,7 @@ namespace Akka.Streams.Tests.Dsl
                 subscriber.ExpectSubscription().Request(5);
 
                 var errorSignalled = Enumerable.Range(1, 4)
-                    .Aggregate(false, (b, e) => b || subscriber.ExpectNextOrError() is int);
+                    .Aggregate(false, (b, e) => b || subscriber.ExpectNextOrError() is TestException);
                 if (!errorSignalled)
                     subscriber.ExpectSubscriptionAndError().Should().BeOfType<TestException>();
             }, Materializer);
@@ -190,10 +195,7 @@ namespace Akka.Streams.Tests.Dsl
                     Source.From(Enumerable.Range(1, 5))
                         .ViaMaterialized(testFlow, Keep.Both)
                         .To(Sink.Ignore<IEnumerable<int>>());
-                var x = runnable.Run(Materializer);
-                x.Item1.Should().BeOfType<Unit>();
-                x.Item2.Item1.Should().BeOfType<Unit>();
-                x.Item2.Item2.Should().BeOfType<Unit>();
+                runnable.Invoking(r => r.Run(Materializer)).ShouldNotThrow();
 
                 runnable.MapMaterializedValue(_ => "boo").Run(Materializer).Should().Be("boo");
             }, Materializer);

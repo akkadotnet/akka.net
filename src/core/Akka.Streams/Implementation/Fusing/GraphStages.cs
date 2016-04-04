@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Reactive.Streams;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Util;
@@ -16,6 +18,29 @@ namespace Akka.Streams.Implementation.Fusing
 
         internal static GraphStageWithMaterializedValue<FlowShape<T, T>, Task<Unit>> TerminationWatcher<T>()
             => Implementation.Fusing.TerminationWatcher<T>.Instance;
+
+        /// <summary>
+        /// Fusing graphs that have cycles involving FanIn stages might lead to deadlocks if
+        /// demand is not carefully managed.
+        /// 
+        /// This means that FanIn stages need to early pull every relevant input on startup.
+        /// This can either be implemented inside the stage itself, or this method can be used,
+        /// which adds a detacher stage to every input.
+        /// </summary>
+        internal static IGraph<UniformFanInShape<T, T>, TMat> WithDetachedInputs<T, TMat>(GraphStage<UniformFanInShape<T, T>> stage)
+        {
+            return GraphDsl.Create<UniformFanInShape<T, T>, TMat>(builder =>
+            {
+                var concat = builder.Add(stage);
+                var detachers = concat.Ins.Select(inlet =>
+                {
+                    var detacher = builder.Add(new Detacher<T>());
+                    builder.From(detacher).To(inlet);
+                    return detacher.Inlet;
+                }).ToArray();
+                return new UniformFanInShape<T, T>(concat.Out, detachers);
+            });
+        }
     }
 
     internal class GraphStageModule : Module
