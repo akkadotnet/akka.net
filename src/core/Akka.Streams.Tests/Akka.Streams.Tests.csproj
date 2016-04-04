@@ -93,6 +93,7 @@
     <Compile Include="Dsl\FlowMapAsyncUnorderedSpec .cs" />
     <Compile Include="Dsl\FlowMapAsyncSpec.cs" />
     <Compile Include="Dsl\FlowMergeSpec.cs" />
+    <Compile Include="Dsl\FlowOnCompleteSpec.cs" />
     <Compile Include="Dsl\FlowSpec.cs" />
     <Compile Include="Dsl\QueueSourceSpec.cs" />
     <Compile Include="Actor\ActorPublisherSpec.cs" />
