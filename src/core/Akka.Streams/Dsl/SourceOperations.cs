@@ -33,6 +33,31 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
+        /// RecoverWith allows to switch to alternative Source on flow failure. It will stay in effect after
+        /// a failure has been recovered so that each time there is a failure it is fed into the <paramref name="partialFunc"/> and a new
+        /// Source may be materialized.
+        /// <para>
+        /// Since the underlying failure signal onError arrives out-of-band, it might jump over existing elements.
+        /// This stage can recover the failure signal, but not the skipped elements, which will be dropped.
+        /// </para>
+        /// <para>
+        /// '''Emits when''' element is available from the upstream or upstream is failed and element is available from alternative Source
+        /// </para>
+        /// <para>
+        /// '''Backpressures when''' downstream backpressures
+        /// </para>
+        /// <para>
+        /// '''Completes when''' upstream completes or upstream failed with exception pf can handle
+        /// </para>
+        /// '''Cancels when''' downstream cancels 
+        /// </summary>
+        public static Source<TOut, TMat> RecoverWith<TOut, TMat>(this Source<TOut, TMat> flow,
+            Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc)
+        {
+            return (Source<TOut, TMat>)InternalFlowOperations.RecoverWith(flow, partialFunc);
+        }
+
+        /// <summary>
         /// Transform this stream by applying the given function to each of the elements
         /// as they pass through this processing step.
         /// <para>

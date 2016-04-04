@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Event;
 using Akka.Pattern;
+using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
@@ -1663,5 +1664,83 @@ namespace Akka.Streams.Implementation.Fusing
         {
             return new DropWithinStageLogic(Shape, this);
         }
+    }
+
+    internal sealed class RecoverWith<TOut, TMat> : SimpleLinearGraphStage<TOut>
+    {
+        #region internal classes
+
+        private sealed class RecoverWithLogic : GraphStageLogic
+        {
+            private readonly RecoverWith<TOut, TMat> _recover;
+
+            public RecoverWithLogic(RecoverWith<TOut, TMat> recover) : base(recover.Shape)
+            {
+                _recover = recover;
+                SetHandler(recover.Outlet, onPull: () => Pull(recover.Inlet));
+                SetHandler(recover.Inlet, onPush: () => Push(recover.Outlet, Grab(recover.Inlet)),
+                    onUpstreamFailure: OnFailure);
+            }
+
+            private void OnFailure(Exception ex)
+            {
+                var result = _recover._partialFunction(ex);
+                if (result != null)
+                    SwitchTo(result);
+                else 
+                    FailStage(ex);
+            }
+
+            private void SwitchTo(IGraph<SourceShape<TOut>, TMat> source)
+            {
+                var sinkIn = new SubSinkInlet<TOut>("RecoverWithSink");
+                sinkIn.SetHandler(new LambdaInHandler(onPush: () =>
+                {
+                    if (IsAvailable(_recover.Outlet))
+                    {
+                        Push(_recover.Outlet, sinkIn.Grab());
+                        sinkIn.Pull();
+                    }
+                }, onUpstreamFinish: () =>
+                {
+                    if(!sinkIn.IsAvailable)
+                        CompleteStage();
+                }, onUpstreamFailure: OnFailure));
+
+                Action pushOut = () =>
+                {
+                    Push(_recover.Outlet, sinkIn.Grab());
+                    if (!sinkIn.IsClosed)
+                        sinkIn.Pull();
+                    else
+                        CompleteStage();
+                };
+
+                var outHandler = new LambdaOutHandler(onPull: () =>
+                {
+                    if (sinkIn.IsAvailable)
+                        pushOut();
+                }, onDownstreamFinish: () => sinkIn.Cancel());
+
+                Source.FromGraph(source).RunWith(sinkIn.Sink, Interpreter.SubFusingMaterializer);
+                SetHandler(_recover.Outlet, outHandler);
+                sinkIn.Pull();
+            }
+        }
+
+        #endregion
+
+        private readonly Func<Exception, IGraph<SourceShape<TOut>, TMat>> _partialFunction;
+
+        public RecoverWith(Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunction)
+        {
+            _partialFunction = partialFunction;
+        }
+
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.RecoverWith;
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new RecoverWithLogic(this);
+
+        public override string ToString() => "RecoverWith";
     }
 }

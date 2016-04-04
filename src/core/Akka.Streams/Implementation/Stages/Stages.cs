@@ -19,6 +19,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes Filter = Attributes.CreateName("filter");
         public static readonly Attributes Collect = Attributes.CreateName("collect");
         public static readonly Attributes Recover = Attributes.CreateName("recover");
+        public static readonly Attributes RecoverWith = Attributes.CreateName("recoverWith");
         public static readonly Attributes MapAsync = Attributes.CreateName("mapAsync");
         public static readonly Attributes MapAsyncUnordered = Attributes.CreateName("mapAsyncUnordered");
         public static readonly Attributes Grouped = Attributes.CreateName("grouped");
