@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Akka.Event;
 using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Stage;
+using Akka.Streams.Util;
 
 namespace Akka.Streams.Dsl
 {
@@ -25,9 +26,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels 
         /// </summary>
-        public static Source<TOut, TMat> Recover<TOut, TMat>(this Source<TOut, TMat> flow, Func<Exception, TOut> partialFunc) where TOut : class
+        public static Source<Option<TOut>, TMat> Recover<TOut, TMat>(this Source<TOut, TMat> flow, Func<Exception, Option<TOut>> partialFunc)
         {
-            return (Source<TOut, TMat>)InternalFlowOperations.Recover(flow, partialFunc);
+            return (Source<Option<TOut>, TMat>)InternalFlowOperations.Recover(flow, partialFunc);
         }
 
         /// <summary>
@@ -306,7 +307,7 @@ namespace Akka.Streams.Dsl
         /// <seealso cref="Take{T,TMat}"/>
         /// <seealso cref="TakeWithin{T,TMat}"/>
         /// <seealso cref="TakeWhile{T,TMat}"/>
-        private static Source<T, TMat> LimitWeighted<T, TMat>(this Source<T, TMat> flow, long max, Func<T, long> costFunc)
+        public static Source<T, TMat> LimitWeighted<T, TMat>(this Source<T, TMat> flow, long max, Func<T, long> costFunc)
         {
             return (Source<T, TMat>)flow.AndThen(new Implementation.Stages.LimitWeighted<T>(max, costFunc));
         }
@@ -1108,9 +1109,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut, TMat> Log<TOut, TMat>(this Source<TOut, TMat> flow, string name, ILoggingAdapter log, Func<TOut, object> extract = null)
+        public static Source<TOut, TMat> Log<TOut, TMat>(this Source<TOut, TMat> flow, string name, Func<TOut, object> extract = null, ILoggingAdapter log = null)
         {
-            return (Source<TOut, TMat>)InternalFlowOperations.Log(flow, name, log, extract);
+            return (Source<TOut, TMat>)InternalFlowOperations.Log(flow, name, extract, log);
         }
 
         /// <summary>
@@ -1173,6 +1174,26 @@ namespace Akka.Streams.Dsl
         {
             return (Source<T2, TMat>)InternalFlowOperations.Interleave(flow, other, segmentSize);
         }
+        
+        /// <summary>
+        /// Interleave is a deterministic merge of the given <see cref="Source{TOut,TMat}"/> with elements of this <see cref="IFlow{T,TMat}"/>.
+        /// It first emits `segmentSize` number of elements from this flow to downstream, then - same amount for `that` source,
+        /// then repeat process.
+        ///
+        /// After one of upstreams is complete than all the rest elements will be emitted from the second one
+        ///
+        /// If it gets error from one of upstreams - stream completes with failure.
+        ///
+        /// @see<see cref="Interleave{TIn,TOut}"/>.
+        ///
+        ///It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
+        /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// </summary>
+        public static Source<T2, TMat3> InterleaveMaterialized<T1, T2, TMat, TMat2, TMat3>(this Source<T1, TMat> flow,
+            IGraph<SourceShape<T2>, TMat2> graph, int segmentSize, Func<TMat, TMat2, TMat3> combine) where T1 : T2
+        {
+            return (Source<T2, TMat3>)InternalFlowOperations.InterleaveMaterialized(flow, graph, segmentSize, combine);
+        }
 
         /// <summary>
         /// Merge the given [[Source]] to this [[Flow]], taking elements as they arrive from input streams,
@@ -1189,6 +1210,23 @@ namespace Akka.Streams.Dsl
         public static Source<TOut2, TMat> Merge<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, IGraph<SourceShape<TOut2>, TMat> other) where TOut1 : TOut2
         {
             return (Source<TOut2, TMat>)InternalFlowOperations.Merge(flow, other);
+        }
+
+
+        /// <summary>
+        /// Merge the given <see cref="Source"/> to this <see cref="Flow"/>, taking elements as they arrive from input streams,
+        /// picking randomly when several elements ready.
+        /// 
+        /// @see <see cref="Merge{TOut1,TOut2,TMat}"/>
+        /// 
+        /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
+        /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// </summary>
+        public static Source<TOut2, TMat3> MergeMaterialized<TOut1, TOut2, TMat, TMat2, TMat3>(this Source<TOut1, TMat> flow,
+            IGraph<SourceShape<TOut2>, TMat2> that, Func<TMat, TMat2, TMat3> combine, bool eagerComplete = false)
+            where TOut1 : TOut2
+        {
+            return (Source<TOut2, TMat3>)InternalFlowOperations.MergeMaterialized(flow, that, combine);
         }
 
         /// <summary>

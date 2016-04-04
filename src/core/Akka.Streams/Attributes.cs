@@ -48,7 +48,10 @@ namespace Akka.Streams
 
         public sealed class LogLevels : IAttribute
         {
-            public static readonly int Off = -1;
+            /// <summary>
+            /// Use to disable logging on certain operations when configuring <see cref="LogLevels"/>
+            /// </summary>
+            public static readonly LogLevel Off = Logging.LogLevelFor("off");
 
             public readonly LogLevel OnElement;
             public readonly LogLevel OnFinish;

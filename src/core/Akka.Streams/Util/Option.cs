@@ -6,16 +6,16 @@
     /// Useful where distinguishing between null (or zero, or false) and unitialized is significant.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    internal class Holder<T>
+    public class Option<T>
     {
         private T _value;
 
-        public Holder()
+        public Option()
         {
             Reset();
         }
 
-        public Holder(T value)
+        public Option(T value)
         {
             Value = @value;
         }

@@ -9,6 +9,7 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
+using Akka.Streams.Util;
 
 namespace Akka.Streams.Dsl.Internal
 {
@@ -42,8 +43,8 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels 
         /// </summary>
-        public static IFlow<TOut, TMat> Recover<TOut, TMat>(this IFlow<TOut, TMat> flow,
-            Func<Exception, TOut> partialFunc) where TOut : class
+        public static IFlow<Option<TOut>, TMat> Recover<TOut, TMat>(this IFlow<TOut, TMat> flow,
+            Func<Exception, Option<TOut>> partialFunc)
         {
             return flow.AndThen(new Recover<TOut>(partialFunc));
         }
@@ -1191,8 +1192,8 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<T, TMat> Log<T, TMat>(this IFlow<T, TMat> flow, string name, ILoggingAdapter log,
-            Func<T, object> extract = null)
+        public static IFlow<T, TMat> Log<T, TMat>(this IFlow<T, TMat> flow, string name, Func<T, object> extract = null,
+            ILoggingAdapter log = null)
         {
             return flow.AndThen(new Log<T>(name, extract ?? Identity<T>(), log));
         }
@@ -1284,6 +1285,26 @@ namespace Akka.Streams.Dsl.Internal
             return flow.Via(InterleaveGraph<T1, T2, TMat>(graph, segmentSize));
         }
 
+        /// <summary>
+        /// Interleave is a deterministic merge of the given <see cref="Source{TOut,TMat}"/> with elements of this <see cref="IFlow{T,TMat}"/>.
+        /// It first emits `segmentSize` number of elements from this flow to downstream, then - same amount for `that` source,
+        /// then repeat process.
+        ///
+        /// After one of upstreams is complete than all the rest elements will be emitted from the second one
+        ///
+        /// If it gets error from one of upstreams - stream completes with failure.
+        ///
+        /// @see<see cref="Interleave{TIn,TOut}"/>.
+        ///
+        ///It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
+        /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// </summary>
+        public static IFlow<T2, TMat3> InterleaveMaterialized<T1, T2, TMat, TMat2, TMat3>(this IFlow<T1, TMat> flow,
+            IGraph<SourceShape<T2>, TMat2> graph, int segmentSize, Func<TMat, TMat2, TMat3> combine) where T1 : T2
+        {
+            return flow.ViaMaterialized(InterleaveGraph<T1, T2, TMat2>(graph, segmentSize), combine);
+        }
+
         private static IGraph<FlowShape<T1, T2>, TMat> InterleaveGraph<T1, T2, TMat>(
             IGraph<SourceShape<T2>, TMat> graph, int segmentSize) where T1 : T2
         {
@@ -1297,7 +1318,7 @@ namespace Akka.Streams.Dsl.Internal
         }
 
         /// <summary>
-        /// Merge the given [[Source]] to this [[Flow]], taking elements as they arrive from input streams,
+        /// Merge the given <see cref="Source"/> to this <see cref="Flow"/>, taking elements as they arrive from input streams,
         /// picking randomly when several elements ready.
         /// <para>
         /// '''Emits when''' one of the inputs has an element available
@@ -1312,6 +1333,22 @@ namespace Akka.Streams.Dsl.Internal
             IGraph<SourceShape<TOut>, TMat> other, bool eagerComplete = false) where TIn : TOut
         {
             return flow.Via(MergeGraph<TIn, TOut, TMat>(other, eagerComplete));
+        }
+
+        /// <summary>
+        /// Merge the given <see cref="Source"/> to this <see cref="Flow"/>, taking elements as they arrive from input streams,
+        /// picking randomly when several elements ready.
+        /// 
+        /// @see <see cref="Merge{TIn,TOut,TMat}"/>
+        /// 
+        /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
+        /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// </summary>
+        public static IFlow<TOut, TMat3> MergeMaterialized<TIn, TOut, TMat, TMat2, TMat3>(this IFlow<TIn, TMat> flow,
+            IGraph<SourceShape<TOut>, TMat2> that, Func<TMat, TMat2, TMat3> combine, bool eagerComplete = false)
+            where TIn : TOut
+        {
+            return flow.ViaMaterialized(MergeGraph<TIn, TOut, TMat2>(that, eagerComplete), combine);
         }
 
         private static IGraph<FlowShape<TIn, TOut>, TMat> MergeGraph<TIn, TOut, TMat>(
