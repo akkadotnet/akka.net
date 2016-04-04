@@ -215,7 +215,7 @@ namespace Akka.Streams.Implementation.Fusing
                     _left--;
                     if (_left == 0)
                     {
-                        Push(_stage._out, Tuple.Create(_builder, OpenSubstream()));
+                        Push(_stage._out, Tuple.Create(_builder.AsEnumerable(), OpenSubstream()));
                         Complete(_stage._out);
                     }
                     else
