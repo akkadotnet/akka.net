@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="MessageSerializer.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Serialization;
 using Google.ProtocolBuffers;
@@ -30,12 +37,13 @@ namespace Akka.Remote
         /// Serializes the specified message.
         /// </summary>
         /// <param name="system">The system.</param>
+        /// <param name="address"></param>
         /// <param name="message">The message.</param>
         /// <returns>SerializedMessage.</returns>
-        public static SerializedMessage Serialize(ActorSystem system, object message)
+        public static SerializedMessage Serialize(ActorSystem system,Address address, object message)
         {
             Serializer serializer = system.Serialization.FindSerializerFor(message);
-            byte[] messageBytes = serializer.ToBinary(message);
+            byte[] messageBytes = serializer.ToBinaryWithAddress(address,message);
             SerializedMessage.Builder messageBuilder = new SerializedMessage.Builder()
                 .SetSerializerId(serializer.Identifier);
             if (serializer.IncludeManifest)
@@ -46,3 +54,4 @@ namespace Akka.Remote
         }
     }
 }
+

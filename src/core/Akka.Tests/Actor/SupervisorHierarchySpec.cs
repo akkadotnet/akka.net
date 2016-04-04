@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="SupervisorHierarchySpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading;
 using Akka.Actor;
 using Akka.Actor.Dsl;
@@ -130,7 +137,7 @@ namespace Akka.Tests.Actor
                 ctx.Watch(crasher);
             }, "boss");
 
-            //We have built this hiearchy:
+            //We have built this hierarchy:
             //     boss
             //      |
             //    crasher
@@ -139,7 +146,7 @@ namespace Akka.Tests.Actor
             //Crasher will be restarted, and during PostRestart countDownMessages will count down.
             //We then send another "killCrasher", which again will send Kill to crasher. It crashes,
             //decider says it should be restarted but since we specified maximum 1 restart/5seconds it will be 
-            //permantely stopped. Boss, which watches crasher, recieves Terminated, and counts down countDownMax
+            //permanently stopped. Boss, which watches crasher, receives Terminated, and counts down countDownMax
             EventFilter.Exception<ActorKilledException>().Expect(2, () =>
             {
                 boss.Tell("killCrasher");
@@ -152,7 +159,7 @@ namespace Akka.Tests.Actor
         [Fact]
         public void A_supervisor_hierarchy_must_resume_children_after_Resume()
         {
-            //Build this hiearchy:
+            //Build this hierarchy:
             //     boss
             //      |
             //    middle
@@ -192,7 +199,7 @@ namespace Akka.Tests.Actor
                 c.Receive("spawn", (s, ctx) => ctx.Sender.Tell(ctx.ActorOf<Resumer>()));
             }, "slowResumer");
 
-            //Build this hiearchy:
+            //Build this hierarchy:
             //  slowResumer
             //      |
             //     boss
@@ -256,7 +263,7 @@ namespace Akka.Tests.Actor
                         {
                             var ca = createAttempt.IncrementAndGet();
                             if (ca <= 6 && ca % 3 == 0)
-                                childContext.ActorOf(BlackHoleActor.Props, "workingChild");
+                                childContext.ActorOf(BlackHoleActor.Props, "workingChild" + ca);
                             if (ca < 6)
                                 throw new InvalidOperationException("OH NO!");
                             childDsl.OnPreStart = _ => preStartCalled.IncrementAndGet();
@@ -278,3 +285,4 @@ namespace Akka.Tests.Actor
 
     }
 }
+

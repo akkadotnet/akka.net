@@ -1,14 +1,21 @@
-﻿using Akka.Actor;
+﻿//-----------------------------------------------------------------------
+// <copyright file="InitializeLogger.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using Akka.Actor;
 
 namespace Akka.Event
 {
     /// <summary>
-    ///     Class InitializeLogger.
+    /// Message used to initialize a logger.
     /// </summary> 
-    public class InitializeLogger : NoSerializationVerificationNeeded
+    public class InitializeLogger : INoSerializationVerificationNeeded
     {
         /// <summary>
-        ///     Initializes a new instance of the <see cref="InitializeLogger" /> class.
+        /// Initializes a new instance of the <see cref="InitializeLogger" /> message.
         /// </summary>
         /// <param name="loggingBus">The logging bus.</param>
         public InitializeLogger(LoggingBus loggingBus)
@@ -17,9 +24,10 @@ namespace Akka.Event
         }
 
         /// <summary>
-        ///     Gets the logging bus.
+        /// Gets the logging bus instance.
         /// </summary>
-        /// <value>The logging bus.</value>
+        /// <value>The logging bus instance.</value>
         public LoggingBus LoggingBus { get; private set; }
     }
 }
+

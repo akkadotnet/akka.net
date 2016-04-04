@@ -1,7 +1,15 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Serialization.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Actor.Internal;
 using Akka.Util.Internal;
 
 namespace Akka.Serialization
@@ -14,9 +22,20 @@ namespace Akka.Serialization
 
     public class Serialization
     {
-        [ThreadStatic] public static Information CurrentTransportInformation;
+        [ThreadStatic] private static Information _currentTransportInformation;
 
-        [ThreadStatic] public static ActorSystem CurrentSystem;
+        public static T SerializeWithTransport<T>(ActorSystem system, Address address, Func<T> action)
+        {
+            _currentTransportInformation = new Information()
+            {
+                System = system,
+                Address = address
+            };
+            var res = action();
+            _currentTransportInformation = null;
+            return res;
+        }
+
         private readonly Serializer _nullSerializer;
 
         private readonly Dictionary<Type, Serializer> _serializerMap = new Dictionary<Type, Serializer>();
@@ -38,8 +57,7 @@ namespace Akka.Serialization
                 var serializerType = Type.GetType(serializerTypeName);
                 if (serializerType == null)
                 {
-                    system.Log.Warning(string.Format("The type name for serializer '{0}' did not resolve to an actual Type: '{1}'",
-                            kvp.Key, serializerTypeName));
+                    system.Log.Warning("The type name for serializer '{0}' did not resolve to an actual Type: '{1}'",kvp.Key, serializerTypeName);
                     continue;
                 }
 
@@ -57,17 +75,14 @@ namespace Akka.Serialization
                 if (messageType == null)
                 {
 
-                    system.Log.Warning(string.Format(
-                            "The type name for message/serializer binding '{0}' did not resolve to an actual Type: '{1}'",
-                            serializerName, typename));
+                    system.Log.Warning("The type name for message/serializer binding '{0}' did not resolve to an actual Type: '{1}'",serializerName, typename);
                     continue;
                 }
 
                 var serializer = namedSerializers[serializerName];
                 if (serializer == null)
                 {
-                    system.Log.Warning(string.Format(
-                            "Serialization binding to non existing serializer: '{0}'", serializerName));
+                    system.Log.Warning("Serialization binding to non existing serializer: '{0}'", serializerName);
                     continue;
                 }
                 _serializerMap.Add(messageType,serializer);
@@ -89,6 +104,15 @@ namespace Akka.Serialization
         public object Deserialize(byte[] bytes, int serializerId, Type type)
         {
             return _serializers[serializerId].FromBinary(bytes, type);
+        }
+
+        public object Deserialize(byte[] bytes, int serializerId, string manifest)
+        {
+            var serializer = _serializers[serializerId];
+
+            if (serializer is SerializerWithStringManifest)
+                return ((SerializerWithStringManifest)serializer).FromBinary(bytes, manifest);
+            return serializer.FromBinary(bytes, Type.GetType(manifest));
         }
 
         public Serializer FindSerializerFor(object obj)
@@ -120,40 +144,48 @@ namespace Akka.Serialization
             throw new Exception("Serializer not found for type " + objectType.Name);
         }
 
-        public static string SerializedActorPath(IActorRef @ref)
+        public static string SerializedActorPath(IActorRef actorRef)
         {
-            /*
-val path = actorRef.path
-    val originalSystem: ExtendedActorSystem = actorRef match {
-      case a: ActorRefWithCell ⇒ a.underlying.system.asInstanceOf[ExtendedActorSystem]
-      case _                   ⇒ null
-    }
-    Serialization.currentTransportInformation.value match {
-      case null ⇒ originalSystem match {
-        case null ⇒ path.toSerializationFormat
-        case system ⇒
-          try path.toSerializationFormatWithAddress(system.provider.getDefaultAddress)
-          catch { case NonFatal(_) ⇒ path.toSerializationFormat }
-      }
-      case Information(address, system) ⇒
-        if (originalSystem == null || originalSystem == system)
-          path.toSerializationFormatWithAddress(address)
-        else {
-          val provider = originalSystem.provider
-          path.toSerializationFormatWithAddress(provider.getExternalAddressFor(address).getOrElse(provider.getDefaultAddress))
-        }
-    }*/
-            ActorSystem originalSystem = null;
-            if (@ref is ActorRefWithCell)
+            if (Equals(actorRef, ActorRefs.NoSender)) 
+                return String.Empty;
+
+            var path = actorRef.Path;
+            ExtendedActorSystem originalSystem = null;
+            if (actorRef is ActorRefWithCell)
             {
-                originalSystem = @ref.AsInstanceOf<ActorRefWithCell>().Underlying.System;
-                if (CurrentTransportInformation == null)
-                {
-                    return @ref.Path.ToSerializationFormat();
-                }
-                return @ref.Path.ToStringWithAddress(CurrentTransportInformation.Address);
+                originalSystem = actorRef.AsInstanceOf<ActorRefWithCell>().Underlying.System.AsInstanceOf<ExtendedActorSystem>();
             }
-            return @ref.Path.ToSerializationFormat();
+
+            if (_currentTransportInformation == null)
+            {
+                if (originalSystem == null)
+                {
+                    var res = path.ToSerializationFormat();
+                    return res;
+                }
+                else
+                {
+                    var defaultAddress = originalSystem.Provider.DefaultAddress;
+                    var res = path.ToStringWithAddress(defaultAddress);
+                    return res;
+                }
+            }
+
+            //CurrentTransportInformation exists
+            var system = _currentTransportInformation.System;
+            var address = _currentTransportInformation.Address;
+            if (originalSystem == null || originalSystem == system)
+            {
+                var res = path.ToStringWithAddress(address);
+                return res;
+            }
+            else
+            {
+                var provider = originalSystem.Provider;
+                var res =
+                    path.ToStringWithAddress(provider.GetExternalAddressFor(address).GetOrElse(provider.DefaultAddress));
+                return res;
+            }
         }
 
         public Serializer GetSerializerById(int serializerId)
@@ -162,3 +194,4 @@ val path = actorRef.path
         }
     }
 }
+

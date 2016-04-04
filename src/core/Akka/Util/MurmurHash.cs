@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="MurmurHash.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -95,7 +102,7 @@ namespace Akka.Util
         /// <param name="hash">The prior hash value</param>
         /// <param name="value">The new value to incorporate</param>
         /// <param name="magicA">A magic integer from the left of the stream</param>
-        /// <param name="magicB">A magic integer froma different stream</param>
+        /// <param name="magicB">A magic integer from a different stream</param>
         /// <returns>The updated hash value</returns>
         public static uint ExtendHash(uint hash, uint value, uint magicA, uint magicB)
         {
@@ -118,7 +125,7 @@ namespace Akka.Util
         #region Internal 32-bit hashing helpers
 
         /// <summary>
-        /// Rotate a 32-bit unsigned integer to the left by <see cref="shift"/> bits
+        /// Rotate a 32-bit unsigned integer to the left by <paramref name="shift"/> bits
         /// </summary>
         /// <param name="original">Original value</param>
         /// <param name="shift">The shift value</param>
@@ -129,7 +136,7 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// Rotate a 64-bit unsigned integer to the left by <see cref="shift"/> bits
+        /// Rotate a 64-bit unsigned integer to the left by <paramref name="shift"/> bits
         /// </summary>
         /// <param name="original">Original value</param>
         /// <param name="shift">The shift value</param>
@@ -245,3 +252,4 @@ namespace Akka.Util
         }
     }
 }
+

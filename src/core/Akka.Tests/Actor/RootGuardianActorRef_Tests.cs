@@ -1,8 +1,14 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RootGuardianActorRef_Tests.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Akka.Actor;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 using Akka.Dispatch;
 using Akka.TestKit;
 using Xunit;
@@ -72,7 +78,7 @@ namespace Akka.Tests.Actor
             Assert.Same(extraNameChild, actorRef);
         }
 
-        [Fact(Skip = "Ignored")]
+        [Fact]
         public void Getting_an_unknown_child_that_exists_in_extraNames_Should_return_nobody()
         {
             var props = Props.Create<GuardianActor>(new OneForOneStrategy(e => Directive.Stop));
@@ -103,3 +109,4 @@ namespace Akka.Tests.Actor
         }
     }
 }
+

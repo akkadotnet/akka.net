@@ -1,3 +1,10 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="SpecRunCoordinator.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -100,7 +107,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         /// <summary>
         /// When the result of a <see cref="HandleEndSpec"/> finally gets finished...
         /// </summary>
-        /// <param name="nodeDatum">An evenlope with all of the <see cref="NodeData"/> messages we processed from earilier</param>
+        /// <param name="nodeDatum">An envelope with all of the <see cref="NodeData"/> messages we processed from earlier</param>
         private void HandleNodeDatum(NodeData[] nodeDatum)
         {
             FactData.AddNodes(nodeDatum);
@@ -119,3 +126,4 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
 
     }
 }
+

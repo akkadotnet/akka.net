@@ -1,4 +1,11 @@
-﻿namespace Akka.Actor
+﻿//-----------------------------------------------------------------------
+// <copyright file="ExtendedActorSystem.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+namespace Akka.Actor
 {
     /// <summary>
     /// More powerful interface to the actor system’s implementation which is presented to 
@@ -65,3 +72,4 @@
         //  private[akka] def printTree: String
     }
 }
+

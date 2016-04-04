@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorCell.DefaultMessages.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -29,6 +36,12 @@ namespace Akka.Actor
             }
         }
 
+        private int _currentEnvelopeId;
+
+        public int CurrentEnvelopeId
+        {
+            get { return _currentEnvelopeId; }
+        }
         /// <summary>
         ///     Invokes the specified envelope.
         /// </summary>
@@ -37,7 +50,8 @@ namespace Akka.Actor
         {
             var message = envelope.Message;
             CurrentMessage = message;
-            Sender = envelope.Sender;
+            _currentEnvelopeId ++;
+            Sender = MatchSender(envelope);
 
             try
             {
@@ -46,6 +60,7 @@ namespace Akka.Actor
                     AutoReceiveMessage(envelope);
                 else
                     ReceiveMessage(message);
+                CurrentMessage = null;
             }
             catch (Exception cause)
             {
@@ -55,6 +70,18 @@ namespace Akka.Actor
             {
                 CheckReceiveTimeout(); // Reschedule receive timeout
             }
+        }
+
+        /// <summary>
+        /// If the envelope.Sender property is null, then we'll substitute
+        /// Deadletters as the <see cref="Sender"/> of this message.
+        /// </summary>
+        /// <param name="envelope">The envelope we received</param>
+        /// <returns>An IActorRef that corresponds to a Sender</returns>
+        private IActorRef MatchSender(Envelope envelope)
+        {
+            var sender = envelope.Sender;
+            return sender ?? System.DeadLetters;
         }
 
 
@@ -115,7 +142,7 @@ namespace Akka.Actor
 
         internal void ReceiveMessage(object message)
         {
-            var wasHandled = _actor.AroundReceive(_behaviorStack.Peek(), message);
+            var wasHandled = _actor.AroundReceive(_state.GetCurrentBehavior(), message);
 
             if (System.Settings.AddLoggingReceive && _actor is ILogReceive)
             {
@@ -146,7 +173,7 @@ namespace Akka.Actor
             {
                 var m = envelope.Message;
 
-                if (m is CompleteTask) HandleCompleteTask(m as CompleteTask);
+                if (m is ActorTaskSchedulerMessage) HandleActorTaskSchedulerMessage(m as ActorTaskSchedulerMessage);
                 else if (m is Failed) HandleFailed(m as Failed);
                 else if (m is DeathWatchNotification)
                 {
@@ -167,8 +194,6 @@ namespace Akka.Actor
                 else if (m is Recreate) FaultRecreate((m as Recreate).Cause);
                 else if (m is Suspend) FaultSuspend();
                 else if (m is Resume) FaultResume((m as Resume).CausedByFailure);
-                else if (m is SuspendReentrancy) HandleSuspendReentrancy();
-                else if (m is ResumeReentrancy) HandleResumeReentrancy();
                 else if (m is Terminate) Terminate();
                 else if (m is Supervise)
                 {
@@ -186,22 +211,21 @@ namespace Akka.Actor
             }
         }
 
-        private void HandleSuspendReentrancy()
+        private void HandleActorTaskSchedulerMessage(ActorTaskSchedulerMessage m)
         {
-            Mailbox.Suspend(MailboxSuspendStatus.AwaitingTask);
+            //set the current message captured in the async operation
+            //current message was cleared earlier when the async receive handler completed
+            CurrentMessage = m.Message;
+            if (m.Exception != null)
+            {
+                HandleInvokeFailure(m.Exception);
+                return;
+            }
+
+            m.ExecuteTask();
+            CurrentMessage = null;
         }
 
-        private void HandleResumeReentrancy()
-        {
-            Mailbox.Resume(MailboxSuspendStatus.AwaitingTask);
-        }
-
-        private void HandleCompleteTask(CompleteTask task)
-        {
-            CurrentMessage = task.State.Message;
-            Sender = task.State.Sender;
-            task.SetResult();
-        }
         public void SwapMailbox(DeadLetterMailbox mailbox)
         {
             Mailbox.DebugPrint("{0} Swapping mailbox to DeadLetterMailbox", Self);
@@ -350,17 +374,7 @@ namespace Akka.Actor
             SendSystemMessage(Dispatch.SysMsg.Suspend.Instance);
         }
 
-        public void SuspendReentrancy()
-        {
-            SendSystemMessage(Dispatch.SysMsg.SuspendReentrancy.Instance);
-        }
-
-        public void ResumeReentrancy()
-        {
-            SendSystemMessage(Dispatch.SysMsg.ResumeReentrancy.Instance);
-        }
-
-        private void SendSystemMessage(SystemMessage systemMessage)
+        private void SendSystemMessage(ISystemMessage systemMessage)
         {
             try
             {
@@ -382,3 +396,4 @@ namespace Akka.Actor
         }
     }
 }
+

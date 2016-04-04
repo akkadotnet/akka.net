@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Program.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Routing;
@@ -48,9 +55,6 @@ akka {
     }
     remote {
         helios.tcp {
-            transport-class = ""Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote""
-		    applied-adapters = []
-		    transport-protocol = tcp
 		    port = 8090
 		    hostname = localhost
         }
@@ -79,14 +83,10 @@ akka {
                 remote.Tell("Remote message 3", reply);
                 remote.Tell("Remote message 4", reply);
                 remote.Tell("Remote message 5", reply);
-                Console.ReadLine();
-                for (var i = 0; i < 10000; i++)
-                {
-                    remote.Tell(i);
-                }
 
                 Console.ReadLine();
             }
         }
     }
 }
+

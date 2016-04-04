@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Address.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -210,21 +217,24 @@ namespace Akka.Actor
         {
             try
             {
+                Uri uri;
+                bool isRelative = Uri.TryCreate(addr, UriKind.Relative, out uri);
+                if (!isRelative) return null;
+
                 var finalAddr = addr;
-                if (!Uri.IsWellFormedUriString(addr, UriKind.RelativeOrAbsolute))
+                if (!addr.StartsWith("/"))
                 {
                     //hack to cause the URI not to explode when we're only given an actor name
                     finalAddr = "/" + addr;
                 }
-                var uri = new Uri(finalAddr, UriKind.RelativeOrAbsolute);
-                if (uri.IsAbsoluteUri) return null;
 
                 return finalAddr.Split('/').SkipWhile(string.IsNullOrEmpty);
             }
-            catch (UriFormatException ex)
+            catch (UriFormatException)
             {
                 return null;
             }
         }
     }
 }
+

@@ -1,3 +1,10 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestActor.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using Akka.Actor;
 
 namespace Akka.TestKit
@@ -21,7 +28,7 @@ namespace Akka.TestKit
         /// received messages. If the delegate specified on the constructor returns
         /// <c>true</c> the message will be ignored by <see cref="TestActor"/>
         /// </summary>
-        public class SetIgnore : NoSerializationVerificationNeeded
+        public class SetIgnore : INoSerializationVerificationNeeded
         {
             private readonly Ignore _ignore;
 
@@ -35,7 +42,7 @@ namespace Akka.TestKit
         /// the specified actor and receive death notifications, 
         /// i.e. <see cref="Terminated"/> messages.
         /// </summary>
-        public class Watch : NoSerializationVerificationNeeded
+        public class Watch : INoSerializationVerificationNeeded
         {
             private readonly IActorRef _actorToWatch;
 
@@ -48,7 +55,7 @@ namespace Akka.TestKit
         /// Message that is supposed to be sent to a <see cref="TestActor"/> to make it unwatch 
         /// a previously watched actor.
         /// </summary>
-        public class Unwatch : NoSerializationVerificationNeeded
+        public class Unwatch : INoSerializationVerificationNeeded
         {
             private readonly IActorRef _actorToUnwatch;
 
@@ -63,7 +70,7 @@ namespace Akka.TestKit
         /// will be run for each received message and can be used to send or forward 
         /// messages, etc. Each invocation must return the AutoPilot for the next round.
         /// </summary>
-        public class SetAutoPilot : NoSerializationVerificationNeeded
+        public class SetAutoPilot : INoSerializationVerificationNeeded
         {
             private readonly AutoPilot _autoPilot;
 
@@ -73,3 +80,4 @@ namespace Akka.TestKit
         }
     }
 }
+

@@ -1,3 +1,10 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="MatchExpressionBuilder.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -128,7 +135,7 @@ namespace Akka.Tools.MatchHandler
         private static Tuple<ParameterExpression[], object[]> DecorateHandlerAndPredicateExpressions(IReadOnlyList<Argument> arguments, ParameterExpression inputParameter)
         {
             //Warning: This is using the same algorithm as CreateArgumentValuesArray.
-            //         Any updates in this shoul be made in CreateArgumentValuesArray as well.
+            //         Any updates in this should be made in CreateArgumentValuesArray as well.
             //
             //If we only have a few arguments, the parameters will be:
             //    (arguments_0, arguments_1)
@@ -340,3 +347,4 @@ namespace Akka.Tools.MatchHandler
         //in Example 2, can be compiled, cached and reused no matter the predicates and actions.
     }
 }
+

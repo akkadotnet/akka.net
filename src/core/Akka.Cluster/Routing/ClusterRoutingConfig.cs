@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterRoutingConfig.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
@@ -175,7 +182,6 @@ namespace Akka.Cluster.Routing
                 throw new ConfigurationException("Resizer can't be used together with cluster router.");
             _settings = settings;
             _local = local;
-            Guard.Assert(local.Resizer == null, "Resizer can't be used together with cluster router.");
         }
 
         private readonly AtomicCounter _childNameCounter = new AtomicCounter(0);
@@ -547,6 +553,7 @@ namespace Akka.Cluster.Routing
         {
             Settings = settings;
             _supervisorStrategy = supervisorStrategy;
+            if (_supervisorStrategy == null) throw new ArgumentNullException("supervisorStrategy");
             _pool = (Pool)Cell.RouterConfig;
         }
 
@@ -599,3 +606,4 @@ namespace Akka.Cluster.Routing
     }
 
 }
+

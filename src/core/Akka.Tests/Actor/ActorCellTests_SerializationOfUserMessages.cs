@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorCellTests_SerializationOfUserMessages.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.Tests.TestUtils;
@@ -21,7 +28,7 @@ namespace Akka.Tests.Actor
         }
 
        [Fact]
-       public void DoesNotSerializesUserMessages()
+       public void Does_not_serializes_user_messages()
        {
             var message = new SomeUserMessage
             {
@@ -54,7 +61,7 @@ namespace Akka.Tests.Actor
         }
        
         [Fact]
-        public void DoSerializeUserMessages()
+        public void Do_serialize_user_messages()
         {
             var message = new SomeUserMessage
             {
@@ -72,3 +79,4 @@ namespace Akka.Tests.Actor
         }
     }
 }
+

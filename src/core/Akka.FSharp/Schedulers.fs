@@ -1,4 +1,11 @@
-﻿[<AutoOpen>]
+﻿//-----------------------------------------------------------------------
+// <copyright file="Schedulers.fs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+[<AutoOpen>]
 module Schedulers
 
 open Akka.Actor
@@ -40,15 +47,8 @@ type Akka.Actor.ITellScheduler with
     /// <param name="every">Interval.</param>
     /// <param name="message">Message to be sent to the receiver by the scheduler.</param>
     /// <param name="receiver">Message receiver.</param>
-    /// <param name="sender">Optional actor reference set up as message sender</param>
-    /// <param name="cancelable">Optional cancelation token</param>
-    member this.ScheduleTellRepeatedly(after: TimeSpan, every: TimeSpan, receiver: IActorRef, message: 'Message, ?sender: IActorRef, ?cancelable: ICancelable) : unit =
-        let s = match sender with
-                | Some aref -> aref
-                | None -> ActorCell.GetCurrentSelfOrNoSender()
-        match cancelable with
-        | Some c -> this.ScheduleTellRepeatedly(after, every, receiver, message, s, c)
-        | None -> this.ScheduleTellRepeatedly(after, every, receiver, message, s)
+    member this.ScheduleTellRepeatedly(after: TimeSpan, every: TimeSpan, receiver: IActorRef, message: 'Message) : unit =
+        this.ScheduleTellRepeatedly(after, every, receiver, message, ActorRefs.NoSender)
         
     /// <summary>
     /// Schedules a single <paramref name="message"/> send to the provided <paramref name="receiver"/>.
@@ -56,12 +56,6 @@ type Akka.Actor.ITellScheduler with
     /// <param name="after">Delay before sending a message.</param>
     /// <param name="message">Message to be sent to the receiver by the scheduler.</param>
     /// <param name="receiver">Message receiver.</param>
-    /// <param name="sender">Optional actor reference set up as message sender</param>
-    /// <param name="cancelable">Optional cancelation token</param>
-    member this.ScheduleTellOnce(after: TimeSpan, receiver: IActorRef, message: 'Message, ?sender: IActorRef, ?cancelable: ICancelable) : unit =
-        let s = match sender with
-                | Some aref -> aref
-                | None -> ActorCell.GetCurrentSelfOrNoSender()
-        match cancelable with
-        | Some c -> this.ScheduleTellOnce(after, receiver, message, s, c)
-        | None -> this.ScheduleTellOnce(after, receiver, message, s)
+    member this.ScheduleTellOnce(after: TimeSpan, receiver: IActorRef, message: 'Message) : unit =
+        this.ScheduleTellOnce(after, receiver, message, ActorRefs.NoSender)
+

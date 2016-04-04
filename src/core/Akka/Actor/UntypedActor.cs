@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="UntypedActor.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading.Tasks;
 using Akka.Dispatch;
 
@@ -15,14 +22,14 @@ namespace Akka.Actor
             return true;
         }
 
-        protected void RunTask(AsyncBehavior behavior, Action action)
+        protected void RunTask(Action action)
         {
-            ActorTaskScheduler.RunTask(behavior,action);
+            ActorTaskScheduler.RunTask(action);
         }
 
-        protected void RunTask(AsyncBehavior behavior, Func<Task> action)
+        protected void RunTask(Func<Task> action)
         {
-            ActorTaskScheduler.RunTask(behavior,action);
+            ActorTaskScheduler.RunTask(action);
         }
 
         /// <summary>
@@ -65,3 +72,4 @@ namespace Akka.Actor
         protected static new IUntypedActorContext Context { get { return (IUntypedActorContext) ActorBase.Context; } }
     }
 }
+

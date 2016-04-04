@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="MainForm.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Windows.Forms;
@@ -72,7 +79,7 @@ namespace SymbolLookup
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            ActorSystem.Shutdown();
+            ActorSystem.Terminate();
         }
 
         private void btn_Go_Click(object sender, EventArgs e)
@@ -84,3 +91,4 @@ namespace SymbolLookup
         }
     }
 }
+

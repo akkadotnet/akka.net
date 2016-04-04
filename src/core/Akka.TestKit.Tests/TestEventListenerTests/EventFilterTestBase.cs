@@ -1,3 +1,10 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="EventFilterTestBase.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using Akka.Event;
 
 namespace Akka.Testkit.Tests.TestEventListenerTests
@@ -18,7 +25,7 @@ namespace Akka.Testkit.Tests.TestEventListenerTests
             // ReSharper disable once DoNotCallOverridableMethodsInConstructor
             SendRawLogEventMessage(initLoggerMessage);
             ExpectMsg("OK");
-            //From now on we know that all messsages will be forwarded to TestActor
+            //From now on we know that all messages will be forwarded to TestActor
         }
 
         protected abstract void SendRawLogEventMessage(object message);
@@ -44,3 +51,4 @@ namespace Akka.Testkit.Tests.TestEventListenerTests
 
     }
 }
+

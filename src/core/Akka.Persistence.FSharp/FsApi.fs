@@ -1,4 +1,11 @@
-﻿module Akka.Persistence.FSharp
+﻿//-----------------------------------------------------------------------
+// <copyright file="FsApi.fs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+module Akka.Persistence.FSharp
 
 open System
 open Akka.Actor
@@ -11,12 +18,12 @@ type PersistenceId = string
 type Snapshotter<'State> =
     abstract LoadSnapshot: PersistenceId -> SnapshotSelectionCriteria -> int64 -> unit
     abstract SaveSnapshot: 'State -> unit
-    abstract DeleteSnapshot: int64 -> DateTime -> unit
+    abstract DeleteSnapshot: int64 -> unit
     abstract DeleteSnapshots: SnapshotSelectionCriteria -> unit
 
 [<Interface>]
 type Eventsourced<'Command, 'Event, 'State> =
-    inherit ActorRefFactory
+    inherit IActorRefFactory
     inherit ICanWatch
     inherit Snapshotter<'State>
         
@@ -43,7 +50,7 @@ type Eventsourced<'Command, 'Event, 'State> =
     /// <summary>
     /// Lazy logging adapter. It won't be initialized until logging function will be called. 
     /// </summary>
-    abstract Log : Lazy<Akka.Event.LoggingAdapter>
+    abstract Log : Lazy<Akka.Event.ILoggingAdapter>
 
     /// <summary>
     /// Defers a function execution to the moment, when actor is suposed to end it's lifecycle.
@@ -124,8 +131,8 @@ type FunPersistentActor<'Command, 'Event, 'State>(aggregate: Aggregate<'Command,
             member __.Log = lazy (Akka.Event.Logging.GetLogger(context)) 
             member __.Defer fn = deferables <- fn::deferables
             member __.DeferEvent callback events = this.Defer(events, Action<_>(updateState callback))
-            member __.PersistEvent callback events = this.Persist(events, Action<_>(updateState callback))
-            member __.AsyncPersistEvent callback events = this.PersistAsync(events, Action<_>(updateState callback)) 
+            member __.PersistEvent callback events = this.PersistAll(events, Action<_>(updateState callback))
+            member __.AsyncPersistEvent callback events = this.PersistAllAsync(events, Action<_>(updateState callback)) 
             member __.Journal() = this.Journal
             member __.SnapshotStore() = this.SnapshotStore
             member __.PersistenceId() = this.PersistenceId
@@ -133,19 +140,27 @@ type FunPersistentActor<'Command, 'Event, 'State>(aggregate: Aggregate<'Command,
             member __.LastSequenceNr() = this.LastSequenceNr
             member __.LoadSnapshot pid criteria seqNr = this.LoadSnapshot(pid, criteria, seqNr)
             member __.SaveSnapshot state = this.SaveSnapshot(state)
-            member __.DeleteSnapshot seqNr timestamp = this.DeleteSnapshot(seqNr, timestamp)
+            member __.DeleteSnapshot seqNr = this.DeleteSnapshot(seqNr)
             member __.DeleteSnapshots criteria = this.DeleteSnapshots(criteria) }
-      
+            
     member __.Sender() : IActorRef = base.Sender
     member __.Unhandled msg = base.Unhandled msg
     override x.OnCommand (msg: obj) = 
         match msg with
         | :? 'Command as cmd -> aggregate.exec mailbox state cmd
-        | _ -> ()   // ignore?
+        | _ -> 
+            let serializer = UntypedActor.Context.System.Serialization.FindSerializerForType typeof<obj> :?> Akka.Serialization.NewtonSoftJsonSerializer
+            match Serialization.tryDeserializeJObject serializer.Serializer msg with
+            | Some(cmd) -> aggregate.exec mailbox state cmd
+            | None -> x.Unhandled msg
     override x.OnRecover (msg: obj) = 
         match msg with
         | :? 'Event as e -> state <- aggregate.apply mailbox state e
-        | _ -> ()   // ignore?        
+        | _ -> 
+            let serializer = UntypedActor.Context.System.Serialization.FindSerializerForType typeof<obj> :?> Akka.Serialization.NewtonSoftJsonSerializer
+            match Serialization.tryDeserializeJObject serializer.Serializer msg with
+            | Some(e) -> state <- aggregate.apply mailbox state e
+            | None -> x.Unhandled msg
     override x.PostStop () =
         base.PostStop ()
         List.iter (fun fn -> fn()) deferables
@@ -154,7 +169,7 @@ type FunPersistentActor<'Command, 'Event, 'State>(aggregate: Aggregate<'Command,
 
 [<Interface>]
 type View<'Event, 'State> =
-    inherit ActorRefFactory
+    inherit IActorRefFactory
     inherit ICanWatch
     inherit Snapshotter<'State>
 
@@ -181,7 +196,7 @@ type View<'Event, 'State> =
     /// <summary>
     /// Lazy logging adapter. It won't be initialized until logging function will be called. 
     /// </summary>
-    abstract Log : Lazy<Akka.Event.LoggingAdapter>
+    abstract Log : Lazy<Akka.Event.ILoggingAdapter>
 
     /// <summary>
     /// Defers a function execution to the moment, when actor is suposed to end it's lifecycle.
@@ -249,7 +264,7 @@ type FunPersistentView<'Event, 'State>(perspective: Perspective<'Event, 'State>,
             member __.LastSequenceNr() = this.LastSequenceNr
             member __.LoadSnapshot pid criteria seqNr = this.LoadSnapshot(pid, criteria, seqNr)
             member __.SaveSnapshot state = this.SaveSnapshot(state)
-            member __.DeleteSnapshot seqNr timestamp = this.DeleteSnapshot(seqNr, timestamp)
+            member __.DeleteSnapshot seqNr = this.DeleteSnapshot(seqNr)
             member __.DeleteSnapshots criteria = this.DeleteSnapshots(criteria) }
       
     member __.Sender() : IActorRef = base.Sender
@@ -258,8 +273,14 @@ type FunPersistentView<'Event, 'State>(perspective: Perspective<'Event, 'State>,
         match msg with
         | :? 'Event as e -> 
             state <- perspective.apply mailbox state e
-            true
-        | _ -> false   // ignore?        
+            true            
+        | _ -> 
+            let serializer = UntypedActor.Context.System.Serialization.FindSerializerForType typeof<obj> :?> Akka.Serialization.NewtonSoftJsonSerializer
+            match Serialization.tryDeserializeJObject serializer.Serializer msg with
+            | Some(e) -> 
+                state <- perspective.apply mailbox state e
+                true
+            | None -> false     
     override x.PostStop () =
         base.PostStop ()
         List.iter (fun fn -> fn()) deferables
@@ -272,8 +293,8 @@ type Delivery<'Command, 'Event, 'State> =
     
     abstract Deliver: (int64 -> obj) -> ActorPath -> unit
     abstract ConfirmDelivery: int64 -> bool
-    abstract GetDeliverySnapshot: unit -> GuaranteedDeliverySnapshot
-    abstract SetDeliverySnapshot: GuaranteedDeliverySnapshot -> unit
+    abstract GetDeliverySnapshot: unit -> AtLeastOnceDeliverySnapshot
+    abstract SetDeliverySnapshot: AtLeastOnceDeliverySnapshot -> unit
     abstract UnconfirmedCount: unit -> int
 
 type DeliveryAggregate<'Command, 'Event, 'State> = {
@@ -283,13 +304,13 @@ type DeliveryAggregate<'Command, 'Event, 'State> = {
 }
 
 type Deliverer<'Command, 'Event, 'State>(aggregate: DeliveryAggregate<'Command, 'Event, 'State>, name: PersistenceId) as this =
-    inherit GuaranteedDeliveryActor()
+    inherit AtLeastOnceDeliveryActor()
     
     let mutable deferables = []
     let mutable state: 'State = aggregate.state
     let mailbox = 
         let self' = this.Self
-        let context = GuaranteedDeliveryActor.Context :> IActorContext
+        let context = AtLeastOnceDeliveryActor.Context :> IActorContext
         let updateState (updater: 'Event -> 'State) e : unit = 
             state <- updater e
             ()
@@ -306,8 +327,8 @@ type Deliverer<'Command, 'Event, 'State>(aggregate: DeliveryAggregate<'Command, 
             member __.Log = lazy (Akka.Event.Logging.GetLogger(context)) 
             member __.Defer fn = deferables <- fn::deferables
             member __.DeferEvent callback events = this.Defer(events, Action<_>(updateState callback))
-            member __.PersistEvent callback events = this.Persist(events, Action<_>(updateState callback))
-            member __.AsyncPersistEvent callback events = this.PersistAsync(events, Action<_>(updateState callback)) 
+            member __.PersistEvent callback events = this.PersistAll(events, Action<_>(updateState callback))
+            member __.AsyncPersistEvent callback events = this.PersistAllAsync(events, Action<_>(updateState callback)) 
             member __.Journal() = this.Journal
             member __.SnapshotStore() = this.SnapshotStore
             member __.PersistenceId() = this.PersistenceId
@@ -315,7 +336,7 @@ type Deliverer<'Command, 'Event, 'State>(aggregate: DeliveryAggregate<'Command, 
             member __.LastSequenceNr() = this.LastSequenceNr
             member __.LoadSnapshot pid criteria seqNr = this.LoadSnapshot(pid, criteria, seqNr)
             member __.SaveSnapshot state = this.SaveSnapshot(state)
-            member __.DeleteSnapshot seqNr timestamp = this.DeleteSnapshot(seqNr, timestamp)
+            member __.DeleteSnapshot seqNr = this.DeleteSnapshot(seqNr)
             member __.DeleteSnapshots criteria = this.DeleteSnapshots(criteria)
             member __.Deliver mapper path = this.Deliver(path, System.Func<_,_>(mapper))
             member __.ConfirmDelivery id = this.ConfirmDelivery(id)
@@ -328,12 +349,20 @@ type Deliverer<'Command, 'Event, 'State>(aggregate: DeliveryAggregate<'Command, 
     override x.ReceiveCommand (msg: obj) = 
         match msg with
         | :? 'Command as cmd -> aggregate.exec mailbox state cmd
-        | _ -> ()   // ignore?
+        | _ -> 
+            let serializer = UntypedActor.Context.System.Serialization.FindSerializerForType typeof<obj> :?> Akka.Serialization.NewtonSoftJsonSerializer
+            match Serialization.tryDeserializeJObject serializer.Serializer msg with
+            | Some(cmd) -> aggregate.exec mailbox state cmd
+            | None -> x.Unhandled msg
         true
     override x.ReceiveRecover (msg: obj) = 
         match msg with
         | :? 'Event as e -> state <- aggregate.apply mailbox state e
-        | _ -> ()   // ignore?        
+        | _ -> 
+            let serializer = UntypedActor.Context.System.Serialization.FindSerializerForType typeof<obj> :?> Akka.Serialization.NewtonSoftJsonSerializer
+            match Serialization.tryDeserializeJObject serializer.Serializer msg with
+            | Some(e) -> state <- aggregate.apply mailbox state e
+            | None -> x.Unhandled msg
         true
     override x.PostStop () =
         base.PostStop ()
@@ -372,7 +401,7 @@ module Linq =
 /// <param name="name">Identifies uniquely current actor across different incarnations. It's necessary to identify it's event source.</param>
 /// <param name="aggregate">Aggregate containing state of the actor, but also an event- and command-handling behavior.</param>
 /// <param name="options">Additional spawning options.</param>
-let spawnPersist (actorFactory : ActorRefFactory) (name : PersistenceId) (aggregate: Aggregate<'Command, 'Event, 'State>) (options : SpawnOption list) : IActorRef =
+let spawnPersist (actorFactory : IActorRefFactory) (name : PersistenceId) (aggregate: Aggregate<'Command, 'Event, 'State>) (options : SpawnOption list) : IActorRef =
     let e = Linq.PersistentExpression.ToExpression(fun () -> new FunPersistentActor<'Command, 'Event, 'State>(aggregate, name))
     let props = applySpawnOptions (Props.Create e) options
     actorFactory.ActorOf(props, name)
@@ -385,7 +414,7 @@ let spawnPersist (actorFactory : ActorRefFactory) (name : PersistenceId) (aggreg
 /// <param name="viewName">Identifies uniquely current view's state. It's different that event source, since many views with different internal states can relate to single event source.</param>
 /// <param name="aggregate">Aggregate containing state of the actor, but also an command-handling behavior.</param>
 /// <param name="options">Additional spawning options.</param>
-let spawnView (actorFactory : ActorRefFactory) (viewName: PersistenceId) (name : PersistenceId)  (perspective: Perspective<'Event, 'State>) (options : SpawnOption list) : IActorRef =
+let spawnView (actorFactory : IActorRefFactory) (viewName: PersistenceId) (name : PersistenceId)  (perspective: Perspective<'Event, 'State>) (options : SpawnOption list) : IActorRef =
     let e = Linq.PersistentExpression.ToExpression(fun () -> new FunPersistentView<'Event, 'State>(perspective, name, viewName))
     let props = applySpawnOptions (Props.Create e) options
     actorFactory.ActorOf(props, viewName)
@@ -397,7 +426,8 @@ let spawnView (actorFactory : ActorRefFactory) (viewName: PersistenceId) (name :
 /// <param name="name">Identifies uniquely current actor across different incarnations. It's necessary to identify it's event source.</param>
 /// <param name="aggregate">Aggregate containing state of the actor, but also an event- and command-handling behavior.</param>
 /// <param name="options">Additional spawning options.</param>
-let spawnDeliverer (actorFactory : ActorRefFactory) (name : PersistenceId) (aggregate: DeliveryAggregate<'Command, 'Event, 'State>) (options : SpawnOption list) : IActorRef =
+let spawnDeliverer (actorFactory : IActorRefFactory) (name : PersistenceId) (aggregate: DeliveryAggregate<'Command, 'Event, 'State>) (options : SpawnOption list) : IActorRef =
     let e = Linq.PersistentExpression.ToExpression(fun () -> new Deliverer<'Command, 'Event, 'State>(aggregate, name))
     let props = applySpawnOptions (Props.Create e) options
     actorFactory.ActorOf(props, name)
+

@@ -1,4 +1,11 @@
-﻿using System.Collections.Generic;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RemoteRouterSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
@@ -36,7 +43,7 @@ namespace Akka.Remote.Tests
         public RemoteRouterSpec()
             : base(@"
             akka.test.single-expect-default = 6s #to help overcome issues with GC pauses on build server
-            akka.remote.retry-gate-closed-for = 1 s #in the event of a Sys <--> System2 whoosh (both tried to connect to eachother), retry quickly
+            akka.remote.retry-gate-closed-for = 1 s #in the event of a Sys <--> System2 whoosh (both tried to connect to each other), retry quickly
             akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
             akka.remote.helios.tcp {
                 hostname = localhost
@@ -89,6 +96,7 @@ namespace Akka.Remote.Tests
       }
     }
 ".Replace("${masterSysName}", "Master" + sysName).Replace("${sysName}", sysName).Replace("${port}", port.ToString())).WithFallback(Sys.Settings.Config);
+
             masterActorSystem = ActorSystem.Create("Master" + sysName, conf);
 
             intendedRemoteAddress = Address.Parse("akka.tcp://${sysName}@localhost:${port}"
@@ -312,3 +320,4 @@ namespace Akka.Remote.Tests
         }
     }
 }
+

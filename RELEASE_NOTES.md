@@ -1,6 +1,579 @@
-#### 1.0.0 Mar 15 2015
+#### 1.0.7 January 18 2016 ####
 
-TBD
+#### 1.0.6 January 18 2016 ####
+**Maintenance release for Akka.NET v1.0.5**
+This patch consists of many bug fixes, performance improvements, as well as the addition of two brand new alpha modules for Akka.Cluster users.
+
+**Akka.Cluster.Tools** and **Akka.Cluster.Sharding**
+The biggest part of this release is the addition of [Akka.Cluster.Tools](http://getakka.net/docs/clustering/cluster-tools) and [Akka.Cluster.Sharding](http://getakka.net/docs/clustering/cluster-sharding), both of which are available now as pre-release packages on NuGet.
+
+```
+PM> Install-Package Akka.Cluster.Tools -pre
+```
+and
+
+```
+PM> Install-Package Akka.Cluster.Sharding -pre
+```
+
+Respectively, these two packages extend Akka.Cluster to do the following:
+
+1. Distributed pub/sub (Akka.Cluster.Tools)
+2. `ClusterClient` - subscribe to changes in cluster availability without actually being part of the cluster itself. (Akka.Cluster.Tools)
+3. `ClusterSingleton` - guarantee a single instance of a specific actor throughout the cluster. (Akka.Cluster.Tools)
+4. Sharding - partition data into durable stores (built on top of Akka.Persistence) in a manner that is fault-tolerant and recoverable across thecluster. (Akka.Cluster.Sharding)
+
+Check out the documentation for more details!
+* http://getakka.net/docs/clustering/cluster-tools
+* http://getakka.net/docs/clustering/cluster-sharding
+
+**Fixes & Changes - Akka.NET Core**
+* [Fix incorrect serialization of Unicode characters in NewtonSoftJsonSerializer](https://github.com/akkadotnet/akka.net/pull/1508)
+* [Fixed: Supervisorstrategy does not preserve stacktrace](https://github.com/akkadotnet/akka.net/issues/1499)
+* [added initial performance specs using NBench](https://github.com/akkadotnet/akka.net/pull/1520)
+* [Add wire back as contrib package + Serialization TestKit](https://github.com/akkadotnet/akka.net/pull/1503)
+* [Implemented the RegisterOnTermination feature.](https://github.com/akkadotnet/akka.net/pull/1523)
+* [Increased performance of DedicatedThreadPool](https://github.com/akkadotnet/akka.net/pull/1569)
+* [#1605 updated Google.ProtocolBuffers to 2.4.1.555](https://github.com/akkadotnet/akka.net/pull/1634)
+* [Clear current message - fixes #1609](https://github.com/akkadotnet/akka.net/pull/1613)
+* [Rewrite of the AtomicReference ](https://github.com/akkadotnet/akka.net/pull/1615)
+* [Implemented WhenTerminated and Terminate](https://github.com/akkadotnet/akka.net/pull/1614)
+* [Implemented StartTime and Uptime](https://github.com/akkadotnet/akka.net/pull/1617)
+* [API Diff with fixed Approval file](https://github.com/akkadotnet/akka.net/pull/1639)
+* [Fixed: NullReferenceException in Akka.Util.Internal.Collections.ImmutableAvlTreeBase`2.RotateLeft](https://github.com/akkadotnet/akka.net/issues/1202)
+
+
+
+**Fixes & Changes - Akka.Remote & Akka.Cluster**
+It should be noted that we've improved the throughput from Akka.NET v1.0.5 to 1.0.6 by a factor of 8
+
+* [Akka.Cluster.Tools & Akka.Cluster.Sharding with tests and examples](https://github.com/akkadotnet/akka.net/pull/1530)
+* [Added UntrustedSpec](https://github.com/akkadotnet/akka.net/pull/1535)
+* [Akka.Remote Performance - String.Format logging perf fix](https://github.com/akkadotnet/akka.net/pull/1540)
+* [Remoting system upgrade](https://github.com/akkadotnet/akka.net/pull/1596)
+* [PublicHostname defaults to IPAddress.Any when hostname is blank](https://github.com/akkadotnet/akka.net/pull/1621)
+* [Removes code that overrides OFF log level with WARNING.](https://github.com/akkadotnet/akka.net/pull/1644)
+* [fixes issue with Helios message ordering](https://github.com/akkadotnet/akka.net/pull/1638)
+* [Fixed: Actor does not receive "Terminated" message if remoting is used and it is not monitored actor's parent](https://github.com/akkadotnet/akka.net/issues/1646)
+
+**Fixes & Changes - Akka.Persistence**
+* [Fixed racing conditions on sql-based snapshot stores](https://github.com/akkadotnet/akka.net/pull/1507)
+* [Fix for race conditions in presistence plugins](https://github.com/akkadotnet/akka.net/pull/1543)
+* [Fix #1522 Ensure extensions and persistence plugins are only registered/created once](https://github.com/akkadotnet/akka.net/pull/1648)
+
+A special thanks to all of our contributors for making this happen!
+18 contributors since release v1.0.5
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 22 | 3564 | 28087 | Aaron Stannard |
+| 15 | 1710 | 1303 | rogeralsing |
+| 6 | 569 | 95 | Silv3rcircl3 |
+| 6 | 53594 | 4417 | Bartosz Sypytkowski |
+| 5 | 1786 | 345 | Sean Gilliam |
+| 3 | 786 | 159 | maxim.salamatko |
+| 2 | 765 | 277 | JeffCyr |
+| 2 | 44 | 53 | Chris Constantin |
+| 2 | 14 | 2 | Simon Anderson |
+| 1 | 84 | 4 | Bart de Boer |
+| 1 | 6051 | 27 | danielmarbach |
+| 1 | 6 | 2 | tstojecki |
+| 1 | 3 | 5 | Ralf1108 |
+| 1 | 27 | 0 | Andrew Skotzko |
+| 1 | 2 | 2 | easuter |
+| 1 | 2 | 1 | Danthar |
+| 1 | 182 | 0 | derwasp |
+| 1 | 179 | 0 | Onat Yiğit Mercan |
+
+#### 1.0.5 December 3 2015 ####
+**Maintenance release for Akka.NET v1.0.4**
+This release is a collection of bug fixes, performance enhancements, and general improvements contributed by 29 individual contributors.
+
+**Fixes & Changes - Akka.NET Core**
+* [Bugfix: Make the Put on the SimpleDnsCache idempotent](https://github.com/akkadotnet/akka.net/commit/2ed1d574f76491707deac236db3fd7c1e5af5757)
+* [Add CircuitBreaker Initial based on akka 2.0.5](https://github.com/akkadotnet/akka.net/commit/7e16834ef0ff8551cdd3530eacb1016d40cb1cb8)
+* [Fix for receive timeout in async await actor](https://github.com/akkadotnet/akka.net/commit/6474bd7dc3d27756e255d12ef21f331108d9922d)
+* [akka-io: fixed High CPU load using the Akka.IO TCP server](https://github.com/akkadotnet/akka.net/commit/4af2cfbcaafa33ea04a1a8b1aa6486e78bd6f821)
+* [akka-io: Stop select loop on idle](https://github.com/akkadotnet/akka.net/commit/e545780d36cfb805b2014746a2e97006894c2e00)
+* [Serialization fixes](https://github.com/akkadotnet/akka.net/commit/6385cc20a3d310efc0bb2f9e29710c5b7bceaa87)
+* [Fix issue #1301 - inprecise resizing of resizable routers](https://github.com/akkadotnet/akka.net/commit/cf714333b25190249f01d79bad606d4ce5863e47)
+* [Stashing now checks message equality by reference](https://github.com/akkadotnet/akka.net/commit/884330dfb5d69b523f25a59b98450322fe3b34f4)
+* [rewrote ActorPath.TryParseAddrss to now test Uris by try / catch and use Uri.TryCreate instead](https://github.com/akkadotnet/akka.net/commit/8eaf32147a08f213db818bf19d74ed9d1aadaed2)
+* [Port EventBusUnsubscribers](https://github.com/akkadotnet/akka.net/commit/bd91bcd50d918e5e8ee4b085e53d603cfd46c89a)
+* [Add optional PipeTo completion handlers](https://github.com/akkadotnet/akka.net/commit/dfb7f61026d5d0b2d23efe1dd73af820f70a1d1c)
+* [Akka context props output to Serilog](https://github.com/akkadotnet/akka.net/commit/409cd7f4ed0b285827b681685af59ec19c5a4b73)
+
+
+**Fixes & Changes - Akka.Remote, Akka.Cluster**
+* [MultiNode tests can now be skipped by specifying a SkipReason](https://github.com/akkadotnet/akka.net/commit/75f966cb7d2f2c0d859e0e3a90a38d251a10c5e5)
+* [Akka.Remote: Discard msg if payload size > max allowed.](https://github.com/akkadotnet/akka.net/commit/05f57b9b1ff256145bc085f94d49a591e51e1304)
+* [Throw `TypeLoadException` when an actor type or dependency cannot be found in a remote actor deploy scenario](https://github.com/akkadotnet/akka.net/commit/ffed3eb088bc00f90a5e4b7367d4598fda007401)
+* [MultiNode Test Visualizer](https://github.com/akkadotnet/akka.net/commit/7706bb242719b7f7197058e89f8579af5b82dfc3)
+* [Fix for Akka.Cluster.Routing.ClusterRouterGroupSettings Mono Linux issue](https://github.com/akkadotnet/akka.net/commit/dbbd2ac9b16772af8f8e35d3d1c8bf5dcf354f42)
+* [Added RemoteDeploymentWatcher](https://github.com/akkadotnet/akka.net/commit/44c29ccefaeca0abdc4fd1f81daf1dc27a285f66)
+* [Akka IO Transport: framing support](https://github.com/akkadotnet/akka.net/commit/60b5d2a318b485652e0888190aaa930fe43b1bbc)
+* [#1443 fix for cluster shutdown](https://github.com/akkadotnet/akka.net/commit/941688aead57266b454b76530a7fb5446f68e15d)
+
+**Fixes & Changes - Akka.Persistence**
+* [Fixes the NullReferenceException in #1235 and appears to adhere to the practice of including an addres with the serialized binary.](https://github.com/akkadotnet/akka.net/commit/3df119ff614c3298299f863e18efd6e0fa848858)
+* [Port Finite State Machine DSL to Akka.Persistence](https://github.com/akkadotnet/akka.net/commit/dce684d907df86f5039eb2ca20727ab48d4b218a)
+* [Become and BecomeStacked for ReceivePersistentActor](https://github.com/akkadotnet/akka.net/commit/b11dafc86eb9284c2d515fd9da3599fe463a5681)
+* [Persistent actor stops on recovery failures](https://github.com/akkadotnet/akka.net/commit/03105719a8866e8eadac268bc8f813e738f989b9)
+* [Fixed: data races inside sql journal engine](https://github.com/akkadotnet/akka.net/commit/f088f0c681fdc7ba1b4eaf7f823c2a9535d3045d)
+* [fix sqlite.conf and readme](https://github.com/akkadotnet/akka.net/commit/c7e925ba624eee7e386855251169aecbafd6ae7d)
+* [#1416 created ReceiveActor implementation of AtLeastOnceDeliveryActor base class](https://github.com/akkadotnet/akka.net/commit/4d1d79b568bdae6565423c3ed914f8a9606dc0e8)
+
+A special thanks to all of our contributors, organized below by the number of changes made:
+
+23369 5258  18111 Aaron Stannard
+18827 16329 2498  Bartosz Sypytkowski
+11994 9496  2498  Steffen Forkmann
+6031  4637  1394  maxim.salamatko
+1987  1667  320 Graeme Bradbury
+1556  1149  407 Sean Gilliam
+1118  1118  0 moliver
+706 370 336 rogeralsing
+616 576 40  Marek Kadek
+501 5 496 Alex Koshelev
+377 269 108 Jeff Cyr
+280 208 72  willieferguson
+150 98  52  Christian Palmstierna
+85  63  22  Willie Ferguson
+77  71  6 Emil Ingerslev
+66  61  5 Grover Jackson
+60  39  21  Alexander Pantyukhin
+56  33  23  Uladzimir Makarau
+55  54  1 rdavisau
+51  18  33  alex-kondrashov
+42  26  16  Silv3rcircl3
+36  30  6 evertmulder
+33  19  14  Filip Malachowicz
+13  11  2 Suhas Chatekar
+7 6 1 tintoy
+4 2 2 Jonathan
+2 1 1 neekgreen
+2 1 1 Christopher Martin
+2 1 1 Artem Borzilov 
+
+#### 1.0.4 August 07 2015 ####
+**Maintenance release for Akka.NET v1.0.3**
+
+**Akka.IO**
+This release introduces some major new features to Akka.NET, including [Akka.IO - a new set of capabilities built directly into the Akka NuGet package that allow you to communicate with your actors directly via TCP and UDP sockets](http://getakka.net/docs/IO) from external (non-actor) systems.
+
+If you want to see a really cool example of Akka.IO in action, look at [this sample that shows off how to use the Telnet commandline to interact directly with Akka.NET actors](https://github.com/akkadotnet/akka.net/blob/dev/src/examples/TcpEchoService.Server).
+
+**Akka.Persistence.MongoDb** and **Akka.Persistence.Sqlite**
+Two new flavors of Akka.Persistence support are now available. You can install them via the commandline!
+
+```
+PM> Install-Package Akka.Persistence.MongoDb -pre
+```
+and
+
+```
+PM> Install-Package Akka.Persistence.Sqlite -pre
+```
+
+**Fixes & Changes - Akka.NET Core**
+* [F# API - problem with discriminated union serialization](https://github.com/akkadotnet/akka.net/issues/999)
+* [Fix Null Sender issue](https://github.com/akkadotnet/akka.net/issues/1212)
+* [Outdated FsPickler version in Akka.FSharp can lead to runtime errors when other FsPickler-dependent packages are installed](https://github.com/akkadotnet/akka.net/issues/1206)
+* [Add default Ask timeout to HOCON configuration](https://github.com/akkadotnet/akka.net/issues/1163)
+* [Remote watching is repeated](https://github.com/akkadotnet/akka.net/issues/1090)
+* [RemoteDaemon bug, not removing children ](https://github.com/akkadotnet/akka.net/pull/1068)
+* [HOCON include support](https://github.com/akkadotnet/akka.net/pull/1169)
+* [Replace SystemNanoTime with MonotonicClock](https://github.com/akkadotnet/akka.net/pull/1174)
+
+**Akka.DI.StructureMap**
+We now have support for the [StructureMap dependency injection framework](http://docs.structuremap.net/) out of the box. You can install it here!
+
+```
+PM> Install-Package Akka.DI.StructureMap
+```
+
+#### 1.0.3 June 12 2015 ####
+**Bugfix release for Akka.NET v1.0.2.**
+
+This release addresses an issue with Akka.Persistence.SqlServer and Akka.Persistence.PostgreSql where both packages were missing a reference to Akka.Persistence.Sql.Common. 
+
+In Akka.NET v1.0.3 we've packaged Akka.Persistence.Sql.Common into its own NuGet package and referenced it in the affected packages.
+
+#### 1.0.2 June 2 2015
+**Bugfix release for Akka.NET v1.0.1.**
+
+Fixes & Changes - Akka.NET Core
+* [Routers seem ignore supervision strategy](https://github.com/akkadotnet/akka.net/issues/996)
+* [Replaced DateTime.Now with DateTime.UtcNow/MonotonicClock](https://github.com/akkadotnet/akka.net/pull/1009)
+* [DedicatedThreadScheduler](https://github.com/akkadotnet/akka.net/pull/1002)
+* [Add ability to specify scheduler implementation in configuration](https://github.com/akkadotnet/akka.net/pull/994)
+* [Added generic extensions to EventStream subscribe/unsubscribe.](https://github.com/akkadotnet/akka.net/pull/990)
+* [Convert null to NoSender.](https://github.com/akkadotnet/akka.net/pull/993)
+* [Supervisor strategy bad timeouts](https://github.com/akkadotnet/akka.net/pull/986)
+* [Updated Pigeon.conf throughput values](https://github.com/akkadotnet/akka.net/pull/980)
+* [Add PipeTo for non-generic Tasks for exception handling](https://github.com/akkadotnet/akka.net/pull/978)
+
+Fixes & Changes - Akka.NET Dependency Injection
+* [Added Extensions methods to ActorSystem and ActorContext to make DI more accessible](https://github.com/akkadotnet/akka.net/pull/966)
+* [DIActorProducer fixes](https://github.com/akkadotnet/akka.net/pull/961)
+* [closes akkadotnet/akka.net#1020 structuremap dependency injection](https://github.com/akkadotnet/akka.net/pull/1021)
+
+Fixes & Changes - Akka.Remote and Akka.Cluster
+* [Fixing up cluster rejoin behavior](https://github.com/akkadotnet/akka.net/pull/962)
+* [Added dispatcher fixes for remote and cluster ](https://github.com/akkadotnet/akka.net/pull/983)
+* [Fixes to ClusterRouterGroup](https://github.com/akkadotnet/akka.net/pull/953)
+* [Two actors are created by remote deploy using Props.WithDeploy](https://github.com/akkadotnet/akka.net/issues/1025)
+
+Fixes & Changes - Akka.Persistence
+* [Renamed GuaranteedDelivery classes to AtLeastOnceDelivery](https://github.com/akkadotnet/akka.net/pull/984)
+* [Changes in Akka.Persistence SQL backend](https://github.com/akkadotnet/akka.net/pull/963)
+* [PostgreSQL persistence plugin for both event journal and snapshot store](https://github.com/akkadotnet/akka.net/pull/971)
+* [Cassandra persistence plugin](https://github.com/akkadotnet/akka.net/pull/995)
+
+**New Features:**
+
+**Akka.TestKit.XUnit2**
+Akka.NET now has support for [XUnit 2.0](http://xunit.github.io/)! You can install Akka.TestKit.XUnit2 via the NuGet commandline:
+
+```
+PM> Install-Package Akka.TestKit.XUnit2
+```
+
+**Akka.Persistence.PostgreSql** and **Akka.Persistence.Cassandra**
+Akka.Persistence now has two additional concrete implementations for PostgreSQL and Cassandra! You can install either of the packages using the following commandline:
+
+[Akka.Persistence.PostgreSql Configuration Docs](https://github.com/akkadotnet/akka.net/tree/dev/src/contrib/persistence/Akka.Persistence.PostgreSql)
+```
+PM> Install-Package Akka.Persistence.PostgreSql
+```
+
+[Akka.Persistence.Cassandra Configuration Docs](https://github.com/akkadotnet/akka.net/tree/dev/src/contrib/persistence/Akka.Persistence.Cassandra)
+```
+PM> Install-Package Akka.Persistence.Cassandra
+```
+
+**Akka.DI.StructureMap**
+Akka.NET's dependency injection system now supports [StructureMap](http://structuremap.github.io/)! You can install Akka.DI.StructureMap via the NuGet commandline:
+
+```
+PM> Install-Package Akka.DI.StructureMap
+```
+
+#### 1.0.1 Apr 28 2015
+
+**Bugfix release for Akka.NET v1.0.**
+
+Fixes:
+* [v1.0 F# scheduling API not sending any scheduled messages](https://github.com/akkadotnet/akka.net/issues/831)
+* [PinnedDispatcher - uses single thread for all actors instead of creating persanal thread for every actor](https://github.com/akkadotnet/akka.net/issues/850)
+* [Hotfix async await when awaiting IO completion port based tasks](https://github.com/akkadotnet/akka.net/pull/843)
+* [Fix for async await suspend-resume mechanics](https://github.com/akkadotnet/akka.net/pull/836)
+* [Nested Ask async await causes null-pointer exception in ActorTaskScheduler](https://github.com/akkadotnet/akka.net/issues/855)
+* [Akka.Remote: can't reply back remotely to child of Pool router](https://github.com/akkadotnet/akka.net/issues/884)
+* [Context.DI().ActorOf shouldn't require a parameterless constructor](https://github.com/akkadotnet/akka.net/issues/832)
+* [DIActorContextAdapter uses typeof().Name instead of AssemblyQualifiedName](https://github.com/akkadotnet/akka.net/issues/833)
+* [IndexOutOfRangeException with RoundRobinRoutingLogic & SmallestMailboxRoutingLogic](https://github.com/akkadotnet/akka.net/issues/908)
+
+New Features:
+
+**Akka.TestKit.NUnit**
+Akka.NET now has support for [NUnit ](http://nunit.org/) inside its TestKit. You can install Akka.TestKit.NUnit via the NuGet commandline:
+
+```
+PM> Install-Package Akka.TestKit.NUnit
+```
+
+**Akka.Persistence.SqlServer**
+The first full implementation of Akka.Persistence is now available for SQL Server.
+
+[Read the full instructions for working with Akka.Persistence.SQLServer here](https://github.com/akkadotnet/akka.net/tree/dev/src/contrib/persistence/Akka.Persistence.SqlServer).
+
+#### 1.0.0 Apr 09 2015
+
+**Akka.NET is officially no longer in beta status**. The APIs introduced in Akka.NET v1.0 will enjoy long-term support from the Akka.NET development team and all of its professional support partners.
+
+Many breaking changes were introduced between v0.8 and v1.0 in order to provide better future extensibility and flexibility for Akka.NET, and we will outline the major changes in detail in these release notes.
+
+However, if you want full API documentation we recommend going to the following:
+
+* **[Latest Stable Akka.NET API Docs](http://api.getakka.net/docs/stable/index.html "Akka.NET Latest Stable API Docs")**
+* **[Akka.NET Wiki](http://getakka.net/wiki/ "Akka.NET Wiki")**
+
+----
+
+**Updated Packages with 1.0 Stable Release**
+
+All of the following NuGet packages have been upgraded to 1.0 for stable release:
+
+- Akka.NET Core
+- Akka.FSharp
+- Akka.Remote
+- Akka.TestKit
+- Akka.DI (dependency injection)
+- Akka.Loggers (logging)
+
+The following packages (and modules dependent on them) are still in *pre-release* status:
+
+- Akka.Cluster
+- Akka.Persistence
+
+----
+**Introducing Full Mono Support for Akka.NET**
+
+One of the biggest changes in Akka.NET v1.0 is the introduction of full Mono support across all modules; we even have [Raspberry PI machines talking to laptops over Akka.Remote](https://twitter.com/AkkaDotNET/status/584109606714093568)!
+
+We've tested everything using Mono v3.12.1 across OS X and Ubuntu. 
+
+**[Please let us know how well Akka.NET + Mono runs on your environment](https://github.com/akkadotnet/akka.net/issues/694)!**
+
+----
+
+**API Changes in v1.0**
+
+**All methods returning an `ActorRef` now return `IActorRef`**
+This is the most significant breaking change introduced in AKka.NET v1.0. Rather than returning the `ActorRef` abstract base class from all of the `ActorOf`, `Sender` and other methods we now return an instance of the `IActorRef` interface instead.
+
+This was done in order to guarantee greater future extensibility without additional breaking changes, so we decided to pay off that technical debt now that we're supporting these APIs long-term.
+
+Here's the set of breaking changes you need to be aware of:
+
+- Renamed:
+  - `ActorRef`          --> `IActorRef`
+  - `ActorRef.Nobody`   --> `ActorRefs.Nobody`
+  - `ActorRef.NoSender` --> `ActorRefs.NoSender`
+- `ActorRef`'s  operators `==` and `!=` has been removed. This means all expressions like `actorRef1 == actorRef2` must be replaced with `Equals(actorRef1, actorRef2)`
+- `Tell(object message)`, i.e. the implicit sender overload, has been moved
+to an extension method, and requires `using Akka.Actor;` to be accessible.
+- Implicit cast from `ActorRef` to `Routee` has been replaced with `Routee.FromActorRef(actorRef)`
+
+**`async` / `await` Support**
+
+`ReceiveActor`s now support Async/Await out of the box.
+
+```csharp
+public class MyActor : ReceiveActor
+{
+       public MyActor()
+       {
+             Receive<SomeMessage>(async some => {
+                    //we can now safely use await inside this receive handler
+                    await SomeAsyncIO(some.Data);
+                    Sender.Tell(new EverythingIsAllOK());                   
+             });
+       }
+}
+```
+
+It is also possible to specify the behavior for the async handler, using `AsyncBehavior.Suspend` and  `AsyncBehavior.Reentrant` as the first argument.
+When using `Suspend` the normal actor semantics will be preserved, the actor will not be able to process any new messages until the current async operation is completed.
+While using `Reentrant` will allow the actor to multiplex messages during the `await` period.
+This does not mean that messages are processed in parallel, we still stay true to "one message at a time", but each await continuation will be piped back to the actor as a message and continue under the actors concurrency constraint.
+
+However, `PipeTo` pattern is still the preferred way to perform async operations inside an actor, as it is more explicit and clearly states what is going on.
+
+
+**Switchable Behaviors**
+In order to make the switchable behavior APIs more understandable for both `UntypedActor` and `ReceiveActor` we've updated the methods to the following:
+
+``` C#
+Become(newHandler); // become newHandler, without adding previous behavior to the stack (default)
+BecomeStacked(newHandler); // become newHandler, without adding previous behavior to the stack (default)
+UnbecomeStacked(); //revert to the previous behavior in the stack
+```
+
+The underlying behavior-switching implementation hasn't changed at all - only the names of the methods.
+
+**Scheduler APIs**
+The `Context.System.Scheduler` API has been overhauled to be both more extensible and understandable going forward. All of the previous capabilities for the `Scheduler` are still available, only in different packaging than they were before.
+
+Here are the new APIs:
+
+``` C#
+Context.System.Scheduler
+  .ScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, ActorRef sender);
+  .ScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, ActorRef sender, ICancelable cancelable);
+  .ScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message, ActorRef sender);
+  .ScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message, ActorRef sender, ICancelable cancelable);
+
+Context.System.Scheduler.Advanced
+  .ScheduleOnce(TimeSpan delay, Action action);
+  .ScheduleOnce(TimeSpan delay, Action action, ICancelable cancelable);
+  .ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action);
+  .ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable);
+```
+
+There's also a set of extension methods for specifying delays and intervals in milliseconds as well as methods for all four variants (`ScheduleTellOnceCancelable`, `ScheduleTellRepeatedlyCancelable`, `ScheduleOnceCancelable`, `ScheduleRepeatedlyCancelable`) that creates a cancelable, schedules, and returns the cancelable. 
+
+**Akka.NET `Config` now loaded automatically from App.config and Web.config**
+In previous versions Akka.NET users had to do the following to load Akka.NET HOCON configuration sections from App.config or Web.config:
+
+```csharp
+var section = (AkkaConfigurationSection)ConfigurationManager.GetSection("akka");
+var config = section.AkkaConfig;
+var actorSystem = ActorSystem.Create("MySystem", config);
+```
+
+As of Akka.NET v1.0 this is now done for you automatically:
+
+```csharp
+var actorSystem = ActorSystem.Create("MySystem"); //automatically loads App/Web.config, if any
+```
+
+**Dispatchers**
+Akka.NET v1.0 introduces the `ForkJoinDispatcher` as well as general purpose dispatcher re-use.
+
+**Using ForkJoinDispatcher**
+ForkJoinDispatcher is special - it uses [`Helios.Concurrency.DedicatedThreadPool`](https://github.com/helios-io/DedicatedThreadPool) to create a dedicated set of threads for the exclusive use of the actors configured to use a particular `ForkJoinDispatcher` instance. All of the remoting actors depend on the `default-remote-dispatcher` for instance.
+
+Here's how you can create your own ForkJoinDispatcher instances via Config:
+
+```
+myapp{
+  my-forkjoin-dispatcher{
+    type = ForkJoinDispatcher
+    throughput = 100
+    dedicated-thread-pool{ #settings for Helios.DedicatedThreadPool
+      thread-count = 3 #number of threads
+      #deadlock-timeout = 3s #optional timeout for deadlock detection
+      threadtype = background #values can be "background" or "foreground"
+    }
+  }
+}
+}
+```
+
+You can then use this specific `ForkJoinDispatcher` instance by configuring specific actors to use it, whether it's via config or the fluent interface on `Props`:
+
+**Config**
+```
+akka.actor.deploy{
+     /myActor1{
+       dispatcher = myapp.my-forkjoin-dispatcher
+     }
+}
+```
+
+**Props**
+```csharp
+var actor = Sys.ActorOf(Props.Create<Foo>().WithDispatcher("myapp.my-forkjoin-dispatcher"));
+```
+
+**FluentConfiguration [REMOVED]**
+`FluentConfig` has been removed as we've decided to standardize on HOCON configuration, but if you still want to use the old FluentConfig bits you can find them here: https://github.com/rogeralsing/Akka.FluentConfig
+
+**F# API**
+The F# API has changed to reflect the other C# interface changes, as well as unique additions specific to F#.
+
+In addition to updating the F# API, we've also fixed a long-standing bug with being able to serialize discriminated unions over the wire. This has been resolved.
+
+**Interface Renames**
+In order to comply with .NET naming conventions and standards, all of the following interfaces have been renamed with the `I{InterfaceName}` prefix.
+
+The following interfaces have all been renamed to include the `I` prefix:
+
+- [X] `Akka.Actor.ActorRefProvider, Akka` (Public)
+- [X] `Akka.Actor.ActorRefScope, Akka` (Public)
+- [X] `Akka.Actor.AutoReceivedMessage, Akka` (Public)
+- [X] `Akka.Actor.Cell, Akka` (Public)
+- [X] `Akka.Actor.Inboxable, Akka` (Public)
+- [X] `Akka.Actor.IndirectActorProducer, Akka` (Public)
+- [X] `Akka.Actor.Internal.ChildrenContainer, Akka` (Public)
+- [X] `Akka.Actor.Internal.ChildStats, Akka` (Public)
+- [X] `Akka.Actor.Internal.InternalSupportsTestFSMRef`2, Akka` (Public)
+- [X] `Akka.Actor.Internal.SuspendReason+WaitingForChildren, Akka`
+- [X] `Akka.Actor.Internals.InitializableActor, Akka` (Public)
+- [X] `Akka.Actor.LocalRef, Akka`
+- [X] `Akka.Actor.LoggingFSM, Akka` (Public)
+- [X] `Akka.Actor.NoSerializationVerificationNeeded, Akka` (Public)
+- [X] `Akka.Actor.PossiblyHarmful, Akka` (Public)
+- [X] `Akka.Actor.RepointableRef, Akka` (Public)
+- [X] `Akka.Actor.WithBoundedStash, Akka` (Public)
+- [X] `Akka.Actor.WithUnboundedStash, Akka` (Public)
+- [X] `Akka.Dispatch.BlockingMessageQueueSemantics, Akka` (Public)
+- [X] `Akka.Dispatch.BoundedDequeBasedMessageQueueSemantics, Akka` (Public)
+- [X] `Akka.Dispatch.BoundedMessageQueueSemantics, Akka` (Public)
+- [X] `Akka.Dispatch.DequeBasedMailbox, Akka` (Public)
+- [X] `Akka.Dispatch.DequeBasedMessageQueueSemantics, Akka` (Public)
+- [X] `Akka.Dispatch.MessageQueues.MessageQueue, Akka` (Public)
+- [X] `Akka.Dispatch.MultipleConsumerSemantics, Akka` (Public)
+- [X] `Akka.Dispatch.RequiresMessageQueue`1, Akka` (Public)
+- [X] `Akka.Dispatch.Semantics, Akka` (Public)
+- [X] `Akka.Dispatch.SysMsg.SystemMessage, Akka` (Public)
+- [X] `Akka.Dispatch.UnboundedDequeBasedMessageQueueSemantics, Akka` (Public)
+- [X] `Akka.Dispatch.UnboundedMessageQueueSemantics, Akka` (Public)
+- [X] `Akka.Event.LoggingAdapter, Akka` (Public)
+- [X] `Akka.FluentConfigInternals, Akka` (Public)
+- [X] `Akka.Remote.InboundMessageDispatcher, Akka.Remote`
+- [X] `Akka.Remote.RemoteRef, Akka.Remote`
+- [X] `Akka.Routing.ConsistentHashable, Akka` (Public)
+
+**`ConsistentHashRouter` and `IConsistentHashable`**
+Akka.NET v1.0 introduces the idea of virtual nodes to the `ConsistentHashRouter`, which are designed to provide more even distributions of hash ranges across a relatively small number of routees. You can take advantage of virtual nodes via configuration:
+
+```xml
+akka.actor.deployment {
+	/router1 {
+		router = consistent-hashing-pool
+		nr-of-instances = 3
+		virtual-nodes-factor = 17
+	}
+}
+```
+
+Or via code:
+
+```csharp
+var router4 = Sys.ActorOf(Props.Empty.WithRouter(
+	new ConsistentHashingGroup(new[]{c},hashMapping: hashMapping)
+	.WithVirtualNodesFactor(5)), 
+	"router4");
+```
+
+**`ConsistentHashMapping` Delegate**
+There are three ways to instruct a router to hash a message:
+1. Wrap the message in a `ConsistentHashableEnvelope`;
+2. Implement the `IConsistentHashable` interface on your message types; or
+3. Or, write a `ConsistentHashMapper` delegate and pass it to a `ConsistentHashingGroup` or a `ConsistentHashingPool` programmatically at create time.
+
+Here's an example, taken from the `ConsistentHashSpecs`:
+
+```csharp
+ConsistentHashMapping hashMapping = msg =>
+{
+    if (msg is Msg2)
+    {
+        var m2 = msg as Msg2;
+        return m2.Key;
+    }
+
+    return null;
+};
+var router2 =
+    Sys.ActorOf(new ConsistentHashingPool(1, null, null, null, hashMapping: hashMapping)
+    .Props(Props.Create<Echo>()), "router2");
+```
+
+Alternatively, you don't have to pass the `ConsistentHashMapping` into the constructor - you can use the `WithHashMapping` fluent interface built on top of both `ConsistentHashingGroup` and `ConsistentHashingPool`:
+
+```csharp
+var router2 =
+    Sys.ActorOf(new ConsistentHashingPool(1).WithHashMapping(hashMapping)
+    .Props(Props.Create<Echo>()), "router2");
+```
+
+**`ConsistentHashable` renamed to `IConsistentHashable`**
+Any objects you may have decorated with the `ConsistentHashable` interface to work with `ConsistentHashRouter` instances will need to implement `IConsistentHashable` going forward, as all interfaces have been renamed with the `I-` prefix per .NET naming conventions.
+
+**Akka.DI.Unity NuGet Package**
+Akka.NET now ships with dependency injection support for [Unity](http://unity.codeplex.com/).
+
+You can install our Unity package via the following command in the NuGet package manager console:
+
+```
+PM> Install-Package Akka.DI.Unity
+```
+
+----
 
 #### 0.8.0 Feb 11 2015
 

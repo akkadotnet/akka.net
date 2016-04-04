@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="AutoDownSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
@@ -73,7 +80,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AutoDownMustDownUnreachableWhenLeader()
+        public void AutoDown_must_down_unreachable_when_leader()
         {
             var a = AutoDownActor(TimeSpan.Zero);
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
@@ -82,7 +89,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AutoDownMustNotDownUnreachableWhenNotLeader()
+        public void AutoDown_must_not_down_unreachable_when_not_leader()
         {
             var a = AutoDownActor(TimeSpan.Zero);
             a.Tell(new ClusterEvent.LeaderChanged(MemberB.Address));
@@ -91,7 +98,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AutoDownMustDownUnreachableWhenBecomingLeader()
+        public void AutoDown_must_down_unreachable_when_becoming_leader()
         {
             var a = AutoDownActor(TimeSpan.Zero);
             a.Tell(new ClusterEvent.LeaderChanged(MemberB.Address));
@@ -101,7 +108,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AutoDownMustDownUnreachableAfterSpecifiedDuration()
+        public void AutoDown_must_down_unreachable_after_specified_duration()
         {
             var a = AutoDownActor(TimeSpan.FromSeconds(2));
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
@@ -111,7 +118,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AutoDownMustDownUnreachableWhenBecomingLeaderInbetweenDetectionAndSpecifiedDuration()
+        public void AutoDown_must_down_unreachable_when_becoming_leader_inbetween_detection_and_specified_duration()
         {
             var a = AutoDownActor(TimeSpan.FromSeconds(2));
             a.Tell(new ClusterEvent.LeaderChanged(MemberB.Address));
@@ -122,7 +129,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AutoDownMustNotDownUnreachableWhenLoosingLeadershipInbetweenDetectionAndSpecifiedDuration()
+        public void AutoDown_must_not_down_unreachable_when_loosing_leadership_inbetween_detection_and_specified_duration()
         {
             var a = AutoDownActor(TimeSpan.FromSeconds(2));
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
@@ -132,7 +139,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AutoDownMustNotDownWhenUnreachableBecomeReachableInbetweenDetectionAndSpecifiedDuration()
+        public void AutoDown_must_not_down_when_unreachable_become_reachable_inbetween_detection_and_specified_duration()
         {
             var a = AutoDownActor(TimeSpan.FromSeconds(2));
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
@@ -143,7 +150,7 @@ namespace Akka.Cluster.Tests
 
 
         [Fact]
-        public void AutoDownMustNotDownUnreachableIsRemovedInbetweenDetectionAndSpecifiedDuration()
+        public void AutoDown_must_not_down_unreachable_is_removed_inbetween_detection_and_specified_duration()
         {
             var a = AutoDownActor(TimeSpan.FromSeconds(2));
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
@@ -153,7 +160,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AutoDownMustNotDownWhenUnreachableIsAlreadyDown()
+        public void AutoDown_must_not_down_when_unreachable_is_already_down()
         {
             var a = AutoDownActor(TimeSpan.Zero);
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
@@ -163,3 +170,4 @@ namespace Akka.Cluster.Tests
 
     }
 }
+

@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="EventBus.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,23 +13,17 @@ using System.Linq;
 namespace Akka.Event
 {
     /// <summary>
-    /// Class EventBus.
+    /// Represents the base event bus, internally manages subscriptions using the event type, classifier type and subscriber type.
     /// </summary>
-    /// <typeparam name="TEvent">The type of the t event.</typeparam>
-    /// <typeparam name="TClassifier">The type of the t classifier.</typeparam>
-    /// <typeparam name="TSubscriber">The type of the t subscriber.</typeparam>
+    /// <typeparam name="TEvent">The type of the event.</typeparam>
+    /// <typeparam name="TClassifier">The type of the classifier.</typeparam>
+    /// <typeparam name="TSubscriber">The type of the subscriber.</typeparam>
     public abstract class EventBus<TEvent, TClassifier, TSubscriber>
     {
-        /// <summary>
-        /// The classifiers
-        /// </summary>
-        private readonly Dictionary<TClassifier, List<Subscription<TSubscriber, TClassifier>>> classifiers =
+        private readonly Dictionary<TClassifier, List<Subscription<TSubscriber, TClassifier>>> _classifiers =
             new Dictionary<TClassifier, List<Subscription<TSubscriber, TClassifier>>>();
 
-        /// <summary>
-        /// The cache
-        /// </summary>
-        private volatile ConcurrentDictionary<TClassifier, List<TSubscriber>> cache =
+        private volatile ConcurrentDictionary<TClassifier, List<TSubscriber>> _cache =
             new ConcurrentDictionary<TClassifier, List<TSubscriber>>();
 
         /// <summary>
@@ -53,21 +54,22 @@ namespace Akka.Event
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         public virtual bool Subscribe(TSubscriber subscriber, TClassifier classifier)
         {
-            lock (classifiers)
+            lock (_classifiers)
             {
                 List<Subscription<TSubscriber, TClassifier>> subscribers;
-                if (!classifiers.TryGetValue(classifier, out subscribers))
+                if (!_classifiers.TryGetValue(classifier, out subscribers))
                 {
                     subscribers = new List<Subscription<TSubscriber, TClassifier>>();
-                    classifiers.Add(classifier, subscribers);
+                    _classifiers.Add(classifier, subscribers);
                 }
+
                 //already subscribed
                 if (subscribers.Any(s => s.Subscriber.Equals(subscriber)))
                     return false;
 
                 var subscription = new Subscription<TSubscriber, TClassifier>(subscriber);
-
                 subscribers.Add(subscription);
+
                 ClearCache();
                 return true;
             }
@@ -80,18 +82,20 @@ namespace Akka.Event
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         public virtual bool Unsubscribe(TSubscriber subscriber)
         {
-            lock (classifiers)
+            lock (_classifiers)
             {
-                bool res = false;
-                List<Subscription<TSubscriber, TClassifier>> subscribers;
-                foreach (TClassifier classifier in classifiers.Keys)
+                var res = false;
+
+                foreach (var classifier in _classifiers.Keys)
                 {
-                    if (classifiers.TryGetValue(classifier, out subscribers))
-                    {
-                        if (subscribers.RemoveAll(s => s.Subscriber.Equals(subscriber)) > 0)
-                            res = true;
-                    }
+                    List<Subscription<TSubscriber, TClassifier>> subscribers;
+                    if (!_classifiers.TryGetValue(classifier, out subscribers)) 
+                        continue;
+                    
+                    if (subscribers.RemoveAll(s => s.Subscriber.Equals(subscriber)) > 0)
+                        res = true;
                 }
+                
                 ClearCache();
                 return res;
             }
@@ -105,32 +109,32 @@ namespace Akka.Event
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         public virtual bool Unsubscribe(TSubscriber subscriber, TClassifier classifier)
         {
-            lock (classifiers)
+            lock (_classifiers)
             {
-                bool res = false;
+                var res = false;
+
                 List<Subscription<TSubscriber, TClassifier>> subscribers;
-                if (classifiers.TryGetValue(classifier, out subscribers))
+                if (_classifiers.TryGetValue(classifier, out subscribers))
                 {
                     if (subscribers.RemoveAll(s => s.Subscriber.Equals(subscriber)) > 0)
                         res = true;
                 }
                 else
                 {
-                    foreach (var kvp in classifiers)
+                    foreach (var kvp in _classifiers)
                     {
-                        if (IsSubClassification(kvp.Key, classifier))
+                        if (!IsSubClassification(kvp.Key, classifier)) 
+                            continue;
+
+                        var subscriptions = kvp.Value.Where(ss => ss.Subscriber.Equals(subscriber)).ToList();
+                        foreach (var existingSubscriber in subscriptions)
                         {
-                            List<Subscription<TSubscriber, TClassifier>> s = kvp.Value;
-                            List<Subscription<TSubscriber, TClassifier>> subscriptions =
-                                s.Where(ss => ss.Subscriber.Equals(subscriber)).ToList();
-                            foreach (var existingSubscriber in subscriptions)
-                            {
-                                existingSubscriber.Unsubscriptions.Add(classifier);
-                                res = true;
-                            }
+                            existingSubscriber.Unsubscriptions.Add(classifier);
+                            res = true;
                         }
                     }
                 }
+
                 ClearCache();
                 return res;
             }
@@ -141,7 +145,7 @@ namespace Akka.Event
         /// </summary>
         private void ClearCache()
         {
-            cache = new ConcurrentDictionary<TClassifier, List<TSubscriber>>();
+            _cache = new ConcurrentDictionary<TClassifier, List<TSubscriber>>();
         }
 
         /// <summary>
@@ -180,10 +184,10 @@ namespace Akka.Event
         /// <param name="event">The event.</param>
         public virtual void Publish(TEvent @event)
         {
-            TClassifier eventClass = GetClassifier(@event);
+            var eventClass = GetClassifier(@event);
 
             List<TSubscriber> cachedSubscribers;
-            if (cache.TryGetValue(eventClass, out cachedSubscribers))
+            if (_cache.TryGetValue(eventClass, out cachedSubscribers))
             {
                 PublishToSubscribers(@event, cachedSubscribers);
             }
@@ -201,7 +205,7 @@ namespace Akka.Event
         /// <param name="cachedSubscribers">The cached subscribers.</param>
         private void PublishToSubscribers(TEvent @event, List<TSubscriber> cachedSubscribers)
         {
-            foreach (TSubscriber subscriber in cachedSubscribers)
+            foreach (var subscriber in cachedSubscribers)
             {
                 Publish(@event, subscriber);
             }
@@ -215,29 +219,34 @@ namespace Akka.Event
         /// <returns>List{`2}.</returns>
         private List<TSubscriber> UpdateCacheForEventClassifier(TEvent @event, TClassifier eventClass)
         {
-            lock (classifiers)
+            lock (_classifiers)
             {
                 var cachedSubscribers = new HashSet<TSubscriber>();
-                foreach (var kvp in classifiers)
-                {
-                    TClassifier classifier = kvp.Key;
-                    List<Subscription<TSubscriber, TClassifier>> set = kvp.Value;
-                    if (Classify(@event, classifier))
-                    {
-                        foreach (var subscriber in set)
-                        {
-                            if (subscriber.Unsubscriptions.Any(u => IsSubClassification(u, eventClass)))
-                                continue;
 
-                            cachedSubscribers.Add(subscriber.Subscriber);
-                        }
+                foreach (var kvp in _classifiers)
+                {
+                    var classifier = kvp.Key;
+                    var set = kvp.Value;
+
+                    if (!Classify(@event, classifier)) 
+                        continue;
+
+                    foreach (var subscriber in set)
+                    {
+                        if (subscriber.Unsubscriptions.Any(u => IsSubClassification(u, eventClass)))
+                            continue;
+
+                        cachedSubscribers.Add(subscriber.Subscriber);
                     }
                 }
+
                 //finds a distinct list of subscribers for the given event type
-                List<TSubscriber> list = cachedSubscribers.ToList();
-                cache[eventClass] = list;
+                var list = cachedSubscribers.ToList();
+                _cache[eventClass] = list;
+                
                 return list;
             }
         }
     }
 }
+

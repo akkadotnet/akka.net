@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="GracefulStopSupport.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Dispatch.SysMsg;
@@ -16,7 +23,7 @@ namespace Akka.Actor
     /// <remarks><c>IMPORTANT:</c> the actor being terminated and its supervisor being informed of the availability of the deceased actor's name
     /// are two distinct operations, which do not obey any reliable ordering.</remarks>
     /// 
-    /// If the target actor isn't terminated within the timeout the <see cref="Task"/> is complted with failure.
+    /// If the target actor isn't terminated within the timeout the <see cref="Task"/> is completed with failure.
     /// 
     /// If you want to invoke specialized stopping logic on your target actor instead of <see cref="PoisonPill"/>, you can pass your stop command as a parameter:
     /// <code>
@@ -68,7 +75,8 @@ namespace Akka.Actor
 
                 internalTarget.Tell(new Unwatch(target, fref));
                 return returnResult;
-            }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+            }, TaskContinuationOptions.ExecuteSynchronously);
         }
     }
 }
+

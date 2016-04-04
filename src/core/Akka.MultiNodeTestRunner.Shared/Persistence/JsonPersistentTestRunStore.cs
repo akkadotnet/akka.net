@@ -1,17 +1,24 @@
-﻿using System.IO;
+﻿//-----------------------------------------------------------------------
+// <copyright file="JsonPersistentTestRunStore.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
+using System.IO;
 using System.Reflection;
 using System.Text;
 using Akka.MultiNodeTestRunner.Shared.Reporting;
-using Akka.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
 namespace Akka.MultiNodeTestRunner.Shared.Persistence
 {
     /// <summary>
-    /// XML (omg not XML!) implementation of the <see cref="IPersistentTestRunStore"/>
+    /// JavaScript Object Notation (JSON) implementation of the <see cref="IRetrievableTestRunStore"/>
     /// </summary>
-    public class JsonPersistentTestRunStore : IPersistentTestRunStore
+    public class JsonPersistentTestRunStore : IRetrievableTestRunStore
     {
         //Internal version of the contract resolver
         private class AkkaContractResolver : DefaultContractResolver
@@ -53,8 +60,8 @@ namespace Akka.MultiNodeTestRunner.Shared.Persistence
 
         public bool SaveTestRun(string filePath, TestRunTree data)
         {
-            Guard.Assert(data != null, "TestRunTree must not be null.");
-            Guard.Assert(!string.IsNullOrEmpty(filePath), "filePath must not be null or empty");
+            if (data == null) throw new ArgumentNullException("data");
+            if (string.IsNullOrEmpty(filePath)) throw new ArgumentException("filePath must not be null or empty");
 
 
 // ReSharper disable once AssignNullToNotNullAttribute //already made this null check with Guard
@@ -74,7 +81,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Persistence
 
         public TestRunTree FetchTestRun(string filePath)
         {
-            Guard.Assert(!string.IsNullOrEmpty(filePath), "filePath must not be null or empty");
+            if (string.IsNullOrEmpty(filePath)) throw new ArgumentException("filePath must not be null or empty");
             // ReSharper disable once AssignNullToNotNullAttribute //already made this null check with Guard
             var finalPath = Path.GetFullPath(filePath);
             var fileText = File.ReadAllText(finalPath, Encoding.UTF8);
@@ -83,3 +90,4 @@ namespace Akka.MultiNodeTestRunner.Shared.Persistence
         }
     }
 }
+

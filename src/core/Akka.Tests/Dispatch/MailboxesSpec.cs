@@ -1,4 +1,12 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="MailboxesSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
+using System.Linq;
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
@@ -25,6 +33,14 @@ namespace Akka.Tests.Dispatch
         }
     }
 
+    public class IntPriorityMailbox : UnboundedPriorityMailbox
+    {
+        protected override int PriorityGenerator(object message)
+        {
+            return message as int? ?? Int32.MaxValue;
+        }
+    }
+
     public class MailboxesSpec : AkkaSpec
     {
         public MailboxesSpec() : base(GetConfig())
@@ -38,11 +54,15 @@ akka.actor.default-dispatcher.throughput = 100  #ensure we process 100 messages 
 string-prio-mailbox {
     mailbox-type : """ + typeof(TestPriorityMailbox).AssemblyQualifiedName  + @"""
 }
+
+int-prio-mailbox {
+    mailbox-type : """ + typeof(IntPriorityMailbox).AssemblyQualifiedName + @"""
+}
 ";
         }
 
         [Fact]
-        public void CanUseUnboundedPriorityMailbox()
+        public void Can_use_unbounded_priority_mailbox()
         {
             var actor = Sys.ActorOf(EchoActor.Props(this).WithMailbox("string-prio-mailbox"), "echo");
 
@@ -75,5 +95,44 @@ string-prio-mailbox {
 
             ExpectNoMsg(TimeSpan.FromSeconds(0.3));
         }       
+
+        [Fact]
+        public void Priority_mailbox_keeps_ordering_with_many_priority_values()
+        {
+            var actor = Sys.ActorOf(EchoActor.Props(this).WithMailbox("int-prio-mailbox"), "echo");
+
+            //pause mailbox until all messages have been told
+            actor.Tell(Suspend.Instance);
+
+            AwaitCondition(()=> ((LocalActorRef)actor).Cell.Mailbox.IsSuspended);
+            // creates 50 messages with values spanning from Int32.MinValue to Int32.MaxValue
+            var values = new int[50];
+            var increment = (int)(UInt32.MaxValue / values.Length);
+
+            for (var i = 0; i < values.Length; i++)
+                values[i] = Int32.MinValue + increment * i;
+
+            // tell the actor in reverse order
+            foreach (var value in values.Reverse())
+            {
+                actor.Tell(value);
+                actor.Tell(value);
+                actor.Tell(value);
+            }
+
+            //resume mailbox, this prevents the mailbox from running to early
+            actor.Tell(new Resume(null));
+
+            // expect the messages in the correct order
+            foreach (var value in values)
+            {
+                ExpectMsg(value);
+                ExpectMsg(value);
+                ExpectMsg(value);
+            }
+
+            ExpectNoMsg(TimeSpan.FromSeconds(0.3));
+        }
     }
 }
+

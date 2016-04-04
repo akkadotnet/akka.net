@@ -1,10 +1,18 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ResizerSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Linq;
 using System.Threading;
 using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
 using Xunit;
+using FluentAssertions;
 
 namespace Akka.Tests.Routing
 {
@@ -152,34 +160,28 @@ namespace Akka.Tests.Routing
 
             (RouteeSize(router)).ShouldBe(resizer.LowerBound);
 
-            Action<int, TimeSpan> loop = (loops, span) =>
+            Action<int, TimeSpan, int?> loopTillAppropriateSize = (loops, span, expectedBound) =>
             {
                 for (var i = 0; i < loops; i++)
                 {
                     router.Tell(span, TestActor);
+                    if (expectedBound.HasValue && RouteeSize(router) >= expectedBound.Value)
+                    {
+                        return;
+                    }
+
                     //sending too quickly will result in skipped resize due to many resizeInProgress conflicts
                     Thread.Sleep(TimeSpan.FromMilliseconds(20));
                 }
-                Within(
-                    TimeSpan.FromMilliseconds((span.TotalMilliseconds * loops) / resizer.LowerBound) + TimeSpan.FromSeconds(2),
-                    () =>
-                    {
-                        for (var i = 0; i < loops; i++) ExpectMsg("done");
-                        return true;
-                    });
             };
 
-            
-
             // 2 more should go through without triggering more
-            loop(2, TimeSpan.FromMilliseconds(200));
+            loopTillAppropriateSize(2, TimeSpan.FromMilliseconds(200), null);
             RouteeSize(router).ShouldBe(resizer.LowerBound);
 
-
             // a whole bunch should max it out
-            loop(50, TimeSpan.FromMilliseconds(500));
+            loopTillAppropriateSize(200, TimeSpan.FromMilliseconds(500), resizer.UpperBound);
             RouteeSize(router).ShouldBe(resizer.UpperBound);
-
         }
 
         class BackoffActor : UntypedActor
@@ -206,9 +208,12 @@ namespace Akka.Tests.Routing
                 var router = Sys.ActorOf(Props.Create<BackoffActor>().WithRouter(new RoundRobinPool(0, resizer)));
 
                 // put some pressure on the router
-                for (var i = 0; i < 25; i++)
+                for (var i = 0; i < 200; i++)
                 {
                     router.Tell(150);
+                    if (RouteeSize(router) > 2) 
+                        break;
+
                     Thread.Sleep(20);
                 }
 
@@ -217,24 +222,23 @@ namespace Akka.Tests.Routing
                 Thread.Sleep(300);
 
                 // let it cool down
-                AwaitCondition(() =>
+                AwaitAssert(() =>
                 {
                     router.Tell(0); //trigger resize
                     Thread.Sleep(20);
-                    return RouteeSize(router) < z;
-                }, null, TimeSpan.FromMilliseconds(500));
+                    RouteeSize(router).Should().BeLessThan(z);
+                }, null, TimeSpan.FromSeconds(1));
             });
         }
 
         #region Internal methods
 
-        private int RouteeSize(IActorRef router)
+        private static int RouteeSize(IActorRef router)
         {
-            var routeesTask = router.Ask<Routees>(new GetRoutees(), TestKitSettings.DefaultTimeout);
-            routeesTask.Wait(TestKitSettings.DefaultTimeout);
-            return routeesTask.Result.Members.Count();
+            return ((RoutedActorRef) router).Children.Count();
         }
 
         #endregion
     }
 }
+

@@ -1,4 +1,11 @@
-﻿using System.Collections.Generic;
+﻿//-----------------------------------------------------------------------
+// <copyright file="SinkCoordinator.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -119,7 +126,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
                 //Shut down the ActorSystem if all confirmations have been received
                 if (ReceivedSinkCloseConfirmations >= TotalReceiveClosedConfirmations)
-                    Context.System.Shutdown();
+                    Context.System.Terminate();
             });
 
             Receive<RecommendedExitCode>(code =>
@@ -140,7 +147,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                     sink.RequestExitCode(Self);
                     sink.Close(Context.System)
                         .ContinueWith(r => new SinkClosed(),
-                        TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent)
+                        TaskContinuationOptions.ExecuteSynchronously)
                         .PipeTo(Self);
                 }
             });
@@ -193,3 +200,4 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         #endregion
     }
 }
+

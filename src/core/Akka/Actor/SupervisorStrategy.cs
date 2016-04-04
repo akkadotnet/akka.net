@@ -1,9 +1,16 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="SupervisorStrategy.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Akka.Actor.Internal;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -72,19 +79,11 @@ namespace Akka.Actor
         ///     thrown. It will be restarted for other `Exception` types.
         ///     The error is escalated if it's a `Exception`, i.e. `Error`.
         /// </summary>
-        /// <param name="exception">The exception.</param>
         /// <returns>Directive.</returns>
-        public static Directive DefaultDecider(Exception exception)
-        {
-            if (exception is ActorInitializationException)
-                return Directive.Stop;
-            if (exception is ActorKilledException)
-                return Directive.Stop;
-            if (exception is DeathPactException)
-                return Directive.Stop;
-
-            return Directive.Restart;
-        }
+        public static IDecider DefaultDecider = Decider.From(Directive.Restart,
+            Directive.Stop.When<ActorInitializationException>(),
+            Directive.Stop.When<ActorKilledException>(),
+            Directive.Stop.When<DeathPactException>());
 
         /// <summary>
         ///     Restarts the child.
@@ -179,6 +178,12 @@ namespace Akka.Actor
         public static readonly SupervisorStrategy DefaultStrategy = new OneForOneStrategy(DefaultDecider);    
 
         /// <summary>
+        ///     This strategy resembles Erlang in that failing children are always
+        ///     terminated (one-for-one).
+        /// </summary>
+        public static readonly OneForOneStrategy StoppingStrategy = new OneForOneStrategy(ex => Directive.Stop);
+
+        /// <summary>
         /// This method is called after the child has been removed from the set of children.
         /// It does not need to do anything special. Exceptions thrown from this method
         /// do NOT make the actor fail if this happens during termination.
@@ -225,7 +230,7 @@ namespace Akka.Actor
         /// <param name="withinTimeRange">duration of the time window for maxNrOfRetries, Duration.Inf means no window.</param>
         /// <param name="localOnlyDecider">mapping from Exception to <see cref="Directive" /></param>
         public OneForOneStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, Func<Exception, Directive> localOnlyDecider)
-            : this(maxNrOfRetries.GetValueOrDefault(-1), withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).Milliseconds, localOnlyDecider)
+            : this(maxNrOfRetries.GetValueOrDefault(-1), (int) withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).TotalMilliseconds, localOnlyDecider)
         {
             //Intentionally left blank
         }
@@ -242,7 +247,7 @@ namespace Akka.Actor
         /// <param name="withinTimeRange">duration of the time window for maxNrOfRetries, Duration.Inf means no window.</param>
         /// <param name="decider">mapping from Exception to <see cref="Directive" /></param>
         public OneForOneStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, IDecider decider)
-            : this(maxNrOfRetries.GetValueOrDefault(-1), withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).Milliseconds, decider)
+            : this(maxNrOfRetries.GetValueOrDefault(-1), (int) withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).TotalMilliseconds, decider)
         {
             //Intentionally left blank
         }
@@ -259,7 +264,8 @@ namespace Akka.Actor
         /// <param name="withinTimeMilliseconds">duration in milliseconds of the time window for <paramref name="maxNrOfRetries"/>, negative values means no window.</param>
         /// <param name="localOnlyDecider">Mapping from an <see cref="Exception"/> to <see cref="Directive"/></param>
         /// <param name="loggingEnabled">If <c>true</c> failures will be logged</param>
-        public OneForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, Func<Exception, Directive> localOnlyDecider, bool loggingEnabled = true) : this(maxNrOfRetries,withinTimeMilliseconds,new LocalOnlyDecider(localOnlyDecider),loggingEnabled)
+        public OneForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, Func<Exception, Directive> localOnlyDecider, bool loggingEnabled = true)
+            : this(maxNrOfRetries, withinTimeMilliseconds, new LocalOnlyDecider(localOnlyDecider), loggingEnabled)
         {
             //Intentionally left blank
         }
@@ -351,6 +357,8 @@ namespace Akka.Actor
 
         public override ISurrogate ToSurrogate(ActorSystem system)
         {
+            if (Decider is LocalOnlyDecider)
+                throw new NotSupportedException("Can not serialize LocalOnlyDecider");
             return new OneForOneStrategySurrogate
             {
                 Decider = Decider,
@@ -397,7 +405,7 @@ namespace Akka.Actor
         /// <param name="withinTimeRange">duration of the time window for maxNrOfRetries, <see cref="Timeout.InfiniteTimeSpan"/> means no window.</param>
         /// <param name="localOnlyDecider">mapping from Exception to <see cref="Directive"/></param>
         public AllForOneStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, Func<Exception, Directive> localOnlyDecider)
-            : this(maxNrOfRetries.GetValueOrDefault(-1), withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).Milliseconds, localOnlyDecider)
+            : this(maxNrOfRetries.GetValueOrDefault(-1), (int) withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).TotalMilliseconds, localOnlyDecider)
         {
             //Intentionally left blank
         }
@@ -414,7 +422,7 @@ namespace Akka.Actor
         /// <param name="withinTimeRange">duration of the time window for maxNrOfRetries, <see cref="Timeout.InfiniteTimeSpan"/> means no window.</param>
         /// <param name="decider">mapping from Exception to <see cref="Directive"/></param>
         public AllForOneStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, IDecider decider)
-            : this(maxNrOfRetries.GetValueOrDefault(-1), withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).Milliseconds, decider)
+            : this(maxNrOfRetries.GetValueOrDefault(-1), (int) withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).TotalMilliseconds, decider)
         {
             //Intentionally left blank
         }
@@ -431,7 +439,8 @@ namespace Akka.Actor
         /// <param name="withinTimeMilliseconds">duration in milliseconds of the time window for <paramref name="maxNrOfRetries"/>, negative values means no window.</param>
         /// <param name="localOnlyDecider">Mapping from an <see cref="Exception"/> to <see cref="Directive"/></param>
         /// <param name="loggingEnabled">If <c>true</c> failures will be logged</param>
-        public AllForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, Func<Exception, Directive> localOnlyDecider, bool loggingEnabled=true) : this(maxNrOfRetries,withinTimeMilliseconds,new LocalOnlyDecider(localOnlyDecider),loggingEnabled)
+        public AllForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, Func<Exception, Directive> localOnlyDecider, bool loggingEnabled=true)
+            : this(maxNrOfRetries, withinTimeMilliseconds, new LocalOnlyDecider(localOnlyDecider), loggingEnabled)
         {
             //Intentionally left blank
         }
@@ -696,6 +705,50 @@ namespace Akka.Actor
             }
 
             return DefaultDirective;
+        }
+    }
+
+    public abstract class SupervisorStrategyConfigurator
+    {
+        public abstract SupervisorStrategy Create();
+
+        public static SupervisorStrategyConfigurator CreateConfigurator(string typeName)
+        {
+            switch (typeName)
+            {
+                case "Akka.Actor.DefaultSupervisorStrategy":
+                    return new DefaultSupervisorStrategy();
+
+                case "Akka.Actor.StoppingSupervisorStrategy":
+                    return new StoppingSupervisorStrategy();
+
+                case null:
+                    throw new ConfigurationException("Could not resolve SupervisorStrategyConfigurator. typeName is null");
+
+                default:
+                    Type configuratorType = Type.GetType(typeName);
+
+                    if (configuratorType == null)
+                        throw new ConfigurationException("Could not resolve SupervisorStrategyConfigurator type " + typeName);
+
+                    return (SupervisorStrategyConfigurator)Activator.CreateInstance(configuratorType);
+            }
+        }
+    }
+
+    public class DefaultSupervisorStrategy : SupervisorStrategyConfigurator
+    {
+        public override SupervisorStrategy Create()
+        {
+            return SupervisorStrategy.DefaultStrategy;
+        }
+    }
+
+    public class StoppingSupervisorStrategy : SupervisorStrategyConfigurator
+    {
+        public override SupervisorStrategy Create()
+        {
+            return SupervisorStrategy.StoppingStrategy;
         }
     }
 }

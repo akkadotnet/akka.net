@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="AkkaPduCodec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Linq;
 using Akka.Actor;
 using Google.ProtocolBuffers;
@@ -98,7 +105,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// INTERNAL API
     /// 
-    /// A Codec that is able to convert Akka PDUs from and to <see cref="ByteString"/>
+    /// A codec that is able to convert Akka PDUs from and to <see cref="ByteString"/>
     /// </summary>
     internal abstract class AkkaPduCodec
     {
@@ -347,3 +354,4 @@ namespace Akka.Remote.Transport
         #endregion
     }
 }
+

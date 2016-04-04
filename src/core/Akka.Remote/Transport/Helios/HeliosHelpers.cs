@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="HeliosHelpers.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Net;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -240,7 +247,7 @@ namespace Akka.Remote.Transport.Helios
                 {
                     var listener = s.Result;
                     RegisterListener(channel, listener, msg, remoteSocketAddress);
-                }, TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.NotOnCanceled & TaskContinuationOptions.NotOnFaulted);
+                }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.NotOnCanceled | TaskContinuationOptions.NotOnFaulted);
                 op = handle;
             }
             else
@@ -253,6 +260,8 @@ namespace Akka.Remote.Transport.Helios
         public override void Dispose()
         {
             WrappedTransport.ConnectionGroup.TryRemove(this);
+            base.Dispose();
         }
     }
 }
+

@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="AkkaEqualException.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Runtime.Serialization;
 using Xunit.Sdk;
 
@@ -16,11 +23,12 @@ namespace Akka.TestKit.Xunit.Internals
             _args = args;
         }
 
-        public AkkaEqualException(object expected, object actual, bool skipPositionCheck, string format = "", params object[] args)
+        public AkkaEqualException(object expected, object actual, bool skipPositionCheck, string format = "",
+            params object[] args)
             : base(expected, actual, skipPositionCheck)
         {
-            _format = format;
             _args = args;
+            _format = format;
         }
 
         protected AkkaEqualException(SerializationInfo info, StreamingContext context)
@@ -48,3 +56,4 @@ namespace Akka.TestKit.Xunit.Internals
         }
     }
 }
+

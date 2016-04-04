@@ -1,4 +1,11 @@
-﻿using System.Diagnostics;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TraceLogger.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Diagnostics;
 using Akka.Actor;
 
 namespace Akka.Event
@@ -12,13 +19,12 @@ namespace Akka.Event
     {
         protected override void OnReceive(object message)
         {
-            PatternMatch.Match(message)
+            message.Match()
                  .With<InitializeLogger>(m => Sender.Tell(new LoggerInitialized()))
-                 .With<Error>(m =>
-                      Trace.TraceError(m.ToString()))
+                 .With<Error>(m => Trace.TraceError(m.ToString()))
                   .With<Warning>(m => Trace.TraceWarning(m.ToString()))
                  .With<DeadLetter>(m => Trace.TraceWarning(string.Format("Deadletter - unable to send message {0} from {1} to {2}", m.Message, m.Sender, m.Sender), typeof(DeadLetter).ToString()))
-                 .With<UnhandledMessage>(m => Trace.TraceWarning(string.Format("Unhandled message!"), typeof(UnhandledMessage).ToString()))
+                 .With<UnhandledMessage>(m => Trace.TraceWarning("Unhandled message!"))
                  .Default(m =>
                  {
                      if (m != null)
@@ -27,3 +33,4 @@ namespace Akka.Event
         }
     }
 }
+

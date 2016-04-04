@@ -1,6 +1,13 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RoutedActorRef.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 using Akka.Dispatch;
 
 namespace Akka.Routing
@@ -53,3 +60,4 @@ namespace Akka.Routing
         }
     }
 }
+

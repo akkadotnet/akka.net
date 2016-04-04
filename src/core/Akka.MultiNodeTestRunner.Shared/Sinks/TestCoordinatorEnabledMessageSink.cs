@@ -1,3 +1,10 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestCoordinatorEnabledMessageSink.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -27,7 +34,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                             return new SinkCoordinator.RecommendedExitCode(task.Result.Passed.GetValueOrDefault(false)
                                 ? 0
                                 : 1);
-                        }, TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent)
+                        }, TaskContinuationOptions.ExecuteSynchronously)
                             .PipeTo(Sender, Self);
                 }
             });
@@ -126,7 +133,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                     {
                         var testRunTree = tr.Result;
                         return new BeginSinkTerminate(testRunTree, sender);
-                    }, TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously)
+                    }, TaskContinuationOptions.ExecuteSynchronously)
                     .PipeTo(Self);
             }
         }
@@ -138,3 +145,4 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         }
     }
 }
+

@@ -1,9 +1,16 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TransportAdapters.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 
 namespace Akka.Remote.Transport
 {
@@ -140,6 +147,14 @@ namespace Akka.Remote.Transport
             }
         }
 
+        public override long MaximumPayloadBytes
+        {
+            get
+            {
+                return WrappedTransport.MaximumPayloadBytes;
+            }
+        }
+
         protected abstract Task<IAssociationEventListener> InterceptListen(Address listenAddress,
             Task<IAssociationEventListener> listenerTask);
 
@@ -162,7 +177,7 @@ namespace Akka.Remote.Transport
                 return
                     new Tuple<Address, TaskCompletionSource<IAssociationEventListener>>(
                         SchemeAugmenter.AugmentScheme(listenAddress), upstreamListenerPromise);
-            }, TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent).Unwrap();
+            }, TaskContinuationOptions.ExecuteSynchronously).Unwrap();
         }
 
         public override Task<AssociationHandle> Associate(Address remoteAddress)
@@ -317,9 +332,9 @@ namespace Akka.Remote.Transport
 
         public override Task<bool> Shutdown()
         {
-            var stopTask = manager.GracefulStop(((RemoteActorRefProvider)((ActorSystemImpl) System).Provider).RemoteSettings.FlushWait);
+            var stopTask = manager.GracefulStop((RARP.For(System).Provider).RemoteSettings.FlushWait);
             var transportStopTask = WrappedTransport.Shutdown();
-            return Task.WhenAll(stopTask, transportStopTask).ContinueWith(x => x.IsCompleted, TaskContinuationOptions.ExecuteSynchronously);
+            return Task.WhenAll(stopTask, transportStopTask).ContinueWith(x => x.IsCompleted && !(x.IsFaulted || x.IsCanceled), TaskContinuationOptions.ExecuteSynchronously);
         }
     }
 
@@ -330,13 +345,13 @@ namespace Akka.Remote.Transport
         /// </summary>
        protected Queue<object> DelayedEvents = new Queue<object>();
 
-        protected IAssociationEventListener associationListener;
-        protected Address localAddress;
-        protected long uniqueId = 0L;
+        protected IAssociationEventListener AssociationListener;
+        protected Address LocalAddress;
+        protected long UniqueId = 0L;
 
-        protected long nextId()
+        protected long NextId()
         {
-            return Interlocked.Increment(ref uniqueId);
+            return Interlocked.Increment(ref UniqueId);
         }
 
         protected override void OnReceive(object message)
@@ -344,15 +359,15 @@ namespace Akka.Remote.Transport
             PatternMatch.Match(message)
                 .With<ListenUnderlying>(listen =>
                 {
-                    localAddress = listen.ListenAddress;
+                    LocalAddress = listen.ListenAddress;
                     var capturedSelf = Self;
                     listen.UpstreamListener.ContinueWith(
                         listenerRegistered => capturedSelf.Tell(new ListenerRegistered(listenerRegistered.Result)),
-                        TaskContinuationOptions.AttachedToParent);
+                        TaskContinuationOptions.ExecuteSynchronously);
                 })
                 .With<ListenerRegistered>(listener =>
                 {
-                    associationListener = listener.Listener;
+                    AssociationListener = listener.Listener;
                     foreach (var dEvent in DelayedEvents)
                     {
                         Self.Tell(dEvent, ActorRefs.NoSender);
@@ -370,3 +385,4 @@ namespace Akka.Remote.Transport
         protected abstract void Ready(object message);
     }
 }
+

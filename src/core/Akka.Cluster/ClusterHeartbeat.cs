@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterHeartbeat.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -44,7 +51,7 @@ namespace Akka.Cluster
 
         private readonly Cluster _cluster;
 
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
 
         public ClusterHeartbeatSender()
         {
@@ -56,7 +63,7 @@ namespace Akka.Cluster
                 ImmutableHashSet.Create<UniqueAddress>(),
                 FailureDetector);
 
-            //stat perioidic heartbeat to other nodes in cluster
+            //start periodic heartbeat to other nodes in cluster
             _heartbeatTask =
             Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
                 _cluster.Settings.PeriodicTasksInitialDelay.Max(_cluster.Settings.HeartbeatInterval), 
@@ -95,7 +102,7 @@ namespace Akka.Cluster
             Receive<HeartbeatRsp>(rsp => DoHeartbeatRsp(rsp.From));
             Receive<ClusterEvent.MemberUp>(up => AddMember(up.Member));
             Receive<ClusterEvent.MemberRemoved>(removed => RemoveMember(removed.Member));
-            Receive<ClusterEvent.IMemberEvent>(@event => { }); //we don't care about other member evets
+            Receive<ClusterEvent.IMemberEvent>(@event => { }); //we don't care about other member events
             Receive<ExpectedFirstHeartbeat>(heartbeat => TriggerFirstHeart(heartbeat.From));
         }
 
@@ -402,3 +409,4 @@ namespace Akka.Cluster
         #endregion
     }
 }
+

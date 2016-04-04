@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorWithStashSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.TestKit;
@@ -49,6 +56,17 @@ namespace Akka.Tests.Actor.Stash
             var stasher = ActorOf<StashingTwiceActor>("stashing-actor");
             stasher.Tell("hello");
             _state.ExpectedException.Ready(TimeSpan.FromSeconds(3));
+        }
+
+        [Fact]
+        public void An_actor_Should__not_throw_an_exception_if_the_same_message_is_received_and_stashed_twice()
+        {
+            _state.ExpectedException = new TestLatch();
+            var stasher = ActorOf<StashAndReplyActor>("stashing-actor");
+            stasher.Tell("hello");
+            ExpectMsg("bye");
+            stasher.Tell("hello");
+            ExpectMsg("bye");
         }
 
         [Fact]
@@ -130,17 +148,17 @@ namespace Akka.Tests.Actor.Stash
             ExpectMsg("terminated2");
         }
 
-        private class UnboundedStashActor : BlackHoleActor, WithUnboundedStash
+        private class UnboundedStashActor : BlackHoleActor, IWithUnboundedStash
         {
             public IStash Stash { get; set; }
         }
 
-        private class BoundedStashActor : BlackHoleActor, WithBoundedStash
+        private class BoundedStashActor : BlackHoleActor, IWithBoundedStash
         {
             public IStash Stash { get; set; }
         }
 
-        private class StashingActor : TestReceiveActor, WithUnboundedStash
+        private class StashingActor : TestReceiveActor, IWithUnboundedStash
         {
             public StashingActor()
             {
@@ -166,7 +184,21 @@ namespace Akka.Tests.Actor.Stash
             public IStash Stash { get; set; }
         }
 
-        private class StashEverythingActor : ReceiveActor, WithUnboundedStash
+        private class StashAndReplyActor : ReceiveActor, IWithUnboundedStash
+        {
+            public StashAndReplyActor()
+            {
+                ReceiveAny(m =>
+                {
+                    Stash.Stash();
+                    Sender.Tell("bye");
+                }
+                );
+            }
+            public IStash Stash { get; set; }
+        }
+
+        private class StashEverythingActor : ReceiveActor, IWithUnboundedStash
         {
             public StashEverythingActor()
             {
@@ -175,7 +207,7 @@ namespace Akka.Tests.Actor.Stash
             public IStash Stash { get; set; }
         }
 
-        private class StashingTwiceActor : TestReceiveActor, WithUnboundedStash
+        private class StashingTwiceActor : TestReceiveActor, IWithUnboundedStash
         {
             public StashingTwiceActor()
             {
@@ -186,7 +218,7 @@ namespace Akka.Tests.Actor.Stash
                     {
                         Stash.Stash();
                     }
-                    catch(IllegalActorStateException e)
+                    catch(IllegalActorStateException)
                     {
                         _state.ExpectedException.Open();
                     }
@@ -207,7 +239,7 @@ namespace Akka.Tests.Actor.Stash
             public IStash Stash { get; set; }
         }
 
-        private class SlaveActor : TestReceiveActor, WithUnboundedStash
+        private class SlaveActor : TestReceiveActor, IWithUnboundedStash
         {
             private readonly TestLatch _restartLatch;
 
@@ -232,7 +264,7 @@ namespace Akka.Tests.Actor.Stash
             public IStash Stash { get; set; }
         }
 
-        private class ActorsThatClearsStashOnPreRestart : TestReceiveActor, WithUnboundedStash
+        private class ActorsThatClearsStashOnPreRestart : TestReceiveActor, IWithUnboundedStash
         {
             private readonly TestLatch _restartLatch;
 
@@ -257,7 +289,7 @@ namespace Akka.Tests.Actor.Stash
 
         }
 
-        private class TerminatedMessageStashingActor : TestReceiveActor, WithUnboundedStash
+        private class TerminatedMessageStashingActor : TestReceiveActor, IWithUnboundedStash
         {
             public TerminatedMessageStashingActor(IActorRef probe)
             {
@@ -295,7 +327,85 @@ namespace Akka.Tests.Actor.Stash
             public TestBarrier Finished;
             public TestLatch ExpectedException;
         }
+
+        [Fact]
+        public void An_actor_should_not_throw_an_exception_if_sent_two_messages_with_same_value_different_reference()
+        {
+            _state.ExpectedException = new TestLatch();
+            var stasher = ActorOf<StashEverythingActor>("stashing-actor");
+            stasher.Tell(new CustomMessageOverrideEquals("A"));
+            stasher.Tell(new CustomMessageOverrideEquals("A"));
+
+            // NOTE:
+            // here we should test for no exception thrown..
+            // but I don't know how....
+        }
+
+        public class CustomMessageOverrideEquals
+        {
+
+            public CustomMessageOverrideEquals(string cargo)
+            {
+                Cargo = cargo;
+            }
+            public override int GetHashCode()
+            {
+                return base.GetHashCode() ^ 314;
+            }
+            public override bool Equals(System.Object obj)
+            {
+                // If parameter is null return false.
+                if (obj == null)
+                {
+                    return false;
+                }
+
+                // If parameter cannot be cast to Point return false.
+                CustomMessageOverrideEquals p = obj as CustomMessageOverrideEquals;
+                if ((System.Object)p == null)
+                {
+                    return false;
+                }
+
+                // Return true if the fields match:
+                return (Cargo == p.Cargo);
+            }
+
+            public bool Equals(CustomMessageOverrideEquals p)
+            {
+                // If parameter is null return false:
+                if ((object)p == null)
+                {
+                    return false;
+                }
+
+                // Return true if the fields match:
+                return (Cargo == p.Cargo);
+            }
+            public static bool operator ==(CustomMessageOverrideEquals a, CustomMessageOverrideEquals b)
+            {
+                // If both are null, or both are same instance, return true.
+                if (System.Object.ReferenceEquals(a, b))
+                {
+                    return true;
+                }
+
+                // If one is null, but not both, return false.
+                if (((object)a == null) || ((object)b == null))
+                {
+                    return false;
+                }
+
+                // Return true if the fields match:
+                return (a.Cargo == b.Cargo);
+            }
+
+            public static bool operator !=(CustomMessageOverrideEquals a, CustomMessageOverrideEquals b)
+            {
+                return !(a == b);
+            }
+            public string Cargo { get; private set; }
+        }
     }
-
-
 }
+

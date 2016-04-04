@@ -1,7 +1,9 @@
-﻿/**
- * Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
- * Original C# code written by Akka.NET project <http://getakka.net/>
- */
+﻿//-----------------------------------------------------------------------
+// <copyright file="CachingConfig.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Concurrent;
@@ -118,7 +120,7 @@ namespace Akka.Dispatch
                                 pathEntry = new ValuePathEntry(true, true, configValue.AtKey("cached"));
                             }
                         }
-                        catch (Exception ex)
+                        catch (Exception)
                         {
                             pathEntry = EmptyPathEntry;
                         }
@@ -128,7 +130,7 @@ namespace Akka.Dispatch
                         pathEntry = NonExistingPathEntry;
                     }
                 }
-                catch (Exception ex) //configuration threw some sort of error
+                catch (Exception) //configuration threw some sort of error
                 {
                     pathEntry = InvalidPathEntry;
                 }
@@ -275,3 +277,4 @@ namespace Akka.Dispatch
         }
     }
 }
+

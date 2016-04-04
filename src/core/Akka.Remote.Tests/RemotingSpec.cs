@@ -1,8 +1,17 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RemotingSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.Transport;
+using Akka.Routing;
 using Akka.TestKit;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -61,7 +70,7 @@ namespace Akka.Remote.Tests
                   applied-adapters = []
                   registry-key = aX33k0jWKg
                   local-address = ""test://RemotingSpec@localhost:12345""
-                  maximum-payload-bytes = 32000 bytes
+                  maximum-payload-bytes = 32000b
                   scheme-identifier = test
                 }
               }
@@ -108,7 +117,7 @@ namespace Akka.Remote.Tests
                   applied-adapters = []
                   registry-key = aX33k0jWKg
                   local-address = ""test://remote-sys@localhost:12346""
-                    maximum-payload-bytes = 48000 bytes
+                  maximum-payload-bytes = 128000b
                   scheme-identifier = test
                 }
               }
@@ -130,7 +139,7 @@ namespace Akka.Remote.Tests
 
         protected override void AfterAll()
         {
-            remoteSystem.Shutdown();
+            remoteSystem.Terminate();
             AssociationRegistry.Clear();
             base.AfterAll();
         }
@@ -156,7 +165,6 @@ namespace Akka.Remote.Tests
             Assert.Equal("pong", msg.Item1);
             Assert.IsType<FutureActorRef>(msg.Item2);
         }
-
 
         [Fact]
         public void Remoting_must_create_and_supervise_children_on_remote_Node()
@@ -191,6 +199,68 @@ namespace Akka.Remote.Tests
             }
         }
 
+        [Fact]
+        public async Task Bug_884_Remoting_must_support_reply_to_Routee()
+        {
+            var router = Sys.ActorOf(new RoundRobinPool(3).Props(Props.Create(() => new Reporter(TestActor))));
+            var routees = await router.Ask<Routees>(new GetRoutees());
+
+            //have one of the routees send the message
+            var targetRoutee = routees.Members.Cast<ActorRefRoutee>().Select(x => x.Actor).First();
+            here.Tell("ping", targetRoutee);
+            var msg = ExpectMsg<Tuple<string, IActorRef>>(TimeSpan.FromSeconds(1.5));
+            Assert.Equal("pong", msg.Item1);
+            Assert.Equal(targetRoutee, msg.Item2);
+        }
+
+        [Fact]
+        public async Task Bug_884_Remoting_must_support_reply_to_child_of_Routee()
+        {
+            var props = Props.Create(() => new Reporter(TestActor));
+            var router = Sys.ActorOf(new RoundRobinPool(3).Props(Props.Create(() => new NestedDeployer(props))));
+            var routees = await router.Ask<Routees>(new GetRoutees());
+
+            //have one of the routees send the message
+            var targetRoutee = routees.Members.Cast<ActorRefRoutee>().Select(x => x.Actor).First();
+            var reporter = await targetRoutee.Ask<IActorRef>(new NestedDeployer.GetNestedReporter());
+            here.Tell("ping", reporter);
+            var msg = ExpectMsg<Tuple<string, IActorRef>>(TimeSpan.FromSeconds(1.5));
+            Assert.Equal("pong", msg.Item1);
+            Assert.Equal(reporter, msg.Item2);
+        }
+
+        [Fact]
+        public void Drop_sent_messages_over_payload_size()
+        {
+            var oversized = ByteStringOfSize(MaxPayloadBytes + 1);
+            EventFilter.Exception<OversizedPayloadException>(start: "Discarding oversized payload sent to ").ExpectOne(() =>
+            {
+                VerifySend(oversized, () =>
+                {
+                    ExpectNoMsg();
+                });
+            });
+        }
+
+        [Fact]
+        public void Drop_received_messages_over_payload_size()
+        {
+            EventFilter.Exception<OversizedPayloadException>(start: "Discarding oversized payload received").ExpectOne(() =>
+            {
+                VerifySend(MaxPayloadBytes + 1, () =>
+                {
+                    ExpectNoMsg();
+                });
+            });
+        }
+
+        [Fact]
+        public void Nobody_should_be_converted_back_to_its_singleton()
+        {
+            here.Tell(ActorRefs.Nobody, TestActor);
+            ExpectMsg(ActorRefs.Nobody, TimeSpan.FromSeconds(1.5));
+        }
+
         #endregion
 
         #region Internal Methods
@@ -200,7 +270,7 @@ namespace Akka.Remote.Tests
             get
             {
                 var byteSize = Sys.Settings.Config.GetByteSize("akka.remote.test.maximum-payload-bytes");
-        if (byteSize != null)
+                if (byteSize != null)
                     return (int)byteSize.Value;
                 return 0;
             }
@@ -251,7 +321,7 @@ namespace Akka.Remote.Tests
             {
                 bigBounceHere.Tell(msg, TestActor);
                 afterSend();
-                ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+                ExpectNoMsg();
             }
             finally
             {
@@ -296,6 +366,52 @@ namespace Akka.Remote.Tests
             }
 
             public string S { get; private set; }
+        }
+
+        class Reporter : UntypedActor
+        {
+            private IActorRef _reportTarget;
+
+            public Reporter(IActorRef reportTarget)
+            {
+                _reportTarget = reportTarget;
+            }
+
+
+            protected override void OnReceive(object message)
+            {
+                _reportTarget.Forward(message);
+            }
+        }
+
+        class NestedDeployer : UntypedActor
+        {
+            private Props _reporterProps;
+            private IActorRef _repoterActorRef;
+
+            public class GetNestedReporter { }
+
+            public NestedDeployer(Props reporterProps)
+            {
+                _reporterProps = reporterProps;
+            }
+
+            protected override void PreStart()
+            {
+                _repoterActorRef = Context.ActorOf(_reporterProps);
+            }
+
+            protected override void OnReceive(object message)
+            {
+                if (message is GetNestedReporter)
+                {
+                    Sender.Tell(_repoterActorRef);
+                }
+                else
+                {
+                    Unhandled(message);
+                }
+            }
         }
 
         class Echo1 : UntypedActor
@@ -347,7 +463,8 @@ namespace Akka.Remote.Tests
                         {
                             actorTuple.Item2.Tell(Tuple.Create("pong", Sender.Path.ToSerializationFormat()));
                         }
-                    });
+                    })
+                    .Default(msg => Sender.Tell(msg));
             }
         }
 
@@ -381,3 +498,4 @@ namespace Akka.Remote.Tests
         #endregion
     }
 }
+

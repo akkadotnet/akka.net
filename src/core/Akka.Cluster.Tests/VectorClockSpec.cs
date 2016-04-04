@@ -1,4 +1,11 @@
-﻿using System.Collections.Generic;
+﻿//-----------------------------------------------------------------------
+// <copyright file="VectorClockSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Collections.Generic;
 using Xunit;
 
 namespace Akka.Cluster.Tests
@@ -6,14 +13,14 @@ namespace Akka.Cluster.Tests
     public class VectorClockSpec
     {
         [Fact]
-        public void MustHaveZeroVersionsWhenCreated()
+        public void Must_have_zero_versions_when_created()
         {
             var clock = VectorClock.Create();
             Assert.Equal(new Dictionary<VectorClock.Node, long>(), clock.Versions);
         }
 
         [Fact]
-        public void MustNotHappenBeforeItself()
+        public void Must_not_happen_before_itself()
         {
             var clock1 = VectorClock.Create();
             var clock2 = VectorClock.Create();
@@ -22,7 +29,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void MustPassMiscComparisonTest1()
+        public void Must_pass_misc_comparison_test1()
         {
             var clock1_1 = VectorClock.Create();
             var clock2_1 = clock1_1.Increment(VectorClock.Node.Create("1"));
@@ -38,7 +45,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void MustPassMiscComparisonTest2()
+        public void Must_pass_misc_comparison_test2()
         {
             var clock1_1 = VectorClock.Create();
             var clock2_1 = clock1_1.Increment(VectorClock.Node.Create("1"));
@@ -55,7 +62,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void MustPassMiscComparisonTest3()
+        public void Must_pass_misc_comparison_test3()
         {
             var clock1_1 = VectorClock.Create();
             var clock2_1 = clock1_1.Increment(VectorClock.Node.Create("1"));
@@ -67,7 +74,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void MustPassMiscComparisonTest4()
+        public void Must_pass_misc_comparison_test4()
         {
             var clock1_3 = VectorClock.Create();
             var clock2_3 = clock1_3.Increment(VectorClock.Node.Create("1"));
@@ -83,7 +90,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void MustPassMiscComparisonTest5()
+        public void Must_pass_misc_comparison_test5()
         {
             var clock1_1 = VectorClock.Create();
             var clock2_1 = clock1_1.Increment(VectorClock.Node.Create("2"));
@@ -100,7 +107,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void MustPassMiscComparisonTest6()
+        public void Must_pass_misc_comparison_test6()
         {
             var clock1_1 = VectorClock.Create();
             var clock2_1 = clock1_1.Increment(VectorClock.Node.Create("1"));
@@ -115,7 +122,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void MustPassMiscComparisonTest7()
+        public void Must_pass_misc_comparison_test7()
         {
             var clock1_1 = VectorClock.Create();
             var clock2_1 = clock1_1.Increment(VectorClock.Node.Create("1"));
@@ -132,7 +139,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void MustPassMiscComparisonTest8()
+        public void Must_pass_misc_comparison_test8()
         {
             var clock1_1 = VectorClock.Create();
             var clock2_1 = clock1_1.Increment(VectorClock.Node.FromHash("1"));
@@ -147,7 +154,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void MustCorrectlyMergeTwoClocks()
+        public void Must_correctly_merge_two_clocks()
         {
             var node1 = VectorClock.Node.Create("1");
             var node2 = VectorClock.Node.Create("2");
@@ -185,7 +192,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void MustCorrectlyMergeTwoDisjointVectorClocks()
+        public void Must_correctly_merge_two_disjoint_vector_clocks()
         {
             var node1 = VectorClock.Node.Create("1");
             var node2 = VectorClock.Node.Create("2");
@@ -226,7 +233,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void MustPassBlankClockIncrementing()
+        public void Must_pass_blank_clock_incrementing()
         {
             var node1 = VectorClock.Node.Create("1");
             var node2 = VectorClock.Node.Create("2");
@@ -248,7 +255,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void MustPassMergingBehavior()
+        public void Must_pass_merging_behavior()
         {
             var node1 = VectorClock.Node.Create("1");
             var node2 = VectorClock.Node.Create("2");
@@ -269,3 +276,4 @@ namespace Akka.Cluster.Tests
         }
     }
 }
+

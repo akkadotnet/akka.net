@@ -1,8 +1,14 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorCell.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Akka.Actor.Internal;
-using Akka.Actor.Internals;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Serialization;
@@ -17,12 +23,13 @@ namespace Akka.Actor
         private Props _props;
         private static readonly Props terminatedProps=new TerminatedProps();
 
-        private Stack<Receive> _behaviorStack = new Stack<Receive>(1);
+
         private long _uid;
         private ActorBase _actor;
         private bool _actorHasBeenCleared;
         private Mailbox _mailbox;
         private readonly ActorSystemImpl _systemImpl;
+        private ActorTaskScheduler _taskScheduler;
 
 
         public ActorCell(ActorSystemImpl system, IInternalActorRef self, Props props, MessageDispatcher dispatcher, IInternalActorRef parent)
@@ -31,7 +38,8 @@ namespace Akka.Actor
             _props = props;
             _systemImpl = system;
             Parent = parent;
-            Dispatcher = dispatcher;            
+            Dispatcher = dispatcher;
+            
         }
 
         public object CurrentMessage { get; private set; }
@@ -58,9 +66,24 @@ namespace Akka.Actor
         internal bool ActorHasBeenCleared { get { return _actorHasBeenCleared; } }
         internal static Props TerminatedProps { get { return terminatedProps; } }
 
+        public ActorTaskScheduler TaskScheduler
+        {
+            get
+            {
+                var taskScheduler = Volatile.Read(ref _taskScheduler);
+
+                if (taskScheduler != null)
+                    return taskScheduler;
+
+                taskScheduler = new ActorTaskScheduler(this);
+                return Interlocked.CompareExchange(ref _taskScheduler, taskScheduler, null) ?? taskScheduler;
+            }
+        }
+
         public void Init(bool sendSupervise, Func<Mailbox> createMailbox /*, MailboxType mailboxType*/) //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType
         {
             var mailbox = createMailbox(); //Akka: dispatcher.createMailbox(this, mailboxType)
+            Dispatcher.Attach(this);
             mailbox.Setup(Dispatcher);
             mailbox.SetActor(this);
             _mailbox = mailbox;
@@ -137,14 +160,12 @@ namespace Akka.Actor
 
         public void Become(Receive receive)
         {
-            if(_behaviorStack.Count > 1) //We should never pop off the initial receiver
-                _behaviorStack.Pop();
-            _behaviorStack.Push(receive);
+            _state = _state.Become(receive);
         }
 
         public void BecomeStacked(Receive receive)
         {
-            _behaviorStack.Push(receive);
+            _state = _state.BecomeStacked(receive);
         }
 
 
@@ -165,8 +186,7 @@ namespace Akka.Actor
 
         public void UnbecomeStacked()
         {
-            if (_behaviorStack.Count > 1) //We should never pop off the initial receiver
-                _behaviorStack.Pop();                
+            _state = _state.UnbecomeStacked();
         }
 
         void IUntypedActorContext.Become(UntypedReceive receive)
@@ -201,8 +221,10 @@ namespace Akka.Actor
             //set the thread static context or things will break
             UseThreadContext(() =>
             {
-                _behaviorStack = new Stack<Receive>(1);
+                _state = _state.ClearBehaviorStack();
                 instance = CreateNewActorInstance();
+                //TODO: this overwrites any already initialized supervisor strategy
+                //We should investigate what we can do to handle this better
                 instance.SupervisorStrategyInternal = _props.SupervisorStrategy;
                 //defaults to null - won't affect lazy instantiation unless explicitly set in props
             });
@@ -250,7 +272,7 @@ namespace Akka.Actor
                 //this._systemImpl.DeadLetters.Tell(new DeadLetter(message, sender, this.Self));
             }
 
-            if (_systemImpl.Settings.SerializeAllMessages && !(message is NoSerializationVerificationNeeded))
+            if (_systemImpl.Settings.SerializeAllMessages && !(message is INoSerializationVerificationNeeded))
             {
                 Serializer serializer = _systemImpl.Serialization.FindSerializerFor(message);
                 byte[] serialized = serializer.ToBinary(message);
@@ -295,16 +317,24 @@ namespace Akka.Actor
                     }
                 }
 
+                ReleaseActor(actor);
                 actor.Clear(_systemImpl.DeadLetters);
             }
             _actorHasBeenCleared = true;
             CurrentMessage = null;
-            _behaviorStack = null;
+
+            //TODO: semantics here? should all "_state" be cleared? or just behavior?
+            _state = _state.ClearBehaviorStack();
+        }
+
+        private void ReleaseActor(ActorBase a)
+        {
+            _props.Release(a);
         }
 
         protected void PrepareForNewActor()
         {
-            _behaviorStack = new Stack<Receive>(1);
+            _state = _state.ClearBehaviorStack();
             _actorHasBeenCleared = false;
         }
         protected void SetActorFields(ActorBase actor)
@@ -325,13 +355,14 @@ namespace Akka.Actor
         public static IActorRef GetCurrentSelfOrNoSender()
         {
             var current = Current;
-            return current != null ? current.Self : NoSender.Instance;
+            return current != null ? current.Self : ActorRefs.NoSender;
         }
 
         public static IActorRef GetCurrentSenderOrNoSender()
         {
             var current = Current;
-            return current != null ? current.Sender : NoSender.Instance;
+            return current != null ? current.Sender : ActorRefs.NoSender;
         }
     }
 }
+

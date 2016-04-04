@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Program.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Event;
 
@@ -20,13 +27,13 @@ namespace TimeServer
 
         public class TimeServerActor : TypedActor, IHandle<string>
         {
-            private readonly LoggingAdapter _log = Context.GetLogger();
+            private readonly ILoggingAdapter _log = Context.GetLogger();
 
             public void Handle(string message)
             {
                 if (message.ToLowerInvariant() == "gettime")
                 {
-                    var time =DateTime.Now.ToLongTimeString();
+                    var time =DateTime.UtcNow.ToLongTimeString();
                     Sender.Tell(time, Self);
                 }
                 else
@@ -40,3 +47,4 @@ namespace TimeServer
         }
     }
 }
+

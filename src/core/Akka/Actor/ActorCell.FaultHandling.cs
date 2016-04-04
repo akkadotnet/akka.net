@@ -1,6 +1,14 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorCell.FaultHandling.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using Akka.Actor.Internal;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -222,7 +230,7 @@ namespace Akka.Actor
                     if (CurrentMessage is Failed)
                     {
                         var failedChild = Sender;
-                        childrenNotToSuspend = childrenNotToSuspend.Concat(failedChild); //Function handles childrenNotToSuspend beeing null
+                        childrenNotToSuspend = childrenNotToSuspend.Concat(failedChild); //Function handles childrenNotToSuspend being null
                         SetFailed(failedChild);
                     }
                     else
@@ -298,6 +306,7 @@ namespace Akka.Actor
                         SwapMailbox(deadLetterMailbox);
                         mailbox.BecomeClosed();
                         mailbox.CleanUp();
+                        Dispatcher.Detach(this);
                     }
                 }
                 finally
@@ -316,7 +325,9 @@ namespace Akka.Actor
 
                                 ClearActor(a);
                                 ClearActorCell();
+                                
                                 _actor = null;
+                                
                             }
                         }
                     }
@@ -384,7 +395,7 @@ namespace Akka.Actor
                 {
                     var handled = _actor.SupervisorStrategyInternal.HandleFailure(this, f.Cause, childStats, ChildrenContainer.Stats);
                     if (!handled)
-                        throw f.Cause;
+                        ExceptionDispatchInfo.Capture(f.Cause).Throw();
                 }
                 else
                 {
@@ -455,3 +466,4 @@ namespace Akka.Actor
         }
     }
 }
+

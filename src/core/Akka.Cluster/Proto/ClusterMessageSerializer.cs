@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterMessageSerializer.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
@@ -333,7 +340,7 @@ namespace Akka.Cluster.Proto
             Func<EWMA, Msg.NodeMetrics.Types.EWMA.Builder> ewmaToProto = ewma => ewma == null ? null :
                 Msg.NodeMetrics.Types.EWMA.CreateBuilder().SetAlpha(ewma.Alpha).SetValue(ewma.Value);
 
-            // we set all metric types as doubles, since we don't have a convenienent Number base class like Scala
+            // we set all metric types as doubles, since we don't have a convenient Number base class like Scala
             Func<double, Msg.NodeMetrics.Types.Number.Builder> numberToProto = d => Msg.NodeMetrics.Types.Number.CreateBuilder()
                 .SetType(Msg.NodeMetrics.Types.NumberType.Double)
                 .SetValue64((ulong) BitConverter.DoubleToInt64Bits(d));
@@ -449,7 +456,7 @@ namespace Akka.Cluster.Proto
                 return new Reachability(recordBuilder.ToImmutable(), versionsBuilder.ToImmutable());
             };
 
-            Func<Msg.Member, Member> memberFromProto = member => Member.Create(addressMapping[member.AddressIndex], MemberStatusFromProto[member.Status],
+            Func<Msg.Member, Member> memberFromProto = member => Member.Create(addressMapping[member.AddressIndex], member.HasUpNumber ? member.UpNumber : 0, MemberStatusFromProto[member.Status],
                 member.RolesIndexesList.Select(x => roleMapping[x]).ToImmutableHashSet());
 
             var members = gossip.MembersList.Select(memberFromProto).ToImmutableSortedSet(Member.Ordering);
@@ -486,3 +493,4 @@ namespace Akka.Cluster.Proto
         #endregion
     }
 }
+

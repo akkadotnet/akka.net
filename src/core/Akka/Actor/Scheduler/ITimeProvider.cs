@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ITimeProvider.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 
 namespace Akka.Actor
 {
@@ -8,5 +15,8 @@ namespace Akka.Actor
         /// Gets the scheduler's notion of current time.
         /// </summary>
         DateTimeOffset Now { get; }
+        TimeSpan MonotonicClock { get; }
+        TimeSpan HighResMonotonicClock { get; }
     }
 }
+

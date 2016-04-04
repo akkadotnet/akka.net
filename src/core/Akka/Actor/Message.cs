@@ -1,4 +1,11 @@
-﻿namespace Akka.Actor
+﻿//-----------------------------------------------------------------------
+// <copyright file="Message.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+namespace Akka.Actor
 {
     //Note: this is a struct in order to lower GC pressure, it will be removed once the mailbox Run call goes out of scope. //Roger
 
@@ -21,7 +28,8 @@
 
         public override string ToString()
         {
-            return "<" + (Message ?? "null") + "> from " + (Sender ?? NoSender.Instance);
+            return "<" + (Message ?? "null") + "> from " + (Sender == ActorRefs.NoSender ? "NoSender" : Sender.ToString());
         }
     }
 }
+

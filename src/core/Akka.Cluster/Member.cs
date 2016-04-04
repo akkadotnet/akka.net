@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Member.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -33,6 +40,10 @@ namespace Akka.Cluster
         public UniqueAddress UniqueAddress { get { return _uniqueAddress; } }
 
         readonly int _upNumber;
+
+        /// <summary>
+        /// TODO: explain what this does
+        /// </summary>
         internal int UpNumber { get { return _upNumber; } }
 
         readonly MemberStatus _status;
@@ -41,9 +52,9 @@ namespace Akka.Cluster
         readonly ImmutableHashSet<string> _roles;
         public ImmutableHashSet<string> Roles { get { return _roles; } }
 
-        public static Member Create(UniqueAddress uniqueAddress, MemberStatus status, ImmutableHashSet<string> roles)
+        public static Member Create(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, ImmutableHashSet<string> roles)
         {
-            return new Member(uniqueAddress, 0, status, roles);
+            return new Member(uniqueAddress, upNumber, status, roles);
         }
 
         Member(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, ImmutableHashSet<string> roles)
@@ -287,3 +298,4 @@ namespace Akka.Cluster
         #endregion
     }
 }
+

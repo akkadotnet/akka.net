@@ -1,3 +1,11 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="ImmutabilityUtils.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -16,7 +24,7 @@ namespace Akka.Util.Internal
 
         public static HashSet<T> CopyAndAdd<T>(this HashSet<T> set, T item)
         {
-            Guard.Assert(set != null, "set cannot be null");
+            if (set == null) throw new ArgumentNullException("set", "CopyAndAdd cause exception cannot be null");
             // ReSharper disable once PossibleNullReferenceException
             var copy = new T[set.Count + 1];
             set.CopyTo(copy);
@@ -26,7 +34,7 @@ namespace Akka.Util.Internal
 
         public static HashSet<T> CopyAndRemove<T>(this HashSet<T> set, T item)
         {
-            Guard.Assert(set != null, "set cannot be null");
+            if (set == null) throw new ArgumentNullException("set", "CopyAndRemove cause exception cannot be null");
             // ReSharper disable once PossibleNullReferenceException
             var copy = new T[set.Count];
             set.CopyTo(copy);
@@ -60,3 +68,4 @@ namespace Akka.Util.Internal
         #endregion
     }
 }
+

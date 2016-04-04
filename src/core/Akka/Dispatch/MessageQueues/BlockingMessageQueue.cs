@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="BlockingMessageQueue.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading;
 using Akka.Actor;
 
@@ -7,7 +14,7 @@ namespace Akka.Dispatch.MessageQueues
     /// <summary> 
     /// Base class for blocking message queues. Allows non thread safe data structures to be used as message queues. 
     /// </summary>
-    public abstract class BlockingMessageQueue : MessageQueue, BlockingMessageQueueSemantics
+    public abstract class BlockingMessageQueue : IMessageQueue, IBlockingMessageQueueSemantics
     {
         private readonly object _lock = new object();
         private TimeSpan _blockTimeOut = TimeSpan.FromSeconds(1);
@@ -71,3 +78,4 @@ namespace Akka.Dispatch.MessageQueues
         protected abstract bool LockedTryDequeue(out Envelope envelope);
     }
 }
+

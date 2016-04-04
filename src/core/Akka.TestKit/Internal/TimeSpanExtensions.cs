@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TimeSpanExtensions.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading;
 
 namespace Akka.TestKit.Internal
@@ -113,17 +120,6 @@ namespace Akka.TestKit.Internal
         }
 
         /// <summary>
-        /// Returns the smallest value.
-        /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
-        /// </summary>
-        public static TimeSpan Min(this TimeSpan a, TimeSpan b)
-        {
-            if(b.IsInfinite()) return a;
-            if(a.IsInfinite()) return b;
-            return a < b ? a : b;
-        }
-
-        /// <summary>
         /// Returns the smallest value. if <paramref name="b"/> is <c>null</c> it's treated as 
         /// undefined, and <paramref name="a"/> is returned.
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
@@ -141,3 +137,4 @@ namespace Akka.TestKit.Internal
         }
     }
 }
+

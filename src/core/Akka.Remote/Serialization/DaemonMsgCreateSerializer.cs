@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="DaemonMsgCreateSerializer.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Configuration;
@@ -8,17 +15,33 @@ using Google.ProtocolBuffers;
 
 namespace Akka.Remote.Serialization
 {
+    /// <summary>
+    /// This is a special <see cref="Serializer"/> that serializes and deserializes <see cref="DaemonMsgCreate"/> only.
+    /// Serialization of contained <see cref="RouterConfig"/>, <see cref="Config"/>, and <see cref="Scope"/> is done with the
+    /// configured serializer for those classes.
+    /// </summary>
     public class DaemonMsgCreateSerializer : Serializer
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DaemonMsgCreateSerializer"/> class.
+        /// </summary>
+        /// <param name="system">The actor system to associate with this serializer. </param>
         public DaemonMsgCreateSerializer(ExtendedActorSystem system) : base(system)
         {
         }
 
+        /// <summary>
+        /// Completely unique value to identify this implementation of Serializer, used to optimize network traffic
+        /// Values from 0 to 16 is reserved for Akka internal usage
+        /// </summary>
         public override int Identifier
         {
             get { return 3; }
         }
 
+        /// <summary>
+        /// Returns whether this serializer needs a manifest in the fromBinary method
+        /// </summary>
         public override bool IncludeManifest
         {
             get { return false; }
@@ -45,6 +68,12 @@ namespace Akka.Remote.Serialization
             return o;
         }
 
+        /// <summary>
+        /// Serializes the given object into a byte array
+        /// </summary>
+        /// <param name="obj">The object to serialize </param>
+        /// <returns>A byte array containing the serialized object</returns>
+        /// <exception cref="ArgumentException">Can't serialize a non-<see cref="DaemonMsgCreate"/> message using <see cref="DaemonMsgCreateSerializer"/></exception>
         public override byte[] ToBinary(object obj)
         {
             var msg = obj as DaemonMsgCreate;
@@ -71,7 +100,7 @@ namespace Akka.Remote.Serialization
                 .SetDeploy(GetDeployData(props.Deploy));
 
             foreach (object arg in props.Arguments)
-            {               
+            {
                 if (arg == null)
                 {
                     builder = builder.AddArgs(ByteString.Empty);
@@ -81,7 +110,7 @@ namespace Akka.Remote.Serialization
                 {
                     builder = builder.AddArgs(Serialize(arg));
                     builder = builder.AddClasses(arg.GetType().AssemblyQualifiedName);
-                }                
+                }
             }
 
             return builder.Build();
@@ -103,10 +132,36 @@ namespace Akka.Remote.Serialization
             return res.Build();
         }
 
+        /// <summary>
+        /// Deserializes a byte array into an object of type <paramref name="type"/>.
+        /// </summary>
+        /// <param name="bytes">The array containing the serialized object</param>
+        /// <param name="type">The type of object contained in the array</param>
+        /// <returns>The object contained in the array</returns>
+        /// <exception cref="TypeLoadException">
+        /// Could not find type on the remote system.
+        /// Ensure that the remote system has an assembly that contains the type in its assembly search path.
+        /// </exception>
         public override object FromBinary(byte[] bytes, Type type)
         {
             var proto = DaemonMsgCreateData.ParseFrom(bytes);
-            var clazz = Type.GetType(proto.Props.Clazz);
+            Type clazz; 
+
+            try
+            {
+                clazz = Type.GetType(proto.Props.Clazz, true);
+            }
+            catch (TypeLoadException ex)
+            {
+                var msg = string.Format(
+                       "Could not find type '{0}' on the remote system. " +
+                       "Ensure that the remote system has an assembly that contains the type {0} in its assembly search path", 
+                       proto.Props.Clazz);
+
+
+                throw new TypeLoadException(msg, ex);
+            }
+
             var args = GetArgs(proto);
             var props = new Props(GetDeploy(proto.Props.Deploy), clazz, args);
             return new DaemonMsgCreate(
@@ -126,7 +181,7 @@ namespace Akka.Remote.Serialization
 
             RouterConfig routerConfig;
             if (protoDeploy.HasRouterConfig)
-                routerConfig = (RouterConfig) Deserialize(protoDeploy.RouterConfig, protoDeploy.RouterConfig.GetType());
+                routerConfig = (RouterConfig)Deserialize(protoDeploy.RouterConfig, typeof(RouterConfig));
             else
                 routerConfig = RouterConfig.NoRouter;
 
@@ -149,7 +204,7 @@ namespace Akka.Remote.Serialization
         {
             var args = new object[proto.Props.ArgsCount];
             for (int i = 0; i < args.Length; i++)
-            {                
+            {
                 var typeName = proto.Props.GetClasses(i);
                 var arg = proto.Props.GetArgs(i);
                 if (typeName == "" && ByteString.Empty.Equals(arg))

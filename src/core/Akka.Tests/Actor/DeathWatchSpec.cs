@@ -1,5 +1,13 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="DeathWatchSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
+using System.Threading;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Dispatch;
@@ -47,25 +55,18 @@ namespace Akka.Tests.Actor
         [Fact]
         public void Bug209_any_user_messages_following_a_Terminate_message_should_be_forwarded_to_DeadLetterMailbox()
         {
-            var actor = (LocalActorRef)Sys.ActorOf(Props.Empty, "killed-actor");
+            var actor = (LocalActorRef) Sys.ActorOf(Props.Empty, "killed-actor");
+            Watch(actor);
+            Sys.EventStream.Subscribe(TestActor, typeof (DeadLetter));
 
-            Sys.EventStream.Subscribe(TestActor, typeof(DeadLetter));
+            actor.Tell(PoisonPill.Instance);
+            ExpectMsg<Terminated>();
 
-            var mailbox = actor.Cell.Mailbox;
-            //Wait for the mailbox to become idle after processed all initial messages.
-            AwaitCondition(() =>
-                !mailbox.HasUnscheduledMessages && mailbox.Status == Mailbox.MailboxStatus.Idle);
-
-            //Suspend the mailbox and post Terminate and a user message
-            mailbox.Suspend();
-            mailbox.Post(actor, new Envelope() { Message = Terminate.Instance, Sender = TestActor });
-            mailbox.Post(actor, new Envelope() { Message = "SomeUserMessage", Sender = TestActor });
-
-            //Resume the mailbox, which will also schedule
-            mailbox.Resume();
+            actor.Tell(new Envelope { Message = "SomeUserMessage", Sender = TestActor });
+            ExpectMsg<DeadLetter>(d => ((Envelope)d.Message).Message.Equals("SomeUserMessage"));
 
             //The actor should Terminate, exchange the mailbox to a DeadLetterMailbox and forward the user message to the DeadLetterMailbox
-            ExpectMsg<DeadLetter>(d => (string)d.Message == "SomeUserMessage");
+            
             actor.Cell.Mailbox.ShouldBe(Sys.Mailboxes.DeadLetterMailbox);
         }
 
@@ -437,7 +438,7 @@ namespace Akka.Tests.Actor
             public Failed Fail { get; private set; }
         }
 
-        internal struct Latches : NoSerializationVerificationNeeded
+        internal struct Latches : INoSerializationVerificationNeeded
         {
 
             public Latches(TestLatch t1, TestLatch t2)
@@ -470,3 +471,4 @@ namespace Akka.Tests.Actor
         }
     }
 }
+

@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Program.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -85,7 +92,10 @@ routees.paths = [
                     roundRobinPool.Tell(i);
                 }
 
+                var scatterGatherGroup = system.ActorOf(new ScatterGatherFirstCompletedPool(5).Props(Props.Create<ReplyWorker>()));
 
+                var reply = scatterGatherGroup.Ask<string>("test");
+                reply.Wait();
                 Console.ReadLine();
             }
         }
@@ -98,4 +108,13 @@ routees.paths = [
             Console.WriteLine("{0} received {1}", Self.Path.Name, message);
         }
     }
+
+    public class ReplyWorker : UntypedActor
+    {
+        protected override void OnReceive(object message)
+        {
+            Sender.Tell(string.Format("{0} received {1}", Self.Path.Name, message), Self);
+        }
+    }
 }
+

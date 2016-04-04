@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorPathSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Linq;
 using System.Web;
 using Akka.Actor;
@@ -47,6 +54,7 @@ namespace Akka.Tests.Actor
             Assert.True("pAth2".Equals(elements[1], StringComparison.Ordinal), "second path element");
             Assert.Equal(actorPath.ToString(),"akka://sYstEm/pAth1/pAth2");
         }
+
         [Fact]
         public void ActorPath_Parse_HandlesCasing_ForRemote()
         {
@@ -74,7 +82,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void SupportsParsingRemotePaths()
+        public void Supports_parsing_remote_paths()
         {
             var remote = "akka://sys@host:1234/some/ref";
             var parsed = ActorPathParse(remote);
@@ -82,7 +90,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void ReturnFalseUponMalformedPath()
+        public void Return_false_upon_malformed_path()
         {
             ActorPath ignored;
             ActorPath.TryParse("", out ignored).ShouldBe(false);
@@ -93,7 +101,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void CreateCorrectToString()
+        public void Create_correct_ToString()
         {
             var a = new Address("akka.tcp", "mysys");
             //TODO: there must be a / after system name
@@ -104,7 +112,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void CreateCorrectToStringWithoutAddress()
+        public void Create_correct_ToString_without_address()
         {
             var a = new Address("akka.tcp", "mysys");
             //TODO: there must be a / after system name
@@ -115,7 +123,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void CreateCorrectToStringWithAddress()
+        public void Create_correct_ToString_with_address()
         {
             var local = new Address("akka.tcp", "mysys");
             var a = new Address("akka.tcp", "mysys", "aaa", 2552);
@@ -155,13 +163,13 @@ namespace Akka.Tests.Actor
          */
 
         [Fact]
-        public void HaveCorrectPathElements()
+        public void Have_correct_path_elements()
         {
             (new RootActorPath(new Address("akka.tcp", "mysys")) / "user" / "foo" / "bar").Elements.ShouldOnlyContainInOrder(new[] { "user", "foo", "bar" });
         }
 
         [Fact]
-        public void PathsWithDifferentAddressesAndSameElementsShouldNotBeEqual()
+        public void Paths_with_different_addresses_and_same_elements_should_not_be_equal()
         {
             ActorPath path1 = null;
             ActorPath path2 = null;
@@ -172,7 +180,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void PathsWithSameAddressesAndSameElementsShouldNotBeEqual()
+        public void Paths_with_same_addresses_and_same_elements_should_not_be_equal()
         {
             ActorPath path1 = null;
             ActorPath path2 = null;
@@ -212,3 +220,4 @@ namespace Akka.Tests.Actor
         }
     }
 }
+

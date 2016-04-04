@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Futures.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -22,15 +29,14 @@ namespace Akka.Actor
             return self.Ask<object>(message, timeout);
         }
 
-        public static async Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout = null)
+        public static Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout = null)
         {
             IActorRefProvider provider = ResolveProvider(self);
             if (provider == null)
                 throw new NotSupportedException("Unable to resolve the target Provider");
 
             ResolveReplyTo();
-            var result = (T)await Ask(self, message, provider, timeout);
-            return result;
+            return Ask(self, message, provider, timeout).CastTask<object, T>();
         }
 
         internal static IActorRef ResolveReplyTo()
@@ -58,8 +64,11 @@ namespace Akka.Actor
         private static Task<object> Ask(ICanTell self, object message, IActorRefProvider provider,
             TimeSpan? timeout)
         {
-            var result = new TaskCompletionSource<object>(TaskContinuationOptions.AttachedToParent);
-            if (timeout.HasValue)
+            var result = new TaskCompletionSource<object>();
+
+            timeout = timeout ?? provider.Settings.AskTimeout;
+
+            if (timeout != Timeout.InfiniteTimeSpan && timeout.Value > default(TimeSpan))
             {
                 var cancellationSource = new CancellationTokenSource();
                 cancellationSource.Token.Register(() => result.TrySetCanceled());
@@ -197,7 +206,7 @@ namespace Akka.Actor
                 {
                     c.Cancel(false);
                 }
-            }, TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously);
+            }, TaskContinuationOptions.ExecuteSynchronously);
 
             return a;
         }
@@ -318,9 +327,9 @@ namespace Akka.Actor
 
         protected override void TellInternal(object message, IActorRef sender)
         {
-            if (message is SystemMessage)
+            if (message is ISystemMessage)
             {
-                SendSystemMessage(message as SystemMessage); 
+                SendSystemMessage(message as ISystemMessage); 
                 return;
             }
 
@@ -339,7 +348,7 @@ namespace Akka.Actor
         }
 
         //TODO: isn't SendSystemMessage supposed to be a part of ActorRef? Why isn't it overridable?
-        private void SendSystemMessage(SystemMessage message)
+        private void SendSystemMessage(ISystemMessage message)
         {
             if(message is Terminate) Stop();
             else if (message is DeathWatchNotification)
@@ -428,3 +437,4 @@ namespace Akka.Actor
         }
     }
 }
+

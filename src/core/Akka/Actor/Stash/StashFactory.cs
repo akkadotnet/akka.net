@@ -1,3 +1,10 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="StashFactory.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using Akka.Actor.Internal;
 using Akka.Util;
@@ -22,12 +29,12 @@ namespace Akka.Actor
 
         public static IStash CreateStash(this IActorContext context, Type actorType)
         {
-            if(actorType.Implements<WithBoundedStash>())
+            if(actorType.Implements<IWithBoundedStash>())
             {
                 return new BoundedStashImpl(context);
             }
 
-            if(actorType.Implements<WithUnboundedStash>())
+            if(actorType.Implements<IWithUnboundedStash>())
             {
                 return new UnboundedStashImpl(context);
             }
@@ -37,3 +44,4 @@ namespace Akka.Actor
         }
     }
 }
+

@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorPath.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Util;
@@ -79,8 +86,8 @@ namespace Akka.Actor
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
                 var actorPath = obj as ActorPath;
-                if (actorPath != null) return Equals(actorPath);
-                return Equals((Surrogate) obj);
+
+                return Equals(actorPath);
             }
 
             public override int GetHashCode()
@@ -247,7 +254,8 @@ namespace Akka.Actor
             var a = path;
             foreach (string element in name)
             {
-                a = a / element;
+                if(!string.IsNullOrEmpty(element))
+                    a = a / element;
             }
             return a;
         }
@@ -290,14 +298,10 @@ namespace Akka.Actor
             //This code corresponds to AddressFromURIString.unapply
             uri = null;
             address = null;
-            try
-            {
-                uri = new Uri(path);
-            }
-            catch (UriFormatException)
-            {
+
+            if (!Uri.TryCreate(path, UriKind.Absolute, out uri))
                 return false;
-            }
+
             var protocol = uri.Scheme; //Typically "akka"
             if (!protocol.StartsWith("akka", StringComparison.OrdinalIgnoreCase))
             {
@@ -586,3 +590,4 @@ namespace Akka.Actor
         }
     }
 }
+

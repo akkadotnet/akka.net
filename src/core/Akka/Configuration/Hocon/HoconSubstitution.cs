@@ -1,14 +1,35 @@
-﻿using System.Collections.Generic;
+﻿//-----------------------------------------------------------------------
+// <copyright file="HoconSubstitution.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Collections.Generic;
 
 namespace Akka.Configuration.Hocon
 {
     /// <summary>
-    ///     HOCON Substitution, e.g. $foo.bar
+    /// This class represents a substitution element in a HOCON (Human-Optimized Config Object Notation)
+    /// configuration string.
+    /// <code>
+    /// akka {  
+    ///   defaultInstances = 10
+    ///   deployment{
+    ///     /user/time{
+    ///       nr-of-instances = $defaultInstances
+    ///     }
+    ///   }
+    /// }
+    /// </code>
     /// </summary>
     public class HoconSubstitution : IHoconElement, IMightBeAHoconObject
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="HoconSubstitution"/> class.
+        /// </summary>
         protected HoconSubstitution()
-        {            
+        {
         }
 
         /// <summary>
@@ -23,81 +44,66 @@ namespace Akka.Configuration.Hocon
         /// <summary>
         ///     The full path to the value which should substitute this instance.
         /// </summary>
-        /// <value>The path.</value>
-        public string Path { get; private set; }
+        public string Path { get; set; }
 
         /// <summary>
         ///     The evaluated value from the Path property
         /// </summary>
-        /// <value>The resolved value.</value>
         public HoconValue ResolvedValue { get; set; }
 
         /// <summary>
-        ///     Determines whether this instance is string.
+        /// Determines whether this element is a string.
         /// </summary>
-        /// <returns><c>true</c> if this instance is string; otherwise, <c>false</c>.</returns>
+        /// <returns><c>true</c> if this element is a string; otherwise <c>false</c></returns>
         public bool IsString()
         {
             return ResolvedValue.IsString();
         }
 
         /// <summary>
-        ///     Returns the value of this instance as a string.
+        /// Retrieves the string representation of this element.
         /// </summary>
-        /// <returns>System.String.</returns>
+        /// <returns>The string representation of this element.</returns>
         public string GetString()
         {
             return ResolvedValue.GetString();
         }
 
         /// <summary>
-        ///     Determines whether this instance is array.
+        /// Determines whether this element is an array.
         /// </summary>
-        /// <returns><c>true</c> if this instance is array; otherwise, <c>false</c>.</returns>
+        /// <returns><c>true</c> if this element is aan array; otherwise <c>false</c></returns>
         public bool IsArray()
         {
             return ResolvedValue.IsArray();
         }
 
         /// <summary>
-        ///     Returns the value of this instance as an array.
+        /// Retrieves a list of elements associated with this element.
         /// </summary>
-        /// <returns>IList&lt;HoconValue&gt;.</returns>
+        /// <returns>A list of elements associated with this element.</returns>
         public IList<HoconValue> GetArray()
         {
             return ResolvedValue.GetArray();
         }
 
         /// <summary>
-        ///     Determines whether this instance is an HOCON object.
+        /// Determines whether this element is a HOCON object.
         /// </summary>
-        /// <returns><c>true</c> if this instance is object; otherwise, <c>false</c>.</returns>
+        /// <returns><c>true</c> if this element is a HOCON object; otherwise <c>false</c></returns>
         public bool IsObject()
         {
             return ResolvedValue != null && ResolvedValue.IsObject();
         }
 
         /// <summary>
-        ///     Returns the value of this instance as an HOCON object.
+        /// Retrieves the HOCON object representation of this element.
         /// </summary>
-        /// <returns>HoconObject.</returns>
+        /// <returns>The HOCON object representation of this element.</returns>
         public HoconObject GetObject()
         {
             return ResolvedValue.GetObject();
         }
-
-        #region Implicit operators
-
-        /// <summary>
-        ///     Performs an implicit conversion from <see cref="HoconSubstitution" /> to <see cref="HoconObject" />.
-        /// </summary>
-        /// <param name="substitution">The substitution.</param>
-        /// <returns>The result of the conversion.</returns>
-        public static implicit operator HoconObject(HoconSubstitution substitution)
-        {
-            return substitution.GetObject();
-        }
-
-        #endregion
     }
 }
+

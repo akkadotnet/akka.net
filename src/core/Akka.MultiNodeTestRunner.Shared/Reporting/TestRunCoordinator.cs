@@ -1,9 +1,16 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestRunCoordinator.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
-using Akka.Util;
 
 namespace Akka.MultiNodeTestRunner.Shared.Reporting
 {
@@ -105,16 +112,16 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
                 _currentSpecRunActor.Forward(message);
             });
             Receive<BeginNewSpec>(spec => ReceiveBeginSpecRun(spec));
-            Receive<EndSpec>(spec => ReceiveEndSpecRun(spec));
+            ReceiveAsync<EndSpec>(spec => ReceiveEndSpecRun(spec));
             Receive<RequestTestRunState>(state => Sender.Tell(TestRunData.Copy(TestRunPassed(TestRunData))));
             Receive<SubscribeFactCompletionMessages>(messages => AddSubscriber(messages));
             Receive<UnsubscribeFactCompletionMessages>(messages => RemoveSubscriber(messages));
-            Receive<EndTestRun>(run =>
+            ReceiveAsync<EndTestRun>(async run =>
             {
                 //clean up the current spec, if it hasn't been done already
                 if (_currentSpecRunActor != null)
                 {
-                    ReceiveEndSpecRun(new EndSpec());
+                    await ReceiveEndSpecRun(new EndSpec());
                 }
 
                 //Mark the test run as finished
@@ -140,7 +147,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
 
         private void ReceiveBeginSpecRun(BeginNewSpec spec)
         {
-            Guard.Assert(_currentSpecRunActor == null, "EndSpec has not been called for previous run yet. Cannot begin next run.");
+            if (_currentSpecRunActor != null) throw new InvalidOperationException("EndSpec has not been called for previous run yet. Cannot begin next run.");
 
             //Create the new spec run actor
             _currentSpecRunActor =
@@ -148,16 +155,11 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
                     Props.Create(() => new SpecRunCoordinator(spec.ClassName, spec.MethodName, spec.Nodes)));
         }
 
-        private void ReceiveEndSpecRun(EndSpec spec)
+        private async Task ReceiveEndSpecRun(EndSpec spec)
         {
             //Should receive a FactData in return
-            var specCompleteTask = _currentSpecRunActor.Ask<FactData>(spec, TimeSpan.FromSeconds(2));
+            var factData = await _currentSpecRunActor.Ask<FactData>(spec, TimeSpan.FromSeconds(2));
 
-            //Going to block so we can't accidentally start processing  messages for a new spec yet..
-            specCompleteTask.Wait();
-
-            //Got the result we needed
-            var factData = specCompleteTask.Result;
             TestRunData.AddSpec(factData);
 
             //Publish the FactData back to any subscribers who wanted it
@@ -178,3 +180,4 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         #endregion
     }
 }
+

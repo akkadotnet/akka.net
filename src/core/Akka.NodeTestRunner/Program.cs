@@ -1,5 +1,18 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Program.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
+using System.IO;
+using System.Net;
+using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.IO;
 using Akka.Remote.TestKit;
 using Xunit;
 
@@ -7,58 +20,151 @@ namespace Akka.NodeTestRunner
 {
     class Program
     {
-        static void Main(string[] args)
+        /// <summary>
+        /// If it takes longer than this value for the <see cref="Sink"/> to get back to us
+        /// about a particular test passing or failing, throw loudly.
+        /// </summary>
+        private static readonly TimeSpan MaxProcessWaitTimeout = TimeSpan.FromMinutes(1.5);
+        private static IActorRef _logger;
+
+        static int Main(string[] args)
         {
             var nodeIndex = CommandLine.GetInt32("multinode.index");
-            var assemblyName = CommandLine.GetProperty("multinode.test-assembly");
+            var assemblyFileName = CommandLine.GetProperty("multinode.test-assembly");
             var typeName = CommandLine.GetProperty("multinode.test-class");
             var testName = CommandLine.GetProperty("multinode.test-method");
             var displayName = testName;
 
+            var listenAddress = IPAddress.Parse(CommandLine.GetProperty("multinode.listen-address"));
+            var listenPort = CommandLine.GetInt32("multinode.listen-port");
+            var listenEndpoint = new IPEndPoint(listenAddress, listenPort);
+
+            var system = ActorSystem.Create("NoteTestRunner-" + nodeIndex);
+            var tcpClient = _logger = system.ActorOf<RunnerTcpClient>();
+            system.Tcp().Tell(new Tcp.Connect(listenEndpoint), tcpClient);
+
             Thread.Sleep(TimeSpan.FromSeconds(10));
 
-            using (var controller = new XunitFrontController(assemblyName))
+            using (var controller = new XunitFrontController(assemblyFileName))
             {
-                using (var sink = new Sink(nodeIndex))
+                /* need to pass in just the assembly name to Discovery, not the full path
+                 * i.e. "Akka.Cluster.Tests.MultiNode.dll"
+                 * not "bin/Release/Akka.Cluster.Tests.MultiNode.dll" - this will cause
+                 * the Discovery class to actually not find any indivudal specs to run
+                 */
+                var assemblyName = Path.GetFileName(assemblyFileName);
+                Console.WriteLine("Running specs for {0} [{1}]", assemblyName, assemblyFileName);
+                using (var discovery = new Discovery(assemblyName, typeName))
                 {
-                    Thread.Sleep(10000);
-                    try
+                    using (var sink = new Sink(nodeIndex, tcpClient))
                     {
-                        controller.RunTests(
-                            new[]
-                            {
-                                new Xunit1TestCase(assemblyName, null, typeName, testName, displayName, null,
-                                    "MultiNodeTest")
-                            }, sink, new TestFrameworkOptions());
-                    }
-                    catch (AggregateException ex)
-                    {
-                        var specFail = new SpecFail(nodeIndex, displayName);
-                        specFail.FailureExceptionTypes.Add(ex.GetType().ToString());
-                        specFail.FailureMessages.Add(ex.Message);
-                        specFail.FailureStackTraces.Add(ex.StackTrace);
-                        foreach (var innerEx in ex.Flatten().InnerExceptions)
+                        Thread.Sleep(10000);
+                        try
                         {
-                            specFail.FailureExceptionTypes.Add(innerEx.GetType().ToString());
-                            specFail.FailureMessages.Add(innerEx.Message);
-                            specFail.FailureStackTraces.Add(innerEx.StackTrace);
+                            controller.Find(true, discovery, TestFrameworkOptions.ForDiscovery());
+                            discovery.Finished.WaitOne();
+                            controller.RunTests(discovery.TestCases, sink, TestFrameworkOptions.ForExecution());
                         }
-                        Console.WriteLine(specFail);
-                        Environment.Exit(1); //signal failure
+                        catch (AggregateException ex)
+                        {
+                            var specFail = new SpecFail(nodeIndex, displayName);
+                            specFail.FailureExceptionTypes.Add(ex.GetType().ToString());
+                            specFail.FailureMessages.Add(ex.Message);
+                            specFail.FailureStackTraces.Add(ex.StackTrace);
+                            foreach (var innerEx in ex.Flatten().InnerExceptions)
+                            {
+                                specFail.FailureExceptionTypes.Add(innerEx.GetType().ToString());
+                                specFail.FailureMessages.Add(innerEx.Message);
+                                specFail.FailureStackTraces.Add(innerEx.StackTrace);
+                            }
+                            _logger.Tell(specFail.ToString());
+                            Console.WriteLine(specFail);
+
+                            //make sure message is send over the wire
+                            FlushLogMessages();
+                            Environment.Exit(1); //signal failure
+                            return 1;
+                        }
+                        catch (Exception ex)
+                        {
+                            var specFail = new SpecFail(nodeIndex, displayName);
+                            specFail.FailureExceptionTypes.Add(ex.GetType().ToString());
+                            specFail.FailureMessages.Add(ex.Message);
+                            specFail.FailureStackTraces.Add(ex.StackTrace);
+                            _logger.Tell(specFail.ToString());
+                            Console.WriteLine(specFail);
+
+                            //make sure message is send over the wire
+                            FlushLogMessages();
+                            Environment.Exit(1); //signal failure
+                            return 1;
+                        }
+
+                        var timedOut = false;
+                        if (!sink.Finished.WaitOne(MaxProcessWaitTimeout)) //timed out
+                        {
+                            var line = string.Format("Timed out while waiting for test to complete after {0} ms",
+                                MaxProcessWaitTimeout);
+                            _logger.Tell(line);
+                            Console.WriteLine(line);
+                            timedOut = true;
+                        }
+
+                        FlushLogMessages();
+                        system.Shutdown();
+                        system.AwaitTermination();
+
+                        Environment.Exit(sink.Passed && !timedOut ? 0 : 1);
+                        return sink.Passed ? 0 : 1;
                     }
-                    catch (Exception ex)
-                    {
-                        var specFail = new SpecFail(nodeIndex, displayName);
-                        specFail.FailureExceptionTypes.Add(ex.GetType().ToString());
-                        specFail.FailureMessages.Add(ex.Message);
-                        specFail.FailureStackTraces.Add(ex.StackTrace);
-                        Console.WriteLine(specFail);
-                        Environment.Exit(1); //signal failure
-                    }
-                    sink.Finished.WaitOne();
-                    Environment.Exit(sink.Passed ? 0 : 1);
                 }
             }
         }
+
+        private static void FlushLogMessages()
+        {
+            try
+            {
+                _logger.GracefulStop(TimeSpan.FromSeconds(2)).Wait();
+            }
+            catch
+            {
+                Console.WriteLine("Exception thrown while waiting for TCP transport to flush - not all messages may have been logged.");
+            }
+        }
     }
+
+     class RunnerTcpClient : ReceiveActor, IWithUnboundedStash
+     {
+         public RunnerTcpClient()
+         {
+             Become(WaitingForConnection);
+         }
+ 
+         private void WaitingForConnection()
+         {
+             Receive<Tcp.Connected>(connected =>
+             {
+                 Sender.Tell(new Tcp.Register(Self));
+                 Become(Connected(Sender));
+             });
+             Receive<string>(_ => Stash.Stash());
+         }
+ 
+         private Receive Connected(IActorRef connection)
+         {
+             Stash.UnstashAll();
+ 
+             return message =>
+             {
+                 var bytes = ByteString.FromString(message.ToString());
+                 connection.Tell(Tcp.Write.Create(bytes));
+ 
+                 return true;
+             };
+         }
+ 
+         public IStash Stash { get; set; }
+     }
 }
+

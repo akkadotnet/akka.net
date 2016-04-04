@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Program.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Configuration;
 using Akka.Actor;
 using Akka.Configuration;
@@ -10,7 +17,7 @@ namespace Samples.Cluster.Simple
     {
         private static void Main(string[] args)
         {
-            StartUp(args.Length == 0 ? new String[] {"2551", "2552", "0"} : args);
+            StartUp(args.Length == 0 ? new String[] { "2551", "2552", "0" } : args);
             Console.WriteLine("Press any key to exit");
             Console.ReadKey();
         }
@@ -29,8 +36,9 @@ namespace Samples.Cluster.Simple
                 var system = ActorSystem.Create("ClusterSystem", config);
 
                 //create an actor that handles cluster domain events
-                system.ActorOf(Props.Create(typeof (SimpleClusterListener)), "clusterListener");
+                system.ActorOf(Props.Create(typeof(SimpleClusterListener)), "clusterListener");
             }
         }
     }
 }
+

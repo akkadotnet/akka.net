@@ -1,11 +1,19 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RoutedActorCell.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internal;
-using Akka.Actor.Internals;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
+using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Routing
 {
@@ -41,7 +49,7 @@ namespace Akka.Routing
             AddRoutees(new[] { routee });
         }
 
-        internal void AddRoutees(Routee[] routees)
+        internal void AddRoutees(IList<Routee> routees)
         {
             foreach (var routee in routees)
             {
@@ -62,20 +70,14 @@ namespace Akka.Routing
         /// </summary>
         /// <param name="affectedRoutees"></param>
         /// <param name="stopChild"></param>
-        internal void RemoveRoutees(IEnumerable<Routee> affectedRoutees, bool stopChild)
+        internal void RemoveRoutees(IList<Routee> affectedRoutees, bool stopChild)
         {
-            var oldRouter = _router;
-            var routees = _router.Routees.ToList();
-            routees.RemoveAll(r =>
-            {
-                var routee = r as ActorRefRoutee;
-                if (routee != null)
-                {
-                    return affectedRoutees.Contains(routee);
-                }
-                return false;
-            });
-            _router = oldRouter.WithRoutees(routees.ToArray());
+            var routees = _router.Routees
+                .Where(routee => !affectedRoutees.Contains(routee))
+                .ToArray();
+
+            _router = _router.WithRoutees(routees);
+
             foreach (var affectedRoutee in affectedRoutees)
             {
                 Unwatch(affectedRoutee);
@@ -88,13 +90,13 @@ namespace Akka.Routing
         private void Unwatch(Routee routee)
         {
             var actorRef = routee as ActorRefRoutee;
-            if (actorRef != null) base.Unwatch(actorRef.Actor);
+            if (actorRef != null) Unwatch(actorRef.Actor);
         }
 
         private void Watch(Routee routee)
         {
             var actorRef = routee as ActorRefRoutee;
-            if (actorRef != null) base.Watch(actorRef.Actor);
+            if (actorRef != null) Watch(actorRef.Actor);
         }
 
         /// <summary>
@@ -119,20 +121,17 @@ namespace Akka.Routing
             // create the initial routees before scheduling the Router actor
             _router = _routerConfig.CreateRouter(System);
             _routerConfig.Match()
-                .With<Pool>(r =>
+                .With<Pool>(pool =>
                 {
-                    var routees = new List<Routee>();
-                    for (var i = 0; i < r.GetNrOfInstances(System); i++)
-                    {
-                        var routee = r.NewRoutee(_routeeProps, this);
-                        routees.Add(routee);
-                    }
-                    AddRoutees(routees.ToArray());
+                    var nrOfRoutees = pool.GetNrOfInstances(System);
+                    if (nrOfRoutees > 0)
+                        AddRoutees(Vector.Fill<Routee>(nrOfRoutees)(() => pool.NewRoutee(_routeeProps, this)));
                 })
-                .With<Group>(r =>
+                .With<Group>(group =>
                 {
-                    var routees = _routerConfig.GetRoutees(this).ToArray();
-                    AddRoutees(routees);
+                    var paths = group.Paths;
+                    if (paths.NonEmpty())
+                        AddRoutees(paths.Select(p => group.RouteeFor(p, this)).ToList());
                 });
             PreSuperStart();
             base.Start();
@@ -146,12 +145,12 @@ namespace Akka.Routing
 
         internal void RemoveRoutee(Routee routee, bool stopChild)
         {
-            RemoveRoutees(new List<Routee>() { routee }, stopChild);
+            RemoveRoutees(new List<Routee> { routee }, stopChild);
         }
 
         public override void Post(IActorRef sender, object message)
         {
-            if (message is SystemMessage) base.Post(sender, message);
+            if (message is ISystemMessage) base.Post(sender, message);
             else SendMessage(sender, message);
         }
 

@@ -1,4 +1,11 @@
-﻿using System.Collections.Immutable;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.TestKit;
@@ -14,7 +21,6 @@ namespace Akka.Cluster.Tests
             auto-down-unreachable-after = 0s
             periodic-tasks-initial-delay = 120 s // turn off scheduled tasks
             publish-stats-interval = 0 s # always, when it happens
-            failure-detector.implementation-class = ""Akka.Cluster.Tests.FailureDetectorPuppet, Akka.Cluster.Tests""
         }
         akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
         akka.remote.helios.tcp.port = 0";
@@ -39,13 +45,13 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AClusterMustUseTheAddressOfTheRemoteTransport()
+        public void A_cluster_must_use_the_address_of_the_remote_transport()
         {
             Assert.Equal(_selfAddress, _cluster.SelfAddress);
         }
 
         [Fact]
-        public void AClusterMustInitiallyBecomeSingletonClusterWhenJoiningItselfAndReachConvergence()
+        public void A_cluster_must_initially_become_singleton_cluster_when_joining_itself_and_reach_convergence()
         {
             Assert.Equal(0, ClusterView.Members.Count);
             _cluster.Join(_selfAddress);
@@ -57,7 +63,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AClusterMustPublishInitialStateAsSnapshotToSubscribers()
+        public void A_cluster_must_publish_initial_state_as_snapshot_to_subscribers()
         {
             try
             {
@@ -71,7 +77,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AClusterMustPublishInitialStateAsEventsToSubscribers()
+        public void A_cluster_must_publish_initial_state_as_events_to_subscribers()
         {
             try
             {
@@ -87,7 +93,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AClusterMustSendCurrentClusterStateToOneReceiverWhenRequested()
+        public void A_cluster_must_send_current_cluster_state_to_one_receiver_when_requested()
         {
             _cluster.SendCurrentClusterState(TestActor);
             ExpectMsg<ClusterEvent.CurrentClusterState>();
@@ -95,7 +101,7 @@ namespace Akka.Cluster.Tests
 
         // this should be the last test step, since the cluster is shutdown
         [Fact]
-        public void AClusterMustPublishMemberRemovedWhenShutdown()
+        public void A_cluster_must_publish_member_removed_when_shutdown()
         {
             _cluster.Join(_selfAddress);
             LeaderActions(); // Joining -> Up
@@ -109,3 +115,4 @@ namespace Akka.Cluster.Tests
         }
     }
 }
+

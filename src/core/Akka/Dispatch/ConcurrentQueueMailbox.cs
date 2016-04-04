@@ -1,4 +1,11 @@
-﻿﻿using System.Diagnostics;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ConcurrentQueueMailbox.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+﻿using System.Diagnostics;
 using System.Threading;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
@@ -84,7 +91,7 @@ namespace Akka.Dispatch
 
                     //if deadline time have expired, stop and break
                     if (throughputDeadlineTime.HasValue && throughputDeadlineTime.Value > 0 &&
-                        _deadLineTimer.ElapsedTicks > throughputDeadlineTime.Value)
+                        _deadLineTimer.Elapsed.Ticks > throughputDeadlineTime.Value)
                     {
                         _deadLineTimer.Stop();
                         break;
@@ -111,7 +118,7 @@ namespace Akka.Dispatch
                     //but that doesn't matter, since if the above "if" misses
                     //the "Post" that adds the new message will still schedule
                     //this specific call is just to deal with existing messages
-                    //that wasn't scheduled due to dispatcher throughput beeing reached
+                    //that wasn't scheduled due to dispatcher throughput being reached
                     //or system messages arriving during user message processing
                     Schedule();
                 }
@@ -142,7 +149,7 @@ namespace Akka.Dispatch
                 return;
 
             hasUnscheduledMessages = true;
-            if (envelope.Message is SystemMessage)
+            if (envelope.Message is ISystemMessage)
             {
                 Mailbox.DebugPrint("{0} enqueued system message {1} to {2}", ActorCell.Self, envelope, ActorCell.Self.Equals(receiver) ? "itself" : receiver.ToString());
                 _systemMessages.Enqueue(envelope);
@@ -214,5 +221,11 @@ namespace Akka.Dispatch
             //       messageQueue.cleanUp(actor.self, actor.dispatcher.mailboxes.deadLetterMailbox.messageQueue)
             //   }
         }
+
+        protected bool TryDequeue(out Envelope envelope)
+        {
+            return _userMessages.TryDequeue(out envelope);
+        }
     }
 }
+

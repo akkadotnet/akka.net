@@ -1,3 +1,11 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="NormalChildrenContainer.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Collections.Immutable;
 using System.Text;
 using Akka.Util.Internal;
 using Akka.Util.Internal.Collections;
@@ -11,20 +19,20 @@ namespace Akka.Actor.Internal
     /// </summary>
     public class NormalChildrenContainer : ChildrenContainerBase
     {
-        private NormalChildrenContainer(IImmutableMap<string, IChildStats> children)
+        private NormalChildrenContainer(IImmutableDictionary<string, IChildStats> children)
             : base(children)
         {
         }
 
-        public static IChildrenContainer Create(IImmutableMap<string, IChildStats> children)
+        public static IChildrenContainer Create(IImmutableDictionary<string, IChildStats> children)
         {
-            if (children.IsEmpty) return EmptyChildrenContainer.Instance;
+            if (children.Count == 0) return EmptyChildrenContainer.Instance;
             return new NormalChildrenContainer(children);
         }
 
         public override IChildrenContainer Add(string name, ChildRestartStats stats)
         {
-            return Create(InternalChildren.AddOrUpdate(name, stats));
+            return Create(InternalChildren.SetItem(name, stats));
         }
 
         public override IChildrenContainer Remove(IActorRef child)
@@ -39,15 +47,15 @@ namespace Akka.Actor.Internal
 
         public override IChildrenContainer Reserve(string name)
         {
-            if (InternalChildren.Contains(name))
+            if (InternalChildren.ContainsKey(name))
                 throw new InvalidActorNameException(string.Format("Actor name \"{0}\" is not unique!", name));
-            return new NormalChildrenContainer(InternalChildren.AddOrUpdate(name, ChildNameReserved.Instance));
+            return new NormalChildrenContainer(InternalChildren.SetItem(name, ChildNameReserved.Instance));
         }
 
         public override IChildrenContainer Unreserve(string name)
         {
             IChildStats stats;
-            if (InternalChildren.TryGet(name, out stats) && (stats is ChildNameReserved))
+            if (InternalChildren.TryGetValue(name, out stats) && (stats is ChildNameReserved))
             {
                 return Create(InternalChildren.Remove(name));
             }
@@ -60,10 +68,11 @@ namespace Akka.Actor.Internal
             if (numberOfChildren > 20) return numberOfChildren + " children";
             var sb = new StringBuilder();
 
-            sb.Append("Children:\n    ").AppendJoin("\n    ", InternalChildren.AllMinToMax, ChildStatsAppender);
+            sb.Append("Children:\n    ").AppendJoin("\n    ", InternalChildren, ChildStatsAppender);
             return sb.ToString();
         }
 
 
     }
 }
+

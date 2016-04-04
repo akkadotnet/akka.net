@@ -1,23 +1,30 @@
-﻿using System.Collections.Generic;
+﻿//-----------------------------------------------------------------------
+// <copyright file="DequeWrapperMessageQueue.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Collections.Generic;
 using Akka.Actor;
 
 namespace Akka.Dispatch.MessageQueues
 {
     /// <summary>
-    /// Message queue for supporting <see cref="DequeBasedMessageQueueSemantics"/> within <see cref="Mailbox"/> instances.
+    /// Message queue for supporting <see cref="IDequeBasedMessageQueueSemantics"/> within <see cref="Mailbox"/> instances.
     /// 
     /// Uses a <see cref="Stack{Envelope}"/> internally - each individual <see cref="EnqueueFirst"/>
     /// </summary>
-    public class DequeWrapperMessageQueue : MessageQueue, DequeBasedMessageQueueSemantics
+    public class DequeWrapperMessageQueue : IMessageQueue, IDequeBasedMessageQueueSemantics
     {
         private readonly Stack<Envelope> _prependBuffer = new Stack<Envelope>();
-        private readonly MessageQueue _messageQueue;
+        private readonly IMessageQueue _messageQueue;
         /// <summary>
-        /// Takes another <see cref="MessageQueue"/> as an argument - wraps <see cref="messageQueue"/>
+        /// Takes another <see cref="IMessageQueue"/> as an argument - wraps <paramref name="messageQueue"/>
         /// in order to provide it with prepend (<see cref="EnqueueFirst"/>) semantics.
         /// </summary>
         /// <param name="messageQueue"></param>
-        public DequeWrapperMessageQueue(MessageQueue messageQueue)
+        public DequeWrapperMessageQueue(IMessageQueue messageQueue)
         {
             _messageQueue = messageQueue;
         }
@@ -40,7 +47,7 @@ namespace Akka.Dispatch.MessageQueues
         }
 
         /// <summary>
-        /// Enqueue a message to the back of the <see cref="MessageQueue"/>
+        /// Enqueue a message to the back of the <see cref="IMessageQueue"/>
         /// </summary>
         /// <param name="envelope"></param>
         public void Enqueue(Envelope envelope)
@@ -52,7 +59,7 @@ namespace Akka.Dispatch.MessageQueues
         /// Attempt to dequeue a message from the front of the prepend buffer.
         /// 
         /// If the prepend buffer is empty, dequeue a message from the normal
-        /// <see cref="MessageQueue"/> wrapped but this wrapper.
+        /// <see cref="IMessageQueue"/> wrapped but this wrapper.
         /// </summary>
         /// <param name="envelope">The message to return, if any</param>
         /// <returns><c>true</c> if a message was available, <c>false</c> otherwise.</returns>
@@ -77,3 +84,4 @@ namespace Akka.Dispatch.MessageQueues
         }
     }
 }
+

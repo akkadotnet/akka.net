@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Inbox.Actor.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Event;
@@ -15,10 +22,10 @@ namespace Akka.Actor
 
         private object _currentMessage;
         private Select? _currentSelect;
-        private Tuple<DateTime, ICancelable> _currentDeadline;
+        private Tuple<TimeSpan, ICancelable> _currentDeadline;
 
         private int _size;
-        private LoggingAdapter _log = Context.GetLogger();
+        private ILoggingAdapter _log = Context.GetLogger();
 
         public InboxActor(int size)
         {
@@ -42,7 +49,7 @@ namespace Akka.Actor
             {
                 if (!_printedWarning)
                 {
-                    _log.Warning("Dropping message: Inbox size has been exceeded, use akka.actor.inbox.inbox-size to increase maximum allowed inbox size. Current is " + _size);
+                    _log.Warning("Dropping message: Inbox size has been exceeded, use akka.actor.inbox.inbox-size to increase maximum allowed inbox size. Current is {0}", _size);
                     _printedWarning = true;
                 }
             }
@@ -113,7 +120,7 @@ namespace Akka.Actor
                 .With<StopWatch>(sw => Context.Unwatch(sw.Target))
                 .With<Kick>(() =>
                 {
-                    var now = DateTime.Now;
+                    var now = Context.System.Scheduler.MonotonicClock;
                     var overdue = _clientsByTimeout.TakeWhile(q => q.Deadline < now);
                     foreach (var query in overdue)
                     {
@@ -161,10 +168,21 @@ namespace Akka.Actor
                     if (_currentDeadline != null)
                     {
                         _currentDeadline.Item2.Cancel();
+                        _currentDeadline = null;
                     }
-                    var cancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(next.Deadline - DateTime.Now, Self, new Kick(), Self);
 
-                    _currentDeadline = Tuple.Create(next.Deadline, cancelable);
+                    TimeSpan delay = next.Deadline - Context.System.Scheduler.MonotonicClock;
+
+                    if (delay > TimeSpan.Zero)
+                    {
+                        var cancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(delay, Self, new Kick(), Self);
+                        _currentDeadline = Tuple.Create(next.Deadline, cancelable);
+                    }
+                    else
+                    {
+                        // The client already timed out, Kick immediately
+                        Self.Tell(new Kick(), ActorRefs.NoSender);
+                    }
                 }
             }
 

@@ -1,10 +1,11 @@
-﻿/**
- * Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
- * Original C# code written by Akka.NET project <http://getakka.net/>
- */
+﻿//-----------------------------------------------------------------------
+// <copyright file="DispatchersSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
-using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -40,7 +41,7 @@ namespace Akka.Tests.Dispatch
                     }
                     my-synchronized-dispather{
                         type = SynchronizedDispatcher
-		                throughput = 10
+                        throughput = 10
                     }
                 }
                 akka.actor.deployment{
@@ -165,6 +166,15 @@ namespace Akka.Tests.Dispatch
             d1.ShouldNotBeSame(d3);
         }
 
+
+        [Fact]
+        public void PinnedDispatchers_must_return_new_instance_each_time()
+        {
+            var d1 = Lookup("myapp.my-pinned-dispatcher");
+            var d2 = Lookup("myapp.my-pinned-dispatcher");
+            d1.ShouldNotBeSame(d2);
+        }
+
         #endregion
 
         #region Support methods and classes
@@ -190,3 +200,4 @@ namespace Akka.Tests.Dispatch
         #endregion
     }
 }
+

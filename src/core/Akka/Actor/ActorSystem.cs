@@ -1,10 +1,18 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorSystem.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
+using Akka.Util;
 
 namespace Akka.Actor
 {
@@ -12,7 +20,7 @@ namespace Akka.Actor
     ///     An actor system is a hierarchical group of actors which share common
     ///     configuration, e.g. dispatchers, deployments, remote capabilities and
     ///     addresses. It is also the entry point for creating or looking up actors.
-    ///     There are several possibilities for creating actors (see [[Akka.Actor.Props]]
+    ///     There are several possibilities for creating actors (see <see cref="Akka.Actor.Props"/>
     ///     for details on `props`):
     ///     <code>
     /// system.ActorOf(props, "name");
@@ -26,7 +34,7 @@ namespace Akka.Actor
     ///     </b>
     ///     This class is not meant to be extended by user code.
     /// </summary>
-    public abstract class ActorSystem : ActorRefFactory, IDisposable
+    public abstract class ActorSystem : IActorRefFactory, IDisposable
     {
         /// <summary>Gets the settings.</summary>
         /// <value>The settings.</value>
@@ -64,7 +72,19 @@ namespace Akka.Actor
         public abstract IScheduler Scheduler { get; }
 
         /// <summary>Gets the log</summary>
-        public abstract LoggingAdapter Log { get; }
+        public abstract ILoggingAdapter Log { get; }
+
+        /// <summary>
+        /// Start-up time since the epoch.
+        /// </summary>
+        public TimeSpan StartTime { get; } = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        /// <summary>
+        /// Up-time of this actor system.
+        /// </summary>
+        public TimeSpan Uptime => MonotonicClock.ElapsedHighRes - _creationTime;
+
+        private readonly TimeSpan _creationTime = MonotonicClock.ElapsedHighRes;
 
         /// <summary>
         ///     Creates a new ActorSystem with the specified name, and the specified Config
@@ -89,7 +109,7 @@ namespace Akka.Actor
         /// <returns>ActorSystem.</returns>
         public static ActorSystem Create(string name)
         {
-            return CreateAndStartSystem(name,ConfigurationFactory.Load());
+            return CreateAndStartSystem(name, ConfigurationFactory.Load());
         }
 
         private static ActorSystem CreateAndStartSystem(string name, Config withFallback)
@@ -129,24 +149,48 @@ namespace Akka.Actor
         /// </summary>
         public abstract bool TryGetExtension<T>(out T extension) where T : class, IExtension;
 
+        /// <summary>
+        /// Register a block of code (callback) to run after ActorSystem.shutdown has been issued and
+        /// all actors in this actor system have been stopped.
+        /// Multiple code blocks may be registered by calling this method multiple times.
+        /// The callbacks will be run sequentially in reverse order of registration, i.e.
+        /// last registration is run first.
+        /// </summary>
+        /// <param name="code">The code to run</param>
+        /// <exception cref="Exception">Thrown if the System has already shut down or if shutdown has been initiated.</exception>
+        public abstract void RegisterOnTermination(Action code);
 
         /// <summary>
-        ///     Stop this actor system. This will stop the guardian actor, which in turn
-        ///     will recursively stop all its child actors, then the system guardian
-        ///     (below which the logging actors reside) and the execute all registered
-        ///     termination handlers (<see cref="ActorSystem.RegisterOnTermination" />).
+        /// Stop this actor system. This will stop the guardian actor, which in turn
+        /// will recursively stop all its child actors, then the system guardian
+        /// (below which the logging actors reside) and the execute all registered
+        /// termination handlers (<see cref="ActorSystem.RegisterOnTermination" />).
         /// </summary>
+        [Obsolete("Use Terminate instead. This method will be removed in future versions")]
         public abstract void Shutdown();
+
+        /// <summary>
+        /// Terminates this actor system. This will stop the guardian actor, which in turn
+        /// will recursively stop all its child actors, then the system guardian
+        /// (below which the logging actors reside) and the execute all registered
+        /// termination handlers (<see cref="ActorSystem.RegisterOnTermination" />).
+        /// Be careful to not schedule any operations on completion of the returned task
+        /// using the `dispatcher` of this actor system as it will have been shut down before the
+        /// task completes.
+        /// </summary>
+        public abstract Task Terminate();
 
         /// <summary>
         /// Returns a task that will be completed when the system has terminated.
         /// </summary>
+        [Obsolete("Use WhenTerminated instead. This property will be removed in future versions")]
         public abstract Task TerminationTask { get; }
 
         /// <summary>
         /// Block current thread until the system has been shutdown.
         /// This will block until after all on termination callbacks have been run.
         /// </summary>
+        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
         public abstract void AwaitTermination();
 
         /// <summary>
@@ -159,6 +203,7 @@ namespace Akka.Actor
         /// <param name="timeout">The timeout.</param>
         /// <returns>Returns <c>true</c> if the system was shutdown during the specified time;
         /// <c>false</c> if it timed out.</returns>
+        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
         public abstract bool AwaitTermination(TimeSpan timeout);
 
         /// <summary>
@@ -172,8 +217,16 @@ namespace Akka.Actor
         /// <param name="cancellationToken">A cancellation token that cancels the wait operation.</param>
         /// <returns>Returns <c>true</c> if the system was shutdown during the specified time;
         /// <c>false</c> if it timed out, or the cancellationToken was canceled. </returns>
+        [Obsolete("Use WhenTerminated instead. This method will be removed in future versions")]
         public abstract bool AwaitTermination(TimeSpan timeout, CancellationToken cancellationToken);
 
+        /// <summary>
+        /// Returns a task which will be completed after the ActorSystem has been terminated
+        /// and termination hooks have been executed. Be careful to not schedule any operations
+        /// on the `dispatcher` of this actor system as it will have been shut down before this
+        /// task completes.
+        /// </summary>
+        public abstract Task WhenTerminated { get; }
 
         public abstract void Stop(IActorRef actor);
         private bool _isDisposed; //Automatically initialized to false;
@@ -209,12 +262,12 @@ namespace Akka.Actor
             try
             {
                 //Make sure Dispose does not get called more than once, by checking the disposed field
-                if(!_isDisposed)
+                if (!_isDisposed)
                 {
-                    if(disposing)
+                    if (disposing)
                     {
                         Log.Debug("Disposing system");
-                        Shutdown();
+                        Terminate();
                     }
                     //Clean up unmanaged resources
                 }
@@ -230,7 +283,7 @@ namespace Akka.Actor
         public abstract object RegisterExtension(IExtensionId extension);
 
         public abstract IActorRef ActorOf(Props props, string name = null);
-        
+
         public abstract ActorSelection ActorSelection(ActorPath actorPath);
         public abstract ActorSelection ActorSelection(string actorPath);
 
@@ -245,3 +298,4 @@ namespace Akka.Actor
         }
     }
 }
+

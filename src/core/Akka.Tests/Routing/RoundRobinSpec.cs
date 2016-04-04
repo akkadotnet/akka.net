@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RoundRobinSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
@@ -55,5 +62,17 @@ namespace Akka.Tests.Routing
             Sys.Stop(router);
             testLatch.Ready(TimeSpan.FromSeconds(5));
         }
+
+        [Fact]
+        public void RoundRobin_should_not_throw_IndexOutOfRangeException_when_counter_wraps_to_be_negative()
+        {
+            var routees = new[] {Routee.NoRoutee, Routee.NoRoutee, Routee.NoRoutee};
+            var routingLogic = new RoundRobinRoutingLogic(int.MaxValue - 5);
+            for (var i = 0; i < 10; i++)
+            {
+                routingLogic.Select(i, routees);
+            }
+        }
     }
 }
+

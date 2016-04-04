@@ -1,10 +1,18 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="PersistenceSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Akka.Configuration;
 using Akka.TestKit;
 using Akka.Util.Internal;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.Tests
 {
@@ -21,6 +29,7 @@ namespace Akka.Persistence.Tests
                 akka.actor.serialize-messages = {0}
                 akka.persistence.publish-plugin-commands = on
                 akka.persistence.journal.plugin = ""akka.persistence.journal.{1}""
+                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.local""
                 akka.persistence.snapshot-store.local.dir = ""target/snapshots-{2}/""
                 akka.test.single-expect-default = 10s", serialization ?? "on", plugin, test);
 
@@ -33,16 +42,16 @@ namespace Akka.Persistence.Tests
 
         private readonly string _name;
 
-        protected PersistenceSpec(string config)
-            : base(config)
+        protected PersistenceSpec(string config, ITestOutputHelper output = null)
+            : base(config, output)
         {
             _name = NamePrefix + "-" + _counter.GetAndIncrement();
             Clean = new Cleanup(this);
             Clean.Initialize();
         }
 
-        protected PersistenceSpec(Config config = null)
-            : base(config)
+        protected PersistenceSpec(Config config = null, ITestOutputHelper output = null)
+            : base(config, output)
         {
             _name = NamePrefix + "-" + _counter.GetAndIncrement();
             Clean = new Cleanup(this);
@@ -137,3 +146,4 @@ namespace Akka.Persistence.Tests
         }
     }
 }
+

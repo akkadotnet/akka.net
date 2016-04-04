@@ -1,9 +1,16 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="InboxSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 using Akka.Event;
 using Akka.TestKit;
 using Xunit;
@@ -12,7 +19,8 @@ namespace Akka.Tests.Actor
 {
     public class InboxSpec : AkkaSpec
     {
-        private Inbox _inbox;
+        private readonly Inbox _inbox;
+
         public InboxSpec()
             : base("akka.actor.inbox.inbox-size=1000")  //Default is 1000 but just to make sure these tests don't fail we set it
         {
@@ -98,7 +106,7 @@ namespace Akka.Tests.Actor
                     o.ShouldBe(0);
                 }
 
-                //The inbox should be empty now, so receiving should result in a timeout             
+                //The inbox should be empty now, so receiving should result in a timeout
                 Intercept<TimeoutException>(() =>
                 {
                     var received = _inbox.Receive(TimeSpan.FromSeconds(1));
@@ -111,15 +119,15 @@ namespace Akka.Tests.Actor
             }
         }
 
-
         [Fact]
         public void Inbox_have_a_default_and_custom_timeouts()
         {
-            Within(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(6), () =>
+            Within(TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(6), () =>
             {
                 Intercept<TimeoutException>(() => _inbox.Receive());
                 return true;
             });
+
             Within(TimeSpan.FromSeconds(1), () =>
             {
                 Intercept<TimeoutException>(() => _inbox.Receive(TimeSpan.FromMilliseconds(100)));
@@ -130,7 +138,7 @@ namespace Akka.Tests.Actor
         [Fact]
         public void Select_WithClient_should_update_Client_and_copy_the_rest_of_the_properties_BUG_427()
         {
-            var deadline = new DateTime(1919, 5, 24);
+            var deadline = new TimeSpan(Sys.Scheduler.MonotonicClock.Ticks/2); //Some point in the past
             Predicate<object> predicate = o => true;
             var actorRef = new EmptyLocalActorRef(((ActorSystemImpl)Sys).Provider, new RootActorPath(new Address("akka", "test")), Sys.EventStream);
             var select = new Select(deadline, predicate, actorRef);
@@ -143,5 +151,14 @@ namespace Akka.Tests.Actor
             updatedSelect.Client.ShouldBe(updatedActorRef);
         }
 
+        [Fact]
+        public void Inbox_Receive_will_timeout_gracefully_if_timeout_is_already_expired()
+        {
+            var task = _inbox.ReceiveAsync(TimeSpan.FromSeconds(-1));
+
+            Assert.True(task.Wait(1000), "Receive did not complete in time.");
+            Assert.IsType<Status.Failure>(task.Result);
+        }
     }
 }
+

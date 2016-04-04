@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Resizer.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
@@ -8,8 +15,8 @@ using Akka.Dispatch;
 namespace Akka.Routing
 {
     /// <summary>
-    /// [[Pool]] routers with dynamically resizable number of routees are implemented by providing a Resizer
-    /// implementation in the [[akka.routing.Pool]] configuration
+    /// <see cref="Akka.Routing.Pool"/> routers with dynamically resizable number of routees are implemented by providing a Resizer
+    /// implementation in the <see cref="Akka.Routing.Pool"/> configuration
     /// </summary>
     public abstract class Resizer
     {
@@ -43,7 +50,7 @@ namespace Akka.Routing
     }
 
     /// <summary>
-    /// Implementation of [[Resizer]] that adjust the [[Pool]] based on specified thresholds.
+    /// Implementation of <see cref="Akka.Routing.Resizer"/> that adjust the <see cref="Akka.Routing.Pool"/> based on specified thresholds.
     /// </summary>
     public class DefaultResizer : Resizer, IEquatable<DefaultResizer>
     {
@@ -86,6 +93,8 @@ namespace Akka.Routing
             BackoffThreshold = backoffThreshold;
             BackoffRate = backoffRate;
             MessagesPerResize = messagesPerResize;
+
+            Validate();
         }
 
         /// <summary>
@@ -311,3 +320,4 @@ namespace Akka.Routing
         public int MessagesPerResize { get; private set; }
     }
 }
+

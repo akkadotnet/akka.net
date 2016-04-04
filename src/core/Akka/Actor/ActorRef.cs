@@ -1,11 +1,18 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorRef.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Util;
@@ -35,7 +42,7 @@ namespace Akka.Actor
     /// RepointableActorRef (and potentially others) may change their locality at
     /// runtime, meaning that isLocal might not be stable. RepointableActorRef has
     /// the feature that it starts out “not fully started” (but you can send to it),
-    /// which is why <see cref="IsSt"/> features here; it is not improbable that cluster
+    /// which is why <see cref="IsStarted"/> features here; it is not improbable that cluster
     /// actor refs will have the same behavior.
     /// INTERNAL
     /// </summary>
@@ -80,9 +87,9 @@ namespace Akka.Actor
         protected override void TellInternal(object message, IActorRef sender)
         {
 
-            if (message is SystemMessage) //we have special handling for system messages
+            if (message is ISystemMessage) //we have special handling for system messages
             {
-                SendSystemMessage(message.AsInstanceOf<SystemMessage>(), sender);
+                SendSystemMessage(message.AsInstanceOf<ISystemMessage>(), sender);
             }
             else
             {
@@ -91,19 +98,6 @@ namespace Akka.Actor
                     _unregister();
                     _result.TrySetResult(message);
                 }
-            }
-        }
-
-        protected void SendSystemMessage(SystemMessage message, IActorRef sender)
-        {
-            var d = message as DeathWatchNotification;
-            if (message is Terminate)
-            {
-                Stop();
-            }
-            else if (d != null)
-            {
-                this.Tell(new Terminated(d.Actor, d.ExistenceConfirmed, d.AddressTerminated));
             }
         }
     }
@@ -118,7 +112,7 @@ namespace Akka.Actor
             return actorCell != null ? actorCell.Self : ActorRefs.NoSender;
         }
     }
-    public interface IActorRef : ICanTell, IEquatable<IActorRef>, IComparable<IActorRef>, ISurrogated
+    public interface IActorRef : ICanTell, IEquatable<IActorRef>, IComparable<IActorRef>, ISurrogated, IComparable
     {
         ActorPath Path { get; }
     }
@@ -135,7 +129,8 @@ namespace Akka.Actor
         /// <summary>
         /// Forwards the message using the current Sender
         /// </summary>
-        /// <param name="message"></param>
+        /// <param name="receiver">The actor that receives the forward</param>
+        /// <param name="message">The message to forward</param>
         public static void Forward(this IActorRef receiver, object message)
         {
             var sender = ActorCell.GetCurrentSenderOrNoSender();
@@ -146,7 +141,11 @@ namespace Akka.Actor
     public static class ActorRefs
     {
         public static readonly Nobody Nobody = Nobody.Instance;
-        public static readonly IActorRef NoSender = Actor.NoSender.Instance; //In Akka this is just null
+        /// <summary>
+        /// Use this value as an argument to <see cref="ICanTell.Tell"/> if there is not actor to
+        /// reply to (e.g. when sending from non-actor code).
+        /// </summary>
+        public static readonly IActorRef NoSender = null;
     }
 
     public abstract class ActorRefBase : IActorRef
@@ -170,7 +169,10 @@ namespace Akka.Actor
 
         public void Tell(object message, IActorRef sender)
         {
-            if (sender == null) throw new ArgumentNullException("sender", "A sender must be specified");
+            if (sender == null)
+            {
+                sender = ActorRefs.NoSender;
+            }
 
             TellInternal(message, sender);
         }
@@ -200,6 +202,13 @@ namespace Akka.Actor
             }
         }
 
+        public int CompareTo(object obj)
+        {
+            if (obj != null && !(obj is IActorRef))
+                throw new ArgumentException("Object must be of type IActorRef.");
+            return CompareTo((IActorRef) obj);
+        }
+
         public bool Equals(IActorRef other)
         {
             return Path.Uid == other.Path.Uid && Path.Equals(other.Path);
@@ -213,7 +222,7 @@ namespace Akka.Actor
             return Path.Uid == other.Path.Uid ? 0 : 1;
         }
 
-        public ISurrogate ToSurrogate(ActorSystem system)
+        public virtual ISurrogate ToSurrogate(ActorSystem system)
         {
             return new Surrogate(Serialization.Serialization.SerializedActorPath(this));
         }
@@ -241,6 +250,7 @@ namespace Akka.Actor
         void Stop();
         void Restart(Exception cause);
         void Suspend();
+        void SendSystemMessage(ISystemMessage message, IActorRef sender);
     }
 
     public abstract class InternalActorRefBase : ActorRefBase, IInternalActorRef
@@ -265,6 +275,18 @@ namespace Akka.Actor
 
         public abstract bool IsTerminated { get; }
         public abstract bool IsLocal { get; }
+        public void SendSystemMessage(ISystemMessage message, IActorRef sender)
+        {
+            var d = message as DeathWatchNotification;
+            if (message is Terminate)
+            {
+                Stop();
+            }
+            else if (d != null)
+            {
+                this.Tell(new Terminated(d.Actor, d.ExistenceConfirmed, d.AddressTerminated));
+            }
+        }
     }
 
     public abstract class MinimalActorRef : InternalActorRefBase, ILocalRef
@@ -316,7 +338,15 @@ namespace Akka.Actor
     /// <summary> This is an internal look-up failure token, not useful for anything else.</summary>
     public sealed class Nobody : MinimalActorRef
     {
+        public class NobodySurrogate : ISurrogate
+        {
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return Nobody.Instance;
+            }
+        }
         public static Nobody Instance = new Nobody();
+        private static readonly NobodySurrogate SurrogateInstance = new NobodySurrogate();
         private readonly ActorPath _path = new RootActorPath(Address.AllSystems, "/Nobody");
 
         private Nobody() { }
@@ -328,6 +358,10 @@ namespace Akka.Actor
             get { throw new NotSupportedException("Nobody does not provide"); }
         }
 
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return SurrogateInstance;
+        }
     }
 
     public abstract class ActorRefWithCell : InternalActorRefBase
@@ -340,30 +374,16 @@ namespace Akka.Actor
 
     }
 
-    public sealed class NoSender : ActorRefBase
-    {
-        public static readonly NoSender Instance = new NoSender();
-        private readonly ActorPath _path = new RootActorPath(Address.AllSystems, "/NoSender");
-
-        private NoSender() { }
-
-        public override ActorPath Path { get { return _path; } }
-
-        protected override void TellInternal(object message, IActorRef sender)
-        {
-        }
-    }
-
     internal class VirtualPathContainer : MinimalActorRef
     {
         private readonly IInternalActorRef _parent;
-        private readonly LoggingAdapter _log;
+        private readonly ILoggingAdapter _log;
         private readonly IActorRefProvider _provider;
         private readonly ActorPath _path;
 
         private readonly ConcurrentDictionary<string, IInternalActorRef> _children = new ConcurrentDictionary<string, IInternalActorRef>();
 
-        public VirtualPathContainer(IActorRefProvider provider, ActorPath path, IInternalActorRef parent, LoggingAdapter log)
+        public VirtualPathContainer(IActorRefProvider provider, ActorPath path, IInternalActorRef parent, ILoggingAdapter log)
         {
             _parent = parent;
             _log = log;
@@ -386,7 +406,7 @@ namespace Akka.Actor
             get { return _path; }
         }
 
-        public LoggingAdapter Log
+        public ILoggingAdapter Log
         {
             get { return _log; }
         }
@@ -401,7 +421,7 @@ namespace Akka.Actor
         {
             _children.AddOrUpdate(name, actor, (k, v) =>
             {
-                //TODO:  log.debug("{} replacing child {} ({} -> {})", path, name, old, ref)
+                Log.Warning("{0} replacing child {1} ({2} -> {3})", name, actor, v, actor);
                 return v;
             });
         }
@@ -411,7 +431,16 @@ namespace Akka.Actor
             IInternalActorRef tmp;
             if (!_children.TryRemove(name, out tmp))
             {
-                //TODO: log.warning("{} trying to remove non-child {}", path, name)
+                Log.Warning("{0} trying to remove non-child {1}", Path, name);
+            }
+        }
+
+        public void RemoveChild(string name,IActorRef child)
+        {
+            IInternalActorRef tmp;
+            if (!_children.TryRemove(name, out tmp))
+            {
+                Log.Warning("{0} trying to remove non-child {1}",Path,name);
             }
         }
 
@@ -489,3 +518,4 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
         }
     }
 }
+

@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="FSM.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -138,11 +145,11 @@ namespace Akka.Actor
             public long Generation { get; private set; }
         }
         [DebuggerDisplay("Timer {Name,nq}, message: {Message")]
-        internal class Timer : NoSerializationVerificationNeeded
+        internal class Timer : INoSerializationVerificationNeeded
         {
-            private readonly LoggingAdapter _debugLog;
+            private readonly ILoggingAdapter _debugLog;
 
-            public Timer(string name, object message, bool repeat, int generation, IActorContext context, LoggingAdapter debugLog)
+            public Timer(string name, object message, bool repeat, int generation, IActorContext context, ILoggingAdapter debugLog)
             {
                 _debugLog = debugLog;
                 Context = context;
@@ -177,8 +184,7 @@ namespace Akka.Actor
                 if(_debugLog != null)
                     send = () =>
                     {
-                        _debugLog.Debug("{3}Timer '{0}' went off. Sending {1} -> {2}", name, message, actor,
-                            _ref.IsCancellationRequested ? "Cancelled " : "");
+                        _debugLog.Debug("{0}Timer '{1}' went off. Sending {2} -> {3}",_ref.IsCancellationRequested ? "Cancelled " : "", name, message, actor);
                         actor.Tell(this, Context.Self);
                     };
                 else
@@ -198,7 +204,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Log entry of the <see cref="LoggingFSM"/> - can be obtained by calling <see cref="GetLog"/>
+        /// Log entry of the <see cref="ILoggingFSM"/> - can be obtained by calling <see cref="GetLog"/>
         /// </summary>
         /// <typeparam name="TS">The name of the state</typeparam>
         /// <typeparam name="TD">The data of the state</typeparam>
@@ -244,7 +250,7 @@ namespace Akka.Actor
 
             public Reason StopReason { get; private set; }
 
-            public List<object> Replies { get; private set; }
+            public List<object> Replies { get; protected set; }
 
             public State<TS, TD> Copy(TimeSpan? timeout, Reason stopReason = null, List<object> replies = null)
             {
@@ -331,7 +337,7 @@ namespace Akka.Actor
         /// which allows pattern matching to extract both state and data.
         /// </summary>
         /// <typeparam name="TD">The state data for this event</typeparam>
-        public class Event<TD> : NoSerializationVerificationNeeded
+        public class Event<TD> : INoSerializationVerificationNeeded
         {
             public Event(object fsmEvent, TD stateData)
             {
@@ -352,7 +358,7 @@ namespace Akka.Actor
         /// <summary>
         /// Class representing the state of the <see cref="FSM{TS,TD}"/> within the OnTermination block.
         /// </summary>
-        public class StopEvent<TS, TD> : NoSerializationVerificationNeeded
+        public class StopEvent<TS, TD> : INoSerializationVerificationNeeded
         {
             public StopEvent(Reason reason, TS terminatedState, TD stateData)
             {
@@ -378,10 +384,10 @@ namespace Akka.Actor
     /// <typeparam name="TData">The state data type</typeparam>
     public abstract class FSM<TState, TData> : FSMBase, IListeners, IInternalSupportsTestFSMRef<TState,TData>
     {
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
         protected FSM()
         {
-            if(this is LoggingFSM)
+            if(this is ILoggingFSM)
                 DebugEvent = Context.System.Settings.FsmDebugEvent;
         }
         
@@ -684,7 +690,7 @@ namespace Akka.Actor
             {
                 return delegate(Event<TData> @event)
                 {
-                    _log.Warning(String.Format("unhandled event {0} in state {1}", @event.FsmEvent, StateName));
+                    _log.Warning("unhandled event {0} in state {1}", @event.FsmEvent, StateName);
                     return Stay();
                 };
             }
@@ -723,8 +729,8 @@ namespace Akka.Actor
         /// See http://scalachina.com/api/scala/PartialFunction.html
         /// </summary>
         /// <param name="original">The original <see cref="StateFunction"/> to be called</param>
-        /// <param name="fallback">The <see cref="StateFunction"/> to be called if <see cref="original"/> returns null</param>
-        /// <returns>A <see cref="StateFunction"/> which combines both the results of <see cref="original"/> and <see cref="fallback"/></returns>
+        /// <param name="fallback">The <see cref="StateFunction"/> to be called if <paramref name="original"/> returns null</param>
+        /// <returns>A <see cref="StateFunction"/> which combines both the results of <paramref name="original"/> and <paramref name="fallback"/></returns>
         private static StateFunction OrElse(StateFunction original, StateFunction fallback)
         {
             StateFunction chained = delegate(Event<TData> @event)
@@ -969,5 +975,6 @@ namespace Akka.Actor
     /// Marker interface to let the setting "akka.actor.debug.fsm" control if logging should occur in <see cref="FSM{TS,TD}"/>
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    public interface LoggingFSM { }
+    public interface ILoggingFSM { }
 }
+

@@ -1,8 +1,17 @@
-﻿using System.Collections.Generic;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ResizablePoolCell.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 using Akka.Dispatch;
+using Akka.Dispatch.SysMsg;
 using Akka.Util;
 using Akka.Util.Internal;
 
@@ -25,8 +34,7 @@ namespace Akka.Routing
         public ResizablePoolCell(ActorSystemImpl system, IInternalActorRef self, Props routerProps, MessageDispatcher dispatcher, Props routeeProps, IInternalActorRef supervisor, Pool pool)
             : base(system,self, routerProps,dispatcher, routeeProps, supervisor)
         {
-
-            Guard.Assert(pool.Resizer != null, "RouterConfig must be a Pool with defined resizer");
+            if (pool.Resizer == null) throw new ArgumentException("RouterConfig must be a Pool with defined resizer");
 
             resizer = pool.Resizer;
             _routerProps = routerProps;
@@ -48,6 +56,7 @@ namespace Akka.Routing
         public override void Post(IActorRef sender, object message)
         {
             if(!(_routerProps.RouterConfig.IsManagementMessage(message)) &&
+                !(message is ISystemMessage) &&
                 resizer.IsTimeForResize(_resizeCounter.GetAndIncrement()) &&
                 _resizeInProgress.CompareAndSet(false, true))
             {
@@ -76,14 +85,19 @@ namespace Akka.Routing
                     {
                         var currentRoutees = Router.Routees;
                         var enumerable = currentRoutees as Routee[] ?? currentRoutees.ToArray();
-                        var routeesToAbandon = enumerable.Drop(enumerable.Count() + requestedCapacity);
+
+                        var routeesToAbandon = enumerable
+                            .Drop(enumerable.Count() + requestedCapacity)
+                            .ToList();
+
                         RemoveRoutees(routeesToAbandon, true);
                     }
                 }
                 finally
                 {
-                    _resizeInProgress = false;
+                    _resizeInProgress.Value = false;
                 }
         }
     }
 }
+

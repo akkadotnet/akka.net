@@ -1,5 +1,13 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="PersistentView.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
+using Akka.Event;
 using Newtonsoft.Json;
 
 namespace Akka.Persistence
@@ -76,9 +84,10 @@ namespace Akka.Persistence
     /// `akka.persistence.view.auto-update-interval` configuration key. Applications may trigger additional
     /// view updates by sending the view <see cref="Update"/> requests. See also methods
     /// </summary>
-    public abstract partial class PersistentView : ActorBase, ISnapshotter, IPersistentIdentity, WithUnboundedStash
+    public abstract partial class PersistentView : ActorBase, ISnapshotter, IPersistentIdentity, IWithUnboundedStash, IPersistenceRecovery
     {
         protected readonly PersistenceExtension Extension;
+        private readonly ILoggingAdapter _log;
 
         private readonly PersistenceSettings.ViewSettings _viewSettings;
         private IActorRef _snapshotStore;
@@ -95,7 +104,8 @@ namespace Akka.Persistence
             Extension = Persistence.Instance.Apply(Context.System);
             _viewSettings = Extension.Settings.View;
             _internalStash = CreateStash();
-            _currentState = RecoveryPending();
+            _currentState = RecoveryStarted(long.MaxValue);
+            _log = Context.GetLogger();
         }
 
         public string JournalPluginId { get; protected set; }
@@ -164,19 +174,42 @@ namespace Akka.Persistence
         /// </summary>
         public long SnapshotSequenceNr { get { return LastSequenceNr; } }
 
-        private void ChangeState(ViewState state)
-        {
-            _currentState = state;
-        }
-
         private void UpdateLastSequenceNr(IPersistentRepresentation persistent)
         {
             if (persistent.SequenceNr > LastSequenceNr) LastSequenceNr = persistent.SequenceNr;
         }
 
         /// <summary>
-        /// Orders to load a snapshots related to persistent actor identified by <paramref name="persistenceId"/>
-        /// that match specified <paramref name="criteria"/> up to provided <paramref name="toSequenceNr"/> upper, inclusive bound.
+        /// Called when the persistent view is started for the first time.
+        /// The returned <see cref="Akka.Persistence.Recovery"/> object defines how the actor
+        /// will recover its persistent state behore handling the first incoming message.
+        /// 
+        /// To skip recovery completely return <see cref="Akka.Persistence.Recovery.None"/>.
+        /// </summary>
+        public virtual Recovery Recovery { get { return new Recovery(replayMax: AutoUpdateReplayMax); } }
+
+        /// <summary>
+        /// Called whenever a message replay fails. By default it logs the error.
+        /// Subclass may override to customize logging.
+        /// The <see cref="PersistentView"/> will not stop or throw exception due to this.
+        /// It will try again on next update.
+        /// </summary>
+        /// <returns></returns>
+        protected virtual void OnReplayError(Exception cause)
+        {
+            if (_log.IsErrorEnabled)
+                _log.Error(cause, "Persistence view failure when replaying events for persistenceId [{0}]. " +
+                                  "Last known sequence number [{}]", PersistenceId, LastSequenceNr);
+        }
+
+        private void ChangeState(ViewState state)
+        {
+            _currentState = state;
+        }
+
+        /// <summary>
+        /// Instructs the snapshot store to load the specified snapshot and send it via an
+        /// <see cref="SnapshotOffer"/> to the running <see cref="PersistentActor"/>.
         /// </summary>
         public void LoadSnapshot(string persistenceId, SnapshotSelectionCriteria criteria, long toSequenceNr)
         {
@@ -184,8 +217,10 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// Saves a <paramref name="snapshot"/> of this actor's state. If snapshot succeeds, this actor will
-        /// receive a <see cref="SaveSnapshotSuccess"/>, otherwise a <see cref="SaveSnapshotFailure"/> message.
+        /// Saves <paramref name="snapshot"/> of current <see cref="ISnapshotter"/> state.
+        /// 
+        /// The <see cref="PersistentActor"/> will be notified about the success or failure of this
+        /// via an <see cref="SaveSnapshotSuccess"/> or <see cref="SaveSnapshotFailure"/> message.
         /// </summary>
         public void SaveSnapshot(object snapshot)
         {
@@ -193,15 +228,21 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// Deletes a snapshot identified by <paramref name="sequenceNr"/> and <paramref name="timestamp"/>.
+        /// Deletes the snapshot identified by <paramref name="sequenceNr"/>.
+        /// 
+        /// The <see cref="PersistentActor"/> will be notified about the status of the deletion
+        /// via an <see cref="DeleteSnapshotSuccess"/> or <see cref="DeleteSnapshotFailure"/> message.
         /// </summary>
-        public void DeleteSnapshot(long sequenceNr, DateTime timestamp)
+        public void DeleteSnapshot(long sequenceNr)
         {
-            SnapshotStore.Tell(new DeleteSnapshot(new SnapshotMetadata(SnapshotterId, sequenceNr, timestamp)));
+            SnapshotStore.Tell(new DeleteSnapshot(new SnapshotMetadata(SnapshotterId, sequenceNr)));
         }
 
         /// <summary>
-        /// Delete all snapshots matching <paramref name="criteria"/>.
+        /// Deletes all snapshots matching <paramref name="criteria"/>.
+        /// 
+        /// The <see cref="PersistentActor"/> will be notified about the status of the deletion
+        /// via an <see cref="DeleteSnapshotsSuccess"/> or <see cref="DeleteSnapshotsFailure"/> message.
         /// </summary>
         public void DeleteSnapshots(SnapshotSelectionCriteria criteria)
         {
@@ -214,3 +255,4 @@ namespace Akka.Persistence
         }
     }
 }
+

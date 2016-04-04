@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Switch.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 
 namespace Akka.Util
 {
@@ -170,5 +177,14 @@ namespace Akka.Util
         {
             get { return !_switch.Value; }
         }
+
+        public void Locked(Action action)
+        {
+            lock (_lock)
+            {
+                action();
+            }
+        }
     }
 }
+

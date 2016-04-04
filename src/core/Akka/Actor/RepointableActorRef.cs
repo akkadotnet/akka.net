@@ -1,9 +1,15 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RepointableActorRef.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Akka.Actor.Internal;
-using Akka.Actor.Internals;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -44,18 +50,18 @@ namespace Akka.Actor
 
         public void SwapUnderlying(ICell cell)
         {
-            #pragma warning disable 0420
+#pragma warning disable 0420
             //Ok to ignore CS0420 "a reference to a volatile field will not be treated as volatile" for interlocked calls http://msdn.microsoft.com/en-us/library/4bw5ewxy(VS.80).aspx
             Interlocked.Exchange(ref _underlying_DoNotCallMeDirectly, cell);
-            #pragma warning restore 0420
+#pragma warning restore 0420
         }
 
         private void SwapLookup(ICell cell)
         {
-            #pragma warning disable 0420
+#pragma warning disable 0420
             //Ok to ignore CS0420 "a reference to a volatile field will not be treated as volatile" for interlocked calls http://msdn.microsoft.com/en-us/library/4bw5ewxy(VS.80).aspx
             Interlocked.Exchange(ref _lookup_DoNotCallMeDirectly, cell);
-            #pragma warning restore 0420
+#pragma warning restore 0420
         }
 
         ///<summary>
@@ -68,13 +74,13 @@ namespace Akka.Actor
         public RepointableActorRef Initialize(bool async)
         {
             var underlying = Underlying;
-            if(underlying == null)
+            if (underlying == null)
             {
                 var newCell = new UnstartedCell(_system, this, _props, _supervisor);
                 SwapUnderlying(newCell);
                 SwapLookup(newCell);
                 _supervisor.Tell(new Supervise(this, async));
-                if(!async)
+                if (!async)
                     Point();
 
                 return this;
@@ -94,11 +100,11 @@ namespace Akka.Actor
         public void Point()
         {
             var underlying = Underlying;
-            if(underlying == null)
+            if (underlying == null)
                 throw new IllegalStateException("Underlying cell is null");
 
             var unstartedCell = underlying as UnstartedCell;
-            if(unstartedCell != null)
+            if (unstartedCell != null)
             {
                 // The problem here was that if the real actor (which will start running
                 // at cell.start()) creates children in its constructor, then this may
@@ -110,7 +116,7 @@ namespace Akka.Actor
                 cell.Start();
                 unstartedCell.ReplaceWith(cell);
             }
-            // underlying not beeing UnstartedCell happens routinely for things which were created async=false
+            // underlying not being UnstartedCell happens routinely for things which were created async=false
         }
 
         protected virtual ActorCell NewCell()
@@ -160,7 +166,7 @@ namespace Akka.Actor
         {
             get
             {
-                if(Underlying == null)
+                if (Underlying == null)
                     throw new IllegalStateException("IsStarted called before initialized");
                 return !(Underlying is UnstartedCell);
             }
@@ -174,32 +180,33 @@ namespace Akka.Actor
         public override IActorRef GetChild(IEnumerable<string> name)
         {
             var current = (IActorRef)this;
-            var index = 0;
-            foreach(var element in name)
+            if (!name.Any()) return current;
+
+            var next = name.FirstOrDefault() ?? "";
+
+            switch (next)
             {
-                switch (element)
-                {
-                    case "..":
-                        return Parent.GetChild(name.Skip(index));
-                    case "":
-                        break;
-                    default:
-                        var nameAndUid = ActorCell.SplitNameAndUid(element);
-                        IChildStats stats;
-                        if (Lookup.TryGetChildStatsByName(nameAndUid.Name, out stats))
+                case "..":
+                    return Parent.GetChild(name.Skip(1));
+                case "":
+                    return ActorRefs.Nobody;
+                default:
+                    var nameAndUid = ActorCell.SplitNameAndUid(next);
+                    IChildStats stats;
+                    if (Lookup.TryGetChildStatsByName(nameAndUid.Name, out stats))
+                    {
+                        var crs = stats as ChildRestartStats;
+                        var uid = nameAndUid.Uid;
+                        if (crs != null && (uid == ActorCell.UndefinedUid || uid == crs.Uid))
                         {
-                            var crs = stats as ChildRestartStats;
-                            var uid = nameAndUid.Uid;
-                            if (crs != null && (uid == ActorCell.UndefinedUid || uid == crs.Uid))
-                            {
-                                crs.Child.GetChild(name.Skip(index));
-                            }
+                            if (name.Skip(1).Any())
+                                return crs.Child.GetChild(name.Skip(1));
+                            else
+                                return crs.Child;
                         }
-                        return ActorRefs.Nobody;
-                }
-                index++;
+                    }
+                    return ActorRefs.Nobody;
             }
-            return current;
         }
 
         public override IInternalActorRef GetSingleChild(string name)
@@ -235,11 +242,11 @@ namespace Akka.Actor
 
         public void ReplaceWith(ICell cell)
         {
-            lock(_lock)
+            lock (_lock)
             {
                 try
                 {
-                    foreach(var envelope in _messageQueue)
+                    foreach (var envelope in _messageQueue)
                     {
                         cell.Post(envelope.Sender, envelope.Message);
                     }
@@ -304,7 +311,7 @@ namespace Akka.Actor
 
         public void Post(IActorRef sender, object message)
         {
-            if(message is SystemMessage)
+            if (message is ISystemMessage)
                 SendSystemMessage(message, sender);
             else
                 SendMessage(message, sender);
@@ -312,12 +319,12 @@ namespace Akka.Actor
 
         private void SendMessage(object message, IActorRef sender)
         {
-            if(Monitor.TryEnter(_lock, _timeout))
+            if (Monitor.TryEnter(_lock, _timeout))
             {
                 try
                 {
                     var cell = _self.Underlying;
-                    if(CellIsReady(cell))
+                    if (CellIsReady(cell))
                     {
                         cell.Post(sender, message);
                     }
@@ -341,10 +348,10 @@ namespace Akka.Actor
 
         private void SendSystemMessage(object message, IActorRef sender)
         {
-            lock(_lock)
+            lock (_lock)
             {
                 var cell = _self.Underlying;
-                if(CellIsReady(cell))
+                if (CellIsReady(cell))
                 {
                     cell.Post(sender, message);
                 }
@@ -354,14 +361,14 @@ namespace Akka.Actor
                     try
                     {
                         // systemMessages that are sent during replace need to jump to just after the last system message in the queue, so it's processed before other messages
-                        if(!ReferenceEquals(_self.Lookup, this) && ReferenceEquals(_self.Underlying, this) &&
+                        if (!ReferenceEquals(_self.Lookup, this) && ReferenceEquals(_self.Underlying, this) &&
                            _messageQueue.Count != 0)
                             TryEnqueue(envelope);
                         else
                             _messageQueue.Add(envelope);
                         Mailbox.DebugPrint("{0} temp queueing system msg {1} from {2}", Self, message, sender);
                     }
-                    catch(Exception e)
+                    catch (Exception e)
                     {
                         _system.EventStream.Publish(new Warning(_self.Path.ToString(), GetType(),
                             "Dropping message of type" + message.GetType() + " due to  enqueue failure: " + e.ToString()));
@@ -375,17 +382,17 @@ namespace Akka.Actor
         {
             var queueIndex = 0;
             var insertIntoIndex = -1;
-            while(true)
+            while (true)
             {
                 var hasMoreMessagesInTheQueue = queueIndex < _messageQueue.Count;
-                if(hasMoreMessagesInTheQueue)
+                if (hasMoreMessagesInTheQueue)
                 {
                     var queuedMessage = _messageQueue[queueIndex];
                     queueIndex++;
-                    if(queuedMessage.Message is SystemMessage)
+                    if (queuedMessage.Message is ISystemMessage)
                         insertIntoIndex = queueIndex;
                 }
-                else if(insertIntoIndex == -1)
+                else if (insertIntoIndex == -1)
                 {
                     _messageQueue.Add(envelope);
                     return;
@@ -418,7 +425,7 @@ namespace Akka.Actor
         {
             get
             {
-                lock(_lock)
+                lock (_lock)
                 {
                     var cell = _self.Underlying;
                     return CellIsReady(cell)
@@ -432,7 +439,7 @@ namespace Akka.Actor
         {
             get
             {
-                lock(_lock)
+                lock (_lock)
                 {
                     var cell = _self.Underlying;
                     return CellIsReady(cell)
@@ -446,3 +453,4 @@ namespace Akka.Actor
         public Props Props { get { return _props; } }
     }
 }
+

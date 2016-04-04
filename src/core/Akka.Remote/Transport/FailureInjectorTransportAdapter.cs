@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="FailureInjectorTransportAdapter.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -22,20 +29,32 @@ namespace Akka.Remote.Transport
     }
 
     /// <summary>
-    /// The failure we're going to inject into a transport, of course :)
+    /// This exception is used to indicate a simulated failure in an association.
     /// </summary>
     public sealed class FailureInjectorException : AkkaException
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FailureInjectorException"/> class.
+        /// </summary>
+        /// <param name="msg">The message that describes the error.</param>
         public FailureInjectorException(string msg)
         {
             Msg = msg;
         }
 
-        protected FailureInjectorException(SerializationInfo info, StreamingContext context)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FailureInjectorException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
+        private FailureInjectorException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
 
+        /// <summary>
+        /// Retrieves the message of the simulated failure.
+        /// </summary>
         public string Msg { get; private set; }
     }
 
@@ -108,7 +127,7 @@ namespace Akka.Remote.Transport
             _shouldDebugLog = ExtendedActorSystem.Settings.Config.GetBoolean("akka.remote.gremlin.debug");
         }
 
-        private LoggingAdapter _log;
+        private ILoggingAdapter _log;
         private Random Rng
         {
             get { return ThreadLocalRandom.Current; }
@@ -163,9 +182,7 @@ namespace Akka.Remote.Transport
                 // Listen is called only during the initialization of the stack, and upstreamListener is not read before this
                 // finishes.
                 _upstreamListener = tr.Result;
-            }, TaskContinuationOptions.AttachedToParent & 
-            TaskContinuationOptions.ExecuteSynchronously & 
-            TaskContinuationOptions.OnlyOnRanToCompletion);
+            }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion);
             return Task.FromResult((IAssociationEventListener)this);
         }
 
@@ -186,7 +203,7 @@ namespace Akka.Remote.Transport
                    addressChaosTable.AddOrUpdate(NakedAddress(handle.RemoteAddress), address => PassThru.Instance,
                        (address, mode) => PassThru.Instance);
                    statusPromise.SetResult(new FailureInjectorHandle(handle, this));
-               }, TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously);
+               }, TaskContinuationOptions.ExecuteSynchronously);
             }
         }
 
@@ -221,9 +238,8 @@ namespace Akka.Remote.Transport
                 var drop = mode as Drop;
                 if (Rng.NextDouble() <= drop.InboundDropP)
                 {
-                    var logString = string.Format("Dropping inbound [{0}] for [{1}] {2}", instance.GetType(),
-                        remoteAddress, debugMessage);
-                    if(_shouldDebugLog) _log.Debug(logString);
+                    if (_shouldDebugLog) _log.Debug("Dropping inbound [{0}] for [{1}] {2}", instance.GetType(),
+                         remoteAddress, debugMessage);
                     return true;
                 }
             }
@@ -240,8 +256,8 @@ namespace Akka.Remote.Transport
                 var drop = mode as Drop;
                 if (Rng.NextDouble() <= drop.OutboundDropP)
                 {
-                    var logString = string.Format("Dropping outbound [{0}] for [{1}] {2}", instance.GetType(), remoteAddress, debugMessage);
-                    if (_shouldDebugLog) _log.Debug(logString);
+                    if (_shouldDebugLog) 
+                        _log.Debug("Dropping outbound [{0}] for [{1}] {2}", instance.GetType(), remoteAddress, debugMessage);
                     return true;
                 }
             }
@@ -291,9 +307,7 @@ namespace Akka.Remote.Transport
             {
                 _upstreamListener = tr.Result;
                 WrappedHandle.ReadHandlerSource.SetResult(this);
-            }, TaskContinuationOptions.AttachedToParent 
-            & TaskContinuationOptions.ExecuteSynchronously 
-            & TaskContinuationOptions.OnlyOnRanToCompletion);
+            }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion);
         }
 
         public override bool Write(ByteString payload)
@@ -321,3 +335,4 @@ namespace Akka.Remote.Transport
         #endregion
     }
 }
+

@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RemotingLifecycleEvent.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
@@ -196,11 +203,11 @@ namespace Akka.Remote
     {
         public ActorSystem System { get; private set; }
 
-        public LoggingAdapter Log { get; private set; }
+        public ILoggingAdapter Log { get; private set; }
 
         public readonly LogLevel LogLevel;
 
-        public EventPublisher(ActorSystem system, LoggingAdapter log, LogLevel logLevel)
+        public EventPublisher(ActorSystem system, ILoggingAdapter log, LogLevel logLevel)
         {
             System = system;
             Log = log;
@@ -214,3 +221,4 @@ namespace Akka.Remote
         }
     }
 }
+

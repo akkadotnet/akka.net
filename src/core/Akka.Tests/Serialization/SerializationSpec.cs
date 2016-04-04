@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="SerializationSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
@@ -148,190 +155,232 @@ namespace Akka.Tests.Serialization
         }
 
         [Fact]
-        public void CanSerializeAddressMessage()
+        public void Can_serialize_address_message()
         {
             var message = new UntypedContainerMessage { Contents = new Address("abc","def") };
             AssertEqual(message);
         }
 
         [Fact]
-        public void CanSerializeDecimal()
+        public void Can_serialize_decimal()
         {
             var message = 123.456m;
             AssertEqual(message);
         }
 
         [Fact]
-        public void CanSerializeDecimalMessage()
+        public void Can_serialize_decimal_message()
         {
             var message = new UntypedContainerMessage { Contents = 123.456m };
             AssertEqual(message);
         }
 
         [Fact]
-        public void CanSerializeFloatMessage()
+        public void Can_serialize_float_message()
         {
             var message = new UntypedContainerMessage {Contents = 123.456f};
             AssertEqual(message);
         }
 
         [Fact]
-        public void CanSerializeLongMessage()
+        public void Can_serialize_long_message()
         {
             var message = new UntypedContainerMessage { Contents = 123L };
             AssertEqual(message);
         }
 
         [Fact]
-        public void CanSerializeDoubleMessage()
+        public void Can_serialize_double_message()
         {
             var message = new UntypedContainerMessage { Contents = 123.456d };
             AssertEqual(message);
         }
 
         [Fact]
-        public void CanSerializeIntMessage()
+        public void Can_serialize_int_message()
         {
             var message = new UntypedContainerMessage { Contents = 123};
             AssertEqual(message);
         }
 
         [Fact]
-        public void CanSerializeLong()
+        public void Can_serialize_long()
         {
-            var message = 123l;
+            var message = 123L;
             AssertEqual(message);
         }
 
         [Fact]
-        public void CanSerializeDouble()
+        public void Can_serialize_double()
         {
             var message = 123.456d;
             AssertEqual(message);
         }
 
         [Fact]
-        public void CanSerializeInt()
+        public void Can_serialize_int()
         {
             var message = 123;
             AssertEqual(message);
         }
 
         [Fact]
-        public void CanSerializeFloat()
+        public void Can_serialize_float()
         {
             var message = 123.456f;
             AssertEqual(message);
         }
 
         [Fact]
-        public void CanSerializeAddress()
+        public void Can_serialize_address()
         {
             var message = new Address("abc", "def", "ghi", 123);
             AssertEqual(message);
         }
 
         [Fact]
-        public void CanSerializeImmutableMessages()
+        public void Can_serialize_immutable_messages()
         {
             var message = new ImmutableMessage(Tuple.Create("aaa", "bbb"));
             AssertEqual(message);        
         }
 
         [Fact]
-        public void CanSerializeImmutableMessagesWithPrivateCtor()
+        public void Can_serialize_immutable_messages_with_private_ctor()
         {
             var message = new ImmutableMessageWithPrivateCtor(Tuple.Create("aaa", "bbb"));
             AssertEqual(message);
         }
 
         [Fact]
-        public void CanSerializeProps()
+        public void Can_serialize_Props()
         {           
             var message = Props.Create<BlackHoleActor>().WithMailbox("abc").WithDispatcher("def");
             AssertEqual(message);
         }
 
         [Fact]
-        public void CanSerializeDeploy()
+        public void Can_serialize_Deploy()
         {
             var message = new Deploy(RouterConfig.NoRouter).WithMailbox("abc");
             AssertEqual(message);
         }
 
         [Fact]
-        public void CanSerializeRemoteScope()
+        public void Can_serialize_RemoteScope()
         {
             var message = new RemoteScope(new Address("akka.tcp", "foo", "localhost", 8080));
             AssertEqual(message);
         }
 
         [Fact]
-        public void CanSerializeLocalScope()
+        public void Can_serialize_LocalScope()
         {
             var message = LocalScope.Instance;
             AssertEqual(message);
         }
 
         [Fact]
-        public void CanSerializeRoundRobinPool()
+        public void Can_serialize_RoundRobinPool()
         {
-            var message = new RoundRobinPool(10, new DefaultResizer(0,1));
+            var decider = Decider.From(
+             Directive.Restart,
+             Directive.Stop.When<ArgumentException>(),
+             Directive.Stop.When<NullReferenceException>());
+
+            var supervisor = new OneForOneStrategy(decider);
+
+            var message = new RoundRobinPool(10, new DefaultResizer(0,1),supervisor,"abc");
             AssertEqual(message);
         }
 
-        [Fact(Skip = "What am I doing wrong??")]
-        public void CanSerializeRoundRobinGroup()
+        [Fact]
+        public void Can_serialize_RoundRobinGroup()
         {
             var message = new RoundRobinGroup("abc");
             AssertEqual(message);
         }
 
         [Fact]
-        public void CanSerializeRandomPool()
+        public void Can_serialize_RandomPool()
         {
-            var message = new RandomPool(10, new DefaultResizer(0, 1));
+            var decider = Decider.From(
+             Directive.Restart,
+             Directive.Stop.When<ArgumentException>(),
+             Directive.Stop.When<NullReferenceException>());
+
+            var supervisor = new OneForOneStrategy(decider);
+
+            var message = new RandomPool(10, new DefaultResizer(0, 1),supervisor,"abc");
             AssertEqual(message);
         }
 
-        [Fact(Skip = "What am I doing wrong??")]
-        public void CanSerializeRandomGroup()
+        [Fact]
+        public void Can_serialize_RandomGroup()
         {
             var message = new RandomGroup("abc");
             AssertEqual(message);
         }
 
         [Fact]
-        public void CanSerializeConsistentHashPool()
+        public void Can_serialize_ConsistentHashPool()
         {
-            var message = new ConsistentHashingPool(10);
+            var decider = Decider.From(
+               Directive.Restart,
+               Directive.Stop.When<ArgumentException>(),
+               Directive.Stop.When<NullReferenceException>());
+
+            var supervisor = new OneForOneStrategy(decider);
+
+            var message = new ConsistentHashingPool(10,null,supervisor,"abc");
             AssertEqual(message);
         }
 
 
         [Fact]
-        public void CanSerializeTailChoppingPool()
-        {            
-            var message = new TailChoppingPool(10,TimeSpan.FromSeconds(10),TimeSpan.FromSeconds(2));
-            AssertEqual(message);
-        }
-
-        [Fact]
-        public void CanSerializeScatterGatherFirstCompletedPool()
+        public void Can_serialize_TailChoppingPool()
         {
-            var message = new ScatterGatherFirstCompletedPool(10);
+            var decider = Decider.From(
+             Directive.Restart,
+             Directive.Stop.When<ArgumentException>(),
+             Directive.Stop.When<NullReferenceException>());
+
+            var supervisor = new OneForOneStrategy(decider);
+
+            var message = new TailChoppingPool(10,null,supervisor,"abc",TimeSpan.FromSeconds(10),TimeSpan.FromSeconds(2));
             AssertEqual(message);
         }
 
         [Fact]
-        public void CanSerializeSmallestMailboxPool()
+        public void Can_serialize_ScatterGatherFirstCompletedPool()
         {
-            var message = new SmallestMailboxPool(10);
+            var decider = Decider.From(
+             Directive.Restart,
+             Directive.Stop.When<ArgumentException>(),
+             Directive.Stop.When<NullReferenceException>());
+
+            var supervisor = new OneForOneStrategy(decider);
+
+            var message = new ScatterGatherFirstCompletedPool(10,null,supervisor,"abc",TimeSpan.MaxValue);
             AssertEqual(message);
         }
 
         [Fact]
-        public void CanSerializeResizer()
+        public void Can_serialize_SmallestMailboxPool()
+        {
+            var decider = Decider.From(
+             Directive.Restart,
+             Directive.Stop.When<ArgumentException>(),
+             Directive.Stop.When<NullReferenceException>());
+
+            var supervisor = new OneForOneStrategy(decider);
+
+            var message = new SmallestMailboxPool(10,null,supervisor,"abc");
+            AssertEqual(message);
+        }
+
+        [Fact]
+        public void Can_serialize_Resizer()
         {
             var message = new DefaultResizer(1, 20);
             AssertEqual(message);
@@ -341,7 +390,8 @@ namespace Akka.Tests.Serialization
         {
             var serializer = Sys.Serialization.FindSerializerFor(message);
             var serialized = serializer.ToBinary(message);
-            var deserialized = (T)serializer.FromBinary(serialized, typeof(T));
+            var result = serializer.FromBinary(serialized, typeof(T));
+            var deserialized = (T) result;
 
        //     Assert.True(message.Equals(deserialized));
             Assert.Equal(message, deserialized);
@@ -349,7 +399,7 @@ namespace Akka.Tests.Serialization
 
 
         [Fact]
-        public void CanSerializeConfig()
+        public void Can_serialize_Config()
         {
             var message = ConfigurationFactory.Default();
             var serializer = Sys.Serialization.FindSerializerFor(message);
@@ -364,7 +414,7 @@ namespace Akka.Tests.Serialization
 
 
         [Fact]
-        public void CanSerializeActorRef()
+        public void Can_serialize_ActorRef()
         {
             var message = new SomeMessage
             {
@@ -379,7 +429,7 @@ namespace Akka.Tests.Serialization
         }
 
         [Fact]
-        public void CanSerializeActorPath()
+        public void Can_serialize_ActorPath()
         {
             var uri = "akka.tcp://sys@localhost:9000/user/actor";
             var actorPath = ActorPath.Parse(uri);
@@ -388,7 +438,7 @@ namespace Akka.Tests.Serialization
         }
 
         [Fact]
-        public void CanSerializeActorPathContainer()
+        public void Can_serialize_ActorPathContainer()
         {
             var uri = "akka.tcp://sys@localhost:9000/user/actor";
             var actorPath = ActorPath.Parse(uri);
@@ -401,7 +451,7 @@ namespace Akka.Tests.Serialization
         }
 
         [Fact]
-        public void CanSerializeSingletonMessages()
+        public void Can_serialize_singleton_messages()
         {
             var message = Terminate.Instance;
 
@@ -413,14 +463,14 @@ namespace Akka.Tests.Serialization
         }
 
         [Fact]
-        public void CanTranslateActorRefFromSurrogateType()
+        public void Can_translate_ActorRef_from_surrogate_type()
         {
             var aref = ActorOf<BlackHoleActor>();
             AssertEqual(aref);
         }
 
         [Fact]
-        public void CanSerializeDecider()
+        public void Can_serialize_Decider()
         {
             var decider = Decider.From(
                 Directive.Restart,
@@ -437,7 +487,7 @@ namespace Akka.Tests.Serialization
         }
 
         [Fact]
-        public void CanSerializeSupervisor()
+        public void Can_serialize_Supervisor()
         {
             var decider = Decider.From(
                 Directive.Restart,
@@ -461,8 +511,8 @@ namespace Akka.Tests.Serialization
 
         //TODO: find out why this fails on build server
 
-        [Fact(Skip="Fails on buildserver")]
-        public void CanSerializeFutureActorRef()
+        [Fact]
+        public void Can_serialize_FutureActorRef()
         {
             Sys.EventStream.Subscribe(TestActor, typeof(object));
             var empty = Sys.ActorOf<EmptyActor>();
@@ -483,7 +533,7 @@ namespace Akka.Tests.Serialization
         }
 
         [Fact]
-        public void CanGetSerializerByBinding()
+        public void Can_get_serializer_by_binding()
         {
             Sys.Serialization.FindSerializerFor(null).GetType().ShouldBe(typeof(NullSerializer));
             Sys.Serialization.FindSerializerFor(new byte[]{1,2,3}).GetType().ShouldBe(typeof(ByteArraySerializer));
@@ -503,7 +553,7 @@ namespace Akka.Tests.Serialization
 akka.actor {
     serializers {
         dummy = """ + typeof(DummySerializer).AssemblyQualifiedName + @"""
-	}
+    }
 
     serialization-bindings {
       ""System.String"" = dummy
@@ -540,3 +590,4 @@ akka.actor {
         }
     }
 }
+

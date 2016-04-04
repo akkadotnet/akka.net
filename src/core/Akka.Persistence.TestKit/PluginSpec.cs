@@ -1,25 +1,33 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="PluginSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.TestKit;
-using Akka.TestKit.Xunit;
 using Akka.Util.Internal;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.TestKit
 {
-    public abstract class PluginSpec : TestKitBase, IDisposable
+    public abstract class PluginSpec : Akka.TestKit.Xunit2.TestKit, IDisposable
     {
-        private readonly AtomicCounter _counter = new AtomicCounter(0);
+        private static readonly AtomicCounter Counter = new AtomicCounter(0);
         private readonly PersistenceExtension _extension;
         private string _pid;
+        private string _writerGuid;
 
         protected int ActorInstanceId = 1;
 
-        protected PluginSpec(Config config = null, string actorSystemName = null, string testActorName = null) 
-            : base(new XunitAssertions(), FromConfig(config), actorSystemName, testActorName)
+        protected PluginSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null) 
+            : base(FromConfig(config), actorSystemName, output)
         {
             _extension = Persistence.Instance.Apply(Sys as ExtendedActorSystem);
-            _pid = "p-" + _counter.IncrementAndGet();
+            _pid = "p-" + Counter.IncrementAndGet();
+            _writerGuid = Guid.NewGuid().ToString();
         }
 
         protected static Config FromConfig(Config config = null)
@@ -29,8 +37,9 @@ namespace Akka.Persistence.TestKit
                 : config.WithFallback(Persistence.DefaultConfig());
         }
 
-        public string Pid { get { return _pid; } }
         public PersistenceExtension Extension { get { return _extension; } }
+        public string Pid { get { return _pid; } }
+        public string WriterGuid { get { return _writerGuid; } }
 
         public void Subscribe<T>(IActorRef subscriber)
         {
@@ -45,8 +54,8 @@ namespace Akka.Persistence.TestKit
 
         protected virtual void Dispose(bool disposing)
         {
-            if (disposing)
-                Shutdown();
+            //if (disposing) FSMBase.Shutdown();
         }
     }
 }
+

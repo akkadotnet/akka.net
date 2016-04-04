@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="PersistentViewSpec.Actors.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 
 namespace Akka.Persistence.Tests
@@ -183,6 +190,39 @@ namespace Akka.Persistence.Tests
             public override string PersistenceId { get { return _name; } }
         }
 
+        internal class StashingPersistentView : PersistentView
+        {
+            private readonly string _name;
+            private readonly IActorRef _probe;
+
+            public StashingPersistentView(string name, IActorRef probe)
+            {
+                _name = name;
+                _probe = probe;
+            }
+
+            protected override bool Receive(object message)
+            {
+                if (message.Equals("other"))
+                    Stash.Stash();
+                else if (message.Equals("unstash"))
+                {
+                    Stash.UnstashAll();
+                    Context.Become(m =>
+                    {
+                        _probe.Tell(string.Format("{0}-{1}", m, LastSequenceNr));
+                        return true;
+                    });
+                }
+                else
+                    Stash.Stash();
+                return true;
+            }
+
+            public override string ViewId { get { return _name + "-view"; } }
+            public override string PersistenceId { get { return _name; } }
+        }
+
         internal class PersistentOrNotTestPersistentView : PersistentView
         {
             private readonly string _name;
@@ -255,3 +295,4 @@ namespace Akka.Persistence.Tests
         #endregion
     }
 }
+

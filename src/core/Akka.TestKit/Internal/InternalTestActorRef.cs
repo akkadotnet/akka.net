@@ -1,6 +1,13 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="InternalTestActorRef.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 using Akka.Dispatch;
 using Akka.Pattern;
 using Akka.Util;
@@ -190,10 +197,11 @@ namespace Akka.TestKit.Internal
         }
 
 
-        public class InternalGetActor : IAutoReceivedMessage, PossiblyHarmful
+        public class InternalGetActor : IAutoReceivedMessage, IPossiblyHarmful
         {
             public static readonly InternalGetActor Instance = new InternalGetActor();
             private InternalGetActor() { }
         }
     }
 }
+

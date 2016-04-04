@@ -1,4 +1,11 @@
-﻿using System.Collections.Generic;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ProtobufEncoder.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Collections.Generic;
 using Helios.Buffers;
 using Helios.Net;
 using Google.ProtocolBuffers;
@@ -32,3 +39,4 @@ namespace Akka.Remote.TestKit.Proto
         }
     }
 }
+

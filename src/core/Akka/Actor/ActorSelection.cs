@@ -1,10 +1,18 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorSelection.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Util;
 using Akka.Util.Internal;
+using Akka.Util.Internal.Collections;
 
 namespace Akka.Actor
 {      
@@ -13,6 +21,23 @@ namespace Akka.Actor
     /// </summary>
     public class ActorSelection : ICanTell
     {
+        /// <summary>
+        ///     Gets the anchor.
+        /// </summary>
+        /// <value>The anchor.</value>
+        public IActorRef Anchor { get; private set; }
+
+        /// <summary>
+        ///     Gets or sets the elements.
+        /// </summary>
+        /// <value>The elements.</value>
+        public SelectionPathElement[] Path { get; set; }
+
+        /// <summary>
+        /// <see cref="string"/> representation of all of the elements in the <see cref="ActorSelection"/> path.
+        /// </summary>
+        public string PathString { get { return string.Join("/", Path.Select(x => x.ToString())); } }
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorSelection" /> class.
         /// </summary>
@@ -28,7 +53,7 @@ namespace Akka.Actor
         public ActorSelection(IActorRef anchor, SelectionPathElement[] path)
         {
             Anchor = anchor;
-            Elements = path;
+            Path = path;
         }
 
         /// <summary>
@@ -49,54 +74,30 @@ namespace Akka.Actor
         public ActorSelection(IActorRef anchor, IEnumerable<string> elements)
         {
             Anchor = anchor;
-            Elements = elements.Select<string, SelectionPathElement>(e =>
-            {
-                if (e == "..")
-                    return new SelectParent();
-                if (e.Contains("?") || e.Contains("*"))
-                    return new SelectChildPattern(e);
-                return new SelectChildName(e);
-            }).ToArray();
+            Path = elements
+                .Select<string, SelectionPathElement>(e =>
+                {
+                    if (e.Contains("?") || e.Contains("*"))
+                        return new SelectChildPattern(e);
+                    if (e == "..")
+                        return new SelectParent();
+                    return new SelectChildName(e);
+                })
+                .ToArray();
         }
-
-        /// <summary>
-        ///     Gets the anchor.
-        /// </summary>
-        /// <value>The anchor.</value>
-        public IActorRef Anchor { get; private set; }
-
-        /// <summary>
-        ///     Gets or sets the elements.
-        /// </summary>
-        /// <value>The elements.</value>
-        public SelectionPathElement[] Elements { get; set; }
-
-        /// <summary>
-        /// <see cref="string"/> representation of all of the elements in the <see cref="ActorSelection"/> path.
-        /// </summary>
-        public string PathString { get { return string.Join("/", Elements.Select(x => x.ToString())); } }
 
         /// <summary>
         ///     Posts a message to this ActorSelection.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
-        public void Tell(object message, IActorRef sender)
+        public void Tell(object message, IActorRef sender = null)
         {
-            Deliver(message, sender, 0, Anchor);
-        }
-
-        /// <summary>
-        ///     Posts a message to this ActorSelection.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        public void Tell(object message)
-        {
-            var sender = ActorRefs.NoSender;
-            if (ActorCell.Current != null && ActorCell.Current.Self != null)
+            if (sender == null && ActorCell.Current != null && ActorCell.Current.Self != null)
                 sender = ActorCell.Current.Self;
 
-            Deliver(message, sender, 0, Anchor);
+            DeliverSelection(Anchor as IInternalActorRef, sender, 
+                new ActorSelectionMessage(message, Path, wildCardFanOut: false));
         }
 
         public Task<IActorRef> ResolveOne(TimeSpan timeout)
@@ -109,57 +110,17 @@ namespace Akka.Actor
             try
             {
                 var identity = await this.Ask<ActorIdentity>(new Identify(null), timeout);
+                if(identity.Subject == null)
+                    throw new ActorNotFoundException("subject was null");
+
                 return identity.Subject;
             }
-            catch
+            catch(Exception ex)
             {
-                throw new ActorNotFoundException();
+                throw new ActorNotFoundException("Exception ocurred while resolving ActorSelection", ex);
             }
         }
-
-        /// <summary>
-        ///     Delivers the specified message.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="sender">The sender.</param>
-        /// <param name="pathIndex">Index of the path.</param>
-        /// <param name="current">The current.</param>
-        private void Deliver(object message, IActorRef sender, int pathIndex, IActorRef current)
-        {
-            if (pathIndex == Elements.Length)
-            {
-                current.Tell(message, sender);
-            }
-            else
-            {
-                var element = Elements[pathIndex];
-                if (current is ActorRefWithCell)
-                {
-                    var withCell = (ActorRefWithCell) current;
-                    if (element is SelectParent)
-                        Deliver(message, sender, pathIndex + 1, withCell.Parent);
-                    else if (element is SelectChildName)
-                        Deliver(message, sender, pathIndex + 1,
-                            withCell.GetSingleChild(element.AsInstanceOf<SelectChildName>().Name));
-                    else if (element is SelectChildPattern)
-                    {
-                        var pattern = element as SelectChildPattern;
-                        var children =
-                            withCell.Children.Where(c => c.Path.Name.Like(pattern.PatternStr));
-                        foreach (IActorRef matchingChild in children)
-                        {
-                            Deliver(message, sender, pathIndex + 1, matchingChild);
-                        }
-                    }
-                }
-                else
-                {
-                    var rest = Elements.Skip(pathIndex).ToArray();
-                    current.Tell(new ActorSelectionMessage(message, rest), sender);
-                }
-            }
-        }
-
+        
         /// <summary>
         ///     INTERNAL API
         ///     Convenience method used by remoting when receiving <see cref="ActorSelectionMessage" /> from a remote
@@ -167,21 +128,92 @@ namespace Akka.Actor
         /// </summary>
         internal static void DeliverSelection(IInternalActorRef anchor, IActorRef sender, ActorSelectionMessage sel)
         {
-            var actorSelection = new ActorSelection(anchor, sel.Elements);
-            actorSelection.Tell(sel.Message, sender);
+            if (sel.Elements.IsNullOrEmpty())
+            {
+                anchor.Tell(sel.Message, sender);
+            }
+            else
+            {
+                var iter = sel.Elements.Iterator();
+
+                Action<IInternalActorRef> rec = null;
+                rec = @ref => @ref.Match()
+                    .With<ActorRefWithCell>(refWithCell =>
+                    {
+                        var emptyRef = new EmptyLocalActorRef(refWithCell.Provider, anchor.Path/sel.Elements.Select(el => el.ToString()), refWithCell.Underlying.System.EventStream);
+
+                        iter.Next()
+                            .Match()
+                            .With<SelectParent>(_ =>
+                            {
+                                var parent = @ref.Parent;
+                                if (iter.IsEmpty())
+                                    parent.Tell(sel.Message, sender);
+                                else
+                                    rec(parent);
+                            })
+                            .With<SelectChildName>(name =>
+                            {
+                                var child = refWithCell.GetSingleChild(name.Name);
+                                if (child is Nobody)
+                                {
+                                    if (!sel.WildCardFanOut) 
+                                        emptyRef.Tell(sel, sender);
+                                }
+                                else if (iter.IsEmpty())
+                                {
+                                    child.Tell(sel.Message, sender);
+                                }
+                                else
+                                {
+                                    rec(child);
+                                }
+
+                            })
+                            .With<SelectChildPattern>(p =>
+                            {
+                                var children = refWithCell.Children;
+                                var matchingChildren = children
+                                    .Where(c => c.Path.Name.Like(p.PatternStr))
+                                    .ToList();
+
+                                if (iter.IsEmpty())
+                                {
+                                    if(matchingChildren.Count ==0 && !sel.WildCardFanOut)
+                                        emptyRef.Tell(sel, sender);
+                                    else
+                                        matchingChildren.ForEach(child => child.Tell(sel.Message, sender));
+                                }
+                                else
+                                {
+                                    if (matchingChildren.Count == 0 && !sel.WildCardFanOut)
+                                        emptyRef.Tell(sel, sender);
+                                    else
+                                    {
+                                        var m = new ActorSelectionMessage(sel.Message, iter.ToVector().ToArray(), 
+                                            sel.WildCardFanOut || matchingChildren.Count > 1);
+                                        matchingChildren.ForEach(child => DeliverSelection(child as IInternalActorRef, sender, m));
+                                    }
+                                }
+                            });
+                    })
+                    .Default(_ => @ref.Tell(new ActorSelectionMessage(sel.Message, iter.ToVector().ToArray()), sender));
+
+                rec(anchor);
+            }
         }
 
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
+            if (obj.GetType() != GetType()) return false;
             return Equals((ActorSelection) obj);
         }
 
         protected bool Equals(ActorSelection other)
         {
-            return Equals(Anchor, other.Anchor) && Equals(Elements, other.Elements);
+            return Equals(Anchor, other.Anchor) && Equals(Path, other.Path);
         }
 
         public override int GetHashCode()
@@ -189,7 +221,7 @@ namespace Akka.Actor
             unchecked
             {
                 var hashCode = Anchor != null ? Anchor.GetHashCode() : 0 * 397;
-                return Elements.Aggregate(hashCode, (current, element) => current ^ element.GetHashCode() * 17);
+                return Path.Aggregate(hashCode, (current, element) => current ^ element.GetHashCode() * 17);
             }
         }
     }
@@ -197,13 +229,14 @@ namespace Akka.Actor
     /// <summary>
     ///     Class ActorSelectionMessage.
     /// </summary>
-    public class ActorSelectionMessage : IAutoReceivedMessage, PossiblyHarmful
+    public class ActorSelectionMessage : IAutoReceivedMessage, IPossiblyHarmful
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorSelectionMessage" /> class.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="elements">The elements.</param>
+        /// <param name="wildCardFanOut"></param>
         public ActorSelectionMessage(object message, SelectionPathElement[] elements, bool wildCardFanOut = false)
         {
             Message = message;
@@ -315,3 +348,4 @@ namespace Akka.Actor
         }
     }
 }
+

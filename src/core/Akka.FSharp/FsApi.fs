@@ -1,13 +1,77 @@
-﻿namespace Akka.FSharp
+﻿//-----------------------------------------------------------------------
+// <copyright file="FsApi.fs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+namespace Akka.FSharp
 
 open Akka.Actor
 open System
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Linq.QuotationEvaluation
 
+module Serialization = 
+    open Nessos.FsPickler
+    open Akka.Serialization
+
+    let internal serializeToBinary (fsp:BinarySerializer) o = 
+            use stream = new System.IO.MemoryStream()
+            fsp.Serialize(stream, o)
+            stream.ToArray()
+
+    let internal deserializeFromBinary<'t> (fsp:BinarySerializer) (bytes: byte array) =
+            use stream = new System.IO.MemoryStream(bytes)
+            fsp.Deserialize<'t> stream
+            
+    let private jobjectType = Type.GetType("Newtonsoft.Json.Linq.JObject, Newtonsoft.Json") 
+    let private jsonSerlizerType = Type.GetType("Newtonsoft.Json.JsonSerializer, Newtonsoft.Json")
+    let private toObjectMethod = jobjectType.GetMethod("ToObject", [|typeof<System.Type>; jsonSerlizerType|])
+
+    let tryDeserializeJObject jsonSerializer o : 'Message option =
+        let t = typeof<'Message>
+        if o <> null && o.GetType().Equals jobjectType 
+        then 
+            try
+                let res = toObjectMethod.Invoke(o, [|t; jsonSerializer|]) 
+                Some (res :?> 'Message)
+            with
+            | _ -> None // type conversion failed (passed JSON is not of expected type)
+        else None
+
+    
+    // used for top level serialization
+    type ExprSerializer(system) = 
+        inherit Serializer(system)
+        let fsp = FsPickler.CreateBinary()
+        override __.Identifier = 9
+        override __.IncludeManifest = true        
+        override __.ToBinary(o) = serializeToBinary fsp o        
+        override __.FromBinary(bytes, _) = deserializeFromBinary fsp bytes
+        
+                        
+    let internal exprSerializationSupport (system: ActorSystem) =
+        let serializer = ExprSerializer(system :?> ExtendedActorSystem)
+        system.Serialization.AddSerializer(serializer)
+        system.Serialization.AddSerializationMap(typeof<Expr>, serializer)
 
 [<AutoOpen>]
 module Actors =
+    open System.Threading.Tasks
+
+    let private tryCast (t:Task<obj>) : 'Message =
+        match t.Result with
+        | :? 'Message as m -> m
+        | o ->
+            let context = Akka.Actor.Internal.InternalCurrentActorCellKeeper.Current
+            if context = null 
+            then failwith "Cannot cast JObject outside the actor system context "
+            else
+                let serializer = context.System.Serialization.FindSerializerForType typeof<'Message> :?> Akka.Serialization.NewtonSoftJsonSerializer
+                match Serialization.tryDeserializeJObject serializer.Serializer o with
+                | Some m -> m
+                | None -> raise (InvalidCastException("Tried to cast JObject to " + typeof<'Message>.ToString()))
 
     /// <summary>
     /// Unidirectional send operator. 
@@ -19,7 +83,9 @@ module Actors =
     /// Bidirectional send operator. Sends a message object directly to actor 
     /// tracked by actorRef and awaits for response send back from corresponding actor. 
     /// </summary>
-    let inline (<?) (tell : #ICanTell) (msg : obj) : Async<'Message> = tell.Ask<'Message> msg |> Async.AwaitTask
+    let (<?) (tell : #ICanTell) (msg : obj) : Async<'Message> = 
+        tell.Ask(msg).ContinueWith(Func<_,'Message>(tryCast), TaskContinuationOptions.ExecuteSynchronously)
+        |> Async.AwaitTask
 
     /// Pipes an output of asynchronous expression directly to the recipients mailbox.
     let pipeTo (computation : Async<'T>) (recipient : ICanTell) (sender : IActorRef) : unit = 
@@ -32,6 +98,14 @@ module Actors =
 
     /// Pipe operator which sends an output of asynchronous expression directly to the recipients mailbox
     let inline (<!|) (recipient : ICanTell) (computation : Async<'T>) = pipeTo computation recipient ActorRefs.NoSender
+    
+    type ICanTell with
+        
+        /// <summary>
+        /// Sends a message to an actor and asynchronously awaits for a response back until timeout occur.
+        /// </summary>
+        member this.Ask(msg: obj, timeout: TimeSpan): Async<'Response> =
+            this.Ask<'Response>(msg, Nullable(timeout)) |> Async.AwaitTask
 
     type IO<'T> =
         | Input
@@ -41,7 +115,7 @@ module Actors =
     /// </summary>
     [<Interface>]
     type Actor<'Message> = 
-        inherit ActorRefFactory
+        inherit IActorRefFactory
         inherit ICanWatch
     
         /// <summary>
@@ -72,7 +146,7 @@ module Actors =
         /// <summary>
         /// Lazy logging adapter. It won't be initialized until logging function will be called. 
         /// </summary>
-        abstract Log : Lazy<Akka.Event.LoggingAdapter>
+        abstract Log : Lazy<Akka.Event.ILoggingAdapter>
 
         /// <summary>
         /// Defers provided function to be invoked when actor stops, regardless of reasons.
@@ -99,14 +173,14 @@ module Actors =
     [<AbstractClass>]
     type Actor() = 
         inherit UntypedActor()
-        interface WithUnboundedStash with
+        interface IWithUnboundedStash with
             member val Stash = null with get, set
 
     /// <summary>
     /// Returns an instance of <see cref="ActorSelection" /> for specified path. 
     /// If no matching receiver will be found, a <see cref="ActorRefs.NoSender" /> instance will be returned. 
     /// </summary>
-    let inline select (path : string) (selector : ActorRefFactory) : ActorSelection = selector.ActorSelection path
+    let inline select (path : string) (selector : IActorRefFactory) : ActorSelection = selector.ActorSelection path
         
     /// Gives access to the next message throu let! binding in actor computation expression.
     type Cont<'In, 'Out> = 
@@ -221,16 +295,19 @@ module Actors =
                         member __.Unwatch(aref:IActorRef) = context.Unwatch aref
                         member __.Log = lazy (Akka.Event.Logging.GetLogger(context))
                         member __.Defer fn = deferables <- fn::deferables 
-                        member __.Stash() = (this :> WithUnboundedStash).Stash.Stash()
-                        member __.Unstash() = (this :> WithUnboundedStash).Stash.Unstash()
-                        member __.UnstashAll() = (this :> WithUnboundedStash).Stash.UnstashAll() }
-    
+                        member __.Stash() = (this :> IWithUnboundedStash).Stash.Stash()
+                        member __.Unstash() = (this :> IWithUnboundedStash).Stash.Unstash()
+                        member __.UnstashAll() = (this :> IWithUnboundedStash).Stash.UnstashAll() }
+        
         new(actor : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) = FunActor(actor.Compile () ())
         member __.Sender() : IActorRef = base.Sender
         member __.Unhandled msg = base.Unhandled msg
         override x.OnReceive msg = 
             match state with
-            | Func f -> state <- f (msg :?> 'Message)
+            | Func f -> 
+                match msg with
+                | :? 'Message as m -> state <- f m
+                | _ -> x.Unhandled msg
             | Return _ -> x.PostStop()
         override x.PostStop() =
             base.PostStop ()
@@ -238,7 +315,7 @@ module Actors =
             
 
     /// Builds an actor message handler using an actor expression syntax.
-    let actor = ActorBuilder()                
+    let actor = ActorBuilder()    
     
 [<AutoOpen>]
 module Logging = 
@@ -319,35 +396,7 @@ module Linq =
     type Expression = 
         static member ToExpression(f : System.Linq.Expressions.Expression<System.Func<FunActor<'Message, 'v>>>) = toExpression<FunActor<'Message, 'v>> f
         static member ToExpression<'Actor>(f : Quotations.Expr<(unit -> 'Actor)>) = toExpression<'Actor> (QuotationEvaluator.ToLinqExpression f)  
-
-module Serialization = 
-    open Nessos.FsPickler
-    open Akka.Serialization
-
-    let internal serializeToBinary (fsp:BinarySerializer) o = 
-            use stream = new System.IO.MemoryStream()
-            fsp.Serialize(o.GetType(), stream, o)
-            stream.ToArray()
-
-    let internal deserializeFromBinary (fsp:BinarySerializer) (bytes: byte array) (t: Type) =
-            use stream = new System.IO.MemoryStream(bytes)
-            fsp.Deserialize(t, stream)
-    
-    // used for top level serialization
-    type ExprSerializer(system) = 
-        inherit Serializer(system)
-        let fsp = FsPickler.CreateBinary()
-        override __.Identifier = 9
-        override __.IncludeManifest = true        
-        override __.ToBinary(o) = serializeToBinary fsp o        
-        override __.FromBinary(bytes, t) = deserializeFromBinary fsp bytes t
         
-                        
-    let internal exprSerializationSupport (system: ActorSystem) =
-        let serializer = ExprSerializer(system :?> ExtendedActorSystem)
-        system.Serialization.AddSerializer(serializer)
-        system.Serialization.AddSerializationMap(typeof<Expr>, serializer)
-
 [<RequireQualifiedAccess>]
 module Configuration = 
 
@@ -372,7 +421,7 @@ type ExprDeciderSurrogate(serializedExpr: byte array) =
     interface ISurrogate with
         member this.FromSurrogate _ = 
             let fsp = Nessos.FsPickler.FsPickler.CreateBinary()
-            let expr = (Serialization.deserializeFromBinary fsp (this.SerializedExpr) typeof<Expr<(exn->Directive)>>) :?> Expr<(exn->Directive)>
+            let expr = (Serialization.deserializeFromBinary<Expr<(exn->Directive)>> fsp (this.SerializedExpr))
             ExprDecider(expr) :> ISurrogated
 
 and ExprDecider (expr: Expr<(exn->Directive)>) =
@@ -475,7 +524,7 @@ module Spawn =
     /// <param name="name">Name of spawned child actor</param>
     /// <param name="expr">F# expression compiled down to receive function used by actor for response for incoming request</param>
     /// <param name="options">List of options used to configure actor creation</param>
-    let spawne (actorFactory : ActorRefFactory) (name : string) (expr : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) 
+    let spawne (actorFactory : IActorRefFactory) (name : string) (expr : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) 
         (options : SpawnOption list) : IActorRef = 
         let e = Linq.Expression.ToExpression(fun () -> new FunActor<'Message, 'Returned>(expr))
         let props = applySpawnOptions (Props.Create e) options
@@ -489,7 +538,7 @@ module Spawn =
     /// <param name="name">Name of spawned child actor</param>
     /// <param name="f">Used by actor for handling response for incoming request</param>
     /// <param name="options">List of options used to configure actor creation</param>
-    let spawnOpt (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) 
+    let spawnOpt (actorFactory : IActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) 
         (options : SpawnOption list) : IActorRef = 
         let e = Linq.Expression.ToExpression(fun () -> new FunActor<'Message, 'Returned>(f))
         let props = applySpawnOptions (Props.Create e) options
@@ -502,7 +551,7 @@ module Spawn =
     /// <param name="actorFactory">Either actor system or parent actor</param>
     /// <param name="name">Name of spawned child actor</param>
     /// <param name="f">Used by actor for handling response for incoming request</param>
-    let spawn (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) : IActorRef = 
+    let spawn (actorFactory : IActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) : IActorRef = 
         spawnOpt actorFactory name f []
 
     /// <summary>
@@ -513,7 +562,7 @@ module Spawn =
     /// <param name="name">Name of spawned child actor</param>
     /// <param name="f">Used to create a new instance of the actor</param>
     /// <param name="options">List of options used to configure actor creation</param>
-    let spawnObjOpt (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) 
+    let spawnObjOpt (actorFactory : IActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) 
         (options : SpawnOption list) : IActorRef = 
         let e = Linq.Expression.ToExpression<'Actor> f
         let props = applySpawnOptions (Props.Create e) options
@@ -526,7 +575,7 @@ module Spawn =
     /// <param name="actorFactory">Either actor system or parent actor</param>
     /// <param name="name">Name of spawned child actor</param>
     /// <param name="f">Used to create a new instance of the actor</param>
-    let spawnObj (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) : IActorRef = 
+    let spawnObj (actorFactory : IActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) : IActorRef = 
         spawnObjOpt actorFactory name f []
 
     /// <summary>
@@ -632,3 +681,4 @@ module EventStreaming =
     /// Publishes an event on the provided event stream. Event channel is resolved from event's type.
     /// </summary>
     let publish (event: 'Event) (eventStream: Akka.Event.EventStream) : unit = eventStream.Publish event
+

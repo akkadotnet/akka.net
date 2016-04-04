@@ -1,4 +1,11 @@
-﻿using Akka.Event;
+﻿//-----------------------------------------------------------------------
+// <copyright file="DebugFilter.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using Akka.Event;
 using Akka.TestKit.Internal.StringMatcher;
 
 namespace Akka.TestKit.Internal
@@ -27,3 +34,4 @@ namespace Akka.TestKit.Internal
         protected override string FilterDescriptiveName { get { return "Debug"; } }
     }
 }
+

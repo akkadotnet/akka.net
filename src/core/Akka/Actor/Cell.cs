@@ -1,7 +1,13 @@
+Ôªø//-----------------------------------------------------------------------
+// <copyright file="Cell.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using Akka.Actor.Internal;
-using Akka.Actor.Internals;
 
 namespace Akka.Actor
 {
@@ -10,7 +16,7 @@ namespace Akka.Actor
     /// </summary>
     public interface ICell
     {
-        /// <summary>Gets the ìselfî reference which this Cell is attached to.</summary>
+        /// <summary>Gets the ‚Äúself‚Äù reference which this Cell is attached to.</summary>
         IActorRef Self { get; }
 
         /// <summary>The system within which this Cell lives.</summary>
@@ -125,6 +131,7 @@ namespace Akka.Actor
         //    * schedule the actor to run, depending on which type of cell it is.
         //    * Is only allowed to throw Fatal Throwables.
         //    */
-        //    def sendSystemMessage(msg: SystemMessage): Unit
+        //    def sendSystemMessage(msg: ISystemMessage): Unit
     }
 }
+

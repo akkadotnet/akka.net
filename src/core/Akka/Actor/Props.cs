@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Props.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -12,9 +19,9 @@ using Newtonsoft.Json;
 namespace Akka.Actor
 {
     /// <summary>
-    ///     Props is a configuration object using in creating an [[Actor]]; it is
+    ///     Props is a configuration object used in creating an <see cref="Akka.Actor.ActorBase">Actor</see>; it is
     ///     immutable, so it is thread-safe and fully shareable.
-    ///     Examples on C# API:
+    /// <example>
     /// <code>
     ///   private Props props = Props.Empty();
     ///   private Props props = Props.Create(() => new MyActor(arg1, arg2));
@@ -22,9 +29,12 @@ namespace Akka.Actor
     ///   private Props otherProps = props.WithDispatcher("dispatcher-id");
     ///   private Props otherProps = props.WithDeploy(deployment info);
     ///  </code>
+    ///  </example>
     /// </summary>
     public class Props : IEquatable<Props> , ISurrogated
     {
+        private const string NullActorTypeExceptionText = "Props must be instantiated with an actor type.";
+
         public class PropsSurrogate : ISurrogate
         {
             public Type Type { get; set; }
@@ -84,7 +94,7 @@ namespace Akka.Actor
                 return false;
 
             //TODO: since arguments can be serialized, we can not compare by ref
-            //arguments may also not impement equality opertators, so we can not structurally compare either
+            //arguments may also not implement equality operators, so we can not structurally compare either
             //we can not just call a serializer and compare outputs either, since different args may require diff serializer mechanics
 
             return true;
@@ -176,6 +186,8 @@ namespace Akka.Actor
         public Props(Type type, object[] args)
             : this(defaultDeploy, type, args)
         {
+            if (type == null)
+                throw new ArgumentNullException("type", NullActorTypeExceptionText);
         }
 
         /// <summary>
@@ -185,6 +197,8 @@ namespace Akka.Actor
         public Props(Type type)
             : this(defaultDeploy, type, noArgs)
         {
+            if (type == null)
+                throw new ArgumentNullException("type", NullActorTypeExceptionText);
         }
 
         /// <summary>
@@ -196,6 +210,9 @@ namespace Akka.Actor
         public Props(Type type, SupervisorStrategy supervisorStrategy, IEnumerable<object> args)
             : this(defaultDeploy, type, args.ToArray())
         {
+            if (type == null)
+                throw new ArgumentNullException("type", NullActorTypeExceptionText);
+
             SupervisorStrategy = supervisorStrategy;
         }
 
@@ -208,6 +225,9 @@ namespace Akka.Actor
         public Props(Type type, SupervisorStrategy supervisorStrategy, params object[] args)
             : this(defaultDeploy, type, args)
         {
+            if (type == null)
+                throw new ArgumentNullException("type", NullActorTypeExceptionText);
+
             SupervisorStrategy = supervisorStrategy;
         }
 
@@ -220,6 +240,8 @@ namespace Akka.Actor
         public Props(Deploy deploy, Type type, IEnumerable<object> args)
             : this(deploy, type, args.ToArray())
         {
+            if (type == null)
+                throw new ArgumentNullException("type", NullActorTypeExceptionText);
         }
 
         /// <summary>
@@ -326,7 +348,7 @@ namespace Akka.Actor
         /// <summary>
         ///     Creates the specified factory.
         /// </summary>
-        /// <typeparam name="TActor">The type of the t actor.</typeparam>
+        /// <typeparam name="TActor">The type of the actor.</typeparam>
         /// <param name="factory">The factory.</param>
         /// <param name="supervisorStrategy">Optional: Supervisor strategy</param>
         /// <returns>Props.</returns>
@@ -342,13 +364,13 @@ namespace Akka.Actor
 
             object[] args = newExpression.GetArguments().ToArray();
 
-            return new Props(typeof (TActor), args);
+            return new Props(typeof (TActor), supervisorStrategy, args);
         }
 
         /// <summary>
         ///     Creates this instance.
         /// </summary>
-        /// <typeparam name="TActor">The type of the t actor.</typeparam>
+        /// <typeparam name="TActor">The type of the actor.</typeparam>
         /// <returns>Props.</returns>
         public static Props Create<TActor>(params object[] args) where TActor : ActorBase
         {
@@ -370,7 +392,7 @@ namespace Akka.Actor
         /// <summary>
         ///     Creates this instance.
         /// </summary>
-        /// <typeparam name="TActor">The type of the t actor.</typeparam>
+        /// <typeparam name="TActor">The type of the actor.</typeparam>
         /// <returns>Props.</returns>
         public static Props Create<TActor>(SupervisorStrategy supervisorStrategy) where TActor : ActorBase, new()
         {
@@ -383,9 +405,13 @@ namespace Akka.Actor
         ///     Creates the specified type.
         /// </summary>
         /// <param name="type">The type.</param>
+        /// <param name="args"></param>
         /// <returns>Props.</returns>
         public static Props Create(Type type, params object[] args)
         {
+            if (type == null)
+                throw new ArgumentNullException("type", NullActorTypeExceptionText);
+
             return new Props(type, args);
         }
 
@@ -485,7 +511,7 @@ namespace Akka.Actor
             try {
                 return producer.Produce();
             } catch (Exception e) {
-                throw new Exception("Error while creating actor instance of type " + type + " with " + arguments.Length + " args: (" + StringFormat.SafeJoin(",", arguments) + ")", e);
+                throw new TypeLoadException("Error while creating actor instance of type " + type + " with " + arguments.Length + " args: (" + StringFormat.SafeJoin(",", arguments) + ")", e);
             }
         }
 
@@ -523,6 +549,12 @@ namespace Akka.Actor
             {
                 get { return typeof(ActorBase); }
             }
+
+
+            public void Release(ActorBase actor)
+            {
+                actor = null;
+            }
         }
 
         private class ActivatorProducer : IIndirectActorProducer
@@ -545,6 +577,12 @@ namespace Akka.Actor
             {
                 get { return _actorType; }
             }
+
+
+            public void Release(ActorBase actor)
+            {
+                actor = null;
+            }
         }
 
         private class FactoryConsumer<TActor> : IIndirectActorProducer where TActor : ActorBase
@@ -565,6 +603,12 @@ namespace Akka.Actor
             {
                 get { return typeof(TActor); }
             }
+
+
+            public void Release(ActorBase actor)
+            {
+                actor = null;
+            }
         }
 
         #endregion
@@ -582,6 +626,19 @@ namespace Akka.Actor
             }
             throw new ArgumentException(string.Format("Unknown actor producer [{0}]", type.FullName));
         }
+
+        internal void Release(ActorBase actor)
+        {
+            try
+            {
+                if (this.producer != null) this.producer.Release(actor);
+            }
+            finally
+            {
+                actor = null;	
+            }
+
+        }
     }
 
     public class TerminatedProps : Props
@@ -597,7 +654,7 @@ namespace Akka.Actor
     ///     rather than a traditional Activator.
     ///     Intended to be used in conjunction with Dependency Injection.
     /// </summary>
-    /// <typeparam name="TActor">The type of the t actor.</typeparam>
+    /// <typeparam name="TActor">The type of the actor.</typeparam>
     internal class DynamicProps<TActor> : Props where TActor : ActorBase
     {
         /// <summary>
@@ -653,7 +710,7 @@ namespace Akka.Actor
 
     /// <summary>
     ///     This interface defines a class of actor creation strategies deviating from
-    ///     the usual default of just reflectively instantiating the [[Actor]]
+    ///     the usual default of just reflectively instantiating the <see cref="Akka.Actor.ActorBase">Actor</see>
     ///     subclass. It can be used to allow a dependency injection framework to
     ///     determine the actual actor class and how it shall be instantiated.
     /// </summary>
@@ -668,9 +725,17 @@ namespace Akka.Actor
         ActorBase Produce();
 
         /// <summary>
-        ///     This method is used by [[Props]] to determine the type of actor which will
+        ///     This method is used by <see cref="Akka.Actor.Props"/> to determine the type of actor which will
         ///     be created. The returned type is not used to produce the actor.
         /// </summary>
         Type ActorType { get; }
+
+        /// <summary>
+        /// This method is used by <see cref="Akka.Actor.Props"/> to signal the Producer that it can
+        /// release it's reference.  <see href="http://www.amazon.com/Dependency-Injection-NET-Mark-Seemann/dp/1935182501/ref=sr_1_1?ie=UTF8&qid=1425861096&sr=8-1&keywords=mark+seemann">HERE</see> 
+        /// </summary>
+        /// <param name="actor"></param>
+        void Release(ActorBase actor);
     }
 }
+

@@ -1,8 +1,15 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="LocalActorRefProviderSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Extensions;
@@ -89,7 +96,7 @@ namespace Akka.Tests.Actor
         {
             protected override bool Receive(object message)
             {
-                if (message == "")
+                if (message as string == "")
                 {
                     var a = Context.ActorOf(Props.Empty, "duplicate");
                     var b = Context.ActorOf(Props.Empty, "duplicate");
@@ -110,7 +117,7 @@ namespace Akka.Tests.Actor
 
             protected override bool Receive(object message)
             {
-                if (message == "GetChild")
+                if (message as string == "GetChild")
                 {
                     Sender.Tell(this.childActorRef);
                     return true;
@@ -120,3 +127,4 @@ namespace Akka.Tests.Actor
         }
     }
 }
+

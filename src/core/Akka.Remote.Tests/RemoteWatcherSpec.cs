@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RemoteWatcherSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.Util.Internal;
@@ -92,22 +99,35 @@ namespace Akka.Remote.Tests
                     get { return _uid; }
                 }
 
+                protected bool Equals(Quarantined other)
+                {
+                    return Equals(_address, other._address) && _uid == other._uid;
+                }
+
                 public override bool Equals(object obj)
                 {
-                    var other = obj as Quarantined;
-                    if (other == null) return false;
-                    return _address.Equals(other._address); //TODO: Ignoring uid? /&& _uid == other._uid;
+                    if (ReferenceEquals(null, obj)) return false;
+                    if (ReferenceEquals(this, obj)) return true;
+                    if (obj.GetType() != this.GetType()) return false;
+                    return Equals((Quarantined) obj);
                 }
 
                 public override int GetHashCode()
                 {
                     unchecked
                     {
-                        var hash = 17;
-                        hash = hash*23 + _address.GetHashCode();
-                        //TODO: Ignoring uid hash = hash*23 + _uid.GetHashCode();
-                        return hash;
+                        return ((_address != null ? _address.GetHashCode() : 0)*397) ^ _uid.GetHashCode();
                     }
+                }
+
+                public static bool operator ==(Quarantined left, Quarantined right)
+                {
+                    return Equals(left, right);
+                }
+
+                public static bool operator !=(Quarantined left, Quarantined right)
+                {
+                    return !Equals(left, right);
                 }
             }
 
@@ -186,7 +206,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void ARemoteWatcherMustHaveCorrectInteractionWhenWatching()
+        public void A_RemoteWatcher_must_have_correct_interaction_when_watching()
         {
             var fd = CreateFailureDetectorRegistry();
             var monitorA = Sys.ActorOf(Props.Create<TestRemoteWatcher>(), "monitor1");
@@ -250,7 +270,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void ARemoteWatcherMustGenerateAddressTerminatedWhenMissingHeartbeats()
+        public void A_RemoteWatcher_must_generate_address_terminated_when_missing_heartbeats()
         {
             var p = CreateTestProbe();
             var q = CreateTestProbe();
@@ -291,7 +311,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void ARemoteWatcherMustGenerateAddressTerminatedWhenMissingFirstHeartbeat()
+        public void A_RemoteWatcher_must_generate_address_terminated_when_missing_first_heartbeat()
         {
             var p = CreateTestProbe();
             var q = CreateTestProbe();
@@ -332,7 +352,7 @@ namespace Akka.Remote.Tests
 
         [Fact]
         public void
-            ARemoteWatcherMustGenerateAddressTerminatedForNewWatchAfterBrokenConnectionWasReestablishedAndBrokenAgain()
+            A_RemoteWatcher_must_generate_address_terminated_for_new_watch_after_broken_connection_was_reestablished_and_broken_again()
         {
             var p = CreateTestProbe();
             var q = CreateTestProbe();
@@ -423,3 +443,4 @@ namespace Akka.Remote.Tests
 
     }
 }
+

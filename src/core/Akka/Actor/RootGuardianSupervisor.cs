@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RootGuardianSupervisor.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading.Tasks;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -12,13 +19,13 @@ namespace Akka.Actor
     /// </summary>
     public class RootGuardianSupervisor : MinimalActorRef
     {
-        private readonly LoggingAdapter _log;
+        private readonly ILoggingAdapter _log;
         private readonly TaskCompletionSource<Status> _terminationPromise;
         private readonly ActorPath _path;
         private readonly Switch _stopped=new Switch(false);
         private readonly IActorRefProvider _provider;
 
-        public RootGuardianSupervisor(RootActorPath root, IActorRefProvider provider, TaskCompletionSource<Status> terminationPromise, LoggingAdapter log)
+        public RootGuardianSupervisor(RootActorPath root, IActorRefProvider provider, TaskCompletionSource<Status> terminationPromise, ILoggingAdapter log)
         {
             _log = log;
             _terminationPromise = terminationPromise;
@@ -28,7 +35,7 @@ namespace Akka.Actor
 
         protected override void TellInternal(object message, IActorRef sender)
         {
-            var systemMessage = message as SystemMessage;
+            var systemMessage = message as ISystemMessage;
             if(systemMessage!=null)
             {
                 SendSystemMessage(systemMessage);
@@ -43,7 +50,7 @@ namespace Akka.Actor
             }
         }
 
-        private void SendSystemMessage(SystemMessage systemMessage)
+        private void SendSystemMessage(ISystemMessage systemMessage)
         {
             _stopped.IfOff(() =>
             {
@@ -95,3 +102,4 @@ namespace Akka.Actor
         }
     }
 }
+

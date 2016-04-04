@@ -9,7 +9,7 @@
     <description>AutoFac Dependency Injection (DI) support for Akka.NET</description>
     <licenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</licenseUrl>
     <projectUrl>https://github.com/akkadotnet/akka.net</projectUrl>
-    <iconUrl>https://raw.githubusercontent.com/akkadotnet/akka.net/gh-pages/images/icon-32x32.png</iconUrl>
+    <iconUrl>http://getakka.net/images/AkkaNetLogo.Normal.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <releaseNotes>@releaseNotes@</releaseNotes>
     <copyright>@copyright@</copyright>

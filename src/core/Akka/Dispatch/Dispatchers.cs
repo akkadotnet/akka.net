@@ -1,7 +1,10 @@
-﻿/**
- * Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
- * Original C# code written by Akka.NET project <http://getakka.net/>
- */
+﻿//-----------------------------------------------------------------------
+// <copyright file="Dispatchers.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Concurrent;
 using System.Threading;
@@ -43,6 +46,9 @@ namespace Akka.Dispatch
     /// </summary>
     public class ThreadPoolDispatcher : MessageDispatcher
     {
+
+        private static readonly bool _isFullTrusted = AppDomain.CurrentDomain.IsFullyTrusted;
+
         /// <summary>
         /// Takes a <see cref="MessageDispatcherConfigurator"/>
         /// </summary>
@@ -57,8 +63,11 @@ namespace Akka.Dispatch
         public override void Schedule(Action run)
         {
             var wc = new WaitCallback(_ => run());
-            ThreadPool.UnsafeQueueUserWorkItem(wc, null);
-            //ThreadPool.QueueUserWorkItem(wc, null);
+            // we use unsafe version if current application domain is FullTrusted
+            if (_isFullTrusted)
+                ThreadPool.UnsafeQueueUserWorkItem(wc, null);
+            else
+                ThreadPool.QueueUserWorkItem(wc, null);
         }
     }
 
@@ -89,48 +98,6 @@ namespace Akka.Dispatch
         {
             var t = new Task(run);
             t.Start(_scheduler);
-        }
-    }
-
-    /// <summary>
-    ///     Class SingleThreadDispatcher.
-    /// </summary>
-    public class SingleThreadDispatcher : MessageDispatcher
-    {
-        /// <summary>
-        ///     The queue
-        /// </summary>
-        private readonly BlockingCollection<Action> queue = new BlockingCollection<Action>();
-
-        /// <summary>
-        ///     The running
-        /// </summary>
-        private volatile bool running = true;
-
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="SingleThreadDispatcher" /> class.
-        /// </summary>
-        public SingleThreadDispatcher(MessageDispatcherConfigurator configurator)
-            : base(configurator)
-        {
-            var thread = new Thread(_ =>
-            {
-                foreach (var next in queue.GetConsumingEnumerable())
-                {
-                    next();
-                    if (!running) return;
-                }
-            });
-            thread.Start(); //thread won't start automatically without this
-        }
-
-        /// <summary>
-        ///     Schedules the specified run.
-        /// </summary>
-        /// <param name="run">The run.</param>
-        public override void Schedule(Action run)
-        {
-            queue.Add(run);
         }
     }
 
@@ -213,10 +180,10 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// Checks that configuration provides a sectionfor the given dispatcher.
-        /// This does not gaurantee that no <see cref="ConfigurationException"/> will be thrown
+        /// Checks that configuration provides a section for the given dispatcher.
+        /// This does not guarantee that no <see cref="ConfigurationException"/> will be thrown
         /// when using the dispatcher, because the details can only be checked by trying to
-        /// instantiate it, which might be undersirable when just checking.
+        /// instantiate it, which might be undesirable when just checking.
         /// </summary>
         public bool HasDispatcher(string id)
         {
@@ -259,7 +226,7 @@ namespace Akka.Dispatch
         /// </summary>
         /// <param name="cfg">The provided configuration section.</param>
         /// <returns>An instance of the <see cref="MessageDispatcher"/>, if valid.</returns>
-        /// <exception cref="ConfigurationException">if the `id` property is missing from <see cref="cfg"/></exception>
+        /// <exception cref="ConfigurationException">if the `id` property is missing from <paramref name="cfg"/></exception>
         /// <exception cref="NotSupportedException">thrown if the dispatcher path or type cannot be resolved.</exception>
         internal MessageDispatcher From(Config cfg)
         {
@@ -271,7 +238,7 @@ namespace Akka.Dispatch
         /// and <see cref="HasDispatcher"/> instead of looking up the configurator from the system
         /// configuration.
         /// 
-        /// This enables dynamic addtition of dispatchers.
+        /// This enables dynamic addition of dispatchers.
         /// 
         /// <remarks>
         /// A <see cref="MessageDispatcherConfigurator"/> for a certain id can only be registered once,
@@ -279,7 +246,7 @@ namespace Akka.Dispatch
         /// first registration will be used.
         /// </remarks>
         /// </summary>
-        /// <returns>This method returns <c>true</c> if the specified configurator was successfully regisetered.</returns>
+        /// <returns>This method returns <c>true</c> if the specified configurator was successfully registered.</returns>
         public bool RegisterConfigurator(string id, MessageDispatcherConfigurator configurator)
         {
             return _dispatcherConfigurators.TryAdd(id, configurator);
@@ -383,3 +350,4 @@ namespace Akka.Dispatch
         }
     }
 }
+

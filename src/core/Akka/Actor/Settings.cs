@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Settings.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -61,6 +68,7 @@ namespace Akka.Actor
             
             SupervisorStrategyClass = Config.GetString("akka.actor.guardian-supervisor-strategy");
 
+            AskTimeout = Config.GetTimeSpan("akka.actor.ask-timeout", allowInfinite: true);
             CreationTimeout = Config.GetTimeSpan("akka.actor.creation-timeout");
             UnstartedPushTimeout = Config.GetTimeSpan("akka.actor.unstarted-push-timeout");
 
@@ -100,6 +108,8 @@ namespace Akka.Actor
             DebugRouterMisconfiguration = Config.GetBoolean("akka.actor.debug.router-misconfiguration");
             Home = Config.GetString("akka.home") ?? "";
             DefaultVirtualNodesFactor = Config.GetInt("akka.actor.deployment.default.virtual-nodes-factor");
+
+            SchedulerClass = Config.GetString("akka.scheduler.implementation");
             //TODO: dunno.. we dont have FiniteStateMachines, dont know what the rest is
             /*              
                 final val SchedulerClass: String = getString("akka.scheduler.implementation")
@@ -149,6 +159,12 @@ namespace Akka.Actor
         /// </summary>
         /// <value><c>true</c> if [serialize all creators]; otherwise, <c>false</c>.</value>
         public bool SerializeAllCreators { get; private set; }
+
+        /// <summary>
+        ///     Gets the default timeout for <see cref="Futures.Ask" /> calls.
+        /// </summary>
+        /// <value>The ask timeout.</value>
+        public TimeSpan AskTimeout { get; private set; }
 
         /// <summary>
         ///     Gets the creation timeout.
@@ -254,6 +270,11 @@ namespace Akka.Actor
         public int DefaultVirtualNodesFactor { get; private set; }
 
         /// <summary>
+        /// Gets the scheduler implementation used by this system.
+        /// </summary>
+        public string SchedulerClass { get; private set; }
+
+        /// <summary>
         ///     Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>A <see cref="string" /> that represents this instance.</returns>
@@ -263,3 +284,4 @@ namespace Akka.Actor
         }
     }
 }
+

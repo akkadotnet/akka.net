@@ -1,10 +1,19 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Remoting.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote.Transport;
 using Akka.Util.Internal;
@@ -72,7 +81,6 @@ namespace Akka.Remote
         #endregion
     }
 
-    //TODO: needs to be implemented in Endpoint
     /// <summary>
     /// INTERNAL API
     /// Messages marked with this interface will be sent before other messages when buffering is active.
@@ -86,7 +94,7 @@ namespace Akka.Remote
     /// </summary>
     internal class Remoting : RemoteTransport
     {
-        private readonly LoggingAdapter log;
+        private readonly ILoggingAdapter _log;
         private volatile IDictionary<string, HashSet<ProtocolTransportAddressPair>> _transportMapping;
         private volatile IActorRef _endpointManager;
 
@@ -99,13 +107,13 @@ namespace Akka.Remote
         private volatile Address _defaultAddress;
 
         private IActorRef _transportSupervisor;
-        private EventPublisher _eventPublisher;
+        private readonly EventPublisher _eventPublisher;
 
         public Remoting(ExtendedActorSystem system, RemoteActorRefProvider provider)
             : base(system, provider)
         {
-            log = Logging.GetLogger(system, "remoting");
-            _eventPublisher = new EventPublisher(system, log, Logging.LogLevelFor(provider.RemoteSettings.RemoteLifecycleEventsLogLevel));
+            _log = Logging.GetLogger(system, "remoting");
+            _eventPublisher = new EventPublisher(system, _log, Logging.LogLevelFor(provider.RemoteSettings.RemoteLifecycleEventsLogLevel));
             _transportSupervisor = system.SystemActorOf(Props.Create<TransportSupervisor>(), "transports");
         }
 
@@ -121,29 +129,33 @@ namespace Akka.Remote
             get { return _defaultAddress; }
         }
 
+        /// <summary>
+        /// Start assumes that it cannot be followed by another Start() without having a Shutdown() first
+        /// </summary>
         public override void Start()
         {
-            log.Info("Starting remoting");
-
             if (_endpointManager == null)
             {
+                _log.Info("Starting remoting");
                 _endpointManager =
-                System.SystemActorOf(
-                    Props.Create(() => new EndpointManager(System.Settings.Config, log)).WithDeploy(Deploy.Local),
+                System.SystemActorOf(RARP.For(System).ConfigureDispatcher(
+                    Props.Create(() => new EndpointManager(System.Settings.Config, _log)).WithDeploy(Deploy.Local)),
                     EndpointManagerName);
 
                 try
                 {
                     var addressPromise = new TaskCompletionSource<IList<ProtocolTransportAddressPair>>();
-                    _endpointManager.Tell(new EndpointManager.Listen(addressPromise));
+
+                    // tells the EndpointManager to start all transports and bind them to listenable addresses, and then set the results
+                    // of this promise to include them.
+                    _endpointManager.Tell(new EndpointManager.Listen(addressPromise)); 
 
                     addressPromise.Task.Wait(Provider.RemoteSettings.StartupTimeout);
                     var akkaProtocolTransports = addressPromise.Task.Result;
                     if(akkaProtocolTransports.Count==0)
-                        throw new Exception("No transports enabled");
+                        throw new ConfigurationException(@"No transports enabled under ""akka.remote.enabled-transports""");
                     _addresses = new HashSet<Address>(akkaProtocolTransports.Select(a => a.Address));
-                    //   this.transportMapping = akkaProtocolTransports
-                    //       .ToDictionary(p => p.ProtocolTransport.Transport.SchemeIdentifier,);
+
                     IEnumerable<IGrouping<string, ProtocolTransportAddressPair>> tmp =
                         akkaProtocolTransports.GroupBy(t => t.ProtocolTransport.SchemeIdentifier);
                     _transportMapping = new Dictionary<string, HashSet<ProtocolTransportAddressPair>>();
@@ -156,7 +168,7 @@ namespace Akka.Remote
                     _defaultAddress = akkaProtocolTransports.Head().Address;
                     _addresses = new HashSet<Address>(akkaProtocolTransports.Select(x => x.Address));
 
-                    log.Info("Remoting started; listening on addresses : [{0}]", string.Join(",", _addresses.Select(x => x.ToString())));
+                    _log.Info("Remoting started; listening on addresses : [{0}]", string.Join(",", _addresses.Select(x => x.ToString())));
 
                     _endpointManager.Tell(new EndpointManager.StartupFinished());
                     _eventPublisher.NotifyListeners(new RemotingListenEvent(_addresses.ToList()));
@@ -180,7 +192,7 @@ namespace Akka.Remote
             }
             else
             {
-                log.Warning("Remoting was already started. Ignoring start attempt.");
+                _log.Warning("Remoting was already started. Ignoring start attempt.");
             }
         }
 
@@ -188,8 +200,8 @@ namespace Akka.Remote
         {
             if (_endpointManager == null)
             {
-                log.Warning("Remoting is not running. Ignoring shutdown attempt");
-                return Task.Run(() => { });
+                _log.Warning("Remoting is not running. Ignoring shutdown attempt");
+                return Task.FromResult(true);
             }
             else
             {
@@ -211,13 +223,12 @@ namespace Akka.Remote
                     {
                         if (!result.Result)
                         {
-                            log.Warning(
-                                "Shutdown finished, but flushing might not have been successful and some messages might have been dropped. " +
+                            _log.Warning("Shutdown finished, but flushing might not have been successful and some messages might have been dropped. " +
                                 "Increase akka.remote.flush-wait-on-shutdown to a larger value to avoid this.");
                         }
                         finalize();
                     }
-                }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+                }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
             }
         }
 
@@ -227,10 +238,8 @@ namespace Akka.Remote
             {
                 throw new RemoteTransportException("Attempted to send remote message but Remoting is not running.", null);
             }
-            if (sender == null)
-                sender = ActorRefs.NoSender;
 
-            _endpointManager.Tell(new EndpointManager.Send(message, recipient, sender), sender);
+            _endpointManager.Tell(new EndpointManager.Send(message, recipient, sender), sender ?? ActorRefs.NoSender);
         }
 
         public override Task<bool> ManagementCommand(object cmd)
@@ -245,14 +254,15 @@ namespace Akka.Remote
                     Provider.RemoteSettings.CommandAckTimeout)
                     .ContinueWith(result =>
                     {
+                        if (result.IsCanceled || result.IsFaulted)
+                            return false;
                         return result.Result.Status;
-                    },
-                        TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent);
+                    }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
 
         public override Address LocalAddressForRemote(Address remote)
         {
-            return LocalAddressForRemote(_transportMapping, remote);
+            return Remoting.LocalAddressForRemote(_transportMapping, remote);
         }
 
         public override void Quarantine(Address address, int? uid)
@@ -317,7 +327,10 @@ namespace Akka.Remote
         #endregion
     }
 
-    internal sealed class RegisterTransportActor : NoSerializationVerificationNeeded
+    /// <summary>
+    /// Message type used to provide both <see cref="Props"/> and a name for a new transport actor
+    /// </summary>
+    internal sealed class RegisterTransportActor : INoSerializationVerificationNeeded
     {
         public RegisterTransportActor(Props props, string name)
         {
@@ -330,26 +343,25 @@ namespace Akka.Remote
         public string Name { get; private set; }
     }
 
-    internal class TransportSupervisor : UntypedActor
+    /// <summary>
+    /// Actor responsible for supervising the creation of all transport actors
+    /// </summary>
+    internal class TransportSupervisor : ReceiveActor
     {
-        private readonly SupervisorStrategy _strategy = new OneForOneStrategy(3, TimeSpan.FromMinutes(1), exception => Directive.Restart);
+        private readonly SupervisorStrategy _strategy = new OneForOneStrategy(exception => Directive.Restart);
         protected override SupervisorStrategy SupervisorStrategy()
         {
             return _strategy;
         }
 
-        protected override void OnReceive(object message)
+        public TransportSupervisor()
         {
-            PatternMatch.Match(message)
-                .With<RegisterTransportActor>(r =>
-                {
-                    /*
-                     * TODO: need to add support for RemoteDispatcher here.
-                     * See https://github.com/akka/akka/blob/master/akka-remote/src/main/scala/akka/remote/RemoteSettings.scala#L42 
-                     * and https://github.com/akka/akka/blob/master/akka-remote/src/main/scala/akka/remote/Remoting.scala#L95
-                     */
-                    Sender.Tell(Context.ActorOf(r.Props.WithDeploy(Deploy.Local), r.Name));
-                });
+            Receive<RegisterTransportActor>(
+                r =>
+                    Sender.Tell(
+                        Context.ActorOf(RARP.For(Context.System).ConfigureDispatcher(r.Props.WithDeploy(Deploy.Local)),
+                            r.Name)));
         }
     }
 }
+

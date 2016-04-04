@@ -1,3 +1,10 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="RealMessageEnvelope.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using Akka.Actor;
 
 namespace Akka.TestKit
@@ -18,7 +25,8 @@ namespace Akka.TestKit
 
         public override string ToString()
         {
-            return "<" + (Message ?? "null") + "> from " + (Sender ?? NoSender.Instance);
+            return "<" + (Message ?? "null") + "> from " + (Sender == ActorRefs.NoSender ? "NoSender" : Sender.ToString());
         }
     }
 }
+

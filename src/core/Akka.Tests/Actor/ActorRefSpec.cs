@@ -1,6 +1,14 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorRefSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading;
 using Akka.Actor;
+using Akka.Actor.Internal;
 using Akka.Serialization;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
@@ -8,7 +16,7 @@ using Xunit;
 
 namespace Akka.Tests.Actor
 {
-    public class ActorRefSpec : AkkaSpec, NoImplicitSender
+    public class ActorRefSpec : AkkaSpec, INoImplicitSender
     {
         [Fact]
         public void An_ActorRef_should_equal_itself()
@@ -66,6 +74,7 @@ namespace Akka.Tests.Actor
         public void An_ActorRef_should_not_allow_actors_to_be_created_outside_an_ActorOf()
         {
             Shutdown();
+            InternalCurrentActorCellKeeper.Current = null;
             Intercept<ActorInitializationException>(() =>
             {
                 new BlackHoleActor();
@@ -98,20 +107,37 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void An_ActoRef_should_return_EmptyLocalActorRef_on_deserialize_if_not_present_in_actor_hierarchy_and_remoting_is_not_enabled()
+        public void
+            An_ActoRef_should_return_EmptyLocalActorRef_on_deserialize_if_not_present_in_actor_hierarchy_and_remoting_is_not_enabled
+            ()
         {
             var aref = ActorOf<BlackHoleActor>("non-existing");
-            var aserializer = Sys.Serialization.FindSerializerForType(typeof(IActorRef));
+            var aserializer = Sys.Serialization.FindSerializerForType(typeof (IActorRef));
             var binary = aserializer.ToBinary(aref);
 
+            Watch(aref);
+
             aref.Tell(PoisonPill.Instance);
-            VerifyActorTermination(aref);
+
+            ExpectMsg<Terminated>();
 
             var bserializer = Sys.Serialization.FindSerializerForType(typeof (IActorRef));
-            var bref = (IActorRef)bserializer.FromBinary(binary, typeof(IActorRef));
 
-            bref.GetType().ShouldBe(typeof(EmptyLocalActorRef));
-            bref.Path.ShouldBe(aref.Path);
+            AwaitCondition(() =>
+            {
+                var bref = (IActorRef) bserializer.FromBinary(binary, typeof (IActorRef));
+                try
+                {
+                    bref.GetType().ShouldBe(typeof (EmptyLocalActorRef));
+                    bref.Path.ShouldBe(aref.Path);
+
+                    return true;
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
+            });
         }
 
         [Fact]
@@ -251,6 +277,17 @@ namespace Akka.Tests.Actor
             var t2 = parent.Ask("what");
             t2.Wait(timeout);
             Assert.True(!(bool)t2.Result);
+        }
+
+        [Fact]
+        public void An_ActorRef_should_never_have_a_null_Sender_Bug_1212()
+        {          
+            var actor = ActorOfAsTestActorRef<NonPublicActor>(Props.Create<NonPublicActor>(SupervisorStrategy.StoppingStrategy));
+            // actors with a null sender should always write to deadletters
+            EventFilter.DeadLetter<object>().ExpectOne(() => actor.Tell(new object(), null));
+
+            // will throw an exception if there's a bug
+            ExpectNoMsg();
         }
 
         private void VerifyActorTermination(IActorRef actorRef)
@@ -550,3 +587,4 @@ namespace Akka.Tests.Actor
         }
     }
 }
+

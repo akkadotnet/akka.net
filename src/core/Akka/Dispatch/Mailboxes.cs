@@ -1,8 +1,17 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Mailboxes.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Util.Reflection;
+using Akka.Dispatch.MessageQueues;
 
 namespace Akka.Dispatch
 {
@@ -18,7 +27,9 @@ namespace Akka.Dispatch
 
         private readonly DeadLetterMailbox _deadLetterMailbox;
         public static readonly string DefaultMailboxId = "akka.actor.default-mailbox";
+        public static readonly string NoMailboxRequirement = "";
         private readonly Dictionary<Type, Config> _requirementsMapping;
+        private readonly Type _defaultMailboxType;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="Mailboxes" /> class.
@@ -43,6 +54,8 @@ namespace Akka.Dispatch
                 var config = system.Settings.Config.GetConfig(kvp.Value.GetString());
                 _requirementsMapping.Add(type, config);
             }
+
+            _defaultMailboxType = FromConfig(DefaultMailboxId);
         }
 
         public Type LookupByQueueType(Type queueType)
@@ -62,6 +75,21 @@ namespace Akka.Dispatch
             return instance;
         }
 
+        private Type GetRequiredType(Type actorType)
+        {
+            return actorType.GetInterfaces()
+                .Where(i => i.IsGenericType)
+                .Where(i => i.GetGenericTypeDefinition() == typeof (IRequiresMessageQueue<>))
+                .Select(i => i.GetGenericArguments().First())
+                .FirstOrDefault();
+        }
+
+        private Type GetMailboxRequirement(Config config)
+        {
+            var mailboxRequirement = config.GetString("mailbox-requirement");
+            return mailboxRequirement == null || mailboxRequirement.Equals(NoMailboxRequirement) ? typeof (IMessageQueue) : Type.GetType(mailboxRequirement, true);
+        }
+
         public Type GetMailboxType(Props props, Config dispatcherConfig)
         {
             if (!string.IsNullOrEmpty(props.Mailbox))
@@ -69,23 +97,53 @@ namespace Akka.Dispatch
                 return FromConfig(props.Mailbox);
             }
 
-            var actortype = props.Type;
-            var interfaces = actortype.GetInterfaces()
-                .Where(i => i.IsGenericType)
-                .Where(i => i.GetGenericTypeDefinition() == typeof (RequiresMessageQueue<>))
-                .Select(i => i.GetGenericArguments().First())
-                .ToList();
+            if (dispatcherConfig == null)
+                dispatcherConfig = ConfigurationFactory.Empty;
+            var id = dispatcherConfig.GetString("id");
+            var deploy = props.Deploy;
+            var actorType = props.Type;
+            var actorRequirement = new Lazy<Type>(() => GetRequiredType(actorType));
 
-            if (interfaces.Count > 0)
+            var mailboxRequirement = GetMailboxRequirement(dispatcherConfig);
+            var hasMailboxRequirement = mailboxRequirement != typeof (IMessageQueue);
+
+            var hasMailboxType = dispatcherConfig.HasPath("mailbox-type") &&
+                                 dispatcherConfig.GetString("mailbox-type") != Deploy.NoMailboxGiven;
+
+            Func<Type, Type> verifyRequirements = mailboxType =>
             {
-                var config = _requirementsMapping[interfaces.First()];
-                var mailbox = config.GetString("mailbox-type");
-                var mailboxType = Type.GetType(mailbox);
+                // TODO Akka code after introducing IProducesMessageQueue
+                // if (hasMailboxRequirement && !mailboxRequirement.isAssignableFrom(mqType))
+                //   throw new IllegalArgumentException(
+                //     s"produced message queue type [$mqType] does not fulfill requirement for dispatcher [$id]. " +
+                //       s"Must be a subclass of [$mailboxRequirement].")
+                // if (hasRequiredType(actorClass) && !actorRequirement.isAssignableFrom(mqType))
+                //   throw new IllegalArgumentException(
+                //     s"produced message queue type [$mqType] does not fulfill requirement for actor class [$actorClass]. " +
+                //       s"Must be a subclass of [$actorRequirement].")
                 return mailboxType;
+            };
+
+            if (!deploy.Mailbox.Equals(Deploy.NoMailboxGiven))
+                return verifyRequirements(FromConfig(deploy.Mailbox));
+            if (!deploy.Dispatcher.Equals(Deploy.NoDispatcherGiven) && hasMailboxType)
+                return verifyRequirements(FromConfig(id));
+            if (actorRequirement.Value != null)
+            {
+                try
+                {
+                    return verifyRequirements(LookupByQueueType(actorRequirement.Value));
+                }
+                catch (Exception e)
+                {
+                    if (hasMailboxRequirement)
+                        return verifyRequirements(LookupByQueueType(mailboxRequirement));
+                    throw;
+                }
             }
-
-
-            return FromConfig(DefaultMailboxId);
+            if (hasMailboxRequirement)
+                return verifyRequirements(LookupByQueueType(mailboxRequirement));
+            return verifyRequirements(_defaultMailboxType);
         }
 
         /// <summary>
@@ -95,7 +153,7 @@ namespace Akka.Dispatch
         /// <returns>Mailbox.</returns>
         public Type FromConfig(string path)
         {
-            //TODO: this should not exist, its a temp hack because we are not serializing mailbox info when doing remote deply..
+            //TODO: this should not exist, its a temp hack because we are not serializing mailbox info when doing remote deploy..
             if (string.IsNullOrEmpty(path))
             {
                 return typeof (UnboundedMailbox);
@@ -104,7 +162,7 @@ namespace Akka.Dispatch
             var config = _system.Settings.Config.GetConfig(path);
             var type = config.GetString("mailbox-type");
 
-            var mailboxType = Type.GetType(type);
+            var mailboxType = TypeCache.GetType(type);
             return mailboxType;
             /*
 mailbox-capacity = 1000
@@ -114,3 +172,4 @@ stash-capacity = -1
         }
     }
 }
+

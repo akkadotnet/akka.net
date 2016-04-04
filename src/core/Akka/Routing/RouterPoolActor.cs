@@ -1,4 +1,11 @@
-﻿using System.Linq;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RouterPoolActor.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Linq;
 using Akka.Actor;
 using Akka.Util.Internal;
 
@@ -11,7 +18,7 @@ namespace Akka.Routing
     /// </summary>
     internal class RouterPoolActor : RouterActor
     {
-   //     private SupervisorStrategy supervisorStrategy;
+        private readonly SupervisorStrategy _supervisorStrategy;
 
         protected Pool Pool
         {
@@ -35,7 +42,12 @@ namespace Akka.Routing
         /// <param name="supervisorStrategy">The supervisor strategy.</param>
         public RouterPoolActor(SupervisorStrategy supervisorStrategy)
         {
-            SupervisorStrategyInternal = supervisorStrategy;
+            _supervisorStrategy = supervisorStrategy;
+        }
+
+        protected override SupervisorStrategy SupervisorStrategy()
+        {
+            return _supervisorStrategy;
         }
 
         /// <summary>
@@ -62,7 +74,11 @@ namespace Akka.Routing
                 else if (poolSize.Change < 0)
                 {
                     var currentRoutees = Cell.Router.Routees.ToArray();
-                    var abandon = currentRoutees.Drop(currentRoutees.Length + poolSize.Change);
+
+                    var abandon = currentRoutees
+                        .Drop(currentRoutees.Length + poolSize.Change)
+                        .ToList();
+
                     Cell.RemoveRoutees(abandon, true);
                 }
             }
@@ -75,3 +91,4 @@ namespace Akka.Routing
 
     }
 }
+

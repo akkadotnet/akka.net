@@ -1,6 +1,14 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestProbe.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using Akka.Actor;
+using Akka.Dispatch.SysMsg;
 using Akka.Util;
 
 namespace Akka.TestKit
@@ -10,9 +18,9 @@ namespace Akka.TestKit
     /// Use <see cref="TestKitBase.CreateTestProbe(string)" /> inside your test 
     /// to create new instances.
     /// </summary>
-    public class TestProbe : TestKitBase, NoImplicitSender, IInternalActorRef
+    public class TestProbe : TestKitBase, INoImplicitSender, IInternalActorRef
     {      
-        public TestProbe(ActorSystem system, TestKitAssertions assertions, string testProbeName=null)
+        public TestProbe(ActorSystem system, ITestKitAssertions assertions, string testProbeName=null)
             : base(assertions, system, testProbeName)
         {
         }
@@ -131,5 +139,16 @@ namespace Akka.TestKit
         {
             ((IInternalActorRef)TestActor).Suspend();
         }
+
+        public void SendSystemMessage(ISystemMessage message, IActorRef sender)
+        {
+            ((IInternalActorRef)TestActor).SendSystemMessage(message, sender);
+        }
+
+        public int CompareTo(object obj)
+        {
+            return TestActor.CompareTo(obj);
+        }
     }
 }
+

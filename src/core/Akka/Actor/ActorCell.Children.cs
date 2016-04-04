@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorCell.Children.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Akka.Actor.Internal;
@@ -334,7 +341,7 @@ namespace Akka.Actor
             //       val ser = SerializationExtension(cell.system)
             //       props.args forall (arg ⇒
             //         arg == null ||
-            //           arg.isInstanceOf[NoSerializationVerificationNeeded] ||
+            //           arg.isInstanceOf[INoSerializationVerificationNeeded] ||
             //           ser.deserialize(ser.serialize(arg.asInstanceOf[AnyRef]).get, arg.getClass).get != null)
             //     } catch {
             //       case NonFatal(e) ⇒ throw new IllegalArgumentException(s"pre-creation serialization check failed at [${cell.self.path}/$name]", e)
@@ -369,3 +376,4 @@ namespace Akka.Actor
         }
     }
 }
+

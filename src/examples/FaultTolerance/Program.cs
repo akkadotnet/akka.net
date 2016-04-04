@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Program.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Akka.Actor;
@@ -32,7 +39,7 @@ namespace FaultTolerance
     // Listens on progress from the worker and shuts down the system when enough work has been done.
     public class Listener : UntypedActor
     {
-        LoggingAdapter log = Logging.GetLogger(Context);
+        ILoggingAdapter log = Logging.GetLogger(Context);
 
         protected override void PreRestart(Exception reason, object message)
         {
@@ -53,14 +60,14 @@ namespace FaultTolerance
                 if (progress.Percent >= 100)
                 {
                     log.Info("That's all, shutting down");
-                    Context.System.Shutdown();
+                    Context.System.Terminate();
                 }
             }
             else if (message == ReceiveTimeout.Instance)
             {
                 // No progress within 15 seconds, ServiceUnavailable
                 log.Error("Shutting down due to unavailable service");
-                Context.System.Shutdown();
+                Context.System.Terminate();
             }
             else
             {
@@ -97,7 +104,7 @@ namespace FaultTolerance
     // The Worker supervise the CounterService.
     public class Worker : UntypedActor
     {
-        LoggingAdapter log = Logging.GetLogger(Context);
+        ILoggingAdapter log = Logging.GetLogger(Context);
 
         // The sender of the initial Start message will continuously be notified about progress
         IActorRef progressListener;
@@ -195,7 +202,7 @@ namespace FaultTolerance
     // supervise Storage and Counter.
     public class CounterService : UntypedActor
     {
-        LoggingAdapter log = Logging.GetLogger(Context);
+        ILoggingAdapter log = Logging.GetLogger(Context);
 
         string key = Context.Self.Path.Name;
         IActorRef storage;
@@ -297,7 +304,7 @@ namespace FaultTolerance
             if (counter == null)
             {
                 if (backlog.Count >= MAX_BACKLOG)
-                    throw new ServiceUnavailableException("CounterService nto available, lack of initial value");
+                    throw new ServiceUnavailableException("CounterService not available, lack of initial value");
 
                 backlog.Add(new SenderMessagePair(Sender, message));
             }
@@ -347,7 +354,7 @@ namespace FaultTolerance
     // if there is any storage available at the moment.
     public class Counter : UntypedActor
     {
-        LoggingAdapter log = Logging.GetLogger(Context);
+        ILoggingAdapter log = Logging.GetLogger(Context);
         string key;
         long count;
         IActorRef storage;
@@ -514,3 +521,4 @@ namespace FaultTolerance
 
     #endregion
 }
+

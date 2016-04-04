@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterHeartBeatSenderStateSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
@@ -259,7 +266,7 @@ namespace Akka.Cluster.Tests
                             break;
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     Debug.WriteLine("Failure context: i = {0}, node = {1}, op={2}, unreachable={3}, ringReceivers={4}, ringNodes={5}", i, node, operation, 
                         string.Join(",",state.Unreachable), 
@@ -273,3 +280,4 @@ namespace Akka.Cluster.Tests
         #endregion
     }
 }
+

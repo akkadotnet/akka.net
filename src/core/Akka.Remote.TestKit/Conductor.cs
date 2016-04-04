@@ -1,8 +1,17 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Conductor.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Transport;
@@ -17,8 +26,8 @@ namespace Akka.Remote.TestKit
     /// The conductor is the one orchestrating the test: it governs the
     /// <see cref="Akka.Remote.TestKit.Controller"/>'s ports to which all
     /// Players connect, it issues commands to their
-    /// <see cref="Akka.Remote.TestKit.NetworkFailureInjector"></see> and provides support
-    /// for barriers using the <see cref="Akka.Remote.TestKit.BarrierCoordinator"></see>.
+    /// <see cref="Akka.Remote.TestKit.NetworkFailureInjector"/> and provides support
+    /// for barriers using the <see cref="Akka.Remote.TestKit.BarrierCoordinator"/>.
     /// All of this is bundled inside the <see cref="TestConductor"/>
     /// </summary>
     partial class TestConductor //Conductor trait in JVM version
@@ -56,18 +65,24 @@ namespace Akka.Remote.TestKit
         /// <returns></returns>
         public async Task<INode> StartController(int participants, RoleName name, INode controllerPort)
         {
-            if(_controller != null) throw new Exception("TestConductorServer was already started");
-            _controller = _system.ActorOf(new Props(typeof (Controller), new object[] {participants, controllerPort}),
-                "controller");
+            if(_controller != null) throw new IllegalStateException("TestConductorServer was already started");
+            _controller = _system.ActorOf(Props.Create(() => new Controller(participants, controllerPort)),
+               "controller");
             //TODO: Need to review this async stuff
-            var node = await _controller.Ask<INode>(TestKit.Controller.GetSockAddr.Instance).ConfigureAwait(false);
+            var node = await _controller.Ask<INode>(TestKit.Controller.GetSockAddr.Instance, Settings.QueryTimeout).ConfigureAwait(false);
             await StartClient(name, node).ConfigureAwait(false);
             return node;
         }
 
+        /// <summary>
+        /// Obtain the port to which the controller’s socket is actually bound. This
+        /// will deviate from the configuration in `akka.testconductor.port` in case
+        /// that was given as zero.
+        /// </summary>
+        /// <returns>The address of the controller's socket endpoint</returns>
         public Task<INode> SockAddr()
         {
-            return _controller.Ask<INode>(TestKit.Controller.GetSockAddr.Instance);
+            return Controller.Ask<INode>(TestKit.Controller.GetSockAddr.Instance, Settings.QueryTimeout);
         }
 
         /// <summary>
@@ -96,7 +111,7 @@ namespace Akka.Remote.TestKit
             float rateMBit)
         {
             RequireTestConductorTransport();
-            return Controller.Ask<Done>(new Throttle(node, target, direction, rateMBit));
+            return Controller.Ask<Done>(new Throttle(node, target, direction, rateMBit), Settings.QueryTimeout);
         }
 
         /// <summary>
@@ -120,10 +135,10 @@ namespace Akka.Remote.TestKit
 
         private void RequireTestConductorTransport()
         {
-            //TODO: What is helios equivalent of this?
-            /*if(!Transport.DefaultAddress.Protocol.Contains(".trttl.gremlin."))
+            // Verifies that the Throttle and  FailureInjector TransportAdapters are active
+            if(!Transport.DefaultAddress.Protocol.Contains(".trttl.gremlin."))
                 throw new ConfigurationException("To use this feature you must activate the failure injector adapters " +
-                    "(trttl, gremlin) by specifying `testTransport(on = true)` in your MultiNodeConfig.");*/
+                    "(trttl, gremlin) by specifying `TestTransport(on = true)` in your MultiNodeConfig.");
         }
 
         /// <summary>
@@ -153,7 +168,7 @@ namespace Akka.Remote.TestKit
         /// <returns></returns>
         public Task<Done> Disconnect(RoleName node, RoleName target)
         {
-            return Controller.Ask<Done>(new Disconnect(node, target, false));
+            return Controller.Ask<Done>(new Disconnect(node, target, false), Settings.QueryTimeout);
         }
 
         /// <summary>
@@ -166,7 +181,7 @@ namespace Akka.Remote.TestKit
         /// <returns></returns>
         public Task<Done> Abort(RoleName node, RoleName target)
         {
-            return Controller.Ask<Done>(new Disconnect(node, target, true));
+            return Controller.Ask<Done>(new Disconnect(node, target, true), Settings.QueryTimeout);
         }
 
         /// <summary>
@@ -180,7 +195,7 @@ namespace Akka.Remote.TestKit
         {
             // the recover is needed to handle ClientDisconnectedException exception,
             // which is normal during shutdown
-            return Controller.Ask(new Terminate(node, new Right<bool, int>(exitValue))).ContinueWith(t =>
+            return Controller.Ask(new Terminate(node, new Right<bool, int>(exitValue)), Settings.QueryTimeout).ContinueWith(t =>
             {
                 if(t.Result is Done) return Done.Instance;
                 var failure = t.Result as FSMBase.Failure;
@@ -202,7 +217,7 @@ namespace Akka.Remote.TestKit
         {
             // the recover is needed to handle ClientDisconnectedException exception,
             // which is normal during shutdown
-            return Controller.Ask(new Terminate(node, new Left<bool, int>(abort))).ContinueWith(t =>
+            return Controller.Ask(new Terminate(node, new Left<bool, int>(abort)), Settings.QueryTimeout).ContinueWith(t =>
             {
                 if (t.Result is Done) return Done.Instance;
                 var failure = t.Result as FSMBase.Failure;
@@ -217,7 +232,7 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public Task<IEnumerable<RoleName>> GetNodes()
         {
-            return Controller.Ask<IEnumerable<RoleName>>(TestKit.Controller.GetNodes.Instance);
+            return Controller.Ask<IEnumerable<RoleName>>(TestKit.Controller.GetNodes.Instance, Settings.QueryTimeout);
         }
 
         /// <summary>
@@ -230,7 +245,7 @@ namespace Akka.Remote.TestKit
         /// <returns></returns>
         public Task<Done> RemoveNode(RoleName node)
         {
-            return Controller.Ask<Done>(new Remove(node));
+            return Controller.Ask<Done>(new Remove(node), Settings.QueryTimeout);
         }
     }
 
@@ -242,11 +257,11 @@ namespace Akka.Remote.TestKit
     /// </summary>
     internal class ConductorHandler : IHeliosConnectionHandler
     {
-        private readonly LoggingAdapter _log;
+        private readonly ILoggingAdapter _log;
         private readonly IActorRef _controller;
         private readonly ConcurrentDictionary<IConnection, IActorRef> _clients = new ConcurrentDictionary<IConnection, IActorRef>();
 
-        public ConductorHandler(IActorRef controller, LoggingAdapter log)
+        public ConductorHandler(IActorRef controller, ILoggingAdapter log)
         {
             _controller = controller;
             _log = log;
@@ -255,7 +270,8 @@ namespace Akka.Remote.TestKit
         public async void OnConnect(INode remoteAddress, IConnection responseChannel)
         {
             _log.Debug("connection from {0}", responseChannel.RemoteHost);
-            //TODO: Seems wrong to create new RemoteConnection here
+            
+            // Duration of this Ask operation needs to be infinite
             var fsm = await _controller.Ask<IActorRef>(new Controller.CreateServerFSM(new RemoteConnection(responseChannel, this)), TimeSpan.FromMilliseconds(Int32.MaxValue));
             _clients.AddOrUpdate(responseChannel, fsm, (connection, @ref) => fsm);
         }
@@ -274,21 +290,25 @@ namespace Akka.Remote.TestKit
 
         public void OnMessage(object message, IConnection responseChannel)
         {
-            _log.Debug(string.Format("message from {0}: {1}", responseChannel.RemoteHost, message));
+            _log.Debug("message from {0}: {1}", responseChannel.RemoteHost, message);
             if (message is INetworkOp)
             {
-                _clients[responseChannel].Tell(message);
+                IActorRef fsm;
+                if (_clients.TryGetValue(responseChannel, out fsm))
+                {
+                    fsm.Tell(message);
+                }
             }
             else
             {
-                _log.Debug(string.Format("client {0} sent garbage `{1}`, disconnecting", responseChannel.RemoteHost, message));
+                _log.Debug("client {0} sent garbage `{1}`, disconnecting", responseChannel.RemoteHost, message);
                 responseChannel.Close();
             }
         }
 
         public void OnException(Exception ex, IConnection erroredChannel)
         {
-            _log.Warn(string.Format("handled network error from {0}: {1}", erroredChannel.RemoteHost, ex.Message));
+            _log.Warning("handled network error from {0}: {1}", erroredChannel.RemoteHost, ex.Message);
         }
     }
 
@@ -307,9 +327,9 @@ namespace Akka.Remote.TestKit
     /// 
     /// INTERNAL API.
     /// </summary>
-    class ServerFSM : FSM<ServerFSM.State, IActorRef>, LoggingFSM
+    class ServerFSM : FSM<ServerFSM.State, IActorRef>, ILoggingFSM
     {
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
         readonly RemoteConnection _channel;
         readonly IActorRef _controller;        
         RoleName _roleName;
@@ -421,3 +441,4 @@ namespace Akka.Remote.TestKit
         }
     }
 }
+

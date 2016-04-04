@@ -1,4 +1,11 @@
-﻿using Akka.Dispatch;
+﻿//-----------------------------------------------------------------------
+// <copyright file="EmptyLocalActorRef.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 
@@ -24,7 +31,7 @@ namespace Akka.Actor
 
         protected override void TellInternal(object message, IActorRef sender)
         {
-            var systemMessage = message as SystemMessage;
+            var systemMessage = message as ISystemMessage;
             if(systemMessage != null)
             {
                 SendSystemMessage(systemMessage);
@@ -54,7 +61,7 @@ namespace Akka.Actor
             SpecialHandle(deadLetter.Message, deadLetter.Sender);
         }
 
-        private void SendSystemMessage(SystemMessage message)
+        private void SendSystemMessage(ISystemMessage message)
         {
             Mailbox.DebugPrint("EmptyLocalActorRef {0} having enqueued {1}", Path, message);
             SpecialHandle(message, _provider.DeadLetters);
@@ -98,3 +105,4 @@ namespace Akka.Actor
         }
     }
 }
+

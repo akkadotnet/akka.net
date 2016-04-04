@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="CommandLine.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Specialized;
 
 namespace Akka.Remote.TestKit
@@ -7,7 +14,7 @@ namespace Akka.Remote.TestKit
     /// <summary>
     /// Command line argument parser for individual node tests during a <see cref="MultiNodeSpec"/>.
     /// 
-    /// Parses arguments from <see cref="Environment.GetCommandLineArgs"/> using the same conventions as cannonical Akka.
+    /// Parses arguments from <see cref="Environment.GetCommandLineArgs"/> using the same conventions as canonical Akka.
     /// 
     /// For example (from the Akka.NodeTestRunner source):
     /// <code>
@@ -36,9 +43,20 @@ namespace Akka.Remote.TestKit
             return Values.Value[key];
         }
 
+        public static string GetPropertyOrDefault(string key, string defaultStr)
+        {
+            return Values.Value.ContainsKey(key) ? Values.Value[key] : defaultStr;
+        }
+
         public static int GetInt32(string key)
         {
             return Convert.ToInt32(GetProperty(key));
         }
+
+        public static int GetInt32OrDefault(string key, int defaultInt)
+        {
+            return Values.Value.ContainsKey(key) ? GetInt32(key) : defaultInt;
+        }
     }
 }
+

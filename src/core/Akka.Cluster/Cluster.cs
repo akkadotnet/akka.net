@@ -1,8 +1,15 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Cluster.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote;
@@ -20,13 +27,13 @@ namespace Akka.Cluster
 
     //TODO: xmldoc
     /// <summary>
-    /// This module is responsible cluster membership information. Changes to the cluster
-    /// information is retrieved through [[#subscribe]]. Commands to operate the cluster is
-    /// available through methods in this class, such as [[#join]], [[#down]] and [[#leave]].
+    /// This module is responsible for cluster membership information. Changes to the cluster
+    /// information is retrieved through <see cref="Akka.Cluster.Cluster.Subscribe"/>. Commands to operate the cluster is
+    /// available through methods in this class, such as <see cref="Akka.Cluster.Cluster.Join"/>, <see cref="Akka.Cluster.Cluster.Down"/> and <see cref="Akka.Cluster.Cluster.Leave"/>.
     /// 
-    /// Each cluster [[Member]] is identified by its [[akka.actor.Address]], and
+    /// Each cluster <see cref="Akka.Cluster.Member"/> is identified by its <see cref="Akka.Actor.Address"/>, and
     /// the cluster address of this actor system is [[#selfAddress]]. A member also has a status;
-    /// initially [[MemberStatus.Joining]] followed by [[MemberStatus.Up]].
+    /// initially <see cref="Akka.Cluster.MemberStatus.Joining"/> followed by <see cref="Akka.Cluster.MemberStatus.Up"/>.
     /// </summary>
     public class Cluster :IExtension
     {
@@ -104,7 +111,7 @@ namespace Akka.Cluster
         /// </summary>
         /// <param name="subscriber">The actor who'll receive the cluster domain events</param>
         /// <param name="to"><see cref="ClusterEvent.IClusterDomainEvent"/> subclasses</param>
-        /// <remarks>A snapshot of <see cref="ClusterEvent.CurrentClusterState"/> will be sent to <see cref="subscriber"/> as the first message</remarks>
+        /// <remarks>A snapshot of <see cref="ClusterEvent.CurrentClusterState"/> will be sent to <paramref name="subscriber"/> as the first message</remarks>
         public void Subscribe(IActorRef subscriber, Type[] to)
         {
             Subscribe(subscriber, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsSnapshot, to);
@@ -116,10 +123,10 @@ namespace Akka.Cluster
         /// <param name="subscriber">The actor who'll receive the cluster domain events</param>
         /// <param name="initialStateMode">
         /// If set to <see cref="ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents"/> the events corresponding to the current state
-        /// will be sent to <see cref="subscriber"/> to mimic what it would have seen if it were listening to the events when they occurred in the past.
+        /// will be sent to <paramref name="subscriber"/> to mimic what it would have seen if it were listening to the events when they occurred in the past.
         /// 
         /// If set to <see cref="ClusterEvent.SubscriptionInitialStateMode.InitialStateAsSnapshot"/> 
-        /// a snapshot of <see cref="ClusterEvent.CurrentClusterState"/> will be sent to <see cref="subscriber"/> as the first message. </param>
+        /// a snapshot of <see cref="ClusterEvent.CurrentClusterState"/> will be sent to <paramref name="subscriber"/> as the first message. </param>
         /// <param name="to"><see cref="ClusterEvent.IClusterDomainEvent"/> subclasses</param>
         public void Subscribe(IActorRef subscriber, ClusterEvent.SubscriptionInitialStateMode initialStateMode, Type[] to)
         {
@@ -154,7 +161,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// Try to join this cluster node specified by <see cref="address"/>.
+        /// Try to join this cluster node specified by <paramref name="address"/>.
         /// A <see cref="Join"/> command is sent to the node to join.
         /// 
         /// An actor system can only join a cluster once. Additional attempts will be ignored.
@@ -180,7 +187,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// Send command to issue state transition to LEAVING for the node specified by <see cref="address"/>.
+        /// Send command to issue state transition to LEAVING for the node specified by <paramref name="address"/>.
         /// The member will go through the status changes <see cref="MemberStatus.Leaving"/> (not published to 
         /// subscribers) followed by <see cref="MemberStatus.Exiting"/> and finally <see cref="MemberStatus.Removed"/>.
         /// 
@@ -198,7 +205,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// Send command to DOWN the ndoe specified by <see cref="address"/>.
+        /// Send command to DOWN the node specified by <paramref name="address"/>.
         /// 
         /// When a member is considered by the failure detector to be unreachable the leader is not
         /// allowed to perform its duties, such as changing status of new joining members to <see cref="MemberStatus.Up"/>.
@@ -245,7 +252,7 @@ namespace Akka.Cluster
 
         internal ActorSystemImpl System { get; private set; }
 
-        readonly LoggingAdapter _log;
+        readonly ILoggingAdapter _log;
         readonly ClusterReadView _readView;
         public ClusterReadView ReadView {get { return _readView; }}
 
@@ -271,7 +278,11 @@ namespace Akka.Cluster
             {
                 LogInfo("Shutting down...");
                 System.Stop(_clusterDaemons);
-                _readView.Dispose();
+
+                if (_readView != null)
+                {
+                    _readView.Dispose();
+                }
 
                 LogInfo("Successfully shut down");
             }
@@ -288,12 +299,13 @@ namespace Akka.Cluster
 
         public void LogInfo(string template, object arg1)
         {
-            _log.Info(String.Format("Cluster Node [{0}] - " + template, SelfAddress, arg1));
+            _log.Info("Cluster Node [{0}] - " + template, SelfAddress, arg1);
         }
 
         public void LogInfo(string template, object arg1, object arg2)
         {
-            _log.Info(String.Format("Cluster Node [{0}] - " + template, SelfAddress, arg1, arg2));
+            _log.Info("Cluster Node [{0}] - " + template, SelfAddress, arg1, arg2);
         }
     }
 }
+

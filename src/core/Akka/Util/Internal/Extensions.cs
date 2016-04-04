@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Extensions.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -75,6 +82,11 @@ namespace Akka.Util.Internal
             return @this > other ? @this : other;
         }
 
+        public static TimeSpan Min(this TimeSpan @this, TimeSpan other)
+        {
+            return @this < other ? @this : other;
+        }
+
         public static IEnumerable<T> Concat<T>(this IEnumerable<T> enumerable, T item)
         {
             var itemInArray = new[] {item};
@@ -82,5 +94,25 @@ namespace Akka.Util.Internal
                 return itemInArray;
             return enumerable.Concat(itemInArray);
         }
+
+        public static void ForEach<T>(this IEnumerable<T> enumerable, Action<T> action)
+        {
+            foreach (var item in enumerable)
+                action(item);
+        }
+
+        /// <summary>
+        /// Selects last n elements.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="self"></param>
+        /// <param name="n"></param>
+        /// <returns></returns>
+        public static IEnumerable<T> TakeRight<T>(this IEnumerable<T> self, int n)
+        {
+            var enumerable = self as T[] ?? self.ToArray();
+            return enumerable.Skip(Math.Max(0, enumerable.Length - n));
+        }
     }
 }
+

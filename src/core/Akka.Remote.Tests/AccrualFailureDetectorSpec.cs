@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="AccrualFailureDetectorSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.TestKit;
@@ -61,7 +68,7 @@ namespace Akka.Remote.Tests
                 ShouldBe(fd.Phi(kv.Key, 1000.0, 100.0), kv.Value, 0.1);
             }
 
-            //larger stdDeviation reuslts => lower phi
+            //larger stdDeviation results => lower phi
             Assert.True(fd.Phi(1100, 1000.0, 500.0) < fd.Phi(1100, 1000.0, 100.0));
         }
 
@@ -304,3 +311,4 @@ namespace Akka.Remote.Tests
         }
     }
 }
+

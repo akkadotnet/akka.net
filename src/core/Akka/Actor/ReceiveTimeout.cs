@@ -1,4 +1,11 @@
-﻿namespace Akka.Actor
+﻿//-----------------------------------------------------------------------
+// <copyright file="ReceiveTimeout.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+namespace Akka.Actor
 {
 
     /// <summary>
@@ -7,7 +14,7 @@
     /// <see cref="ActorBase.SetReceiveTimeout">SetReceiveTimeout</see>
     /// and no message has been sent to the actor during the specified amount of time.
     /// </summary>
-    public class ReceiveTimeout : PossiblyHarmful
+    public class ReceiveTimeout : IPossiblyHarmful
     {
         private ReceiveTimeout() { }
         private static readonly ReceiveTimeout _instance = new ReceiveTimeout();
@@ -25,3 +32,4 @@
         }
     }
 }
+

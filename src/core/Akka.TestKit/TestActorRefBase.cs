@@ -1,7 +1,15 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestActorRefBase.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Dispatch;
+using Akka.Dispatch.SysMsg;
 using Akka.TestKit.Internal;
 using Akka.Util;
 
@@ -57,7 +65,7 @@ namespace Akka.TestKit
         /// If this call is made from within an actor, the current actor will be the sender.
         /// If the call is made from a test class that is based on TestKit, TestActor will 
         /// will be the sender;
-        /// otherwise <see cref="NoSender"/> will be set as sender.
+        /// otherwise <see cref="ActorRefs.NoSender"/> will be set as sender.
         /// </summary>
         /// <param name="message">The message.</param>
         public void Tell(object message)
@@ -130,6 +138,11 @@ namespace Akka.TestKit
         public override int GetHashCode()
         {
             return _internalRef.GetHashCode();
+        }
+
+        public int CompareTo(object obj)
+        {
+            return ((IComparable) _internalRef).CompareTo(obj);
         }
 
         public bool Equals(IActorRef other)
@@ -226,5 +239,11 @@ namespace Akka.TestKit
         {
             _internalRef.Suspend();
         }
+
+        public void SendSystemMessage(ISystemMessage message, IActorRef sender)
+        {
+            _internalRef .SendSystemMessage(message, sender);
+        }
     }
 }
+

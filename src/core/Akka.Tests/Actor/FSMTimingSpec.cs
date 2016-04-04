@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="FSMTimingSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
@@ -77,7 +84,7 @@ namespace Akka.Tests.Actor
             //arrange
 
             //act
-            //the timeout in state TestStateTieout is 800ms, then it will change back to Initial
+            //the timeout in state TestStateTimeout is 800ms, then it will change back to Initial
             Within(TimeSpan.FromMilliseconds(400), () =>
             {
                 fsm.Tell(State.TestStateTimeoutOverride, Self);
@@ -187,7 +194,7 @@ namespace Akka.Tests.Actor
         /// <summary>
         /// receiveWhile is currently broken
         /// </summary>
-        [Fact(Skip = "receiveWhile is currently broken")]
+        [Fact]
         public void FSM_must_receive_and_cancel_a_repeated_timer()
         {
             fsm.Tell(State.TestRepeatedTimer, Self);
@@ -228,7 +235,7 @@ namespace Akka.Tests.Actor
             TestSingleTimer,
             TestSingleTimerResubmit,
             TestRepeatedTimer,
-            TestUnandled,
+            TestUnhandled,
             TestCancelTimer,
             TestCancelStateTimerInNamedTimerMessage,
             TestCancelStateTimerInNamedTimerMessage2
@@ -263,7 +270,7 @@ namespace Akka.Tests.Actor
         }
 
 
-        public class StateMachine : FSM<State, int>, LoggingFSM
+        public class StateMachine : FSM<State, int>, ILoggingFSM
         {
             public StateMachine(IActorRef tester)
             {
@@ -440,7 +447,7 @@ namespace Akka.Tests.Actor
                     return nextState;
                 });
 
-                When(State.TestUnandled, @event =>
+                When(State.TestUnhandled, @event =>
                 {
                     State<State, int> nextState = null;
 
@@ -472,3 +479,4 @@ namespace Akka.Tests.Actor
         #endregion
     }
 }
+

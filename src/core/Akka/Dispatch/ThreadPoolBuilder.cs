@@ -1,10 +1,51 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ThreadPoolBuilder.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
+using System.Threading;
 using Akka.Configuration;
+using Helios.Concurrency;
 
 namespace Akka.Dispatch
 {
-    class ThreadPoolBuilder
+    /// <summary>
+    /// <see cref="Config"/> helper class for configuring <see cref="MessageDispatcherConfigurator"/>
+    /// instances who depend on the Helios <see cref="DedicatedThreadPool"/>.
+    /// </summary>
+    internal static class DedicatedThreadPoolConfigHelpers
     {
+        internal static TimeSpan? GetSafeDeadlockTimeout(Config cfg)
+        {
+            var timespan = cfg.GetTimeSpan("deadlock-timeout", TimeSpan.FromSeconds(-1));
+            if (timespan.TotalSeconds < 0)
+                return null;
+            return timespan;
+        }
+
+        internal static ThreadType ConfigureThreadType(string threadType)
+        {
+            return string.Compare(threadType, ThreadType.Foreground.ToString(), StringComparison.InvariantCultureIgnoreCase) == 0 ?
+                ThreadType.Foreground : ThreadType.Background;
+        }
+
+        internal static ApartmentState GetApartmentState(Config cfg)
+        {
+            var s = cfg.GetString("apartment");
+            return string.Compare(s, "sta", StringComparison.InvariantCultureIgnoreCase) == 0
+                ? ApartmentState.STA
+                : string.Compare(s, "mta", StringComparison.InvariantCultureIgnoreCase) == 0
+                    ? ApartmentState.MTA
+                    : ApartmentState.Unknown;
+        }
+
+        /// <summary>
+        /// Default settings for <see cref="SingleThreadDispatcher"/> instances.
+        /// </summary>
+        internal static readonly DedicatedThreadPoolSettings DefaultSingleThreadPoolSettings = new DedicatedThreadPoolSettings(1, "DefaultSingleThreadPool");
     }
 
     /// <summary>
@@ -45,3 +86,4 @@ namespace Akka.Dispatch
         #endregion
     }
 }
+

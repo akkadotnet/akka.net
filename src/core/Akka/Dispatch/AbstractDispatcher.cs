@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="AbstractDispatcher.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
@@ -141,27 +148,6 @@ namespace Akka.Dispatch
     }
 
     /// <summary>
-    /// Used to create instances of the <see cref="SingleThreadDispatcher"/>. 
-    /// <remarks>
-    /// Always returns the same instance.
-    /// </remarks>
-    /// </summary>
-    class PinnedDispatcherConfigurator : MessageDispatcherConfigurator
-    {
-        public PinnedDispatcherConfigurator(Config config, IDispatcherPrerequisites prerequisites) : base(config, prerequisites)
-        {
-            _dispatcher = new SingleThreadDispatcher(this);
-        }
-
-        private readonly SingleThreadDispatcher _dispatcher;
-
-        public override MessageDispatcher Dispatcher()
-        {
-            return _dispatcher;
-        }
-    }
-
-    /// <summary>
     /// Used to create instances of the <see cref="CurrentSynchronizationContextDispatcher"/>.
     /// 
     /// <remarks>
@@ -181,25 +167,8 @@ namespace Akka.Dispatch
     }
 
     /// <summary>
-    /// Lookup list for different types of out-of-the-box <see cref="Dispatcher"/>s.
-    /// </summary>
-    public enum DispatcherType
-    {
-        Dispatcher,
-        TaskDispatcher,
-        PinnedDispatcher,
-        SynchronizedDispatcher,
-    }
-    public static class DispatcherTypeMembers
-    {
-        public static string GetName(this DispatcherType self)
-        {
-            //TODO: switch case return string?
-            return self.ToString();
-        }
-    }
-    /// <summary>
-    ///     Class MessageDispatcher.
+    /// Class responsible for pushing messages from an actor's mailbox into its
+    /// receive methods. Comes in many different flavors.
     /// </summary>
     public abstract class MessageDispatcher
     {
@@ -209,7 +178,7 @@ namespace Akka.Dispatch
         public const int DefaultThroughput = 100;
 
         /// <summary>
-        /// The configuator used to configure this message dispatcher.
+        /// The configurator used to configure this message dispatcher.
         /// </summary>
         public MessageDispatcherConfigurator Configurator { get; private set; }
 
@@ -254,11 +223,39 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// Dispatches a <see cref="SystemMessage"/> from a mailbox to an <see cref="ActorCell"/>        
+        /// Dispatches a <see cref="ISystemMessage"/> from a mailbox to an <see cref="ActorCell"/>        
         /// </summary>
         public virtual void SystemDispatch(ActorCell cell, Envelope envelope)
         {
             cell.SystemInvoke(envelope);
         }
+
+        /// <summary>
+        /// Attaches the dispatcher to the <see cref="ActorCell"/>
+        /// 
+        /// <remarks>
+        /// Practically, doesn't do very much right now - dispatchers aren't responsible for creating
+        /// mailboxes in Akka.NET
+        /// </remarks>
+        /// </summary>
+        /// <param name="cell">The ActorCell belonging to the actor who's attaching to this dispatcher.</param>
+        public virtual void Attach(ActorCell cell)
+        {
+            
+        }
+
+        /// <summary>
+        /// Detaches the dispatcher to the <see cref="ActorCell"/>
+        /// 
+        /// <remarks>
+        /// Only really used in dispatchers with 1:1 relationship with dispatcher.
+        /// </remarks>
+        /// </summary>
+        /// <param name="cell">The ActorCell belonging to the actor who's detaching from this dispatcher.</param>
+        public virtual void Detach(ActorCell cell)
+        {
+
+        }
     }
 }
+

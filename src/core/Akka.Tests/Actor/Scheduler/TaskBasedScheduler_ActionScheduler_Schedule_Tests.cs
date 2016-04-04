@@ -1,3 +1,10 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="TaskBasedScheduler_ActionScheduler_Schedule_Tests.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -9,14 +16,14 @@ using Xunit.Extensions;
 namespace Akka.Tests.Actor.Scheduler
 {
     // ReSharper disable once InconsistentNaming
-    public class TaskBasedScheduler_ActionScheduler_Schedule_Tests : AkkaSpec
+    public class DedicatedThreadScheduler_ActionScheduler_Schedule_Tests : AkkaSpec
     {
-        [Theory(Skip = "Tests that messages are sent with the specified interval, however due to inaccuracy of Task.Dely this often fails. Run this manually if you've made changes to TaskBasedScheduler")]
+        [Theory]
         [InlineData(10, 1000)]
         public void ScheduleRepeatedly_in_milliseconds_Tests_and_verify_the_interval(int initialDelay, int interval)
         {
             // Prepare, set up actions to be fired
-            IActionScheduler scheduler = new TaskBasedScheduler();
+            IActionScheduler scheduler = new DedicatedThreadScheduler(Sys);
 
             var cancelable = new Cancelable(Sys.Scheduler);
             var receiver = ActorOf(dsl =>
@@ -60,7 +67,7 @@ namespace Akka.Tests.Actor.Scheduler
         public void ScheduleRepeatedly_in_milliseconds_Tests(int initialDelay, int interval)
         {
             // Prepare, set up actions to be fired
-            IActionScheduler testScheduler = new TaskBasedScheduler();
+            IActionScheduler testScheduler = new DedicatedThreadScheduler(Sys);
 
             testScheduler.ScheduleRepeatedly(initialDelay, interval, () => TestActor.Tell("Test"));
 
@@ -76,7 +83,7 @@ namespace Akka.Tests.Actor.Scheduler
         public void ScheduleRepeatedly_in_TimeSpan_Tests(int initialDelay, int interval)
         {
             // Prepare, set up actions to be fired
-            IActionScheduler testScheduler = new TaskBasedScheduler();
+            IActionScheduler testScheduler = new DedicatedThreadScheduler(Sys);
 
             testScheduler.ScheduleRepeatedly(TimeSpan.FromMilliseconds(initialDelay), TimeSpan.FromMilliseconds(interval), () => TestActor.Tell("Test"));
 
@@ -91,7 +98,7 @@ namespace Akka.Tests.Actor.Scheduler
         public void ScheduleOnceTests()
         {
             // Prepare, set up actions to be fired
-            IActionScheduler testScheduler = new TaskBasedScheduler();
+            IActionScheduler testScheduler = new DedicatedThreadScheduler(Sys);
 
             testScheduler.ScheduleOnce(50, () => TestActor.Tell("Test1"));
             testScheduler.ScheduleOnce(100, () => TestActor.Tell("Test2"));
@@ -109,7 +116,7 @@ namespace Akka.Tests.Actor.Scheduler
         public void When_ScheduleOnce_many_at_the_same_time_Then_all_fires(int[] times)
         {
             // Prepare, set up actions to be fired
-            IActionScheduler scheduler = new TaskBasedScheduler();
+            IActionScheduler scheduler = new DedicatedThreadScheduler(Sys);
 
             foreach(var time in times)
             {
@@ -134,7 +141,7 @@ namespace Akka.Tests.Actor.Scheduler
         [InlineData(-4711)]
         public void When_ScheduleOnce_with_invalid_delay_Then_exception_is_thrown(int invalidTime)
         {
-            IActionScheduler testScheduler = new TaskBasedScheduler();
+            IActionScheduler testScheduler = new DedicatedThreadScheduler(Sys);
 
             XAssert.Throws<ArgumentOutOfRangeException>(() =>
                 testScheduler.ScheduleOnce(invalidTime, () => { })
@@ -146,7 +153,7 @@ namespace Akka.Tests.Actor.Scheduler
         [InlineData(-4711)]
         public void When_ScheduleRepeatedly_with_invalid_delay_Then_exception_is_thrown(int invalidTime)
         {
-            IActionScheduler testScheduler = new TaskBasedScheduler();
+            IActionScheduler testScheduler = new DedicatedThreadScheduler(Sys);
 
             XAssert.Throws<ArgumentOutOfRangeException>(() =>
                 testScheduler.ScheduleRepeatedly(invalidTime, 100, () => { })
@@ -159,7 +166,7 @@ namespace Akka.Tests.Actor.Scheduler
         [InlineData(-4711)]
         public void When_ScheduleRepeatedly_with_invalid_interval_Then_exception_is_thrown(int invalidInterval)
         {
-            IActionScheduler testScheduler = new TaskBasedScheduler();
+            IActionScheduler testScheduler = new DedicatedThreadScheduler(Sys);
 
             XAssert.Throws<ArgumentOutOfRangeException>(() =>
                 testScheduler.ScheduleRepeatedly(42, invalidInterval, () => { })
@@ -169,7 +176,7 @@ namespace Akka.Tests.Actor.Scheduler
         [Fact]
         public void When_ScheduleOnce_with_0_delay_Then_action_is_executed_immediately()
         {
-            IActionScheduler testScheduler = new TaskBasedScheduler();
+            IActionScheduler testScheduler = new DedicatedThreadScheduler(Sys);
             var manualResetEvent = new ManualResetEventSlim();
             manualResetEvent.IsSet.ShouldBeFalse();
             testScheduler.ScheduleOnce(0, () => manualResetEvent.Set());
@@ -180,7 +187,7 @@ namespace Akka.Tests.Actor.Scheduler
         [Fact]
         public void When_ScheduleRepeatedly_with_0_delay_Then_action_is_executed_immediately()
         {
-            IActionScheduler testScheduler = new TaskBasedScheduler();
+            IActionScheduler testScheduler = new DedicatedThreadScheduler(Sys);
             var manualResetEvent = new ManualResetEventSlim();
             manualResetEvent.IsSet.ShouldBeFalse();
             testScheduler.ScheduleRepeatedly(0, 100, () => manualResetEvent.Set());
@@ -191,7 +198,7 @@ namespace Akka.Tests.Actor.Scheduler
         [Fact]
         public void When_ScheduleRepeatedly_action_crashes_Then_no_more_calls_will_be_scheduled()
         {
-            IActionScheduler testScheduler = new TaskBasedScheduler();
+            IActionScheduler testScheduler = new DedicatedThreadScheduler(Sys);
             var timesCalled = 0;
             testScheduler.ScheduleRepeatedly(0, 10, () => { Interlocked.Increment(ref timesCalled); throw new Exception("Crash"); });
             AwaitCondition(() => timesCalled >= 1);
@@ -202,3 +209,4 @@ namespace Akka.Tests.Actor.Scheduler
         }
     }
 }
+

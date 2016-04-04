@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="XunitAssertions.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.TestKit.Xunit.Internals;
 using Xunit;
 
@@ -7,7 +14,7 @@ namespace Akka.TestKit.Xunit
     /// <summary>
     /// Assertions for xUnit
     /// </summary>
-    public class XunitAssertions : TestKitAssertions
+    public class XunitAssertions : ITestKitAssertions
     {
         public void Fail(string format = "", params object[] args)
         {
@@ -40,3 +47,4 @@ namespace Akka.TestKit.Xunit
 
     }
 }
+

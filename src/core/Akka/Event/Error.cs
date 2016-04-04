@@ -1,15 +1,21 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Error.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 
 namespace Akka.Event
 {
-
     /// <summary>
-    ///     Class Error.
+    /// Represents an Error log event.
     /// </summary>
     public class Error : LogEvent
     {
         /// <summary>
-        ///     Initializes a new instance of the <see cref="Error" /> class.
+        /// Initializes a new instance of the <see cref="Error" /> class.
         /// </summary>
         /// <param name="cause">The cause.</param>
         /// <param name="logSource">The log source.</param>
@@ -24,15 +30,11 @@ namespace Akka.Event
         }
 
         /// <summary>
-        ///     Gets the cause.
+        /// Gets the cause of the error.
         /// </summary>
         /// <value>The cause.</value>
         public Exception Cause { get; private set; }
 
-        /// <summary>
-        ///     Logs the level.
-        /// </summary>
-        /// <returns>LogLevel.</returns>
         public override LogLevel LogLevel()
         {
             return Event.LogLevel.ErrorLevel;
@@ -54,3 +56,4 @@ namespace Akka.Event
         }
     }
 }
+

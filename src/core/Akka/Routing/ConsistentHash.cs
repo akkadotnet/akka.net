@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ConsistentHash.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +16,7 @@ using Akka.Util.Internal;
 namespace Akka.Routing
 {
     /// <summary>
-    /// Consistent Hashing node ring implementaiton.
+    /// Consistent Hashing node ring implementation.
     /// 
     ///  A good explanation of Consistent Hashing:
     /// http://weblogs.java.net/blog/tomwhite/archive/2007/11/consistent_hash.html
@@ -22,11 +29,11 @@ namespace Akka.Routing
         private readonly SortedDictionary<int, T> _nodes;
         private readonly int _virtualNodesFactor;
 
-        internal ConsistentHash(SortedDictionary<int, T> nodes, int virtualNodesFactor)
+        public ConsistentHash(SortedDictionary<int, T> nodes, int virtualNodesFactor)
         {
             _nodes = nodes;
 
-            Guard.Assert(virtualNodesFactor >= 1, "virtualNodesFactor must be >= 1");
+            if (virtualNodesFactor < 1) throw new ArgumentException("virtualNodesFactor must be >= 1");
 
             _virtualNodesFactor = virtualNodesFactor;
         }
@@ -102,7 +109,7 @@ namespace Akka.Routing
         /// </summary>
         public T NodeFor(byte[] key)
         {
-            Guard.Assert(!IsEmpty, string.Format("Can't get node for [{0}] from an empty node ring", key));
+            if (IsEmpty) throw new InvalidOperationException(string.Format("Can't get node for [{0}] from an empty node ring", key));
 
             return NodeRing[Idx(Array.BinarySearch(NodeHashRing, ConsistentHash.HashFor(key)))];
         }
@@ -114,7 +121,7 @@ namespace Akka.Routing
         /// </summary>
         public T NodeFor(string key)
         {
-            Guard.Assert(!IsEmpty, string.Format("Can't get node for [{0}] from an empty node ring", key));
+            if (IsEmpty) throw new InvalidOperationException(string.Format("Can't get node for [{0}] from an empty node ring", key));
 
             return NodeRing[Idx(Array.BinarySearch(NodeHashRing, ConsistentHash.HashFor(key)))];
         }
@@ -271,3 +278,4 @@ namespace Akka.Routing
         #endregion
     }
 }
+

@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RemoteWatcher.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
@@ -18,7 +25,7 @@ namespace Akka.Remote
     /// For a new node to be watched this actor periodically sends <see cref="RemoteWatcher.Heartbeat"/>
     /// to the peer actor on the other node, which replies with <see cref="RemoteWatcher.HeartbeatRsp"/>
     /// message back. The failure detector on the watching side monitors these heartbeat messages.
-    /// If arrival of hearbeat messages stops it will be detected and this actor will publish
+    /// If arrival of heartbeat messages stops it will be detected and this actor will publish
     /// <see cref="AddressTerminated"/> to the <see cref="AddressTerminatedTopic"/>.
     ///
     /// When all actors on a node have been unwatched it will stop sending heartbeat messages.
@@ -347,7 +354,7 @@ namespace Akka.Remote
 
             if (_watchingNodes.Contains(from) && !_unreachable.Contains(from))
             {
-                if (!_addressUids.ContainsKey(from) || _addressUids.ContainsKey(from))
+                if (!_addressUids.ContainsKey(from) || _addressUids[from] != uid)
                     ReWatch(from);
                 _addressUids[from] = uid;
                 _failureDetector.Heartbeat(from);
@@ -420,13 +427,13 @@ namespace Akka.Remote
 
         protected void ProcessUnwatchRemote(IActorRef watchee, IActorRef watcher)
         {
-            if (watcher != Self)
+            if (!Equals(watcher, Self))
             {
                 _log.Debug("Unwatching: [{0} -> {1}]", watcher.Path, watchee.Path);
                 _watching.Remove(Tuple.Create(watchee, watcher));
 
                 // clean up self watch when no more watchers of this watchee
-                if (_watching.All(t => t.Item1 != watchee || t.Item2 == Self))
+                if (_watching.All(t => !Equals(t.Item1, watchee) || Equals(t.Item2, Self)))
                 {
                     _log.Debug("Cleanup self watch of [{0}]", watchee.Path);
                     Context.Unwatch(watchee);
@@ -449,7 +456,7 @@ namespace Akka.Remote
             var toProcess = _watching.Where(t => t.Item1.Equals(watchee)).ToList();
             foreach (var t in toProcess)
             {
-                if (!addressTerminated && t.Item2 != Self)
+                if (!addressTerminated && !Equals(t.Item2, Self))
                     t.Item2.Tell(new DeathWatchNotification(watchee, existenceConfirmed, false));
             }
 
@@ -529,6 +536,7 @@ namespace Akka.Remote
             }
         }
 
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
     }
 }
+

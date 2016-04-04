@@ -8,7 +8,7 @@ Submit only relevant commits. We don't mind many commits in a pull request, but 
 
 - __Use a feature branch__ The pull request should be created from a feature branch, and not from _dev_. See below for why.
 - __No merge-commits__
-If you have commits that looks like this _"Merge branch 'my-branch' into dev"_ or _"Merge branch 'dev' of github .com/akkadotnet/akka.net into dev"_ you're probaly using merge instead of [rebase](https://help.github.com/articles/about-git-rebase) locally. See below on _Handling updates from upstream_. 
+If you have commits that looks like this _"Merge branch 'my-branch' into dev"_ or _"Merge branch 'dev' of github .com/akkadotnet/akka.net into dev"_ you're probaly using merge instead of [rebase](https://help.github.com/articles/about-git-rebase) locally. See below on _Handling updates from upstream_.
 - __Squash commits__ Often we create temporary commits like _"Started implementing feature x"_ and then _"Did a bit more on feature x"_. Squash these commits together using [interactive rebase](https://help.github.com/articles/about-git-rebase). Also see [Squashing commits with rebase](http://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html).
 - __Descriptive commit messages__ If a commit's message isn't descriptive, change it using [interactive rebase](https://help.github.com/articles/about-git-rebase). Refer to issues using `#issue`. Example of a bad message ~~"Small cleanup"~~. Example of good message: _"Removed Security.Claims header from FSM, which broke Mono build per #62"_. Don't be afraid to write long messages, if needed. Try to explain _why_ you've done the changes. The Erlang repo has some info on [writing good commit messages](https://github.com/erlang/otp/wiki/Writing-good-commit-messages).
 - __No one-commit-to-rule-them-all__ Large commits that changes too many things at the same time are very hard to review. Split large commits into smaller. See this [StackOverflow question](http://stackoverflow.com/questions/6217156/break-a-previous-commit-into-multiple-commits) for information on how to do this.
@@ -31,17 +31,17 @@ Make sure you have a [GitHub](https://github.com/) account.
 - Fork, clone, add upstream to the Akka.NET repository. See [Fork a repo](https://help.github.com/articles/fork-a-repo) for more detailed instructions or follow the instructions below.
 
 - Fork by clicking _Fork_ on https://github.com/akkadotnet/akka.net
-- Clone your fork locally. 
+- Clone your fork locally.
 ```
 git clone https://github.com/YOUR-USERNAME/akka.net
 ```
-- Add an upstream remote. 
+- Add an upstream remote.
 ```
 git remote add upstream https://github.com/akkadotnet/akka.net
 ```
 You now have two remotes: _upstream_ points to https://github.com/akkadotnet/akka.net, and _origin_ points to your fork on GitHub.
 
-- Make changes. See below. 
+- Make changes. See below.
 
 Unsure where to start? Issues marked with [_up for grabs_](https://github.com/akkadotnet/akka.net/labels/up%20for%20grabs) are things we want help with.
 
@@ -52,8 +52,8 @@ New to Git? See https://help.github.com/articles/what-are-other-good-resources-f
 ### Making changes
 __Never__ work directly on _dev_ or _master_ and you should never send a pull request from master - always from a feature branch created by you.
 
-- Pick an [issue](https://github.com/akkadotnet/akka.net/issues). If no issue exists (search first) create one. 
--  Get any changes from _upstream_. 
+- Pick an [issue](https://github.com/akkadotnet/akka.net/issues). If no issue exists (search first) create one.
+-  Get any changes from _upstream_.
 ```
 git checkout dev
 git fetch upstream
@@ -68,7 +68,7 @@ See https://help.github.com/articles/fetching-a-remote for more info
 git checkout -b my-new-branch-123
 ```
 - Work on your feature. Commit.
-- Rebase often, see below. 
+- Rebase often, see below.
 - Make sure you adhere to _Checklist before creating a Pull Request_ described above.
 - Push the branch to your fork on GitHub
 ```
@@ -91,7 +91,7 @@ git stash
 git checkout dev
 git fetch upstream
 git merge --ff-only upstream/dev
-``` 
+```
 - Rebase your feature branch on _dev_. See [Git Branching - Rebasing](http://git-scm.com/book/en/Git-Branching-Rebasing) for more info on rebasing
 ```
 git checkout my-new-branch-123
@@ -109,8 +109,11 @@ If we ask you to change already published commits using interactive rebase (like
 git push -f origin my-new-branch-123
 ```
 
+### The build server isn't picking up a Pull request that I've modified
+The build server relies on git commit timestamps to keep track of new builds that it needs to perform. When updating a PR, sometimes the timestamp of the latest commit in the PR isn't updated. This leads the build server to think that the PR has already been built and tested. In order to force the build server to rebuild and test the updated PR, please follow the instructions outlined in this post [How can one change the timestamp of an old commit in Git?](http://stackoverflow.com/questions/454734/how-can-one-change-the-timestamp-of-an-old-commit-in-git/31540373#31540373).
+
 ### All my commits are on dev. How do I get them to a new branch? ###
-If all commits are on _dev_ you need to move them to a new feature branch. 
+If all commits are on _dev_ you need to move them to a new feature branch.
 
 You can rebase your local _dev_ on _upstream/dev_ (to remove any merge commits), rename it, and recreate _dev_
 ```
@@ -127,10 +130,32 @@ git cherry-pick rev           #repeat until you have picked all commits
 git branch -m dev old-dev     #rename dev
 git branch dev upstream/dev   #create a new dev
 ```
+### What to do with feature branch after the pull request is merged and closed ? ###
+After a pull request has been merged and closed you can delete the feature branch.
+
+Get latest changes from the upstream
+
+```
+git checkout dev
+git fetch upstream
+git merge --ff-only upstream/dev
+git push origin dev
+```
+
+Remove the branch locally
+
+```
+git branch -d my-new-branch-123
+```
+Remove the branch on remote
+
+```
+git push origin --delete my-new-branch-123
+```
 
 ## Code guidelines
 
-See [Contributor Guidelines](http://akkadotnet.github.io/wiki/Contributor%20guidelines) on the wiki.
+See our [Contributor Guidelines](http://getakka.net/docs/Contributor%20guidelines) for more information on following the project's conventions.
 
 ---
 Props to [NancyFX](https://github.com/NancyFx/Nancy) from which we've "borrowed" some of this text.

@@ -1,3 +1,10 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="SchedulerBase.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 
 namespace Akka.Actor
@@ -14,7 +21,6 @@ namespace Akka.Actor
         {
             ValidateDelay(delay, "delay");
             InternalScheduleTellOnce(delay, receiver, message, sender, cancelable);
-
         }
 
         void ITellScheduler.ScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message, IActorRef sender)
@@ -30,7 +36,6 @@ namespace Akka.Actor
             ValidateInterval(interval, "interval");
             InternalScheduleTellRepeatedly(initialDelay, interval, receiver, message, sender, cancelable);
         }
-
 
         void IActionScheduler.ScheduleOnce(TimeSpan delay, Action action)
         {
@@ -59,18 +64,17 @@ namespace Akka.Actor
         }
 
         IAdvancedScheduler IScheduler.Advanced { get { return this; } }
-
         DateTimeOffset ITimeProvider.Now { get { return TimeNow; } }
-
+        
         protected abstract DateTimeOffset TimeNow { get; }
+        public abstract TimeSpan MonotonicClock { get; }
+        public abstract TimeSpan HighResMonotonicClock { get; }
 
         protected abstract void InternalScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable);
-
         protected abstract void InternalScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable);
 
         protected abstract void InternalScheduleOnce(TimeSpan delay, Action action, ICancelable cancelable);
         protected abstract void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable);
-
 
         protected static void ValidateInterval(TimeSpan interval, string parameterName)
         {
@@ -85,3 +89,4 @@ namespace Akka.Actor
         }
     }
 }
+

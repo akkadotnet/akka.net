@@ -1,4 +1,12 @@
+Ôªø//-----------------------------------------------------------------------
+// <copyright file="TerminatingChildrenContainer.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
+using System.Collections.Immutable;
 using System.Text;
 using Akka.Util.Internal;
 using Akka.Util.Internal.Collections;
@@ -12,19 +20,19 @@ namespace Akka.Actor.Internal
     /// or Terminating.
     /// Removing the last child which was supposed to be terminating will return a different
     /// type of container, depending on whether or not children are left and whether or not
-    /// the reason was ìTerminatingî.
+    /// the reason was ‚ÄúTerminating‚Äù.
     /// </summary>
     public class TerminatingChildrenContainer : ChildrenContainerBase
     {
-        private readonly IImmutableSet<IActorRef> _toDie;
+        private readonly ImmutableHashSet<IActorRef> _toDie;
         private readonly SuspendReason _reason;
 
-        public TerminatingChildrenContainer(IImmutableMap<string, IChildStats> children, IActorRef toDie, SuspendReason reason)
-            : this(children, ImmutableTreeSet<IActorRef>.Create(toDie), reason)
+        public TerminatingChildrenContainer(IImmutableDictionary<string, IChildStats> children, IActorRef toDie, SuspendReason reason)
+            : this(children, ImmutableHashSet<IActorRef>.Empty.Add(toDie), reason)
         {
             //Intentionally left blank
         }
-        public TerminatingChildrenContainer(IImmutableMap<string, IChildStats> children, IImmutableSet<IActorRef> toDie, SuspendReason reason)
+        public TerminatingChildrenContainer(IImmutableDictionary<string, IChildStats> children, ImmutableHashSet<IActorRef> toDie, SuspendReason reason)
             : base(children)
         {
             _toDie = toDie;
@@ -35,7 +43,7 @@ namespace Akka.Actor.Internal
 
         public override IChildrenContainer Add(string name, ChildRestartStats stats)
         {
-            var newMap = InternalChildren.AddOrUpdate(name, stats);
+            var newMap = InternalChildren.SetItem(name, stats);
             return new TerminatingChildrenContainer(newMap, _toDie, _reason);
         }
 
@@ -58,16 +66,16 @@ namespace Akka.Actor.Internal
         public override IChildrenContainer Reserve(string name)
         {
             if (_reason is SuspendReason.Termination) throw new InvalidOperationException(string.Format("Cannot reserve actor name\"{0}\". Is terminating.", name));
-            if (InternalChildren.Contains(name))
+            if (InternalChildren.ContainsKey(name))
                 throw new InvalidActorNameException(string.Format("Actor name \"{0}\" is not unique!", name));
             else
-                return new TerminatingChildrenContainer(InternalChildren.AddOrUpdate(name, ChildNameReserved.Instance), _toDie, _reason);
+                return new TerminatingChildrenContainer(InternalChildren.SetItem(name, ChildNameReserved.Instance), _toDie, _reason);
         }
 
         public override IChildrenContainer Unreserve(string name)
         {
             IChildStats stats;
-            if (!InternalChildren.TryGet(name, out stats))
+            if (!InternalChildren.TryGetValue(name, out stats))
                 return this;
             return new TerminatingChildrenContainer(InternalChildren.Remove(name), _toDie, _reason);
         }
@@ -90,11 +98,11 @@ namespace Akka.Actor.Internal
             if (numberOfChildren > 10)
                 sb.Append(numberOfChildren).Append(" children\n");
             else
-                sb.Append("Children:\n    ").AppendJoin("\n    ", InternalChildren.AllMinToMax, ChildStatsAppender).Append('\n');
+                sb.Append("Children:\n    ").AppendJoin("\n    ", InternalChildren, ChildStatsAppender).Append('\n');
 
             var numberToDie = _toDie.Count;
             sb.Append(numberToDie).Append(" children terminating:\n    ");
-            sb.AppendJoin("\n    ", _toDie.AllMinToMax);
+            sb.AppendJoin("\n    ", _toDie);
 
             return sb.ToString();
         }
@@ -105,3 +113,4 @@ namespace Akka.Actor.Internal
         }
     }
 }
+

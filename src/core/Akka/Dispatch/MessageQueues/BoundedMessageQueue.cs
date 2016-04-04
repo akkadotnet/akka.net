@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="BoundedMessageQueue.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Concurrent;
 using Akka.Actor;
 using Akka.Configuration;
@@ -6,7 +13,7 @@ using Akka.Configuration;
 namespace Akka.Dispatch.MessageQueues
 {
     /// <summary>An Bounded mailbox message queue.</summary>
-    public class BoundedMessageQueue : MessageQueue, BoundedMessageQueueSemantics
+    public class BoundedMessageQueue : IMessageQueue, IBoundedMessageQueueSemantics
     {
         private readonly BlockingCollection<Envelope> _queue;
 
@@ -66,3 +73,4 @@ namespace Akka.Dispatch.MessageQueues
         public TimeSpan PushTimeOut { get; set; }
     }
 }
+

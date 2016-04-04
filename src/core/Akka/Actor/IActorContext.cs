@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="IActorContext.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 
 namespace Akka.Actor
@@ -25,7 +32,7 @@ namespace Akka.Actor
         IActorRef Unwatch(IActorRef subject);
     }
 
-    public interface IActorContext : ActorRefFactory, ICanWatch
+    public interface IActorContext : IActorRefFactory, ICanWatch
     {
         /// <summary>
         /// Gets the <see cref="IActorRef"/> belonging to the current actor.
@@ -45,7 +52,7 @@ namespace Akka.Actor
         /// Gets a reference to the <see cref="ActorSystem"/> to which this actor belongs.
         /// 
         /// <remarks>
-        /// This property is how you can get access to the <see cref="Scheduler"/> and other parts
+        /// This property is how you can get access to the <see cref="IScheduler"/> and other parts
         /// of Akka.NET from within an actor instance.
         /// </remarks>
         /// </summary>
@@ -128,6 +135,11 @@ namespace Akka.Actor
         /// <param name="timeout">The timeout. Pass in <c>null</c> to switch off this feature.</param>
         void SetReceiveTimeout(TimeSpan? timeout);
 
+        /// <summary>
+        /// Gets the inactivity deadline timeout set using <see cref="SetReceiveTimeout"/>.
+        /// </summary>
+        TimeSpan? ReceiveTimeout { get; }
+
         /*
   def self: ActorRef
   def props: Props
@@ -151,3 +163,4 @@ namespace Akka.Actor
         void Stop(IActorRef child);
     }
 }
+
