@@ -1,11 +1,10 @@
-﻿using System;
-using Akka.Actor;
+﻿using Akka.Actor;
 using Akka.Event;
 using Akka.Streams.Actors;
 
 namespace Akka.Streams.Implementation
 {
-    public class ActorRefSinkActor : Actors.ActorSubscriber
+    public class ActorRefSinkActor : ActorSubscriber
     {
         public static Props Props(IActorRef @ref, int highWatermark, object onCompleteMessage)
         {
@@ -23,21 +22,25 @@ namespace Akka.Streams.Implementation
             Ref = @ref;
             HighWatermark = highWatermark;
             OnCompleteMessage = onCompleteMessage;
-            _requestStrategy = new WatermarkRequestStrategy(highWatermark);
+            RequestStrategy = new WatermarkRequestStrategy(highWatermark);
 
             Context.Watch(Ref);
         }
 
-        protected ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+        protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
 
         protected override bool Receive(object message)
         {
             Terminated terminated;
-            if(message is OnNext) Ref.Tell(message);
+            if (message is OnNext)
+            {
+                var onNext = (OnNext) message;
+                Ref.Tell(onNext.Element);
+            }
             else if (message is OnError)
             {
-                var err = (OnError) message;
-                Ref.Tell(new Status.Failure(err.Cause));
+                var onError = (OnError) message;
+                Ref.Tell(new Status.Failure(onError.Cause));
                 Context.Stop(Self);
             }
             else if (message is OnComplete)
@@ -53,10 +56,6 @@ namespace Akka.Streams.Implementation
             return true;
         }
 
-        private readonly IRequestStrategy _requestStrategy;
-        public override IRequestStrategy RequestStrategy
-        {
-            get { return _requestStrategy; }
-        }
+        public override IRequestStrategy RequestStrategy { get; }
     }
 }

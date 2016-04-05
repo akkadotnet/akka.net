@@ -257,7 +257,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class ActorRefSink<TIn> : SinkModule<TIn, IActorRef>
+    internal sealed class ActorRefSink<TIn> : SinkModule<TIn, Unit>
     {
         private readonly IActorRef _ref;
         private readonly object _onCompleteMessage;
@@ -276,17 +276,17 @@ namespace Akka.Streams.Implementation
         public override IModule WithAttributes(Attributes attributes)
             => new ActorRefSink<TIn>(_ref, _onCompleteMessage, attributes, AmendShape(attributes));
 
-        protected override SinkModule<TIn, IActorRef> NewInstance(SinkShape<TIn> shape)
+        protected override SinkModule<TIn, Unit> NewInstance(SinkShape<TIn> shape)
             => new ActorRefSink<TIn>(_ref, _onCompleteMessage, _attributes, shape);
 
-        public override ISubscriber<TIn> Create(MaterializationContext context, out IActorRef materializer)
+        public override ISubscriber<TIn> Create(MaterializationContext context, out Unit materializer)
         {
             var actorMaterializer = ActorMaterializer.Downcast(context.Materializer);
             var effectiveSettings = actorMaterializer.EffectiveSettings(context.EffectiveAttributes);
             var subscriberRef = actorMaterializer.ActorOf(context,
                 ActorRefSinkActor.Props(_ref, effectiveSettings.MaxInputBufferSize, _onCompleteMessage));
 
-            materializer = subscriberRef;
+            materializer = null;
             return new ActorSubscriberImpl<TIn>(subscriberRef);
         }
 
