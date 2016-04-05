@@ -41,9 +41,6 @@ namespace Akka.Remote.Transport.Streaming
 
             Port = config.GetInt("port");
 
-            Hostname = config.GetString("hostname");
-            Port = config.GetInt("port");
-
             string bindHostname = config.GetString("bind-hostname");
 
             if (string.IsNullOrEmpty(bindHostname))
@@ -210,8 +207,10 @@ namespace Akka.Remote.Transport.Streaming
             Socket socket = CreateDualModeTcpSocket();
             Settings.ConfigureSocket(socket);
 
-            //TODO Does it even work if the port is not set?
-            int port = remoteAddress.Port ?? 2552;
+            if (remoteAddress.Port == null)
+                throw new ArgumentException("Port must be specified.", nameof(remoteAddress));
+
+            int port = remoteAddress.Port.Value;
 
             var connectTask = Task.Factory.FromAsync(socket.BeginConnect, socket.EndConnect, remoteAddress.Host, port, null);
 

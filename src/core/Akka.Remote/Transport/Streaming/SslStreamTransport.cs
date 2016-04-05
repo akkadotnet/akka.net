@@ -128,7 +128,7 @@ certificate {
 
         public override string SchemeIdentifier
         {
-            get { return "ssl"; }
+            get { return "ssl.tcp"; }
         }
 
         public SslStreamTransport(ActorSystem system, Config config)

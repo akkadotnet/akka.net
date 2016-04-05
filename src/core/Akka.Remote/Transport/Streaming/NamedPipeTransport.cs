@@ -8,11 +8,11 @@ using Akka.Configuration;
 namespace Akka.Remote.Transport.Streaming
 {
     //TODO Work in progress
-    public class NamedPipeTranspotSettings : StreamTransportSettings
+    public class NamedPipeTransportSettings : StreamTransportSettings
     {
         public string PipeName { get; private set; }
 
-        public NamedPipeTranspotSettings(Config config)
+        public NamedPipeTransportSettings(Config config)
             : base(config)
         {
             PipeName = config.GetString("pipe-name");
@@ -26,7 +26,7 @@ namespace Akka.Remote.Transport.Streaming
     {
         public const string ProtocolName = "pipe";
 
-        public new NamedPipeTranspotSettings Settings { get;  }
+        public new NamedPipeTransportSettings Settings { get;  }
 
         public override string SchemeIdentifier
         {
@@ -34,12 +34,12 @@ namespace Akka.Remote.Transport.Streaming
         }
 
         public NamedPipeTransport(ActorSystem system, Config config)
-            : base(system, new NamedPipeTranspotSettings(config))
+            : base(system, new NamedPipeTransportSettings(config))
         {
             
         }
 
-        public NamedPipeTransport(ActorSystem system, NamedPipeTranspotSettings settings)
+        public NamedPipeTransport(ActorSystem system, NamedPipeTransportSettings settings)
             : base(system, settings)
         {
             Settings = settings;

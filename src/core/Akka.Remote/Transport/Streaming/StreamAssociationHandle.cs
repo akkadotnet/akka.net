@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -6,8 +7,29 @@ using Google.ProtocolBuffers;
 
 namespace Akka.Remote.Transport.Streaming
 {
+    // This could be optimized with unsafe code
+    internal static class LittleEndian
+    {
+        public static void WriteInt32(int value, byte[] buffer, int offset)
+        {
+            buffer[offset] = (byte)(value & 0x000000FF);
+            buffer[offset + 1] = (byte)((value & 0x0000FF00) >> 8);
+            buffer[offset + 2] = (byte)((value & 0x00FF0000) >> 16);
+            buffer[offset + 3] = (byte)((value & 0xFF000000) >> 24);
+        }
+
+        public static int ReadInt32(byte[] buffer, int offset)
+        {
+            return buffer[offset] |
+                   buffer[offset + 1] << 8 |
+                   buffer[offset + 2] << 16 |
+                   buffer[offset + 3] << 24;
+        }
+    }
+
     public class StreamAssociationHandle : AssociationHandle
     {
+        private readonly StreamTransportSettings _settings;
         private readonly Stream _stream;
         private readonly AsyncQueue<ByteString> _writeQueue;
         private IHandleEventListener _eventListener;
@@ -28,6 +50,7 @@ namespace Akka.Remote.Transport.Streaming
         public StreamAssociationHandle(StreamTransportSettings settings, Stream stream, Address localAddress, Address remoteAddress)
             : base(localAddress, remoteAddress)
         {
+            _settings = settings;
             _stream = stream;
             _writeQueue = new AsyncQueue<ByteString>();
 
@@ -94,37 +117,123 @@ namespace Akka.Remote.Transport.Streaming
                     readBytes += available;
                 }
 
-                int payloadLength = BitConverter.ToInt32(readBuffer, readIndex);
+                int payloadLength = LittleEndian.ReadInt32(readBuffer, readIndex);
                 readIndex += sizeof(int);
 
-                //TODO Protect against invalid payload length by chunking the payload buffer
-                //     if payloadLength is bigger than available data in the read buffer
-                byte[] payloadBuffer = new byte[payloadLength];
-                int payloadOffset = 0;
+                byte[] payloadBuffer = null;
 
-                while (payloadOffset < payloadLength)
+                if (payloadLength < 0 || payloadLength > _settings.FrameSizeHardLimit)
                 {
-                    if (readIndex == readBytes)
-                    {
-                        readIndex = 0;
-                        readBytes = await _stream.ReadAsync(readBuffer, 0, bufferLength).ConfigureAwait(false);
+                    //TODO Log Error
+                    _eventListener.Notify(new Disassociated(DisassociateInfo.Unknown));
+                    return;
+                }
+                if (payloadLength > _settings.MaximumFrameSize)
+                {
+                    #region Skip the bytes
+                    //TODO Log Error
 
-                        if (readBytes == 0)
+                    int payloadOffset = 0;
+
+                    while (payloadOffset < payloadLength)
+                    {
+                        if (readIndex == readBytes)
                         {
-                            _eventListener.Notify(new Disassociated(DisassociateInfo.Unknown));
-                            return;
+                            readIndex = 0;
+                            readBytes = await _stream.ReadAsync(readBuffer, 0, bufferLength).ConfigureAwait(false);
+
+                            if (readBytes == 0)
+                            {
+                                _eventListener.Notify(new Disassociated(DisassociateInfo.Unknown));
+                                return;
+                            }
                         }
+
+                        available = Math.Min(readBytes - readIndex, payloadLength - payloadOffset);
+                        readIndex += available;
+                        payloadOffset += available;
                     }
 
-                    available = Math.Min(readBytes - readIndex, payloadLength - payloadOffset);
+                    #endregion
+                }
+                else if (payloadLength > _settings.ChunkedReadThreshold && payloadLength > bufferLength - readIndex)
+                {
+                    // The payload is chunked as a protection against denial of service. Otherwise a malicious remote endpoint
+                    // could make the node allocate big buffers without sending the data first.
+                    #region Read Chunked
+                    //TODO Could allow direct read if Socket.Available include the full payload length
+                    //TODO The chunked buffers could be pooled (See RecyclableMemoryStream)
 
-                    Buffer.BlockCopy(readBuffer, readIndex, payloadBuffer, payloadOffset, available);
-                    readIndex += available;
-                    payloadOffset += available;
+                    var chunks = new List<byte[]>();
+                    int payloadOffset = 0;
+
+                    while (payloadOffset < payloadLength)
+                    {
+                        if (readIndex == readBytes)
+                        {
+                            readIndex = 0;
+                            readBytes = await _stream.ReadAsync(readBuffer, 0, bufferLength).ConfigureAwait(false);
+
+                            if (readBytes == 0)
+                            {
+                                _eventListener.Notify(new Disassociated(DisassociateInfo.Unknown));
+                                return;
+                            }
+                        }
+
+                        available = Math.Min(readBytes - readIndex, payloadLength - payloadOffset);
+                        byte[] chunk = new byte[available];
+                        Buffer.BlockCopy(readBuffer, readIndex, chunk, 0, available);
+                        chunks.Add(chunk);
+
+                        readIndex += available;
+                        payloadOffset += available;
+                    }
+
+                    payloadOffset = 0;
+                    payloadBuffer = new byte[payloadLength];
+
+                    foreach (byte[] chunk in chunks)
+                    {
+                        int chunkLength = chunk.Length;
+                        Buffer.BlockCopy(chunk, 0, payloadBuffer, payloadOffset, chunkLength);
+                        payloadOffset += chunkLength;
+                    }
+
+                    #endregion
+                }
+                else
+                {
+                    payloadBuffer = new byte[payloadLength];
+                    int payloadOffset = 0;
+
+                    while (payloadOffset < payloadLength)
+                    {
+                        if (readIndex == readBytes)
+                        {
+                            readIndex = 0;
+                            readBytes = await _stream.ReadAsync(readBuffer, 0, bufferLength).ConfigureAwait(false);
+
+                            if (readBytes == 0)
+                            {
+                                _eventListener.Notify(new Disassociated(DisassociateInfo.Unknown));
+                                return;
+                            }
+                        }
+
+                        available = Math.Min(readBytes - readIndex, payloadLength - payloadOffset);
+
+                        Buffer.BlockCopy(readBuffer, readIndex, payloadBuffer, payloadOffset, available);
+                        readIndex += available;
+                        payloadOffset += available;
+                    }
                 }
 
-                var payload = new InboundPayload(ByteString.Unsafe.FromBytes(payloadBuffer));
-                _eventListener.Notify(payload);
+                if (payloadBuffer != null)
+                {
+                    var payload = new InboundPayload(ByteString.Unsafe.FromBytes(payloadBuffer));
+                    _eventListener.Notify(payload);
+                }
             }
         }
 
@@ -133,7 +242,7 @@ namespace Akka.Remote.Transport.Streaming
             _writeQueue.Enqueue(payload);
 
             // Always return true, we don't want to use the backoff in EndpointWriter
-            return true;
+            return true; //TODO Investigate if we need to use the backoff
         }
 
         private async Task WriteLoop()
@@ -149,7 +258,7 @@ namespace Akka.Remote.Transport.Streaming
 
             while (true)
             {
-                var item = _writeQueue.Dequeue();
+                var item = _writeQueue.DequeueAsync();
 
                 ByteString payload;
 
@@ -178,7 +287,7 @@ namespace Akka.Remote.Transport.Streaming
                 }
 
 
-                if (bufferLength - bufferOffset < sizeof (int))
+                if (bufferLength - bufferOffset < sizeof(int))
                 {
                     // Not enough space to write payload length, flush the buffer
                     await _stream.WriteAsync(writeBuffer, 0, bufferOffset).ConfigureAwait(false);
@@ -187,27 +296,35 @@ namespace Akka.Remote.Transport.Streaming
 
                 // Copy the length
                 int payloadLength = payload.Length;
-                byte[] lengthBuffer = BitConverter.GetBytes(payloadLength);
-                Buffer.BlockCopy(lengthBuffer, 0, writeBuffer, bufferOffset, sizeof(int));
-                bufferOffset += 4;
 
-                byte[] payloadBuffer = ByteString.Unsafe.GetBuffer(payload);
-                int payloadOffset = 0;
-
-                while (payloadOffset < payloadLength)
+                if (payloadLength > _settings.MaximumFrameSize)
                 {
-                    if (bufferLength == bufferOffset)
+                    //Drop the message
+                    //TODO Log Error
+                }
+                else
+                {
+                    LittleEndian.WriteInt32(payloadLength, writeBuffer, bufferOffset);
+                    bufferOffset += sizeof(int);
+
+                    byte[] payloadBuffer = ByteString.Unsafe.GetBuffer(payload);
+                    int payloadOffset = 0;
+
+                    while (payloadOffset < payloadLength)
                     {
-                        // Flush the buffer
-                        await _stream.WriteAsync(writeBuffer, 0, bufferOffset).ConfigureAwait(false);
-                        bufferOffset = 0;
+                        if (bufferLength == bufferOffset)
+                        {
+                            // Flush the buffer
+                            await _stream.WriteAsync(writeBuffer, 0, bufferOffset).ConfigureAwait(false);
+                            bufferOffset = 0;
+                        }
+
+                        int available = Math.Min(bufferLength - bufferOffset, payloadLength - payloadOffset);
+
+                        Buffer.BlockCopy(payloadBuffer, payloadOffset, writeBuffer, bufferOffset, available);
+                        payloadOffset += available;
+                        bufferOffset += available;
                     }
-
-                    int available = Math.Min(bufferLength - bufferOffset, payloadLength - payloadOffset);
-
-                    Buffer.BlockCopy(payloadBuffer, payloadOffset, writeBuffer, bufferOffset, available);
-                    payloadOffset += available;
-                    bufferOffset += available;
                 }
             }
         }

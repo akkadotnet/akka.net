@@ -7,6 +7,13 @@ using System.Threading.Tasks;
 
 namespace Akka.Remote.Transport.Streaming
 {
+    /// <summary>
+    /// Asynchronous multi-producer/single-consumer queue.
+    /// <remarks>
+    /// This classed is optimized for usage in StreamAssociationHandle, review carefully before reuse.
+    /// </remarks>
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
     internal sealed class AsyncQueue<T> : IDisposable
     {
         internal interface IFutureItem : INotifyCompletion
@@ -18,6 +25,9 @@ namespace Akka.Remote.Transport.Streaming
             IFutureItem GetAwaiter();
             void GetResult();
         }
+
+        //TODO Try the ValueTask trick
+        //https://github.com/dotnet/corefx/blob/master/src/System.Threading.Tasks.Extensions/src/System/Threading/Tasks/ValueTask.cs
 
         internal class FutureItem : IFutureItem
         {
@@ -120,6 +130,10 @@ namespace Akka.Remote.Transport.Streaming
             _queue = new Queue<T>();
         }
 
+        /// <summary>
+        /// Add an item to the queue. Can be called concurrently.
+        /// </summary>
+        /// <returns>True if the item was enqueued, otherwise False.</returns>
         public bool Enqueue(T item)
         {
             FutureItem completedWaiter = null;
@@ -145,14 +159,18 @@ namespace Akka.Remote.Transport.Streaming
             return true;
         }
 
-        public IFutureItem Dequeue()
+        /// <summary>
+        /// Dequeue an item from the queue. The queue is single consumer, DequeueAsync must not be called again until the previous dequeue operation have completed.
+        /// </summary>
+        /// <returns>A future of the dequeued item.</returns>
+        public IFutureItem DequeueAsync()
         {
             FutureItem futureItem = new FutureItem();
 
             lock (_queue)
             {
                 if (_pendingDequeue != null)
-                    throw new InvalidOperationException("Dequeue operation is already in progress. This class is single reader.");
+                    throw new InvalidOperationException("Dequeue operation is already in progress. This queue is single consumer.");
 
                 if (_isDisposed)
                 {

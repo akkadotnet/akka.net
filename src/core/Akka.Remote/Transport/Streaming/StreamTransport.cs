@@ -20,6 +20,10 @@ namespace Akka.Remote.Transport.Streaming
 
         public TimeSpan FlushWaitTimeout { get; }
 
+        public int ChunkedReadThreshold { get; }
+
+        public int FrameSizeHardLimit { get; }
+
         public StreamTransportSettings(Config config)
         {
             Config = config;
@@ -28,6 +32,8 @@ namespace Akka.Remote.Transport.Streaming
             StreamReadBufferSize = GetByteSize(config, "stream-read-buffer-size");
             MaximumFrameSize = GetByteSize(config, "maximum-frame-size", 32000);
             FlushWaitTimeout = config.GetTimeSpan("flush-wait-on-shutdown");
+            ChunkedReadThreshold = GetByteSize(config, "chunked-read-threshold");
+            FrameSizeHardLimit = GetByteSize(config, "frame-size-hard-limit", 32000);
         }
 
         protected static int GetByteSize(Config config, string path, int minValue = 0, int maxValue = int.MaxValue)
