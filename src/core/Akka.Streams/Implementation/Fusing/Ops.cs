@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Configuration;
 using System.Linq;
 using System.Threading.Tasks;
@@ -524,36 +525,43 @@ namespace Akka.Streams.Implementation.Fusing
     {
         private readonly int _count;
         private readonly int _step;
-        private List<T> _buffer;
+        private IImmutableList<T> _buffer;
 
         public Sliding(int count, int step)
         {
             _count = count;
             _step = step;
-            _buffer = new List<T>();
+            _buffer = ImmutableList<T>.Empty;
         }
 
         public override ISyncDirective OnPush(T element, IContext<IEnumerable<T>> context)
         {
-            _buffer.Add(element);
-            if (_buffer.Count < _count) return context.Pull();
-            if (_buffer.Count == _count) return context.Push(_buffer);
+            _buffer = _buffer.Add(element);
+
+            if (_buffer.Count < _count)
+                return context.Pull();
+            if (_buffer.Count == _count)
+                return context.Push(_buffer);
             if (_step > _count)
             {
-                if (_buffer.Count == _step) _buffer = new List<T>();
+                if (_buffer.Count == _step)
+                    _buffer = ImmutableList<T>.Empty;
                 return context.Pull();
             }
-            else
-            {
-                _buffer = _buffer.Skip(_step).ToList();
-                return _buffer.Count == _count ? (ISyncDirective) context.Push(_buffer) : context.Pull();
-            }
+
+            _buffer = _buffer.Skip(_step).ToImmutableList();
+            return _buffer.Count == _count
+                ? (ISyncDirective) context.Push(_buffer)
+                : context.Pull();
         }
 
         public override ISyncDirective OnPull(IContext<IEnumerable<T>> context)
         {
-            if (!context.IsFinishing) return context.Pull();
-            if (_buffer.Count >= _count) return context.Finish();
+            if (!context.IsFinishing)
+                return context.Pull();
+            if (_buffer.Count >= _count)
+                return context.Finish();
+
             return context.PushAndFinish(_buffer);
         }
 
