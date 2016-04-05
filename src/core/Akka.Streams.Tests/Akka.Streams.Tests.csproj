@@ -99,6 +99,7 @@
     <Compile Include="Dsl\FlowRecoverWithSpec.cs" />
     <Compile Include="Dsl\FlowReduceSpec.cs" />
     <Compile Include="Dsl\FlowScanSpec.cs" />
+    <Compile Include="Dsl\FlowSectionSpec.cs" />
     <Compile Include="Dsl\FlowSpec.cs" />
     <Compile Include="Dsl\QueueSourceSpec.cs" />
     <Compile Include="Actor\ActorPublisherSpec.cs" />
