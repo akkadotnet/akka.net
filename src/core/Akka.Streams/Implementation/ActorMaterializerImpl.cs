@@ -463,7 +463,7 @@ namespace Akka.Streams.Implementation
         {
             var p = new ActorProcessor<TIn,TOut>(impl);
             // Resolve cyclic dependency with actor. This MUST be the first message no matter what.
-            impl.Tell(new ExposedPublisher<TOut>(p));
+            impl.Tell(new ExposedPublisher(p));
             return p;
         }
     }

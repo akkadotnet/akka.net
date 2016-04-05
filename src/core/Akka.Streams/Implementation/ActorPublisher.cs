@@ -17,12 +17,12 @@ namespace Akka.Streams.Implementation
     }
 
     [Serializable]
-    public sealed class RequestMore<T>
+    public sealed class RequestMore
     {
-        public readonly ActorSubscription<T> Subscription;
+        public readonly IActorSubscription Subscription;
         public readonly long Demand;
 
-        public RequestMore(ActorSubscription<T> subscription, long demand)
+        public RequestMore(IActorSubscription subscription, long demand)
         {
             Subscription = subscription;
             Demand = demand;
@@ -30,22 +30,22 @@ namespace Akka.Streams.Implementation
     }
 
     [Serializable]
-    public sealed class Cancel<T>
+    public sealed class Cancel
     {
-        public readonly ActorSubscription<T> Subscription;
+        public readonly IActorSubscription Subscription;
 
-        public Cancel(ActorSubscription<T> subscription)
+        public Cancel(IActorSubscription subscription)
         {
             Subscription = subscription;
         }
     }
 
     [Serializable]
-    public sealed class ExposedPublisher<T>
+    public sealed class ExposedPublisher
     {
-        public readonly ActorPublisher<T> Publisher;
+        public readonly IActorPublisher Publisher;
 
-        public ExposedPublisher(ActorPublisher<T> publisher)
+        public ExposedPublisher(IActorPublisher publisher)
         {
             Publisher = publisher;
         }
@@ -122,8 +122,8 @@ namespace Akka.Streams.Implementation
 
         public IEnumerable<ISubscriber<TOut>> TakePendingSubscribers()
         {
-            var pending = _pendingSubscribers.GetAndSet(null);
-            return (pending != null) ? (IEnumerable<ISubscriber<TOut>>)pending : new ISubscriber<TOut>[0];
+            var pending = _pendingSubscribers.GetAndSet(ImmutableList<ISubscriber<TOut>>.Empty);
+            return pending ?? ImmutableList<ISubscriber<TOut>>.Empty;
         }
 
         public void Shutdown(Exception reason)
@@ -165,7 +165,11 @@ namespace Akka.Streams.Implementation
         }
     }
 
-    public class ActorSubscription<TIn> : ISubscription
+    public interface IActorSubscription : ISubscription
+    {
+    }
+
+    public class ActorSubscription<TIn> : IActorSubscription
     {
         public readonly IActorRef Implementor;
         public readonly ISubscriber<TIn> Subscriber;
@@ -178,12 +182,12 @@ namespace Akka.Streams.Implementation
 
         public void Request(long n)
         {
-            Implementor.Tell(new RequestMore<TIn>(this, n));
+            Implementor.Tell(new RequestMore(this, n));
         }
 
         public void Cancel()
         {
-            Implementor.Tell(new Cancel<TIn>(this));
+            Implementor.Tell(new Cancel(this));
         }
     }
 

@@ -95,6 +95,11 @@ namespace Akka.Streams.Implementation
             materializer = processor;
             return processor;
         }
+
+        public override string ToString()
+        {
+            return "PublisherSink";
+        }
     }
 
     /// <summary>

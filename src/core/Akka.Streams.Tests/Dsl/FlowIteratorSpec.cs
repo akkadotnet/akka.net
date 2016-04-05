@@ -169,19 +169,50 @@ namespace Akka.Streams.Tests.Dsl
                 c.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
             }, Materializer);
         }
+
+        [Fact]
+        public void A_Flow_based_on_an_iterable_must_produce_elements_with_multiple_subscribers()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var p = CreateSource(3).RunWith(Sink.AsPublisher<int>(true), Materializer);
+                var c1 = TestSubscriber.CreateManualProbe<int>(this);
+                var c2 = TestSubscriber.CreateManualProbe<int>(this);
+                
+                p.Subscribe(c1);
+                p.Subscribe(c2);
+                var sub1 = c1.ExpectSubscription();
+                var sub2 = c2.ExpectSubscription();
+                sub1.Request(1);
+                sub2.Request(2);
+                c1.ExpectNext(1);
+                c2.ExpectNext(1);
+                c2.ExpectNext(2);
+                c1.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                c2.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                sub1.Request(2);
+                sub2.Request(2);
+                c1.ExpectNext(2);
+                c1.ExpectNext(3);
+                c2.ExpectNext(3);
+                c1.ExpectComplete();
+                c2.ExpectComplete();
+            }, Materializer);
+        }
+
         [Fact]
         public void A_Flow_based_on_an_iterable_must_produce_elements_to_later_subscriber()
         {
             this.AssertAllStagesStopped(() =>
             {
-                var p = CreateSource(3).RunWith(Sink.AsPublisher<int>(false), Materializer);
+                var p = CreateSource(3).RunWith(Sink.AsPublisher<int>(true), Materializer);
                 var c1 = TestSubscriber.CreateManualProbe<int>(this);
                 var c2 = TestSubscriber.CreateManualProbe<int>(this);
                 
                 p.Subscribe(c1);
                 var sub1 = c1.ExpectSubscription();
                 sub1.Request(1);
-                c1.ExpectNext(1);
+                c1.ExpectNext(1, TimeSpan.FromSeconds(60));
                 c1.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
                 p.Subscribe(c2);
@@ -195,6 +226,27 @@ namespace Akka.Streams.Tests.Dsl
                 sub1.Request(3);
                 c1.ExpectNext(2)
                     .ExpectNext(3)
+                    .ExpectComplete();
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_Flow_based_on_an_iterable_must_produce_elements_with_one_transformation_step()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var p = CreateSource(4)
+                    .Map(x => x*2)
+                    .RunWith(Sink.AsPublisher<int>(false), Materializer);
+                var c = TestSubscriber.CreateManualProbe<int>(this);
+
+                p.Subscribe(c);
+                var sub = c.ExpectSubscription();
+
+                sub.Request(10);
+                c.ExpectNext(2)
+                    .ExpectNext(4)
+                    .ExpectNext(6)
                     .ExpectComplete();
             }, Materializer);
         }

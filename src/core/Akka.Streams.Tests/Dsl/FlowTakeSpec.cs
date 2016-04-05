@@ -24,7 +24,7 @@ namespace Akka.Streams.Tests.Dsl
             var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 16);
             Materializer = ActorMaterializer.Create(Sys, settings);
 
-            MuteDeadLetters(typeof(OnNext), typeof(OnComplete), typeof(RequestMore<>));
+            MuteDeadLetters(typeof(OnNext), typeof(OnComplete), typeof(RequestMore));
         }
 
         [Fact]

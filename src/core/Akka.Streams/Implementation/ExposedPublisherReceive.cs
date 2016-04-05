@@ -5,7 +5,7 @@ using Akka.Actor;
 
 namespace Akka.Streams.Implementation
 {
-    public abstract class ExposedPublisherReceive<T>
+    public abstract class ExposedPublisherReceive
     {
         public readonly Receive ActiveReceive;
         public readonly Action<object> Unhandled;
@@ -18,12 +18,12 @@ namespace Akka.Streams.Implementation
             Unhandled = unhandled;
         }
 
-        public abstract void ReceiveExposedPublisher(ExposedPublisher<T> publisher);
+        public abstract void ReceiveExposedPublisher(ExposedPublisher publisher);
 
         public bool Apply(object message)
         {
-            ExposedPublisher<T> publisher;
-            if ((publisher = message as ExposedPublisher<T>) != null)
+            ExposedPublisher publisher;
+            if ((publisher = message as ExposedPublisher) != null)
             {
                 ReceiveExposedPublisher(publisher);
                 if (_stash.Any())

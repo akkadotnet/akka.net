@@ -14,7 +14,7 @@ namespace Akka.Streams.Implementation
         {
             var p = new ActorProcessor<TIn, TOut>(impl);
             // Resolve cyclic dependency with actor. This MUST be the first message no matter what.
-            impl.Tell(new ExposedPublisher<TOut>(p));
+            impl.Tell(new ExposedPublisher(p));
             return p;
         }
     }
@@ -304,22 +304,22 @@ namespace Akka.Streams.Implementation
 
         protected bool WaitingExposedPublisher(object message)
         {
-            if (message is ExposedPublisher<TOut>)
+            if (message is ExposedPublisher)
             {
-                ExposedPublisher = ((ExposedPublisher<TOut>)message).Publisher;
+                ExposedPublisher = (ActorPublisher<TOut>) ((ExposedPublisher)message).Publisher;
                 SubReceive.Become(DownstreamRunning);
                 return true;
             }
             throw new IllegalStateException(
-                $"The first message must be [{typeof (ExposedPublisher<TOut>)}] but was [{message}]");
+                $"The first message must be [{typeof (ExposedPublisher)}] but was [{message}]");
         }
 
         protected bool DownstreamRunning(object message)
         {
             if (message is SubscribePending) SubscribePending(ExposedPublisher.TakePendingSubscribers());
-            else if (message is RequestMore<TOut>)
+            else if (message is RequestMore)
             {
-                var requestMore = (RequestMore<TOut>)message;
+                var requestMore = (RequestMore)message;
                 if (requestMore.Demand < 1)
                     Error(ReactiveStreamsCompliance.NumberOfElementsInRequestMustBePositiveException);
                 else
@@ -359,7 +359,7 @@ namespace Akka.Streams.Implementation
             }
         }
 
-        private sealed class InternalExposedPublisherReceive : ExposedPublisherReceive<T>
+        private sealed class InternalExposedPublisherReceive : ExposedPublisherReceive
         {
             private readonly ActorProcessorImpl<T> _self;
             public InternalExposedPublisherReceive(Receive activeReceive, Action<object> unhandled, ActorProcessorImpl<T> self) : base(activeReceive, unhandled)
@@ -367,7 +367,7 @@ namespace Akka.Streams.Implementation
                 _self = self;
             }
 
-            public override void ReceiveExposedPublisher(ExposedPublisher<T> publisher)
+            public override void ReceiveExposedPublisher(ExposedPublisher publisher)
             {
                 _self.PrimaryOutputs.SubReceive.CurrentReceive(publisher);
                 Context.Become(ActiveReceive);
@@ -400,7 +400,7 @@ namespace Akka.Streams.Implementation
         public Action CurrentAction { get; set; }
         public bool IsPumpFinished => this.IsPumpFinished();
 
-        private readonly ExposedPublisherReceive<T> _receive;
+        private readonly ExposedPublisherReceive _receive;
         /**
          * Subclass may override [[#activeReceive]]
          */
