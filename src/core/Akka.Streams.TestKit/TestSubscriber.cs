@@ -68,12 +68,12 @@ namespace Akka.Streams.TestKit
 
             public void OnSubscribe(ISubscription subscription)
             {
-                _probe.Ref.Tell(new TestSubscriber.OnSubscribe(subscription));
+                _probe.Ref.Tell(new OnSubscribe(subscription));
             }
 
             public void OnError(Exception cause)
             {
-                _probe.Ref.Tell(new TestSubscriber.OnError(cause));
+                _probe.Ref.Tell(new OnError(cause));
             }
 
             public void OnComplete()
