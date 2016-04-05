@@ -22,7 +22,7 @@ namespace Akka.Streams.Implementation
             private readonly ActorMaterializerImpl _materializer;
             private readonly Func<GraphInterpreterShell, IActorRef> _subflowFuser;
             private readonly string _flowName;
-            private int _nextId = 0;
+            private int _nextId;
 
             public ActorMaterializerSession(ActorMaterializerImpl materializer, IModule topLevel, Attributes initialAttributes, Func<GraphInterpreterShell, IActorRef> subflowFuser)
                 : base(topLevel, initialAttributes)
@@ -191,15 +191,10 @@ namespace Akka.Streams.Implementation
             return _flowNames.Next();
         }
 
-        private Attributes InitialAttributes
-        {
-            get
-            {
-                return Attributes.CreateInputBuffer(_settings.InitialInputBufferSize, _settings.MaxInputBufferSize)
-                    .And(ActorAttributes.CreateDispatcher(_settings.Dispatcher))
-                    .And(ActorAttributes.CreateSupervisionStrategy(_settings.SupervisionDecider));
-            }
-        }
+        private Attributes InitialAttributes =>
+            Attributes.CreateInputBuffer(_settings.InitialInputBufferSize, _settings.MaxInputBufferSize)
+                .And(ActorAttributes.CreateDispatcher(_settings.Dispatcher))
+                .And(ActorAttributes.CreateSupervisionStrategy(_settings.SupervisionDecider));
 
         public override ActorMaterializerSettings EffectiveSettings(Attributes attributes)
         {
@@ -467,6 +462,7 @@ namespace Akka.Streams.Implementation
         public static ActorProcessor<TIn, TOut> Create<TIn, TOut>(IActorRef impl)
         {
             var p = new ActorProcessor<TIn,TOut>(impl);
+            // Resolve cyclic dependency with actor. This MUST be the first message no matter what.
             impl.Tell(new ExposedPublisher<TOut>(p));
             return p;
         }

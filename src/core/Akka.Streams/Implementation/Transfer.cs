@@ -4,7 +4,7 @@ using Akka.Pattern;
 
 namespace Akka.Streams.Implementation
 {
-    internal struct SubReceive
+    internal class SubReceive
     {
         private Receive _currentReceive;
 
@@ -13,7 +13,7 @@ namespace Akka.Streams.Implementation
             _currentReceive = initial;
         }
 
-        public Receive CurrentReceive { get { return _currentReceive; } }
+        public Receive CurrentReceive => _currentReceive;
 
         public void Become(Receive receive)
         {

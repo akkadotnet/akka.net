@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Reactive.Streams;
 using Akka.Actor;
@@ -63,9 +62,9 @@ namespace Akka.Streams.Implementation
         private readonly object[] _inputBuffer;
         private readonly int _indexMask;
         private ISubscription _upstream;
-        private int _inputBufferElements = 0;
-        private int _nextInputElementCursor = 0;
-        private bool _isUpstreamCompleted = false;
+        private int _inputBufferElements;
+        private int _nextInputElementCursor;
+        private bool _isUpstreamCompleted;
         private int _batchRemaining;
 
         protected BatchingInputBuffer(int count, IPump pump)
@@ -80,21 +79,21 @@ namespace Akka.Streams.Implementation
             _indexMask = count - 1;
             _inputBuffer = new object[count];
             _batchRemaining = RequestBatchSize;
-            _subReceive = new SubReceive(WaitingForUpstream);
+            SubReceive = new SubReceive(WaitingForUpstream);
 
-            _needsInput = DefaultInputTransferStates.NeedsInput(this);
-            _needsInputOrComplete = DefaultInputTransferStates.NeedsInputOrComplete(this);
+            NeedsInput = DefaultInputTransferStates.NeedsInput(this);
+            NeedsInputOrComplete = DefaultInputTransferStates.NeedsInputOrComplete(this);
         }
 
-        private int RequestBatchSize { get { return Math.Max(1, _inputBuffer.Length / 2); } }
+        private int RequestBatchSize => Math.Max(1, _inputBuffer.Length / 2);
 
         public override string ToString()
         {
-            return string.Format("BatchingInputBuffer(Count={0}, elems={1}, completed={2}, remaining={3})", Count, _inputBufferElements, _isUpstreamCompleted, _batchRemaining);
+            return
+                $"BatchingInputBuffer(Count={Count}, elems={_inputBufferElements}, completed={_isUpstreamCompleted}, remaining={_batchRemaining})";
         }
 
-        private readonly SubReceive _subReceive;
-        public virtual SubReceive SubReceive { get { return _subReceive; } }
+        public virtual SubReceive SubReceive { get; }
 
         public virtual object DequeueInputElement()
         {
@@ -142,16 +141,14 @@ namespace Akka.Streams.Implementation
             _inputBufferElements = 0;
         }
 
-        private readonly TransferState _needsInput;
-        public TransferState NeedsInput { get { return _needsInput; } }
+        public TransferState NeedsInput { get; }
 
-        private readonly TransferState _needsInputOrComplete;
-        public TransferState NeedsInputOrComplete { get { return _needsInputOrComplete; } }
+        public TransferState NeedsInputOrComplete { get; }
 
-        public bool IsClosed { get { return _isUpstreamCompleted; } }
-        public bool IsOpen { get { return !IsClosed; } }
-        public bool AreInputsDepleted { get { return _isUpstreamCompleted && _inputBufferElements == 0; } }
-        public bool AreInputsAvailable { get { return _inputBufferElements > 0; } }
+        public bool IsClosed => _isUpstreamCompleted;
+        public bool IsOpen => !IsClosed;
+        public bool AreInputsDepleted => _isUpstreamCompleted && _inputBufferElements == 0;
+        public bool AreInputsAvailable => _inputBufferElements > 0;
 
         protected virtual void OnComplete()
         {
@@ -206,7 +203,7 @@ namespace Akka.Streams.Implementation
         {
             if (message is OnSubscribe)
                 throw new IllegalStateException("OnSubscribe called after OnError or OnComplete");
-            else return false;
+            return false;
         }
 
         protected virtual void InputOnError(Exception e)
@@ -222,28 +219,26 @@ namespace Akka.Streams.Implementation
 
         protected ActorPublisher<TOut> ExposedPublisher;
         protected ISubscriber<TOut> Subscriber;
-        protected long DownstreamDemand = 0L;
-        protected bool IsDownstreamCompleted = false;
-
-        private readonly SubReceive _subReceive;
+        protected long DownstreamDemand;
+        protected bool IsDownstreamCompleted;
 
         public SimpleOutputs(IActorRef actor, IPump pump)
         {
             Actor = actor;
             Pump = pump;
 
-            _subReceive = new SubReceive(WaitingExposedPublisher);
+            SubReceive = new SubReceive(WaitingExposedPublisher);
             NeedsDemand = DefaultOutputTransferStates.NeedsDemand(this);
             NeedsDemandOrCancel = DefaultOutputTransferStates.NeedsDemandOrCancel(this);
         }
 
-        public bool IsSubscribed { get { return Subscriber != null; } }
+        public bool IsSubscribed => Subscriber != null;
 
-        public virtual SubReceive SubReceive { get { return _subReceive; } }
+        public virtual SubReceive SubReceive { get; }
         public TransferState NeedsDemand { get; }
         public TransferState NeedsDemandOrCancel { get; }
-        public long DemandCount { get { return DownstreamDemand; } }
-        public bool IsDemandAvailable { get { return DownstreamDemand > 0; } }
+        public long DemandCount => DownstreamDemand;
+        public bool IsDemandAvailable => DownstreamDemand > 0;
 
         public void EnqueueOutputElement(TOut element)
         {
@@ -286,8 +281,8 @@ namespace Akka.Streams.Implementation
             }
         }
 
-        public bool IsClosed { get { return IsDownstreamCompleted && !ReferenceEquals(Subscriber, null); } }
-        public bool IsOpen { get { return !IsClosed; } }
+        public bool IsClosed => IsDownstreamCompleted && !ReferenceEquals(Subscriber, null);
+        public bool IsOpen => !IsClosed;
 
         protected ISubscription CreateSubscription()
         {
@@ -315,7 +310,8 @@ namespace Akka.Streams.Implementation
                 SubReceive.Become(DownstreamRunning);
                 return true;
             }
-            else throw new IllegalStateException(string.Format("The first message must be [{0}] but was [{1}]", typeof(ExposedPublisher<TOut>), message));
+            throw new IllegalStateException(
+                $"The first message must be [{typeof (ExposedPublisher<TOut>)}] but was [{message}]");
         }
 
         protected bool DownstreamRunning(object message)

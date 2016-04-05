@@ -71,13 +71,10 @@ namespace Akka.Streams.Implementation
     /// </summary>
     internal class PublisherSink<TIn> : SinkModule<TIn, IPublisher<TIn>>
     {
-        private readonly SinkShape<TIn> _shape;
-
         public PublisherSink(Attributes attributes, SinkShape<TIn> shape)
             : base(shape)
         {
             Attributes = attributes;
-            _shape = shape;
         }
 
         public override Attributes Attributes { get; }
@@ -105,14 +102,12 @@ namespace Akka.Streams.Implementation
     /// </summary>
     internal sealed class FanoutPublisherSink<TIn> : SinkModule<TIn, IPublisher<TIn>>
     {
-        private readonly Attributes _attributes;
-
         public FanoutPublisherSink(Attributes attributes, SinkShape<TIn> shape) : base(shape)
         {
-            _attributes = attributes;
+            Attributes = attributes;
         }
 
-        public override Attributes Attributes => _attributes;
+        public override Attributes Attributes { get; }
 
         public override IModule WithAttributes(Attributes attributes)
             => new FanoutPublisherSink<TIn>(attributes, AmendShape(attributes));
@@ -152,7 +147,6 @@ namespace Akka.Streams.Implementation
 
         public override ISubscriber<TIn> Create(MaterializationContext context, out Task materializer)
         {
-            var effectiveSettings = ActorMaterializer.Downcast(context.Materializer).EffectiveSettings(context.EffectiveAttributes);
             var p = new TaskCompletionSource<Unit>();
             materializer = p.Task;
             return new SinkholeSubscriber<TIn>(p);
