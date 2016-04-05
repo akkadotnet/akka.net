@@ -28,7 +28,7 @@ namespace Akka.Streams.Tests.Dsl
             var task =
                 Source.From(Enumerable.Range(1, 10))
                     .Delay(TimeSpan.FromSeconds(1))
-                    .Grouped(1000)
+                    .Grouped(100)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
             task.Wait(TimeSpan.FromMilliseconds(1200)).Should().BeTrue();
             task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
@@ -164,7 +164,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var actualError = Source.From(Enumerable.Range(1, 3))
+                var actualError = Source.From(Enumerable.Range(1, 20))
                                 .Delay(TimeSpan.FromMilliseconds(300), DelayOverflowStrategy.Fail)
                                 .WithAttributes(Attributes.CreateInputBuffer(16, 16))
                                 .RunWith(this.SinkProbe<int>(), Materializer)
@@ -172,7 +172,7 @@ namespace Akka.Streams.Tests.Dsl
                                 .ExpectError();
 
                 actualError.Should().BeOfType<BufferOverflowException>();
-                actualError.Message.Should().Be("Buffer overflow for delay combinator (max capacity was: 16)!");
+                actualError.Message.Should().Be("Buffer overflow for Delay combinator (max capacity was: 16)!");
             }, Materializer);
         }
 

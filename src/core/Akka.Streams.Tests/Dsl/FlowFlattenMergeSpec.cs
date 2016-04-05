@@ -28,7 +28,7 @@ namespace Akka.Streams.Tests.Dsl
 
         private Source<int, Unit> Blocked => Source.FromTask(new TaskCompletionSource<int>().Task);
 
-        private Sink<int, Task<IEnumerable<int>>> ToSeq()
+        private Sink<int, Task<IEnumerable<int>>> ToSeq
             => Flow.Create<int>().Grouped(1000).ToMaterialized(Sink.First<IEnumerable<int>>(), Keep.Right);
 
         private Sink<int, Task<ImmutableHashSet<int>>> ToSet =>
@@ -50,7 +50,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_FlattenMerge_must_not_be_held_back_by_one_slow_stream()
         {
-            var task = Source.From(new[] { Src10(0), Src10(10), Src10(20), Src10(30) })
+            var task = Source.From(new[] { Src10(0), Src10(10), Blocked, Src10(20), Src10(30) })
                 .FlatMapMerge(3, s => s)
                 .Take(40)
                 .RunWith(ToSet, Materializer);
@@ -64,7 +64,7 @@ namespace Akka.Streams.Tests.Dsl
             var task = Source.From(new[] { Src10(0), Src10(10), Src10(20), Blocked, Blocked, Src10(30) })
                 .FlatMapMerge(3, s => s)
                 .Take(40)
-                .RunWith(ToSeq(), Materializer);
+                .RunWith(ToSeq, Materializer);
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
 
             task.Result.Take(30).ShouldAllBeEquivalentTo(Enumerable.Range(0, 30));
@@ -140,7 +140,7 @@ namespace Akka.Streams.Tests.Dsl
             p2.ExpectRequest();
             p.SetException(ex);
             p1.ExpectCancellation();
-            p1.ExpectCancellation();
+            p2.ExpectCancellation();
         }
 
         [Fact]
@@ -161,7 +161,7 @@ namespace Akka.Streams.Tests.Dsl
             p2.ExpectRequest();
             p.SetException(ex);
             p1.ExpectCancellation();
-            p1.ExpectCancellation();
+            p2.ExpectCancellation();
         }
 
         [Fact]
@@ -201,26 +201,23 @@ namespace Akka.Streams.Tests.Dsl
             p2.ExpectRequest();
             sink.Cancel();
             p1.ExpectCancellation();
-            p1.ExpectCancellation();
+            p2.ExpectCancellation();
         }
 
         [Fact]
         public void A_FlattenMerge_must_work_with_many_concurrently_queued_events()
         {
-            var p = Source.From(Enumerable.Range(0, 100))
-                .Map(i => Src10(10*i))
+            const int noOfSources = 100;
+            var p = Source.From(Enumerable.Range(0, noOfSources).Select(i => Src10(10*i)))
                 .FlatMapMerge(int.MaxValue, x => x)
                 .RunWith(this.SinkProbe<int>(), Materializer);
-            p.Within(TimeSpan.FromSeconds(1), () =>
-            {
-                p.EnsureSubscription();
-                p.ExpectNoMsg();
-                return Unit.Instance;
-            });
-            var elems = p.Within(TimeSpan.FromSeconds(1),
-                () => Enumerable.Range(1, 1000).Select(_ => p.RequestNext()));
+
+            p.EnsureSubscription();
+            p.ExpectNoMsg(TimeSpan.FromSeconds(1));
+
+            var elems = p.Within(TimeSpan.FromSeconds(1), () => Enumerable.Range(1, noOfSources * 10).Select(_ => p.RequestNext()).ToArray());
             p.ExpectComplete();
-            elems.ShouldAllBeEquivalentTo(Enumerable.Range(0, 1000));
+            elems.ShouldAllBeEquivalentTo(Enumerable.Range(0, noOfSources * 10));
         }
     }
 }

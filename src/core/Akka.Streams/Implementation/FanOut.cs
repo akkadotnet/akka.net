@@ -389,6 +389,7 @@ namespace Akka.Streams.Implementation
             _settings = settings;
             OutputBunch = new OutputBunch<T>(outputCount, Self, this);
             PrimaryInputs = new AnonymousBatchingInputBuffer(settings.MaxInputBufferSize, this);
+            this.Init();
         }
 
         #region Actor implementation
@@ -432,7 +433,7 @@ namespace Akka.Streams.Implementation
 
         public Action CurrentAction { get; set; }
 
-        public bool IsPumpFinished => TransferState.IsCompleted;
+        public bool IsPumpFinished => this.IsPumpFinished();
 
         public void InitialPhase(int waitForUpstream, TransferPhase andThen)
             => Pumps.InitialPhase(this, waitForUpstream, andThen);

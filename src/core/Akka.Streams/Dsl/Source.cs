@@ -66,7 +66,7 @@ namespace Akka.Streams.Dsl
         public Source<TOut, TMat3> ConcatMaterialized<TMat2, TMat3>(IGraph<SourceShape<TOut>, TMat2> that,
             Func<TMat, TMat2, TMat3> materializedFunction)
         {
-            return ViaMaterialized(InternalFlowOperations.ConcatGraph<TOut, TOut, TMat2>(that), materializedFunction);
+            return ViaMaterialized(InternalFlowOperations.ConcatGraph(that), materializedFunction);
         }
 
         IGraph<SourceShape<TOut>, TMat> IGraph<SourceShape<TOut>, TMat>.WithAttributes(Attributes attributes)
@@ -262,7 +262,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Source<T, Unit> FromTask<T>(Task<T> task)
         {
-            return Single(task).MapAsyncUnordered(1, x => x).WithAttributes(DefaultAttributes.TaskSource);
+            return FromGraph(new TaskSource<T>(task));
         }
 
         /// <summary>

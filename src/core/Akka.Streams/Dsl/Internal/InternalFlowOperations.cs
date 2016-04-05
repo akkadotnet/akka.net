@@ -256,7 +256,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<TOut, TMat> Collect<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> collector)
         {
-            return flow.AndThen<TOut, TIn, TMat>(new Collect<TIn, TOut>(collector));
+            return flow.AndThen(new Collect<TIn, TOut>(collector));
         }
 
         /// <summary>
@@ -512,10 +512,7 @@ namespace Akka.Streams.Dsl.Internal
         public static IFlow<T, TMat> Delay<T, TMat>(this IFlow<T, TMat> flow, TimeSpan of,
             DelayOverflowStrategy? strategy = null)
         {
-            return
-                flow.Via(
-                    new Fusing.Delay<T>(of, strategy ?? DelayOverflowStrategy.DropTail).WithAttributes(
-                        Attributes.CreateName("delay")));
+            return flow.Via(new Fusing.Delay<T>(of, strategy ?? DelayOverflowStrategy.DropTail));
         }
 
         /// <summary>
@@ -1456,10 +1453,22 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<TOut, TMat> Concat<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
-            IGraph<SourceShape<TOut>, TMat> other) where TIn : TOut
+        public static IFlow<T, TMat> Concat<T, TMat>(this IFlow<T, TMat> flow,
+            IGraph<SourceShape<T>, TMat> other)
         {
-            return flow.Via(ConcatGraph<TIn, TOut, TMat>(other));
+            return flow.Via(ConcatGraph<T, TMat>(other));
+        }
+
+        internal static IGraph<FlowShape<T, T>, TMat> ConcatGraph<T, TMat>(
+            IGraph<SourceShape<T>, TMat> other)
+        {
+            return GraphDsl.Create(other, (builder, shape) =>
+            {
+                var merge = builder.Add(Dsl.Concat.Create<T>());
+                var r = builder.From(shape);
+                r.To(merge.In(1));
+                return new FlowShape<T, T>(merge.In(0), merge.Out);
+            });
         }
 
         /// <summary>
@@ -1510,18 +1519,6 @@ namespace Akka.Streams.Dsl.Internal
             Func<TMat, Task<Unit>, TMat2> materializerFunction)
         {
             return flow.ViaMaterialized(Fusing.GraphStages.TerminationWatcher<T>(), materializerFunction);
-        }
-
-        internal static IGraph<FlowShape<TIn, TOut>, TMat> ConcatGraph<TIn, TOut, TMat>(
-            IGraph<SourceShape<TOut>, TMat> other) where TIn : TOut
-        {
-            return GraphDsl.Create(other, (builder, shape) =>
-            {
-                var merge = builder.Add(new Concat<TIn, TOut>());
-                var r = builder.From(shape);
-                r.To(merge.In(1));
-                return new FlowShape<TIn, TOut>(merge.In(0), merge.Out);
-            });
         }
 
         //TODO: there is no HKT in .NET, so we cannot simply do `to` method, which evaluates to either Source ⇒ IRunnableGraph, or Flow ⇒ Sink

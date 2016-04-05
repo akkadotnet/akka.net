@@ -12,6 +12,7 @@ using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
+using Akka.Streams.Util;
 using Akka.Util;
 using Akka.Util.Internal;
 
@@ -165,7 +166,7 @@ namespace Akka.Streams.Stage
             TimerMessages.Timer timer;
             if (_keyToTimers.TryGetValue(scheduled.TimerKey, out timer) && timer.Id == id)
             {
-                if (!scheduled.IsReapeating)
+                if (!scheduled.IsRepeating)
                     _keyToTimers.Remove(scheduled.TimerKey);
                 OnTimer(scheduled.TimerKey);
             }
@@ -188,9 +189,9 @@ namespace Akka.Streams.Stage
             var id = _timerIdGen.IncrementAndGet();
             var task = Interpreter.Materializer.ScheduleRepeatedly(initialDelay, interval, () =>
             {
-                TimerAsyncCallback(new TimerMessages.Scheduled(timerKey, id, isReapeating: true));
+                TimerAsyncCallback(new TimerMessages.Scheduled(timerKey, id, isRepeating: true));
             });
-            _keyToTimers.Add(timerKey, new TimerMessages.Timer(id, task));
+            _keyToTimers[timerKey] = new TimerMessages.Timer(id, task);
         }
 
         /// <summary>
@@ -215,9 +216,9 @@ namespace Akka.Streams.Stage
             var id = _timerIdGen.IncrementAndGet();
             var task = Interpreter.Materializer.ScheduleOnce(delay, () =>
             {
-                TimerAsyncCallback(new TimerMessages.Scheduled(timerKey, id, isReapeating: true));
+                TimerAsyncCallback(new TimerMessages.Scheduled(timerKey, id, isRepeating: false));
             });
-            _keyToTimers.Add(timerKey, new TimerMessages.Timer(id, task));
+            _keyToTimers[timerKey] = new TimerMessages.Timer(id, task);
         }
 
         /// <summary>
@@ -261,16 +262,16 @@ namespace Akka.Streams.Stage
         {
             public readonly object TimerKey;
             public readonly int TimerId;
-            public readonly bool IsReapeating;
+            public readonly bool IsRepeating;
 
-            public Scheduled(object timerKey, int timerId, bool isReapeating)
+            public Scheduled(object timerKey, int timerId, bool isRepeating)
             {
                 if (timerKey == null)
                     throw new ArgumentNullException("timerKey", "Timer key cannot be null");
 
                 TimerKey = timerKey;
                 TimerId = timerId;
-                IsReapeating = isReapeating;
+                IsRepeating = isRepeating;
             }
         }
 
@@ -1307,41 +1308,46 @@ namespace Akka.Streams.Stage
         {
             private readonly string _name;
             private InHandler _handler;
-            private T _elem;
+            private readonly Option<T> _elem;
             private bool _closed;
             private bool _pulled;
             private readonly SubSink<T> _sink;
 
-            public SubSinkInlet(string name)
+            public SubSinkInlet(GraphStageLogic logic, string name)
             {
                 _name = name;
-                _sink = new SubSink<T>(name, msg =>
-                {
-                    if (_closed)
-                        return;
+                _elem = new Option<T>();
+                _sink = new SubSink<T>(name, logic.GetAsyncCallback<IActorSubscriberMessage>(
+                    msg =>
+                    {
+                        if (_closed)
+                            return;
 
-                    msg.Match().With<OnNext>(n =>
-                    {
-                        _elem = (T)n.Element;
-                        _pulled = false;
-                        _handler.OnPush();
-                    }).With<OnComplete>(() =>
-                    {
-                        _closed = true;
-                        _handler.OnUpstreamFinish();
-                    }).With<OnError>(e =>
-                    {
-                        _closed = true;
-                        _handler.OnUpstreamFailure(e.Cause);
-                    });
-                });
+                        if (msg is OnNext)
+                        {
+                            _elem.Value = (T) ((OnNext) msg).Element;
+                            _pulled = false;
+                            _handler.OnPush();
+                        }
+                        else if (msg is OnComplete)
+                        {
+                            _closed = true;
+                            _handler.OnUpstreamFinish();
+                        }
+                        else if (msg is OnError)
+                        {
+                            _closed = true;
+                            _handler.OnUpstreamFailure(((OnError) msg).Cause);
+                        }
+                        ;
+                    }));
             }
 
             public IGraph<SinkShape<T>, Unit> Sink => _sink;
 
             public void SetHandler(InHandler handler) => _handler = handler;
 
-            public bool IsAvailable => _elem != null;
+            public bool IsAvailable => _elem.HasValue;
 
             public bool IsClosed => _closed;
 
@@ -1349,11 +1355,11 @@ namespace Akka.Streams.Stage
 
             public T Grab()
             {
-                if (_elem == null)
+                if (!_elem.HasValue)
                     throw new IllegalStateException($"cannot grab element from port {this} when data have not yet arrived");
 
-                var ret = _elem;
-                _elem = default(T);
+                var ret = _elem.Value;
+                _elem.Reset();
                 return ret;
             }
 
@@ -1375,6 +1381,11 @@ namespace Akka.Streams.Stage
             }
 
             public override string ToString() => $"SubSinkInlet{_name}";
+        }
+
+        protected SubSinkInlet<T> CreateSubSinkInlet<T>(string name)
+        {
+            return new SubSinkInlet<T>(this, name);
         }
 
         /// <summary>
@@ -1402,7 +1413,7 @@ namespace Akka.Streams.Stage
 
                 _source = new SubSource<T>(name, command =>
                 {
-                    if (command == SubSink.Command.RequestOne)
+                    if (command is SubSink.RequestOne)
                     {
                         if (!_closed)
                         {
@@ -1410,7 +1421,7 @@ namespace Akka.Streams.Stage
                             _handler.OnPull();
                         }
                     }
-                    else if (command == SubSink.Command.Cancel)
+                    else if (command is SubSink.Cancel)
                     {
                         if (!_closed)
                         {

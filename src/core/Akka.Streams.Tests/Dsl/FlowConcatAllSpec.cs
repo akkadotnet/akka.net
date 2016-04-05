@@ -27,10 +27,10 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var s1 = Source.From(new[] {1, 2});
-                var s2 = Source.From(new int[] { });
-                var s3 = Source.From(new[] { 3 });
-                var s4 = Source.From(new[] { 4, 5,6 });
-                var s5 = Source.From(new[] { 7,8,9,10 });
+                var s2 = Source.From(new int[] {});
+                var s3 = Source.From(new[] {3});
+                var s4 = Source.From(new[] {4, 5, 6});
+                var s5 = Source.From(new[] {7, 8, 9, 10});
 
                 var main = Source.From(new[] {s1, s2, s3, s4, s5});
 

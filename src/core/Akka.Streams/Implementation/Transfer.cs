@@ -259,6 +259,12 @@ namespace Akka.Streams.Implementation
 
     internal static class Pumps
     {
+        public static void Init(this IPump self)
+        {
+            self.TransferState = NotInitialized.Instance;
+            self.CurrentAction = () => { throw new IllegalStateException("Pump has not been initialized with a phase"); };
+        }
+
         public static readonly TransferPhase CompletedPhase = new TransferPhase(Completed.Instance, () =>
         {
             throw new IllegalStateException("The action of completed phase must never be executed");
@@ -314,6 +320,11 @@ namespace Akka.Streams.Implementation
                 self.TransferState = phase.Precondintion;
                 self.CurrentAction = phase.Action;
             }
+        }
+
+        public static bool IsPumpFinished(this IPump self)
+        {
+            return self.TransferState.IsCompleted;
         }
 
         public static void Pump(this IPump self)

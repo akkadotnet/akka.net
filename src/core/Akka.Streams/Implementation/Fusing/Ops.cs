@@ -1446,18 +1446,18 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region internal classes
 
-        private sealed class DelayGraphStageLogic : TimerGraphStageLogic
+        private sealed class Logic : TimerGraphStageLogic
         {
             private const string TimerName = "DelayedTimer";
             private readonly Delay<T> _stage;
-            private IBuffer<KeyValuePair<DateTime, T>> _buffer; // buffer has pairs timestamp with upstream element
-            private bool _willStop = false;
+            private IBuffer<Tuple<long, T>> _buffer; // buffer has pairs timestamp with upstream element
+            private bool _willStop;
             private readonly int _size;
 
-            public DelayGraphStageLogic(FlowShape<T, T> shape, Attributes inheritedAttributes, Delay<T> stage) : base(shape)
+            public Logic(FlowShape<T, T> shape, Attributes inheritedAttributes, Delay<T> stage) : base(shape)
             {
                 _stage = stage;
-                _size = inheritedAttributes.GetAttribute<Attributes.InputBuffer>(new Attributes.InputBuffer(16, 16)).Max;
+                _size = inheritedAttributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;
 
                 var overflowStrategy = OnPushStrategy(_stage._strategy);
 
@@ -1466,7 +1466,7 @@ namespace Akka.Streams.Implementation.Fusing
                     if (_buffer.IsFull) overflowStrategy();
                     else
                     {
-                        GrabAndPull(_stage._strategy != DelayOverflowStrategy.Backpressure || _buffer.Used < _size - 1);
+                        GrabAndPull(_stage._strategy != DelayOverflowStrategy.Backpressure || _buffer.Capacity < _size - 1);
                         if (!IsTimerActive(TimerName)) ScheduleOnce(TimerName, _stage._delay);
                     }
                 }, onUpstreamFinish: () =>
@@ -1477,20 +1477,19 @@ namespace Akka.Streams.Implementation.Fusing
 
                 SetHandler(_stage.Outlet, onPull: () =>
                 {
-                    if (!IsTimerActive(TimerName) && !_buffer.IsEmpty && NextElementWaitTime < 0) Push(_stage.Outlet, _buffer.Dequeue().Value);
+                    if (!IsTimerActive(TimerName) && !_buffer.IsEmpty && NextElementWaitTime < 0)
+                        Push(_stage.Outlet, _buffer.Dequeue().Item2);
+
                     if (!_willStop && !HasBeenPulled(_stage.Inlet)) Pull(_stage.Inlet);
                     CompleteIfReady();
                 });
             }
 
-            private long NextElementWaitTime
-            {
-                get { return (long) (_stage._delay.Ticks - (DateTime.UtcNow.Ticks - _buffer.Peek().Key.Ticks))*TimeSpan.TicksPerSecond; }
-            }
+            private long NextElementWaitTime => _stage._delay.Ticks - (DateTime.UtcNow.Ticks - _buffer.Peek().Item1);
 
             public override void PreStart()
             {
-                _buffer = Buffer.Create<KeyValuePair<DateTime, T>>(_size, Materializer);
+                _buffer = Buffer.Create<Tuple<long, T>>(_size, Materializer);
             }
 
             private void CompleteIfReady()
@@ -1500,7 +1499,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             protected internal override void OnTimer(object timerKey)
             {
-                Push(_stage.Outlet, _buffer.Dequeue().Value);
+                Push(_stage.Outlet, _buffer.Dequeue().Item2);
                 if (!_buffer.IsEmpty)
                 {
                     var waitTime = NextElementWaitTime;
@@ -1510,10 +1509,10 @@ namespace Akka.Streams.Implementation.Fusing
                 CompleteIfReady();
             }
 
-            private void GrabAndPull(bool predicate = true)
+            private void GrabAndPull(bool pullCondition = true)
             {
-                _buffer.Enqueue(new KeyValuePair<DateTime, T>(DateTime.UtcNow, Grab(_stage.Inlet)));
-                if (predicate) Pull(_stage.Inlet);
+                _buffer.Enqueue(new Tuple<long, T>(DateTime.UtcNow.Ticks, Grab(_stage.Inlet)));
+                if (pullCondition) Pull(_stage.Inlet);
             }
 
             private Action OnPushStrategy(DelayOverflowStrategy strategy)
@@ -1523,7 +1522,7 @@ namespace Akka.Streams.Implementation.Fusing
                     case DelayOverflowStrategy.EmitEarly:
                         return () =>
                         {
-                            if (!IsTimerActive(TimerName)) Push(_stage.Outlet, _buffer.Dequeue().Value);
+                            if (!IsTimerActive(TimerName)) Push(_stage.Outlet, _buffer.Dequeue().Item2);
                             else
                             {
                                 CancelTimer(TimerName);
@@ -1555,9 +1554,10 @@ namespace Akka.Streams.Implementation.Fusing
                             GrabAndPull();
                         };
                     case DelayOverflowStrategy.Fail:
-                        return () => { FailStage(new BufferOverflowException("Buffer overflow for Delay combinator")); };
+                        return () => { FailStage(new BufferOverflowException($"Buffer overflow for Delay combinator (max capacity was: {_size})!")); };
                     default:
-                        return () => { throw new IllegalStateException(string.Format("Delay buffer must never overflow in {0} mode", strategy)); };
+                        return () => { throw new IllegalStateException(
+                            $"Delay buffer must never overflow in {strategy} mode"); };
                 }
             }
         }
@@ -1575,7 +1575,12 @@ namespace Akka.Streams.Implementation.Fusing
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new DelayGraphStageLogic(Shape, inheritedAttributes, this);
+            return new Logic(Shape, inheritedAttributes, this);
+        }
+
+        public override string ToString()
+        {
+            return "Delay";
         }
     }
 

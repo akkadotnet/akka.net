@@ -102,21 +102,22 @@ namespace Akka.Streams
     public class UniformFanInShape<TIn, TOut> : FanInShape<TOut>
     {
         public readonly int N;
-        private readonly Inlet<TIn>[] _in;
 
         public UniformFanInShape(int n, IInit init) : base(init)
         {
             N = n;
-            _in = Enumerable.Range(0, n).Select(i => NewInlet<TIn>($"in{i}")).ToArray();
+            Ins = Enumerable.Range(0, n).Select(i => NewInlet<TIn>($"in{i}")).ToImmutableList();
         }
 
         public UniformFanInShape(int n) : this(n, new InitName("UniformFanIn")) { }
         public UniformFanInShape(int n, string name) : this(n, new InitName(name)) { }
         public UniformFanInShape(Outlet<TOut> outlet, params Inlet<TIn>[] inlets) : this(inlets.Length, new InitPorts(outlet, inlets)) { }
 
+        public IImmutableList<Inlet<TIn>> Ins { get; }
+
         public Inlet<TIn> In(int n)
         {
-            return _in[n];
+            return Ins[n];
         }
 
         protected override FanInShape<TOut> Construct(IInit init)

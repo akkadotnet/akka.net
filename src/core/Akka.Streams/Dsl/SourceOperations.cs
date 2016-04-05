@@ -1308,9 +1308,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut2, TMat> Concat<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, IGraph<SourceShape<TOut2>, TMat> other) where TOut1 : TOut2
+        public static Source<TOut, TMat> Concat<TOut, TMat>(this Source<TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other)
         {
-            return (Source<TOut2, TMat>)InternalFlowOperations.Concat(flow, other);
+            return (Source<TOut, TMat>)InternalFlowOperations.Concat(flow, other);
         }
 
         /// <summary>

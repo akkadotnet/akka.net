@@ -21,10 +21,9 @@ namespace Akka.Streams.Implementation
         public TransferState NeedsDemand { get; }
 
         public TransferState NeedsDemandOrCancel { get; }
+        public bool IsDemandAvailable => _downstreamBufferSpace > 0;
 
         public long DemandCount => _downstreamBufferSpace;
-
-        public bool IsDemandAvailable => _downstreamBufferSpace > 0;
 
         public override int InitialBufferSize { get; }
 
@@ -51,49 +50,47 @@ namespace Akka.Streams.Implementation
             });
         }
 
+        protected override ISubscriptionWithCursor<T> CreateSubscription(ISubscriber<T> subscriber)
+            => new ActorSubscriptionWithCursor<T>(_self, subscriber);
+
         protected bool DownstreamRunning(object message)
         {
-            var subscribePending = message as SubscribePending;
-            if (subscribePending != null)
+            if (message is SubscribePending)
             {
-                ExposedPublisher.TakePendingSubscribers().ForEach(RegisterSubscriber);
-                return true;
+                SubscribePending();
             }
-
-            var requestMore = message as RequestMore<T>;
-            if (requestMore != null)
+            else if (message is RequestMore<T>)
             {
-                MoreRequested(requestMore.Subscription as ActorSubscriptionWithCursor<T>, requestMore.Demand);
+                var requestMore = (RequestMore<T>) message;
+                MoreRequested((ActorSubscriptionWithCursor<T>)requestMore.Subscription, requestMore.Demand);
                 _pump.Pump();
-                return true;
             }
-
-            var cancel = message as Cancel<T>;
-            if (cancel != null)
+            else if (message is Cancel<T>)
             {
-                UnregisterSubscription(cancel.Subscription as ActorSubscriptionWithCursor<T>);
+                var cancel = (Cancel<T>) message;
+                UnregisterSubscription((ActorSubscriptionWithCursor<T>) cancel.Subscription);
                 _pump.Pump();
-                return true;
             }
+            else return false;
 
-            return false;
+            return true;
         }
 
         protected override void RequestFromUpstream(long elements) => _downstreamBufferSpace += elements;
 
-        protected override void CancelUpstream() => _downstreamCompleted = true;
+        private void SubscribePending()
+        {
+            ExposedPublisher.TakePendingSubscribers().ForEach(RegisterSubscriber);
+        }
 
         protected override void Shutdown(bool isCompleted)
         {
-            if (ExposedPublisher != null)
-                ExposedPublisher.Shutdown(isCompleted ? null : ActorPublisher<object>.NormalShutdownReason);
+            ExposedPublisher?.Shutdown(isCompleted ? null : ActorPublisher<object>.NormalShutdownReason);
 
-            if (_afterShutdown != null)
-                _afterShutdown();
+            _afterShutdown?.Invoke();
         }
 
-        protected override ISubscriptionWithCursor<T> CreateSubscription(ISubscriber<T> subscriber)
-            => new ActorSubscriptionWithCursor<T>(_self, subscriber);
+        protected override void CancelUpstream() => _downstreamCompleted = true;
 
         public void EnqueueOutputElement(object element)
         {
@@ -121,8 +118,7 @@ namespace Akka.Streams.Implementation
             _downstreamCompleted = true;
             AbortDownstream(e);
 
-            if (ExposedPublisher != null)
-                ExposedPublisher.Shutdown(e);
+            ExposedPublisher?.Shutdown(e);
         }
 
         public bool IsClosed => _downstreamCompleted;
@@ -132,18 +128,17 @@ namespace Akka.Streams.Implementation
 
     internal class FanoutProcessorImpl<T> : ActorProcessorImpl<T>
     {
-        public static Props Props(ActorMaterializerSettings effectiveSettingsy)
+        public static Props Props(ActorMaterializerSettings settings)
         {
-            return Actor.Props.Create(() => new FanoutProcessorImpl<T>(effectiveSettingsy)).WithDeploy(Deploy.Local);
+            return Actor.Props.Create(() => new FanoutProcessorImpl<T>(settings)).WithDeploy(Deploy.Local);
         }
-
 
         protected override IOutputs PrimaryOutputs { get; }
 
-        public FanoutProcessorImpl(ActorMaterializerSettings effectiveSettings) : base(effectiveSettings)
+        public FanoutProcessorImpl(ActorMaterializerSettings settings) : base(settings)
         {
-            PrimaryOutputs = new FanoutOutputs<T>(effectiveSettings.MaxInputBufferSize,
-                effectiveSettings.InitialInputBufferSize, Self, this, AfterFlush);
+            PrimaryOutputs = new FanoutOutputs<T>(settings.MaxInputBufferSize,
+                settings.InitialInputBufferSize, Self, this, AfterFlush);
 
             var running = new TransferPhase(PrimaryInputs.NeedsInput.And(PrimaryOutputs.NeedsDemand),
                 () => PrimaryOutputs.EnqueueOutputElement(PrimaryInputs.DequeueInputElement()));
@@ -161,7 +156,7 @@ namespace Akka.Streams.Implementation
             // Stopping will happen after flush
         }
 
-        protected new void PumpFinished()
+        public override void PumpFinished()
         {
             PrimaryInputs.Cancel();
             PrimaryOutputs.Complete();

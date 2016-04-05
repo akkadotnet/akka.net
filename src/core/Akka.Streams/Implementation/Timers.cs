@@ -232,13 +232,13 @@ namespace Akka.Streams.Implementation
     internal sealed class DelayInitial<T> : GraphStage<FlowShape<T, T>>
     {
         #region stage logic
-        private sealed class DelayInitialStageLogic : TimerGraphStageLogic
+        private sealed class Logic : TimerGraphStageLogic
         {
-            public const string DelayTimer = "DelayTimer";
+            private const string DelayTimer = "DelayTimer";
             private readonly DelayInitial<T> _stage;
             private bool _isOpen = false;
 
-            public DelayInitialStageLogic(Shape shape, DelayInitial<T> stage) : base(shape)
+            public Logic(Shape shape, DelayInitial<T> stage) : base(shape)
             {
                 _stage = stage;
                 SetHandler(_stage.In, onPush: () => Push(_stage.Out, Grab(_stage.In)));
@@ -277,7 +277,7 @@ namespace Akka.Streams.Implementation
         public override FlowShape<T, T> Shape { get; }
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new DelayInitialStageLogic(Shape, this);
+            return new Logic(Shape, this);
         }
     }
 

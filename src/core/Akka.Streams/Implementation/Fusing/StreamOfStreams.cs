@@ -18,51 +18,64 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region internal classes
 
-        private sealed class FlattenStageLogic : GraphStageLogic
+        private sealed class Logic : GraphStageLogic
         {
-            private readonly FlattenMerge<T, TMat> _flattenMerge;
+            private readonly FlattenMerge<T, TMat> _stage;
             private readonly HashSet<SubSinkInlet<T>> _sources = new HashSet<SubSinkInlet<T>>();
             private IBuffer<SubSinkInlet<T>> _q;
             private readonly Action _outHandler;
 
-            public FlattenStageLogic(FlattenMerge<T, TMat> flattenMerge) : base(flattenMerge.Shape)
+            public Logic(FlattenMerge<T, TMat> stage) : base(stage.Shape)
             {
-                _flattenMerge = flattenMerge;
+                _stage = stage;
                 _outHandler = () =>
                 {
                     // could be unavailable due to async input having been executed before this notification
-                    if (_q.NonEmpty && IsAvailable(flattenMerge._out))
+                    if (_q.NonEmpty && IsAvailable(_stage._out))
                         PushOut();
                 };
 
-                SetHandler(flattenMerge._in, onPush: () =>
-                {
-                    var source = Grab(flattenMerge._in);
-                    AddSource(source);
-                    if (ActiveSource < flattenMerge._breadth)
-                        TryPull(flattenMerge._in);
-                }, onUpstreamFinish: () =>
-                {
-                    if (ActiveSource == 0)
-                        CompleteStage();
-                });
+                SetHandler(_stage._in,
+                    onPush: () =>
+                    {
+                        var source = Grab(_stage._in);
+                        AddSource(source);
+                        if (ActiveSources < _stage._breadth)
+                            TryPull(_stage._in);
+                    },
+                    onUpstreamFinish: () =>
+                    {
+                        if (ActiveSources == 0)
+                            CompleteStage();
+                    });
 
-                SetHandler(flattenMerge._out, onPull: () =>
-                {
-                    Pull(flattenMerge._in);
-                    SetHandler(flattenMerge._out, _outHandler);
-                });
+                SetHandler(_stage._out,
+                    onPull: () =>
+                    {
+                        Pull(_stage._in);
+                        SetHandler(_stage._out, _outHandler);
+                    });
             }
 
-            private int ActiveSource => _sources.Count;
+            private int ActiveSources => _sources.Count;
 
             public override void PreStart()
-                => _q = Buffer.Create<SubSinkInlet<T>>(_flattenMerge._breadth, Interpreter.Materializer);
+            {
+                _q = Buffer.Create<SubSinkInlet<T>>(_stage._breadth, Interpreter.Materializer);
+            }
+
+            public override void PostStop()
+            {
+                foreach (var source in _sources)
+                {
+                    source.Cancel();
+                }
+            }
 
             private void PushOut()
             {
                 var src = _q.Dequeue();
-                Push(_flattenMerge._out, src.Grab());
+                Push(_stage._out, src.Grab());
                 if (!src.IsClosed)
                     src.Pull();
                 else
@@ -71,39 +84,41 @@ namespace Akka.Streams.Implementation.Fusing
 
             private void RemoveSource(SubSinkInlet<T> src)
             {
-                var pulledSuppressed = ActiveSource == _flattenMerge._breadth;
+                var pullSuppressed = ActiveSources == _stage._breadth;
                 _sources.Remove(src);
 
-                if (pulledSuppressed)
-                    TryPull(_flattenMerge._in);
-                if (ActiveSource == 0 && IsClosed(_flattenMerge._in))
+                if (pullSuppressed)
+                    TryPull(_stage._in);
+                if (ActiveSources == 0 && IsClosed(_stage._in))
                     CompleteStage();
             }
 
             private void AddSource(IGraph<SourceShape<T>, TMat> source)
             {
-                var sinkIn = new SubSinkInlet<T>("FlattenMergeSink");
-                sinkIn.SetHandler(new LambdaInHandler(onPush: () =>
-                {
-                    if (IsAvailable(_flattenMerge._out))
+                var sinkIn = CreateSubSinkInlet<T>("FlattenMergeSink");
+                sinkIn.SetHandler(new LambdaInHandler(
+                    onPush: () =>
                     {
-                        Push(_flattenMerge._out, sinkIn.Grab());
-                        sinkIn.Pull();
-                    }
-                    else
-                        _q.Enqueue(sinkIn);
-                }, onUpstreamFinish: () =>
-                {
-                    if (!sinkIn.IsAvailable)
-                        RemoveSource(sinkIn);
-                }));
+                        if (IsAvailable(_stage._out))
+                        {
+                            Push(_stage._out, sinkIn.Grab());
+                            sinkIn.Pull();
+                        }
+                        else
+                            _q.Enqueue(sinkIn);
+                    },
+                    onUpstreamFinish: () =>
+                    {
+                        if (!sinkIn.IsAvailable)
+                            RemoveSource(sinkIn);
+                    }));
 
                 sinkIn.Pull();
                 _sources.Add(sinkIn);
                 Source.FromGraph(source).RunWith(sinkIn.Sink, Interpreter.SubFusingMaterializer);
             }
 
-            public override string ToString() => $"FlattenMerge({_flattenMerge._breadth})";
+            public override string ToString() => $"FlattenMerge({_stage._breadth})";
         }
 
         #endregion
@@ -125,7 +140,12 @@ namespace Akka.Streams.Implementation.Fusing
 
         public override FlowShape<IGraph<SourceShape<T>, TMat>, T> Shape { get; }
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new FlattenStageLogic(this);
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+        public override string ToString()
+        {
+            return $"FlattenMerge({_breadth})";
+        }
     }
 
     /// <summary>
@@ -531,10 +551,18 @@ namespace Akka.Streams.Implementation.Fusing
     /// </summary>
     internal static class SubSink
     {
-        internal enum Command
+        internal interface ICommand { }
+
+        internal class RequestOne : ICommand
         {
-            RequestOne,
-            Cancel
+            public static readonly RequestOne Instance = new RequestOne();
+            private RequestOne() { }
+        }
+
+        internal class Cancel : ICommand
+        {
+            public static readonly Cancel Instance = new Cancel();
+            private Cancel() { }
         }
     }
 
@@ -545,65 +573,64 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region internal classes
 
-        private sealed class SubSinkLogic : GraphStageLogic
+        private sealed class Logic : GraphStageLogic
         {
-            private readonly SubSink<T> _subSink;
+            private readonly SubSink<T> _stage;
 
-            public SubSinkLogic(SubSink<T> subSink) : base(subSink.Shape)
+            public Logic(SubSink<T> stage) : base(stage.Shape)
             {
-                _subSink = subSink;
+                _stage = stage;
 
-                var ec = subSink._externalCallback;
-
-                SetHandler(subSink._in, onPush: () => ec(new OnNext(Grab(subSink._in))), onUpstreamFinish: () => ec(OnComplete.Instance), onUpstreamFailure: ex => ec(new OnError(ex)));
+                SetHandler(stage._in,
+                    onPush: () => _stage._externalCallback(new OnNext(Grab(_stage._in))),
+                    onUpstreamFinish: () => _stage._externalCallback(OnComplete.Instance),
+                    onUpstreamFailure: ex => _stage._externalCallback(new OnError(ex)));
             }
 
-            private void SetCallback(Action<SubSink.Command> cb)
+            private void SetCallback(Action<SubSink.ICommand> cb)
             {
-                var status = _subSink._status.Value;
+                var status = _stage._status.Value;
                 if (status == null)
                 {
-                    if (!_subSink._status.CompareAndSet(null, cb))
+                    if (!_stage._status.CompareAndSet(null, cb))
                         SetCallback(cb);
                 }
-
-                var cmd = status as SubSink.Command?;
-                if (cmd.HasValue)
+                else if (status is SubSink.RequestOne)
                 {
-                    if (cmd.Value == SubSink.Command.RequestOne)
-                    {
-                        Pull(_subSink._in);
-                        if (!_subSink._status.CompareAndSet(SubSink.Command.RequestOne, cb))
-                            SetCallback(cb);
-                    }
-                    else
-                    {
-                        CompleteStage();
-                        if (!_subSink._status.CompareAndSet(SubSink.Command.Cancel, cb))
-                            SetCallback(cb);
-                    }
+                    Pull(_stage._in);
+                    if (!_stage._status.CompareAndSet(SubSink.RequestOne.Instance, cb))
+                        SetCallback(cb);
                 }
-
-                if (status is Action)
+                else if (status is SubSink.Cancel)
+                {
+                    CompleteStage();
+                    if (!_stage._status.CompareAndSet(SubSink.Cancel.Instance, cb))
+                        SetCallback(cb);
+                }
+                else if (status is Action)
+                {
                     FailStage(new IllegalStateException("Substream Source cannot be materialized more than once"));
+                }
             }
 
             public override void PreStart()
             {
-                SetCallback(cmd =>
+                var ourOwnCallback = GetAsyncCallback<SubSink.ICommand>(cmd =>
                 {
-                    switch (cmd)
+                    if (cmd is SubSink.RequestOne)
                     {
-                        case SubSink.Command.RequestOne:
-                            TryPull(_subSink._in);
-                            break;
-                        case SubSink.Command.Cancel:
-                            CompleteStage();
-                            break;
-                        default:
-                            throw new IllegalStateException("Bug");
+                            TryPull(_stage._in);
+                    }
+                    else if (cmd is SubSink.Cancel)
+                    {
+                        CompleteStage();
+                    }
+                    else
+                    {
+                        throw new IllegalStateException("Bug");
                     }
                 });
+                SetCallback(ourOwnCallback);
             }
         }
 
@@ -630,29 +657,31 @@ namespace Akka.Streams.Implementation.Fusing
         public void PullSubstream()
         {
             var s = _status.Value;
-            var f = s as Action<SubSink.Command>;
+            var f = s as Action<SubSink.ICommand>;
 
             if (f != null)
-                f(SubSink.Command.RequestOne);
-            else if (s == null)
             {
-                if (!_status.CompareAndSet(null, SubSink.Command.RequestOne))
-                    ((Action<SubSink.Command>) _status.Value)(SubSink.Command.RequestOne);
+                f(SubSink.RequestOne.Instance);
+            }
+            else
+            {
+                if (!_status.CompareAndSet(null, SubSink.RequestOne.Instance))
+                    ((Action<SubSink.ICommand>) _status.Value)(SubSink.RequestOne.Instance);
             }
         }
 
         public void CancelSubstream()
         {
             var s = _status.Value;
-            var f = s as Action<SubSink.Command>;
+            var f = s as Action<SubSink.ICommand>;
 
             if (f != null)
-                f(SubSink.Command.Cancel);
-            else if (!_status.CompareAndSet(s, SubSink.Command.Cancel))
-                ((Action<SubSink.Command>) _status.Value)(SubSink.Command.Cancel);
+                f(SubSink.Cancel.Instance);
+            else if (!_status.CompareAndSet(s, SubSink.Cancel.Instance)) // a potential RequestOne is overwritten
+                ((Action<SubSink.ICommand>) _status.Value)(SubSink.Cancel.Instance);
         }
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new SubSinkLogic(this);
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         public override string ToString() => _name;
     }
@@ -674,7 +703,7 @@ namespace Akka.Streams.Implementation.Fusing
             var module = s.Module as GraphStageModule;
             if (module?.Stage is SubSource<T>)
             {
-                ((SubSource<T>) module.Stage).ExternalCallback(SubSink.Command.Cancel);
+                ((SubSource<T>) module.Stage).ExternalCallback(SubSink.Cancel.Instance);
                 return;
             }
 
@@ -700,49 +729,48 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region internal classes 
 
-        private sealed class SubSourceLogic : GraphStageLogic
+        private sealed class Logic : GraphStageLogic
         {
-            private readonly SubSource<T> _sub;
+            private readonly SubSource<T> _stage;
 
-            public SubSourceLogic(SubSource<T> sub) : base(sub.Shape)
+            public Logic(SubSource<T> stage) : base(stage.Shape)
             {
-                _sub = sub;
+                _stage = stage;
 
-                SetHandler(sub._out, onPull: () => sub.ExternalCallback(SubSink.Command.RequestOne), onDownstreamFinish: () => sub.ExternalCallback(SubSink.Command.Cancel));
+                SetHandler(stage._out,
+                    onPull: () => _stage.ExternalCallback(SubSink.RequestOne.Instance),
+                    onDownstreamFinish: () => _stage.ExternalCallback(SubSink.Cancel.Instance));
             }
 
-            private void SetCallback(Action<IActorSubscriberMessage> cb)
+            private void SetCallback(Action<IActorSubscriberMessage> callback)
             {
-                var s = _sub._status.Value;
+                var status = _stage._status.Value;
 
-                if (s == null)
+                if (status == null)
                 {
-                    if (!_sub._status.CompareAndSet(null, cb))
-                        SetCallback(cb);
-                    return;
+                    if (!_stage._status.CompareAndSet(null, callback))
+                        SetCallback(callback);
                 }
-
-                var complete = s as OnComplete;
-                if (complete != null)
-                {
+                else if (status is OnComplete)
                     CompleteStage();
-                    return;
-                }
-
-                var error = s as OnError;
-                if (error != null)
-                {
-                    FailStage(error.Cause);
-                    return;
-                }
-
-                if (s is Action<IActorSubscriberMessage>)
+                else if (status is OnError)
+                    FailStage(((OnError) status).Cause);
+                else if (status is Action<IActorSubscriberMessage>)
                     throw new IllegalStateException("Substream Source cannot be materialized more than once");
             }
 
             public override void PreStart()
             {
-                SetCallback(message => { message.Match().With<OnComplete>(CompleteStage).With<OnError>(e => FailStage(e.Cause)).With<OnNext>(n => Push(_sub._out, (T) n.Element)); });
+                var ourOwnCallback = GetAsyncCallback<IActorSubscriberMessage>(msg =>
+                {
+                    if (msg is OnComplete)
+                        CompleteStage();
+                    else if (msg is OnError)
+                        FailStage(((OnError) msg).Cause);
+                    else if (msg is OnNext)
+                        Push(_stage._out, (T) ((OnNext) msg).Element);
+                });
+                SetCallback(ourOwnCallback);
             }
         }
 
@@ -752,7 +780,7 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Outlet<T> _out = new Outlet<T>("SubSource.out");
         private readonly AtomicReference<object> _status = new AtomicReference<object>();
 
-        public SubSource(string name, Action<SubSink.Command> externalCallback)
+        public SubSource(string name, Action<SubSink.ICommand> externalCallback)
         {
             _name = name;
 
@@ -765,7 +793,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         protected override Attributes InitialAttributes { get; }
 
-        public Action<SubSink.Command> ExternalCallback { get; }
+        internal Action<SubSink.ICommand> ExternalCallback { get; }
 
         public void PushSubstream(T elem)
         {
@@ -802,7 +830,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         public bool Timeout(TimeSpan d) => _status.CompareAndSet(null, new OnError(new SubscriptionTimeoutException($"Substream Source has not been materialized in {d}")));
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new SubSourceLogic(this);
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         public override string ToString() => _name;
     }

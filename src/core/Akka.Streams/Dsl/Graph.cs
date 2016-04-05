@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Reactive.Streams;
 using Akka.Streams.Implementation;
+using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 
 namespace Akka.Streams.Dsl
@@ -309,6 +311,15 @@ namespace Akka.Streams.Dsl
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new MergePreferredStageLogic(Shape, this);
+        }
+    }
+
+    public static class Interleave
+    {
+        public static IGraph<UniformFanInShape<T, T>, Unit> Create<T>(int inputPorts, int segmentSize,
+            bool eagerClose = false)
+        {
+            return GraphStages.WithDetachedInputs<T, Unit>(new Interleave<T, T>(inputPorts, segmentSize, eagerClose));
         }
     }
 
@@ -849,6 +860,14 @@ namespace Akka.Streams.Dsl
     {
         public static readonly UnzipWith Instance = new UnzipWith();
         private UnzipWith() { }
+    }
+
+    public static class Concat
+    {
+        public static IGraph<UniformFanInShape<T, T>, Unit> Create<T>(int inputPorts = 2)
+        {
+            return GraphStages.WithDetachedInputs<T, Unit>(new Concat<T, T>(inputPorts));
+        }
     }
 
     /// <summary>
