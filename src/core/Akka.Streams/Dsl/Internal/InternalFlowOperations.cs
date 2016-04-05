@@ -256,7 +256,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<TOut, TMat> Collect<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> collector)
         {
-            return flow.AndThen<TOut, TIn, TMat>(new Collect<TIn, TOut>(collector));
+            return flow.AndThen(new Collect<TIn, TOut>(collector));
         }
 
         /// <summary>
@@ -512,10 +512,7 @@ namespace Akka.Streams.Dsl.Internal
         public static IFlow<T, TMat> Delay<T, TMat>(this IFlow<T, TMat> flow, TimeSpan of,
             DelayOverflowStrategy? strategy = null)
         {
-            return
-                flow.Via(
-                    new Fusing.Delay<T>(of, strategy ?? DelayOverflowStrategy.DropTail).WithAttributes(
-                        Attributes.CreateName("delay")));
+            return flow.Via(new Fusing.Delay<T>(of, strategy ?? DelayOverflowStrategy.DropTail));
         }
 
         /// <summary>

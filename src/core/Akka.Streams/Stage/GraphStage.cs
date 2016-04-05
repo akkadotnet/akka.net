@@ -166,7 +166,7 @@ namespace Akka.Streams.Stage
             TimerMessages.Timer timer;
             if (_keyToTimers.TryGetValue(scheduled.TimerKey, out timer) && timer.Id == id)
             {
-                if (!scheduled.IsReapeating)
+                if (!scheduled.IsRepeating)
                     _keyToTimers.Remove(scheduled.TimerKey);
                 OnTimer(scheduled.TimerKey);
             }
@@ -189,9 +189,9 @@ namespace Akka.Streams.Stage
             var id = _timerIdGen.IncrementAndGet();
             var task = Interpreter.Materializer.ScheduleRepeatedly(initialDelay, interval, () =>
             {
-                TimerAsyncCallback(new TimerMessages.Scheduled(timerKey, id, isReapeating: true));
+                TimerAsyncCallback(new TimerMessages.Scheduled(timerKey, id, isRepeating: true));
             });
-            _keyToTimers.Add(timerKey, new TimerMessages.Timer(id, task));
+            _keyToTimers[timerKey] = new TimerMessages.Timer(id, task);
         }
 
         /// <summary>
@@ -216,9 +216,9 @@ namespace Akka.Streams.Stage
             var id = _timerIdGen.IncrementAndGet();
             var task = Interpreter.Materializer.ScheduleOnce(delay, () =>
             {
-                TimerAsyncCallback(new TimerMessages.Scheduled(timerKey, id, isReapeating: true));
+                TimerAsyncCallback(new TimerMessages.Scheduled(timerKey, id, isRepeating: false));
             });
-            _keyToTimers.Add(timerKey, new TimerMessages.Timer(id, task));
+            _keyToTimers[timerKey] = new TimerMessages.Timer(id, task);
         }
 
         /// <summary>
@@ -262,16 +262,16 @@ namespace Akka.Streams.Stage
         {
             public readonly object TimerKey;
             public readonly int TimerId;
-            public readonly bool IsReapeating;
+            public readonly bool IsRepeating;
 
-            public Scheduled(object timerKey, int timerId, bool isReapeating)
+            public Scheduled(object timerKey, int timerId, bool isRepeating)
             {
                 if (timerKey == null)
                     throw new ArgumentNullException("timerKey", "Timer key cannot be null");
 
                 TimerKey = timerKey;
                 TimerId = timerId;
-                IsReapeating = isReapeating;
+                IsRepeating = isRepeating;
             }
         }
 
