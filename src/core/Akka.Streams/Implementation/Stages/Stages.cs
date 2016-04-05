@@ -218,7 +218,7 @@ namespace Akka.Streams.Implementation.Stages
 
         public Grouped(int count, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Grouped)
         {
-            if (count <= 0) throw new ArgumentException("Grouped count must be greater than 0", "count");
+            if (count <= 0) throw new ArgumentException("Grouped count must be greater than 0", nameof(count));
             _count = count;
         }
 

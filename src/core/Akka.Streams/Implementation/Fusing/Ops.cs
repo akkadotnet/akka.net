@@ -476,7 +476,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _left = _count;
                 return context.Push(result);
             }
-            else return context.Pull();
+            return context.Pull();
         }
 
         public override ISyncDirective OnPull(IContext<IEnumerable<T>> context)
@@ -488,7 +488,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _buffer = new List<T>(_count);
                 return context.PushAndFinish(result);
             }
-            else return context.Pull();
+            return context.Pull();
         }
 
         public override ITerminationDirective OnUpstreamFinish(IContext<IEnumerable<T>> context)
