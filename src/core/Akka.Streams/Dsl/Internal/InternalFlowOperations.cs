@@ -431,6 +431,24 @@ namespace Akka.Streams.Dsl.Internal
         }
 
         /// <summary>
+        /// Similar to <see cref="Fold{TIn,TOut,TMat}"/> but uses first element as zero element.
+        /// Applies the given function towards its current and next value,
+        /// yielding the next current value. 
+        /// <para>
+        /// '''Emits when''' upstream completes
+        /// </para>
+        /// '''Backpressures when''' downstream backpressures
+        /// <para>
+        /// '''Completes when''' upstream completes
+        /// </para>
+        /// '''Cancels when''' downstream cancels
+        /// </summary>
+        public static IFlow<TIn, TMat> Reduce<TIn, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TIn, TIn> reduce)
+        {
+            return flow.Via(new Fusing.Reduce<TIn>(reduce));
+        }
+
+        /// <summary>
         /// Intersperses stream with provided element, similar to how <see cref="string.Join(string,string[])"/>
         /// injects a separator between a collection's elements.
         /// 

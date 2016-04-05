@@ -251,6 +251,23 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
+        /// A <see cref="Sink{TIn,Task}"/> that will invoke the given <paramref name="reduce"/> for every received element, giving it its previous
+        /// output (from the second element) and the element as input.
+        /// The returned <see cref="Task{TIn}"/> will be completed with value of the final
+        /// function evaluation when the input stream ends, or completed with `Failure`
+        /// if there is a failure signaled in the stream.
+        /// </summary>
+        public static Sink<TIn, Task<TIn>> Reduce<TIn>(Func<TIn, TIn, TIn> reduce)
+        {
+            var graph = Flow.Create<TIn>()
+                .Reduce(reduce)
+                .ToMaterialized(First<TIn>(), Keep.Right)
+                .Named("ReduceSink");
+
+            return FromGraph(graph);
+        }
+
+        /// <summary>
         /// A <see cref="Sink{TIn, Unit}"/> that when the flow is completed, either through a failure or normal
         /// completion, apply the provided function with <paramref name="success"/> or <paramref name="failure"/>.
         /// </summary>

@@ -97,6 +97,7 @@
     <Compile Include="Dsl\FlowPrefixAndTailSpec.cs" />
     <Compile Include="Dsl\FlowRecoverSpec.cs" />
     <Compile Include="Dsl\FlowRecoverWithSpec.cs" />
+    <Compile Include="Dsl\FlowReduceSpec.cs" />
     <Compile Include="Dsl\FlowSpec.cs" />
     <Compile Include="Dsl\QueueSourceSpec.cs" />
     <Compile Include="Actor\ActorPublisherSpec.cs" />

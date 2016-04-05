@@ -102,7 +102,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var src = Source.From(Enumerable.Range(1, 3)).Map(x =>
                 {
-                    if (x == 2)
+                    if (x == 3)
                         throw Ex;
                     return x;
                 });

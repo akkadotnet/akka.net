@@ -122,7 +122,7 @@ namespace Akka.Streams.Implementation
         public override ISubscriber<TIn> Create(MaterializationContext context, out IPublisher<TIn> materializer)
         {
             var actorMaterializer = ActorMaterializer.Downcast(context.Materializer);
-            var settings = actorMaterializer.EffectiveSettings(context.EffectiveAttributes);
+            var settings = actorMaterializer.EffectiveSettings(Attributes);
             var fanoutRef = actorMaterializer.ActorOf(context, FanoutProcessorImpl<TIn>.Props(settings));
             var fanoutProcessor = ActorProcessorFactory.Create<TIn, TIn>(fanoutRef);
             materializer = fanoutProcessor;

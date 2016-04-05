@@ -1666,6 +1666,58 @@ namespace Akka.Streams.Implementation.Fusing
         }
     }
 
+    internal sealed class Reduce<T> : SimpleLinearGraphStage<T>
+    {
+        #region internal classes
+
+        private sealed class Logic : GraphStageLogic
+        {
+            private readonly Reduce<T> _stage;
+            private T _aggregator;
+
+            public Logic(Reduce<T> stage) : base(stage.Shape)
+            {
+                _stage = stage;
+
+                var rest = new LambdaInHandler(onPush: () =>
+                {
+                    _aggregator = stage._reduce(_aggregator, Grab(stage.Inlet));
+                    Pull(stage.Inlet);
+                }, onUpstreamFinish: () =>
+                {
+                    Push(stage.Outlet, _aggregator);
+                    CompleteStage();
+                });
+
+                SetHandler(stage.Inlet, onPush: () =>
+                {
+                    _aggregator = Grab(stage.Inlet);
+                    Pull(stage.Inlet);
+                    SetHandler(stage.Inlet, rest);
+                });
+
+                SetHandler(stage.Outlet, onPull: () => Pull(stage.Inlet));
+            }
+
+            public override string ToString() => $"Reduce.Logic(aggregator={_aggregator}";
+        }
+
+        #endregion
+
+        private readonly Func<T, T, T> _reduce;
+
+        public Reduce(Func<T,T,T> reduce)
+        {
+            _reduce = reduce;
+        }
+
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.Reduce;
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+        public override string ToString() => "Reduce";
+    }
+
     internal sealed class RecoverWith<TOut, TMat> : SimpleLinearGraphStage<TOut>
     {
         #region internal classes
@@ -1693,7 +1745,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             private void SwitchTo(IGraph<SourceShape<TOut>, TMat> source)
             {
-                var sinkIn = new SubSinkInlet<TOut>("RecoverWithSink");
+                var sinkIn = new SubSinkInlet<TOut>(this, "RecoverWithSink");
                 sinkIn.SetHandler(new LambdaInHandler(onPush: () =>
                 {
                     if (IsAvailable(_recover.Outlet))
