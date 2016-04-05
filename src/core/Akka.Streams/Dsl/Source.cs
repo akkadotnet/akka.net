@@ -262,7 +262,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Source<T, Unit> FromTask<T>(Task<T> task)
         {
-            return Single(task).MapAsyncUnordered(1, x => x).WithAttributes(DefaultAttributes.TaskSource);
+            return FromGraph(new TaskSource<T>(task));
         }
 
         /// <summary>

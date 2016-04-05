@@ -8,7 +8,7 @@ using Akka.Util;
 
 namespace Akka.Streams.Implementation
 {
-    internal abstract class MultiStreamOutputProcessor<T> : ActorProcessorImpl<T>, IPump, IStreamSubscriptionTimeoutSupport<T>
+    internal abstract class MultiStreamOutputProcessor<T> : ActorProcessorImpl<T>, IStreamSubscriptionTimeoutSupport<T>
     {
         #region internal classes
 

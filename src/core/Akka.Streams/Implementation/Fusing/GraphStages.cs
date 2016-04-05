@@ -459,4 +459,58 @@ namespace Akka.Streams.Implementation.Fusing
             return new AnonymousStageLogic(Shape, this);
         }
     }
+
+    internal sealed class TaskSource<T> : GraphStage<SourceShape<T>>
+    {
+        #region Internal classes
+        private sealed class Logic : GraphStageLogic
+        {
+            public Logic(Shape shape, TaskSource<T> source) : base(shape)
+            {
+                SetHandler(source.Outlet, onPull: () =>
+                {
+                    var callback = GetAsyncCallback<Task<T>>(t =>
+                    {
+                        if (!t.IsCanceled && !t.IsFaulted)
+                            Emit(source.Outlet, t.Result, CompleteStage);
+                        else
+                            FailStage(t.IsFaulted
+                                ? Flatten(t.Exception)
+                                : new TaskCanceledException("Task was cancelled."));
+                    });
+                    source._task.ContinueWith(t => callback(t), TaskContinuationOptions.ExecuteSynchronously);
+                    SetHandler(source.Outlet, EagerTerminateOutput); // After first pull we won't produce anything more
+                });
+            }
+
+            private Exception Flatten(AggregateException exception)
+            {
+                return exception.InnerExceptions.Count == 1 ? exception.InnerExceptions[0] : exception;
+            }
+        }
+        #endregion
+
+        private readonly Task<T> _task;
+
+        public readonly Outlet<T> Outlet = new Outlet<T>("task.out");
+
+        public TaskSource(Task<T> task)
+        {
+            ReactiveStreamsCompliance.RequireNonNullElement(task);
+            _task = task;
+            Shape = new SourceShape<T>(Outlet);
+        }
+
+        public override SourceShape<T> Shape { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+        {
+            return new Logic(Shape, this);
+        }
+
+        public override string ToString()
+        {
+            return "TaskSource";
+        }
+    }
 }

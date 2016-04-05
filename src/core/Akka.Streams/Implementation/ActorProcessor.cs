@@ -395,13 +395,14 @@ namespace Akka.Streams.Implementation
             PrimaryOutputs = new SimpleOutputs<T>(Self, this);
 
             _receive = new InternalExposedPublisherReceive(ActiveReceive, Unhandled, this);
+            this.Init();
         }
 
-        protected ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+        protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
 
         public TransferState TransferState { get; set; }
         public Action CurrentAction { get; set; }
-        public bool IsPumpFinished { get; }
+        public bool IsPumpFinished => this.IsPumpFinished();
 
         private readonly ExposedPublisherReceive<T> _receive;
         /**
@@ -471,7 +472,6 @@ namespace Akka.Streams.Implementation
 
         protected override void PostStop()
         {
-            base.PostStop();
             PrimaryInputs.Cancel();
             PrimaryOutputs.Error(new AbruptTerminationException(Self));
         }
