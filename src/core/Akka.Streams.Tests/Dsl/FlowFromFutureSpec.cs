@@ -40,7 +40,7 @@ namespace Akka.Streams.Tests.Dsl
             var c = TestSubscriber.CreateManualProbe<int>(this);
             var p = Source.FromTask(Task.Run(new Func<int>(()=> { throw ex; }))).RunWith(Sink.AsPublisher<int>(false), Materializer);
             p.Subscribe(c);
-            c.ExpectSubscriptionAndError().InnerException.Should().Be(ex);
+            c.ExpectSubscriptionAndError().Should().Be(ex);
         }
 
         [Fact]
@@ -77,16 +77,16 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_based_on_a_Future_must_produce_elements_with_multiple_subscribers()
         {
-            var promies = new TaskCompletionSource<int>();
+            var promise = new TaskCompletionSource<int>();
+            var p = Source.FromTask(promise.Task).RunWith(Sink.AsPublisher<int>(true), Materializer);
             var c1 = TestSubscriber.CreateManualProbe<int>(this);
             var c2 = TestSubscriber.CreateManualProbe<int>(this);
-            var p = Source.FromTask(promies.Task).RunWith(Sink.AsPublisher<int>(true), Materializer);
             p.Subscribe(c1);
             p.Subscribe(c2);
             var sub1 = c1.ExpectSubscription();
             var sub2 = c2.ExpectSubscription();
             sub1.Request(1);
-            promies.SetResult(1);
+            promise.SetResult(1);
             sub2.Request(2);
             c1.ExpectNext(1);
             c2.ExpectNext(1);
