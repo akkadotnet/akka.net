@@ -85,7 +85,7 @@ namespace Akka.Streams.Implementation
 
         protected override void Shutdown(bool isCompleted)
         {
-            ExposedPublisher?.Shutdown(isCompleted ? null : ActorPublisher<object>.NormalShutdownReason);
+            ExposedPublisher?.Shutdown(isCompleted ? null : ActorPublisher.NormalShutdownReason);
 
             _afterShutdown?.Invoke();
         }

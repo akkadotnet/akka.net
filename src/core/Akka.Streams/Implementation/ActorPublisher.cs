@@ -62,6 +62,12 @@ namespace Akka.Streams.Implementation
     {
     }
 
+    internal static class ActorPublisher
+    {
+        public const string NormalShutdownReasonMessage = "Cannot subscribe to shut-down Publisher";
+        public static readonly NormalShutdownException NormalShutdownReason = new NormalShutdownException(NormalShutdownReasonMessage);
+    }
+
     /**
      * INTERNAL API
      *
@@ -71,8 +77,6 @@ namespace Akka.Streams.Implementation
     public class ActorPublisher<TOut> : IActorPublisher, IPublisher<TOut>
     {
         protected readonly IActorRef Impl;
-        public const string NormalShutdownReasonMessage = "Cannot subscribe to shut-down Publisher";
-        public static readonly NormalShutdownException NormalShutdownReason = new NormalShutdownException(NormalShutdownReasonMessage);
 
         // The subscriber of an subscription attempt is first placed in this list of pending subscribers.
         // The actor will call takePendingSubscribers to remove it from the list when it has received the
@@ -82,9 +86,9 @@ namespace Akka.Streams.Implementation
         private readonly AtomicReference<ImmutableList<ISubscriber<TOut>>> _pendingSubscribers =
             new AtomicReference<ImmutableList<ISubscriber<TOut>>>(ImmutableList<ISubscriber<TOut>>.Empty);
 
-        private volatile Exception _shutdownReason = null;
+        private volatile Exception _shutdownReason;
         
-        protected virtual object WakeUpMessage { get { return SubscribePending.Instance; } }
+        protected virtual object WakeUpMessage => SubscribePending.Instance;
 
         public ActorPublisher(IActorRef impl)
         {
@@ -93,7 +97,7 @@ namespace Akka.Streams.Implementation
 
         public void Subscribe(ISubscriber<TOut> subscriber)
         {
-            if (subscriber == null) throw new ArgumentNullException("subscriber");
+            if (subscriber == null) throw new ArgumentNullException(nameof(subscriber));
             while (true)
             {
                 var current = _pendingSubscribers.Value;
@@ -118,7 +122,8 @@ namespace Akka.Streams.Implementation
 
         public IEnumerable<ISubscriber<TOut>> TakePendingSubscribers()
         {
-            return _pendingSubscribers.GetAndSet(null);
+            var pending = _pendingSubscribers.GetAndSet(null);
+            return (pending != null) ? (IEnumerable<ISubscriber<TOut>>)pending : new ISubscriber<TOut>[0];
         }
 
         public void Shutdown(Exception reason)
@@ -191,10 +196,11 @@ namespace Akka.Streams.Implementation
             Cursor = 0;
         }
 
-        ISubscriber<TIn> ISubscriptionWithCursor<TIn>.Subscriber { get { return Subscriber; } }
+        ISubscriber<TIn> ISubscriptionWithCursor<TIn>.Subscriber => Subscriber;
+
         public void Dispatch(object element)
         {
-            throw new NotImplementedException();
+            ReactiveStreamsCompliance.TryOnNext(Subscriber, (TIn)element);
         }
 
         bool ISubscriptionWithCursor<TIn>.IsActive

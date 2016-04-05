@@ -73,7 +73,7 @@ namespace Akka.Streams.Implementation
 
         #endregion
 
-        private static readonly IEndOfStream ShutDown = new ErrorCompleted(ActorPublisher<T>.NormalShutdownReason);
+        private static readonly IEndOfStream ShutDown = new ErrorCompleted(ActorPublisher.NormalShutdownReason);
 
         private readonly Lazy<ResizableMultiReaderRingBuffer<T>> _buffer;
 
