@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Reactive.Streams;
 using Akka.Actor;
@@ -299,7 +300,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.From<IFruit>(Apples()).SplitWhen<IFruit, Unit, IFruit>(_ => true);
             Source<KeyValuePair<int, Source<IFruit, Unit>>, Unit> f3 =
                 Source.From<IFruit>(Apples()).GroupBy<IFruit, Unit, int, IFruit>(_ => 2);
-            Source<Tuple<IEnumerable<IFruit>, Source<IFruit, Unit>>, Unit> f4 =
+            Source<Tuple<IImmutableList<IFruit>, Source<IFruit, Unit>>, Unit> f4 =
                 Source.From<IFruit>(Apples()).PrefixAndTail(1);
             Flow<string, Source<IFruit, Unit>, Unit> d1 =
                 Flow.Create<string>()
@@ -309,7 +310,7 @@ namespace Akka.Streams.Tests.Dsl
                 Flow.Create<string>()
                     .Map<string, string, IFruit, Unit>(_ => new Apple())
                     .GroupBy<string, IFruit, Unit, int, IFruit>(_ => 2);
-            Flow<string, Tuple<IEnumerable<IFruit>, Source<IFruit, Unit>>, Unit> d3 =
+            Flow<string, Tuple<IImmutableList<IFruit>, Source<IFruit, Unit>>, Unit> d3 =
                 Flow.Create<string>().Map<string, string, IFruit, Unit>(_ => new Apple()).PrefixAndTail(1);
         }
 

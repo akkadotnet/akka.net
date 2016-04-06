@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Net.NetworkInformation;
 using System.Reactive.Streams;
 using System.Runtime.InteropServices;
@@ -780,7 +781,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels or substream cancels
         /// </summary> 
-        public static IFlow<Tuple<IEnumerable<T>, Source<T, Unit>>, TMat> PrefixAndTail<T, TMat>(
+        public static IFlow<Tuple<IImmutableList<T>, Source<T, Unit>>, TMat> PrefixAndTail<T, TMat>(
             this IFlow<T, TMat> flow, int n)
         {
             return flow.Via(new Fusing.PrefixAndTail<T>(n));

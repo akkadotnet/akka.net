@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Event;
@@ -683,9 +684,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels or substream cancels
         /// </summary> 
-        public static Flow<TIn, Tuple<IEnumerable<TOut>, Source<TOut, Unit>>, TMat> PrefixAndTail<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, int n)
+        public static Flow<TIn, Tuple<IImmutableList<TOut>, Source<TOut, Unit>>, TMat> PrefixAndTail<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, int n)
         {
-            return (Flow<TIn, Tuple<IEnumerable<TOut>, Source<TOut, Unit>>, TMat>)InternalFlowOperations.PrefixAndTail(flow, n);
+            return (Flow<TIn, Tuple<IImmutableList<TOut>, Source<TOut, Unit>>, TMat>)InternalFlowOperations.PrefixAndTail(flow, n);
         }
 
         /// <summary>

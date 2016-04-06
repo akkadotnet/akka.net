@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Reactive.Streams;
 using System.Threading;
@@ -16,21 +17,19 @@ namespace Akka.Streams.Tests.Dsl
 {
     public class FlowPrefixAndTailSpec : AkkaSpec
     {
-        private readonly ITestOutputHelper _helper;
         public ActorMaterializer Materializer { get; set; }
 
         public FlowPrefixAndTailSpec(ITestOutputHelper helper) : base(helper)
         {
-            _helper = helper;
             var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2,2);
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        private static TestException TestException = new TestException("test");
+        private static readonly TestException TestException = new TestException("test");
 
         private static
-            Sink<Tuple<IEnumerable<int>, Source<int, Unit>>, Task<Tuple<IEnumerable<int>, Source<int, Unit>>>>
-            NewHeadSink => Sink.First<Tuple<IEnumerable<int>, Source<int, Unit>>>();
+            Sink<Tuple<IImmutableList<int>, Source<int, Unit>>, Task<Tuple<IImmutableList<int>, Source<int, Unit>>>>
+            NewHeadSink => Sink.First<Tuple<IImmutableList<int>, Source<int, Unit>>>();
 
 
         [Fact]
@@ -74,7 +73,7 @@ namespace Akka.Streams.Tests.Dsl
                 fut.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 var takes = fut.Result.Item1;
                 var tail = fut.Result.Item2;
-                takes.ShouldAllBeEquivalentTo(Enumerable.Range(1, 5));
+                takes.Should().Equal(Enumerable.Range(1, 5));
 
                 var futureSink2 = Sink.First<IEnumerable<int>>();
                 var fut2 = tail.Grouped(6).RunWith(futureSink2, Materializer);
@@ -204,11 +203,11 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var publisher = TestPublisher.CreateManualProbe<int>(this);
-                var subscriber = TestSubscriber.CreateManualProbe<Tuple<IEnumerable<int>, Source<int, Unit>>>(this);
+                var subscriber = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, Unit>>>(this);
 
                 Source.FromPublisher<int, Unit>(publisher)
                     .PrefixAndTail(3)
-                    .To(Sink.FromSubscriber<Tuple<IEnumerable<int>, Source<int, Unit>>, Unit>(subscriber))
+                    .To(Sink.FromSubscriber<Tuple<IImmutableList<int>, Source<int, Unit>>, Unit>(subscriber))
                     .Run(Materializer);
 
                 var upstream = publisher.ExpectSubscription();
@@ -230,11 +229,11 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var publisher = TestPublisher.CreateManualProbe<int>(this);
-                var subscriber = TestSubscriber.CreateManualProbe<Tuple<IEnumerable<int>, Source<int, Unit>>>(this);
+                var subscriber = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, Unit>>>(this);
 
                 Source.FromPublisher<int, Unit>(publisher)
                     .PrefixAndTail(1)
-                    .To(Sink.FromSubscriber<Tuple<IEnumerable<int>, Source<int, Unit>>, Unit>(subscriber))
+                    .To(Sink.FromSubscriber<Tuple<IImmutableList<int>, Source<int, Unit>>, Unit>(subscriber))
                     .Run(Materializer);
 
                 var upstream = publisher.ExpectSubscription();
@@ -264,11 +263,11 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var publisher = TestPublisher.CreateManualProbe<int>(this);
-                var subscriber = TestSubscriber.CreateManualProbe<Tuple<IEnumerable<int>, Source<int, Unit>>>(this);
+                var subscriber = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, Unit>>>(this);
 
                 Source.FromPublisher<int, Unit>(publisher)
                     .PrefixAndTail(1)
-                    .To(Sink.FromSubscriber<Tuple<IEnumerable<int>, Source<int, Unit>>, Unit>(subscriber))
+                    .To(Sink.FromSubscriber<Tuple<IImmutableList<int>, Source<int, Unit>>, Unit>(subscriber))
                     .Run(Materializer);
 
                 var upstream = publisher.ExpectSubscription();
@@ -290,11 +289,11 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var publisher = TestPublisher.CreateManualProbe<int>(this);
-                var subscriber = TestSubscriber.CreateManualProbe<Tuple<IEnumerable<int>, Source<int, Unit>>>(this);
+                var subscriber = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, Unit>>>(this);
 
                 Source.FromPublisher<int, Unit>(publisher)
                     .PrefixAndTail(1)
-                    .To(Sink.FromSubscriber<Tuple<IEnumerable<int>, Source<int, Unit>>, Unit>(subscriber))
+                    .To(Sink.FromSubscriber<Tuple<IImmutableList<int>, Source<int, Unit>>, Unit>(subscriber))
                     .Run(Materializer);
 
                 var upstream = publisher.ExpectSubscription();
@@ -324,11 +323,11 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var up = TestPublisher.CreateManualProbe<int>(this);
-                var down = TestSubscriber.CreateManualProbe<Tuple<IEnumerable<int>, Source<int, Unit>>>(this);
+                var down = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, Unit>>>(this);
 
                 var flowSubscriber = Source.AsSubscriber<int>()
                     .PrefixAndTail(1)
-                    .To(Sink.FromSubscriber<Tuple<IEnumerable<int>, Source<int, Unit>>, Unit>(down))
+                    .To(Sink.FromSubscriber<Tuple<IImmutableList<int>, Source<int, Unit>>, Unit>(down))
                     .Run(Materializer);
 
                 var downstream = down.ExpectSubscription();
@@ -348,7 +347,7 @@ namespace Akka.Streams.Tests.Dsl
             var f =
                 Source.FromPublisher<int, Unit>(pub)
                     .PrefixAndTail(1)
-                    .RunWith(Sink.First<Tuple<IEnumerable<int>, Source<int, Unit>>>(), Materializer);
+                    .RunWith(Sink.First<Tuple<IImmutableList<int>, Source<int, Unit>>>(), Materializer);
             var s = pub.ExpectSubscription();
             s.SendNext(0);
 

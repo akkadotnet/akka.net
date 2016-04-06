@@ -1407,11 +1407,11 @@ namespace Akka.Streams.Stage
             private bool _available;
             private bool _closed;
 
-            public SubSourceOutlet(string name)
+            public SubSourceOutlet(GraphStageLogic logic, string name)
             {
                 _name = name;
 
-                _source = new SubSource<T>(name, command =>
+                _source = new SubSource<T>(name, logic.GetAsyncCallback<SubSink.ICommand>(command =>
                 {
                     if (command is SubSink.RequestOne)
                     {
@@ -1430,7 +1430,7 @@ namespace Akka.Streams.Stage
                             _handler.OnDownstreamFinish();
                         }
                     }
-                });
+                }));
             }
 
             /// <summary>
@@ -1493,6 +1493,11 @@ namespace Akka.Streams.Stage
                 _available = false;
                 _closed = true;
                 _source.FailSubstream(ex);
+            }
+
+            public override string ToString()
+            {
+                return $"SubSourceOutlet({_name})";
             }
         }
     }
