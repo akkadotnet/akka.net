@@ -6,6 +6,7 @@ using System.Reactive.Streams;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
+using Akka.Util.Internal;
 
 namespace Akka.Streams.Dsl
 {
@@ -173,12 +174,10 @@ namespace Akka.Streams.Dsl
         public sealed class MergePreferredShape : UniformFanInShape<T, T>
         {
             private readonly int _secondaryPorts;
-            private readonly IInit _init;
 
             public MergePreferredShape(int secondaryPorts, IInit init) : base(secondaryPorts, init)
             {
                 _secondaryPorts = secondaryPorts;
-                _init = init;
 
                 Preferred = NewInlet<T>("preferred");
             }
@@ -193,7 +192,7 @@ namespace Akka.Streams.Dsl
             public Inlet<T> Preferred { get; }
         }
 
-        private sealed class MergePreferredStageLogic : GraphStageLogic
+        private sealed class Logic : GraphStageLogic
         {
             /// <summary>
             /// This determines the unfairness of the merge:
@@ -201,34 +200,25 @@ namespace Akka.Streams.Dsl
             /// - at 2 the preferred will grab almost all bandwidth against three equally fast secondaries
             /// (measured with eventLimit=1 in the GraphInterpreter, so may not be accurate)
             /// </summary>
-            public const int MaxEmitting = 2;
+            private const int MaxEmitting = 2;
             private readonly MergePreferred<T> _stage;
             private readonly Action[] _pullMe;
             private int _openInputs;
-            private int _preferredEmitting = 0;
+            private int _preferredEmitting;
             private bool _isFirst = true;
 
-            public MergePreferredStageLogic(Shape shape, MergePreferred<T> stage) : base(shape)
+            public Logic(Shape shape, MergePreferred<T> stage) : base(shape)
             {
                 _stage = stage;
                 _openInputs = stage._secondaryPorts + 1;
                 _pullMe = new Action[stage._secondaryPorts];
-                for (int i = 0; i < stage._secondaryPorts; i++)
+                for (var i = 0; i < stage._secondaryPorts; i++)
                 {
                     var inlet = stage.In(i);
                     _pullMe[i] = () => TryPull(inlet);
                 }
 
-                SetHandler(_stage.Out, onPull: () =>
-                {
-                    if (_isFirst)
-                    {
-                        _isFirst = false;
-                        TryPull(_stage.Preferred);
-                        foreach (var inlet in _stage.Shape.Inlets.Cast<Inlet<T>>())
-                            TryPull(inlet);
-                    }
-                });
+                SetHandler(_stage.Out, EagerTerminateOutput);
 
                 SetHandler(_stage.Preferred,
                     onUpstreamFinish: OnComplete,
@@ -280,6 +270,12 @@ namespace Akka.Streams.Dsl
                     if (IsAvailable(port)) Emit(_stage.Out, Grab(port), _pullMe[i]);
                 }
             }
+
+            public override void PreStart()
+            {
+                TryPull(_stage.Preferred);
+                _stage.Shape.Ins.ForEach(TryPull);
+            }
         }
 
         #endregion
@@ -310,7 +306,7 @@ namespace Akka.Streams.Dsl
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new MergePreferredStageLogic(Shape, this);
+            return new Logic(Shape, this);
         }
     }
 
