@@ -1001,7 +1001,7 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region internal classes
 
-        private sealed class MapAsyncGraphStageLogic : GraphStageLogic
+        private sealed class Logic : GraphStageLogic
         {
             private class Holder<T>
             {
@@ -1015,7 +1015,7 @@ namespace Akka.Streams.Implementation.Fusing
             private IBuffer<Holder<TOut>> _buffer;
             private readonly Action<Tuple<Holder<TOut>, Result<TOut>>> _taskCallback;
 
-            public MapAsyncGraphStageLogic(Shape shape, Attributes inheritedAttributes, MapAsync<TIn, TOut> stage) : base(shape)
+            public Logic(Shape shape, Attributes inheritedAttributes, MapAsync<TIn, TOut> stage) : base(shape)
             {
                 _stage = stage;
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
@@ -1046,7 +1046,7 @@ namespace Akka.Streams.Implementation.Fusing
                         var task = _stage.MapFunc(Grab(_stage.In));
                         var holder = new Holder<TOut>() {Elem = NotYetThere};
                         _buffer.Enqueue(holder);
-                        task.ContinueWith(t => _taskCallback(Tuple.Create(holder, Result.FromTask(t))), TaskContinuationOptions.AttachedToParent);
+                        task.ContinueWith(t => _taskCallback(Tuple.Create(holder, Result.FromTask(t))), TaskContinuationOptions.ExecuteSynchronously);
                     }
                     catch (Exception e)
                     {
@@ -1057,10 +1057,7 @@ namespace Akka.Streams.Implementation.Fusing
                 SetHandler(_stage.Out, onPull: PushOne);
             }
 
-            public int Todo
-            {
-                get { return _buffer.Used; }
-            }
+            private int Todo => _buffer.Used;
 
             public override void PreStart()
             {
@@ -1127,7 +1124,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new MapAsyncGraphStageLogic(Shape, inheritedAttributes, this);
+            return new Logic(Shape, inheritedAttributes, this);
         }
     }
 

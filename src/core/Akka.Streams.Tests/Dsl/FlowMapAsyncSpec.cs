@@ -243,7 +243,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_with_MapAsync_must_signal_NPE_when_future_is_completed_with_null()
         {
-            var expected = ReactiveStreamsCompliance.ElementMustNotBeNullMsg + Environment.NewLine + "Parametername: element";
+            var expected = ReactiveStreamsCompliance.ElementMustNotBeNullMsg + Environment.NewLine + "Parameter name: element";
             var c = TestSubscriber.CreateManualProbe<string>(this);
 
             Source.From(new[] {"a", "b"})
@@ -302,7 +302,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 var timer = new Thread(() =>
                 {
-                    var delay = 50000; // nanoseconds
+                    var delay = 500; // 50000 nanoseconds
                     var count = 0;
                     var cont = true;
                     while (cont)
@@ -329,16 +329,13 @@ namespace Akka.Streams.Tests.Dsl
 
                 Func<Task<int>> deferred = () =>
                 {
+                    var promise = new TaskCompletionSource<int>();
                     if (counter.IncrementAndGet() > parallelism)
-                        return Task.Run(() =>
-                        {
-                            throw new Exception("parallelism exceeded");
-                            return 0;
-                        });
+                        promise.SetException(new Exception("parallelism exceeded"));
+                    else
 
-                    var p = new TaskCompletionSource<int>();
-                    queue.Enqueue(Tuple.Create(p, DateTime.Now.Ticks));
-                    return p.Task;
+                        queue.Enqueue(Tuple.Create(promise, DateTime.Now.Ticks));
+                    return promise.Task;
                 };
 
                 try
@@ -348,7 +345,7 @@ namespace Akka.Streams.Tests.Dsl
                         .MapAsync(parallelism, _ => deferred())
                         .RunFold(0, (c, _) => c + 1, Materializer);
 
-                    task.Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
+                    task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                     task.Result.Should().Be(n);
                 }
                 finally
