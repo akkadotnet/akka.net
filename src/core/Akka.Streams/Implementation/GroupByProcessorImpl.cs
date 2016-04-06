@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reactive.Streams;
-using System.Runtime.Remoting.Messaging;
 using Akka.Actor;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
@@ -10,7 +9,7 @@ using Directive = Akka.Streams.Supervision.Directive;
 
 namespace Akka.Streams.Implementation
 {
-    internal class GroupByProcessorImpl : MultiStreamOutputProcessor<object>
+    internal sealed class GroupByProcessorImpl : MultiStreamOutputProcessor<object>
     {
         public static Props Props(ActorMaterializerSettings settings, int maxSubstreams, Func<object, object> keyFor)
         {
@@ -22,7 +21,6 @@ namespace Akka.Streams.Implementation
         private readonly Decider _decider;
         private readonly IDictionary<object, SubstreamOutput> _keyToSubstreamOutput = new Dictionary<object, SubstreamOutput>();
         // No substream is open yet. If downstream cancels now, we are complete
-        private readonly TransferPhase _waitFirst;
         // some substreams are open now. If downstream cancels, we still continue until the substreams are closed
         private readonly TransferPhase _waitNext;
 
@@ -33,7 +31,7 @@ namespace Akka.Streams.Implementation
             _maxSubstreams = maxSubstreams;
             _keyFor = keyFor;
             _decider = settings.SupervisionDecider;
-            _waitFirst = new TransferPhase(PrimaryInputs.NeedsInput.And(PrimaryOutputs.NeedsDemand), () =>
+            var waitFirst = new TransferPhase(PrimaryInputs.NeedsInput.And(PrimaryOutputs.NeedsDemand), () =>
             {
                 var element = PrimaryInputs.DequeueInputElement();
                 object key;
@@ -55,7 +53,7 @@ namespace Akka.Streams.Implementation
                 }
             });
 
-            InitialPhase(1, _waitFirst);
+            InitialPhase(1, waitFirst);
         }
 
         protected override void InvalidateSubstreamOutput(SubstreamKey substream)
@@ -85,7 +83,7 @@ namespace Akka.Streams.Implementation
                         Log.Debug("Dropped element [{0}] due to exception from groupBy function: {1}", key, cause.Message);
                     return false;
                 }
-                else throw;
+                throw;
             }
         }
 

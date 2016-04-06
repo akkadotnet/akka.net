@@ -280,9 +280,9 @@ namespace Akka.Streams.Dsl
         /// to use a bounded mailbox with zero <see cref="BoundedMessageQueue.PushTimeOut"/> or use a rate
         /// limiting stage in front of this <see cref="Sink{TIn, TMat}"/>.
         ///</summary>
-        public static Sink<TIn, object> ActorRef<TIn>(IActorRef actorRef, object onCompleteMessage)
+        public static Sink<TIn, Unit> ActorRef<TIn>(IActorRef actorRef, object onCompleteMessage)
         {
-            return new Sink<TIn, object>(new ActorRefSink<TIn>(actorRef, onCompleteMessage, DefaultAttributes.ActorRefSink, Shape<TIn>("ActorRefSink")));
+            return new Sink<TIn, Unit>(new ActorRefSink<TIn>(actorRef, onCompleteMessage, DefaultAttributes.ActorRefSink, Shape<TIn>("ActorRefSink")));
         }
 
         /// <summary>

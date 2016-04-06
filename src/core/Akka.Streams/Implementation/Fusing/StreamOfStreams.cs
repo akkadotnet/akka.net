@@ -7,6 +7,7 @@ using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
+using Akka.Streams.Util;
 using Akka.Util;
 
 namespace Akka.Streams.Implementation.Fusing
@@ -322,17 +323,17 @@ namespace Akka.Streams.Implementation.Fusing
             SplitAfter
         }
 
-        public static IGraph<FlowShape<T, Source<T, Unit>>, Unit> When<T>(Func<T, bool> p, SubstreamCancelStrategy substreamCancelStrategy) where T : class => new Split<T>(SplitDecision.SplitBefore, p, substreamCancelStrategy);
+        public static IGraph<FlowShape<T, Source<T, Unit>>, Unit> When<T>(Func<T, bool> p, SubstreamCancelStrategy substreamCancelStrategy) => new Split<T>(SplitDecision.SplitBefore, p, substreamCancelStrategy);
 
 
-        public static IGraph<FlowShape<T, Source<T, Unit>>, Unit> After<T>(Func<T, bool> p, SubstreamCancelStrategy substreamCancelStrategy) where T : class => new Split<T>(SplitDecision.SplitAfter, p, substreamCancelStrategy);
+        public static IGraph<FlowShape<T, Source<T, Unit>>, Unit> After<T>(Func<T, bool> p, SubstreamCancelStrategy substreamCancelStrategy) => new Split<T>(SplitDecision.SplitAfter, p, substreamCancelStrategy);
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    internal sealed class Split<T> : GraphStage<FlowShape<T, Source<T, Unit>>> where T : class
+    internal sealed class Split<T> : GraphStage<FlowShape<T, Source<T, Unit>>>
     {
         #region internal classes
 
@@ -352,7 +353,7 @@ namespace Akka.Streams.Implementation.Fusing
 
                 public bool HasInitialElement => FirstElement != null;
 
-                public T FirstElement { private get; set; }
+                public Option<T> FirstElement { get; } = new Option<T>();
 
                 private void CloseThis(SubstreamHandler handler, T currentElem)
                 {
@@ -367,7 +368,7 @@ namespace Akka.Streams.Implementation.Fusing
                     }
                     else if (decision == Split.SplitDecision.SplitBefore)
                     {
-                        handler.FirstElement = currentElem;
+                        handler.FirstElement.Value = currentElem;
                         if (!_logic._substreamCancelled)
                             _logic._substreamSource.Complete();
                     }
@@ -377,8 +378,8 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     if (HasInitialElement)
                     {
-                        _logic._substreamSource.Push(FirstElement);
-                        FirstElement = null;
+                        _logic._substreamSource.Push(FirstElement.Value);
+                        FirstElement.Reset();
                         _logic.SetKeepGoing(false);
 
                         if (_willCompleteAfterInitialElement)
@@ -489,7 +490,7 @@ namespace Akka.Streams.Implementation.Fusing
                     }
                     // Next pull will come from the next substream that we will open
                     else
-                        handler.FirstElement = elem;
+                        handler.FirstElement.Value = elem;
 
                     HandOver(handler);
                 }, onUpstreamFinish: CompleteStage);

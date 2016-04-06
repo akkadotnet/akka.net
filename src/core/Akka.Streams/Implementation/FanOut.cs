@@ -69,7 +69,7 @@ namespace Akka.Streams.Implementation
                     var outputs = _outputs.AsEnumerable().GetEnumerator();
 
                     while (publishers.MoveNext() && outputs.MoveNext())
-                        outputs.Current.SubReceive.CurrentReceive(new ExposedPublisher<T>(publishers.Current));
+                        outputs.Current.SubReceive.CurrentReceive(new ExposedPublisher(publishers.Current));
                 })
                 .With<FanOut.SubstreamRequestMore>(more =>
                 {
@@ -81,7 +81,7 @@ namespace Akka.Streams.Implementation
                         if (_marked[more.Id] && !_pending[more.Id])
                             _markedPending += 1;
                         _pending[more.Id] = true;
-                        _outputs[more.Id].SubReceive.CurrentReceive(new RequestMore<T>(null, more.Demand));
+                        _outputs[more.Id].SubReceive.CurrentReceive(new RequestMore(null, more.Demand));
                     }
                 })
                 .With<FanOut.SubstreamCancel>(cancel =>
@@ -94,7 +94,7 @@ namespace Akka.Streams.Implementation
 
                     _cancelled[cancel.Id] = true;
                     OnCancel(cancel.Id);
-                    _outputs[cancel.Id].SubReceive.CurrentReceive(new Cancel<T>(null));
+                    _outputs[cancel.Id].SubReceive.CurrentReceive(new Cancel(null));
                 })
                 .With<FanOut.SubstreamSubscribePending>(pending =>
                 {
@@ -474,7 +474,7 @@ namespace Akka.Streams.Implementation
     /// TODO Find out where this class will be used and check if the type parameter fit
     /// since we need to cast messages into a tuple and therefore maybe need aditional type parameters
     /// </summary>
-    internal class Unzip<T> : FanOut<T>
+    internal sealed class Unzip<T> : FanOut<T>
     {
         public Unzip(ActorMaterializerSettings settings, int outputCount = 2) : base(settings, outputCount)
         {

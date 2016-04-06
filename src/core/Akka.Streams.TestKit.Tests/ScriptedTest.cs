@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Streams;
@@ -6,6 +7,7 @@ using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Streams.Dsl;
+using Akka.Streams.Util;
 using Akka.TestKit;
 using Akka.Util;
 using Xunit.Abstractions;
@@ -96,7 +98,10 @@ namespace Akka.Streams.TestKit.Tests
                 if (NoOutputsPending)
                     throw new ScriptException($"Tried to produce element {output} but no elements should be produced right now");
 
-                if (!Equals(output, ExpectedOutputs[OutputCursor]))
+                var equalsExpectedOutput = typeof (IEnumerable).IsAssignableFrom(typeof (TOut))
+                    ? ((IEnumerable) output).Cast<object>().SequenceEqual(((IEnumerable) ExpectedOutputs[OutputCursor]).Cast<object>())
+                    : Equals(output, ExpectedOutputs[OutputCursor]);
+                if (!equalsExpectedOutput)
                     throw new ArgumentException("Unexpected output", nameof(output));
 
                 return new Script<TIn, TOut>(ProvidedInputs, ExpectedOutputs, Jumps, InputCursor, OutputCursor + 1, OutputEndCursor, Completed);

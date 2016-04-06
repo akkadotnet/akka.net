@@ -4,7 +4,7 @@ using Akka.Pattern;
 
 namespace Akka.Streams.Implementation
 {
-    internal struct SubReceive
+    internal class SubReceive
     {
         private Receive _currentReceive;
 
@@ -13,7 +13,7 @@ namespace Akka.Streams.Implementation
             _currentReceive = initial;
         }
 
-        public Receive CurrentReceive { get { return _currentReceive; } }
+        public Receive CurrentReceive => _currentReceive;
 
         public void Become(Receive receive)
         {
@@ -42,12 +42,12 @@ namespace Akka.Streams.Implementation
     {
         public static TransferState NeedsInput(IInputs inputs)
         {
-            return new AnonymousTransferState(inputs.AreInputsAvailable, inputs.AreInputsDepleted); 
+            return new LambdaTransferState(() => inputs.AreInputsAvailable, () => inputs.AreInputsDepleted); 
         }
 
         public static TransferState NeedsInputOrComplete(IInputs inputs)
         {
-            return new AnonymousTransferState(inputs.AreInputsAvailable || inputs.AreInputsDepleted, false);
+            return new LambdaTransferState(() => inputs.AreInputsAvailable || inputs.AreInputsDepleted, () => false);
         }
     }
 
@@ -73,12 +73,12 @@ namespace Akka.Streams.Implementation
     {
         public static TransferState NeedsDemand(IOutputs outputs)
         {
-            return new AnonymousTransferState(outputs.IsDemandAvailable, outputs.IsClosed);
+            return new LambdaTransferState(() => outputs.IsDemandAvailable, () => outputs.IsClosed);
         }
 
         public static TransferState NeedsDemandOrCancel(IOutputs outputs)
         {
-            return new AnonymousTransferState(outputs.IsDemandAvailable || outputs.IsClosed, false);
+            return new LambdaTransferState(() => outputs.IsDemandAvailable || outputs.IsClosed, () => false);
         }
     }
 
@@ -86,31 +86,16 @@ namespace Akka.Streams.Implementation
     {
         public abstract bool IsReady { get; }
         public abstract bool IsCompleted { get; }
-        public bool IsExecutable { get { return IsReady && !IsCompleted; } }
+        public bool IsExecutable => IsReady && !IsCompleted;
 
         public TransferState Or(TransferState other)
         {
-            return new AnonymousTransferState(IsReady || other.IsReady, IsCompleted && other.IsCompleted);
+            return new LambdaTransferState(() => IsReady || other.IsReady, () => IsCompleted && other.IsCompleted);
         }
 
         public TransferState And(TransferState other)
         {
-            return new AnonymousTransferState(IsReady && other.IsReady, IsCompleted || other.IsCompleted);
-        }
-    }
-
-    internal sealed class AnonymousTransferState : TransferState
-    {
-        private readonly bool _isReady;
-        private readonly bool _isCompleted;
-
-        public override bool IsReady { get { return _isReady; } }
-        public override bool IsCompleted { get { return _isCompleted; } }
-
-        public AnonymousTransferState(bool isReady, bool isCompleted)
-        {
-            _isReady = isReady;
-            _isCompleted = isCompleted;
+            return new LambdaTransferState(() => IsReady && other.IsReady, () => IsCompleted || other.IsCompleted);
         }
     }
 
@@ -119,8 +104,8 @@ namespace Akka.Streams.Implementation
         private readonly Func<bool> _isReady;
         private readonly Func<bool> _isCompleted;
 
-        public override bool IsReady { get { return _isReady(); } }
-        public override bool IsCompleted { get { return _isCompleted(); } }
+        public override bool IsReady => _isReady();
+        public override bool IsCompleted => _isCompleted();
 
         public LambdaTransferState(Func<bool> isReady, Func<bool> isCompleted)
         {
@@ -137,15 +122,9 @@ namespace Akka.Streams.Implementation
         {
         }
 
-        public override bool IsReady
-        {
-            get { return false; }
-        }
+        public override bool IsReady => false;
 
-        public override bool IsCompleted
-        {
-            get { return true; }
-        }
+        public override bool IsCompleted => true;
     }
 
     internal sealed class NotInitialized : TransferState
@@ -156,8 +135,8 @@ namespace Akka.Streams.Implementation
         {
         }
 
-        public override bool IsReady { get { return false; } }
-        public override bool IsCompleted { get { return false; } }
+        public override bool IsReady => false;
+        public override bool IsCompleted => false;
     }
 
     internal class WaitingForUpstreamSubscription : TransferState
@@ -171,8 +150,8 @@ namespace Akka.Streams.Implementation
             AndThen = andThen;
         }
 
-        public override bool IsReady { get { return false; } }
-        public override bool IsCompleted { get { return false; } }
+        public override bool IsReady => false;
+        public override bool IsCompleted => false;
     }
 
     internal sealed class Always : TransferState
@@ -183,18 +162,18 @@ namespace Akka.Streams.Implementation
         {
         }
 
-        public override bool IsReady { get { return true; } }
-        public override bool IsCompleted { get { return false; } }
+        public override bool IsReady => true;
+        public override bool IsCompleted => false;
     }
 
     internal struct TransferPhase
     {
-        public readonly TransferState Precondintion;
+        public readonly TransferState Precondition;
         public readonly Action Action;
 
-        public TransferPhase(TransferState precondintion, Action action) : this()
+        public TransferPhase(TransferState precondition, Action action) : this()
         {
-            Precondintion = precondintion;
+            Precondition = precondition;
             Action = action;
         }
     }
@@ -227,7 +206,8 @@ namespace Akka.Streams.Implementation
 
         public TransferState TransferState { get; set; }
         public Action CurrentAction { get; set; }
-        public bool IsPumpFinished { get { return TransferState.IsCompleted; } }
+        public bool IsPumpFinished => TransferState.IsCompleted;
+
         public void InitialPhase(int waitForUpstream, TransferPhase andThen)
         {
             Pumps.InitialPhase(this, waitForUpstream, andThen);
@@ -273,10 +253,10 @@ namespace Akka.Streams.Implementation
         public static void InitialPhase(this IPump self, int waitForUpstream, TransferPhase andThen)
         {
             if (waitForUpstream < 1)
-                throw new ArgumentException(string.Format("WaitForUpstream must be >= 1 (was {0})", waitForUpstream));
+                throw new ArgumentException($"WaitForUpstream must be >= 1 (was {waitForUpstream})");
             
             if(self.TransferState != NotInitialized.Instance)
-                throw new IllegalStateException(string.Format("Initial state expected NotInitialized, but got {0}", self.TransferState));
+                throw new IllegalStateException($"Initial state expected NotInitialized, but got {self.TransferState}");
 
             self.TransferState = new WaitingForUpstreamSubscription(waitForUpstream, andThen);
         }
@@ -284,7 +264,7 @@ namespace Akka.Streams.Implementation
         public static void WaitForUpstream(this IPump self, int waitForUpstream)
         {
             if(waitForUpstream < 1) 
-                throw new ArgumentException(string.Format("WaitForUpstream must be >= 1 (was {0})", waitForUpstream));
+                throw new ArgumentException($"WaitForUpstream must be >= 1 (was {waitForUpstream})");
 
             self.TransferState = new WaitingForUpstreamSubscription(waitForUpstream, new TransferPhase(self.TransferState, self.CurrentAction));
         }
@@ -296,7 +276,7 @@ namespace Akka.Streams.Implementation
                 var t = (WaitingForUpstreamSubscription) self.TransferState;
                 if (t.Remaining == 1)
                 {
-                    self.TransferState = t.AndThen.Precondintion;
+                    self.TransferState = t.AndThen.Precondition;
                     self.CurrentAction = t.AndThen.Action;
                 }
                 else
@@ -317,7 +297,7 @@ namespace Akka.Streams.Implementation
             }
             else
             {
-                self.TransferState = phase.Precondintion;
+                self.TransferState = phase.Precondition;
                 self.CurrentAction = phase.Action;
             }
         }

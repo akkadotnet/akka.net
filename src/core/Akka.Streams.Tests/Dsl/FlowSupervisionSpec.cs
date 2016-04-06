@@ -42,14 +42,14 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Stream_superviosion_must_stop_and_complete_stream_with_failure_by_default()
+        public void Stream_supervision_must_stop_and_complete_stream_with_failure_by_default()
         {
             Action action = () => Run(FailingMap);
             action.ShouldThrow<SystemException>().And.ShouldBeEquivalentTo(Exception);
         }
 
         [Fact]
-        public void Stream_superviosion_must_support_resume()
+        public void Stream_supervision_must_support_resume()
         {
             var withAttributes =
                 FailingMap.WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider));
@@ -58,7 +58,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Stream_superviosion_must_support_restart()
+        public void Stream_supervision_must_support_restart()
         {
             var withAttributes =
                 FailingMap.WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider));
@@ -67,18 +67,17 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Stream_superviosion_must_complete_stream_with_ArgumentNullException_when_null_is_emitted()
+        public void Stream_supervision_must_complete_stream_with_ArgumentNullException_when_null_is_emitted()
         {
             var task = Source.From(new[] {"a", "b"}).Map(x => null as string).Limit(1000).RunWith(Sink.Seq<string>(), Materializer);
             
             task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
-                .ShouldThrow<AggregateException>()
-                .WithInnerException<ArgumentNullException>()
-                .WithInnerMessage(ReactiveStreamsCompliance.ElementMustNotBeNullMsg + "Parametername: element");
+                .ShouldThrow<ArgumentNullException>()
+                .WithMessage(ReactiveStreamsCompliance.ElementMustNotBeNullMsg + "Parameter name: element");
         }
 
         [Fact]
-        public void Stream_superviosion_must_resume_stream_when_null_is_emitted()
+        public void Stream_supervision_must_resume_stream_when_null_is_emitted()
         {
             var nullMap = Flow.Create<string>().Map(element =>
             {

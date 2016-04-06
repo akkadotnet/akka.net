@@ -40,11 +40,11 @@ namespace Akka.Streams.Implementation
             NeedsDemandOrCancel = DefaultOutputTransferStates.NeedsDemandOrCancel(this);
             SubReceive = new SubReceive(message =>
             {
-                var publisher = message as ExposedPublisher<T>;
+                var publisher = message as ExposedPublisher;
                 if (publisher == null)
                     throw new IllegalStateException($"The first message must be ExposedPublisher but was {message}");
 
-                ExposedPublisher = publisher.Publisher;
+                ExposedPublisher = (ActorPublisher<T>) publisher.Publisher;
                 SubReceive.Become(DownstreamRunning);
                 return true;
             });
@@ -59,15 +59,15 @@ namespace Akka.Streams.Implementation
             {
                 SubscribePending();
             }
-            else if (message is RequestMore<T>)
+            else if (message is RequestMore)
             {
-                var requestMore = (RequestMore<T>) message;
-                MoreRequested((ActorSubscriptionWithCursor<T>)requestMore.Subscription, requestMore.Demand);
+                var requestMore = (RequestMore) message;
+                MoreRequested((ActorSubscriptionWithCursor<T>) requestMore.Subscription, requestMore.Demand);
                 _pump.Pump();
             }
-            else if (message is Cancel<T>)
+            else if (message is Cancel)
             {
-                var cancel = (Cancel<T>) message;
+                var cancel = (Cancel) message;
                 UnregisterSubscription((ActorSubscriptionWithCursor<T>) cancel.Subscription);
                 _pump.Pump();
             }
@@ -85,7 +85,7 @@ namespace Akka.Streams.Implementation
 
         protected override void Shutdown(bool isCompleted)
         {
-            ExposedPublisher?.Shutdown(isCompleted ? null : ActorPublisher<object>.NormalShutdownReason);
+            ExposedPublisher?.Shutdown(isCompleted ? null : ActorPublisher.NormalShutdownReason);
 
             _afterShutdown?.Invoke();
         }
@@ -126,7 +126,7 @@ namespace Akka.Streams.Implementation
         public bool IsOpen => !IsClosed;
     }
 
-    internal class FanoutProcessorImpl<T> : ActorProcessorImpl<T>
+    internal sealed class FanoutProcessorImpl<T> : ActorProcessorImpl<T>
     {
         public static Props Props(ActorMaterializerSettings settings)
         {
@@ -145,14 +145,13 @@ namespace Akka.Streams.Implementation
             InitialPhase(1, running);
         }
 
-        protected new void Fail(Exception e)
+        protected override void Fail(Exception e)
         {
             if (Settings.IsDebugLogging)
                 Log.Debug("Failed due to: {0}", e.Message);
 
             PrimaryInputs.Cancel();
             PrimaryOutputs.Error(e);
-
             // Stopping will happen after flush
         }
 

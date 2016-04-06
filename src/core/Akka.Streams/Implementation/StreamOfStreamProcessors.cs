@@ -605,7 +605,7 @@ namespace Akka.Streams.Implementation
             {
                 if (message is OtherStreamOnSubscribe)
                 {
-                    throw ActorPublisher<T>.NormalShutdownReason;
+                    throw ActorPublisher.NormalShutdownReason;
                 }
 
                 return false;
