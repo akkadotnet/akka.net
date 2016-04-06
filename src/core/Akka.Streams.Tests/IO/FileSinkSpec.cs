@@ -32,7 +32,9 @@ namespace Akka.Streams.Tests.IO
                 var line = "";
                 for (var i = 0; i < 1000; i++)
                     line += character;
-                line += Environment.NewLine;
+                // don't use Environment.NewLine - it can contain more than one byte length marker, 
+                // causing tests to fail due to incorrect number of bytes in input string
+                line += "\n";
                 _testLines.Add(line);
             }
 
@@ -79,23 +81,25 @@ namespace Akka.Streams.Tests.IO
             {
                 TargetFile(f =>
                 {
-                    Func<List<string>, Task<IOResult>> write = lines => Source.From(lines)
+                    Func<IEnumerable<string>, Task<IOResult>> write = lines => Source.From(lines)
                         .Map(ByteString.FromString)
                         .RunWith(FileIO.ToFile(f), _materializer);
 
                     var completion1 = write(_testLines);
                     completion1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
 
-                    var lastWrite = new List<string>();
+                    var lastWrite = new string[100];
                     for (var i = 0; i < 100; i++)
-                        lastWrite.Add("x");
+                        lastWrite[i] = "x";
 
                     var completion2 = write(lastWrite);
                     completion2.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                     var result = completion2.Result;
 
-                    result.Count.Should().Be(100);
-                    CheckFileContent(f, lastWrite.Aggregate((s, s1) => s + s1) + _testLines.Aggregate((s, s1) => s + s1).Drop(100));
+                    var lastWriteString = new string(lastWrite.SelectMany(x => x).ToArray());
+                    result.Count.Should().Be(lastWriteString.Length);
+                    var testLinesString = new string(_testLines.SelectMany(x => x).ToArray());
+                    CheckFileContent(f, lastWriteString + testLinesString.Substring(100));
                 });
             }, _materializer);
         }
@@ -109,7 +113,7 @@ namespace Akka.Streams.Tests.IO
                 {
                     Func<List<string>, Task<IOResult>> write = lines => Source.From(lines)
                         .Map(ByteString.FromString)
-                        .RunWith(FileIO.ToFile(f, append: true), _materializer);
+                        .RunWith(FileIO.ToFile(f, fileMode: FileMode.Append), _materializer);
 
                     var completion1 = write(_testLines);
                     completion1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -123,10 +127,13 @@ namespace Akka.Streams.Tests.IO
                     completion2.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                     var result2 = completion2.Result;
 
+                    var lastWriteString = new string(lastWrite.SelectMany(x => x).ToArray());
+                    var testLinesString = new string(_testLines.SelectMany(x => x).ToArray());
+
                     f.Length.Should().Be(result1.Count + result2.Count);
-                    CheckFileContent(f,
-                        _testLines.Aggregate((s, s1) => s + s1) + lastWrite.Aggregate((s, s1) => s + s1) +
-                        Environment.NewLine);
+
+                    //NOTE: no new line at the end of the file - does JVM/linux appends new line at the end of the file in append mode?
+                    CheckFileContent(f, testLinesString + lastWriteString);
                 });
             }, _materializer);
         }
@@ -148,7 +155,9 @@ namespace Akka.Streams.Tests.IO
                             .RunWith(FileIO.ToFile(f), materializer);
 
                         ((ActorMaterializerImpl)materializer).Supervisor.Tell(StreamSupervisor.GetChildren.Instance, TestActor);
-                        var actorRef = ExpectMsg<StreamSupervisor.Children>().Refs.First(@ref => @ref.Path.ToString().Contains("fileSource"));
+                        var refs = ExpectMsg<StreamSupervisor.Children>().Refs;
+                        //NOTE: Akka uses "fileSource" as name for DefaultAttributes.FileSink - I think it's mistake on the JVM implementation side
+                        var actorRef = refs.First(@ref => @ref.Path.ToString().Contains("fileSink"));
                         Utils.AssertDispatcher(actorRef, "akka.stream.default-blocking-io-dispatcher");
                     }
                     finally

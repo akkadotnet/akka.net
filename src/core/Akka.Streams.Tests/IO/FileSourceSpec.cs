@@ -21,15 +21,18 @@ namespace Akka.Streams.Tests.IO
         private readonly FileInfo _testFilePath = new FileInfo(Path.Combine(Path.GetTempPath(), "file-source-spec.tmp"));
         private FileInfo _manyLinesPath;
 
-        public FileSourceSpec()
+        public FileSourceSpec() : base(Utils.UnboundedMailboxConfig)
         {
             Sys.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
             var settings = ActorMaterializerSettings.Create(Sys).WithDispatcher("akka.actor.default-dispatcher");
             _materializer = Sys.Materializer(settings);
 
+            var sb = new StringBuilder(6000);
             foreach (var character in new[] { "a", "b", "c", "d", "e", "f" })
                 for (var i = 0; i < 1000; i++)
-                    _testText += character;
+                    sb.Append(character);
+
+            _testText = sb.ToString();
         }
 
         [Fact]
@@ -77,7 +80,8 @@ namespace Akka.Streams.Tests.IO
                 var expectedChunk = nextChunk();
                 while (!string.IsNullOrEmpty(expectedChunk))
                 {
-                    c.ExpectNext().DecodeString(Encoding.UTF8).Should().Be(nextChunk());
+                    var actual = c.ExpectNext().DecodeString(Encoding.UTF8);
+                    actual.Should().Be(expectedChunk);
                     expectedChunk = nextChunk();
                 }
                 sub.Request(1);

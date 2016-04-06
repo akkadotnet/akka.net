@@ -46,7 +46,7 @@ namespace Akka.Streams.Implementation.IO
 
             var ioResultPromise = new TaskCompletionSource<IOResult>();
             var props = FilePublisher.Props(_f, ioResultPromise, _chunkSize, settings.InitialInputBufferSize, settings.MaxInputBufferSize);
-            var dispatcher = context.EffectiveAttributes.GetAttribute(DefaultAttributes.IODispatcher.AttributeList.First()) as ActorAttributes.Dispatcher;
+            var dispatcher = context.EffectiveAttributes.GetAttribute(DefaultAttributes.IODispatcher.GetAttribute<ActorAttributes.Dispatcher>());
             var actorRef = materializer.ActorOf(context, props.WithDispatcher(dispatcher.Name));
 
             task = ioResultPromise.Task;

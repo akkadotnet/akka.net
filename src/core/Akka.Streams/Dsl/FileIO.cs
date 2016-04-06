@@ -38,8 +38,8 @@ namespace Akka.Streams.Dsl
         /// This source is backed by an Actor which will use the dedicated "akka.stream.blocking-io-dispatcher",
         /// unless configured otherwise by using <see cref="ActorAttributes"/>.
         /// </summary>
-        public static Sink<ByteString, Task<IOResult>> ToFile(FileInfo f, bool append = false) =>
-            new Sink<ByteString, Task<IOResult>>(new FileSink(f, append, DefaultAttributes.FileSink,
+        public static Sink<ByteString, Task<IOResult>> ToFile(FileInfo f, FileMode? fileMode = null) =>
+            new Sink<ByteString, Task<IOResult>>(new FileSink(f, fileMode ?? FileMode.OpenOrCreate, DefaultAttributes.FileSink,
                 new SinkShape<ByteString>(new Inlet<ByteString>("FileSink"))));
     }
 }
