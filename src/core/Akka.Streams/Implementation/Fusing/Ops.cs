@@ -12,6 +12,7 @@ using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
 using Akka.Streams.Util;
 using Akka.Util;
+using Akka.Util.Internal.Collections;
 
 namespace Akka.Streams.Implementation.Fusing
 {
@@ -160,58 +161,6 @@ namespace Akka.Streams.Implementation.Fusing
 
             _recovered = result;
             return context.AbsorbTermination();
-        }
-    }
-
-    internal sealed class MapConcat<TIn, TOut> : PushPullStage<TIn, TOut>
-    {
-        private readonly Func<TIn, IEnumerable<TOut>> _func;
-        private readonly Decider _decider;
-        private IIterator<TOut> _currentIterator;
-
-        public MapConcat(Func<TIn, IEnumerable<TOut>> func, Decider decider)
-        {
-            _func = func;
-            _decider = decider;
-            _currentIterator = new IteratorAdapter<TOut>(Enumerable.Empty<TOut>().GetEnumerator());
-        }
-
-        public override ISyncDirective OnPush(TIn element, IContext<TOut> context)
-        {
-            _currentIterator = new IteratorAdapter<TOut>(_func(element).GetEnumerator());
-            return !_currentIterator.HasNext() ? (ISyncDirective) context.Pull() : context.Push(_currentIterator.Next());
-        }
-
-        public override ISyncDirective OnPull(IContext<TOut> context)
-        {
-            if (context.IsFinishing)
-            {
-                if (_currentIterator.HasNext())
-                {
-                    var element = _currentIterator.Next();
-                    return _currentIterator.HasNext() ? context.Push(element) : context.PushAndFinish(element);
-                }
-                else return context.Finish();
-            }
-            else
-            {
-                return _currentIterator.HasNext() ? (ISyncDirective) context.Push(_currentIterator.Next()) : context.Pull();
-            }
-        }
-
-        public override ITerminationDirective OnUpstreamFinish(IContext<TOut> context)
-        {
-            return _currentIterator.HasNext() ? context.AbsorbTermination() : context.Finish();
-        }
-
-        public override Directive Decide(Exception cause)
-        {
-            return _decider(cause);
-        }
-
-        public override IStage<TIn, TOut> Restart()
-        {
-            return new MapConcat<TIn, TOut>(_func, _decider);
         }
     }
 
@@ -1802,5 +1751,105 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new RecoverWithLogic(this);
 
         public override string ToString() => "RecoverWith";
+    }
+
+    internal sealed class StatefulMapConcat<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
+    {
+        #region internal classes
+
+        private sealed class Logic : GraphStageLogic
+        {
+            private readonly StatefulMapConcat<TIn, TOut> _stage;
+            private IteratorAdapter<TOut> _currentIterator;
+            private readonly Decider _decider;
+            private Func<TIn, IEnumerable<TOut>> _plainConcat;
+
+            public Logic(StatefulMapConcat<TIn, TOut> stage, Attributes inheritedAttributes) : base(stage.Shape)
+            {
+                _stage = stage;
+                _decider = inheritedAttributes.GetAttribute(new ActorAttributes.SupervisionStrategy(Deciders.StoppingDecider)).Decider;
+                _plainConcat = stage._concatFactory();
+
+                SetHandler(stage._in, onPush: () =>
+                {
+                    try
+                    {
+                        _currentIterator = new IteratorAdapter<TOut>(_plainConcat(Grab(stage._in)).GetEnumerator());
+                        PushPull();
+                    }
+                    catch (Exception ex)
+                    {
+                        var directive = _decider(ex);
+                        switch (directive)
+                        {
+                            case Directive.Stop:
+                                FailStage(ex);
+                                break;
+                            case Directive.Resume:
+                                if(!HasBeenPulled(_stage._in))
+                                    Pull(_stage._in);
+                                break;
+                            case Directive.Restart:
+                                RestartState();
+                                if (!HasBeenPulled(_stage._in))
+                                    Pull(_stage._in);
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+                    }
+                }, onUpstreamFinish: () =>
+                {
+                    if(!HasNext)
+                        CompleteStage();
+                });
+
+                SetHandler(stage._out, onPull: PushPull);
+            }
+
+            private void RestartState()
+            {
+                _plainConcat = _stage._concatFactory();
+                _currentIterator = null;
+            }
+
+            private bool HasNext => _currentIterator != null && _currentIterator.HasNext();
+
+            private void PushPull()
+            {
+                if (HasNext)
+                {
+                    Push(_stage._out, _currentIterator.Next());
+                    if(!HasNext && IsClosed(_stage._in))
+                        CompleteStage();
+                }
+                else if (!IsClosed(_stage._in))
+                    Pull(_stage._in);
+                else
+                    CompleteStage();
+            }
+        }
+
+        #endregion
+
+        private readonly Func<Func<TIn, IEnumerable<TOut>>> _concatFactory;
+
+        private readonly Inlet<TIn> _in = new Inlet<TIn>("StatefulMapConcat.in");
+        private readonly Outlet<TOut> _out = new Outlet<TOut>("StatefulMapConcat.out");
+
+        public StatefulMapConcat(Func<Func<TIn, IEnumerable<TOut>>> concatFactory)
+        {
+            _concatFactory = concatFactory;
+
+            Shape = new FlowShape<TIn, TOut>(_in, _out);
+        }
+
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.StatefulMapConcat;
+
+        public override FlowShape<TIn, TOut> Shape { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
+
+        public override string ToString() => "StatefulMapConcat";
     }
 }

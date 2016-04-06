@@ -119,7 +119,39 @@ namespace Akka.Streams.Dsl.Internal
         public static IFlow<TOut, TMat> MapConcat<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
             Func<TIn, IEnumerable<TOut>> mapConcater)
         {
-            return flow.AndThen(new MapConcat<TIn, TOut>(mapConcater));
+            return StatefulMapConcat(flow, () => mapConcater);
+        }
+
+        /// <summary>
+        /// Transform each input element into an `Iterable` of output elements that is
+        /// then flattened into the output stream. The transformation is meant to be stateful,
+        /// which is enabled by creating the transformation function anew for every materialization —
+        /// the returned function will typically close over mutable objects to store state between
+        /// invocations. For the stateless variant see <see cref="FlowOperations.MapConcat{T,TIn,TOut,TMat}"/>.
+        /// 
+        /// The returned `Iterable` MUST NOT contain `null` values,
+        /// as they are illegal as stream elements - according to the Reactive Streams specification.
+        /// 
+        /// <para>
+        /// '''Emits when''' the mapping function returns an element or there are still remaining elements
+        /// from the previously calculated collection
+        /// </para>
+        /// <para>
+        /// '''Backpressures when''' downstream backpressures or there are still remaining elements from the
+        /// previously calculated collection
+        /// </para>
+        /// <para>
+        /// '''Completes when''' upstream completes and all remaining elements has been emitted
+        /// </para>
+        /// <para>
+        /// '''Cancels when''' downstream cancels
+        /// </para>
+        /// See also <see cref="FlowOperations.MapConcat{T,TIn,TOut,TMat}"/>
+        /// </summary>
+        public static IFlow<TOut, TMat> StatefulMapConcat<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
+            Func<Func<TIn, IEnumerable<TOut>>> mapConcaterFactory)
+        {
+            return flow.Via(new Fusing.StatefulMapConcat<TIn, TOut>(mapConcaterFactory));
         }
 
         /// <summary>

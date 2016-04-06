@@ -38,7 +38,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes BatchWeighted = Attributes.CreateName("batchWeighted");
         public static readonly Attributes Conflate = Attributes.CreateName("conflate");
         public static readonly Attributes Expand = Attributes.CreateName("expand");
-        public static readonly Attributes MapConcat = Attributes.CreateName("mapConcat");
+        public static readonly Attributes StatefulMapConcat = Attributes.CreateName("statefulMapConcat");
         public static readonly Attributes GroupBy = Attributes.CreateName("groupBy");
         public static readonly Attributes PrefixAndTail = Attributes.CreateName("prefixAndTail");
         public static readonly Attributes Split = Attributes.CreateName("split");
@@ -374,21 +374,6 @@ namespace Akka.Streams.Implementation.Stages
         public override IStage<T, T> Create(Attributes effectiveAttributes)
         {
             return new Fusing.Buffer<T>(_size, _overflowStrategy);
-        }
-    }
-
-    internal sealed class MapConcat<TIn, TOut> : SymbolicStage<TIn, TOut>
-    {
-        private readonly Func<TIn, IEnumerable<TOut>> _func;
-
-        public MapConcat(Func<TIn, IEnumerable<TOut>> func, Attributes attributes = null) : base(attributes ?? DefaultAttributes.MapConcat)
-        {
-            _func = func;
-        }
-
-        public override IStage<TIn, TOut> Create(Attributes effectiveAttributes)
-        {
-            return new Fusing.MapConcat<TIn, TOut>(_func, Supervision(effectiveAttributes));
         }
     }
 
