@@ -16,27 +16,27 @@ namespace Akka.Streams.Implementation.IO
     /// </summary>
     internal class FileSubscriber : ActorSubscriber
     {
-        public static Props Props(FileInfo f, TaskCompletionSource<IOResult> completionPromise, int bufferSize,bool append)
+        public static Props Props(FileInfo f, TaskCompletionSource<IOResult> completionPromise, int bufferSize, FileMode fileMode)
         {
             if(bufferSize <= 0)
                 throw new ArgumentException("Buffer size muste be > 0");
 
-            return Actor.Props.Create(()=> new FileSubscriber(f, completionPromise, bufferSize, append)).WithDeploy(Deploy.Local);
+            return Actor.Props.Create(()=> new FileSubscriber(f, completionPromise, bufferSize, fileMode)).WithDeploy(Deploy.Local);
         }
 
         private readonly FileInfo _f;
         private readonly TaskCompletionSource<IOResult> _completionPromise;
-        private readonly bool _append;
+        private readonly FileMode _fileMode;
         private readonly ILoggingAdapter _log;
         private readonly WatermarkRequestStrategy _requestStrategy;
         private FileStream _chan;
         private long _bytesWritten;
 
-        private FileSubscriber(FileInfo f, TaskCompletionSource<IOResult> completionPromise, int bufferSize, bool append)
+        public FileSubscriber(FileInfo f, TaskCompletionSource<IOResult> completionPromise, int bufferSize, FileMode fileMode)
         {
             _f = f;
             _completionPromise = completionPromise;
-            _append = append;
+            _fileMode = fileMode;
             _log = Context.GetLogger();
             _requestStrategy = new WatermarkRequestStrategy(highWatermark: bufferSize);
         }
@@ -47,8 +47,7 @@ namespace Akka.Streams.Implementation.IO
         {
             try
             {
-                var openOptions = _append ? FileMode.Append : FileMode.Create;
-                _chan = _f.Open(openOptions);
+                _chan = _f.Open(_fileMode, FileAccess.Write);
                 base.PreStart();
             }
             catch (Exception ex)
@@ -65,7 +64,8 @@ namespace Akka.Streams.Implementation.IO
                 {
                     try
                     {
-                        var bytes = ((ByteBuffer)next.Element).Array();
+                        var byteString = (ByteString) next.Element;
+                        var bytes = (byteString.AsByteBuffer()).Array();
                          _chan.Write(bytes, 0, bytes.Length);
                         _bytesWritten += bytes.Length;
                     }

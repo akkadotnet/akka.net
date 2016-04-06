@@ -94,7 +94,7 @@ namespace Akka.Streams.Implementation.IO
                 //Write previously buffered, read into buffer, write newly buffered
                 _availableChunks = SignalOnNexts(ReadAhead(maxReadAhead, SignalOnNexts(_availableChunks)));
 
-                if(TotalDemand > 0&& IsActive)
+                if (TotalDemand > 0 && IsActive)
                     Self.Tell(Continue.Instance);
             }
         }
@@ -107,7 +107,7 @@ namespace Akka.Streams.Implementation.IO
                 return SignalOnNexts(chunks.RemoveAt(0));
             }
 
-            if(chunks.Count != 0 && EofEncountered)
+            if (chunks.Count != 0 && EofEncountered)
                 OnCompleteThenStop();
 
             return chunks;
@@ -129,7 +129,7 @@ namespace Akka.Streams.Implementation.IO
                         _log.Debug($"No more bytes available to read (got 0 from read), marking final bytes of file @ {_eofReachedAtOffset}");
                         return chunks;
                     }
-                    
+
                     _readBytesTotal += readBytes;
                     var newChunks = chunks.Add(ByteString.Create(_buffer, 0, readBytes));
                     return ReadAhead(maxChunks, newChunks);
@@ -151,7 +151,7 @@ namespace Akka.Streams.Implementation.IO
 
             try
             {
-                if(_chan != null)
+                if (_chan != null)
                     _chan.Close();
             }
             catch (Exception ex)

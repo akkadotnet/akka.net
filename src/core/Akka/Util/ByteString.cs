@@ -102,6 +102,11 @@ namespace Akka.IO
                 get { return _bytes[idx]; }
             }
 
+            public sealed override ByteBuffer AsByteBuffer()
+            {
+                return new ByteString1(_bytes).AsByteBuffer();
+            }
+
             public override int Count
             {
                 get { return _bytes.Length; }
@@ -164,6 +169,11 @@ namespace Akka.IO
             public override byte this[int idx]
             {
                 get { return _bytes[checkRangeConvert(idx)]; }
+            }
+
+            public sealed override ByteBuffer AsByteBuffer()
+            {
+                return ByteBuffer.Wrap(_bytes, _startIndex, _length);
             }
 
             public override ByteIterator Iterator()
@@ -267,6 +277,11 @@ namespace Akka.IO
                 }
             }
 
+            public sealed override ByteBuffer AsByteBuffer()
+            {
+                return Compact().AsByteBuffer();
+            }
+
             public override ByteIterator Iterator()
             {
                 return new ByteIterator.MultiByteIterator(
@@ -359,6 +374,8 @@ namespace Akka.IO
     public abstract partial class ByteString : IReadOnlyList<byte>
     {
         public abstract byte this[int index] { get; }
+
+        public abstract ByteBuffer AsByteBuffer();
 
         protected virtual ByteStringBuilder newBuilder()
         {

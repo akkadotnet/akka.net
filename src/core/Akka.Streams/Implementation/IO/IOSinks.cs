@@ -18,24 +18,24 @@ namespace Akka.Streams.Implementation.IO
     internal sealed class FileSink : SinkModule<ByteString, Task<IOResult>>
     {
         private readonly FileInfo _f;
-        private readonly bool _append;
+        private readonly FileMode _fileMode;
         private readonly Attributes _attributes;
 
-        public FileSink(FileInfo f, bool append, Attributes attributes, SinkShape<ByteString> shape) : base(shape)
+        public FileSink(FileInfo f, FileMode fileMode, Attributes attributes, SinkShape<ByteString> shape) : base(shape)
         {
             _f = f;
-            _append = append;
+            _fileMode = fileMode;
             _attributes = attributes;
         }
 
         public override Attributes Attributes => _attributes;
 
         public override IModule WithAttributes(Attributes attributes)
-            => new FileSink(_f, _append, attributes, AmendShape(attributes));
+            => new FileSink(_f, _fileMode, attributes, AmendShape(attributes));
         
 
         protected override SinkModule<ByteString, Task<IOResult>> NewInstance(SinkShape<ByteString> shape)
-            => new FileSink(_f, _append, Attributes, shape);
+            => new FileSink(_f, _fileMode, Attributes, shape);
 
         public override ISubscriber<ByteString> Create(MaterializationContext context, out Task<IOResult> materializer)
         {
@@ -43,7 +43,7 @@ namespace Akka.Streams.Implementation.IO
             var settings = mat.EffectiveSettings(context.EffectiveAttributes);
 
             var ioResultPromise = new TaskCompletionSource<IOResult>();
-            var props = FileSubscriber.Props(_f, ioResultPromise, settings.MaxInputBufferSize, _append);
+            var props = FileSubscriber.Props(_f, ioResultPromise, settings.MaxInputBufferSize, _fileMode);
             var dispatcher = context.EffectiveAttributes.GetAttribute(DefaultAttributes.IODispatcher.AttributeList.First()) as ActorAttributes.Dispatcher;
 
             var actorRef = mat.ActorOf(context, props.WithDispatcher(dispatcher.Name));
