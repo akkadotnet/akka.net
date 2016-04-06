@@ -1,3 +1,6 @@
+#### 1.0.8 April 5 2016 ####
+Placeholder for next release
+
 #### 1.0.7 April 4 2016 ####
 **Maintenance release for Akka.NET v1.0.6**
 The biggest changes in Akka.NET 1.0.7 have been made to Akka.Persistence, which is now designed to match the final stable release version in JVM Akka 2.4. Akka.Persistence is on-target to exit beta and become a fully mature module as of Akka.NET 1.5, due in May/June timeframe.
