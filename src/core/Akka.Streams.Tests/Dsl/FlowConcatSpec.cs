@@ -151,7 +151,7 @@ namespace Akka.Streams.Tests.Dsl
                 subscription.Request(4);
                 Enumerable.Range(1, 3).ForEach(x => subscriber.ExpectNext(x));
                 promise.SetException(TestException());
-                subscriber.ExpectError().InnerException.Should().BeOfType<TestException>();
+                subscriber.ExpectError().Should().BeOfType<TestException>();
             }, Materializer);
         }
 

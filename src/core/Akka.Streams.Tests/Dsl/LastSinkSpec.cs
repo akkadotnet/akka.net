@@ -57,7 +57,7 @@ namespace Akka.Streams.Tests.Dsl
 
 
         [Fact]
-        public void A_Flow_with_Sink_LastOtion_must_yield_the_last_value()
+        public void A_Flow_with_Sink_LastOption_must_yield_the_last_value()
         {
             this.AssertAllStagesStopped(() =>
             {

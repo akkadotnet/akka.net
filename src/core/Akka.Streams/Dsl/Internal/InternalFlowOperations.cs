@@ -1459,7 +1459,7 @@ namespace Akka.Streams.Dsl.Internal
         public static IFlow<T, TMat> Concat<T, TMat>(this IFlow<T, TMat> flow,
             IGraph<SourceShape<T>, TMat> other)
         {
-            return flow.Via(ConcatGraph<T, TMat>(other));
+            return flow.Via(ConcatGraph(other));
         }
 
         internal static IGraph<FlowShape<T, T>, TMat> ConcatGraph<T, TMat>(
