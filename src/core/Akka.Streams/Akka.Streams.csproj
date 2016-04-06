@@ -76,6 +76,7 @@
     <Compile Include="Dsl\BidiFlow.cs" />
     <Compile Include="Dsl\FileIO.cs" />
     <Compile Include="Dsl\FlowOperations.cs" />
+    <Compile Include="Dsl\Framing.cs" />
     <Compile Include="Dsl\Graph.cs" />
     <Compile Include="Dsl\GraphDsl.cs" />
     <Compile Include="Dsl\Internal\GraphImpl.cs" />
