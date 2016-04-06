@@ -1309,6 +1309,7 @@ namespace Akka.Streams.Dsl.Internal
         {
             return GraphDsl.Create(graph, (builder, shape) =>
             {
+                // TODO Use Dsl.Interleave.Create
                 var interleave = builder.Add(new Interleave<T1, T2>(2, segmentSize));
                 var r = builder.From(shape);
                 r.To(interleave.In(1));
@@ -1502,6 +1503,7 @@ namespace Akka.Streams.Dsl.Internal
         {
             return GraphDsl.Create(that, (builder, shape) =>
             {
+                // TODO use Dsl.Concat.Create
                 var merge = builder.Add(new Concat<TIn, TOut>());
                 builder.From(shape).To(merge.In(0));
                 return new FlowShape<TIn, TOut>(merge.In(1), merge.Out);

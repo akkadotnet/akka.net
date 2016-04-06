@@ -205,7 +205,6 @@ namespace Akka.Streams.Dsl
             private readonly Action[] _pullMe;
             private int _openInputs;
             private int _preferredEmitting;
-            private bool _isFirst = true;
 
             public Logic(Shape shape, MergePreferred<T> stage) : base(shape)
             {
@@ -301,8 +300,8 @@ namespace Akka.Streams.Dsl
             return Inlet.Create<T>(Shape.Inlets.ElementAt(id));
         }
 
-        public Outlet<T> Out { get { return Shape.Out; } }
-        public Inlet<T> Preferred { get { return Shape.Preferred; } }
+        public Outlet<T> Out => Shape.Out;
+        public Inlet<T> Preferred => Shape.Preferred;
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
@@ -423,10 +422,10 @@ namespace Akka.Streams.Dsl
         private Outlet<TOut> Out { get; }
         private Inlet<TIn>[] Inlets { get; }
 
-        public Interleave(int inputPorts, int segmentSize, bool eagerClose = false)
+        internal Interleave(int inputPorts, int segmentSize, bool eagerClose = false)
         {
-            if (inputPorts <= 1) throw new ArgumentException("Interleave input ports count must be greater than 1", "inputPorts");
-            if (segmentSize <= 0) throw new ArgumentException("Interleave segment size must be greater than 0", "segmentSize");
+            if (inputPorts <= 1) throw new ArgumentException("Interleave input ports count must be greater than 1", nameof(inputPorts));
+            if (segmentSize <= 0) throw new ArgumentException("Interleave segment size must be greater than 0", nameof(segmentSize));
 
             _inputPorts = inputPorts;
             _segmentSize = segmentSize;
@@ -467,30 +466,30 @@ namespace Akka.Streams.Dsl
             private readonly MergeSorted<T> _stage;
             private T _other;
 
-            readonly Action<T> DispatchRight;
-            readonly Action<T> DispatchLeft;
-            readonly Action PassRight;
-            readonly Action PassLeft;
-            readonly Action ReadRight;
-            readonly Action ReadLeft;
+            private readonly Action<T> _dispatchRight;
+            private readonly Action<T> _dispatchLeft;
+            private readonly Action _passRight;
+            private readonly Action _passLeft;
+            private readonly Action _readRight;
+            private readonly Action _readLeft;
 
             public MergeSortedStageLogic(Shape shape, MergeSorted<T> stage) : base(shape)
             {
                 _stage = stage;
-                DispatchRight = right => Dispatch(_other, right);
-                DispatchLeft = left => Dispatch(left, _other);
-                PassRight = () => Emit(_stage.Out, _other, () =>
+                _dispatchRight = right => Dispatch(_other, right);
+                _dispatchLeft = left => Dispatch(left, _other);
+                _passRight = () => Emit(_stage.Out, _other, () =>
                 {
                     NullOut();
                     PassAlong(_stage.Right, _stage.Out, doPull: true);
                 });
-                PassLeft = () => Emit(_stage.Out, _other, () =>
+                _passLeft = () => Emit(_stage.Out, _other, () =>
                 {
                     NullOut();
                     PassAlong(_stage.Left, _stage.Out, doPull: true);
                 });
-                ReadRight = () => Read(_stage.Right, DispatchRight, PassLeft);
-                ReadLeft = () => Read(_stage.Left, DispatchLeft, PassRight);
+                _readRight = () => Read(_stage.Right, _dispatchRight, _passLeft);
+                _readLeft = () => Read(_stage.Left, _dispatchLeft, _passRight);
 
                 SetHandler(_stage.Left, IgnoreTerminateInput);
                 SetHandler(_stage.Right, IgnoreTerminateInput);
@@ -518,12 +517,12 @@ namespace Akka.Streams.Dsl
                 if (_stage._compare(left, right) == -1)
                 {
                     _other = right;
-                    Emit(_stage.Out, left, ReadLeft);
+                    Emit(_stage.Out, left, _readLeft);
                 }
                 else
                 {
                     _other = left;
-                    Emit(_stage.Out, right, ReadRight);
+                    Emit(_stage.Out, right, _readRight);
                 }
             }
         }
@@ -642,7 +641,7 @@ namespace Akka.Streams.Dsl
 
         public Broadcast(int outputPorts, bool eagerCancel = false)
         {
-            if (outputPorts <= 1) throw new ArgumentException("Broadcast require more than 1 output port", "outputPorts");
+            if (outputPorts <= 1) throw new ArgumentException("Broadcast require more than 1 output port", nameof(outputPorts));
             _outputPorts = outputPorts;
             _eagerCancel = eagerCancel;
 
@@ -918,7 +917,7 @@ namespace Akka.Streams.Dsl
 
         private readonly int _inputPorts;
 
-        public Concat(int inputPorts = 2)
+        internal Concat(int inputPorts = 2)
         {
             if (inputPorts <= 1) throw new ArgumentException("A Concat must have more than 1 input port");
             _inputPorts = inputPorts;
