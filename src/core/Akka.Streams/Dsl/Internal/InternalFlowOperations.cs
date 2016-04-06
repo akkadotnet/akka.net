@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net.NetworkInformation;
 using System.Reactive.Streams;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Akka.Event;
 using Akka.IO;
@@ -882,19 +883,19 @@ namespace Akka.Streams.Dsl.Internal
         /// '''Cancels when''' downstream cancels and substreams cancel
         /// </summary>
         /// <seealso cref="SplitAfter{T,TMat,TVal}"/> 
-        public static IFlow<Source<TVal, TMat>, TMat> SplitWhen<T, TMat, TVal>(this IFlow<T, TMat> flow,
-            Predicate<T> predicate) where TVal : T
+        public static IFlow<Source<TVal, TMat>, TMat> SplitWhen<T, TMat, TVal>(this IFlow<T, TMat> flow, Func<T, bool> predicate) where TVal : T
         {
-            //val merge = new SubFlowImpl.MergeBack[Out, Repr] {
-            //  override def apply[T](flow: Flow[Out, T, Unit], breadth: Int): Repr[T] =
-            //    deprecatedAndThen[Source[Out, Unit]](Split.when(p.asInstanceOf[Any ⇒ Boolean]))
-            //      .map(_.via(flow))
-            //      .via(new FlattenMerge(breadth))
-            //}
-            //val finish: (Sink[Out, Unit]) ⇒ Closed = s ⇒
-            //  deprecatedAndThen[Source[Out, Unit]](Split.when(p.asInstanceOf[Any ⇒ Boolean]))
-            //    .to(Sink.foreach(_.runWith(s)(GraphInterpreter.currentInterpreter.materializer)))
-            //new SubFlowImpl(Flow[Out], merge, finish)
+            return SplitWhen<T, TMat, TVal>(flow, SubstreamCancelStrategy.Drain, predicate);
+  ;      }
+
+        /// <summary>
+        /// This operation applies the given predicate to all incoming elements and
+        /// emits them to a stream of output streams, always beginning a new one with
+        /// the current element if the given predicate returns true for it.
+        /// </summary>
+        public static IFlow<Source<TVal, TMat>, TMat> SplitWhen<T, TMat, TVal>(this IFlow<T, TMat> flow,
+            SubstreamCancelStrategy substreamCancelStrategy, Func<T, bool> predicate) where TVal : T
+        {
             throw new NotImplementedException();
         }
 
