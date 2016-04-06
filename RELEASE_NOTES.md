@@ -1,4 +1,83 @@
-#### 1.0.7 January 18 2016 ####
+#### 1.0.7 April 4 2016 ####
+**Maintenance release for Akka.NET v1.0.6**
+The biggest changes in Akka.NET 1.0.7 have been made to Akka.Persistence, which is now designed to match the final stable release version in JVM Akka 2.4. Akka.Persistence is on-target to exit beta and become a fully mature module as of Akka.NET 1.5, due in May/June timeframe.
+
+A quick note about 1.5 - JSON.NET will be replaced by Wire as the default serializer going forward, so if you want to be forward-compatible with 1.5 you will need to switch to using Wire today. [Learn how to switch to using Wire as the default Akka.NET serializer](http://getakka.net/docs/Serialization#how-to-setup-wire-as-default-serializer).
+
+If you install 1.0.7 you may see the following warning appear:
+
+> NewtonSoftJsonSerializer has been detected as a default serializer. 
+> It will be obsoleted in Akka.NET starting from version 1.5 in the favor of Wire
+for more info visit: http://getakka.net/docs/Serialization#how-to-setup-wire-as-default-serializer
+> If you want to suppress this message set HOCON `{configPath}` config flag to on.
+
+This release also fixes some issues with the Cluster.Tools and Cluster.Sharding NuGet packages, which weren't versioned correctly in previous releases.
+
+**Fixes & Changes - Akka.NET Core**
+* [https://github.com/akkadotnet/akka.net/pull/1667](https://github.com/akkadotnet/akka.net/pull/1667)
+* [Akka IO: ByteIterator and ByteStringbuilder bug fixes](https://github.com/akkadotnet/akka.net/pull/1682)
+* [Hocon Tripple quoted text - Fixes #1687](https://github.com/akkadotnet/akka.net/pull/1689)
+* [Downgrade System.Collections.Immutable to 1.1.36](https://github.com/akkadotnet/akka.net/issues/1698)
+* [Unify immutable collections](https://github.com/akkadotnet/akka.net/issues/1676) - Akka.NET core now depends on System.Collections.Immutable.
+* [#1694 Added safe check in InboxActor when receive timeout is already expired](https://github.com/akkadotnet/akka.net/pull/1702)
+* [Bugfix: DeadLetter filter with Type parameter should call IsInstanceOfType with the correct argument](https://github.com/akkadotnet/akka.net/pull/1707)
+* [Akka.IO bind failed must notify bindCommander of failure](https://github.com/akkadotnet/akka.net/pull/1729)
+* [ReceiveActor: Replaced Receive(Func<T, Task> handler) by ReceiveAsync(...) ](https://github.com/akkadotnet/akka.net/pull/1747)
+* [External ActorSystem for Testkit event filters. ](https://github.com/akkadotnet/akka.net/pull/1753)
+* [Fixed the ScatterGatherFirstCompleted router logic](https://github.com/akkadotnet/akka.net/pull/1769)
+* [Issue #1766 - Lazy evaluation of ChildrenContainer.Children and ChildrenContainer.Stats](https://github.com/akkadotnet/akka.net/pull/1772)
+* [[Dispatch] Support for 'mailbox-requirement' and 'mailbox-type' in dispatcher config](https://github.com/akkadotnet/akka.net/pull/1773)
+* [Fixed within timeout for routers in default configuration](https://github.com/akkadotnet/akka.net/pull/1787)
+* [Default MailboxType optimization](https://github.com/akkadotnet/akka.net/pull/1789)
+* [Warning about JSON.NET obsolete in v1.5](https://github.com/akkadotnet/akka.net/pull/1811)
+* [Issue #1828 Implemented NobodySurrogate](https://github.com/akkadotnet/akka.net/pull/1829)
+
+**Fixes & Changes - Akka.Remote, Akka.Cluster, Et al**
+* [Add the default cluster singleton config as a top-level fallback.](https://github.com/akkadotnet/akka.net/pull/1665)
+* [Change ShardState to a class](https://github.com/akkadotnet/akka.net/pull/1677)
+* [Cluster.Sharding: Take snapshots when configured](https://github.com/akkadotnet/akka.net/pull/1678)
+* [added remote metrics](https://github.com/akkadotnet/akka.net/pull/1722)
+* [Added a new argument to the MultiNodeTestRunner to filter specs](https://github.com/akkadotnet/akka.net/pull/1737)
+* [close #1758 made Akka.Cluster.Tools and Akka.Cluster.Sharding use correct assembly version info and nuget dependencies](https://github.com/akkadotnet/akka.net/pull/1767)
+* [Akka.Remote EndpointWriter backoff bugfix](https://github.com/akkadotnet/akka.net/pull/1777)
+* [Akka.Cluster.TestKit (internal use only)](https://github.com/akkadotnet/akka.net/pull/1782)
+* [Cluster.Tools.Singleton: Member.UpNumber fix](https://github.com/akkadotnet/akka.net/pull/1799)
+
+**Fixes & Changes - Akka.Persistence**
+* [Made JournalEntry.Payload an object and AtLeastOnceDeliverySemantic public](https://github.com/akkadotnet/akka.net/pull/1684)
+* [Akka.Persistence - update code base to akka JVM v2.4](https://github.com/akkadotnet/akka.net/pull/1717)
+* [Ensure internal stash is unstashed on writes after recovery](https://github.com/akkadotnet/akka.net/pull/1756)
+* [Wrap user stash to avoid confusion between PersistentActor.UnstashAll and PersistentActor.Stash.UnstashAll](https://github.com/akkadotnet/akka.net/pull/1757)
+* [Fixes initialization of LocalSnapshotStore directory](https://github.com/akkadotnet/akka.net/pull/1761)
+* [Fixed global ActorContext in SqlJournal](https://github.com/akkadotnet/akka.net/pull/1760)
+
+**Commit Stats for v1.0.7**
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 12 | 1718 | 2213 | Aaron Stannard |
+| 11 | 2187 | 2167 | Silv3rcircl3 |
+| 7 | 433 | 75 | JeffCyr |
+| 6 | 2 | 1127 | Danthar |
+| 6 | 10383 | 3054 | Chris Constantin |
+| 3 | 510 | 25 | maxim.salamatko |
+| 3 | 5 | 3 | Christopher Martin |
+| 2 | 53 | 65 | rogeralsing |
+| 2 | 50 | 1 | mukulsinghsaini |
+| 2 | 2738 | 2035 | Sean Gilliam |
+| 2 | 25 | 4 | Bartosz Sypytkowski |
+| 2 | 2 | 2 | utcnow |
+| 2 | 14 | 13 | zbynek001 |
+| 2 | 130 | 126 | annymsMthd |
+| 1 | 58 | 0 | Denis Kostikov |
+| 1 | 48 | 43 | voltcode |
+| 1 | 213 | 66 | Alex Koshelev |
+| 1 | 2 | 2 | Tamas Vajk |
+| 1 | 2 | 2 | Marc Piechura |
+| 1 | 2 | 1 | Juergen Hoetzel |
+| 1 | 19 | 8 | tstojecki |
+| 1 | 13 | 13 | Willie Ferguson |
+| 1 | 1 | 1 | ravengerUA |
 
 #### 1.0.6 January 18 2016 ####
 **Maintenance release for Akka.NET v1.0.5**
