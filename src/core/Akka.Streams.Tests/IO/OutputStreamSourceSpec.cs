@@ -31,9 +31,9 @@ namespace Akka.Streams.Tests.IO
 
             _bytesArray = new[]
             {
-                Convert.ToByte(new Random().Next(1024)),
-                Convert.ToByte(new Random().Next(1024)),
-                Convert.ToByte(new Random().Next(1024))
+                Convert.ToByte(new Random().Next(256)),
+                Convert.ToByte(new Random().Next(256)),
+                Convert.ToByte(new Random().Next(256))
             };
 
             _byteString = ByteString.Create(_bytesArray);

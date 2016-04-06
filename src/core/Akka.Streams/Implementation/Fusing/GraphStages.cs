@@ -43,7 +43,7 @@ namespace Akka.Streams.Implementation.Fusing
         }
     }
 
-    internal class GraphStageModule : Module
+    internal class GraphStageModule : AtomicModule
     {
         public readonly IGraphStageWithMaterializedValue Stage;
 
@@ -60,9 +60,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             return new CopiedModule(shape, Attributes.None, this);
         }
-
-        public override ImmutableArray<IModule> SubModules => ImmutableArray<IModule>.Empty;
-
+        
         public override IModule CarbonCopy()
         {
             return ReplaceShape(Shape.DeepCopy());

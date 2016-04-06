@@ -15,7 +15,7 @@ namespace Akka.Streams.Tests.IO
         protected TcpHelper(string config) : base(config)
         {
             Settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(4, 4);
-            Materializer = ActorMaterializer.Create(this, Settings);
+            Materializer = Sys.Materializer(Settings);
         }
 
         protected ActorMaterializerSettings Settings { get; }

@@ -14,7 +14,7 @@ using Akka.Util.Internal;
 // ReSharper disable MemberHidesStaticFromOuterClass
 namespace Akka.Streams.Implementation.Fusing
 {
-    internal class GraphModule : Module
+    internal class GraphModule : AtomicModule
     {
         public readonly IModule[] MaterializedValueIds;
         public readonly GraphAssembly Assembly;
@@ -29,9 +29,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         public override Shape Shape { get; }
         public override Attributes Attributes { get; }
-
-        public override ImmutableArray<IModule> SubModules => ImmutableArray<IModule>.Empty;
-
+        
         public override IModule WithAttributes(Attributes attributes)
         {
             return new GraphModule(Assembly, Shape, attributes, MaterializedValueIds);

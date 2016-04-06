@@ -239,7 +239,8 @@ namespace Akka.Streams.Implementation
 
             var session = new ActorMaterializerSession(this, runnableGraph.Module, InitialAttributes, subFlowFuser);
 
-            return (TMat)session.Materialize();
+            var matVal = session.Materialize();
+            return (TMat) matVal;
         }
 
         private readonly Lazy<MessageDispatcher> _executionContext;

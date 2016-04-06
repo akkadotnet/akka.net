@@ -16,7 +16,7 @@ namespace Akka.Streams.Implementation
         ISubscriber Create(MaterializationContext context, out object materializer);
     }
 
-    public abstract class SinkModule<TIn, TMat> : Module, ISinkModule
+    public abstract class SinkModule<TIn, TMat> : AtomicModule, ISinkModule
     {
         private readonly SinkShape<TIn> _shape;
 
@@ -26,7 +26,6 @@ namespace Akka.Streams.Implementation
         }
 
         public override Shape Shape => _shape;
-        public override ImmutableArray<IModule> SubModules => ImmutableArray<IModule>.Empty;
 
         protected abstract SinkModule<TIn, TMat> NewInstance(SinkShape<TIn> shape);
 
