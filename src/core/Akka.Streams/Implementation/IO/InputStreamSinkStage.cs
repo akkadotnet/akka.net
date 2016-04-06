@@ -214,7 +214,7 @@ namespace Akka.Streams.Implementation.IO
                 throw new ArgumentException("offset must be >= 0");
             if (count <= 0)
                 throw new ArgumentException("count must be > 0");
-            if (offset + count <= buffer.Length)
+            if (offset + count > buffer.Length)
                 throw new AggregateException("offset + count must be smaller or equal to the array length");
 
             return ExecuteIfNotClosed(() =>
@@ -283,7 +283,7 @@ namespace Akka.Streams.Implementation.IO
             var size = chunk.Count;
             if (size <= count)
             {
-                chunk.ToArray().CopyTo(buffer, count);
+                Array.Copy(chunk.ToArray(), 0, buffer, offset, Math.Min(size, count));
                 _detachedChunk = null;
                 if (size == count)
                     return gotBytes + size;

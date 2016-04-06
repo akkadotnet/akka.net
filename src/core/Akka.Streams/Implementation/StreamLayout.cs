@@ -394,8 +394,14 @@ namespace Akka.Streams.Implementation
             var modules1 = IsSealed ? ImmutableArray.Create<IModule>(this) : SubModules;
             var modules2 = other.IsSealed ? ImmutableArray.Create(other) : other.SubModules;
 
-            var matComputation1 = IsSealed ? new StreamLayout.Atomic(this) : MaterializedValueComputation;
-            var matComputation2 = other.IsSealed ? new StreamLayout.Atomic(other) : other.MaterializedValueComputation;
+            var matComputationLeft = IsSealed ? new StreamLayout.Atomic(this) : MaterializedValueComputation;
+            var matComputationRight = other.IsSealed ? new StreamLayout.Atomic(other) : other.MaterializedValueComputation;
+
+            StreamLayout.IMaterializedValueNode comp;
+
+            if (IsKeepLeft(matFunc) && IsIgnorable(matComputationRight)) comp = matComputationLeft;
+            else if (IsKeepRight(matFunc) && IsIgnorable(matComputationLeft)) comp = matComputationRight;
+            else comp = new StreamLayout.Combine((x, y) => matFunc((T1)x, (T2)y), matComputationLeft, matComputationRight);
 
             return new CompositeModule(
                 subModules: modules1.Concat(modules2).ToImmutableArray(),
@@ -404,8 +410,36 @@ namespace Akka.Streams.Implementation
                     Shape.Outlets.Concat(other.Shape.Outlets).ToImmutableArray()),
                 downstreams: Downstreams.AddRange(other.Downstreams),
                 upstreams: Upstreams.AddRange(other.Upstreams),
-                materializedValueComputation: new StreamLayout.Combine((x, y) => matFunc((T1)x, (T2)y), matComputation1, matComputation2),
+                materializedValueComputation: comp,
                 attributes: Attributes.None);
+        }
+        
+        private static readonly RuntimeMethodHandle KeepRightMethodhandle = typeof (Keep).GetMethod(nameof(Keep.Right)).MethodHandle;
+        private bool IsKeepRight<T1, T2, T3>(Func<T1, T2, T3> fn)
+        {
+            return fn.Method.IsGenericMethod && fn.Method.GetGenericMethodDefinition().MethodHandle.Value == KeepRightMethodhandle.Value;
+        }
+
+        private static readonly RuntimeMethodHandle KeepLeftMethodhandle = typeof(Keep).GetMethod(nameof(Keep.Left)).MethodHandle;
+        private bool IsKeepLeft<T1, T2, T3>(Func<T1, T2, T3> fn)
+        {
+            return fn.Method.IsGenericMethod && fn.Method.GetGenericMethodDefinition().MethodHandle.Value == KeepLeftMethodhandle.Value;
+        }
+
+        private bool IsIgnorable(StreamLayout.IMaterializedValueNode computation)
+        {
+            if (computation is StreamLayout.Atomic) return IsIgnorable(((StreamLayout.Atomic) computation).Module);
+            return (computation is StreamLayout.Combine || computation is StreamLayout.Transform) || !(computation is StreamLayout.Ignore);
+        }
+
+        private bool IsIgnorable(IModule module)
+        {
+            if (module is AtomicModule || module is EmptyModule) return true;
+            if (module is CopiedModule) return IsIgnorable(((CopiedModule) module).CopyOf);
+            if (module is CompositeModule) return IsIgnorable(((CompositeModule) module).MaterializedValueComputation);
+            if (module is FusedModule) return IsIgnorable(((FusedModule) module).MaterializedValueComputation);
+
+            throw new NotSupportedException($"Module of type {module.GetType()} is not supported by this method");
         }
 
         public IModule ComposeNoMaterialized(IModule that)
@@ -665,6 +699,18 @@ namespace Akka.Streams.Implementation
                    $"\n  Downstreams: {string.Join("", Downstreams.Select(kvp => $"\n    {kvp.Key} -> {kvp.Value}"))}" +
                    $"\n  Upstreams: {string.Join("", Upstreams.Select(kvp => $"\n    {kvp.Key} -> {kvp.Value}"))}";
         }
+    }
+
+    /// <summary>
+    /// This is the only extension point for the sealed type hierarchy: composition
+    /// (i.e. the module tree) is managed strictly within this file, only leaf nodes
+    /// may be declared elsewhere.
+    /// </summary>
+    public abstract class AtomicModule : Module
+    {
+        public sealed override ImmutableArray<IModule> SubModules => ImmutableArray<IModule>.Empty;
+        public sealed override IImmutableDictionary<OutPort, InPort> Downstreams => base.Downstreams;
+        public override IImmutableDictionary<InPort, OutPort> Upstreams => base.Upstreams;
     }
 
     internal sealed class VirtualProcessor<T> : IProcessor<T, T>

@@ -21,7 +21,7 @@ namespace Akka.Streams.Tests.IO
         private readonly ActorMaterializer _materializer;
         private readonly ByteString _byteString = RandomByteString(3);
 
-        public InputStreamSinkSpec()
+        public InputStreamSinkSpec() : base(Utils.UnboundedMailboxConfig)
         {
             Sys.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
             var settings = ActorMaterializerSettings.Create(Sys).WithDispatcher("akka.actor.default-dispatcher");

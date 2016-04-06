@@ -3,7 +3,7 @@ using System.Collections.Immutable;
 
 namespace Akka.Streams.Implementation
 {
-    internal abstract class FlowModule<TIn, TOut, TMat> : Module
+    internal abstract class FlowModule<TIn, TOut, TMat> : AtomicModule
     {
         public readonly Inlet<TIn> In = new Inlet<TIn>("Flow.in");
         public readonly Outlet<TOut> Out = new Outlet<TOut>("Flow.out");
@@ -14,7 +14,6 @@ namespace Akka.Streams.Implementation
         }
         
         public override Shape Shape { get; }
-        public override ImmutableArray<IModule> SubModules => ImmutableArray<IModule>.Empty;
 
         public override IModule ReplaceShape(Shape shape)
         {

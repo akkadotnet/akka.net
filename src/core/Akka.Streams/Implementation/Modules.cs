@@ -13,7 +13,7 @@ namespace Akka.Streams.Implementation
         IPublisher Create(MaterializationContext context, out object materializer);
     }
 
-    internal abstract class SourceModule<TOut, TMat> : Module, ISourceModule
+    internal abstract class SourceModule<TOut, TMat> : AtomicModule, ISourceModule
     {
         private readonly SourceShape<TOut> _shape;
 
@@ -46,9 +46,7 @@ namespace Akka.Streams.Implementation
         {
             return NewInstance(new SourceShape<TOut>(Outlet.Create<TOut>(_shape.Outlet.CarbonCopy())));
         }
-
-        public override ImmutableArray<IModule> SubModules => ImmutableArray<IModule>.Empty;
-
+        
         protected SourceShape<TOut> AmendShape(Attributes attributes)
         {
             var thisN = Attributes.GetNameOrDefault(null);

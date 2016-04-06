@@ -312,7 +312,6 @@ namespace Akka.Streams.Implementation.IO
             #endregion
 
             private readonly ITcpRole _role;
-            private readonly StageActorRef _self;
             private readonly Inlet<ByteString> _bytesIn;
             private readonly Outlet<ByteString> _bytesOut;
             private bool _keepGoing;
@@ -322,7 +321,6 @@ namespace Akka.Streams.Implementation.IO
             public TcpStreamLogic(FlowShape<ByteString, ByteString> shape, ITcpRole role) : base(shape)
             {
                 _role = role;
-                _self = StageActorRef;
                 _bytesIn = shape.Inlet;
                 _bytesOut = shape.Outlet;
 
@@ -358,6 +356,8 @@ namespace Akka.Streams.Implementation.IO
                     });
             }
 
+            private StageActorRef Self => StageActorRef;
+
             public override bool KeepGoingAfterAllPortsClosed => _keepGoing;
 
             public override void PreStart()
@@ -370,7 +370,7 @@ namespace Akka.Streams.Implementation.IO
                     SetHandler(_bytesOut, _readHandler);
                     _connection = inbound.Connection;
                     GetStageActorRef(Connected).Watch(_connection);
-                    _connection.Tell(new Tcp.Register(_self, keepOpenonPeerClosed: true, useResumeWriting: false));
+                    _connection.Tell(new Tcp.Register(Self, keepOpenonPeerClosed: true, useResumeWriting: false));
                     Pull(_bytesIn);
                 }
                 else
@@ -409,7 +409,7 @@ namespace Akka.Streams.Implementation.IO
                             StageActorRef.Unwatch(outbound.Manager);
                             StageActorRef.Become(Connected);
                             StageActorRef.Watch(_connection);
-                            _connection.Tell(new Tcp.Register(_self, keepOpenonPeerClosed: true, useResumeWriting: false));
+                            _connection.Tell(new Tcp.Register(Self, keepOpenonPeerClosed: true, useResumeWriting: false));
 
                             if (IsAvailable(_bytesOut))
                                 _connection.Tell(Tcp.ResumeReading.Instance);
