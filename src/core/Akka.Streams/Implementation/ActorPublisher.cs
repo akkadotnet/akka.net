@@ -129,7 +129,7 @@ namespace Akka.Streams.Implementation
         public void Shutdown(Exception reason)
         {
             _shutdownReason = reason;
-            var pending = _pendingSubscribers.GetAndSet(ImmutableList<ISubscriber<TOut>>.Empty);
+            var pending = _pendingSubscribers.GetAndSet(null);
             if (pending != null)
             {
                 foreach (var subscriber in pending.Reverse())
