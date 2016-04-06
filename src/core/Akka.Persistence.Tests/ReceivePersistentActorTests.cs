@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReceivePersistentActorTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -20,7 +20,8 @@ namespace Akka.Persistence.Tests
 
     public partial class ReceivePersistentActorTests : AkkaSpec
     {
-        public ReceivePersistentActorTests(ITestOutputHelper output = null) : base(output: output)
+        public ReceivePersistentActorTests(ITestOutputHelper output = null)
+            : base("akka.persistence.journal.plugin = \"akka.persistence.journal.inmem\"", output)
         {
         }
 
@@ -143,9 +144,9 @@ namespace Akka.Persistence.Tests
         {
             var journalRef = Persistence.Instance.Apply(Sys).JournalFor(string.Empty);
             var persistents = events
-                .Select(e => new Persistent(e, _seqNrCounter.GetAndIncrement(), e.GetType().FullName, pid))
+                .Select(e => new Persistent(e, _seqNrCounter.GetAndIncrement(), pid, e.GetType().FullName))
                 .ToArray();
-            journalRef.Tell(new WriteMessages(persistents, TestActor, 1));
+            journalRef.Tell(new WriteMessages(persistents.Select(p => new AtomicWrite(p)), TestActor, 1));
 
             ExpectMsg<WriteMessagesSuccessful>();
             foreach (var p in persistents)

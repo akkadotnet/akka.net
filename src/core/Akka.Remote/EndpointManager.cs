@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EndpointManager.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -470,18 +470,21 @@ namespace Akka.Remote
             * those results will then be piped back to Remoting, who waits for the results of
             * listen.AddressPromise.
             * */
-            Receive<Listen>(listen => Listens.ContinueWith<INoSerializationVerificationNeeded>(listens =>
+            Receive<Listen>(listen =>
             {
-                if (listens.IsFaulted)
+                Listens.ContinueWith<INoSerializationVerificationNeeded>(listens =>
                 {
-                    return new ListensFailure(listen.AddressesPromise, listens.Exception);
-                }
-                else
-                {
-                    return new ListensResult(listen.AddressesPromise, listens.Result);
-                }
-            }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default)
-                    .PipeTo(Self));
+                    if (listens.IsFaulted)
+                    {
+                        return new ListensFailure(listen.AddressesPromise, listens.Exception);
+                    }
+                    else
+                    {
+                        return new ListensResult(listen.AddressesPromise, listens.Result);
+                    }
+                }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default)
+                    .PipeTo(Self);
+            });
 
             Receive<ListensResult>(listens =>
             {

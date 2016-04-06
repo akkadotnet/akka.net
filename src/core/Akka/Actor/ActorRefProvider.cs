@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorRefProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -130,6 +130,7 @@ namespace Akka.Actor
         private readonly Dictionary<string, IInternalActorRef> _extraNames = new Dictionary<string, IInternalActorRef>();
         private readonly TaskCompletionSource<Status> _terminationPromise = new TaskCompletionSource<Status>();
         private readonly SupervisorStrategy _systemGuardianStrategy;
+        private readonly SupervisorStrategyConfigurator _userGuardianStrategyConfigurator;
         private VirtualPathContainer _tempContainer;
         private RootGuardianActorRef _rootGuardian;
         private LocalActorRef _userGuardian;    //This is called guardian in Akka
@@ -155,9 +156,8 @@ namespace Akka.Actor
             _tempNumber = new AtomicCounterLong(1);
             _tempNode = _rootPath / "temp";
 
-            //TODO: _guardianSupervisorStrategyConfigurator = dynamicAccess.createInstanceFor[SupervisorStrategyConfigurator](settings.SupervisorStrategyClass, EmptyImmutableSeq).get
             _systemGuardianStrategy = SupervisorStrategy.DefaultStrategy;
-
+            _userGuardianStrategyConfigurator = SupervisorStrategyConfigurator.CreateConfigurator(Settings.SupervisorStrategyClass);
         }
 
         public IActorRef DeadLetters { get { return _deadLetters; } }
@@ -180,7 +180,7 @@ namespace Akka.Actor
 
         private MessageDispatcher DefaultDispatcher { get { return _system.Dispatchers.DefaultGlobalDispatcher; } }
 
-        private SupervisorStrategy UserGuardianSupervisorStrategy { get { return SupervisorStrategy.DefaultStrategy; } }    //TODO: Implement Akka's _guardianSupervisorStrategyConfigurator.create()
+        private SupervisorStrategy UserGuardianSupervisorStrategy { get { return _userGuardianStrategyConfigurator.Create(); } }
 
         public ActorPath TempPath()
         {
@@ -381,15 +381,14 @@ namespace Akka.Actor
                 {
                     // for consistency we check configuration of dispatcher and mailbox locally
                     var dispatcher = _system.Dispatchers.Lookup(props2.Dispatcher);
-                    var mailboxType = _system.Mailboxes.GetMailboxType(props2, ConfigurationFactory.Empty);
 
                     if (async)
                         return
                             new RepointableActorRef(system, props2, dispatcher,
-                                () => _system.Mailboxes.CreateMailbox(props2, ConfigurationFactory.Empty), supervisor,
+                                () => _system.Mailboxes.CreateMailbox(props2, dispatcher.Configurator.Config), supervisor,
                                 path).Initialize(async);
                     return new LocalActorRef(system, props2, dispatcher,
-                        () => _system.Mailboxes.CreateMailbox(props2, ConfigurationFactory.Empty), supervisor, path);
+                        () => _system.Mailboxes.CreateMailbox(props2, dispatcher.Configurator.Config), supervisor, path);
                 }
                 catch (Exception ex)
                 {
@@ -417,10 +416,12 @@ namespace Akka.Actor
 
                 try
                 {
+                    var routerDispatcher = system.Dispatchers.Lookup(p.RouterConfig.RouterDispatcher);
+                    var routerMailbox = system.Mailboxes.CreateMailbox(routerProps, routerDispatcher.Configurator.Config);
+
                     // routers use context.actorOf() to create the routees, which does not allow us to pass
                     // these through, but obtain them here for early verification
-                    var routerDispatcher = system.Dispatchers.Lookup(props.RouterConfig.RouterDispatcher);
-                    var routerMailbox = _system.Mailboxes.CreateMailbox(props, null);
+                    var routeeDispatcher = system.Dispatchers.Lookup(p.Dispatcher);
 
                     var routedActorRef = new RoutedActorRef(system, routerProps, routerDispatcher, () => routerMailbox, routeeProps,
                         supervisor, path);

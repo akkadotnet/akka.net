@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CustomEventFilterTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,34 +10,54 @@ using Xunit;
 
 namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
 {
-    public class CustomEventFilterTests : EventFilterTestBase
+    public abstract class CustomEventFilterTestsBase : EventFilterTestBase
     {
         // ReSharper disable ConvertToLambdaExpression
-        public CustomEventFilterTests() : base("akka.loglevel=ERROR") { }
+        public CustomEventFilterTestsBase() : base("akka.loglevel=ERROR") { }
 
         protected override void SendRawLogEventMessage(object message)
         {
             Sys.EventStream.Publish(new Error(null, "CustomEventFilterTests", GetType(), message));
         }
 
+        protected abstract EventFilterFactory CreateTestingEventFilter();
+
         [Fact]
-        public void CustomFilterShouldMatch()
+        public void Custom_filter_should_match()
         {
-            EventFilter.Custom(logEvent => logEvent is Error && (string) logEvent.Message == "whatever").ExpectOne(() =>
+            var eventFilter = CreateTestingEventFilter();
+            eventFilter.Custom(logEvent => logEvent is Error && (string) logEvent.Message == "whatever").ExpectOne(() =>
             {
                 Log.Error("whatever");
             });
         }
 
         [Fact]
-        public void CustomFilterShouldMatch2()
+        public void Custom_filter_should_match2()
         {
-            EventFilter.Custom<Error>(logEvent => (string)logEvent.Message == "whatever").ExpectOne(() =>
+            var eventFilter = CreateTestingEventFilter();
+            eventFilter.Custom<Error>(logEvent => (string)logEvent.Message == "whatever").ExpectOne(() =>
             {
                 Log.Error("whatever");
             });
         }
         // ReSharper restore ConvertToLambdaExpression
+    }
+
+    public class CustomEventFilterTests : CustomEventFilterTestsBase
+    {
+        protected override EventFilterFactory CreateTestingEventFilter()
+        {
+            return EventFilter;
+        }
+    }
+
+    public class CustomEventFilterCustomFilterTests : CustomEventFilterTestsBase
+    {
+        protected override EventFilterFactory CreateTestingEventFilter()
+        {
+            return CreateEventFilter(Sys);
+        }
     }
 }
 

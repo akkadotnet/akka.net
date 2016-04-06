@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteWatcherSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -206,7 +206,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void ARemoteWatcherMustHaveCorrectInteractionWhenWatching()
+        public void A_RemoteWatcher_must_have_correct_interaction_when_watching()
         {
             var fd = CreateFailureDetectorRegistry();
             var monitorA = Sys.ActorOf(Props.Create<TestRemoteWatcher>(), "monitor1");
@@ -270,7 +270,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void ARemoteWatcherMustGenerateAddressTerminatedWhenMissingHeartbeats()
+        public void A_RemoteWatcher_must_generate_address_terminated_when_missing_heartbeats()
         {
             var p = CreateTestProbe();
             var q = CreateTestProbe();
@@ -311,7 +311,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void ARemoteWatcherMustGenerateAddressTerminatedWhenMissingFirstHeartbeat()
+        public void A_RemoteWatcher_must_generate_address_terminated_when_missing_first_heartbeat()
         {
             var p = CreateTestProbe();
             var q = CreateTestProbe();
@@ -352,7 +352,7 @@ namespace Akka.Remote.Tests
 
         [Fact]
         public void
-            ARemoteWatcherMustGenerateAddressTerminatedForNewWatchAfterBrokenConnectionWasReestablishedAndBrokenAgain()
+            A_RemoteWatcher_must_generate_address_terminated_for_new_watch_after_broken_connection_was_reestablished_and_broken_again()
         {
             var p = CreateTestProbe();
             var q = CreateTestProbe();

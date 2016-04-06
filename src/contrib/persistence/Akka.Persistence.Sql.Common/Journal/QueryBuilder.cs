@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="QueryBuilder.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -37,9 +37,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         DbCommand InsertBatchMessages(IPersistentRepresentation[] messages);
 
         /// <summary>
-        /// Depending on <paramref name="permanent"/> flag this method may return either UPDATE or DELETE statement
-        /// used to alter IsDeleted field or delete rows permanently.
+        /// Returns DELETE statement used to delete rows permanently.
         /// </summary>
-        DbCommand DeleteBatchMessages(string persistenceId, long toSequenceNr, bool permanent);
+        DbCommand DeleteBatchMessages(string persistenceId, long toSequenceNr);
     }
 }

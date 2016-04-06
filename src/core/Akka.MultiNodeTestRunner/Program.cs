@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -42,7 +42,7 @@ namespace Akka.MultiNodeTestRunner
         /// <summary>
         /// MultiNodeTestRunner takes the following <see cref="args"/>:
         /// 
-        /// C:\> Akka.MultiNodeTestRunner.exe [assembly name] [-Dmultinode.enable-filesink=on] [-Dmultinode.output-directory={dir path}]
+        /// C:\> Akka.MultiNodeTestRunner.exe [assembly name] [-Dmultinode.enable-filesink=on] [-Dmultinode.output-directory={dir path}] [-Dmultinode.spec={spec name}]
         /// 
         /// <list type="number">
         /// <listheader>
@@ -89,6 +89,13 @@ namespace Akka.MultiNodeTestRunner
         ///             Defaults to 6577
         ///     </description>
         /// </item>
+        /// <item>
+        ///     <term>-Dmultinode.spec={spec name}</term>
+        ///     <description>
+        ///             Setting this flag means that only tests which contains the spec name will be executed
+        ///             otherwise all tests will be executed
+        ///     </description>
+        /// </item>
         /// </list>
         /// </summary>
         static void Main(string[] args)
@@ -101,6 +108,7 @@ namespace Akka.MultiNodeTestRunner
             var listenAddress = IPAddress.Parse(CommandLine.GetPropertyOrDefault("multinode.listen-address", "127.0.0.1"));
             var listenPort = CommandLine.GetInt32OrDefault("multinode.listen-port", 6577);
             var listenEndpoint = new IPEndPoint(listenAddress, listenPort);
+            var specName = CommandLine.GetPropertyOrDefault("multinode.spec", "");
 
             var tcpLogger = TestRunSystem.ActorOf(Props.Create(() => new TcpLoggingServer(SinkCoordinator)), "TcpLogger");
             TestRunSystem.Tcp().Tell(new Tcp.Bind(tcpLogger, listenEndpoint));
@@ -123,6 +131,9 @@ namespace Akka.MultiNodeTestRunner
                             PublishRunnerMessage(string.Format("Skipping test {0}. Reason - {1}", test.Value.First().MethodName, test.Value.First().SkipReason));
                             continue;
                         }
+
+                        if (!string.IsNullOrWhiteSpace(specName) && !test.Value[0].MethodName.Contains(specName))
+                            continue;
 
                         PublishRunnerMessage(string.Format("Starting test {0}", test.Value.First().MethodName));
 
@@ -188,6 +199,11 @@ namespace Akka.MultiNodeTestRunner
             
             //Block until all Sinks have been terminated.
             TestRunSystem.WhenTerminated.Wait(TimeSpan.FromMinutes(1));
+
+            if (Debugger.IsAttached)
+            {
+                Console.ReadLine(); //block when debugging
+            }
 
             //Return the proper exit code
             Environment.Exit(ExitCodeContainer.ExitCode);

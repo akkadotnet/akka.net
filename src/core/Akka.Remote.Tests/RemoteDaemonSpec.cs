@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteDaemonSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -59,7 +59,7 @@ akka {
         }
 
         [Fact]
-        public void CanCreateActorUsingRemoteDaemonAndInteractWithChild()
+        public void Can_create_actor_using_remote_daemon_and_interact_with_child()
         {
             var p = CreateTestProbe();
             Sys.EventStream.Subscribe(p.Ref, typeof(string));

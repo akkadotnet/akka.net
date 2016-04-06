@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotStoreSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -99,7 +99,7 @@ namespace Akka.Persistence.TestKit.Snapshot
         }
 
         [Fact]
-        public void SnapshotStore_should_load_a_most_recent_snapshot()
+        public void SnapshotStore_should_load_the_most_recent_snapshot()
         {
             SnapshotStore.Tell(new LoadSnapshot(Pid, SnapshotSelectionCriteria.Latest, long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result => 
@@ -110,7 +110,7 @@ namespace Akka.Persistence.TestKit.Snapshot
         }
 
         [Fact]
-        public void SnapshotStore_should_load_a_most_recent_snapshot_matching_an_upper_sequence_number_bound()
+        public void SnapshotStore_should_load_the_most_recent_snapshot_matching_an_upper_sequence_number_bound()
         {
             SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(13), long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result =>
@@ -128,7 +128,7 @@ namespace Akka.Persistence.TestKit.Snapshot
         }
 
         [Fact]
-        public void SnapshotStore_should_load_a_most_recent_snapshot_matching_an_upper_sequence_number_and_timestamp_bound()
+        public void SnapshotStore_should_load_the_most_recent_snapshot_matching_an_upper_sequence_number_and_timestamp_bound()
         {
             SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(13, Metadata[2].Timestamp), long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result =>
@@ -146,17 +146,19 @@ namespace Akka.Persistence.TestKit.Snapshot
         }
 
         [Fact]
-        public void SnapshotStore_should_delete_a_single_snapshot_identified_by_snapshot_metadata()
+        public void SnapshotStore_should_delete_a_single_snapshot_identified_by_SequenceNr_in_snapshot_metadata()
         {
             var md = Metadata[2];
+            md = new SnapshotMetadata(md.PersistenceId, md.SequenceNr); // don't care about timestamp for delete of a single snap
             var command = new DeleteSnapshot(md);
             var sub = CreateTestProbe();
 
             Subscribe<DeleteSnapshot>(sub.Ref);
-            SnapshotStore.Tell(command);
+            SnapshotStore.Tell(command, _senderProbe.Ref);
             sub.ExpectMsg(command);
+            _senderProbe.ExpectMsg<DeleteSnapshotSuccess>();
 
-            SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(md.SequenceNr, md.Timestamp), long.MaxValue), _senderProbe.Ref);
+            SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(md.SequenceNr), long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result =>
                 result.ToSequenceNr == long.MaxValue
                 && result.Snapshot != null
@@ -172,8 +174,9 @@ namespace Akka.Persistence.TestKit.Snapshot
             var sub = CreateTestProbe();
 
             Subscribe<DeleteSnapshots>(sub.Ref);
-            SnapshotStore.Tell(command);
+            SnapshotStore.Tell(command, _senderProbe.Ref);
             sub.ExpectMsg(command);
+            _senderProbe.ExpectMsg<DeleteSnapshotsSuccess>();
 
             SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(md.SequenceNr, md.Timestamp), long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result => result.Snapshot == null && result.ToSequenceNr == long.MaxValue);
@@ -185,6 +188,41 @@ namespace Akka.Persistence.TestKit.Snapshot
                 && result.Snapshot != null
                 && result.Snapshot.Metadata.Equals(Metadata[3])
                 && result.Snapshot.Snapshot.ToString() == "s-4");
+        }
+
+        [Fact]
+        public void SnapshotStore_should_not_delete_snapshots_with_non_matching_upper_timestamp_bounds()
+        {
+            var md = Metadata[3];
+            var criteria = new SnapshotSelectionCriteria(md.SequenceNr, md.Timestamp.Subtract(TimeSpan.FromTicks(1)));
+            var command = new DeleteSnapshots(Pid, criteria);
+            var sub = CreateTestProbe();
+
+            Subscribe<DeleteSnapshots>(sub.Ref);
+            SnapshotStore.Tell(command, _senderProbe.Ref);
+            sub.ExpectMsg(command);
+            _senderProbe.ExpectMsg<DeleteSnapshotsSuccess>(m => m.Criteria.Equals(criteria));
+
+            SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(md.SequenceNr, md.Timestamp), long.MaxValue), _senderProbe.Ref);
+            _senderProbe.ExpectMsg<LoadSnapshotResult>(result =>
+                result.ToSequenceNr == long.MaxValue
+                && result.Snapshot != null
+                && result.Snapshot.Metadata.Equals(Metadata[3])
+                && result.Snapshot.Snapshot.ToString() == "s-4");
+        }
+
+        [Fact(Skip = "This is not yet supported by the snapshot stores")]
+        public void SnapshotStore_should_save_and_overwrite_snapshot_with_same_sequence_number()
+        {
+            var md = Metadata[4];
+            SnapshotStore.Tell(new SaveSnapshot(md, "s-5-modified"), _senderProbe.Ref);
+            var md2 = _senderProbe.ExpectMsg<SaveSnapshotSuccess>().Metadata;
+            Assert.Equal(md.SequenceNr, md2.SequenceNr);
+            SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(md.SequenceNr), long.MaxValue), _senderProbe.Ref);
+            var result = _senderProbe.ExpectMsg<LoadSnapshotResult>();
+            Assert.Equal("s-5-modified", result.Snapshot.Snapshot.ToString());
+            Assert.Equal(md.SequenceNr, result.Snapshot.Metadata.SequenceNr);
+            // metadata timestamp may have been changed
         }
     }
 }

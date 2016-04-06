@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AllTestForEventFilterBase_Instances.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,9 +13,29 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
     {
         public EventFilterDebugTests() : base("akka.loglevel=DEBUG"){}
 
+        protected override EventFilterFactory CreateTestingEventFilter()
+        {
+            return EventFilter;
+        }
+
         protected override void PublishMessage(object message, string source)
         {
             Sys.EventStream.Publish(new Debug(source,GetType(),message));
+        }
+    }
+
+    public class CustomEventFilterDebugTests : AllTestForEventFilterBase<Debug>
+    {
+        public CustomEventFilterDebugTests() : base("akka.loglevel=DEBUG") { }
+
+        protected override EventFilterFactory CreateTestingEventFilter()
+        {
+            return CreateEventFilter(Sys);
+        }
+
+        protected override void PublishMessage(object message, string source)
+        {
+            Sys.EventStream.Publish(new Debug(source, GetType(), message));
         }
     }
 
@@ -23,15 +43,56 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
     {
         public EventFilterInfoTests() : base("akka.loglevel=INFO") { }
 
+        protected override EventFilterFactory CreateTestingEventFilter()
+        {
+            return EventFilter;
+        }
+
         protected override void PublishMessage(object message, string source)
         {
             Sys.EventStream.Publish(new Info(source, GetType(), message));
         }
     }
 
+    public class CustomEventFilterInfoTests : AllTestForEventFilterBase<Info>
+    {
+        public CustomEventFilterInfoTests() : base("akka.loglevel=INFO") { }
+
+        protected override EventFilterFactory CreateTestingEventFilter()
+        {
+            return CreateEventFilter(Sys);
+        }
+
+        protected override void PublishMessage(object message, string source)
+        {
+            Sys.EventStream.Publish(new Info(source, GetType(), message));
+        }
+    }
+
+
     public class EventFilterWarningTests : AllTestForEventFilterBase<Warning>
     {
         public EventFilterWarningTests() : base("akka.loglevel=WARNING") { }
+
+        protected override EventFilterFactory CreateTestingEventFilter()
+        {
+            return EventFilter;
+        }
+
+        protected override void PublishMessage(object message, string source)
+        {
+            Sys.EventStream.Publish(new Warning(source, GetType(), message));
+        }
+    }
+
+    public class CustomEventFilterWarningTests : AllTestForEventFilterBase<Warning>
+    {
+        public CustomEventFilterWarningTests() : base("akka.loglevel=WARNING") { }
+
+        protected override EventFilterFactory CreateTestingEventFilter()
+        {
+            return CreateEventFilter(Sys);
+        }
 
         protected override void PublishMessage(object message, string source)
         {
@@ -42,6 +103,26 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
     public class EventFilterErrorTests : AllTestForEventFilterBase<Error>
     {
         public EventFilterErrorTests() : base("akka.loglevel=ERROR") { }
+
+        protected override EventFilterFactory CreateTestingEventFilter()
+        {
+            return EventFilter;
+        }
+
+        protected override void PublishMessage(object message, string source)
+        {
+            Sys.EventStream.Publish(new Error(null, source, GetType(), message));
+        }
+    }
+
+    public class CustomEventFilterErrorTests : AllTestForEventFilterBase<Error>
+    {
+        public CustomEventFilterErrorTests() : base("akka.loglevel=ERROR") { }
+
+        protected override EventFilterFactory CreateTestingEventFilter()
+        {
+            return CreateEventFilter(Sys);
+        }
 
         protected override void PublishMessage(object message, string source)
         {

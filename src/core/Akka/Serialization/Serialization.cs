@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Serialization.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -104,6 +104,15 @@ namespace Akka.Serialization
         public object Deserialize(byte[] bytes, int serializerId, Type type)
         {
             return _serializers[serializerId].FromBinary(bytes, type);
+        }
+
+        public object Deserialize(byte[] bytes, int serializerId, string manifest)
+        {
+            var serializer = _serializers[serializerId];
+
+            if (serializer is SerializerWithStringManifest)
+                return ((SerializerWithStringManifest)serializer).FromBinary(bytes, manifest);
+            return serializer.FromBinary(bytes, Type.GetType(manifest));
         }
 
         public Serializer FindSerializerFor(object obj)

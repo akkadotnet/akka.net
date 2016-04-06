@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ConfigurationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,7 +18,7 @@ namespace Akka.Tests.Configuration
     public class ConfigurationSpec : AkkaSpec
     {
         [Fact]
-        public void DeserializesHoconConfigurationFromNetConfigFile()
+        public void Deserializes_hocon_configuration_from_net_config_file()
         {
             var section = (AkkaConfigurationSection)ConfigurationManager.GetSection("akka");
             Assert.NotNull(section);
@@ -28,7 +28,7 @@ namespace Akka.Tests.Configuration
         }
 
         [Fact]
-        public void CanCreateConfigFromSourceObject()
+        public void Can_create_config_from_source_object()
         {
             var source = new MyObjectConfig
             {
@@ -46,7 +46,7 @@ namespace Akka.Tests.Configuration
         }
 
         [Fact]
-        public void CanMergeObjects()
+        public void Can_merge_objects()
         {
             var hocon1 = @"
 a {
@@ -96,7 +96,7 @@ a {
         }
 
         [Fact]
-        public void ParsingEmptyStringShouldProduceEmptyHoconRoot()
+        public void Parsing_empty_string_should_produce_empty_hocon_root()
         {
             var value = Parser.Parse(string.Empty, null).Value;
             value.IsEmpty.ShouldBeTrue();

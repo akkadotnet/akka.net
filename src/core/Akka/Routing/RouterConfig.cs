@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RouterConfig.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -250,7 +250,7 @@ namespace Akka.Routing
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return _paths.SequenceEqual(other._paths);
+            return Paths.SequenceEqual(other.Paths);
         }
 
         /// <summary>
@@ -276,18 +276,13 @@ namespace Akka.Routing
         /// </returns>
         public override int GetHashCode()
         {
-            return (_paths != null ? _paths.GetHashCode() : 0);
+            return Paths?.GetHashCode() ?? 0;
         }
-
-        private readonly string[] _paths;
 
         /// <summary>
         /// Retrieves the actor paths used by this router during routee selection.
         /// </summary>
-        public string[] Paths
-        {
-            get { return _paths; }
-        }
+        public string[] Paths { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Group"/> class.
@@ -299,7 +294,7 @@ namespace Akka.Routing
         /// <param name="paths">An enumeration of actor paths used by the group router.</param>
         protected Group(IEnumerable<string> paths) : base(Dispatchers.DefaultDispatcherId)
         {
-            _paths = paths.ToArray();
+            Paths = paths.ToArray();
         }
 
         /// <summary>
@@ -315,7 +310,7 @@ namespace Akka.Routing
         protected Group(IEnumerable<string> paths, string routerDispatcher)
             : base(routerDispatcher ?? Dispatchers.DefaultDispatcherId)
         {
-            _paths = paths.ToArray();
+            Paths = paths.ToArray();
         }
 
         /// <summary>
@@ -329,7 +324,7 @@ namespace Akka.Routing
         protected Group(IEnumerable<IActorRef> routees)
             : base(Dispatchers.DefaultDispatcherId)
         {
-            _paths = routees.Select(x => x.Path.ToStringWithAddress()).ToArray();
+            Paths = routees.Select(x => x.Path.ToStringWithAddress()).ToArray();
         }
 
         internal Routee RouteeFor(string path, IActorContext context)
@@ -388,9 +383,9 @@ namespace Akka.Routing
         /// </returns>
         public override IEnumerable<Routee> GetRoutees(RoutedActorCell routedActorCell)
         {
-            if (_paths == null) return new Routee[0];
+            if (Paths == null) return new Routee[0];
             return
-                _paths.Select(((ActorSystemImpl) routedActorCell.System).ActorSelection)
+                Paths.Select(((ActorSystemImpl) routedActorCell.System).ActorSelection)
                     .Select(actor => new ActorSelectionRoutee(actor));
         }
 
@@ -418,10 +413,6 @@ namespace Akka.Routing
     /// </summary>
     public abstract class Pool : RouterConfig, IEquatable<Pool>
     {
-        private readonly int _nrOfInstances;
-        private readonly bool _usePoolDispatcher;
-        private readonly Resizer _resizer;
-        private readonly SupervisorStrategy _supervisorStrategy;
         //TODO: add supervisor strategy to the equality compare
 
         /// <summary>
@@ -462,7 +453,7 @@ namespace Akka.Routing
         {
             unchecked
             {
-                int hashCode = (Resizer != null ? Resizer.GetHashCode() : 0);
+                int hashCode = Resizer?.GetHashCode() ?? 0;
                 hashCode = (hashCode*397) ^ UsePoolDispatcher.GetHashCode();
                 hashCode = (hashCode*397) ^ NrOfInstances;
                 return hashCode;
@@ -489,11 +480,11 @@ namespace Akka.Routing
             // OMG, if every member in Java is virtual - you must never call any members in a constructor!!1!
             // In all seriousness, without making these members virtual RemoteRouterConfig won't work
             // ReSharper disable DoNotCallOverridableMethodsInConstructor
-            _nrOfInstances = nrOfInstances;
+            NrOfInstances = nrOfInstances;
 
-            _resizer = resizer;
-            _supervisorStrategy = supervisorStrategy ?? DefaultStrategy;
-            _usePoolDispatcher = usePoolDispatcher;
+            Resizer = resizer;
+            SupervisorStrategy = supervisorStrategy ?? DefaultStrategy;
+            UsePoolDispatcher = usePoolDispatcher;
         }
 
         /// <summary>
@@ -506,20 +497,17 @@ namespace Akka.Routing
         /// <param name="config">The configuration used to configure the pool.</param>
         protected Pool(Config config) : base(Dispatchers.DefaultDispatcherId)
         {
-            _nrOfInstances = config.GetInt("nr-of-instances");
-            _resizer = DefaultResizer.FromConfig(config);
-            _usePoolDispatcher = config.HasPath("pool-dispatcher");
-            _supervisorStrategy = DefaultStrategy;
+            NrOfInstances = config.GetInt("nr-of-instances");
+            Resizer = DefaultResizer.FromConfig(config);
+            UsePoolDispatcher = config.HasPath("pool-dispatcher");
+            SupervisorStrategy = DefaultStrategy;
             // ReSharper restore DoNotCallOverridableMethodsInConstructor
         }
 
         /// <summary>
         /// Retrieves the number of routees associated with this pool.
         /// </summary>
-        public virtual int NrOfInstances
-        {
-            get { return _nrOfInstances; }
-        }
+        public virtual int NrOfInstances { get; }
 
         /// <summary>
         /// Used by the <see cref="RoutedActorCell"/> to determine the initial number of routees.
@@ -539,26 +527,17 @@ namespace Akka.Routing
         /// Retrieve whether or not to use the pool dispatcher. The dispatcher is defined in the
         /// 'pool-dispatcher' configuration property in the deployment section of the router.
         /// </summary>
-        public virtual bool UsePoolDispatcher
-        {
-            get { return _usePoolDispatcher; }
-        }
+        public virtual bool UsePoolDispatcher { get; }
 
         /// <summary>
         /// Retrieve the resizer to use when dynamically allocating routees to the pool.
         /// </summary>
-        public virtual Resizer Resizer
-        {
-            get { return _resizer; }
-        }
+        public virtual Resizer Resizer { get; }
 
         /// <summary>
         /// Retrieve the strategy to use when supervising the pool.
         /// </summary>
-        public virtual SupervisorStrategy SupervisorStrategy
-        {
-            get { return _supervisorStrategy; }
-        }
+        public virtual SupervisorStrategy SupervisorStrategy { get; }
 
         /// <summary>
         /// Creates a new <see cref="Routee"/> configured to use the provided <paramref name="routeeProps"/>
@@ -638,9 +617,9 @@ namespace Akka.Routing
             {
                 Pool wssConf;
                 var p = other as Pool;
-                if (SupervisorStrategy == null || (SupervisorStrategy.Equals(Pool.DefaultStrategy) &&
-                                                   !p.SupervisorStrategy.Equals(Pool.DefaultStrategy)))
-                    wssConf = this.WithSupervisorStrategy(p.SupervisorStrategy);
+                if (SupervisorStrategy == null || (SupervisorStrategy.Equals(DefaultStrategy) &&
+                                                   !p.SupervisorStrategy.Equals(DefaultStrategy)))
+                    wssConf = WithSupervisorStrategy(p.SupervisorStrategy);
                 else
                     wssConf = this;
 
@@ -695,10 +674,7 @@ namespace Akka.Routing
         /// The default strategy used is <see cref="OneForOneStrategy"/> with an <see cref="Directive.Escalate"/> decider.
         /// </note>
         /// </summary>
-        public static SupervisorStrategy DefaultStrategy
-        {
-            get { return new OneForOneStrategy(10, TimeSpan.FromSeconds(10), Decider.From(Directive.Escalate)); }
-        }
+        public static SupervisorStrategy DefaultStrategy => new OneForOneStrategy(10, TimeSpan.FromSeconds(10), Decider.From(Directive.Escalate));
 
         #endregion
 
@@ -728,10 +704,24 @@ namespace Akka.Routing
     /// </summary>
     public class FromConfig : RouterConfig
     {
-        private static readonly FromConfig _instance = new FromConfig(Dispatchers.DefaultDispatcherId);
-
         private FromConfig(string routerDispatcher) : base(routerDispatcher)
         {
+        }
+
+        /// <summary>
+        /// Enriches a <see cref="Akka.Actor.Props"/> with what what's stored in the router configuration.
+        /// <note>
+        /// This is semantically the same as:
+        ///     <code>
+        ///         props.WithRouter(FromConfig.Instance)
+        ///     </code>
+        /// </note>
+        /// </summary>
+        /// <param name="props">The Props to enrich</param>
+        /// <returns></returns>
+        public static Props Props(Props props)
+        {
+            return props.WithRouter(Instance);
         }
 
         /// <summary>
@@ -741,10 +731,7 @@ namespace Akka.Routing
         /// This router is set to use the default dispatcher <see cref="Dispatchers.DefaultDispatcherId"/>.
         /// </note>
         /// </summary>
-        public static FromConfig Instance
-        {
-            get { return _instance; }
-        }
+        public static FromConfig Instance { get; } = new FromConfig(Dispatchers.DefaultDispatcherId);
 
         /// <summary>
         /// Creates a router that is responsible for routing messages to routees within the provided <paramref name="system"/>.

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MailboxesSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -62,7 +62,7 @@ int-prio-mailbox {
         }
 
         [Fact]
-        public void CanUseUnboundedPriorityMailbox()
+        public void Can_use_unbounded_priority_mailbox()
         {
             var actor = Sys.ActorOf(EchoActor.Props(this).WithMailbox("string-prio-mailbox"), "echo");
 
@@ -97,7 +97,7 @@ int-prio-mailbox {
         }       
 
         [Fact]
-        public void PriorityMailboxKeepsOrderingWithManyPriorityValues()
+        public void Priority_mailbox_keeps_ordering_with_many_priority_values()
         {
             var actor = Sys.ActorOf(EchoActor.Props(this).WithMailbox("int-prio-mailbox"), "echo");
 

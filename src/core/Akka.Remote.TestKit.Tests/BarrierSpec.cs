@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BarrierSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -84,7 +84,7 @@ namespace Akka.Remote.TestKit.Tests
         private readonly RoleName C = new RoleName("c");
 
         [Fact]
-        public void ABarrierCoordinatorMustRegisterClientsAndRemoveThem()
+        public void A_BarrierCoordinator_must_register_clients_and_remove_them()
         {
             var b = GetBarrier();
             b.Tell(new Controller.NodeInfo(A, Address.Parse("akka://sys"), Sys.DeadLetters), TestActor);
@@ -99,7 +99,7 @@ namespace Akka.Remote.TestKit.Tests
         }
 
         [Fact]
-        public void ABarrierCoordinatorMustRegisterClientsAndDisconnectThem()
+        public void A_BarrierCoordinator_must_register_clients_and_disconnect_them()
         {
             var b = GetBarrier();
             b.Tell(new Controller.NodeInfo(A, Address.Parse("akka://sys"), Sys.DeadLetters));
@@ -110,7 +110,7 @@ namespace Akka.Remote.TestKit.Tests
         }
 
         [Fact]
-        public void ABarrierCoordinatorMustFailEnteringBarrierWhenNobodyRegistered()
+        public void A_BarrierCoordinator_must_fail_entering_barrier_when_nobody_registered()
         {
             var b = GetBarrier();
             b.Tell(new EnterBarrier("bar1", null), TestActor);
@@ -118,7 +118,7 @@ namespace Akka.Remote.TestKit.Tests
         }
 
         [Fact]
-        public void ABarrierCoordinatorMustEnterBarrier()
+        public void A_BarrierCoordinator_must_enter_barrier()
         {
             var barrier = GetBarrier();
             var a = CreateTestProbe();
@@ -136,7 +136,7 @@ namespace Akka.Remote.TestKit.Tests
         }
 
         [Fact]
-        public void ABarrierCoordinatorMustEnterBarrierWithJoiningNode()
+        public void A_BarrierCoordinator_must_enter_barrier_with_joining_node()
         {
             var barrier = GetBarrier();
             var a = CreateTestProbe();
@@ -158,7 +158,7 @@ namespace Akka.Remote.TestKit.Tests
         }
 
         [Fact]
-        public void ABarrierCoordinatorMustEnterBarrierWithLeavingNode()
+        public void A_BarrierCoordinator_must_enter_barrier_with_leaving_node()
         {
             var barrier = GetBarrier();
             var a = CreateTestProbe();
@@ -182,7 +182,7 @@ namespace Akka.Remote.TestKit.Tests
         }
 
         [Fact]
-        public void ABarrierCoordinatorMustEnterLeaveBarrierWhenLastArrivedIsRemoved()
+        public void A_BarrierCoordinator_must_enter_leave_barrier_when_last_arrived_is_removed()
         {
             var barrier = GetBarrier();
             var a = CreateTestProbe();
@@ -196,7 +196,7 @@ namespace Akka.Remote.TestKit.Tests
         }
 
         [Fact]
-        public void ABarrierCoordinatorMustFailBarrierWithDisconnectingNode()
+        public void A_BarrierCoordinator_must_fail_barrier_with_disconnecting_node()
         {
             var barrier = GetBarrier();
             var a = CreateTestProbe();
@@ -218,7 +218,7 @@ namespace Akka.Remote.TestKit.Tests
         }
 
         [Fact]
-        public void ABarrierCoordinatorMustFailBarrierWhenDisconnectingNodeWhoAlreadyArrived()
+        public void A_BarrierCoordinator_must_fail_barrier_when_disconnecting_node_who_already_arrived()
         {
             var barrier = GetBarrier();
             var a = CreateTestProbe();
@@ -245,7 +245,7 @@ namespace Akka.Remote.TestKit.Tests
         }
 
         [Fact]
-        public void ABarrierCoordinatorMustFailWhenEnteringWrongBarrier()
+        public void A_BarrierCoordinator_must_fail_when_entering_wrong_barrier()
         {
             var barrier = GetBarrier();
             var a = CreateTestProbe();
@@ -270,7 +270,7 @@ namespace Akka.Remote.TestKit.Tests
         }
         
         [Fact]
-        public void ABarrierCoordinatorMustFailBarrierAfterFirstFailure()
+        public void A_BarrierCoordinator_must_fail_barrier_after_first_failure()
         {
             var barrier = GetBarrier();
             var a = CreateTestProbe();
@@ -290,7 +290,7 @@ namespace Akka.Remote.TestKit.Tests
         }
 
         [Fact]
-        public void ABarrierCoordinatorMustFailAfterBarrierTimeout()
+        public void A_BarrierCoordinator_must_fail_after_barrier_timeout()
         {
             var barrier = GetBarrier();
             var a = CreateTestProbe();
@@ -314,7 +314,7 @@ namespace Akka.Remote.TestKit.Tests
         }
 
         [Fact]
-        public void ABarrierCoordinatorMustFailIfANodeRegistersTwice()
+        public void A_BarrierCoordinator_must_fail_if_a_node_registers_twice()
         {
             var barrier = GetBarrier();
             var a = CreateTestProbe();

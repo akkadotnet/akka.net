@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterClient.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -211,9 +211,9 @@ namespace Akka.Cluster.Tools.Client
                             break;
                     }
                 })
-               .With<Send>(send => Buffer(new Send(send.Path, send.Message, send.LocalAffinity)))
-               .With<SendToAll>(send => Buffer(new SendToAll(send.Path, send.Message)))
-               .With<Publish>(publish => Buffer(new Publish(publish.Topic, publish.Message)))
+               .With<Send>(send => Buffer(new PublishSubscribe.Send(send.Path, send.Message, send.LocalAffinity)))
+               .With<SendToAll>(send => Buffer(new PublishSubscribe.SendToAll(send.Path, send.Message)))
+               .With<Publish>(publish => Buffer(new PublishSubscribe.Publish(publish.Topic, publish.Message)))
                .WasHandled;
         }
 
@@ -222,11 +222,11 @@ namespace Akka.Cluster.Tools.Client
             return message =>
                 message.Match()
                 .With<Send>(send =>
-                    receptionist.Forward(new Send(send.Path, send.Message, send.LocalAffinity)))
+                    receptionist.Forward(new PublishSubscribe.Send(send.Path, send.Message, send.LocalAffinity)))
                 .With<SendToAll>(toAll =>
-                    receptionist.Forward(new SendToAll(toAll.Path, toAll.Message)))
+                    receptionist.Forward(new PublishSubscribe.SendToAll(toAll.Path, toAll.Message)))
                 .With<Publish>(publish =>
-                    receptionist.Forward(new Publish(publish.Topic, publish.Message)))
+                    receptionist.Forward(new PublishSubscribe.Publish(publish.Topic, publish.Message)))
                 .With<InternalMessage>(m =>
                 {
                     switch (m)

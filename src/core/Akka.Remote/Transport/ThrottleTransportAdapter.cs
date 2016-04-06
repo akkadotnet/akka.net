@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ThrottleTransportAdapter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -79,17 +79,13 @@ namespace Akka.Remote.Transport
                 {
                     return r.Result is SetThrottleAck;
                 }, 
-                    TaskContinuationOptions.AttachedToParent | 
-                    TaskContinuationOptions.ExecuteSynchronously |
-                    TaskContinuationOptions.OnlyOnRanToCompletion);
+                    TaskContinuationOptions.ExecuteSynchronously);
             }
 
             if (message is ForceDisassociate || message is ForceDisassociateExplicitly)
             {
                 return manager.Ask(message, AskTimeout).ContinueWith(r => r.Result is ForceDisassociateAck,
-                    TaskContinuationOptions.AttachedToParent |
-                    TaskContinuationOptions.ExecuteSynchronously |
-                    TaskContinuationOptions.OnlyOnRanToCompletion);
+                    TaskContinuationOptions.ExecuteSynchronously);
             }
 
             return WrappedTransport.ManagementCommand(message);
@@ -437,7 +433,7 @@ namespace Akka.Remote.Transport
                 //        internalTarget.Tell(new Unwatch(target, promiseRef));
                 //       return SetThrottleAck.Instance;
                 //    }
-                //}, TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously);
+                //}, TaskContinuationOptions.ExecuteSynchronously);
 
             }
         }

@@ -154,6 +154,7 @@
     <Compile Include="Dispatch\XUnitAsyncTestsSanityCheck.cs" />
     <Compile Include="Event\EventBusSpec.cs" />
     <Compile Include="Event\EventStreamSpec.cs" />
+    <Compile Include="Event\LoggerMailboxSpec.cs" />
     <Compile Include="IO\SimpleDnsCacheSpec.cs" />
     <Compile Include="IO\TcpConnectionSpec.cs" />
     <Compile Include="IO\TcpIntegrationSpec.cs" />
@@ -188,8 +189,6 @@
     <Compile Include="Util\ContinuousEnumeratorSpec.cs" />
     <Compile Include="Util\Internal\Collections\IteratorTests.cs" />
     <Compile Include="Util\Internal\InterlockedSpinTests.cs" />
-    <Compile Include="Util\Internal\Collections\ImmutableAvlTreeMapTests.cs" />
-    <Compile Include="Util\Internal\Collections\ImmutableAvlTreeTests.cs" />
     <Compile Include="Util\PatternSpec.cs" />
     <Compile Include="Util\SwitchTests.cs" />
     <Compile Include="Util\TypeExtensionsTests.cs" />

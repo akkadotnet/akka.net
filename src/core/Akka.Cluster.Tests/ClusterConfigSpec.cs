@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterConfigSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -20,7 +20,7 @@ namespace Akka.Cluster.Tests
         public ClusterConfigSpec() : base(@"akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""") { }
 
         [Fact]
-        public void ClusteringMustBeAbleToParseGenericClusterConfigElements()
+        public void Clustering_must_be_able_to_parse_generic_cluster_config_elements()
         {
             var settings = new ClusterSettings(Sys.Settings.Config, Sys.Name);
             Assert.True(settings.LogInfo);
@@ -59,7 +59,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void ClusteringShouldHaveCorrectDefaultForkJoinDispatcher()
+        public void Clustering_should_have_correct_default_fork_join_dispatcher()
         {
             var dispatchConfig = Sys.Settings.Config.GetConfig("akka.cluster.default-cluster-dispatcher");
             var dispatcherThreadPoolSettings = dispatchConfig.GetConfig("dedicated-thread-pool");

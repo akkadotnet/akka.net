@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Player.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -14,6 +14,7 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Transport;
+using Akka.Util;
 using Helios.Exceptions;
 using Helios.Net;
 using Helios.Topology;
@@ -51,10 +52,9 @@ namespace Akka.Remote.TestKit
         public Task<Done> StartClient(RoleName name, INode controllerAddr)
         {
             if(_client != null) throw new IllegalStateException("TestConductorClient already started");
-            _client =
-                _system.ActorOf(new Props(typeof (ClientFSM),
-                    new object[] {name, controllerAddr}), "TestConductorClient");
-            
+                _client =
+                _system.ActorOf(Props.Create(() => new ClientFSM(name, controllerAddr)), "TestConductorClient");
+
             //TODO: IRequiresMessageQueue
             var a = _system.ActorOf(Props.Create<WaitForClientFSMToConnect>());
 
@@ -131,13 +131,18 @@ namespace Akka.Remote.TestKit
                 try
                 {
                     var askTimeout = barrierTimeout + Settings.QueryTimeout;
-                    //TODO: Wait?
+                    // Need to force barrier to wait here, so we can pass along a "fail barrier" message in the event
+                    // of a failed operation
                     _client.Ask(new ToServer<EnterBarrier>(new EnterBarrier(name, barrierTimeout)), askTimeout).Wait();
                 }
-                catch (OperationCanceledException)
+                catch (AggregateException)
                 {
                     _client.Tell(new ToServer<FailBarrier>(new FailBarrier(name)));
                     throw new TimeoutException("Client timed out while waiting for barrier " + name);
+                }
+                catch (OperationCanceledException)
+                {
+                   _system.Log.Debug("OperationCanceledException was thrown instead of AggregateException");
                 }
                 _system.Log.Debug("passed barrier {0}", name);
             }
@@ -145,8 +150,7 @@ namespace Akka.Remote.TestKit
 
         public Task<Address> GetAddressFor(RoleName name)
         {
-            //TODO: QueryTimeout implicit?
-            return _client.Ask<Address>(new ToServer<GetAddress>(new GetAddress(name)));
+            return _client.Ask<Address>(new ToServer<GetAddress>(new GetAddress(name)), Settings.QueryTimeout);
         }
     }
 
@@ -324,7 +328,7 @@ namespace Akka.Remote.TestKit
                 }
                 if (@event.FsmEvent is StateTimeout)
                 {
-                    _log.Error("connect timeout to TestConductor");
+                    _log.Error($"Failed to connect to test conductor within {_settings.ConnectTimeout.TotalMilliseconds} ms.");
                     return GoTo(State.Failed);
                 }
 
@@ -362,7 +366,7 @@ namespace Akka.Remote.TestKit
                     _log.Info("disconnected from TestConductor");
                     throw new ConnectionFailure("disconnect");
                 }
-                if(@event.FsmEvent is ToServer<Done> && @event.StateData.Channel != null && @event.StateData.RunningOp == null)
+                if(@event.FsmEvent is ToServer<Done> && @event.StateData.Channel != null)
                 {
                     @event.StateData.Channel.Write(Done.Instance);
                     return Stay();
@@ -439,9 +443,8 @@ namespace Akka.Remote.TestKit
                     {
                         ThrottleMode mode;
                         if (throttleMsg.RateMBit < 0.0f) mode = Unthrottled.Instance;
-                        else if (throttleMsg.RateMBit < 0.0f) mode = Blackhole.Instance;
+                        else if (throttleMsg.RateMBit == 0.0f) mode = Blackhole.Instance;
                         else mode = new TokenBucket(1000, throttleMsg.RateMBit*125000, 0, 0);
-
                         var cmdTask =
                             TestConductor.Get(Context.System)
                                 .Transport.ManagementCommand(new SetThrottle(throttleMsg.Target, throttleMsg.Direction,

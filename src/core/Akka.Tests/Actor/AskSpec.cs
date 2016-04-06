@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AskSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -66,21 +66,21 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void CanAskActor()
+        public void Can_Ask_actor()
         {
             var actor = Sys.ActorOf<SomeActor>();
             actor.Ask<string>("answer").Result.ShouldBe("answer");
         }
 
         [Fact]
-        public void CanAskActorWithTimeout()
+        public void Can_Ask_actor_with_timeout()
         {
             var actor = Sys.ActorOf<SomeActor>();
             actor.Ask<string>("answer",TimeSpan.FromSeconds(10)).Result.ShouldBe("answer");
         }
 
         [Fact]
-        public void CanGetTimeoutWhenAskingActor()
+        public void Can_get_timeout_when_asking_actor()
         {
             var actor = Sys.ActorOf<SomeActor>();
             Assert.Throws<AggregateException>(() => { actor.Ask<string>("timeout", TimeSpan.FromSeconds(3)).Wait(); });
@@ -91,7 +91,7 @@ namespace Akka.Tests.Actor
         /// that we don't deadlock
         /// </summary>
         [Fact]
-        public void CanAskActorInsideReceiveLoop()
+        public void Can_Ask_actor_inside_receive_loop()
         {
             var replyActor = Sys.ActorOf<ReplyActor>();
             var waitActor = Sys.ActorOf(Props.Create(() => new WaitActor(replyActor, TestActor)));

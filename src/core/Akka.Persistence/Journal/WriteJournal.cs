@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="WriteJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 
@@ -22,28 +23,11 @@ namespace Akka.Persistence.Journal
             _eventAdapters = _persistence.AdaptersFor(Self);
         }
 
-        //protected IEnumerable<IPersistentRepresentation> CreatePersistentBatch(IEnumerable<IPersistentEnvelope> resequencables)
-        //{
-        //    return resequencables.Where(PreparePersistentWrite).Cast<IPersistentRepresentation>();
-        //}
-
-        protected bool PreparePersistentWrite(IPersistentEnvelope persistentEnvelope)
-        {
-            if (persistentEnvelope is IPersistentRepresentation)
-            {
-                var repr = AdaptToJournal(persistentEnvelope as IPersistentRepresentation);
-                repr.PrepareWrite(Context);
-                return true;
-            }
-
-            return false;
-        }
-
-        protected IEnumerable<IPersistentRepresentation> CreatePersistentBatch(IEnumerable<IPersistentEnvelope> resequencables)
+        protected IEnumerable<AtomicWrite> PreparePersistentBatch(IEnumerable<IPersistentEnvelope> resequencables)
         {
             return resequencables
-               .Where(e => e is IPersistentRepresentation)
-               .Select(e => AdaptToJournal(e as IPersistentRepresentation).PrepareWrite(Context));
+               .OfType<AtomicWrite>()
+               .Select(aw => new AtomicWrite(((IEnumerable<IPersistentRepresentation>)aw.Payload).Select(p => AdaptToJournal(p.Update(p.SequenceNr, p.PersistenceId, p.IsDeleted, ActorRefs.NoSender, p.WriterGuid))).ToImmutableList()));
         }
 
         protected IEnumerable<IPersistentRepresentation> AdaptFromJournal(IPersistentRepresentation representation)

@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="DispatcherThroughputSpecBase.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading;
 using Akka.Dispatch;
 using NBench;
@@ -59,7 +66,7 @@ namespace Akka.Tests.Performance.Dispatch
 
         [PerfBenchmark(Description = "Tests how long it takes to schedule items onto the dispatcher", RunMode = RunMode.Iterations, NumberOfIterations = 13, TestMode = TestMode.Measurement)]
         [CounterMeasurement(DispatcherCounterName)]
-        public void ScheduleThroughput(BenchmarkContext context)
+        public void Schedule_throughput(BenchmarkContext context)
         {
             for (var i = 0L; i < ScheduleCount;)
             {

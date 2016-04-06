@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeadLettersEventFilterTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,11 +12,12 @@ using Xunit;
 
 namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
 {
-    public class DeadLettersEventFilterTests : EventFilterTestBase
+    public abstract class DeadLettersEventFilterTestsBase : EventFilterTestBase
     {
         private readonly IActorRef _deadActor;
+
         // ReSharper disable ConvertToLambdaExpression
-        public DeadLettersEventFilterTests() : base("akka.loglevel=ERROR")
+        protected DeadLettersEventFilterTestsBase() : base("akka.loglevel=ERROR")
         {
             _deadActor = Sys.ActorOf(BlackHoleActor.Props, "dead-actor");
             Watch(_deadActor);
@@ -29,10 +30,13 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
             Sys.EventStream.Publish(new Error(null, "DeadLettersEventFilterTests", GetType(), message));
         }
 
+        protected abstract EventFilterFactory CreateTestingEventFilter();
+
         [Fact]
-        public void ShouldBeAbleToFilterDeadLetters()
+        public void Should_be_able_to_filter_dead_letters()
         {
-            EventFilter.DeadLetter().ExpectOne(() =>
+            var eventFilter = CreateTestingEventFilter();
+            eventFilter.DeadLetter().ExpectOne(() =>
             {
                 _deadActor.Tell("whatever");
             });
@@ -40,6 +44,22 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
 
 
         // ReSharper restore ConvertToLambdaExpression
+    }
+
+    public class DeadLettersEventFilterTests : DeadLettersEventFilterTestsBase
+    {
+        protected override EventFilterFactory CreateTestingEventFilter()
+        {
+            return EventFilter;
+        }
+    }
+
+    public class DeadLettersCustomEventFilterTests : DeadLettersEventFilterTestsBase
+    {
+        protected override EventFilterFactory CreateTestingEventFilter()
+        {
+            return CreateEventFilter(Sys);
+        }
     }
 }
 

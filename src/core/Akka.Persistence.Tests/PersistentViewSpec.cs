@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentViewSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -92,7 +92,7 @@ namespace Akka.Persistence.Tests
             _viewProbe.ExpectMsg("replicated-b-2");
             _pref.Tell("c");
             _prefProbe.ExpectMsg("c-3");
-            _view.Tell(new Update(isAwait: false));
+            _view.Tell(new Update(isAwait: true));
             _view.Tell("get");
             _viewProbe.ExpectMsg("replicated-c-3");
         }
@@ -210,6 +210,17 @@ namespace Akka.Persistence.Tests
             _pref.Tell("c");
             _viewProbe.ExpectMsg("replicated-b-2");
             _viewProbe.ExpectMsg("replicated-c-3");
+        }
+
+        [Fact]
+        public void PersistentView_should_support_stash()
+        {
+            _view = ActorOf(() => new StashingPersistentView(Name, _viewProbe.Ref));
+            _view.Tell("other");
+            _view.Tell("unstash");
+            _viewProbe.ExpectMsg("a-2"); // note that the LastSequenceNr is 2, since we have replayed b-2
+            _viewProbe.ExpectMsg("b-2");
+            _viewProbe.ExpectMsg("other-2");
         }
 
         private void SubscribeToReplay(TestProbe probe)

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaProtocolTransport.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -892,7 +892,7 @@ namespace Akka.Remote.Transport
         private void ListenForListenerRegistration(TaskCompletionSource<IHandleEventListener> readHandlerSource)
         {
             readHandlerSource.Task.ContinueWith(rh => new HandleListenerRegistered(rh.Result),
-                TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent).PipeTo(Self);
+                TaskContinuationOptions.ExecuteSynchronously).PipeTo(Self);
         }
 
         private Task<IHandleEventListener> NotifyOutboundHandler(AssociationHandle wrappedHandle,

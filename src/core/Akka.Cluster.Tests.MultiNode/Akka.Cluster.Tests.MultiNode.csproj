@@ -36,8 +36,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
-    <Reference Include="System.Collections.Immutable, Version=1.1.37.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\System.Collections.Immutable.1.1.37\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
+    <Reference Include="System.Collections.Immutable, Version=1.1.36.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\System.Collections.Immutable.1.1.36\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System.Core" />
@@ -62,21 +62,24 @@
   <ItemGroup>
     <Compile Include="ClusterDeathWatchSpec.cs" />
     <Compile Include="ConvergenceSpec.cs" />
-    <Compile Include="FailureDetectorPuppet.cs" />
     <Compile Include="InitialHeartbeatSpec.cs" />
     <Compile Include="JoinInProgressSpec.cs" />
     <Compile Include="JoinSeedNodeSpec.cs" />
     <Compile Include="LeaderLeavingSpec.cs" />
-    <Compile Include="MultiNodeClusterSpec.cs" />
-    <Compile Include="MultiNodeLoggingConfig.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RestartNodeSpec.cs" />
     <Compile Include="Routing\ClusterConsistentHashingGroupSpec.cs" />
     <Compile Include="Routing\ClusterConsistentHashingRouterSpec.cs" />
+    <Compile Include="UnreachableNodeJoinsAgainSpec.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj">
       <Project>{7dbd5c17-5e9d-40c4-9201-d092751532a7}</Project>
       <Name>Akka.TestKit.Xunit2</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka.Cluster.TestKit\Akka.Cluster.TestKit.csproj">
+      <Project>{b32850d2-e9cb-4638-83a4-164907595e56}</Project>
+      <Name>Akka.Cluster.TestKit</Name>
     </ProjectReference>
     <ProjectReference Include="..\Akka.Cluster\Akka.Cluster.csproj">
       <Project>{6ab00f61-269a-4501-b06a-026707f000a7}</Project>

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterDomainEventSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -48,7 +48,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void DomainEventsMustBeEmptyForTheSameGossip()
+        public void DomainEvents_must_be_empty_for_the_same_gossip()
         {
             var g1 = new Gossip(ImmutableSortedSet.Create(aUp));
 
@@ -56,7 +56,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void DomainEventsMustBeProducedForNewMembers()
+        public void DomainEvents_must_be_produced_for_new_members()
         {
             var t1 = Converge(new Gossip(ImmutableSortedSet.Create(aUp)));
             var t2 = Converge(new Gossip(ImmutableSortedSet.Create(aUp, bUp, eJoining)));
@@ -72,7 +72,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void DomainEventMustBeProducedForChangedStatusOfMembers()
+        public void DomainEvents_must_be_produced_for_changed_status_of_members()
         {
             var t1 = Converge(new Gossip(ImmutableSortedSet.Create(aJoining, bUp, cUp)));
             var t2 = Converge(new Gossip(ImmutableSortedSet.Create(aUp, bUp, cLeaving, eJoining)));
@@ -87,7 +87,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void DomainEventMustBeProducedForMembersInUnreachable()
+        public void DomainEvents_must_be_produced_for_members_in_unreachable()
         {
             var reachability1 = Reachability.Empty.
                 Unreachable(aUp.UniqueAddress, cUp.UniqueAddress).
@@ -102,7 +102,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void DomainEventMustBeProducedForMembersBecomingReachableAfterUnreachable()
+        public void DomainEvents_must_be_produced_for_members_becoming_reachable_after_unreachable()
         {
             var reachability1 = Reachability.Empty.
                 Unreachable(aUp.UniqueAddress, cUp.UniqueAddress).Reachable(aUp.UniqueAddress, cUp.UniqueAddress).
@@ -119,7 +119,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void DomainEventMustBeProducedForConvergenceChanges()
+        public void DomainEvents_must_be_produced_for_convergence_changes()
         {
             var g1 =
                 new Gossip(ImmutableSortedSet.Create(aUp, bUp, eJoining)).Seen(aUp.UniqueAddress)
@@ -136,7 +136,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void DomainEventMustBeProducedForLeaderChanges()
+        public void DomainEvents_must_be_produced_for_leader_changes()
         {
             var t1 = Converge(new Gossip(ImmutableSortedSet.Create(aUp, bUp, eJoining)));
             var t2 = Converge(new Gossip(ImmutableSortedSet.Create(bUp, eJoining)));
@@ -152,7 +152,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void DomainEventMustBeProducedForRoleLeaderChanges()
+        public void DomainEvents_must_be_produced_for_role_leader_changes()
         {
             var g0 = Gossip.Empty;
             var g1 = new Gossip(ImmutableSortedSet.Create(aUp, bUp, cUp, dLeaving, eJoining));

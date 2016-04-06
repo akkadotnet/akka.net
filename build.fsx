@@ -7,8 +7,6 @@ open System.IO
 open System.Text
 open Fake
 open Fake.FileUtils
-open Fake.MSTest
-open Fake.NUnitCommon
 open Fake.TaskRunnerHelper
 open Fake.ProcessHelper
 
@@ -21,7 +19,7 @@ cd __SOURCE_DIRECTORY__
 
 let product = "Akka.NET"
 let authors = [ "Akka.NET Team" ]
-let copyright = "Copyright © 2013-2015 Akka.NET Team"
+let copyright = "Copyright © 2013-2016 Akka.NET Team"
 let company = "Akka.NET Team"
 let description = "Akka.NET is a port of the popular Java/Scala framework Akka to .NET"
 let tags = ["akka";"actors";"actor";"model";"Akka";"concurrency"]
@@ -59,6 +57,8 @@ let workingDir = binDir @@ "build"
 let libDir = workingDir @@ @"lib\net45\"
 let nugetExe = FullName @"src\.nuget\NuGet.exe"
 let docDir = "bin" @@ "doc"
+let sourceBrowserDocsDir = binDir @@ "sourcebrowser"
+let msdeployPath = "C:\Program Files (x86)\IIS\Microsoft Web Deploy V3\msdeploy.exe"
 
 open Fake.RestorePackageHelper
 Target "RestorePackages" (fun _ -> 
@@ -164,6 +164,42 @@ Target "AzureDocsDeploy" (fun _ ->
 Target "PublishDocs" DoNothing
 
 //--------------------------------------------------------------------------------
+// Build the SourceBrowser docs
+//--------------------------------------------------------------------------------
+Target "GenerateSourceBrowser" <| (fun _ ->
+    DeleteDir sourceBrowserDocsDir
+
+    let htmlGeneratorPath = "src/packages/Microsoft.SourceBrowser/tools/HtmlGenerator.exe"
+    let arguments = sprintf "/out:%s %s" sourceBrowserDocsDir "src/Akka.sln"
+    printfn "Using SourceBrowser: %s %s" htmlGeneratorPath arguments
+    
+    let result = ExecProcess(fun info -> 
+        info.FileName <- htmlGeneratorPath
+        info.Arguments <- arguments) (System.TimeSpan.FromMinutes 20.0)
+    
+    if result <> 0 then failwithf "SourceBrowser failed. %s %s" htmlGeneratorPath arguments
+)
+
+//--------------------------------------------------------------------------------
+// Publish the SourceBrowser docs
+//--------------------------------------------------------------------------------
+Target "PublishSourceBrowser" <| (fun _ ->
+    let canPublish = hasBuildParam "publishsettings"
+    if (canPublish) then
+        let sourceBrowserPublishSettingsPath = getBuildParam "publishsettings"
+        let arguments = sprintf "-verb:sync -source:contentPath=\"%s\" -dest:contentPath=sourcebrowser,publishSettings=\"%s\"" (Path.GetFullPath sourceBrowserDocsDir) sourceBrowserPublishSettingsPath
+        printfn "Using MSDeploy: %s %s" msdeployPath arguments
+    
+        let result = ExecProcess(fun info -> 
+            info.FileName <- msdeployPath
+            info.Arguments <- arguments) (System.TimeSpan.FromMinutes 30.0) //takes a long time to upload
+    
+        if result <> 0 then failwithf "MSDeploy failed. %s %s" msdeployPath arguments
+    else
+        printfn "Missing required parameter to publish SourceBrowser docs. Run build HelpSourceBrowserDocs to find out!"
+)
+
+//--------------------------------------------------------------------------------
 // Copy the build output to bin directory
 //--------------------------------------------------------------------------------
 
@@ -183,11 +219,6 @@ Target "CopyOutput" <| fun _ ->
       "core/Akka.Persistence"
       "core/Akka.Persistence.FSharp"
       "core/Akka.Persistence.TestKit"
-      "contrib/loggers/Akka.Logger.slf4net"
-      "contrib/loggers/Akka.Logger.NLog" 
-      "contrib/loggers/Akka.Logger.Serilog" 
-      "contrib/loggers/Akka.Logger.CommonLogging"
-      "contrib/loggers/Akka.Logger.log4net" 
       "contrib/dependencyinjection/Akka.DI.Core"
       "contrib/dependencyinjection/Akka.DI.AutoFac"
       "contrib/dependencyinjection/Akka.DI.CastleWindsor"
@@ -195,7 +226,6 @@ Target "CopyOutput" <| fun _ ->
       "contrib/dependencyinjection/Akka.DI.Unity"
       "contrib/dependencyinjection/Akka.DI.TestKit"
       "contrib/testkits/Akka.TestKit.Xunit" 
-      "contrib/testkits/Akka.TestKit.NUnit" 
       "contrib/testkits/Akka.TestKit.Xunit2" 
       "contrib/serializers/Akka.Serialization.Wire" 
       "contrib/cluster/Akka.Cluster.Tools"
@@ -221,26 +251,19 @@ Target "CleanTests" <| fun _ ->
 
 open Fake.Testing
 Target "RunTests" <| fun _ ->  
-    let msTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
-    let nunitTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll"
-    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- 
-                                    "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll" -- 
-                                    "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll" 
+    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll"
 
     mkdir testOutput
-
-    MSTest (fun p -> p) msTestAssemblies
-    nunitTestAssemblies
-    |> NUnit (fun p -> 
-        {p with
-            DisableShadowCopy = true; 
-            OutputFile = testOutput + @"\NUnitTestResults.xml"})
-
+   
     let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
-    xUnit2
-        (fun p -> { p with XmlOutputPath = Some (testOutput + @"\XUnitTestResults.xml"); HtmlOutputPath = Some (testOutput + @"\XUnitTestResults.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization })
-        xunitTestAssemblies
+    let runSingleAssembly assembly =
+        let assemblyName = Path.GetFileNameWithoutExtension(assembly)
+        xUnit2
+            (fun p -> { p with XmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.xml"); HtmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization }) 
+            (Seq.singleton assembly)
+
+    xunitTestAssemblies |> Seq.iter (runSingleAssembly)
 
 Target "RunTestsMono" <| fun _ ->  
     let xunitTestAssemblies = !! "src/**/bin/Release Mono/*.Tests.dll"
@@ -249,9 +272,23 @@ Target "RunTestsMono" <| fun _ ->
 
     let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
-    xUnit2
-        (fun p -> { p with XmlOutputPath = Some (testOutput + @"\XUnitTestResults.xml"); HtmlOutputPath = Some (testOutput + @"\XUnitTestResults.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization })
-        xunitTestAssemblies
+    let runSingleAssembly assembly =
+        let assemblyName = Path.GetFileNameWithoutExtension(assembly)
+        xUnit2
+            (fun p -> { p with XmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.xml"); HtmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization }) 
+            (Seq.singleton assembly)
+
+    xunitTestAssemblies |> Seq.iter (runSingleAssembly)
+
+
+(* Debug helper for troubleshooting an issue we had when we were running multi-node tests multiple times *)
+Target "PrintMultiNodeTests" <| fun _ ->
+    let testSearchPath =
+        let assemblyFilter = getBuildParamOrDefault "spec-assembly" String.Empty
+        sprintf "src/**/bin/Release/*%s*.Tests.MultiNode.dll" assemblyFilter
+    (!! testSearchPath) |> Seq.iter (printfn "%s")
+    
+
 
 Target "MultiNodeTests" <| fun _ ->
     let testSearchPath =
@@ -326,6 +363,8 @@ module Nuget =
         match project with
         | "Akka" -> []
         | "Akka.Cluster" -> ["Akka.Remote", release.NugetVersion]
+        | "Akka.Cluster.Sharding" -> ["Akka.Cluster.Tools", preReleaseVersion; "Akka.Persistence", preReleaseVersion]
+        | "Akka.Cluster.Tools" -> ["Akka.Cluster", preReleaseVersion]
         | "Akka.Persistence.TestKit" -> ["Akka.Persistence", preReleaseVersion; "Akka.TestKit.Xunit2", release.NugetVersion]
         | persistence when (persistence.Contains("Sql") && not (persistence.Equals("Akka.Persistence.Sql.Common"))) -> ["Akka.Persistence.Sql.Common", preReleaseVersion]
         | persistence when (persistence.StartsWith("Akka.Persistence.")) -> ["Akka.Persistence", preReleaseVersion]
@@ -338,6 +377,7 @@ module Nuget =
     let getProjectVersion project =
       match project with
       | "Akka.Cluster" -> preReleaseVersion
+      | cluster when cluster.StartsWith("Akka.Cluster.") -> preReleaseVersion
       | persistence when persistence.StartsWith("Akka.Persistence") -> preReleaseVersion
       | "Akka.Serialization.Wire" -> preReleaseVersion
       | _ -> release.NugetVersion
@@ -577,6 +617,22 @@ Target "HelpDocs" <| fun _ ->
       "                                   Build and publish docs to http://fooaccount.blob.core.windows.net/docs/unstable"
       ""]
 
+
+Target "HelpSourceBrowserDocs" <| fun _ ->
+    List.iter printfn [
+      "usage: "
+      "build GenerateSourceBrowser"
+      "Just generates the SourceBrowser docs for Akka.NET locally. Does not attempt to publish."
+      ""
+      "build PublishSourceBrowser publishsettings=<filePath> "
+      ""
+      "Arguments for PublishSourceBrowser target:"
+      "   publishsettings=<filePath> Publish settings file."
+      ""
+      "In order to publish documentation all of these values must be provided."
+      ""]
+
+
 Target "HelpMultiNodeTests" <| fun _ ->
     List.iter printfn [
       "usage: "
@@ -610,6 +666,9 @@ Target "HelpMultiNodeTests" <| fun _ ->
 
 //docs dependencies
 "BuildRelease" ==> "Docs" ==> "AzureDocsDeploy" ==> "PublishDocs"
+
+// SourceBrowser dependencies
+"BuildRelease" ==> "GenerateSourceBrowser" ==> "PublishSourceBrowser"
 
 Target "All" DoNothing
 "BuildRelease" ==> "All"

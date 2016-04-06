@@ -1,22 +1,100 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ScatterGatherFirstCompletedSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
 using Akka.Util.Internal;
+using FluentAssertions;
 using Xunit;
 
 namespace Akka.Tests.Routing
 {
     public class ScatterGatherFirstCompletedSpec : AkkaSpec
     {
+        [Fact]
+        public void Scatter_gather_router_must_be_started_when_constructed()
+        {
+            var routedActor = Sys.ActorOf(Props.Create<TestActor>().WithRouter(new ScatterGatherFirstCompletedPool(1)));
+            ((IInternalActorRef)routedActor).IsTerminated.ShouldBe(false);
+        }
+
+        [Fact]
+        public void Scatter_gather_router_must_deliver_a_broadcast_message_using_tell()
+        {
+            var doneLatch = new TestLatch(2);
+            var counter1 = new AtomicCounter(0);
+            var counter2 = new AtomicCounter(0);
+            var actor1 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter1)));
+            var actor2 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter2)));
+
+            var routedActor = Sys.ActorOf(Props.Create<TestActor>().WithRouter(new ScatterGatherFirstCompletedGroup(TimeSpan.FromSeconds(1), actor1.Path.ToString(), actor2.Path.ToString())));
+            routedActor.Tell(new Broadcast(1));
+            routedActor.Tell(new Broadcast("end"));
+
+            doneLatch.Ready(TimeSpan.FromSeconds(1));
+
+            counter1.Current.ShouldBe(1);
+            counter2.Current.ShouldBe(1);
+        }
+
+        [Fact]
+        public async Task Scatter_gather_router_must_return_response_even_if_one_of_the_actors_has_stopped()
+        {
+            var shutdownLatch = new TestLatch(1);
+            var actor1 = Sys.ActorOf(Props.Create(() => new StopActor(1)));
+            var actor2 = Sys.ActorOf(Props.Create(() => new StopActor(14)));
+            var paths = new []{actor1,actor2};
+            var routedActor = Sys.ActorOf(new ScatterGatherFirstCompletedGroup(paths, TimeSpan.FromSeconds(3)).Props());
+
+            routedActor.Tell(new Broadcast(new Stop(1)));
+            shutdownLatch.Open();
+
+            var res = await routedActor.Ask<int>(0, TimeSpan.FromSeconds(10));
+            res.ShouldBe(14);
+        }
+
+        [Fact]
+        public void Scatter_gather_router_should_only_return_one_response()
+        {
+            var actor1 = Sys.ActorOf(Props.Create(() => new StopActor(1)));
+            var actor2 = Sys.ActorOf(Props.Create(() => new StopActor(14)));
+
+            var paths = new[] { actor1, actor2 };
+            var routedActor = Sys.ActorOf(new ScatterGatherFirstCompletedGroup(paths, TimeSpan.FromSeconds(3)).Props());
+
+            routedActor.Tell(0);
+
+            ExpectMsg<int>(TimeSpan.FromSeconds(3));
+            ExpectNoMsg(TimeSpan.FromSeconds(5));
+        }
+
+        [Fact]
+        public async Task Scatter_gather_router_should_handle_failing_timeouts()
+        {
+            var actor1 = Sys.ActorOf(Props.Create(() => new StopActor(50)));
+
+            var paths = new[] { actor1 };
+            var routedActor = Sys.ActorOf(new ScatterGatherFirstCompletedGroup(paths, TimeSpan.FromSeconds(3)).Props());
+
+            var exception = await routedActor.Ask<Status.Failure>(0, TimeSpan.FromSeconds(5));
+
+            exception
+                .Should()
+                .NotBeNull();
+
+            exception.Cause
+                .Should()
+                .BeOfType<AskTimeoutException>();
+        }
+
         public new class TestActor : UntypedActor
         {
             protected override void OnReceive(object message)
@@ -52,37 +130,6 @@ namespace Akka.Tests.Routing
             }
         }
 
-        [Fact]
-        public void Scatter_gather_router_must_be_started_when_constructed()
-        {
-            /*val routedActor = system.actorOf(Props[TestActor].withRouter(
-       ScatterGatherFirstCompletedRouter(routees = List(newActor(0)), within = 1 seconds)))
-     routedActor.isTerminated should be(false)*/
-
-            var routedActor = Sys.ActorOf(Props.Create<TestActor>().WithRouter(new ScatterGatherFirstCompletedPool(1)));
-            ((IInternalActorRef)routedActor).IsTerminated.ShouldBe(false);
-        }
-
-        [Fact]
-        public void Scatter_gather_router_must_deliver_a_broadcast_message_using_tell()
-        {
-            var doneLatch = new TestLatch(2);
-            var counter1 = new AtomicCounter(0);
-            var counter2 = new AtomicCounter(0);
-            var actor1 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter1)));
-            var actor2 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter2)));
-
-            var routedActor = Sys.ActorOf(Props.Create<TestActor>().WithRouter(new ScatterGatherFirstCompletedGroup(TimeSpan.FromSeconds(1), actor1.Path.ToString(), actor2.Path.ToString())));
-            routedActor.Tell(new Broadcast(1));
-            routedActor.Tell(new Broadcast("end"));
-
-            doneLatch.Ready(TimeSpan.FromSeconds(1));
-
-            counter1.Current.ShouldBe(1);
-            counter2.Current.ShouldBe(1);
-
-        }
-
         public class Stop
         {
             public Stop(int? id = null)
@@ -104,7 +151,7 @@ namespace Akka.Tests.Routing
             {
                 if (message is Stop)
                 {
-                    var s = (Stop) message;
+                    var s = (Stop)message;
                     if (s.Id == null || s.Id == _id)
                     {
                         Context.Stop(Self);
@@ -112,27 +159,10 @@ namespace Akka.Tests.Routing
                 }
                 else
                 {
-                    Thread.Sleep(100*_id);
+                    Thread.Sleep(100 * _id);
                     Sender.Tell(_id);
                 }
             }
         }
-
-        [Fact]
-        public void Scatter_gather_router_must_return_response_even_if_one_of_the_actors_has_stopped()
-        {
-            var shutdownLatch = new TestLatch(1);
-            var actor1 = Sys.ActorOf(Props.Create(() => new StopActor(1)));
-            var actor2 = Sys.ActorOf(Props.Create(() => new StopActor(14)));
-            var paths = new []{actor1,actor2};
-            var routedActor = Sys.ActorOf(new ScatterGatherFirstCompletedGroup(paths, TimeSpan.FromSeconds(3)).Props());
-
-            routedActor.Tell(new Broadcast(new Stop(1)));
-            shutdownLatch.Open();
-            var res = routedActor.Ask<int>(new Broadcast(0), TimeSpan.FromSeconds(10));
-            res.Wait();
-            res.Result.ShouldBe(14);
-        }
     }
 }
-

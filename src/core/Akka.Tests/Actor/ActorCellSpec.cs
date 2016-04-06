@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorCellSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -25,7 +32,7 @@ namespace Akka.Tests.Actor
         {
             public DummyAsyncActor(AutoResetEvent autoResetEvent)
             {
-                Receive<string>(async m =>
+                ReceiveAsync<string>(async m =>
                 {
                     await Task.Delay(500);
                     autoResetEvent.Set();
