@@ -515,7 +515,7 @@ namespace Akka.Streams.Tests.Dsl
 
             setup.UpstreamSubscription.SendNext("a3");
             setup.UpstreamSubscription.SendComplete();
-            setup.Downstream.ExpectNext("a2");
+            setup.Downstream.ExpectNext("a3");
             setup.Downstream.ExpectComplete();
             
             downstream2.ExpectNoMsg(Dilated(TimeSpan.FromMilliseconds(100))); // as nothing was requested yet, fanOutBox needs to cache element in this case
@@ -550,7 +550,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var downstream2 = TestSubscriber.CreateManualProbe<string>(this);
             setup.Publisher.Subscribe(downstream2);
-            downstream2.ExpectError().Should().BeOfType<TestException>();
+            downstream2.ExpectSubscriptionAndError().Should().BeOfType<TestException>();
         }
 
         [Fact]
@@ -567,7 +567,7 @@ namespace Akka.Streams.Tests.Dsl
             var downstream2 = TestSubscriber.CreateManualProbe<string>(this);
             setup.Publisher.Subscribe(downstream2);
             // IllegalStateException shut down
-            downstream2.ExpectSubscriptionAndError().Should().BeOfType<IllegalStateException>();
+            downstream2.ExpectSubscriptionAndError().Should().BeAssignableTo<IllegalStateException>();
         }
 
         [Fact]
@@ -662,7 +662,7 @@ namespace Akka.Streams.Tests.Dsl
             protected override bool AroundReceive(Receive receive, object message)
             {
                 var next = message as OnNext?;
-                if (next.HasValue && next.Value.Event == _brokenMessage)
+                if (next.HasValue && next.Value.Id == 0 && next.Value.Event == _brokenMessage)
                     throw new NullReferenceException($"I'm so broken {next.Value.Event}");
 
                 return base.AroundReceive(receive, message);
@@ -675,7 +675,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var stage = new FaultyFlowStage<TOut, TOut2>();
                 var assembly = new GraphAssembly(new IGraphStageWithMaterializedValue[] { stage }, new[] { Attributes.None },
-                    new Inlet[] { stage.Shape.Inlet }, new[] { 0 }, new Outlet[] { stage.Shape.Outlet }, new[] { -1 });
+                    new Inlet[] { stage.Shape.Inlet , null}, new[] { 0, -1 }, new Outlet[] { null, stage.Shape.Outlet }, new[] { -1, 0 });
 
                 var t = assembly.Materialize(Attributes.None, assembly.Stages.Select(s => s.Module).ToArray(),
                     new Dictionary<IModule, object>(), _ => { });
@@ -685,12 +685,12 @@ namespace Akka.Streams.Tests.Dsl
                 var logics = t.Item3;
 
                 var shell = new GraphInterpreterShell(assembly, inHandlers, outHandlers, logics, stage.Shape, Settings,
-                    Materializer as ActorMaterializerImpl);
+                    (ActorMaterializerImpl) Materializer);
 
                 var props =
                     Props.Create(() => new BrokenActorInterpreter(shell, "a3"))
-                        .WithDispatcher("akka.test.stream-dispatcher")
-                        .WithDeploy(Deploy.Local);
+                        .WithDeploy(Deploy.Local)
+                        .WithDispatcher("akka.test.stream-dispatcher");
                 var impl = Sys.ActorOf(props, "broken-stage-actor");
 
                 var subscriber = new ActorGraphInterpreter.BoundarySubscriber<TOut>(impl, shell, 0);
