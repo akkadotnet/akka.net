@@ -131,6 +131,7 @@
     <Compile Include="Dsl\SinkForeachParallelSpec.cs" />
     <Compile Include="Dsl\SinkSpec.cs" />
     <Compile Include="Dsl\SourceSpec.cs" />
+    <Compile Include="Dsl\StageActorRefSpec.cs" />
     <Compile Include="Dsl\SubscriberSinkSpec.cs" />
     <Compile Include="Dsl\TestConfig.cs" />
     <Compile Include="Implementation\Fusing\ActorGraphInterpreterSpec.cs" />
