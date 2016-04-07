@@ -105,6 +105,7 @@
     <Compile Include="Dsl\FlowSpec.cs" />
     <Compile Include="Dsl\FlowStatefulMapConcatSpec.cs" />
     <Compile Include="Dsl\FramingSpec.cs" />
+    <Compile Include="Dsl\PublisherSinkSpec.cs" />
     <Compile Include="Dsl\QueueSourceSpec.cs" />
     <Compile Include="Actor\ActorPublisherSpec.cs" />
     <Compile Include="Dsl\ActorRefBackpressureSinkSpec.cs" />
