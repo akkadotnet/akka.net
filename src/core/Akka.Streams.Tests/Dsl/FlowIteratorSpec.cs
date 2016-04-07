@@ -235,7 +235,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var p = CreateSource(4)
+                var p = CreateSource(3)
                     .Map(x => x*2)
                     .RunWith(Sink.AsPublisher<int>(false), Materializer);
                 var c = TestSubscriber.CreateManualProbe<int>(this);

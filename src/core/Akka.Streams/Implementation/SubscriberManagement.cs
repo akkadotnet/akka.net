@@ -331,7 +331,7 @@ namespace Akka.Streams.Implementation
                 subscription.IsActive = false;
                 if (_subscriptions.Count == 0)
                 {
-                    if (!(_endOfStream is SubscriberManagement.NotReached))
+                    if (_endOfStream is SubscriberManagement.NotReached)
                     {
                         _endOfStream = SubscriberManagement.ShutDown;
                         CancelUpstream();

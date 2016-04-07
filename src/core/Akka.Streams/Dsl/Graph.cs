@@ -6,6 +6,7 @@ using System.Reactive.Streams;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
+using Akka.Util.Internal;
 
 namespace Akka.Streams.Dsl
 {
@@ -173,12 +174,10 @@ namespace Akka.Streams.Dsl
         public sealed class MergePreferredShape : UniformFanInShape<T, T>
         {
             private readonly int _secondaryPorts;
-            private readonly IInit _init;
 
             public MergePreferredShape(int secondaryPorts, IInit init) : base(secondaryPorts, init)
             {
                 _secondaryPorts = secondaryPorts;
-                _init = init;
 
                 Preferred = NewInlet<T>("preferred");
             }
@@ -193,7 +192,7 @@ namespace Akka.Streams.Dsl
             public Inlet<T> Preferred { get; }
         }
 
-        private sealed class MergePreferredStageLogic : GraphStageLogic
+        private sealed class Logic : GraphStageLogic
         {
             /// <summary>
             /// This determines the unfairness of the merge:
@@ -201,34 +200,24 @@ namespace Akka.Streams.Dsl
             /// - at 2 the preferred will grab almost all bandwidth against three equally fast secondaries
             /// (measured with eventLimit=1 in the GraphInterpreter, so may not be accurate)
             /// </summary>
-            public const int MaxEmitting = 2;
+            private const int MaxEmitting = 2;
             private readonly MergePreferred<T> _stage;
             private readonly Action[] _pullMe;
             private int _openInputs;
-            private int _preferredEmitting = 0;
-            private bool _isFirst = true;
+            private int _preferredEmitting;
 
-            public MergePreferredStageLogic(Shape shape, MergePreferred<T> stage) : base(shape)
+            public Logic(Shape shape, MergePreferred<T> stage) : base(shape)
             {
                 _stage = stage;
                 _openInputs = stage._secondaryPorts + 1;
                 _pullMe = new Action[stage._secondaryPorts];
-                for (int i = 0; i < stage._secondaryPorts; i++)
+                for (var i = 0; i < stage._secondaryPorts; i++)
                 {
                     var inlet = stage.In(i);
                     _pullMe[i] = () => TryPull(inlet);
                 }
 
-                SetHandler(_stage.Out, onPull: () =>
-                {
-                    if (_isFirst)
-                    {
-                        _isFirst = false;
-                        TryPull(_stage.Preferred);
-                        foreach (var inlet in _stage.Shape.Inlets.Cast<Inlet<T>>())
-                            TryPull(inlet);
-                    }
-                });
+                SetHandler(_stage.Out, EagerTerminateOutput);
 
                 SetHandler(_stage.Preferred,
                     onUpstreamFinish: OnComplete,
@@ -280,6 +269,12 @@ namespace Akka.Streams.Dsl
                     if (IsAvailable(port)) Emit(_stage.Out, Grab(port), _pullMe[i]);
                 }
             }
+
+            public override void PreStart()
+            {
+                TryPull(_stage.Preferred);
+                _stage.Shape.Ins.ForEach(TryPull);
+            }
         }
 
         #endregion
@@ -305,12 +300,12 @@ namespace Akka.Streams.Dsl
             return Inlet.Create<T>(Shape.Inlets.ElementAt(id));
         }
 
-        public Outlet<T> Out { get { return Shape.Out; } }
-        public Inlet<T> Preferred { get { return Shape.Preferred; } }
+        public Outlet<T> Out => Shape.Out;
+        public Inlet<T> Preferred => Shape.Preferred;
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new MergePreferredStageLogic(Shape, this);
+            return new Logic(Shape, this);
         }
     }
 
@@ -427,10 +422,10 @@ namespace Akka.Streams.Dsl
         private Outlet<TOut> Out { get; }
         private Inlet<TIn>[] Inlets { get; }
 
-        public Interleave(int inputPorts, int segmentSize, bool eagerClose = false)
+        internal Interleave(int inputPorts, int segmentSize, bool eagerClose = false)
         {
-            if (inputPorts <= 1) throw new ArgumentException("Interleave input ports count must be greater than 1", "inputPorts");
-            if (segmentSize <= 0) throw new ArgumentException("Interleave segment size must be greater than 0", "segmentSize");
+            if (inputPorts <= 1) throw new ArgumentException("Interleave input ports count must be greater than 1", nameof(inputPorts));
+            if (segmentSize <= 0) throw new ArgumentException("Interleave segment size must be greater than 0", nameof(segmentSize));
 
             _inputPorts = inputPorts;
             _segmentSize = segmentSize;
@@ -471,30 +466,30 @@ namespace Akka.Streams.Dsl
             private readonly MergeSorted<T> _stage;
             private T _other;
 
-            readonly Action<T> DispatchRight;
-            readonly Action<T> DispatchLeft;
-            readonly Action PassRight;
-            readonly Action PassLeft;
-            readonly Action ReadRight;
-            readonly Action ReadLeft;
+            private readonly Action<T> _dispatchRight;
+            private readonly Action<T> _dispatchLeft;
+            private readonly Action _passRight;
+            private readonly Action _passLeft;
+            private readonly Action _readRight;
+            private readonly Action _readLeft;
 
             public MergeSortedStageLogic(Shape shape, MergeSorted<T> stage) : base(shape)
             {
                 _stage = stage;
-                DispatchRight = right => Dispatch(_other, right);
-                DispatchLeft = left => Dispatch(left, _other);
-                PassRight = () => Emit(_stage.Out, _other, () =>
+                _dispatchRight = right => Dispatch(_other, right);
+                _dispatchLeft = left => Dispatch(left, _other);
+                _passRight = () => Emit(_stage.Out, _other, () =>
                 {
                     NullOut();
                     PassAlong(_stage.Right, _stage.Out, doPull: true);
                 });
-                PassLeft = () => Emit(_stage.Out, _other, () =>
+                _passLeft = () => Emit(_stage.Out, _other, () =>
                 {
                     NullOut();
                     PassAlong(_stage.Left, _stage.Out, doPull: true);
                 });
-                ReadRight = () => Read(_stage.Right, DispatchRight, PassLeft);
-                ReadLeft = () => Read(_stage.Left, DispatchLeft, PassRight);
+                _readRight = () => Read(_stage.Right, _dispatchRight, _passLeft);
+                _readLeft = () => Read(_stage.Left, _dispatchLeft, _passRight);
 
                 SetHandler(_stage.Left, IgnoreTerminateInput);
                 SetHandler(_stage.Right, IgnoreTerminateInput);
@@ -522,12 +517,12 @@ namespace Akka.Streams.Dsl
                 if (_stage._compare(left, right) == -1)
                 {
                     _other = right;
-                    Emit(_stage.Out, left, ReadLeft);
+                    Emit(_stage.Out, left, _readLeft);
                 }
                 else
                 {
                     _other = left;
-                    Emit(_stage.Out, right, ReadRight);
+                    Emit(_stage.Out, right, _readRight);
                 }
             }
         }
@@ -646,7 +641,7 @@ namespace Akka.Streams.Dsl
 
         public Broadcast(int outputPorts, bool eagerCancel = false)
         {
-            if (outputPorts <= 1) throw new ArgumentException("Broadcast require more than 1 output port", "outputPorts");
+            if (outputPorts <= 1) throw new ArgumentException("Broadcast require more than 1 output port", nameof(outputPorts));
             _outputPorts = outputPorts;
             _eagerCancel = eagerCancel;
 
@@ -922,7 +917,7 @@ namespace Akka.Streams.Dsl
 
         private readonly int _inputPorts;
 
-        public Concat(int inputPorts = 2)
+        internal Concat(int inputPorts = 2)
         {
             if (inputPorts <= 1) throw new ArgumentException("A Concat must have more than 1 input port");
             _inputPorts = inputPorts;

@@ -157,7 +157,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var flow = Flow.FromGraph(GraphDsl.Create(TestSource.SourceProbe<string>(this), Sink.First<string>(), Keep.Both, (b, source, sink) =>
                 {
-                    var concat = b.Add(new Concat<string, string>(2));
+                    var concat = b.Add(Concat.Create<string>(2));
                     var broadcast = b.Add(new Broadcast<string>(2, true));
 
                     b.From(source).To(concat.In(0));
@@ -184,7 +184,7 @@ namespace Akka.Streams.Tests.Dsl
                 var source = Source.Single("lonely traveler").MapMaterializedValue(_ => Task.FromResult(""));
                 var flow = Flow.FromGraph(GraphDsl.Create(Sink.First<string>(), (b, sink) =>
                 {
-                    var interleave = b.Add(new Interleave<string, string>(2, 1));
+                    var interleave = b.Add(Interleave.Create<string>(2, 1));
                     var broadcast = b.Add(new Broadcast<string>(2, true));
 
                     b.From(source).To(interleave.In(0));

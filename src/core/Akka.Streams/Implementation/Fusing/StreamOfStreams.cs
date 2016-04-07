@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Collections.Immutable;
 using System.Reactive.Streams;
 using Akka.Pattern;
 using Akka.Streams.Actors;
@@ -152,25 +152,25 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class PrefixAndTail<T> : GraphStage<FlowShape<T, Tuple<IEnumerable<T>, Source<T, Unit>>>>
+    internal sealed class PrefixAndTail<T> : GraphStage<FlowShape<T, Tuple<IImmutableList<T>, Source<T, Unit>>>>
     {
         #region internal classes
         
-        private sealed class PrefixAndTailLogic : TimerGraphStageLogic
+        private sealed class Logic : TimerGraphStageLogic
         {
             private const string SubscriptionTimer = "SubstreamSubscriptionTimer";
 
             private readonly PrefixAndTail<T> _stage;
             private readonly LambdaOutHandler _subHandler;
             private int _left;
-            private List<T> _builder;
+            private ImmutableList<T>.Builder _builder;
             private SubSourceOutlet<T> _tailSource;
 
-            public PrefixAndTailLogic(PrefixAndTail<T> stage) : base(stage.Shape)
+            public Logic(PrefixAndTail<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
                 _left = _stage._count < 0 ? 0 : _stage._count;
-                _builder = new List<T>(_left);
+                _builder = ImmutableList<T>.Empty.ToBuilder();
 
                 _subHandler = new LambdaOutHandler(onPull: () =>
                 {
@@ -196,21 +196,9 @@ namespace Akka.Streams.Implementation.Fusing
                 var timeoutSettings = materializer.Settings.SubscriptionTimeoutSettings;
                 var timeout = timeoutSettings.Timeout;
 
-                switch (timeoutSettings.Mode)
-                {
-                    case StreamSubscriptionTimeoutTerminationMode.CancelTermination:
-                        _tailSource.Timeout(timeout);
-                        if (_tailSource.IsClosed)
-                            CompleteStage();
-                        break;
-                    case StreamSubscriptionTimeoutTerminationMode.NoopTermination:
-                        // do nothing
-                        break;
-                    case StreamSubscriptionTimeoutTerminationMode.WarnTermination:
-                        materializer.Logger.Warning(
-                            $"Substream subscription timeout triggered after {timeout} in PrefixAndTail({_stage._count})");
-                        break;
-                }
+                _tailSource.Timeout(timeout);
+                if (_tailSource.IsClosed)
+                    CompleteStage();
             }
 
             private bool IsPrefixComplete => ReferenceEquals(_builder, null);
@@ -218,7 +206,7 @@ namespace Akka.Streams.Implementation.Fusing
             private Source<T, Unit> OpenSubstream()
             {
                 var timeout = ActorMaterializer.Downcast(Interpreter.Materializer).Settings.SubscriptionTimeoutSettings.Timeout;
-                _tailSource = new SubSourceOutlet<T>("TailSource");
+                _tailSource = new SubSourceOutlet<T>(this, "TailSource");
                 _tailSource.SetHandler(_subHandler);
                 SetKeepGoing(true);
                 ScheduleOnce(SubscriptionTimer, timeout);
@@ -236,7 +224,7 @@ namespace Akka.Streams.Implementation.Fusing
                     _left--;
                     if (_left == 0)
                     {
-                        Push(_stage._out, Tuple.Create(_builder.AsEnumerable(), OpenSubstream()));
+                        Push(_stage._out, Tuple.Create((IImmutableList<T>) _builder.ToImmutable(), OpenSubstream()));
                         Complete(_stage._out);
                     }
                     else
@@ -248,7 +236,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 if (_left == 0)
                 {
-                    Push(_stage._out, Tuple.Create(Enumerable.Empty<T>(), OpenSubstream()));
+                    Push(_stage._out, Tuple.Create((IImmutableList<T>) ImmutableList<T>.Empty, OpenSubstream()));
                     Complete(_stage._out);
                 }
                 else
@@ -260,7 +248,7 @@ namespace Akka.Streams.Implementation.Fusing
                 if (!IsPrefixComplete)
                 {
                     // This handles the unpulled out case as well
-                    Emit(_stage._out, Tuple.Create(_builder.AsEnumerable(), Source.Empty<T>()), CompleteStage);
+                    Emit(_stage._out, Tuple.Create((IImmutableList<T>) _builder.ToImmutable(), Source.Empty<T>()), CompleteStage);
                 }
                 else
                 {
@@ -294,20 +282,20 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly int _count;
         private readonly Inlet<T> _in = new Inlet<T>("PrefixAndTail.in");
-        private readonly Outlet<Tuple<IEnumerable<T>, Source<T, Unit>>> _out = new Outlet<Tuple<IEnumerable<T>, Source<T, Unit>>>("PrefixAndTail.out");
+        private readonly Outlet<Tuple<IImmutableList<T>, Source<T, Unit>>> _out = new Outlet<Tuple<IImmutableList<T>, Source<T, Unit>>>("PrefixAndTail.out");
 
         public PrefixAndTail(int count)
         {
             _count = count;
 
-            Shape = new FlowShape<T, Tuple<IEnumerable<T>, Source<T, Unit>>>(_in, _out);
+            Shape = new FlowShape<T, Tuple<IImmutableList<T>, Source<T, Unit>>>(_in, _out);
         }
 
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.PrefixAndTail;
 
-        public override FlowShape<T, Tuple<IEnumerable<T>, Source<T, Unit>>> Shape { get; }
+        public override FlowShape<T, Tuple<IImmutableList<T>, Source<T, Unit>>> Shape { get; }
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new PrefixAndTailLogic(this);
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         public override string ToString() => $"PrefixAndTail({_count})";
     }
@@ -504,7 +492,7 @@ namespace Akka.Streams.Implementation.Fusing
                     CompleteStage();
                 else
                 {
-                    _substreamSource = new SubSourceOutlet<T>("SplitSource");
+                    _substreamSource = new SubSourceOutlet<T>(this, "SplitSource");
                     _substreamSource.SetHandler(handler);
                     _substreamCancelled = false;
                     SetHandler(_split._in, handler);

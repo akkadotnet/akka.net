@@ -59,7 +59,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Intersperse_must_deomstrate_how_to_prepend_only()
+        public void A_Intersperse_must_demonstrate_how_to_prepend_only()
         {
             var probe =
                 Source.Combine(Source.Single(">> "), Source.From(new[] {"1", "2", "3"}).Intersperse(","),
