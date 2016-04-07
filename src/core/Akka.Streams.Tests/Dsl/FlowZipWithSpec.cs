@@ -64,7 +64,6 @@ namespace Akka.Streams.Tests.Dsl
             EventFilter.Exception<DivideByZeroException>().ExpectOne(() => subscription.Request(2));
             var error = probe.ExpectError();
             error.Should().BeOfType<DivideByZeroException>();
-            error.Message.Should().Contain("Attempted to divide by zero.");
 
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
         }
