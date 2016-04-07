@@ -65,19 +65,11 @@ namespace Akka.Persistence.Tests
     akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
 
     # snapshot store plugin is NOT defined, things should still work
+    akka.persistence.snapshot-store.plugin = ""akka.persistence.no-snapshot-store""
     akka.persistence.snapshot-store.local.dir = ""target/snapshots-" + typeof(OptionalSnapshotStoreSpec).FullName + "/"))
         {
         }
-
-        [Fact]
-        public void Persistence_extension_should_initialize_properly_even_in_absence_of_configured_snapshot_store()
-        {
-            Sys.ActorOf(Props.Create(() => new AnyPersistentActor(Name)));
-            Sys.EventStream.Subscribe(TestActor, typeof (Warning));
-            var message = ExpectMsg<Warning>().Message.ToString();
-            message.ShouldStartWith("No default snapshot store configured");
-        }
-
+        
         [Fact]
         public void Persistence_extension_should_fail_if_PersistentActor_tries_to_SaveSnapshot_without_snapshot_store_available()
         {

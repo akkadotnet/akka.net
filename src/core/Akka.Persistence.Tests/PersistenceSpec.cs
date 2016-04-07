@@ -18,7 +18,7 @@ namespace Akka.Persistence.Tests
 {
     public abstract class PersistenceSpec : AkkaSpec
     {
-        public static Config Configuration(string plugin, string test, string serialization = null,
+        public static Config Configuration(string test, string serialization = null,
             string extraConfig = null)
         {
             var c = extraConfig == null
@@ -28,10 +28,8 @@ namespace Akka.Persistence.Tests
                 akka.actor.serialize-creators = {0}
                 akka.actor.serialize-messages = {0}
                 akka.persistence.publish-plugin-commands = on
-                akka.persistence.journal.plugin = ""akka.persistence.journal.{1}""
-                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.local""
-                akka.persistence.snapshot-store.local.dir = ""target/snapshots-{2}/""
-                akka.test.single-expect-default = 10s", serialization ?? "on", plugin, test);
+                akka.persistence.snapshot-store.local.dir = ""target/snapshots-{1}/""
+                akka.test.single-expect-default = 10s", serialization ?? "on", test);
 
             return c.WithFallback(ConfigurationFactory.ParseString(configString));
         }

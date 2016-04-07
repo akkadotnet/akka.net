@@ -287,7 +287,7 @@ namespace Akka.Persistence.Tests
             typeof(LoggingAdapter).FullName + ", Akka.Persistence.Tests");
 
         public MemoryEventAdapterSpec()
-            : this("inmem", PersistenceSpec.Configuration("inmem", "MemoryEventAdapterSpec"), ConfigurationFactory.ParseString(AdapterSpecConfig))
+            : this("inmem", Configuration("MemoryEventAdapterSpec"), ConfigurationFactory.ParseString(AdapterSpecConfig))
         {
 
         }

@@ -19,7 +19,7 @@ namespace Akka.Persistence.Tests
     public class MemoryEndToEndAdapterSpec : EndToEndEventAdapterSpec
     {
         private static readonly Config Config = ConfigurationFactory.ParseString(@"akka.persistence.journal.inmem.class = ""Akka.Persistence.Journal.SharedMemoryJournal, Akka.Persistence""");
-        public MemoryEndToEndAdapterSpec() : base("inmem", Configuration("inmem", "MemoryEndToEndAdapterSpec").WithFallback(Config))
+        public MemoryEndToEndAdapterSpec() : base("inmem", Configuration("MemoryEndToEndAdapterSpec").WithFallback(Config))
         {
         }
     }
@@ -292,7 +292,7 @@ namespace Akka.Persistence.Tests
             }}";
 
         protected EndToEndEventAdapterSpec(string journalName, Config journalConfig)
-            : base(PersistenceSpec.Configuration("inmem", "EndToEndEventAdapterSpec"))
+            : base(Configuration("EndToEndEventAdapterSpec"))
         {
             _journalName = journalName;
             _journalConfig = journalConfig;

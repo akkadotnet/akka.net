@@ -40,7 +40,7 @@ namespace Akka.Persistence.Tests
             }
         }
 
-        public LoadPluginSpec() : base(Configuration("inmem", "LoadPluginSpec", extraConfig:
+        public LoadPluginSpec() : base(Configuration("LoadPluginSpec", extraConfig:
   @"akka.persistence.journal.inmem.class = ""Akka.Persistence.Tests.LoadPluginSpec+JournalWithConfig, Akka.Persistence.Tests""
   akka.persistence.journal.inmem.extra-property = 17"))
         {
