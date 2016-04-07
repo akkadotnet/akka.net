@@ -65,7 +65,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Recover_must_not_influece_stream_wher_there_is_no_exception()
+        public void A_Recover_must_not_influece_stream_when_there_is_no_exception()
         {
             this.AssertAllStagesStopped(() =>
             {

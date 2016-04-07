@@ -70,10 +70,10 @@ namespace Akka.Streams.Tests.Dsl
         public void Stream_supervision_must_complete_stream_with_ArgumentNullException_when_null_is_emitted()
         {
             var task = Source.From(new[] {"a", "b"}).Map(x => null as string).Limit(1000).RunWith(Sink.Seq<string>(), Materializer);
-            
+
             task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
                 .ShouldThrow<ArgumentNullException>()
-                .WithMessage(ReactiveStreamsCompliance.ElementMustNotBeNullMsg + "Parameter name: element");
+                .And.Message.Should().StartWith(ReactiveStreamsCompliance.ElementMustNotBeNullMsg);
         }
 
         [Fact]

@@ -33,6 +33,31 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
+        /// RecoverWith allows to switch to alternative Source on flow failure. It will stay in effect after
+        /// a failure has been recovered so that each time there is a failure it is fed into the <paramref name="partialFunc"/> and a new
+        /// Source may be materialized.
+        /// <para>
+        /// Since the underlying failure signal onError arrives out-of-band, it might jump over existing elements.
+        /// This stage can recover the failure signal, but not the skipped elements, which will be dropped.
+        /// </para>
+        /// <para>
+        /// '''Emits when''' element is available from the upstream or upstream is failed and element is available from alternative Source
+        /// </para>
+        /// <para>
+        /// '''Backpressures when''' downstream backpressures
+        /// </para>
+        /// <para>
+        /// '''Completes when''' upstream completes or upstream failed with exception pf can handle
+        /// </para>
+        /// '''Cancels when''' downstream cancels 
+        /// </summary>
+        public static Flow<TIn, TOut, TMat> RecoverWith<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow,
+            Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc)
+        {
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.RecoverWith(flow, partialFunc);
+        }
+
+        /// <summary>
         /// Transform this stream by applying the given function to each of the elements
         /// as they pass through this processing step.
         /// <para>
@@ -75,6 +100,38 @@ namespace Akka.Streams.Dsl
         public static Flow<T, TOut, TMat> MapConcat<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow, Func<TIn, IEnumerable<TOut>> mapConcater)
         {
             return (Flow<T, TOut, TMat>)InternalFlowOperations.MapConcat(flow, mapConcater);
+        }
+
+        /// <summary>
+        /// Transform each input element into an `Iterable` of output elements that is
+        /// then flattened into the output stream. The transformation is meant to be stateful,
+        /// which is enabled by creating the transformation function anew for every materialization —
+        /// the returned function will typically close over mutable objects to store state between
+        /// invocations. For the stateless variant see <see cref="FlowOperations.MapConcat{T,TIn,TOut,TMat}"/>.
+        /// 
+        /// The returned `Iterable` MUST NOT contain `null` values,
+        /// as they are illegal as stream elements - according to the Reactive Streams specification.
+        /// 
+        /// <para>
+        /// '''Emits when''' the mapping function returns an element or there are still remaining elements
+        /// from the previously calculated collection
+        /// </para>
+        /// <para>
+        /// '''Backpressures when''' downstream backpressures or there are still remaining elements from the
+        /// previously calculated collection
+        /// </para>
+        /// <para>
+        /// '''Completes when''' upstream completes and all remaining elements has been emitted
+        /// </para>
+        /// <para>
+        /// '''Cancels when''' downstream cancels
+        /// </para>
+        /// See also <see cref="FlowOperations.MapConcat{T,TIn,TOut,TMat}"/>
+        /// </summary>
+        public static Flow<T, TOut, TMat> StatefulMapConcat<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow,
+            Func<Func<TIn, IEnumerable<TOut>>> mapConcaterFactory)
+        {
+            return (Flow<T, TOut, TMat>) InternalFlowOperations.StatefulMapConcat(flow, mapConcaterFactory);
         }
 
         /// <summary>
@@ -255,6 +312,63 @@ namespace Akka.Streams.Dsl
         {
             return (Flow<TIn, IEnumerable<TOut>, TMat>)InternalFlowOperations.Grouped(flow, n);
         }
+        
+        /// <summary>
+        /// Ensure stream boundedness by limiting the number of elements from upstream.
+        /// If the number of incoming elements exceeds max, it will signal
+        /// upstream failure <see cref="StreamLimitException"/> downstream.
+        /// 
+        /// Due to input buffering some elements may have been
+        /// requested from upstream publishers that will then not be processed downstream
+        /// of this step.
+        /// 
+        /// The stream will be completed without producing any elements if `n` is zero
+        /// or negative.
+        /// <para>
+        /// '''Emits when''' the specified number of elements to take has not yet been reached
+        /// </para>
+        /// '''Backpressures when''' downstream backpressures
+        /// <para>
+        /// '''Completes when''' the defined number of elements has been taken or upstream completes
+        /// </para>
+        /// '''Cancels when''' the defined number of elements has been taken or downstream cancels
+        /// </summary>
+        /// <seealso cref="Take{TIn,TOut,TMat}"/>
+        /// <seealso cref="TakeWithin{TIn,TOut,TMat}"/>
+        /// <seealso cref="TakeWhile{TIn,TOut,TMat}"/>
+        public static Flow<TIn, TOut, TMat> Limit<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, long max)
+        {
+            return LimitWeighted(flow, max, _ => 1L);
+        }
+
+        /// <summary>
+        /// Ensure stream boundedness by evaluating the cost of incoming elements
+        /// using a cost function. Exactly how many elements will be allowed to travel downstream depends on the
+        /// evaluated cost of each element. If the accumulated cost exceeds max, it will signal
+        /// upstream failure <see cref="StreamLimitException"/> downstream.
+        /// 
+        /// Due to input buffering some elements may have been
+        /// requested from upstream publishers that will then not be processed downstream
+        /// of this step.
+        /// 
+        /// The stream will be completed without producing any elements if `n` is zero
+        /// or negative.
+        /// <para>
+        /// '''Emits when''' the specified number of elements to take has not yet been reached
+        /// </para>
+        /// '''Backpressures when''' downstream backpressures
+        /// <para>
+        /// '''Completes when''' the defined number of elements has been taken or upstream completes
+        /// </para>
+        /// '''Cancels when''' the defined number of elements has been taken or downstream cancels
+        /// </summary>
+        /// <seealso cref="Take{TIn,TOut,TMat}"/>
+        /// <seealso cref="TakeWithin{TIn,TOut,TMat}"/>
+        /// <seealso cref="TakeWhile{TIn,TOut,TMat}"/>
+        public static Flow<TIn, TOut, TMat> LimitWeighted<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, long max, Func<TOut, long> costFunc)
+        {
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.LimitWeighted(flow, max, costFunc);
+        }
 
         /// <summary>
         /// Apply a sliding window over the stream and return the windows as groups of elements, with the last group
@@ -320,6 +434,24 @@ namespace Akka.Streams.Dsl
         public static Flow<TIn, TOut2, TMat> Fold<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow, TOut2 zero, Func<TOut2, TOut1, TOut2> fold)
         {
             return (Flow<TIn, TOut2, TMat>)InternalFlowOperations.Fold(flow, zero, fold);
+        }
+
+        /// <summary>
+        /// Similar to <see cref="Fold{TIn,TOut1,TOut2,TMat}"/> but uses first element as zero element.
+        /// Applies the given function towards its current and next value,
+        /// yielding the next current value. 
+        /// <para>
+        /// '''Emits when''' upstream completes
+        /// </para>
+        /// '''Backpressures when''' downstream backpressures
+        /// <para>
+        /// '''Completes when''' upstream completes
+        /// </para>
+        /// '''Cancels when''' downstream cancels
+        /// </summary>
+        public static Flow<TIn, TOut, TMat> Reduce<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Func<TOut, TOut, TOut> reduce)
+        {
+            return (Flow<TIn, TOut, TMat>) InternalFlowOperations.Reduce(flow, reduce);
         }
 
         /// <summary>

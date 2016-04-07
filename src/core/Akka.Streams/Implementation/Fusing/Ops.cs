@@ -1,15 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Configuration;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Event;
 using Akka.Pattern;
+using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
 using Akka.Streams.Util;
 using Akka.Util;
+using Akka.Util.Internal.Collections;
 
 namespace Akka.Streams.Implementation.Fusing
 {
@@ -158,58 +161,6 @@ namespace Akka.Streams.Implementation.Fusing
 
             _recovered = result;
             return context.AbsorbTermination();
-        }
-    }
-
-    internal sealed class MapConcat<TIn, TOut> : PushPullStage<TIn, TOut>
-    {
-        private readonly Func<TIn, IEnumerable<TOut>> _func;
-        private readonly Decider _decider;
-        private IIterator<TOut> _currentIterator;
-
-        public MapConcat(Func<TIn, IEnumerable<TOut>> func, Decider decider)
-        {
-            _func = func;
-            _decider = decider;
-            _currentIterator = new IteratorAdapter<TOut>(Enumerable.Empty<TOut>().GetEnumerator());
-        }
-
-        public override ISyncDirective OnPush(TIn element, IContext<TOut> context)
-        {
-            _currentIterator = new IteratorAdapter<TOut>(_func(element).GetEnumerator());
-            return !_currentIterator.HasNext() ? (ISyncDirective) context.Pull() : context.Push(_currentIterator.Next());
-        }
-
-        public override ISyncDirective OnPull(IContext<TOut> context)
-        {
-            if (context.IsFinishing)
-            {
-                if (_currentIterator.HasNext())
-                {
-                    var element = _currentIterator.Next();
-                    return _currentIterator.HasNext() ? context.Push(element) : context.PushAndFinish(element);
-                }
-                else return context.Finish();
-            }
-            else
-            {
-                return _currentIterator.HasNext() ? (ISyncDirective) context.Push(_currentIterator.Next()) : context.Pull();
-            }
-        }
-
-        public override ITerminationDirective OnUpstreamFinish(IContext<TOut> context)
-        {
-            return _currentIterator.HasNext() ? context.AbsorbTermination() : context.Finish();
-        }
-
-        public override Directive Decide(Exception cause)
-        {
-            return _decider(cause);
-        }
-
-        public override IStage<TIn, TOut> Restart()
-        {
-            return new MapConcat<TIn, TOut>(_func, _decider);
         }
     }
 
@@ -523,36 +474,43 @@ namespace Akka.Streams.Implementation.Fusing
     {
         private readonly int _count;
         private readonly int _step;
-        private List<T> _buffer;
+        private IImmutableList<T> _buffer;
 
         public Sliding(int count, int step)
         {
             _count = count;
             _step = step;
-            _buffer = new List<T>();
+            _buffer = ImmutableList<T>.Empty;
         }
 
         public override ISyncDirective OnPush(T element, IContext<IEnumerable<T>> context)
         {
-            _buffer.Add(element);
-            if (_buffer.Count < _count) return context.Pull();
-            if (_buffer.Count == _count) return context.Push(_buffer);
+            _buffer = _buffer.Add(element);
+
+            if (_buffer.Count < _count)
+                return context.Pull();
+            if (_buffer.Count == _count)
+                return context.Push(_buffer);
             if (_step > _count)
             {
-                if (_buffer.Count == _step) _buffer = new List<T>();
+                if (_buffer.Count == _step)
+                    _buffer = ImmutableList<T>.Empty;
                 return context.Pull();
             }
-            else
-            {
-                _buffer = _buffer.Skip(_step).ToList();
-                return _buffer.Count == _count ? (ISyncDirective) context.Push(_buffer) : context.Pull();
-            }
+
+            _buffer = _buffer.Skip(_step).ToImmutableList();
+            return _buffer.Count == _count
+                ? (ISyncDirective) context.Push(_buffer)
+                : context.Pull();
         }
 
         public override ISyncDirective OnPull(IContext<IEnumerable<T>> context)
         {
-            if (!context.IsFinishing) return context.Pull();
-            if (_buffer.Count >= _count) return context.Finish();
+            if (!context.IsFinishing)
+                return context.Pull();
+            if (_buffer.Count >= _count)
+                return context.Finish();
+
             return context.PushAndFinish(_buffer);
         }
 
@@ -1663,5 +1621,235 @@ namespace Akka.Streams.Implementation.Fusing
         {
             return new DropWithinStageLogic(Shape, this);
         }
+    }
+
+    internal sealed class Reduce<T> : SimpleLinearGraphStage<T>
+    {
+        #region internal classes
+
+        private sealed class Logic : GraphStageLogic
+        {
+            private readonly Reduce<T> _stage;
+            private T _aggregator;
+
+            public Logic(Reduce<T> stage) : base(stage.Shape)
+            {
+                _stage = stage;
+
+                var rest = new LambdaInHandler(onPush: () =>
+                {
+                    _aggregator = stage._reduce(_aggregator, Grab(stage.Inlet));
+                    Pull(stage.Inlet);
+                }, onUpstreamFinish: () =>
+                {
+                    Push(stage.Outlet, _aggregator);
+                    CompleteStage();
+                });
+
+                SetHandler(stage.Inlet, onPush: () =>
+                {
+                    _aggregator = Grab(stage.Inlet);
+                    Pull(stage.Inlet);
+                    SetHandler(stage.Inlet, rest);
+                });
+
+                SetHandler(stage.Outlet, onPull: () => Pull(stage.Inlet));
+            }
+
+            public override string ToString() => $"Reduce.Logic(aggregator={_aggregator}";
+        }
+
+        #endregion
+
+        private readonly Func<T, T, T> _reduce;
+
+        public Reduce(Func<T,T,T> reduce)
+        {
+            _reduce = reduce;
+        }
+
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.Reduce;
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+        public override string ToString() => "Reduce";
+    }
+
+    internal sealed class RecoverWith<TOut, TMat> : SimpleLinearGraphStage<TOut>
+    {
+        #region internal classes
+
+        private sealed class RecoverWithLogic : GraphStageLogic
+        {
+            private readonly RecoverWith<TOut, TMat> _recover;
+
+            public RecoverWithLogic(RecoverWith<TOut, TMat> recover) : base(recover.Shape)
+            {
+                _recover = recover;
+                SetHandler(recover.Outlet, onPull: () => Pull(recover.Inlet));
+                SetHandler(recover.Inlet, onPush: () => Push(recover.Outlet, Grab(recover.Inlet)),
+                    onUpstreamFailure: OnFailure);
+            }
+
+            private void OnFailure(Exception ex)
+            {
+                var result = _recover._partialFunction(ex);
+                if (result != null)
+                    SwitchTo(result);
+                else 
+                    FailStage(ex);
+            }
+
+            private void SwitchTo(IGraph<SourceShape<TOut>, TMat> source)
+            {
+                var sinkIn = new SubSinkInlet<TOut>(this, "RecoverWithSink");
+                sinkIn.SetHandler(new LambdaInHandler(onPush: () =>
+                {
+                    if (IsAvailable(_recover.Outlet))
+                    {
+                        Push(_recover.Outlet, sinkIn.Grab());
+                        sinkIn.Pull();
+                    }
+                }, onUpstreamFinish: () =>
+                {
+                    if(!sinkIn.IsAvailable)
+                        CompleteStage();
+                }, onUpstreamFailure: OnFailure));
+
+                Action pushOut = () =>
+                {
+                    Push(_recover.Outlet, sinkIn.Grab());
+                    if (!sinkIn.IsClosed)
+                        sinkIn.Pull();
+                    else
+                        CompleteStage();
+                };
+
+                var outHandler = new LambdaOutHandler(onPull: () =>
+                {
+                    if (sinkIn.IsAvailable)
+                        pushOut();
+                }, onDownstreamFinish: () => sinkIn.Cancel());
+
+                Source.FromGraph(source).RunWith(sinkIn.Sink, Interpreter.SubFusingMaterializer);
+                SetHandler(_recover.Outlet, outHandler);
+                sinkIn.Pull();
+            }
+        }
+
+        #endregion
+
+        private readonly Func<Exception, IGraph<SourceShape<TOut>, TMat>> _partialFunction;
+
+        public RecoverWith(Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunction)
+        {
+            _partialFunction = partialFunction;
+        }
+
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.RecoverWith;
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new RecoverWithLogic(this);
+
+        public override string ToString() => "RecoverWith";
+    }
+
+    internal sealed class StatefulMapConcat<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
+    {
+        #region internal classes
+
+        private sealed class Logic : GraphStageLogic
+        {
+            private readonly StatefulMapConcat<TIn, TOut> _stage;
+            private IteratorAdapter<TOut> _currentIterator;
+            private readonly Decider _decider;
+            private Func<TIn, IEnumerable<TOut>> _plainConcat;
+
+            public Logic(StatefulMapConcat<TIn, TOut> stage, Attributes inheritedAttributes) : base(stage.Shape)
+            {
+                _stage = stage;
+                _decider = inheritedAttributes.GetAttribute(new ActorAttributes.SupervisionStrategy(Deciders.StoppingDecider)).Decider;
+                _plainConcat = stage._concatFactory();
+
+                SetHandler(stage._in, onPush: () =>
+                {
+                    try
+                    {
+                        _currentIterator = new IteratorAdapter<TOut>(_plainConcat(Grab(stage._in)).GetEnumerator());
+                        PushPull();
+                    }
+                    catch (Exception ex)
+                    {
+                        var directive = _decider(ex);
+                        switch (directive)
+                        {
+                            case Directive.Stop:
+                                FailStage(ex);
+                                break;
+                            case Directive.Resume:
+                                if(!HasBeenPulled(_stage._in))
+                                    Pull(_stage._in);
+                                break;
+                            case Directive.Restart:
+                                RestartState();
+                                if (!HasBeenPulled(_stage._in))
+                                    Pull(_stage._in);
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+                    }
+                }, onUpstreamFinish: () =>
+                {
+                    if(!HasNext)
+                        CompleteStage();
+                });
+
+                SetHandler(stage._out, onPull: PushPull);
+            }
+
+            private void RestartState()
+            {
+                _plainConcat = _stage._concatFactory();
+                _currentIterator = null;
+            }
+
+            private bool HasNext => _currentIterator != null && _currentIterator.HasNext();
+
+            private void PushPull()
+            {
+                if (HasNext)
+                {
+                    Push(_stage._out, _currentIterator.Next());
+                    if(!HasNext && IsClosed(_stage._in))
+                        CompleteStage();
+                }
+                else if (!IsClosed(_stage._in))
+                    Pull(_stage._in);
+                else
+                    CompleteStage();
+            }
+        }
+
+        #endregion
+
+        private readonly Func<Func<TIn, IEnumerable<TOut>>> _concatFactory;
+
+        private readonly Inlet<TIn> _in = new Inlet<TIn>("StatefulMapConcat.in");
+        private readonly Outlet<TOut> _out = new Outlet<TOut>("StatefulMapConcat.out");
+
+        public StatefulMapConcat(Func<Func<TIn, IEnumerable<TOut>>> concatFactory)
+        {
+            _concatFactory = concatFactory;
+
+            Shape = new FlowShape<TIn, TOut>(_in, _out);
+        }
+
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.StatefulMapConcat;
+
+        public override FlowShape<TIn, TOut> Shape { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
+
+        public override string ToString() => "StatefulMapConcat";
     }
 }

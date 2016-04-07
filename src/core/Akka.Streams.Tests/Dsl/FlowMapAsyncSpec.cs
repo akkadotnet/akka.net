@@ -243,7 +243,6 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_with_MapAsync_must_signal_NPE_when_future_is_completed_with_null()
         {
-            var expected = ReactiveStreamsCompliance.ElementMustNotBeNullMsg + Environment.NewLine + "Parameter name: element";
             var c = TestSubscriber.CreateManualProbe<string>(this);
 
             Source.From(new[] {"a", "b"})
@@ -252,7 +251,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var sub = c.ExpectSubscription();
             sub.Request(10);
-            c.ExpectError().Message.Should().Be(expected);
+            c.ExpectError().Message.Should().StartWith(ReactiveStreamsCompliance.ElementMustNotBeNullMsg);
         }
 
         [Fact]

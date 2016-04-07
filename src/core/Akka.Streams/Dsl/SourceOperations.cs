@@ -33,6 +33,31 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
+        /// RecoverWith allows to switch to alternative Source on flow failure. It will stay in effect after
+        /// a failure has been recovered so that each time there is a failure it is fed into the <paramref name="partialFunc"/> and a new
+        /// Source may be materialized.
+        /// <para>
+        /// Since the underlying failure signal onError arrives out-of-band, it might jump over existing elements.
+        /// This stage can recover the failure signal, but not the skipped elements, which will be dropped.
+        /// </para>
+        /// <para>
+        /// '''Emits when''' element is available from the upstream or upstream is failed and element is available from alternative Source
+        /// </para>
+        /// <para>
+        /// '''Backpressures when''' downstream backpressures
+        /// </para>
+        /// <para>
+        /// '''Completes when''' upstream completes or upstream failed with exception pf can handle
+        /// </para>
+        /// '''Cancels when''' downstream cancels 
+        /// </summary>
+        public static Source<TOut, TMat> RecoverWith<TOut, TMat>(this Source<TOut, TMat> flow,
+            Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc)
+        {
+            return (Source<TOut, TMat>)InternalFlowOperations.RecoverWith(flow, partialFunc);
+        }
+
+        /// <summary>
         /// Transform this stream by applying the given function to each of the elements
         /// as they pass through this processing step.
         /// <para>
@@ -75,6 +100,38 @@ namespace Akka.Streams.Dsl
         public static Source<TOut2, TMat> MapConcat<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, Func<TOut1, IEnumerable<TOut2>> mapConcater)
         {
             return (Source<TOut2, TMat>)InternalFlowOperations.MapConcat(flow, mapConcater);
+        }
+
+        /// <summary>
+        /// Transform each input element into an `Iterable` of output elements that is
+        /// then flattened into the output stream. The transformation is meant to be stateful,
+        /// which is enabled by creating the transformation function anew for every materialization —
+        /// the returned function will typically close over mutable objects to store state between
+        /// invocations. For the stateless variant see <see cref="FlowOperations.MapConcat{T,TIn,TOut,TMat}"/>.
+        /// 
+        /// The returned `Iterable` MUST NOT contain `null` values,
+        /// as they are illegal as stream elements - according to the Reactive Streams specification.
+        /// 
+        /// <para>
+        /// '''Emits when''' the mapping function returns an element or there are still remaining elements
+        /// from the previously calculated collection
+        /// </para>
+        /// <para>
+        /// '''Backpressures when''' downstream backpressures or there are still remaining elements from the
+        /// previously calculated collection
+        /// </para>
+        /// <para>
+        /// '''Completes when''' upstream completes and all remaining elements has been emitted
+        /// </para>
+        /// <para>
+        /// '''Cancels when''' downstream cancels
+        /// </para>
+        /// See also <see cref="FlowOperations.MapConcat{T,TIn,TOut,TMat}"/>
+        /// </summary>
+        public static Source<TOut2, TMat> StatefulMapConcat<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow,
+            Func<Func<TOut1, IEnumerable<TOut2>>> mapConcaterFactory)
+        {
+            return (Source<TOut2, TMat>)InternalFlowOperations.StatefulMapConcat(flow, mapConcaterFactory);
         }
 
         /// <summary>
@@ -310,7 +367,7 @@ namespace Akka.Streams.Dsl
         /// <seealso cref="TakeWhile{T,TMat}"/>
         public static Source<T, TMat> LimitWeighted<T, TMat>(this Source<T, TMat> flow, long max, Func<T, long> costFunc)
         {
-            return (Source<T, TMat>)flow.AndThen(new Implementation.Stages.LimitWeighted<T>(max, costFunc));
+            return (Source<T, TMat>) InternalFlowOperations.LimitWeighted(flow, max, costFunc);
         }
 
         /// <summary>
@@ -377,6 +434,24 @@ namespace Akka.Streams.Dsl
         public static Source<TOut2, TMat> Fold<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, TOut2 zero, Func<TOut2, TOut1, TOut2> fold)
         {
             return (Source<TOut2, TMat>)InternalFlowOperations.Fold(flow, zero, fold);
+        }
+
+        /// <summary>
+        /// Similar to <see cref="Fold{TOut1,TOut2,TMat}"/> but uses first element as zero element.
+        /// Applies the given function towards its current and next value,
+        /// yielding the next current value. 
+        /// <para>
+        /// '''Emits when''' upstream completes
+        /// </para>
+        /// '''Backpressures when''' downstream backpressures
+        /// <para>
+        /// '''Completes when''' upstream completes
+        /// </para>
+        /// '''Cancels when''' downstream cancels
+        /// </summary>
+        public static Source<TOut, TMat> Reduce<TOut, TMat>(this Source<TOut, TMat> flow, Func<TOut, TOut, TOut> reduce)
+        {
+            return (Source<TOut, TMat>)InternalFlowOperations.Reduce(flow, reduce);
         }
 
         /// <summary>

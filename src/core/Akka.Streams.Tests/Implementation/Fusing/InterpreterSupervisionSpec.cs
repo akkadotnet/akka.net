@@ -82,40 +82,6 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         }
 
         [Fact]
-        public void Interpreter_error_handling_should_resume_when_Map_throws()
-        {
-            WithOneBoundedSetup(new Map<int, int>(x =>
-            {
-                if (x == 0) throw TE();
-                return x;
-            }, resumingDecider),
-                (lastEvents, upstream, downstream) =>
-                {
-                    downstream.RequestOne();
-                    lastEvents().Should().BeEquivalentTo(new RequestOne());
-                    upstream.OnNext(2);
-                    lastEvents().Should().BeEquivalentTo(new OnNext(2));
-
-                    downstream.RequestOne();
-                    lastEvents().Should().BeEquivalentTo(new RequestOne());
-                    upstream.OnNext(0); // boom
-                    lastEvents().Should().BeEquivalentTo(new RequestOne());
-
-                    upstream.OnNext(3);
-                    lastEvents().Should().BeEquivalentTo(new OnNext(3));
-
-                    // try one more time
-                    downstream.RequestOne();
-                    lastEvents().Should().BeEquivalentTo(new RequestOne());
-                    upstream.OnNext(0); // boom
-                    lastEvents().Should().BeEquivalentTo(new RequestOne());
-
-                    upstream.OnNext(4);
-                    lastEvents().Should().BeEquivalentTo(new OnNext(4));
-                });
-        }
-
-        [Fact]
         public void Interpreter_error_handling_should_resume_when_Map_throws_in_middle_of_chain()
         {
             WithOneBoundedSetup(new IStage<int, int>[] {
