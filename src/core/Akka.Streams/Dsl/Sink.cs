@@ -223,14 +223,11 @@ namespace Akka.Streams.Dsl
         public static Sink<TIn, Task> ForEachParallel<TIn>(int parallelism, Action<TIn> action, MessageDispatcher dispatcher = null)
         {
             return Flow.Create<TIn>()
-#pragma warning disable 1998
-                .MapAsyncUnordered(parallelism, async input =>
-#pragma warning restore 1998
+                .MapAsyncUnordered(parallelism, input => Task.Run(() =>
                 {
                     action(input);
                     return Unit.Instance;
-                })
-                .ToMaterialized(Ignore<Unit>(), Keep.Right);
+                })).ToMaterialized(Ignore<Unit>(), Keep.Right);
         }
 
         /// <summary>
