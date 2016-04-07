@@ -312,6 +312,63 @@ namespace Akka.Streams.Dsl
         {
             return (Flow<TIn, IEnumerable<TOut>, TMat>)InternalFlowOperations.Grouped(flow, n);
         }
+        
+        /// <summary>
+        /// Ensure stream boundedness by limiting the number of elements from upstream.
+        /// If the number of incoming elements exceeds max, it will signal
+        /// upstream failure <see cref="StreamLimitException"/> downstream.
+        /// 
+        /// Due to input buffering some elements may have been
+        /// requested from upstream publishers that will then not be processed downstream
+        /// of this step.
+        /// 
+        /// The stream will be completed without producing any elements if `n` is zero
+        /// or negative.
+        /// <para>
+        /// '''Emits when''' the specified number of elements to take has not yet been reached
+        /// </para>
+        /// '''Backpressures when''' downstream backpressures
+        /// <para>
+        /// '''Completes when''' the defined number of elements has been taken or upstream completes
+        /// </para>
+        /// '''Cancels when''' the defined number of elements has been taken or downstream cancels
+        /// </summary>
+        /// <seealso cref="Take{TIn,TOut,TMat}"/>
+        /// <seealso cref="TakeWithin{TIn,TOut,TMat}"/>
+        /// <seealso cref="TakeWhile{TIn,TOut,TMat}"/>
+        public static Flow<TIn, TOut, TMat> Limit<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, long max)
+        {
+            return LimitWeighted(flow, max, _ => 1L);
+        }
+
+        /// <summary>
+        /// Ensure stream boundedness by evaluating the cost of incoming elements
+        /// using a cost function. Exactly how many elements will be allowed to travel downstream depends on the
+        /// evaluated cost of each element. If the accumulated cost exceeds max, it will signal
+        /// upstream failure <see cref="StreamLimitException"/> downstream.
+        /// 
+        /// Due to input buffering some elements may have been
+        /// requested from upstream publishers that will then not be processed downstream
+        /// of this step.
+        /// 
+        /// The stream will be completed without producing any elements if `n` is zero
+        /// or negative.
+        /// <para>
+        /// '''Emits when''' the specified number of elements to take has not yet been reached
+        /// </para>
+        /// '''Backpressures when''' downstream backpressures
+        /// <para>
+        /// '''Completes when''' the defined number of elements has been taken or upstream completes
+        /// </para>
+        /// '''Cancels when''' the defined number of elements has been taken or downstream cancels
+        /// </summary>
+        /// <seealso cref="Take{TIn,TOut,TMat}"/>
+        /// <seealso cref="TakeWithin{TIn,TOut,TMat}"/>
+        /// <seealso cref="TakeWhile{TIn,TOut,TMat}"/>
+        public static Flow<TIn, TOut, TMat> LimitWeighted<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, long max, Func<TOut, long> costFunc)
+        {
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.LimitWeighted(flow, max, costFunc);
+        }
 
         /// <summary>
         /// Apply a sliding window over the stream and return the windows as groups of elements, with the last group

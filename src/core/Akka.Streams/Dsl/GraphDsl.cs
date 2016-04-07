@@ -130,6 +130,10 @@ namespace Akka.Streams.Dsl
             {
                 return new ReverseOps<TIn, T>(this, sink.Inlet);
             }
+            public ReverseOps<TIn, T> To<TIn, TMat>(IGraph<SinkShape<TIn>, TMat> sink)
+            {
+                return new ReverseOps<TIn, T>(this, Add(sink).Inlet);
+            }
             public ReverseOps<TIn, T> To<TIn, TOut>(FlowShape<TIn, TOut> flow)
             {
                 return new ReverseOps<TIn, T>(this, flow.Inlet);
@@ -211,6 +215,14 @@ namespace Akka.Streams.Dsl
         {
             var b = ops.Builder;
             b.AddEdge(ops.Out, sink.Inlet);
+            return b;
+        }
+
+        public static GraphDsl.Builder<TMat> To<TIn, TOut, TMat>(this GraphDsl.ForwardOps<TOut, TMat> ops, FlowShape<TIn, TOut> flow)
+            where TIn : TOut
+        {
+            var b = ops.Builder;
+            b.AddEdge(ops.Out, flow.Inlet);
             return b;
         }
 
@@ -304,6 +316,23 @@ namespace Akka.Streams.Dsl
             return b;
         }
 
+        public static GraphDsl.Builder<TMat> From<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, IGraph<SourceShape<TOut>, TMat> source)
+            where TIn : TOut
+        {
+            var b = ops.Builder;
+            var s = b.Add(source);
+            b.AddEdge(s.Outlet, ops.In);
+            return b;
+        }
+
+        public static GraphDsl.Builder<TMat> From<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, FlowShape<TIn, TOut> flow)
+            where TIn : TOut
+        {
+            var b = ops.Builder;
+            b.AddEdge(flow.Outlet, ops.In);
+            return b;
+        }
+
         public static GraphDsl.Builder<TMat> From<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, UniformFanInShape<TIn, TOut> junction)
             where TIn : TOut
         {
@@ -342,6 +371,14 @@ namespace Akka.Streams.Dsl
         {
             var b = ops.Builder;
             b.AddEdge(flow.Outlet, ops.In);
+            return new GraphDsl.ReverseOps<TIn, TMat>(b, ops.In);
+        }
+
+        public static GraphDsl.ReverseOps<TIn, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, IGraph<FlowShape<TOut1, TOut2>, TMat> flow)
+            where TIn : TOut2
+        {
+            var b = ops.Builder;
+            b.AddEdge(b.Add(flow).Outlet, ops.In);
             return new GraphDsl.ReverseOps<TIn, TMat>(b, ops.In);
         }
 

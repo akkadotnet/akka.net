@@ -41,10 +41,12 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-            var ex = new TestException("test");
-            var c = TestSubscriber.CreateManualProbe<int>(this);
-                var p = Source.FromTask(Task.Run(new Func<int>(() => { throw ex; }))).RunWith(Sink.AsPublisher<int>(false), Materializer);
-            p.Subscribe(c);
+                var ex = new TestException("test");
+                var c = TestSubscriber.CreateManualProbe<int>(this);
+                var p =
+                    Source.FromTask(Task.Run(new Func<int>(() => { throw ex; })))
+                        .RunWith(Sink.AsPublisher<int>(false), Materializer);
+                p.Subscribe(c);
                 c.ExpectSubscriptionAndError().Should().Be(ex);
             }, Materializer);
         }
@@ -54,29 +56,29 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-            var promies = new TaskCompletionSource<int>();
-            var c = TestSubscriber.CreateManualProbe<int>(this);
-                var p = Source.FromTask(promies.Task).RunWith(Sink.AsPublisher<int>(true), Materializer);
-            p.Subscribe(c);
-            var sub = c.ExpectSubscription();
-            sub.Request(1);
-            c.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-            promies.SetResult(1);
-            c.ExpectNext(1);
-            c.ExpectComplete();
-            c.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                var promise = new TaskCompletionSource<int>();
+                var c = TestSubscriber.CreateManualProbe<int>(this);
+                var p = Source.FromTask(promise.Task).RunWith(Sink.AsPublisher<int>(true), Materializer);
+                p.Subscribe(c);
+                var sub = c.ExpectSubscription();
+                sub.Request(1);
+                c.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                promise.SetResult(1);
+                c.ExpectNext(1);
+                c.ExpectComplete();
+                c.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
             }, Materializer);
         }
 
         [Fact]
         public void A_Flow_based_on_a_Future_must_produce_one_element_when_Future_is_completed_but_not_before_request()
         {
-            var promies = new TaskCompletionSource<int>();
+            var promise = new TaskCompletionSource<int>();
             var c = TestSubscriber.CreateManualProbe<int>(this);
-            var p = Source.FromTask(promies.Task).RunWith(Sink.AsPublisher<int>(true), Materializer);
+            var p = Source.FromTask(promise.Task).RunWith(Sink.AsPublisher<int>(true), Materializer);
             p.Subscribe(c);
             var sub = c.ExpectSubscription();
-            promies.SetResult(1);
+            promise.SetResult(1);
             c.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
             sub.Request(1);
             c.ExpectNext(1);
@@ -88,30 +90,30 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var promies = new TaskCompletionSource<int>();
-                var p = Source.FromTask(promies.Task).RunWith(Sink.AsPublisher<int>(true), Materializer);
+                var promise = new TaskCompletionSource<int>();
+                var p = Source.FromTask(promise.Task).RunWith(Sink.AsPublisher<int>(true), Materializer);
                 var c1 = TestSubscriber.CreateManualProbe<int>(this);
-            var c2 = TestSubscriber.CreateManualProbe<int>(this);
-            p.Subscribe(c1);
-            p.Subscribe(c2);
-            var sub1 = c1.ExpectSubscription();
-            var sub2 = c2.ExpectSubscription();
-            sub1.Request(1);
-            promise.SetResult(1);
-            sub2.Request(2);
-            c1.ExpectNext(1);
-            c2.ExpectNext(1);
-            c1.ExpectComplete();
-            c2.ExpectComplete();
+                var c2 = TestSubscriber.CreateManualProbe<int>(this);
+                p.Subscribe(c1);
+                p.Subscribe(c2);
+                var sub1 = c1.ExpectSubscription();
+                var sub2 = c2.ExpectSubscription();
+                sub1.Request(1);
+                promise.SetResult(1);
+                sub2.Request(2);
+                c1.ExpectNext(1);
+                c2.ExpectNext(1);
+                c1.ExpectComplete();
+                c2.ExpectComplete();
             }, Materializer);
         }
 
         [Fact]
         public void A_Flow_based_on_a_Future_must_allow_cancel_before_receiving_element()
         {
-            var promies = new TaskCompletionSource<int>();
+            var promise = new TaskCompletionSource<int>();
             var c = TestSubscriber.CreateManualProbe<int>(this);
-            var p = Source.FromTask(promies.Task).RunWith(Sink.AsPublisher<int>(true), Materializer);
+            var p = Source.FromTask(promise.Task).RunWith(Sink.AsPublisher<int>(true), Materializer);
             var keepAlive = TestSubscriber.CreateManualProbe<int>(this);
             p.Subscribe(keepAlive);
             p.Subscribe(c);
@@ -119,7 +121,7 @@ namespace Akka.Streams.Tests.Dsl
             sub.Request(1);
             sub.Cancel();
             c.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
-            promies.SetResult(1);
+            promise.SetResult(1);
             c.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
         }
     }
