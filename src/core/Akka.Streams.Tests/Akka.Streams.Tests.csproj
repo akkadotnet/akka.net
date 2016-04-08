@@ -83,6 +83,7 @@
     <Compile Include="Dsl\FlowFoldSpec.cs" />
     <Compile Include="Dsl\FlowForeachSpec.cs" />
     <Compile Include="Dsl\FlowFromFutureSpec.cs" />
+    <Compile Include="Dsl\FlowGraphCompileSpec.cs" />
     <Compile Include="Dsl\FlowGroupedSpec.cs" />
     <Compile Include="Dsl\FlowGroupedWithinSpec.cs" />
     <Compile Include="Dsl\FlowIdleInjectSpec.cs" />

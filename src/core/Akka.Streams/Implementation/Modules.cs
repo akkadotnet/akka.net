@@ -190,16 +190,16 @@ namespace Akka.Streams.Implementation
     {
         private readonly int _bufferSize;
         private readonly OverflowStrategy _overflowStrategy;
-        private readonly Attributes _attributes;
 
         public ActorRefSource(int bufferSize, OverflowStrategy overflowStrategy, Attributes attributes, SourceShape<TOut> shape) : base(shape)
         {
             _bufferSize = bufferSize;
             _overflowStrategy = overflowStrategy;
-            _attributes = attributes;
+            Attributes = attributes;
         }
 
-        public override Attributes Attributes { get { return _attributes; } }
+        public override Attributes Attributes { get; }
+
         public override IModule WithAttributes(Attributes attributes)
         {
             return new ActorRefSource<TOut>(_bufferSize, _overflowStrategy, attributes, AmendShape(attributes));
@@ -207,7 +207,7 @@ namespace Akka.Streams.Implementation
 
         protected override SourceModule<TOut, IActorRef> NewInstance(SourceShape<TOut> shape)
         {
-            return new ActorRefSource<TOut>(_bufferSize, _overflowStrategy, _attributes, shape);
+            return new ActorRefSource<TOut>(_bufferSize, _overflowStrategy, Attributes, shape);
         }
 
         public override IPublisher<TOut> Create(MaterializationContext context, out IActorRef materializer)
