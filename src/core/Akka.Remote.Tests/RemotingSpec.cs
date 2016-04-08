@@ -42,7 +42,7 @@ namespace Akka.Remote.Tests
         private static string GetConfig()
         {
             return @"
-            common-helios-settings {
+            common-transport-settings {
               port = 0
               hostname = ""localhost""
             }
@@ -51,19 +51,15 @@ namespace Akka.Remote.Tests
               actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
 
               remote {
-                transport = ""Akka.Remote.Remoting,Akka.Remote""
-
                 retry-gate-closed-for = 1 s
                 log-remote-lifecycle-events = on
 
                 enabled-transports = [
                   ""akka.remote.test"",
-                  ""akka.remote.helios.tcp"",
-#""akka.remote.helios.udp""
+                  ""akka.remote.networkstream""
                 ]
 
-                helios.tcp = ${common-helios-settings}
-                helios.udp = ${common-helios-settings}
+                networkstream = ${common-transport-settings}
 
                 test {
                   transport-class = ""Akka.Remote.Transport.TestTransport,Akka.Remote""
@@ -89,7 +85,7 @@ namespace Akka.Remote.Tests
         protected string GetOtherRemoteSysConfig()
         {
             return @"
-            common-helios-settings {
+            common-transport-settings {
               port = 0
               hostname = ""localhost""
             }
@@ -98,19 +94,16 @@ namespace Akka.Remote.Tests
               actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
 
               remote {
-                transport = ""Akka.Remote.Remoting,Akka.Remote""
 
                 retry-gate-closed-for = 1 s
                 log-remote-lifecycle-events = on
 
                 enabled-transports = [
                   ""akka.remote.test"",
-                  ""akka.remote.helios.tcp"",
-#""akka.remote.helios.udp""
+                  ""akka.remote.networkstream""
                 ]
 
-                helios.tcp = ${common-helios-settings}
-                helios.udp = ${common-helios-settings}
+                networkstream = ${common-transport-settings}
 
                 test {
                   transport-class = ""Akka.Remote.Transport.TestTransport,Akka.Remote""

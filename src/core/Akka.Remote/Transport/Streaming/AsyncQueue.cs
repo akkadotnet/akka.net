@@ -85,6 +85,7 @@ namespace Akka.Remote.Transport.Streaming
             {
                 _isCompleted = true;
 
+                //TODO Queue on IO ThreadPool or Remote's DedicatedThreadPool
                 if (_continuation != null)
                     ThreadPool.QueueUserWorkItem(state => ((Action)state).Invoke(), _continuation);
             }
@@ -114,6 +115,7 @@ namespace Akka.Remote.Transport.Streaming
                         alreadyCompleted = true;
                 }
 
+                //TODO Queue on IO ThreadPool or Remote's DedicatedThreadPool
                 if (alreadyCompleted)
                     ThreadPool.QueueUserWorkItem(state => ((Action)state).Invoke(), continuation);
             }

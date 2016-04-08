@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Remote.Transport.Streaming;
 using Google.ProtocolBuffers;
 using Helios.Exceptions;
 using Helios.Net;
@@ -230,9 +231,9 @@ namespace Akka.Remote.Transport.Helios
     /// additional bookkeeping when transports are disposed or opened.
     /// </remarks>
     /// </summary>
-    class HeliosTcpTransport : HeliosTransport
+    class HeliosTcpTransport_v1_0 : HeliosTransport
     {
-        public HeliosTcpTransport(ActorSystem system, Config config)
+        public HeliosTcpTransport_v1_0(ActorSystem system, Config config)
             : base(system, config)
         {
         }
@@ -245,6 +246,21 @@ namespace Akka.Remote.Transport.Helios
             client.Open();
 
             return ((TcpClientHandler)client).StatusFuture;
+        }
+    }
+
+    // In v1.5, the Helios config is translated to use NetworkStreamTransport instead.
+    class HeliosTcpTransport : NetworkStreamTransport
+    {
+        public HeliosTcpTransport(ActorSystem system, Config config)
+            : base(system, GetSettings(config))
+        { }
+
+        private static NetworkStreamTransportSettings GetSettings(Config config)
+        {
+            var heliosSettings = new HeliosTransportSettings(config);
+
+            return new NetworkStreamTransportSettings(heliosSettings);
         }
     }
 }
