@@ -133,6 +133,7 @@
     <Compile Include="Dsl\SourceSpec.cs" />
     <Compile Include="Dsl\StageActorRefSpec.cs" />
     <Compile Include="Dsl\SubscriberSinkSpec.cs" />
+    <Compile Include="Dsl\SubscriberSourceSpec.cs" />
     <Compile Include="Dsl\TestConfig.cs" />
     <Compile Include="Implementation\Fusing\ActorGraphInterpreterSpec.cs" />
     <Compile Include="Implementation\Fusing\GraphInterpreterFailureModesSpec.cs" />
