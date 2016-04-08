@@ -1582,6 +1582,50 @@ namespace Akka.Streams.Dsl.Internal
                 return new FlowShape<TIn, TOut>(merge.In(1), merge.Out);
             });
         }
+        
+        /// <summary>
+        /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <seealso cref="Flow{TIn,TOut,TMat}"/>, meaning that elements that passes
+        /// through will also be sent to the <seealso cref="Sink{TIn,TMat}"/>.
+        /// 
+        /// @see <seealso cref="AlsoTo{TOut,TMat}"/>
+        /// 
+        /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
+        /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// </summary>
+        public static IFlow<TOut, TMat3> AlsoToMaterialized<TOut, TMat, TMat2, TMat3>(
+            this IFlow<TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat2> that,
+            Func<TMat, TMat2, TMat3> materializerFunction)
+        {
+            return flow.ViaMaterialized(AlsoToGraph(that), materializerFunction);
+        }
+
+        /// <summary>
+        /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <seealso cref="Flow{TIn,TOut,TMat}"/>, meaning that elements that passes
+        /// through will also be sent to the <seealso cref="Sink{TIn,TMat}"/>.
+        /// 
+        /// '''Emits when''' element is available and demand exists both from the Sink and the downstream.
+        ///
+        /// '''Backpressures when''' downstream or Sink backpressures
+        ///
+        /// '''Completes when''' upstream completes
+        ///
+        /// '''Cancels when''' downstream cancels
+        /// </summary>
+        /// <returns></returns>
+        public static IFlow<TOut, TMat> AlsoTo<TOut, TMat>(this IFlow<TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat> that)
+        {
+            return flow.Via(AlsoToGraph(that));
+        }
+
+        private static IGraph<FlowShape<TOut, TOut>, TMat> AlsoToGraph<TOut, TMat>(IGraph<SinkShape<TOut>, TMat> that)
+        {
+            return GraphDsl.Create(that, (b, r) =>
+            {
+                var broadcast = b.Add(new Broadcast<TOut>(2));
+                b.From(broadcast.Out(1)).To(r);
+                return new FlowShape<TOut, TOut>(broadcast.In, broadcast.Out(0));
+            });
+        }
 
         ///<summary>
         /// Materializes to `Future[Done]` that completes on getting termination message.
