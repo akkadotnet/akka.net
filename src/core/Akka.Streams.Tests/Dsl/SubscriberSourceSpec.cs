@@ -5,6 +5,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit.Tests;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -12,7 +13,7 @@ namespace Akka.Streams.Tests.Dsl
     {
         private ActorMaterializer Materializer { get; }
 
-        public SubscriberSourceSpec()
+        public SubscriberSourceSpec(ITestOutputHelper helper) : base(helper)
         {
             var settings = ActorMaterializerSettings.Create(Sys);
             Materializer = ActorMaterializer.Create(Sys, settings);

@@ -63,6 +63,7 @@
     <Compile Include="ActorMaterializerSpec.cs" />
     <Compile Include="Actor\ActorSubscriberSpec.cs" />
     <Compile Include="Actor\RequestStrategySpecs.cs" />
+    <Compile Include="Dsl\BidiFlowSpec.cs" />
     <Compile Include="Dsl\FlowBatchSpec.cs" />
     <Compile Include="Dsl\FlowBatchWeightedSpec.cs" />
     <Compile Include="Dsl\FlowCollectSpec.cs" />
@@ -135,6 +136,7 @@
     <Compile Include="Dsl\SubscriberSinkSpec.cs" />
     <Compile Include="Dsl\SubscriberSourceSpec.cs" />
     <Compile Include="Dsl\TestConfig.cs" />
+    <Compile Include="Dsl\TickSourceSpec.cs" />
     <Compile Include="Implementation\Fusing\ActorGraphInterpreterSpec.cs" />
     <Compile Include="Implementation\Fusing\GraphInterpreterFailureModesSpec.cs" />
     <Compile Include="Implementation\Fusing\GraphInterpreterPortsSpec.cs" />

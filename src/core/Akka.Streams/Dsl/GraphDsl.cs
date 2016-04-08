@@ -134,6 +134,10 @@ namespace Akka.Streams.Dsl
             {
                 return new ReverseOps<TIn, T>(this, Add(sink).Inlet);
             }
+            public ReverseOps<TIn, T> To<TIn, TOut, TMat>(IGraph<FlowShape<TIn, TOut>, TMat> flow)
+            {
+                return new ReverseOps<TIn, T>(this, Add(flow).Inlet);
+            }
             public ReverseOps<TIn, T> To<TIn, TOut>(FlowShape<TIn, TOut> flow)
             {
                 return new ReverseOps<TIn, T>(this, flow.Inlet);
