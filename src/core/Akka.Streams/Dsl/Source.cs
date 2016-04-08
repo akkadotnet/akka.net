@@ -446,7 +446,7 @@ namespace Akka.Streams.Dsl
         /// <param name="overflowStrategy">Strategy that is used when incoming elements cannot fit inside the buffer</param>
         public static Source<T, IActorRef> ActorRef<T>(int bufferSize, OverflowStrategy overflowStrategy)
         {
-            if (bufferSize < 0) throw new ArgumentException("Buffer size must be greater than or equal 0", "bufferSize");
+            if (bufferSize < 0) throw new ArgumentException("Buffer size must be greater than or equal 0", nameof(bufferSize));
             if (overflowStrategy == OverflowStrategy.Backpressure) throw new NotSupportedException("Backpressure overflow strategy is not supported");
 
             return new Source<T, IActorRef>(new ActorRefSource<T>(bufferSize, overflowStrategy, DefaultAttributes.ActorRefSource, Shape<T>("ActorRefSource")));
