@@ -867,7 +867,7 @@ namespace Akka.Streams.Implementation.Fusing
                     _upstreamCompleted = true;
                     _upstreamFailed = reason;
 
-                    if (!ReferenceEquals(_exposedPublisher, null)) _exposedPublisher.Shutdown(null);
+                    if (!ReferenceEquals(_exposedPublisher, null)) _exposedPublisher.Shutdown(reason);
                     if (!ReferenceEquals(_subscriber, null) && !(reason is ISpecViolation)) ReactiveStreamsCompliance.TryOnError(_subscriber, reason);
                 }
             }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Reactive.Streams;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
