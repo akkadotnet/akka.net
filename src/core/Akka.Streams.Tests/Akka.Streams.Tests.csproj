@@ -63,6 +63,7 @@
     <Compile Include="ActorMaterializerSpec.cs" />
     <Compile Include="Actor\ActorSubscriberSpec.cs" />
     <Compile Include="Actor\RequestStrategySpecs.cs" />
+    <Compile Include="Dsl\AttributesSpec.cs" />
     <Compile Include="Dsl\BidiFlowSpec.cs" />
     <Compile Include="Dsl\FlowBatchSpec.cs" />
     <Compile Include="Dsl\FlowBatchWeightedSpec.cs" />
