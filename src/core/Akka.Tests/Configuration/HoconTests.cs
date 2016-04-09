@@ -393,7 +393,13 @@ a.b.e.f=3
             Assert.Equal("hello\\y\\o\\u", ConfigurationFactory.ParseString(hocon).GetString("a"));
         }
 
-
+        [Fact]
+        public void Can_assign_unescaped_path_like_variable_to_field()
+        {
+            var hocon = @"a=""""""C:\Dev\somepath\to\a\file.txt""""""";
+            Assert.Equal("C:\\Dev\\somepath\\to\\a\\file.txt", ConfigurationFactory.ParseString(hocon).GetString("a"));
+        }
+        
         [Fact]
         public void Can_use_fallback()
         {
