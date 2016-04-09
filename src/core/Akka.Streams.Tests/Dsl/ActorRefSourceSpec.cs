@@ -21,8 +21,7 @@ namespace Akka.Streams.Tests.Dsl
             var settings = ActorMaterializerSettings.Create(Sys);
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
-
-
+        
         [Fact]
         public void A_ActorRefSource_must_emit_received_messages_to_the_stream()
         {
