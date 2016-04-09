@@ -63,6 +63,9 @@
     <Compile Include="ActorMaterializerSpec.cs" />
     <Compile Include="Actor\ActorSubscriberSpec.cs" />
     <Compile Include="Actor\RequestStrategySpecs.cs" />
+    <Compile Include="Dsl\ActorRefSourceSpec.cs" />
+    <Compile Include="Dsl\AttributesSpec.cs" />
+    <Compile Include="Dsl\BidiFlowSpec.cs" />
     <Compile Include="Dsl\FlowBatchSpec.cs" />
     <Compile Include="Dsl\FlowBatchWeightedSpec.cs" />
     <Compile Include="Dsl\FlowCollectSpec.cs" />
@@ -80,6 +83,7 @@
     <Compile Include="Dsl\FlowFoldSpec.cs" />
     <Compile Include="Dsl\FlowForeachSpec.cs" />
     <Compile Include="Dsl\FlowFromFutureSpec.cs" />
+    <Compile Include="Dsl\FlowGraphCompileSpec.cs" />
     <Compile Include="Dsl\FlowGroupedSpec.cs" />
     <Compile Include="Dsl\FlowGroupedWithinSpec.cs" />
     <Compile Include="Dsl\FlowIdleInjectSpec.cs" />
@@ -128,10 +132,14 @@
     <Compile Include="Dsl\LastSinkSpec.cs" />
     <Compile Include="Dsl\ReverseArrowSpec.cs" />
     <Compile Include="Dsl\SeqSinkSpec.cs" />
+    <Compile Include="Dsl\SinkForeachParallelSpec.cs" />
     <Compile Include="Dsl\SinkSpec.cs" />
     <Compile Include="Dsl\SourceSpec.cs" />
+    <Compile Include="Dsl\StageActorRefSpec.cs" />
     <Compile Include="Dsl\SubscriberSinkSpec.cs" />
+    <Compile Include="Dsl\SubscriberSourceSpec.cs" />
     <Compile Include="Dsl\TestConfig.cs" />
+    <Compile Include="Dsl\TickSourceSpec.cs" />
     <Compile Include="Implementation\Fusing\ActorGraphInterpreterSpec.cs" />
     <Compile Include="Implementation\Fusing\GraphInterpreterFailureModesSpec.cs" />
     <Compile Include="Implementation\Fusing\GraphInterpreterPortsSpec.cs" />

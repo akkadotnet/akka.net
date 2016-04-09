@@ -13,7 +13,7 @@ namespace Akka.Streams.Implementation
     {
         #region internal classes 
 
-        private sealed class ActorRefBackpressureLogic : GraphStageLogic
+        private sealed class Logic : GraphStageLogic
         {
             private bool _acknowledgementReceived;
             private bool _completeReceived;
@@ -21,8 +21,9 @@ namespace Akka.Streams.Implementation
             private readonly int _maxBuffer;
             private readonly List<TIn> _buffer;
             private readonly Type _ackType;
-            
-            public ActorRefBackpressureLogic(ActorRefBackpressureSinkStage<TIn> stage, int maxBuffer) : base(stage.Shape)
+            private StageActorRef _self;
+
+            public Logic(ActorRefBackpressureSinkStage<TIn> stage, int maxBuffer) : base(stage.Shape)
             {
                 _stage = stage;
                 _ackType = _stage._ackMessage.GetType();
@@ -48,7 +49,7 @@ namespace Akka.Streams.Implementation
                         _completeReceived = true;
                 }, onUpstreamFailure: ex =>
                 {
-                    stage._actorRef.Tell(stage._onFailureMessage(ex));
+                    stage._actorRef.Tell(stage._onFailureMessage(ex), _self);
                     FailStage(ex);
                 });
             }
@@ -83,8 +84,9 @@ namespace Akka.Streams.Implementation
             public override void PreStart()
             {
                 SetKeepGoing(true);
-                GetStageActorRef(Receive).Watch(_stage._actorRef);
-                _stage._actorRef.Tell(_stage._onInitMessage);
+                _self = GetStageActorRef(Receive);
+                _self.Watch(_stage._actorRef);
+                _stage._actorRef.Tell(_stage._onInitMessage, _self);
                 Pull(_stage._inlet);
             }
 
@@ -92,14 +94,14 @@ namespace Akka.Streams.Implementation
             {
                 var msg = _buffer[0];
                 _buffer.RemoveAt(0);
-                _stage._actorRef.Tell(msg);
+                _stage._actorRef.Tell(msg, _self);
                 if (_buffer.Count == 0 && _completeReceived)
                     Finish();
             }
 
             private void Finish()
             {
-                _stage._actorRef.Tell(_stage._onCompleteMessage);
+                _stage._actorRef.Tell(_stage._onCompleteMessage, _self);
                 CompleteStage();
             }
 
@@ -138,7 +140,7 @@ namespace Akka.Streams.Implementation
             if(maxBuffer <= 0)
                 throw new ArgumentException("Buffer size mst be greater than 0");
 
-            return new ActorRefBackpressureLogic(this, maxBuffer);
+            return new Logic(this, maxBuffer);
         }
     }
 }

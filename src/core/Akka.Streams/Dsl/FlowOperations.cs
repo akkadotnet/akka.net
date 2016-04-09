@@ -1140,6 +1140,40 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
+        /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <seealso cref="Flow{TIn,TOut,TMat}"/>, meaning that elements that passes
+        /// through will also be sent to the <seealso cref="Sink{TIn,TMat}"/>.
+        /// 
+        /// @see <seealso cref="AlsoTo{TOut,TMat}"/>
+        /// 
+        /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
+        /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// </summary>
+        public static Flow<TIn, TOut, TMat3> AlsoToMaterialized<TIn, TOut, TMat, TMat2, TMat3>(
+            this Flow<TIn, TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat2> that,
+            Func<TMat, TMat2, TMat3> materializerFunction)
+        {
+            return (Flow<TIn, TOut, TMat3>)InternalFlowOperations.AlsoToMaterialized(flow, that, materializerFunction);
+        }
+
+        /// <summary>
+        /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <seealso cref="Flow{TIn,TOut,TMat}"/>, meaning that elements that passes
+        /// through will also be sent to the <seealso cref="Sink{TIn,TMat}"/>.
+        /// 
+        /// '''Emits when''' element is available and demand exists both from the Sink and the downstream.
+        ///
+        /// '''Backpressures when''' downstream or Sink backpressures
+        ///
+        /// '''Completes when''' upstream completes
+        ///
+        /// '''Cancels when''' downstream cancels
+        /// </summary>
+        /// <returns></returns>
+        public static Flow<TIn, TOut, TMat> AlsoTo<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat> that)
+        {
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.AlsoTo(flow, that);
+        }
+
+        /// <summary>
         /// Materializes to `Future[Done]` that completes on getting termination message.
         /// The Future completes with success when received complete message from upstream or cancel
         /// from downstream. It fails with the same error when received error message from downstream.
