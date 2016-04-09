@@ -189,7 +189,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var fw = CreateActor<Fw2>();
                 var publisher =
-                    RunnableGraph<TestPublisher.Probe<int>>.FromGraph(
+                    RunnableGraph.FromGraph(
                         this.SourceProbe<int>()
                             .To(Sink.ActorRefWithAck<int>(fw, InitMessage, AckMessage, CompleteMessage))
                             .WithAttributes(Attributes.CreateInputBuffer(1, 1))).Run(Materializer);

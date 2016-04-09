@@ -46,7 +46,7 @@ namespace Akka.Streams.Tests.Dsl
             var probe = TestSubscriber.CreateManualProbe<int>(this);
             Source.From(Enumerable.Range(1, 3))
                 .Take(-1)
-                .To(Sink.FromSubscriber<int, Unit>(probe))
+                .To(Sink.FromSubscriber(probe))
                 .Run(Materializer);
             probe.ExpectSubscription().Request(10);
             probe.ExpectComplete();

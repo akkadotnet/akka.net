@@ -208,9 +208,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             var flow = Flow.Create<string>();
             var c1 = TestSubscriber.CreateManualProbe<string>(this);
-            var sink = flow.To(Sink.FromSubscriber<string, Unit>(c1));
+            var sink = flow.To(Sink.FromSubscriber(c1));
             var publisher = Source.From(new[] { "1", "2", "3" }).RunWith(Sink.AsPublisher<string>(false), Materializer);
-            Source.FromPublisher<string, Unit>(publisher).To(sink).Run(Materializer);
+            Source.FromPublisher(publisher).To(sink).Run(Materializer);
 
             var sub1 = c1.ExpectSubscription();
             sub1.Request(3);
@@ -229,7 +229,7 @@ namespace Akka.Streams.Tests.Dsl
                 return i.ToString();
             });
             var publisher = Source.From(new[] { 1, 2, 3 }).RunWith(Sink.AsPublisher<int>(false), Materializer);
-            Source.FromPublisher<int, Unit>(publisher).Via(flow).To(Sink.Ignore<string>()).Run(Materializer);
+            Source.FromPublisher(publisher).Via(flow).To(Sink.Ignore<string>()).Run(Materializer);
 
             ExpectMsg("1");
             ExpectMsg("2");
@@ -241,9 +241,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             var flow = Flow.Create<int>().Map(i => i.ToString());
             var c1 = TestSubscriber.CreateManualProbe<string>(this);
-            var sink = flow.To(Sink.FromSubscriber<string, Unit>(c1));
+            var sink = flow.To(Sink.FromSubscriber(c1));
             var publisher = Source.From(new[] { 1, 2, 3 }).RunWith(Sink.AsPublisher<int>(false), Materializer);
-            Source.FromPublisher<int, Unit>(publisher).To(sink).Run(Materializer);
+            Source.FromPublisher(publisher).To(sink).Run(Materializer);
 
             var sub1 = c1.ExpectSubscription();
             sub1.Request(3);
@@ -699,8 +699,8 @@ namespace Akka.Streams.Tests.Dsl
 
                 impl.Tell(new ActorGraphInterpreter.ExposedPublisher(shell, 0, publisher));
 
-                return Flow.FromSinkAndSource(Sink.FromSubscriber<TOut, Unit>(subscriber),
-                    Source.FromPublisher<TOut2, Unit>(publisher));
+                return Flow.FromSinkAndSource(Sink.FromSubscriber(subscriber),
+                    Source.FromPublisher(publisher));
             };
 
             return flow.Via(createGraph());

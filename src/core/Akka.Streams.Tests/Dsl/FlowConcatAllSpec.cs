@@ -35,7 +35,7 @@ namespace Akka.Streams.Tests.Dsl
                 var main = Source.From(new[] {s1, s2, s3, s4, s5});
 
                 var subscriber = TestSubscriber.CreateManualProbe<int>(this);
-                main.FlatMapConcat(s => s).To(Sink.FromSubscriber<int, Unit>(subscriber)).Run(Materializer);
+                main.FlatMapConcat(s => s).To(Sink.FromSubscriber(subscriber)).Run(Materializer);
                 var subscription = subscriber.ExpectSubscription();
                 subscription.Request(10);
                 for (var i = 1; i <= 10; i++)
@@ -74,9 +74,9 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var publisher = TestPublisher.CreateManualProbe<Source<int, Unit>>(this);
                 var subscriber = TestSubscriber.CreateManualProbe<int>(this);
-                Source.FromPublisher<Source<int, Unit>, Unit>(publisher)
+                Source.FromPublisher(publisher)
                     .FlatMapConcat(x => x)
-                    .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                    .To(Sink.FromSubscriber(subscriber))
                     .Run(Materializer);
 
                 var upstream = publisher.ExpectSubscription();
@@ -84,7 +84,7 @@ namespace Akka.Streams.Tests.Dsl
                 downstream.Request(1000);
 
                 var substreamPublisher = TestPublisher.CreateManualProbe<int>(this);
-                var substreamFlow = Source.FromPublisher<int, Unit>(substreamPublisher);
+                var substreamFlow = Source.FromPublisher(substreamPublisher);
                 upstream.ExpectRequest();
                 upstream.SendNext(substreamFlow);
                 var subUpstream = substreamPublisher.ExpectSubscription();
@@ -102,9 +102,9 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var publisher = TestPublisher.CreateManualProbe<Source<int, Unit>>(this);
                 var subscriber = TestSubscriber.CreateManualProbe<int>(this);
-                Source.FromPublisher<Source<int, Unit>, Unit>(publisher)
+                Source.FromPublisher(publisher)
                     .FlatMapConcat(x => x)
-                    .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                    .To(Sink.FromSubscriber(subscriber))
                     .Run(Materializer);
 
                 var upstream = publisher.ExpectSubscription();
@@ -112,7 +112,7 @@ namespace Akka.Streams.Tests.Dsl
                 downstream.Request(1000);
 
                 var substreamPublisher = TestPublisher.CreateManualProbe<int>(this, false);
-                var substreamFlow = Source.FromPublisher<int, Unit>(substreamPublisher);
+                var substreamFlow = Source.FromPublisher(substreamPublisher);
                 upstream.ExpectRequest();
                 upstream.SendNext(substreamFlow);
                 var subUpstream = substreamPublisher.ExpectSubscription();
@@ -133,9 +133,9 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var publisher = TestPublisher.CreateManualProbe<Source<int, Unit>>(this);
                 var subscriber = TestSubscriber.CreateManualProbe<int>(this);
-                Source.FromPublisher<Source<int, Unit>, Unit>(publisher)
+                Source.FromPublisher(publisher)
                     .FlatMapConcat<Source<int,Unit>,int,Unit>(x => { throw TestException; })
-                    .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                    .To(Sink.FromSubscriber(subscriber))
                     .Run(Materializer);
 
                 var upstream = publisher.ExpectSubscription();
@@ -143,7 +143,7 @@ namespace Akka.Streams.Tests.Dsl
                 downstream.Request(1000);
 
                 var substreamPublisher = TestPublisher.CreateManualProbe<int>(this);
-                var substreamFlow = Source.FromPublisher<int, Unit>(substreamPublisher);
+                var substreamFlow = Source.FromPublisher(substreamPublisher);
                 upstream.ExpectRequest();
                 upstream.SendNext(substreamFlow);
                 subscriber.ExpectError().Should().Be(TestException);
@@ -158,9 +158,9 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var publisher = TestPublisher.CreateManualProbe<Source<int, Unit>>(this);
                 var subscriber = TestSubscriber.CreateManualProbe<int>(this);
-                Source.FromPublisher<Source<int, Unit>, Unit>(publisher)
+                Source.FromPublisher(publisher)
                     .FlatMapConcat(x => x)
-                    .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                    .To(Sink.FromSubscriber(subscriber))
                     .Run(Materializer);
 
                 var upstream = publisher.ExpectSubscription();
@@ -168,7 +168,7 @@ namespace Akka.Streams.Tests.Dsl
                 downstream.Request(1000);
 
                 var substreamPublisher = TestPublisher.CreateManualProbe<int>(this);
-                var substreamFlow = Source.FromPublisher<int, Unit>(substreamPublisher);
+                var substreamFlow = Source.FromPublisher(substreamPublisher);
                 upstream.ExpectRequest();
                 upstream.SendNext(substreamFlow);
 
@@ -186,9 +186,9 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var publisher = TestPublisher.CreateManualProbe<Source<int, Unit>>(this);
                 var subscriber = TestSubscriber.CreateManualProbe<int>(this);
-                Source.FromPublisher<Source<int, Unit>, Unit>(publisher)
+                Source.FromPublisher(publisher)
                     .FlatMapConcat(x => x)
-                    .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                    .To(Sink.FromSubscriber(subscriber))
                     .Run(Materializer);
 
                 var upstream = publisher.ExpectSubscription();
@@ -196,7 +196,7 @@ namespace Akka.Streams.Tests.Dsl
                 downstream.Request(1000);
 
                 var substreamPublisher = TestPublisher.CreateManualProbe<int>(this);
-                var substreamFlow = Source.FromPublisher<int, Unit>(substreamPublisher);
+                var substreamFlow = Source.FromPublisher(substreamPublisher);
                 upstream.ExpectRequest();
                 upstream.SendNext(substreamFlow);
                 var subUpstream = substreamPublisher.ExpectSubscription();
@@ -215,9 +215,9 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var publisher = TestPublisher.CreateManualProbe<Source<int, Unit>>(this);
                 var subscriber = TestSubscriber.CreateManualProbe<int>(this);
-                Source.FromPublisher<Source<int, Unit>, Unit>(publisher)
+                Source.FromPublisher(publisher)
                     .FlatMapConcat(x => x)
-                    .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                    .To(Sink.FromSubscriber(subscriber))
                     .Run(Materializer);
 
                 var upstream = publisher.ExpectSubscription();
@@ -225,7 +225,7 @@ namespace Akka.Streams.Tests.Dsl
                 downstream.Request(1000);
 
                 var substreamPublisher = TestPublisher.CreateManualProbe<int>(this, false);
-                var substreamFlow = Source.FromPublisher<int, Unit>(substreamPublisher);
+                var substreamFlow = Source.FromPublisher(substreamPublisher);
                 upstream.ExpectRequest();
                 upstream.SendNext(substreamFlow);
                 var subUpstream = substreamPublisher.ExpectSubscription();
@@ -249,7 +249,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 //var flowSubscriber = Source.AsSubscriber<Source<int, Unit>>()
                 //    .FlatMapConcat(x => x)
-                //    .To(Sink.FromSubscriber<int, Unit>(down))
+                //    .To(Sink.FromSubscriber(down))
                 //    .Run(Materializer);
 
                 //var downstream = down.ExpectSubscription();

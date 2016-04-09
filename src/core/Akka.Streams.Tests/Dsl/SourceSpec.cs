@@ -183,7 +183,7 @@ namespace Akka.Streams.Tests.Dsl
                         b.From(i3.Outlet).To(m.In(3));
                         b.From(i4.Outlet).To(m.In(4));
                         return new SourceShape<int>(m.Out);
-                    })).To(Sink.FromSubscriber<int, Unit>(outProbe)).Run(Materializer);
+                    })).To(Sink.FromSubscriber(outProbe)).Run(Materializer);
 
             for (var i = 0; i < 5; i++)
                 probes[i].Subscribe(s[i]);
@@ -209,11 +209,11 @@ namespace Akka.Streams.Tests.Dsl
         public void Composite_Source_must_combine_from_many_inputs_with_simplified_API()
         {
             var probes = Enumerable.Range(1, 3).Select(_ => TestPublisher.CreateManualProbe<int>(this)).ToList();
-            var source = probes.Select(Source.FromPublisher<int, Unit>).ToList();
+            var source = probes.Select(Source.FromPublisher).ToList();
             var outProbe = TestSubscriber.CreateManualProbe<int>(this);
 
             Source.Combine(source[0], source[1], i => new Merge<int, int>(i), source[2])
-                .To(Sink.FromSubscriber<int, Unit>(outProbe))
+                .To(Sink.FromSubscriber(outProbe))
                 .Run(Materializer);
 
             var sub = outProbe.ExpectSubscription();
@@ -238,11 +238,11 @@ namespace Akka.Streams.Tests.Dsl
         public void Composite_Source_must_combine_from_two_inputs_with_simplified_API()
         {
             var probes = Enumerable.Range(1, 2).Select(_ => TestPublisher.CreateManualProbe<int>(this)).ToList();
-            var source = probes.Select(Source.FromPublisher<int, Unit>).ToList();
+            var source = probes.Select(Source.FromPublisher).ToList();
             var outProbe = TestSubscriber.CreateManualProbe<int>(this);
 
             Source.Combine(source[0], source[1], i => new Merge<int, int>(i))
-                .To(Sink.FromSubscriber<int, Unit>(outProbe))
+                .To(Sink.FromSubscriber(outProbe))
                 .Run(Materializer);
 
             var sub = outProbe.ExpectSubscription();

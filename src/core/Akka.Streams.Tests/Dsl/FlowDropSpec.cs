@@ -41,7 +41,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Drop_must_not_drop_anything_for_negative_n()
         {
             var probe = TestSubscriber.CreateManualProbe<int>(this);
-            Source.From(new[] {1, 2, 3}).Drop(-1).To(Sink.FromSubscriber<int, Unit>(probe)).Run(Materializer);
+            Source.From(new[] {1, 2, 3}).Drop(-1).To(Sink.FromSubscriber(probe)).Run(Materializer);
             probe.ExpectSubscription().Request(10);
             probe.ExpectNext(1);
             probe.ExpectNext(2);

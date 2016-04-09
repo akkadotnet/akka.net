@@ -36,7 +36,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Reverse_Arrows_in_the_GraphDsl_must_work_from_Inlets()
         {
-            var task = RunnableGraph<Task<IImmutableList<int>>>.FromGraph(GraphDsl.Create(Sink, (b, s) =>
+            var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
                 b.To(s.Inlet).From(Source);
                 return ClosedShape.Instance;
@@ -48,7 +48,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Reverse_Arrows_in_the_GraphDsl_must_work_from_SinkShape()
         {
-            var task = RunnableGraph<Task<IImmutableList<int>>>.FromGraph(GraphDsl.Create(Sink, (b, s) =>
+            var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
                 b.To(s).From(Source);
                 return ClosedShape.Instance;
@@ -61,9 +61,9 @@ namespace Akka.Streams.Tests.Dsl
         public void Reverse_Arrows_in_the_GraphDsl_must_work_from_Sink()
         {
             var sub = TestSubscriber.CreateManualProbe<int>(this);
-            RunnableGraph<Unit>.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
             {
-                b.To(Streams.Dsl.Sink.FromSubscriber<int, Unit>(sub))
+                b.To(Streams.Dsl.Sink.FromSubscriber(sub))
                     .From(Streams.Dsl.Source.From(Enumerable.Range(1, 3)));
                 
                 return ClosedShape.Instance;
@@ -77,7 +77,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Reverse_Arrows_in_the_GraphDsl_must_not_work_from_Outlets()
         {
-            RunnableGraph<Task<IImmutableList<int>>>.FromGraph(
+            RunnableGraph.FromGraph(
                 GraphDsl.Create<ClosedShape, Task<IImmutableList<int>>>(b =>
                 {
                     var o = b.Add(Source).Outlet;
@@ -91,7 +91,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Reverse_Arrows_in_the_GraphDsl_must_not_work_from_SourceShape()
         {
-            RunnableGraph<Task<IImmutableList<int>>>.FromGraph(
+            RunnableGraph.FromGraph(
                 GraphDsl.Create<ClosedShape, Task<IImmutableList<int>>>(b =>
                 {
                     var o = b.Add(Source);
@@ -112,7 +112,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Reverse_Arrows_in_the_GraphDsl_must_work_from_FlowShape()
         {
-            var task = RunnableGraph<Task<IImmutableList<int>>>.FromGraph(GraphDsl.Create(Sink, (b, s) =>
+            var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
                 var f = b.Add(Flow.Create<int>());
                 b.To(f).From(Source);
@@ -126,7 +126,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Reverse_Arrows_in_the_GraphDsl_must_work_from_UniformFanInShape()
         {
-            var task = RunnableGraph<Task<IImmutableList<int>>>.FromGraph(GraphDsl.Create(Sink, (b, s) =>
+            var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
                 var f = b.Add(new Merge<int, int>(2));
                 b.To(f).From(Source);
@@ -141,7 +141,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Reverse_Arrows_in_the_GraphDsl_must_work_from_UniformFanOutShape()
         {
-            var task = RunnableGraph<Task<IImmutableList<int>>>.FromGraph(GraphDsl.Create(Sink, (b, s) =>
+            var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
                 var f = b.Add(new Broadcast<int>(2));
                 b.To(f).From(Source);
@@ -156,7 +156,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Reverse_Arrows_in_the_GraphDsl_must_work_towards_Outlets()
         {
-            var task = RunnableGraph<Task<IImmutableList<int>>>.FromGraph(GraphDsl.Create(Sink, (b, s) =>
+            var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
                 var o = b.Add(Source).Outlet;
                 b.To(s).From(o);
@@ -169,7 +169,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Reverse_Arrows_in_the_GraphDsl_must_work_towards_SourceShape()
         {
-            var task = RunnableGraph<Task<IImmutableList<int>>>.FromGraph(GraphDsl.Create(Sink, (b, s) =>
+            var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
                 var o = b.Add(Source);
                 b.To(s).From(o);
@@ -182,7 +182,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Reverse_Arrows_in_the_GraphDsl_must_work_towards_Source()
         {
-            var task = RunnableGraph<Task<IImmutableList<int>>>.FromGraph(GraphDsl.Create(Sink, (b, s) =>
+            var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
                 b.To(s).From(Source);
                 return ClosedShape.Instance;
@@ -194,7 +194,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Reverse_Arrows_in_the_GraphDsl_must_work_towards_FlowShape()
         {
-            var task = RunnableGraph<Task<IImmutableList<int>>>.FromGraph(GraphDsl.Create(Sink, (b, s) =>
+            var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
                 var f = b.Add(Flow.Create<int>());
                 b.To(s).From(f);
@@ -208,7 +208,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Reverse_Arrows_in_the_GraphDsl_must_work_towards_UniformFanInShape()
         {
-            var task = RunnableGraph<Task<IImmutableList<int>>>.FromGraph(GraphDsl.Create(Sink, (b, s) =>
+            var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
                 var f = b.Add(new Merge<int, int>(2));
                 b.To(s).From(f);
@@ -223,7 +223,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Reverse_Arrows_in_the_GraphDsl_must_fail_towards_already_full_UniformFanInShape()
         {
-            var task = RunnableGraph<Task<IImmutableList<int>>>.FromGraph(GraphDsl.Create(Sink, (b, s) =>
+            var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
                 var f = b.Add(new Merge<int, int>(2));
                 var src = b.Add(Source);
@@ -243,7 +243,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Reverse_Arrows_in_the_GraphDsl_must_work_towards_UniformFanOutShape()
         {
-            var task = RunnableGraph<Task<IImmutableList<int>>>.FromGraph(GraphDsl.Create(Sink, (b, s) =>
+            var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
                 var f = b.Add(new Broadcast<int>(2));
                 b.To(s).From(f);
@@ -258,7 +258,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Reverse_Arrows_in_the_GraphDsl_must_fail_towards_already_full_UniformFanOutShape()
         {
-            var task = RunnableGraph<Task<IImmutableList<int>>>.FromGraph(GraphDsl.Create(Sink, (b, s) =>
+            var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
                 var f = b.Add(new Broadcast<int>(2));
                 var sink2 = b.Add(Streams.Dsl.Sink.Ignore<int>().MapMaterializedValue(_ => MaterializedValue));
@@ -279,7 +279,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Reverse_Arrows_in_the_GraphDsl_must__work_across_a_Flow()
         {
-            var task = RunnableGraph<Task<IImmutableList<int>>>.FromGraph(GraphDsl.Create(Sink, (b, s) =>
+            var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
                 b.To(s).Via(Flow.Create<int>().MapMaterializedValue(_ => MaterializedValue)).From(Source);
                 return ClosedShape.Instance;
@@ -291,7 +291,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Reverse_Arrows_in_the_GraphDsl_must_work_across_a_FlowShape()
         {
-            var task = RunnableGraph<Task<IImmutableList<int>>>.FromGraph(GraphDsl.Create(Sink, (b, s) =>
+            var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
                 b.To(s).Via(b.Add(Flow.Create<int>().MapMaterializedValue(_ => MaterializedValue))).From(Source);
                 

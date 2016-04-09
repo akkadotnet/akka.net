@@ -17,9 +17,9 @@ namespace Akka.Streams.Tests.Dsl
         protected override TestSubscriber.Probe<int> Setup(IPublisher<int> p1, IPublisher<int> p2)
         {
             var subscriber = TestSubscriber.CreateProbe<int>(this);
-            Source.FromPublisher<int, Unit>(p1)
-                .Merge(Source.FromPublisher<int, Unit>(p2))
-                .RunWith(Sink.FromSubscriber<int, Unit>(subscriber), Materializer);
+            Source.FromPublisher(p1)
+                .Merge(Source.FromPublisher(p2))
+                .RunWith(Sink.FromSubscriber(subscriber), Materializer);
             return subscriber;
         }
 
@@ -40,7 +40,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Map(i => i*2)
                     .Map(i => i/2)
                     .Map(i => i + 1)
-                    .RunWith(Sink.FromSubscriber<int, Unit>(probe), Materializer);
+                    .RunWith(Sink.FromSubscriber(probe), Materializer);
 
                 var subscription = probe.ExpectSubscription();
 
@@ -116,7 +116,7 @@ namespace Akka.Streams.Tests.Dsl
                 var t =
                     Source.AsSubscriber<int>()
                         .MergeMaterialized(Source.AsSubscriber<int>(), Tuple.Create)
-                        .ToMaterialized(Sink.FromSubscriber<int, Unit>(down), Keep.Left)
+                        .ToMaterialized(Sink.FromSubscriber(down), Keep.Left)
                         .Run(Materializer);
                 var graphSubscriber1 = t.Item1;
                 var graphSubscriber2 = t.Item2;

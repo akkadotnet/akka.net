@@ -35,9 +35,9 @@ namespace Akka.Streams.Tests.Dsl
             var subscriber = TestSubscriber.CreateProbe<int>(this);
 
             // Simply repeat the last element as an extrapolation step
-            Source.FromPublisher<int, Unit>(publisher)
+            Source.FromPublisher(publisher)
                 .Expand(i => Enumerable.Repeat(i, 200).GetEnumerator())
-                .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                .To(Sink.FromSubscriber(subscriber))
                 .Run(materializer);
 
             for (var i = 1; i <= 100; i++)
@@ -57,9 +57,9 @@ namespace Akka.Streams.Tests.Dsl
             var subscriber = TestSubscriber.CreateProbe<int>(this);
 
             // Simply repeat the last element as an extrapolation step
-            Source.FromPublisher<int, Unit>(publisher)
+            Source.FromPublisher(publisher)
                 .Expand(i => Enumerable.Repeat(i, 200).GetEnumerator())
-                .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                .To(Sink.FromSubscriber(subscriber))
                 .Run(Materializer);
 
             publisher.SendNext(42);
@@ -83,9 +83,9 @@ namespace Akka.Streams.Tests.Dsl
             var subscriber = TestSubscriber.CreateProbe<int>(this);
 
             // Simply repeat the last element as an extrapolation step
-            Source.FromPublisher<int, Unit>(publisher)
+            Source.FromPublisher(publisher)
                 .Expand(i => Enumerable.Repeat(i, 200).GetEnumerator())
-                .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                .To(Sink.FromSubscriber(subscriber))
                 .Run(Materializer);
 
             publisher.SendNext(1);
@@ -129,9 +129,9 @@ namespace Akka.Streams.Tests.Dsl
             var subscriber = TestSubscriber.CreateProbe<int>(this);
 
             // Simply repeat the last element as an extrapolation step
-            Source.FromPublisher<int, Unit>(publisher)
+            Source.FromPublisher(publisher)
                 .Expand(i => Enumerable.Repeat(i, 200).GetEnumerator())
-                .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                .To(Sink.FromSubscriber(subscriber))
                 .Run(Materializer);
 
             publisher.SendNext(1);

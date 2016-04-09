@@ -108,7 +108,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     .Grouped(200)
                     .ToMaterialized(Sink.First<IEnumerable<int>>(), Keep.Right);
 
-                var tasks = RunnableGraph<Tuple<Task<IEnumerable<int>>, Task<IEnumerable<int>>>>.FromGraph(
+                var tasks = RunnableGraph.FromGraph(
                     GraphDsl.Create(takeAll, takeAll, Keep.Both, (builder, shape1, shape2) =>
                     {
                         var bidi = builder.Add(rotatedBidi);
@@ -173,13 +173,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 var upstream = TestPublisher.CreateProbe<int>(this);
 
-                RunnableGraph<Unit>.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
                 {
                     var faily = b.Add(failyStage);
 
-                    b.From(Source.FromPublisher<int, Unit>(upstream)).To(faily.In);
-                    b.From(faily.Out0).To(Sink.FromSubscriber<int, Unit>(downstream0));
-                    b.From(faily.Out1).To(Sink.FromSubscriber<int, Unit>(downstream1));
+                    b.From(Source.FromPublisher(upstream)).To(faily.In);
+                    b.From(faily.Out0).To(Sink.FromSubscriber(downstream0));
+                    b.From(faily.Out1).To(Sink.FromSubscriber(downstream1));
 
                     return ClosedShape.Instance;
                 })).Run(noFuzzMaterializer);

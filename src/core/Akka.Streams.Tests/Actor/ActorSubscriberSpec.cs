@@ -48,7 +48,7 @@ namespace Akka.Streams.Tests.Actor
             // creating actor with default supervision, because stream supervisor default strategy is to 
             var actorRef = Sys.ActorOf(ManualSubscriber.Props(TestActor));
             Source.From(Enumerable.Range(1, 7))
-                .RunWith(Sink.FromSubscriber<int, Unit>(new ActorSubscriberImpl<int>(actorRef)), Sys.Materializer());
+                .RunWith(Sink.FromSubscriber(new ActorSubscriberImpl<int>(actorRef)), Sys.Materializer());
             actorRef.Tell("ready");
             ExpectMsg<OnNext>().Element.Should().Be(1);
             ExpectMsg<OnNext>().Element.Should().Be(2);

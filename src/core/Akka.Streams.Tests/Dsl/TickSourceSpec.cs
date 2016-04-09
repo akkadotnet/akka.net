@@ -26,7 +26,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var c = TestSubscriber.CreateManualProbe<string>(this);
                 Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(500), "tick")
-                    .To(Sink.FromSubscriber<string, Unit>(c))
+                    .To(Sink.FromSubscriber(c))
                     .Run(Materializer);
                 var sub = c.ExpectSubscription();
                 sub.Request(3);
@@ -46,7 +46,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var c = TestSubscriber.CreateManualProbe<string>(this);
             Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), "tick")
-                .To(Sink.FromSubscriber<string, Unit>(c))
+                .To(Sink.FromSubscriber(c))
                 .Run(Materializer);
             var sub = c.ExpectSubscription();
             sub.Request(2);
@@ -90,7 +90,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var c = TestSubscriber.CreateManualProbe<int>(this);
-                RunnableGraph<Unit>.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
                 {
                     var zip = b.Add(new Zip<int, string>());
                     b.From(Source.From(Enumerable.Range(1, 100))).To(zip.In0);
@@ -98,7 +98,7 @@ namespace Akka.Streams.Tests.Dsl
                         .MapMaterializedValue(_ => Unit.Instance)).To(zip.In1);
                     b.From(zip.Out)
                         .Via(Flow.Create<Tuple<int, string>>().Map(t => t.Item1))
-                        .To(Sink.FromSubscriber<int, Unit>(c));
+                        .To(Sink.FromSubscriber(c));
                     return ClosedShape.Instance;
                 })).Run(Materializer);
                 var sub = c.ExpectSubscription();
@@ -118,7 +118,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var c = TestSubscriber.CreateManualProbe<string>(this);
                 var tickSource = Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(500), "tick");
-                var cancelable = tickSource.To(Sink.FromSubscriber<string, Unit>(c)).Run(Materializer);
+                var cancelable = tickSource.To(Sink.FromSubscriber(c)).Run(Materializer);
                 var sub = c.ExpectSubscription();
                 sub.Request(3);
                 c.ExpectNoMsg(TimeSpan.FromMilliseconds(600));

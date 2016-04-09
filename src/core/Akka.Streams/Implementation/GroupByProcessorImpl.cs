@@ -101,7 +101,7 @@ namespace Akka.Streams.Implementation
                     if (_keyToSubstreamOutput.Count == _maxSubstreams)
                         throw new IllegalStateException(string.Format("Cannot open substream for key '{0}': too many substreams open", key));
                     var substreamOutput = CreateSubstreamOutput();
-                    var substreamFlow = Source.FromPublisher<object, Unit>(substreamOutput);
+                    var substreamFlow = Source.FromPublisher(substreamOutput);
                     PrimaryOutputs.EnqueueOutputElement(substreamFlow);
 
                     if (_keyToSubstreamOutput.ContainsKey(key)) _keyToSubstreamOutput[key] = substreamOutput;

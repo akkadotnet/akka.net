@@ -298,11 +298,14 @@ my-dispatcher1 {
             var probe2 = CreateTestProbe();
 
             var senderRef1 = ActorOf(Sender.Props);
-            var source1 = Source.FromPublisher<int, IActorRef>(ActorPublisher.Create<int>(senderRef1));
+            var source1 = Source.FromPublisher(ActorPublisher.Create<int>(senderRef1))
+                .MapMaterializedValue(_ => senderRef1);
 
-            var sink1 = Sink.FromSubscriber<string, IActorRef>(ActorSubscriber.Create<string>(ActorOf(Receiver.Props(probe1.Ref))));
-            var sink2 = Sink.ActorSubscriber<string>(Receiver.Props(probe2.Ref));
-            var senderRef2 = RunnableGraph<IActorRef>.FromGraph(GraphDsl.Create(
+            var sink1 = Sink.FromSubscriber(ActorSubscriber.Create<string>(ActorOf(Receiver.Props(probe1.Ref))))
+                .MapMaterializedValue(_ => probe1.Ref);
+            var sink2 = Sink.ActorSubscriber<string>(Receiver.Props(probe2.Ref))
+                .MapMaterializedValue(_ => probe2.Ref);
+            var senderRef2 = RunnableGraph.FromGraph(GraphDsl.Create(
                 Source.ActorPublisher<int>(Sender.Props),
                 (builder, source2) =>
                 {
@@ -385,7 +388,7 @@ my-dispatcher1 {
             var materializer = ActorMaterializer.Create(Sys, Sys.Materializer().Settings.WithDispatcher("my-dispatcher1"));
             var s = this.CreateManualProbe<string>();
             var actorRef = Source.ActorPublisher<string>(TestPublisher.Props(TestActor, useTestDispatcher: false))
-                    .To(Sink.FromSubscriber<string, Unit>(s))
+                    .To(Sink.FromSubscriber(s))
                     .Run(materializer);
 
             actorRef.Tell(ThreadName.Instance);
@@ -399,7 +402,7 @@ my-dispatcher1 {
             var s = this.CreateManualProbe<string>();
             var actorRef = Source.ActorPublisher<string>(TestPublisher.Props(TestActor, useTestDispatcher: false))
                 .WithAttributes(ActorAttributes.CreateDispatcher("my-dispatcher1"))
-                .To(Sink.FromSubscriber<string, Unit>(s))
+                .To(Sink.FromSubscriber(s))
                 .Run(materializer);
 
             actorRef.Tell(ThreadName.Instance);
@@ -413,7 +416,7 @@ my-dispatcher1 {
             var s = this.CreateManualProbe<string>();
             var actorRef = Source.ActorPublisher<string>(TestPublisher.Props(TestActor, useTestDispatcher: false).WithDispatcher("my-dispatcher1"))
                 .WithAttributes(ActorAttributes.CreateDispatcher("my-dispatcher2"))
-                .To(Sink.FromSubscriber<string, Unit>(s))
+                .To(Sink.FromSubscriber(s))
                 .Run(materializer);
 
             actorRef.Tell(ThreadName.Instance);

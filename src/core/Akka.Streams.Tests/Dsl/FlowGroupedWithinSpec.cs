@@ -36,9 +36,9 @@ namespace Akka.Streams.Tests.Dsl
                 var p = TestPublisher.CreateManualProbe<int>(this);
                 var c = TestSubscriber.CreateManualProbe<IEnumerable<int>>(this);
 
-                Source.FromPublisher<int, Unit>(p)
+                Source.FromPublisher(p)
                     .GroupedWithin(1000, TimeSpan.FromSeconds(1))
-                    .To(Sink.FromSubscriber<IEnumerable<int>, Unit>(c))
+                    .To(Sink.FromSubscriber(c))
                     .Run(Materializer);
 
                 var pSub = p.ExpectSubscription();
@@ -83,7 +83,7 @@ namespace Akka.Streams.Tests.Dsl
 
             Source.From(Enumerable.Range(1, 3))
                 .GroupedWithin(1000, TimeSpan.FromSeconds(10))
-                .To(Sink.FromSubscriber<IEnumerable<int>, Unit>(c))
+                .To(Sink.FromSubscriber(c))
                 .Run(Materializer);
 
             var cSub = c.ExpectSubscription();
@@ -101,9 +101,9 @@ namespace Akka.Streams.Tests.Dsl
             var p = TestPublisher.CreateManualProbe<int>(this);
             var c = TestSubscriber.CreateManualProbe<IEnumerable<int>>(this);
 
-            Source.FromPublisher<int, Unit>(p)
+            Source.FromPublisher(p)
                 .GroupedWithin(1000, TimeSpan.FromSeconds(1))
-                .To(Sink.FromSubscriber<IEnumerable<int>, Unit>(c))
+                .To(Sink.FromSubscriber(c))
                 .Run(Materializer);
 
             var pSub = p.ExpectSubscription();
@@ -134,9 +134,9 @@ namespace Akka.Streams.Tests.Dsl
             var p = TestPublisher.CreateManualProbe<int>(this);
             var c = TestSubscriber.CreateManualProbe<IEnumerable<int>>(this);
 
-            Source.FromPublisher<int, Unit>(p)
+            Source.FromPublisher(p)
                 .GroupedWithin(1000, TimeSpan.FromMilliseconds(500))
-                .To(Sink.FromSubscriber<IEnumerable<int>, Unit>(c))
+                .To(Sink.FromSubscriber(c))
                 .Run(Materializer);
 
             var pSub = p.ExpectSubscription();
@@ -165,9 +165,9 @@ namespace Akka.Streams.Tests.Dsl
             var upstream = TestPublisher.CreateProbe<int>(this);
             var downstream = TestSubscriber.CreateProbe<IEnumerable<int>>(this);
 
-            Source.FromPublisher<int, Unit>(upstream)
+            Source.FromPublisher(upstream)
                 .GroupedWithin(3, TimeSpan.FromSeconds(2))
-                .To(Sink.FromSubscriber<IEnumerable<int>, Unit>(downstream))
+                .To(Sink.FromSubscriber(downstream))
                 .Run(Materializer);
 
             downstream.Request(2);

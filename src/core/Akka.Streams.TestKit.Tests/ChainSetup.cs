@@ -24,7 +24,7 @@ namespace Akka.Streams.TestKit.Tests
             Upstream = TestPublisher.CreateManualProbe<TIn>(system);
             Downstream = TestSubscriber.CreateProbe<TOut>(system);
 
-            var s = Source.FromPublisher<TIn, Unit>(Upstream).Via(stream((Flow<TIn, TIn, Unit>)Flow.Identity<TIn>().Map(x => x).Named("buh")));
+            var s = Source.FromPublisher(Upstream).Via(stream((Flow<TIn, TIn, Unit>)Flow.Identity<TIn>().Map(x => x).Named("buh")));
             Publisher = toPublisher(s, materializer);
             UpstreamSubscription = Upstream.ExpectSubscription();
             Publisher.Subscribe(Downstream);

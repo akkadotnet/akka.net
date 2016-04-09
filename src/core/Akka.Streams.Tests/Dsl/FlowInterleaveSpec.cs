@@ -18,9 +18,9 @@ namespace Akka.Streams.Tests.Dsl
         protected override TestSubscriber.Probe<int> Setup(IPublisher<int> p1, IPublisher<int> p2)
         {
             var subscriber = TestSubscriber.CreateProbe<int>(this);
-            Source.FromPublisher<int, Unit>(p1)
-                .Interleave(Source.FromPublisher<int, Unit>(p2), 2)
-                .RunWith(Sink.FromSubscriber<int, Unit>(subscriber), Materializer);
+            Source.FromPublisher(p1)
+                .Interleave(Source.FromPublisher(p2), 2)
+                .RunWith(Sink.FromSubscriber(subscriber), Materializer);
             return subscriber;
         }
 
@@ -34,7 +34,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.From(Enumerable.Range(0, 4))
                     .Interleave(Source.From(Enumerable.Range(4, 3)), 2)
                     .Interleave(Source.From(Enumerable.Range(7, 5)), 3)
-                    .RunWith(Sink.FromSubscriber<int, Unit>(probe), Materializer);
+                    .RunWith(Sink.FromSubscriber(probe), Materializer);
 
                 var subscription = probe.ExpectSubscription();
 
@@ -59,7 +59,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 Source.From(Enumerable.Range(0, 3))
                     .Interleave(Source.From(Enumerable.Range(3, 3)), 2)
-                    .RunWith(Sink.FromSubscriber<int, Unit>(probe), Materializer);
+                    .RunWith(Sink.FromSubscriber(probe), Materializer);
 
                 probe.ExpectSubscription().Request(10);
                 probe.ExpectNext(0, 1, 3, 4, 2, 5);
@@ -76,7 +76,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 Source.From(Enumerable.Range(0, 3))
                     .Interleave(Source.From(Enumerable.Range(3, 3)), 1)
-                    .RunWith(Sink.FromSubscriber<int, Unit>(probe), Materializer);
+                    .RunWith(Sink.FromSubscriber(probe), Materializer);
 
                 probe.ExpectSubscription().Request(10);
                 probe.ExpectNext(0, 3, 1, 4, 2, 5);
@@ -103,7 +103,7 @@ namespace Akka.Streams.Tests.Dsl
                 var probe = TestSubscriber.CreateManualProbe<int>(this);
                 Source.From(Enumerable.Range(0, 3))
                     .Interleave(Source.From(Enumerable.Range(3, 13)), 10)
-                    .RunWith(Sink.FromSubscriber<int, Unit>(probe), Materializer);
+                    .RunWith(Sink.FromSubscriber(probe), Materializer);
 
                 probe.ExpectSubscription().Request(25);
                 Enumerable.Range(0, 16).ForEach(i => probe.ExpectNext(i));
@@ -112,7 +112,7 @@ namespace Akka.Streams.Tests.Dsl
                 var probe2 = TestSubscriber.CreateManualProbe<int>(this);
                 Source.From(Enumerable.Range(1, 20))
                     .Interleave(Source.From(Enumerable.Range(21, 5)), 10)
-                    .RunWith(Sink.FromSubscriber<int, Unit>(probe2), Materializer);
+                    .RunWith(Sink.FromSubscriber(probe2), Materializer);
 
                 probe2.ExpectSubscription().Request(100);
                 Enumerable.Range(1, 10).ForEach(i => probe2.ExpectNext(i));
@@ -212,7 +212,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 var t = Source.AsSubscriber<int>()
                     .InterleaveMaterialized(Source.AsSubscriber<int>(), 2, Tuple.Create)
-                    .ToMaterialized(Sink.FromSubscriber<int, Unit>(down), Keep.Left)
+                    .ToMaterialized(Sink.FromSubscriber(down), Keep.Left)
                     .Run(Materializer);
                 var graphSubscriber1 = t.Item1;
                 var graphSubscriber2 = t.Item2;

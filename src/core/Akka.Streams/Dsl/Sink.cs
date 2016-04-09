@@ -362,9 +362,9 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Helper to create <see cref="Sink{TIn,TMat}"/> from <see cref="ISubscriber{TIn}"/>.
         /// </summary>
-        public static Sink<TIn, TMat> FromSubscriber<TIn, TMat>(ISubscriber<TIn> subscriber)
+        public static Sink<TIn, Unit> FromSubscriber<TIn>(ISubscriber<TIn> subscriber)
         {
-            return new Sink<TIn, TMat>(new SubscriberSink<TIn>(subscriber, DefaultAttributes.SubscriberSink, Shape<TIn>("SubscriberSink")));
+            return new Sink<TIn, Unit>(new SubscriberSink<TIn>(subscriber, DefaultAttributes.SubscriberSink, Shape<TIn>("SubscriberSink")));
         }
 
         /// <summary>

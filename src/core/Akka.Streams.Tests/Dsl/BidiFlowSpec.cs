@@ -61,7 +61,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_BidiFlow_must_work_top_and_bottom_in_isolation()
         {
-            var t = RunnableGraph<Tuple<Task<long>,Task<string>>>.FromGraph(GraphDsl.Create(Sink.First<long>(), Sink.First<string>(), Keep.Both,
+            var t = RunnableGraph.FromGraph(GraphDsl.Create(Sink.First<long>(), Sink.First<string>(), Keep.Both,
                 (b, st, sb) =>
                 {
                     var s = b.Add(Bidi());
@@ -132,7 +132,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_BidiFlow_must_materialize_its_value()
         {
-            var f = RunnableGraph<Task<int>>.FromGraph(GraphDsl.Create(BidiMaterialized(), (b, bidi) =>
+            var f = RunnableGraph.FromGraph(GraphDsl.Create(BidiMaterialized(), (b, bidi) =>
             {
                 var flow1 = b.Add(Flow.Create<string>().Map(int.Parse).MapMaterializedValue(_ => Task.FromResult(0)));
                 var flow2 =

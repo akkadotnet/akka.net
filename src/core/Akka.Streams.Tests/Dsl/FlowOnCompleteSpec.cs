@@ -26,7 +26,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var onCompleteProbe = CreateTestProbe();
                 var p = TestPublisher.CreateManualProbe<int>(this);
-                Source.FromPublisher<int, Unit>(p)
+                Source.FromPublisher(p)
                     .To(Sink.OnComplete<int>(() => onCompleteProbe.Ref.Tell("done"), _ => { }))
                     .Run(Materializer);
                 var proc = p.ExpectSubscription();
@@ -45,7 +45,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var onCompleteProbe = CreateTestProbe();
                 var p = TestPublisher.CreateManualProbe<int>(this);
-                Source.FromPublisher<int, Unit>(p)
+                Source.FromPublisher(p)
                     .To(Sink.OnComplete<int>(() => {}, ex => onCompleteProbe.Ref.Tell(ex)))
                     .Run(Materializer);
                 var proc = p.ExpectSubscription();
@@ -64,7 +64,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var onCompleteProbe = CreateTestProbe();
                 var p = TestPublisher.CreateManualProbe<int>(this);
-                Source.FromPublisher<int, Unit>(p)
+                Source.FromPublisher(p)
                     .To(Sink.OnComplete<int>(() => onCompleteProbe.Ref.Tell("done"), _ => {}))
                     .Run(Materializer);
                 var proc = p.ExpectSubscription();
@@ -83,7 +83,7 @@ namespace Akka.Streams.Tests.Dsl
                 var onCompleteProbe = CreateTestProbe();
                 var p = TestPublisher.CreateManualProbe<int>(this);
                 var foreachSink = Sink.ForEach<int>(x => onCompleteProbe.Ref.Tell("foreach-" + x));
-                var future = Source.FromPublisher<int, Unit>(p).Map(x =>
+                var future = Source.FromPublisher(p).Map(x =>
                 {
                     onCompleteProbe.Ref.Tell("map-" + x);
                     return x;

@@ -59,12 +59,15 @@ namespace Akka.Streams.Dsl
         {
             return materializer.Materialize(this);
         }
+    }
 
+    public static class RunnableGraph
+    {
         /// <summary>
         /// A graph with a closed shape is logically a runnable graph, this method makes
         /// it so also in type.
         /// </summary>
-        public static RunnableGraph<TMat> FromGraph(IGraph<ClosedShape, TMat> g)
+        public static RunnableGraph<TMat> FromGraph<TMat>(IGraph<ClosedShape, TMat> g)
             => g as RunnableGraph<TMat> ?? new RunnableGraph<TMat>(g.Module);
     }
 }

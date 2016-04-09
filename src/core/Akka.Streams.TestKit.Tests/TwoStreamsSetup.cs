@@ -30,14 +30,14 @@ namespace Akka.Streams.TestKit.Tests
 
         protected override TestSubscriber.Probe<TOutputs> Setup(IPublisher<int> p1, IPublisher<int> p2)
         {
-            var subscriber = TestSubscriber.CreateProbe<TOutputs>(this);
-            RunnableGraph<Unit>.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+            var subscriber = this.CreateProbe<TOutputs>();
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
             {
                 var f = CreateFixture(b);
 
-                b.From(Source.FromPublisher<int, Unit>(p1)).To(f.Left);
-                b.From(Source.FromPublisher<int, Unit>(p2)).To(f.Right);
-                b.From(f.Out).To(Sink.FromSubscriber<TOutputs, Unit>(subscriber));
+                b.From(Source.FromPublisher(p1)).To(f.Left);
+                b.From(Source.FromPublisher(p2)).To(f.Right);
+                b.From(f.Out).To(Sink.FromSubscriber(subscriber));
                 return ClosedShape.Instance;
             })).Run(Materializer);
 

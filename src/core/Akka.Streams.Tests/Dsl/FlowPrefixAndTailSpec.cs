@@ -42,7 +42,7 @@ namespace Akka.Streams.Tests.Dsl
                 fut.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 var tailFlow = fut.Result.Item2;
                 var tailSubscriber = TestSubscriber.CreateManualProbe<int>(this);
-                tailFlow.To(Sink.FromSubscriber<int, Unit>(tailSubscriber)).Run(Materializer);
+                tailFlow.To(Sink.FromSubscriber(tailSubscriber)).Run(Materializer);
                 tailSubscriber.ExpectSubscriptionAndComplete();
             }, Materializer);
         }
@@ -58,7 +58,7 @@ namespace Akka.Streams.Tests.Dsl
                 fut.Result.Item1.ShouldAllBeEquivalentTo(new[] {1, 2, 3});
                 var tailFlow = fut.Result.Item2;
                 var tailSubscriber = TestSubscriber.CreateManualProbe<int>(this);
-                tailFlow.To(Sink.FromSubscriber<int, Unit>(tailSubscriber)).Run(Materializer);
+                tailFlow.To(Sink.FromSubscriber(tailSubscriber)).Run(Materializer);
                 tailSubscriber.ExpectSubscriptionAndComplete();
             }, Materializer);
         }
@@ -129,7 +129,7 @@ namespace Akka.Streams.Tests.Dsl
                 fut.Result.Item1.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
                 var tail = fut.Result.Item2;
                 var subscriber = TestSubscriber.CreateManualProbe<int>(this);
-                tail.To(Sink.FromSubscriber<int, Unit>(subscriber)).Run(Materializer);
+                tail.To(Sink.FromSubscriber(subscriber)).Run(Materializer);
                 subscriber.ExpectSubscriptionAndComplete();
             }, Materializer);
         }
@@ -146,10 +146,10 @@ namespace Akka.Streams.Tests.Dsl
                 var tail = fut.Result.Item2;
 
                 var subscriber1 = TestSubscriber.CreateProbe<int>(this);
-                tail.To(Sink.FromSubscriber<int, Unit>(subscriber1)).Run(Materializer);
+                tail.To(Sink.FromSubscriber(subscriber1)).Run(Materializer);
 
                 var subscriber2 = TestSubscriber.CreateProbe<int>(this);
-                tail.To(Sink.FromSubscriber<int, Unit>(subscriber2)).Run(Materializer);
+                tail.To(Sink.FromSubscriber(subscriber2)).Run(Materializer);
 
                 subscriber2.ExpectSubscriptionAndError()
                     .Message.Should()
@@ -178,7 +178,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 var subscriber = TestSubscriber.CreateProbe<int>(this);
                 Thread.Sleep(1000);
-                tail.To(Sink.FromSubscriber<int, Unit>(subscriber)).Run(tightTimeoutMaterializer);
+                tail.To(Sink.FromSubscriber(subscriber)).Run(tightTimeoutMaterializer);
                 subscriber.ExpectSubscriptionAndError()
                     .Message.Should()
                     .Be("Substream Source has not been materialized in 00:00:00.5000000");
@@ -205,9 +205,9 @@ namespace Akka.Streams.Tests.Dsl
                 var publisher = TestPublisher.CreateManualProbe<int>(this);
                 var subscriber = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, Unit>>>(this);
 
-                Source.FromPublisher<int, Unit>(publisher)
+                Source.FromPublisher(publisher)
                     .PrefixAndTail(3)
-                    .To(Sink.FromSubscriber<Tuple<IImmutableList<int>, Source<int, Unit>>, Unit>(subscriber))
+                    .To(Sink.FromSubscriber(subscriber))
                     .Run(Materializer);
 
                 var upstream = publisher.ExpectSubscription();
@@ -231,9 +231,9 @@ namespace Akka.Streams.Tests.Dsl
                 var publisher = TestPublisher.CreateManualProbe<int>(this);
                 var subscriber = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, Unit>>>(this);
 
-                Source.FromPublisher<int, Unit>(publisher)
+                Source.FromPublisher(publisher)
                     .PrefixAndTail(1)
-                    .To(Sink.FromSubscriber<Tuple<IImmutableList<int>, Source<int, Unit>>, Unit>(subscriber))
+                    .To(Sink.FromSubscriber(subscriber))
                     .Run(Materializer);
 
                 var upstream = publisher.ExpectSubscription();
@@ -250,7 +250,7 @@ namespace Akka.Streams.Tests.Dsl
                 subscriber.ExpectComplete();
 
                 var substreamSubscriber = TestSubscriber.CreateManualProbe<int>(this);
-                tail.To(Sink.FromSubscriber<int, Unit>(substreamSubscriber)).Run(Materializer);
+                tail.To(Sink.FromSubscriber(substreamSubscriber)).Run(Materializer);
                 substreamSubscriber.ExpectSubscription();
                 upstream.SendError(TestException);
                 substreamSubscriber.ExpectError().Should().Be(TestException);
@@ -265,9 +265,9 @@ namespace Akka.Streams.Tests.Dsl
                 var publisher = TestPublisher.CreateManualProbe<int>(this);
                 var subscriber = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, Unit>>>(this);
 
-                Source.FromPublisher<int, Unit>(publisher)
+                Source.FromPublisher(publisher)
                     .PrefixAndTail(3)
-                    .To(Sink.FromSubscriber<Tuple<IImmutableList<int>, Source<int, Unit>>, Unit>(subscriber))
+                    .To(Sink.FromSubscriber(subscriber))
                     .Run(Materializer);
 
                 var upstream = publisher.ExpectSubscription();
@@ -291,9 +291,9 @@ namespace Akka.Streams.Tests.Dsl
                 var publisher = TestPublisher.CreateManualProbe<int>(this);
                 var subscriber = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, Unit>>>(this);
 
-                Source.FromPublisher<int, Unit>(publisher)
+                Source.FromPublisher(publisher)
                     .PrefixAndTail(1)
-                    .To(Sink.FromSubscriber<Tuple<IImmutableList<int>, Source<int, Unit>>, Unit>(subscriber))
+                    .To(Sink.FromSubscriber(subscriber))
                     .Run(Materializer);
 
                 var upstream = publisher.ExpectSubscription();
@@ -310,7 +310,7 @@ namespace Akka.Streams.Tests.Dsl
                 subscriber.ExpectComplete();
 
                 var substreamSubscriber = TestSubscriber.CreateManualProbe<int>(this);
-                tail.To(Sink.FromSubscriber<int, Unit>(substreamSubscriber)).Run(Materializer);
+                tail.To(Sink.FromSubscriber(substreamSubscriber)).Run(Materializer);
                 substreamSubscriber.ExpectSubscription().Cancel();
 
                 upstream.ExpectCancellation();
@@ -327,7 +327,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 var flowSubscriber = Source.AsSubscriber<int>()
                     .PrefixAndTail(1)
-                    .To(Sink.FromSubscriber<Tuple<IImmutableList<int>, Source<int, Unit>>, Unit>(down))
+                    .To(Sink.FromSubscriber(down))
                     .Run(Materializer);
 
                 var downstream = down.ExpectSubscription();
@@ -345,7 +345,7 @@ namespace Akka.Streams.Tests.Dsl
             var sub = TestSubscriber.CreateManualProbe<int>(this);
 
             var f =
-                Source.FromPublisher<int, Unit>(pub)
+                Source.FromPublisher(pub)
                     .PrefixAndTail(1)
                     .RunWith(Sink.First<Tuple<IImmutableList<int>, Source<int, Unit>>>(), Materializer);
             var s = pub.ExpectSubscription();

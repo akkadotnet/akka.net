@@ -131,7 +131,7 @@ namespace Akka.Streams.Tests.Dsl
             var p = new TaskCompletionSource<Source<int, Unit>>();
 
             Source.Combine(
-                Source.From(new[] {Source.FromPublisher<int, Unit>(p1), Source.FromPublisher<int, Unit>(p2)}),
+                Source.From(new[] {Source.FromPublisher(p1), Source.FromPublisher(p2)}),
                 Source.FromTask(p.Task), i => new Merge<Source<int, Unit>>(i))
                 .FlatMapMerge(5, x => x)
                 .RunWith(Sink.First<int>(), Materializer);
@@ -153,7 +153,7 @@ namespace Akka.Streams.Tests.Dsl
 
 
             Source.From(new[]
-            {Source.FromPublisher<int, Unit>(p1), Source.FromPublisher<int, Unit>(p2), Source.FromTask(p.Task)})
+            {Source.FromPublisher(p1), Source.FromPublisher(p2), Source.FromTask(p.Task)})
                 .FlatMapMerge(5, x => x)
                 .RunWith(Sink.First<int>(), Materializer);
 
@@ -176,7 +176,7 @@ namespace Akka.Streams.Tests.Dsl
             Source.From(Enumerable.Range(1, 3)).FlatMapMerge(10, i =>
             {
                 if (i == 1)
-                    return Source.FromPublisher<int, Unit>(p);
+                    return Source.FromPublisher(p);
 
                 latch.Ready(TimeSpan.FromSeconds(3));
                 throw ex;
@@ -192,7 +192,7 @@ namespace Akka.Streams.Tests.Dsl
             var p1 = TestPublisher.CreateProbe<int>(this);
             var p2 = TestPublisher.CreateProbe<int>(this);
 
-            var sink = Source.From(new[] {Source.FromPublisher<int, Unit>(p1), Source.FromPublisher<int, Unit>(p2)})
+            var sink = Source.From(new[] {Source.FromPublisher(p1), Source.FromPublisher(p2)})
                 .FlatMapMerge(5, x => x)
                 .RunWith(this.SinkProbe<int>(), Materializer);
 

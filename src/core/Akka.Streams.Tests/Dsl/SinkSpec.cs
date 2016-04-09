@@ -40,7 +40,7 @@ namespace Akka.Streams.Tests.Dsl
                     var closure = i;
                     b.From(broadcast.Out(i))
                         .Via(Flow.Create<int>().Filter(x => x == closure))
-                        .To(Sink.FromSubscriber<int, Unit>(probes[i]));
+                        .To(Sink.FromSubscriber(probes[i]));
                 }
                 return new SinkShape<int>(broadcast.In);
             }));
@@ -57,16 +57,16 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Sink_must_be_composable_with_importing_1_modules()
         {
             var probes = CreateProbes();
-            var sink = Sink.FromGraph(GraphDsl.Create(Sink.FromSubscriber<int, Unit>(probes[0]), (b, shape) =>
+            var sink = Sink.FromGraph(GraphDsl.Create(Sink.FromSubscriber(probes[0]), (b, shape) =>
             {
                 var broadcast = b.Add(new Broadcast<int>(3));
                 b.From(broadcast.Out(0)).Via(Flow.Create<int>().Filter(x => x == 0)).To(shape.Inlet);
                 b.From(broadcast.Out(1))
                     .Via(Flow.Create<int>().Filter(x => x == 1))
-                    .To(Sink.FromSubscriber<int, Unit>(probes[1]));
+                    .To(Sink.FromSubscriber(probes[1]));
                 b.From(broadcast.Out(2))
                     .Via(Flow.Create<int>().Filter(x => x == 2))
-                    .To(Sink.FromSubscriber<int, Unit>(probes[2]));
+                    .To(Sink.FromSubscriber(probes[2]));
                 return new SinkShape<int>(broadcast.In);
             }));
             Source.From(new[] { 0, 1, 2 }).RunWith(sink, Materializer);
@@ -83,15 +83,15 @@ namespace Akka.Streams.Tests.Dsl
         {
             var probes = CreateProbes();
             var sink =
-                Sink.FromGraph(GraphDsl.Create(Sink.FromSubscriber<int, Unit>(probes[0]),
-                    Sink.FromSubscriber<int, Unit>(probes[1]), (_, __) => Unit.Instance, (b, shape0, shape1) =>
+                Sink.FromGraph(GraphDsl.Create(Sink.FromSubscriber(probes[0]),
+                    Sink.FromSubscriber(probes[1]), (_, __) => Unit.Instance, (b, shape0, shape1) =>
                     {
                         var broadcast = b.Add(new Broadcast<int>(3));
                         b.From(broadcast.Out(0)).Via(Flow.Create<int>().Filter(x => x == 0)).To(shape0.Inlet);
                         b.From(broadcast.Out(1)).Via(Flow.Create<int>().Filter(x => x == 1)).To(shape1.Inlet);
                         b.From(broadcast.Out(2))
                             .Via(Flow.Create<int>().Filter(x => x == 2))
-                            .To(Sink.FromSubscriber<int, Unit>(probes[2]));
+                            .To(Sink.FromSubscriber(probes[2]));
                         return new SinkShape<int>(broadcast.In);
                     }));
             Source.From(new[] { 0, 1, 2 }).RunWith(sink, Materializer);
@@ -108,8 +108,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             var probes = CreateProbes();
             var sink =
-                Sink.FromGraph(GraphDsl.Create(Sink.FromSubscriber<int, Unit>(probes[0]),
-                    Sink.FromSubscriber<int, Unit>(probes[1]), Sink.FromSubscriber<int, Unit>(probes[2]),
+                Sink.FromGraph(GraphDsl.Create(Sink.FromSubscriber(probes[0]),
+                    Sink.FromSubscriber(probes[1]), Sink.FromSubscriber(probes[2]),
                     (_, __, ___) => Unit.Instance, (b, shape0, shape1, shape2) =>
                     {
                         var broadcast = b.Add(new Broadcast<int>(3));
@@ -131,8 +131,8 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Sink_must_combine_to_many_outputs_with_simplified_API()
         {
             var probes = CreateProbes();
-            var sink = Sink.Combine(i => new Broadcast<int>(i), Sink.FromSubscriber<int, Unit>(probes[0]),
-                Sink.FromSubscriber<int, Unit>(probes[1]), Sink.FromSubscriber<int, Unit>(probes[2]));
+            var sink = Sink.Combine(i => new Broadcast<int>(i), Sink.FromSubscriber(probes[0]),
+                Sink.FromSubscriber(probes[1]), Sink.FromSubscriber(probes[2]));
 
             Source.From(new[] { 0, 1, 2 }).RunWith(sink, Materializer);
 
@@ -151,8 +151,8 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Sink_must_combine_to_two_sinks_with_simplified_API()
         {
             var probes = CreateProbes().Take(2).ToArray();
-            var sink = Sink.Combine(i => new Broadcast<int>(i), Sink.FromSubscriber<int, Unit>(probes[0]),
-                Sink.FromSubscriber<int, Unit>(probes[1]));
+            var sink = Sink.Combine(i => new Broadcast<int>(i), Sink.FromSubscriber(probes[0]),
+                Sink.FromSubscriber(probes[1]));
 
             Source.From(new[] { 0, 1, 2 }).RunWith(sink, Materializer);
 

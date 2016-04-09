@@ -25,9 +25,9 @@ namespace Akka.Streams.Tests.Dsl
             var publisher = TestPublisher.CreateProbe<int>(this);
             var subscriber = TestSubscriber.CreateProbe<int>(this);
 
-            Source.FromPublisher<int, Unit>(publisher)
+            Source.FromPublisher(publisher)
                 .BatchWeighted(3, _ => 4, i => i, (sum, i) => sum + i)
-                .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                .To(Sink.FromSubscriber(subscriber))
                 .Run(Materializer);
             var sub = subscriber.EnsureSubscription();
 

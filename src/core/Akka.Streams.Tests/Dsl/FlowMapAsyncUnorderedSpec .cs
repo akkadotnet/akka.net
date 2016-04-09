@@ -43,7 +43,7 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     latch[n].Ready(TimeSpan.FromSeconds(5));
                     return n;
-                })).To(Sink.FromSubscriber<int, Unit>(c)).Run(Materializer);
+                })).To(Sink.FromSubscriber(c)).Run(Materializer);
                 var sub = c.ExpectSubscription();
                 sub.Request(5);
 
@@ -75,7 +75,7 @@ namespace Akka.Streams.Tests.Dsl
                     probe.Ref.Tell(n);
                     return n;
                 }))
-                .To(Sink.FromSubscriber<int, Unit>(c)).Run(Materializer);
+                .To(Sink.FromSubscriber(c)).Run(Materializer);
             var sub = c.ExpectSubscription();
             c.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
             probe.ExpectNoMsg(TimeSpan.Zero);
@@ -110,7 +110,7 @@ namespace Akka.Streams.Tests.Dsl
                         latch.Ready(TimeSpan.FromSeconds(10));
                         return n;
                     }))
-                    .To(Sink.FromSubscriber<int, Unit>(c)).Run(Materializer);
+                    .To(Sink.FromSubscriber(c)).Run(Materializer);
                 var sub = c.ExpectSubscription();
                 sub.Request(10);
                 c.ExpectError().InnerException.Message.Should().Be("err1");
@@ -137,7 +137,7 @@ namespace Akka.Streams.Tests.Dsl
                             return n;
                         });
                     })
-                    .RunWith(Sink.FromSubscriber<int, Unit>(c), Materializer);
+                    .RunWith(Sink.FromSubscriber(c), Materializer);
                 var sub = c.ExpectSubscription();
                 sub.Request(10);
                 c.ExpectError().Message.Should().Be("err2");
@@ -238,7 +238,7 @@ namespace Akka.Streams.Tests.Dsl
 
             Source.From(new[] {"a", "b"})
                 .MapAsyncUnordered(4, _ => Task.FromResult(null as string))
-                .To(Sink.FromSubscriber<string, Unit>(c)).Run(Materializer);
+                .To(Sink.FromSubscriber(c)).Run(Materializer);
 
             var sub = c.ExpectSubscription();
             sub.Request(10);
@@ -252,7 +252,7 @@ namespace Akka.Streams.Tests.Dsl
             Source.From(new[] { "a", "b", "c" })
                 .MapAsyncUnordered(4, s => s.Equals("b") ? Task.FromResult(null as string) : Task.FromResult(s))
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
-                .To(Sink.FromSubscriber<string, Unit>(c)).Run(Materializer);
+                .To(Sink.FromSubscriber(c)).Run(Materializer);
             var sub = c.ExpectSubscription();
             sub.Request(10);
             c.ExpectNextUnordered("a", "c");
@@ -267,9 +267,9 @@ namespace Akka.Streams.Tests.Dsl
                 var pub = TestPublisher.CreateManualProbe<int>(this);
                 var sub = TestSubscriber.CreateManualProbe<int>(this);
 
-                Source.FromPublisher<int, Unit>(pub)
+                Source.FromPublisher(pub)
                     .MapAsyncUnordered(4, _ => Task.FromResult(0))
-                    .RunWith(Sink.FromSubscriber<int, Unit>(sub), Materializer);
+                    .RunWith(Sink.FromSubscriber(sub), Materializer);
 
                 var upstream = pub.ExpectSubscription();
                 upstream.ExpectRequest();
