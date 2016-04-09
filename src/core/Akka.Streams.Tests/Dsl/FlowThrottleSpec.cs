@@ -57,9 +57,9 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream = TestPublisher.CreateProbe<int>(this);
                 var downstream = TestSubscriber.CreateProbe<int>(this);
 
-                Source.FromPublisher<int, Unit>(upstream)
+                Source.FromPublisher(upstream)
                     .Throttle(1, TimeSpan.FromMilliseconds(300), 0, ThrottleMode.Shaping)
-                    .RunWith(Sink.FromSubscriber<int, Unit>(downstream), Materializer);
+                    .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
                 downstream.Request(2);
                 upstream.SendNext(1);
@@ -83,9 +83,9 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream = TestPublisher.CreateProbe<int>(this);
                 var downstream = TestSubscriber.CreateProbe<int>(this);
 
-                Source.FromPublisher<int, Unit>(upstream)
+                Source.FromPublisher(upstream)
                     .Throttle(1, TimeSpan.FromMilliseconds(300), 0, ThrottleMode.Shaping)
-                    .RunWith(Sink.FromSubscriber<int, Unit>(downstream), Materializer);
+                    .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
                 downstream.Request(2);
                 upstream.SendNext(1);
@@ -108,7 +108,7 @@ namespace Akka.Streams.Tests.Dsl
                 var downstream = TestSubscriber.CreateProbe<int>(this);
                 Source.From(Enumerable.Range(1, 10))
                     .Throttle(1, TimeSpan.FromMilliseconds(300), 0, ThrottleMode.Shaping)
-                    .RunWith(Sink.FromSubscriber<int, Unit>(downstream), Materializer);
+                    .RunWith(Sink.FromSubscriber(downstream), Materializer);
                 downstream.Cancel();
             }, Materializer);
         }
@@ -142,9 +142,9 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream = TestPublisher.CreateProbe<int>(this);
                 var downstream = TestSubscriber.CreateProbe<int>(this);
 
-                Source.FromPublisher<int, Unit>(upstream)
+                Source.FromPublisher(upstream)
                     .Throttle(1, TimeSpan.FromMilliseconds(200), 5, ThrottleMode.Shaping)
-                    .RunWith(Sink.FromSubscriber<int, Unit>(downstream), Materializer);
+                    .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
                 downstream.Request(1);
                 upstream.SendNext(1);
@@ -173,9 +173,9 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream = TestPublisher.CreateProbe<int>(this);
                 var downstream = TestSubscriber.CreateProbe<int>(this);
 
-                Source.FromPublisher<int, Unit>(upstream)
+                Source.FromPublisher(upstream)
                     .Throttle(1, TimeSpan.FromMilliseconds(200), 5, ThrottleMode.Shaping)
-                    .RunWith(Sink.FromSubscriber<int, Unit>(downstream), Materializer);
+                    .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
                 downstream.Request(1);
                 upstream.SendNext(1);
@@ -271,9 +271,9 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream = TestPublisher.CreateProbe<int>(this);
                 var downstream = TestSubscriber.CreateProbe<int>(this);
 
-                Source.FromPublisher<int, Unit>(upstream)
+                Source.FromPublisher(upstream)
                     .Throttle(1, TimeSpan.FromMilliseconds(300), 0, x => x, ThrottleMode.Shaping)
-                    .RunWith(Sink.FromSubscriber<int, Unit>(downstream), Materializer);
+                    .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
                 downstream.Request(2);
                 upstream.SendNext(1);
@@ -296,7 +296,7 @@ namespace Akka.Streams.Tests.Dsl
                 var downstream = TestSubscriber.CreateProbe<int>(this);
                 Source.From(Enumerable.Range(1, 10))
                     .Throttle(2, TimeSpan.FromMilliseconds(200), 0, x => x, ThrottleMode.Shaping)
-                    .RunWith(Sink.FromSubscriber<int, Unit>(downstream), Materializer);
+                    .RunWith(Sink.FromSubscriber(downstream), Materializer);
                 downstream.Cancel();
             }, Materializer);
         }
@@ -330,9 +330,9 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream = TestPublisher.CreateProbe<int>(this);
                 var downstream = TestSubscriber.CreateProbe<int>(this);
 
-                Source.FromPublisher<int, Unit>(upstream)
+                Source.FromPublisher(upstream)
                     .Throttle(2, TimeSpan.FromMilliseconds(400), 5, x => 1, ThrottleMode.Shaping)
-                    .RunWith(Sink.FromSubscriber<int, Unit>(downstream), Materializer);
+                    .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
                 downstream.Request(1);
                 upstream.SendNext(1);
@@ -361,9 +361,9 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream = TestPublisher.CreateProbe<int>(this);
                 var downstream = TestSubscriber.CreateProbe<int>(this);
 
-                Source.FromPublisher<int, Unit>(upstream)
+                Source.FromPublisher(upstream)
                     .Throttle(2, TimeSpan.FromMilliseconds(400), 5, e => e < 4 ? 1 : 20, ThrottleMode.Shaping)
-                    .RunWith(Sink.FromSubscriber<int, Unit>(downstream), Materializer);
+                    .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
                 downstream.Request(1);
                 upstream.SendNext(1);

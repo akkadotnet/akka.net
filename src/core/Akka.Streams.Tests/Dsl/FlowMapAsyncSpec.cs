@@ -40,7 +40,7 @@ namespace Akka.Streams.Tests.Dsl
                 var c = TestSubscriber.CreateManualProbe<int>(this);
                 Source.From(Enumerable.Range(1, 3))
                     .MapAsync(4, Task.FromResult)
-                    .RunWith(Sink.FromSubscriber<int, Unit>(c), Materializer);
+                    .RunWith(Sink.FromSubscriber(c), Materializer);
                 var sub = c.ExpectSubscription();
 
                 sub.Request(2);
@@ -64,7 +64,7 @@ namespace Akka.Streams.Tests.Dsl
                     Thread.Sleep(ThreadLocalRandom.Current.Next(1, 10));
                     return i;
                 }))
-                .RunWith(Sink.FromSubscriber<int, Unit>(c), Materializer);
+                .RunWith(Sink.FromSubscriber(c), Materializer);
             var sub = c.ExpectSubscription();
             sub.Request(1000);
             Enumerable.Range(1, 50).ForEach(n => c.ExpectNext(n));
@@ -82,7 +82,7 @@ namespace Akka.Streams.Tests.Dsl
                     probe.Ref.Tell(n);
                     return n;
                 }))
-                .RunWith(Sink.FromSubscriber<int, Unit>(c), Materializer);
+                .RunWith(Sink.FromSubscriber(c), Materializer);
             var sub = c.ExpectSubscription();
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
             sub.Request(1);
@@ -115,7 +115,7 @@ namespace Akka.Streams.Tests.Dsl
                         latch.Ready(TimeSpan.FromSeconds(10));
                         return n;
                     }))
-                    .To(Sink.FromSubscriber<int, Unit>(c)).Run(Materializer);
+                    .To(Sink.FromSubscriber(c)).Run(Materializer);
                 var sub = c.ExpectSubscription();
                 sub.Request(10);
                 c.ExpectError().InnerException.Message.Should().Be("err1");
@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.Dsl
                             return n;
                         });
                     })
-                    .RunWith(Sink.FromSubscriber<int, Unit>(c), Materializer);
+                    .RunWith(Sink.FromSubscriber(c), Materializer);
                 var sub = c.ExpectSubscription();
                 sub.Request(10);
                 c.ExpectError().Message.Should().Be("err2");
@@ -166,7 +166,7 @@ namespace Akka.Streams.Tests.Dsl
                             return n;
                         }))
                         .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
-                        .RunWith(Sink.FromSubscriber<int, Unit>(c), Materializer);
+                        .RunWith(Sink.FromSubscriber(c), Materializer);
                     var sub = c.ExpectSubscription();
                     sub.Request(10);
                     new[] {1, 2, 4, 5}.ForEach(i => c.ExpectNext(i));
@@ -233,7 +233,7 @@ namespace Akka.Streams.Tests.Dsl
                     return Task.FromResult(n);
                 })
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
-                .RunWith(Sink.FromSubscriber<int, Unit>(c), Materializer);
+                .RunWith(Sink.FromSubscriber(c), Materializer);
             var sub = c.ExpectSubscription();
             sub.Request(10);
             new[] {1, 2, 4, 5}.ForEach(i => c.ExpectNext(i));
@@ -247,7 +247,7 @@ namespace Akka.Streams.Tests.Dsl
 
             Source.From(new[] {"a", "b"})
                 .MapAsync(4, _ => Task.FromResult(null as string))
-                .To(Sink.FromSubscriber<string, Unit>(c)).Run(Materializer);
+                .To(Sink.FromSubscriber(c)).Run(Materializer);
 
             var sub = c.ExpectSubscription();
             sub.Request(10);
@@ -261,7 +261,7 @@ namespace Akka.Streams.Tests.Dsl
             Source.From(new[] { "a", "b", "c" })
                 .MapAsync(4, s => s.Equals("b") ? Task.FromResult(null as string) : Task.FromResult(s))
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
-                .To(Sink.FromSubscriber<string, Unit>(c)).Run(Materializer);
+                .To(Sink.FromSubscriber(c)).Run(Materializer);
             var sub = c.ExpectSubscription();
             sub.Request(10);
             c.ExpectNext("a");
@@ -277,9 +277,9 @@ namespace Akka.Streams.Tests.Dsl
                 var pub = TestPublisher.CreateManualProbe<int>(this);
                 var sub = TestSubscriber.CreateManualProbe<int>(this);
 
-                Source.FromPublisher<int, Unit>(pub)
+                Source.FromPublisher(pub)
                     .MapAsync(4, _ => Task.FromResult(0))
-                    .RunWith(Sink.FromSubscriber<int, Unit>(sub), Materializer);
+                    .RunWith(Sink.FromSubscriber(sub), Materializer);
 
                 var upstream = pub.ExpectSubscription();
                 upstream.ExpectRequest();

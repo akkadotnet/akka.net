@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Streams;
 using System.Threading;
-using System.Threading.Tasks;
 using Akka.Streams.Dsl;
-using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -34,9 +32,9 @@ namespace Akka.Streams.Tests.Dsl
             var publisher = TestPublisher.CreateProbe<int>(this);
             var subscriber = TestSubscriber.CreateManualProbe<int>(this);
 
-            Source.FromPublisher<int, Unit>(publisher)
+            Source.FromPublisher(publisher)
                 .ConflateWithSeed(i => i, (sum, i) => sum + i)
-                .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                .To(Sink.FromSubscriber(subscriber))
                 .Run(Materializer);
             var sub = subscriber.ExpectSubscription();
 
@@ -56,9 +54,9 @@ namespace Akka.Streams.Tests.Dsl
             var publisher = TestPublisher.CreateProbe<int>(this);
             var subscriber = TestSubscriber.CreateManualProbe<int>(this);
 
-            Source.FromPublisher<int, Unit>(publisher)
+            Source.FromPublisher(publisher)
                 .Conflate((sum, i) => sum + i)
-                .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                .To(Sink.FromSubscriber(subscriber))
                 .Run(Materializer);
             var sub = subscriber.ExpectSubscription();
 
@@ -78,9 +76,9 @@ namespace Akka.Streams.Tests.Dsl
             var publisher = TestPublisher.CreateProbe<int>(this);
             var subscriber = TestSubscriber.CreateManualProbe<int>(this);
 
-            Source.FromPublisher<int, Unit>(publisher)
+            Source.FromPublisher(publisher)
                 .ConflateWithSeed(i=>i,(sum, i) => sum + i)
-                .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                .To(Sink.FromSubscriber(subscriber))
                 .Run(Materializer);
             var sub = subscriber.ExpectSubscription();
 
@@ -100,9 +98,9 @@ namespace Akka.Streams.Tests.Dsl
             var publisher = TestPublisher.CreateProbe<int>(this);
             var subscriber = TestSubscriber.CreateManualProbe<int>(this);
 
-            Source.FromPublisher<int, Unit>(publisher)
+            Source.FromPublisher(publisher)
                 .Conflate((sum, i) => sum + i)
-                .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                .To(Sink.FromSubscriber(subscriber))
                 .Run(Materializer);
             var sub = subscriber.ExpectSubscription();
 
@@ -148,9 +146,9 @@ namespace Akka.Streams.Tests.Dsl
             var publisher = TestPublisher.CreateProbe<int>(this);
             var subscriber = TestSubscriber.CreateManualProbe<int>(this);
 
-            Source.FromPublisher<int, Unit>(publisher)
+            Source.FromPublisher(publisher)
                 .ConflateWithSeed(i=>i, (sum, i) => sum + i)
-                .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                .To(Sink.FromSubscriber(subscriber))
                 .Run(Materializer);
             var sub = subscriber.ExpectSubscription();
 
@@ -194,7 +192,7 @@ namespace Akka.Streams.Tests.Dsl
             var sinkProbe = TestSubscriber.CreateManualProbe<int>(this);
             var exceptionlath = new TestLatch();
 
-            var graph = Source.FromPublisher<int, Unit>(sourceProbe).ConflateWithSeed(i =>
+            var graph = Source.FromPublisher(sourceProbe).ConflateWithSeed(i =>
             {
                 if (i%2 == 0)
                 {
@@ -204,9 +202,9 @@ namespace Akka.Streams.Tests.Dsl
                 return i;
             }, (sum, i) => sum + i)
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
-                .To(Sink.FromSubscriber<int, Unit>(sinkProbe))
+                .To(Sink.FromSubscriber(sinkProbe))
                 .WithAttributes(Attributes.CreateInputBuffer(1, 1));
-            RunnableGraph<Unit>.FromGraph(graph).Run(Materializer);
+            RunnableGraph.FromGraph(graph).Run(Materializer);
 
             var sub = sourceProbe.ExpectSubscription();
             var sinkSub = sinkProbe.ExpectSubscription();
@@ -253,11 +251,11 @@ namespace Akka.Streams.Tests.Dsl
                 return state + elem;
             }).WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider));
 
-            var graph = Source.FromPublisher<string, Unit>(sourceProbe)
+            var graph = Source.FromPublisher(sourceProbe)
                 .Via(conflate)
-                .To(Sink.FromSubscriber<string, Unit>(sinkProbe))
+                .To(Sink.FromSubscriber(sinkProbe))
                 .WithAttributes(Attributes.CreateInputBuffer(4, 4));
-            RunnableGraph<Unit>.FromGraph(graph).Run(Materializer);
+            RunnableGraph.FromGraph(graph).Run(Materializer);
 
             var sub = sourceProbe.ExpectSubscription();
 
@@ -279,7 +277,7 @@ namespace Akka.Streams.Tests.Dsl
             var sinkProbe = TestSubscriber.CreateManualProbe<List<int>>(this);
             var saw4Latch = new TestLatch();
 
-            var graph = Source.FromPublisher<int, Unit>(sourceProbe).ConflateWithSeed(i => new List<int> { i },
+            var graph = Source.FromPublisher(sourceProbe).ConflateWithSeed(i => new List<int> { i },
                 (state, elem) =>
                 {
                     if (elem == 2)
@@ -292,9 +290,9 @@ namespace Akka.Streams.Tests.Dsl
                     return state;
                 })
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
-                .To(Sink.FromSubscriber<List<int>, Unit>(sinkProbe))
+                .To(Sink.FromSubscriber(sinkProbe))
                 .WithAttributes(Attributes.CreateInputBuffer(1, 1));
-            RunnableGraph<Unit>.FromGraph(graph).Run(Materializer);
+            RunnableGraph.FromGraph(graph).Run(Materializer);
 
             var sub = sourceProbe.ExpectSubscription();
             var sinkSub = sinkProbe.ExpectSubscription();

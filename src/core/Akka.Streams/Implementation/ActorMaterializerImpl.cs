@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Reactive.Streams;
 using Akka.Actor;
@@ -372,8 +373,8 @@ namespace Akka.Streams.Implementation
         }
         public sealed class Children
         {
-            public readonly ISet<IActorRef> Refs;
-            public Children(ISet<IActorRef> refs)
+            public readonly IImmutableSet<IActorRef> Refs;
+            public Children(IImmutableSet<IActorRef> refs)
             {
                 Refs = refs;
             }
@@ -416,7 +417,7 @@ namespace Akka.Streams.Implementation
             }
             else if (message is GetChildren)
             {
-                Sender.Tell(new Children(new HashSet<IActorRef>(Context.GetChildren())));
+                Sender.Tell(new Children(Context.GetChildren().ToImmutableHashSet()));
             }
             else if (message is StopChildren)
             {

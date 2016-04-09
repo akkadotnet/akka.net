@@ -65,9 +65,9 @@ namespace Akka.Streams.Tests.Dsl
             var upstream = TestPublisher.CreateProbe<int>(this);
             var downstream = TestSubscriber.CreateProbe<int>(this);
 
-            Source.FromPublisher<int, Unit>(upstream)
+            Source.FromPublisher(upstream)
                 .KeepAlive(TimeSpan.FromSeconds(1), () => 0)
-                .RunWith(Sink.FromSubscriber<int, Unit>(downstream), Materializer);
+                .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
             downstream.Request(1);
 
@@ -84,10 +84,10 @@ namespace Akka.Streams.Tests.Dsl
             var upstream = TestPublisher.CreateProbe<int>(this);
             var downstream = TestSubscriber.CreateProbe<int>(this);
 
-            Source.Combine(Source.From(Enumerable.Range(1, 10)), Source.FromPublisher<int, Unit>(upstream),
+            Source.Combine(Source.From(Enumerable.Range(1, 10)), Source.FromPublisher(upstream),
                 i => new Merge<int, int>(i))
                 .KeepAlive(TimeSpan.FromSeconds(1), () => 0)
-                .RunWith(Sink.FromSubscriber<int, Unit>(downstream), Materializer);
+                .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
             downstream.Request(10);
             downstream.ExpectNextN(10).ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
@@ -107,9 +107,9 @@ namespace Akka.Streams.Tests.Dsl
             var upstream = TestPublisher.CreateProbe<int>(this);
             var downstream = TestSubscriber.CreateProbe<int>(this);
 
-            Source.FromPublisher<int, Unit>(upstream)
+            Source.FromPublisher(upstream)
                 .KeepAlive(TimeSpan.FromSeconds(1), () => 0)
-                .RunWith(Sink.FromSubscriber<int, Unit>(downstream), Materializer);
+                .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
             downstream.EnsureSubscription();
             downstream.ExpectNoMsg(TimeSpan.FromSeconds(1.5));
@@ -126,10 +126,10 @@ namespace Akka.Streams.Tests.Dsl
             var upstream = TestPublisher.CreateProbe<int>(this);
             var downstream = TestSubscriber.CreateProbe<int>(this);
 
-            Source.Combine(Source.From(Enumerable.Range(1, 10)), Source.FromPublisher<int, Unit>(upstream),
+            Source.Combine(Source.From(Enumerable.Range(1, 10)), Source.FromPublisher(upstream),
                 i => new Merge<int, int>(i))
                 .KeepAlive(TimeSpan.FromSeconds(1), () => 0)
-                .RunWith(Sink.FromSubscriber<int, Unit>(downstream), Materializer);
+                .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
             downstream.Request(10);
             downstream.ExpectNextN(Enumerable.Range(1, 10));
@@ -148,9 +148,9 @@ namespace Akka.Streams.Tests.Dsl
             var upstream = TestPublisher.CreateProbe<int>(this);
             var downstream = TestSubscriber.CreateProbe<int>(this);
 
-            Source.FromPublisher<int, Unit>(upstream)
+            Source.FromPublisher(upstream)
                 .KeepAlive(TimeSpan.FromSeconds(1), () => 0)
-                .RunWith(Sink.FromSubscriber<int, Unit>(downstream), Materializer);
+                .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
             downstream.EnsureSubscription();
             downstream.ExpectNoMsg(TimeSpan.FromSeconds(1.5));
@@ -170,10 +170,10 @@ namespace Akka.Streams.Tests.Dsl
             var upstream = TestPublisher.CreateProbe<int>(this);
             var downstream = TestSubscriber.CreateProbe<int>(this);
 
-            Source.Combine(Source.From(Enumerable.Range(1, 10)), Source.FromPublisher<int, Unit>(upstream),
+            Source.Combine(Source.From(Enumerable.Range(1, 10)), Source.FromPublisher(upstream),
                 i => new Merge<int, int>(i))
                 .KeepAlive(TimeSpan.FromSeconds(1), () => 0)
-                .RunWith(Sink.FromSubscriber<int, Unit>(downstream), Materializer);
+                .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
             downstream.Request(10);
             downstream.ExpectNextN(Enumerable.Range(1, 10));
@@ -195,9 +195,9 @@ namespace Akka.Streams.Tests.Dsl
             var upstream = TestPublisher.CreateProbe<int>(this);
             var downstream = TestSubscriber.CreateProbe<int>(this);
 
-            Source.FromPublisher<int, Unit>(upstream)
+            Source.FromPublisher(upstream)
                 .KeepAlive(TimeSpan.FromSeconds(1), () => 0)
-                .RunWith(Sink.FromSubscriber<int, Unit>(downstream), Materializer);
+                .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
             downstream.Request(2);
             downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(500));

@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Reactive.Streams;
+using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Streams.Implementation;
@@ -36,7 +38,7 @@ namespace Akka.Streams.TestKit.Tests
 
             probe.Within(TimeSpan.FromSeconds(5), () =>
             {
-                ISet<IActorRef> children = new HashSet<IActorRef>();
+                IImmutableSet<IActorRef> children = ImmutableHashSet<IActorRef>.Empty;
                 try
                 {
                     probe.AwaitAssert(() =>

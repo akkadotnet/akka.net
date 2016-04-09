@@ -21,14 +21,13 @@ namespace Akka.Streams.Tests.Dsl
             var settings = ActorMaterializerSettings.Create(Sys);
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
-
-
+        
         [Fact]
         public void A_ActorRefSource_must_emit_received_messages_to_the_stream()
         {
             var s = TestSubscriber.CreateManualProbe<int>(this);
             var actorRef = Source.ActorRef<int>(10, OverflowStrategy.Fail)
-                .To(Sink.FromSubscriber<int, Unit>(s))
+                .To(Sink.FromSubscriber(s))
                 .Run(Materializer);
             var sub = s.ExpectSubscription();
             sub.Request(2);
@@ -45,7 +44,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var s = TestSubscriber.CreateManualProbe<int>(this);
             var actorRef = Source.ActorRef<int>(100, OverflowStrategy.DropHead)
-                .To(Sink.FromSubscriber<int, Unit>(s))
+                .To(Sink.FromSubscriber(s))
                 .Run(Materializer);
             var sub = s.ExpectSubscription();
             Enumerable.Range(1, 20).ForEach(x => actorRef.Tell(x));
@@ -86,7 +85,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var s = TestSubscriber.CreateManualProbe<int>(this);
                 var actorRef = Source.ActorRef<int>(0, OverflowStrategy.Fail)
-                    .To(Sink.FromSubscriber<int, Unit>(s))
+                    .To(Sink.FromSubscriber(s))
                     .Run(Materializer);
                 Watch(actorRef);
                 var sub = s.ExpectSubscription();
@@ -102,7 +101,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var s = TestSubscriber.CreateManualProbe<int>(this);
                 var actorRef = Source.ActorRef<int>(0, OverflowStrategy.DropHead)
-                    .To(Sink.FromSubscriber<int, Unit>(s))
+                    .To(Sink.FromSubscriber(s))
                     .Run(Materializer);
                 Watch(actorRef);
                 var sub = s.ExpectSubscription();
@@ -119,7 +118,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var s = TestSubscriber.CreateManualProbe<int>(this);
                 var actorRef = Source.ActorRef<int>(10, OverflowStrategy.Fail)
-                    .To(Sink.FromSubscriber<int, Unit>(s))
+                    .To(Sink.FromSubscriber(s))
                     .Run(Materializer);
                 s.ExpectSubscription();
                 actorRef.Tell(PoisonPill.Instance);
@@ -134,7 +133,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var s = TestSubscriber.CreateManualProbe<int>(this);
                 var actorRef = Source.ActorRef<int>(10, OverflowStrategy.Fail)
-                    .To(Sink.FromSubscriber<int, Unit>(s))
+                    .To(Sink.FromSubscriber(s))
                     .Run(Materializer);
                 var sub = s.ExpectSubscription();
                 actorRef.Tell(1);
@@ -154,7 +153,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var s = TestSubscriber.CreateManualProbe<int>(this);
                 var actorRef = Source.ActorRef<int>(3, OverflowStrategy.DropBuffer)
-                    .To(Sink.FromSubscriber<int, Unit>(s))
+                    .To(Sink.FromSubscriber(s))
                     .Run(Materializer);
                 var sub = s.ExpectSubscription();
                 actorRef.Tell(1);
@@ -178,7 +177,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var s = TestSubscriber.CreateManualProbe<int>(this);
                 var actorRef = Source.ActorRef<int>(3, OverflowStrategy.DropBuffer)
-                    .To(Sink.FromSubscriber<int, Unit>(s))
+                    .To(Sink.FromSubscriber(s))
                     .Run(Materializer);
                 var sub = s.ExpectSubscription();
                 actorRef.Tell(1);
@@ -199,7 +198,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var s = TestSubscriber.CreateManualProbe<int>(this);
                 var actorRef = Source.ActorRef<int>(10, OverflowStrategy.Fail)
-                    .To(Sink.FromSubscriber<int, Unit>(s))
+                    .To(Sink.FromSubscriber(s))
                     .Run(Materializer);
                 s.ExpectSubscription();
                 var ex = new TestException("testfailure");
@@ -217,7 +216,7 @@ namespace Akka.Streams.Tests.Dsl
                 const string name = "SomeCustomName";
                 var actorRef = Source.ActorRef<int>(10, OverflowStrategy.Fail)
                     .WithAttributes(Attributes.CreateName(name))
-                    .To(Sink.FromSubscriber<int, Unit>(s))
+                    .To(Sink.FromSubscriber(s))
                     .Run(Materializer);
                 actorRef.Path.ToString().Should().Contain(name);
                 actorRef.Tell(PoisonPill.Instance);

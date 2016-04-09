@@ -44,7 +44,7 @@ namespace Akka.Streams.Tests.Dsl
                     b.From(merge.Out).To(broadcast.In);
                     b.From(broadcast.Out(0))
                         .Via(Flow.Create<int>().Grouped(1000))
-                        .To(Sink.FromSubscriber<IEnumerable<int>, Unit>(probe));
+                        .To(Sink.FromSubscriber(probe));
                     return new FlowShape<int, int>(merge.In(1), broadcast.Out(1));
                 }));
 

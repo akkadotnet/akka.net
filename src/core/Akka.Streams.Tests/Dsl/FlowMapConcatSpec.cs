@@ -60,7 +60,7 @@ namespace Akka.Streams.Tests.Dsl
                     Thread.Sleep(10);
                     return x;
                 })
-                .RunWith(Sink.FromSubscriber<int,Unit>(subscriber), materializer);
+                .RunWith(Sink.FromSubscriber(subscriber), materializer);
 
             var subscription = subscriber.ExpectSubscription();
             subscription.Request(100);

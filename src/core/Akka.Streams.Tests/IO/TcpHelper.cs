@@ -88,7 +88,7 @@ namespace Akka.Streams.Tests.IO
             => Props.Create(() => new TestClient(connection)).WithDispatcher("akka.test.stream-dispatcher");
 
         protected static Props TestServerProps(EndPoint address, IActorRef probe)
-            => Props.Create(() => new TestSerer(address, probe)).WithDispatcher("akka.test.stream-dispatcher");
+            => Props.Create(() => new TestServer(address, probe)).WithDispatcher("akka.test.stream-dispatcher");
 
 
         protected class TestClient : UntypedActor
@@ -174,12 +174,12 @@ namespace Akka.Streams.Tests.IO
             private ServerClose() { }
         }
 
-        protected class TestSerer : UntypedActor
+        protected class TestServer : UntypedActor
         {
             private readonly IActorRef _probe;
             private IActorRef _listener = Nobody.Instance;
 
-            public TestSerer(EndPoint address, IActorRef probe)
+            public TestServer(EndPoint address, IActorRef probe)
             {
                 _probe = probe;
                 Context.System.Tcp().Tell(new Tcp.Bind(Self, address, 100, null, pullMode: true));
@@ -216,6 +216,7 @@ namespace Akka.Streams.Tests.IO
 
                 ServerProbe = testkit.CreateTestProbe();
                 ServerRef = testkit.ActorOf(TestServerProps(Address, ServerProbe.Ref));
+                ServerProbe.ExpectMsg<Tcp.Bound>();
             }
 
             public EndPoint Address { get; }

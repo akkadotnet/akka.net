@@ -29,7 +29,7 @@ namespace Akka.Streams.Tests.Dsl
             RiverOf<string>((subscriber, otherFlow, elements) =>
             {
                 var flow = Flow.Create<int>().Via(otherFlow);
-                Source.From(elements).Via(flow).To(Sink.FromSubscriber<string, Unit>(subscriber)).Run(Materializer);
+                Source.From(elements).Via(flow).To(Sink.FromSubscriber(subscriber)).Run(Materializer);
             }, this);
         }
 
@@ -38,7 +38,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             RiverOf<string>((subscriber, otherFlow, elements) =>
             {
-                Source.From(elements).To(otherFlow.To(Sink.FromSubscriber<string, Unit>(subscriber))).Run(Materializer);
+                Source.From(elements).To(otherFlow.To(Sink.FromSubscriber(subscriber))).Run(Materializer);
             }, this);
         }
 
@@ -47,7 +47,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             RiverOf<string>((subscriber, otherFlow, elements) =>
             {
-                Source.From(elements).Via(otherFlow).To(Sink.FromSubscriber<string, Unit>(subscriber)).Run(Materializer);
+                Source.From(elements).Via(otherFlow).To(Sink.FromSubscriber(subscriber)).Run(Materializer);
             }, this);
         }
 
@@ -56,7 +56,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             RiverOf<string>((subscriber, otherFlow, elements) =>
             {
-                Source.From(elements).To(otherFlow.To(Sink.FromSubscriber<string, Unit>(subscriber))).Run(Materializer);
+                Source.From(elements).To(otherFlow.To(Sink.FromSubscriber(subscriber))).Run(Materializer);
             }, this);
         }
 

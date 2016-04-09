@@ -19,9 +19,9 @@ namespace Akka.Streams.Tests.Dsl
         protected override TestSubscriber.Probe<int> Setup(IPublisher<int> p1, IPublisher<int> p2)
         {
             var subscriber = TestSubscriber.CreateProbe<int>(this);
-            Source.FromPublisher<int, Unit>(p1)
-                .ZipWith(Source.FromPublisher<int, Unit>(p2), (i, i1) => i + i1)
-                .RunWith(Sink.FromSubscriber<int, Unit>(subscriber), Materializer);
+            Source.FromPublisher(p1)
+                .ZipWith(Source.FromPublisher(p2), (i, i1) => i + i1)
+                .RunWith(Sink.FromSubscriber(subscriber), Materializer);
             return subscriber;
         }
 
@@ -31,7 +31,7 @@ namespace Akka.Streams.Tests.Dsl
             var probe = TestSubscriber.CreateManualProbe<int>(this);
             Source.From(Enumerable.Range(1, 4))
                 .ZipWith(Source.From(new[] {10, 20, 30, 40}.AsEnumerable()), (i, i1) => i + i1)
-                .RunWith(Sink.FromSubscriber<int, Unit>(probe), Materializer);
+                .RunWith(Sink.FromSubscriber(probe), Materializer);
 
             var subscription = probe.ExpectSubscription();
 
@@ -53,7 +53,7 @@ namespace Akka.Streams.Tests.Dsl
             var probe = TestSubscriber.CreateManualProbe<int>(this);
             Source.From(Enumerable.Range(1, 4))
                 .ZipWith(Source.From(Enumerable.Range(-2, 4)), (i, i1) => i/i1)
-                .RunWith(Sink.FromSubscriber<int, Unit>(probe), Materializer);
+                .RunWith(Sink.FromSubscriber(probe), Materializer);
 
             var subscription = probe.ExpectSubscription();
 

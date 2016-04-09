@@ -25,7 +25,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var t =
-                    RunnableGraph<Tuple<IPublisher<int>, IPublisher<int>>>.FromGraph(
+                    RunnableGraph.FromGraph(
                         GraphDsl.Create(Sink.AsPublisher<int>(false),
                             Sink.AsPublisher<int>(false), Keep.Both,
                             (b, p1, p2) =>
@@ -43,8 +43,8 @@ namespace Akka.Streams.Tests.Dsl
                 var pub1 = t.Item1;
                 var pub2 = t.Item2;
 
-                var f1 = Source.FromPublisher<int, Unit>(pub1).Map(x => x).RunFold(0, (sum, i) => sum + i, Materializer);
-                var f2 = Source.FromPublisher<int, Unit>(pub2).Map(x => x).RunFold(0, (sum, i) => sum + i, Materializer);
+                var f1 = Source.FromPublisher(pub1).Map(x => x).RunFold(0, (sum, i) => sum + i, Materializer);
+                var f2 = Source.FromPublisher(pub2).Map(x => x).RunFold(0, (sum, i) => sum + i, Materializer);
 
                 f1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 f2.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -61,9 +61,9 @@ namespace Akka.Streams.Tests.Dsl
             var sub = t.Item1;
             var pub = t.Item2;
 
-            Source.From(Enumerable.Range(1, 100)).To(Sink.FromSubscriber<int, Unit>(sub)).Run(Materializer);
+            Source.From(Enumerable.Range(1, 100)).To(Sink.FromSubscriber(sub)).Run(Materializer);
 
-            var task = Source.FromPublisher<int, Unit>(pub).Limit(1000).RunWith(Sink.Seq<int>(), Materializer);
+            var task = Source.FromPublisher(pub).Limit(1000).RunWith(Sink.Seq<int>(), Materializer);
             task.Wait(TimeSpan.FromSeconds(3));
             task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 100));
 
@@ -76,7 +76,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(
                     Sink.AsPublisher<int>(false)
                         .MapMaterializedValue(
-                            p => Source.FromPublisher<int, Unit>(p).RunFold(0, (sum, i) => sum + i, Materializer)),
+                            p => Source.FromPublisher(p).RunFold(0, (sum, i) => sum + i, Materializer)),
                     Materializer);
             f.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             f.Result.Should().Be(6);

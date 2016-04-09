@@ -27,9 +27,9 @@ namespace Akka.Streams.Tests.Dsl
             var input = Enumerable.Range(1, 200).GetEnumerator();
             var p = TestPublisher.CreateManualProbe<int>(this);
             var c = TestSubscriber.CreateManualProbe<int>(this);
-            Source.FromPublisher<int, Unit>(p)
+            Source.FromPublisher(p)
                 .DropWithin(TimeSpan.FromSeconds(1))
-                .To(Sink.FromSubscriber<int, Unit>(c))
+                .To(Sink.FromSubscriber(c))
                 .Run(Materializer);
             var pSub = p.ExpectSubscription();
             var cSub = c.ExpectSubscription();
@@ -66,9 +66,9 @@ namespace Akka.Streams.Tests.Dsl
             var upstream = TestPublisher.CreateProbe<int>(this);
             var downstream = TestSubscriber.CreateProbe<int>(this);
 
-            Source.FromPublisher<int, Unit>(upstream)
+            Source.FromPublisher(upstream)
                 .DropWithin(TimeSpan.FromDays(1))
-                .RunWith(Sink.FromSubscriber<int, Unit>(downstream), Materializer);
+                .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
             upstream.SendComplete();
             downstream.ExpectSubscriptionAndComplete();

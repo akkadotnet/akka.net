@@ -30,7 +30,7 @@ namespace Akka.Streams.TestKit.Tests
             {
                 var upstream = TestPublisher.CreateManualProbe<int>(this);
                 var downstream = TestSubscriber.CreateManualProbe<int>(this);
-                Source.FromPublisher<int, Unit>(upstream)
+                Source.FromPublisher(upstream)
                     .RunWith(Sink.AsPublisher<int>(false), Materializer)
                     .Subscribe(downstream);
 

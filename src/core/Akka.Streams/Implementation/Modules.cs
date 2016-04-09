@@ -213,7 +213,7 @@ namespace Akka.Streams.Implementation
         public override IPublisher<TOut> Create(MaterializationContext context, out IActorRef materializer)
         {
             var mat = ActorMaterializer.Downcast(context.Materializer);
-            materializer = mat.ActorOf(context, ActorRefSourceActor.Props(_bufferSize, _overflowStrategy, mat.Settings));
+            materializer = mat.ActorOf(context, ActorRefSourceActor<TOut>.Props(_bufferSize, _overflowStrategy, mat.Settings));
             return new ActorPublisherImpl<TOut>(materializer);
         }
     }

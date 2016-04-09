@@ -33,9 +33,9 @@ namespace Akka.Streams.Tests.IO
 
                 var tcpReadProbe = new TcpReadProbe(this);
                 var tcpWriteProbe = new TcpWriteProbe(this);
-                Source.FromPublisher<ByteString, ByteString>(tcpWriteProbe.PublisherProbe)
-                    .Via(new Tcp().CreateExtension(Sys as ExtendedActorSystem).OutgoingConnection(server.Address))
-                    .To(Sink.FromSubscriber<ByteString, Unit>(tcpReadProbe.SubscriberProbe))
+                Source.FromPublisher(tcpWriteProbe.PublisherProbe)
+                    .Via(Sys.TcpStream().OutgoingConnection(server.Address))
+                    .To(Sink.FromSubscriber(tcpReadProbe.SubscriberProbe))
                     .Run(Materializer);
                 var serverConnection = server.WaitAccept();
 
@@ -51,7 +51,7 @@ namespace Akka.Streams.Tests.IO
             var expectedOutput = ByteString.Create(Enumerable.Range(0, 255).Select(Convert.ToByte).ToArray());
 
             Source.From(testInput)
-                .Via(new Tcp().CreateExtension(Sys as ExtendedActorSystem).OutgoingConnection(server.Address))
+                .Via(Sys.TcpStream().OutgoingConnection(server.Address))
                 .To(Sink.Ignore<ByteString>())
                 .Run(Materializer);
 
@@ -69,8 +69,8 @@ namespace Akka.Streams.Tests.IO
 
             var idle = new TcpWriteProbe(this); //Just register an idle upstream
             var resultFuture =
-                Source.FromPublisher<ByteString, ByteString>(idle.PublisherProbe)
-                    .Via(new Tcp().CreateExtension(Sys as ExtendedActorSystem).OutgoingConnection(server.Address))
+                Source.FromPublisher(idle.PublisherProbe)
+                    .Via(Sys.TcpStream().OutgoingConnection(server.Address))
                     .RunFold(ByteString.Empty, (acc, input) => acc + input, Materializer);
             var serverConnection = server.WaitAccept();
 
@@ -92,9 +92,9 @@ namespace Akka.Streams.Tests.IO
 
                 var tcpWriteProbe = new TcpWriteProbe(this);
                 var tcpReadProbe = new TcpReadProbe(this);
-                Source.FromPublisher<ByteString, ByteString>(tcpWriteProbe.PublisherProbe)
-                    .Via(new Tcp().CreateExtension(Sys as ExtendedActorSystem).OutgoingConnection(server.Address))
-                    .To(Sink.FromSubscriber<ByteString, ByteString>(tcpReadProbe.SubscriberProbe))
+                Source.FromPublisher(tcpWriteProbe.PublisherProbe)
+                    .Via(Sys.TcpStream().OutgoingConnection(server.Address))
+                    .To(Sink.FromSubscriber(tcpReadProbe.SubscriberProbe))
                     .Run(Materializer);
                 var serverConnection = server.WaitAccept();
 
@@ -130,9 +130,9 @@ namespace Akka.Streams.Tests.IO
 
                 var tcpWriteProbe = new TcpWriteProbe(this);
                 var tcpReadProbe = new TcpReadProbe(this);
-                Source.FromPublisher<ByteString, ByteString>(tcpWriteProbe.PublisherProbe)
-                    .Via(new Tcp().CreateExtension(Sys as ExtendedActorSystem).OutgoingConnection(server.Address))
-                    .To(Sink.FromSubscriber<ByteString, ByteString>(tcpReadProbe.SubscriberProbe))
+                Source.FromPublisher(tcpWriteProbe.PublisherProbe)
+                    .Via(Sys.TcpStream().OutgoingConnection(server.Address))
+                    .To(Sink.FromSubscriber(tcpReadProbe.SubscriberProbe))
                     .Run(Materializer);
                 var serverConnection = server.WaitAccept();
 
@@ -166,9 +166,9 @@ namespace Akka.Streams.Tests.IO
 
                 var tcpWriteProbe = new TcpWriteProbe(this);
                 var tcpReadProbe = new TcpReadProbe(this);
-                Source.FromPublisher<ByteString, ByteString>(tcpWriteProbe.PublisherProbe)
-                    .Via(new Tcp().CreateExtension(Sys as ExtendedActorSystem).OutgoingConnection(server.Address))
-                    .To(Sink.FromSubscriber<ByteString, ByteString>(tcpReadProbe.SubscriberProbe))
+                Source.FromPublisher(tcpWriteProbe.PublisherProbe)
+                    .Via(Sys.TcpStream().OutgoingConnection(server.Address))
+                    .To(Sink.FromSubscriber(tcpReadProbe.SubscriberProbe))
                     .Run(Materializer);
                 var serverConnection = server.WaitAccept();
 
@@ -208,9 +208,9 @@ namespace Akka.Streams.Tests.IO
 
                 var tcpWriteProbe = new TcpWriteProbe(this);
                 var tcpReadProbe = new TcpReadProbe(this);
-                Source.FromPublisher<ByteString, ByteString>(tcpWriteProbe.PublisherProbe)
-                    .Via(new Tcp().CreateExtension(Sys as ExtendedActorSystem).OutgoingConnection(server.Address))
-                    .To(Sink.FromSubscriber<ByteString, ByteString>(tcpReadProbe.SubscriberProbe))
+                Source.FromPublisher(tcpWriteProbe.PublisherProbe)
+                    .Via(Sys.TcpStream().OutgoingConnection(server.Address))
+                    .To(Sink.FromSubscriber(tcpReadProbe.SubscriberProbe))
                     .Run(Materializer);
                 var serverConnection = server.WaitAccept();
 
@@ -245,9 +245,9 @@ namespace Akka.Streams.Tests.IO
 
                 var tcpWriteProbe = new TcpWriteProbe(this);
                 var tcpReadProbe = new TcpReadProbe(this);
-                Source.FromPublisher<ByteString, ByteString>(tcpWriteProbe.PublisherProbe)
-                    .Via(new Tcp().CreateExtension(Sys as ExtendedActorSystem).OutgoingConnection(server.Address))
-                    .To(Sink.FromSubscriber<ByteString, ByteString>(tcpReadProbe.SubscriberProbe))
+                Source.FromPublisher(tcpWriteProbe.PublisherProbe)
+                    .Via(Sys.TcpStream().OutgoingConnection(server.Address))
+                    .To(Sink.FromSubscriber(tcpReadProbe.SubscriberProbe))
                     .Run(Materializer);
                 var serverConnection = server.WaitAccept();
 
@@ -279,9 +279,9 @@ namespace Akka.Streams.Tests.IO
 
                 var tcpWriteProbe = new TcpWriteProbe(this);
                 var tcpReadProbe = new TcpReadProbe(this);
-                Source.FromPublisher<ByteString, ByteString>(tcpWriteProbe.PublisherProbe)
-                    .Via(new Tcp().CreateExtension(Sys as ExtendedActorSystem).OutgoingConnection(server.Address))
-                    .To(Sink.FromSubscriber<ByteString, ByteString>(tcpReadProbe.SubscriberProbe))
+                Source.FromPublisher(tcpWriteProbe.PublisherProbe)
+                    .Via(Sys.TcpStream().OutgoingConnection(server.Address))
+                    .To(Sink.FromSubscriber(tcpReadProbe.SubscriberProbe))
                     .Run(Materializer);
                 var serverConnection = server.WaitAccept();
 
@@ -315,9 +315,9 @@ namespace Akka.Streams.Tests.IO
                 var tcpWriteProbe = new TcpWriteProbe(this);
                 var tcpReadProbe = new TcpReadProbe(this);
 
-                Source.FromPublisher<ByteString, ByteString>(tcpWriteProbe.PublisherProbe)
-                    .Via(new Tcp().CreateExtension(Sys as ExtendedActorSystem).OutgoingConnection(server.Address))
-                    .To(Sink.FromSubscriber<ByteString, ByteString>(tcpReadProbe.SubscriberProbe))
+                Source.FromPublisher(tcpWriteProbe.PublisherProbe)
+                    .Via(Sys.TcpStream().OutgoingConnection(server.Address))
+                    .To(Sink.FromSubscriber(tcpReadProbe.SubscriberProbe))
                     .Run(Materializer);
                 var serverConnection = server.WaitAccept();
 
@@ -341,14 +341,14 @@ namespace Akka.Streams.Tests.IO
             var tcpReadProbe2 = new TcpReadProbe(this);
             var outgoingConnection = new Tcp().CreateExtension(Sys as ExtendedActorSystem).OutgoingConnection(server.Address);
 
-            var conn1F = Source.FromPublisher<ByteString, ByteString>(tcpWriteProbe1.PublisherProbe)
+            var conn1F = Source.FromPublisher(tcpWriteProbe1.PublisherProbe)
                     .ViaMaterialized(outgoingConnection, Keep.Both)
-                    .To(Sink.FromSubscriber<ByteString, ByteString>(tcpReadProbe1.SubscriberProbe))
+                    .To(Sink.FromSubscriber(tcpReadProbe1.SubscriberProbe))
                     .Run(Materializer).Item2;
             var serverConnection1 = server.WaitAccept();
-            var conn2F = Source.FromPublisher<ByteString, ByteString>(tcpWriteProbe2.PublisherProbe)
+            var conn2F = Source.FromPublisher(tcpWriteProbe2.PublisherProbe)
                     .ViaMaterialized(outgoingConnection, Keep.Both)
-                    .To(Sink.FromSubscriber<ByteString, ByteString>(tcpReadProbe2.SubscriberProbe))
+                    .To(Sink.FromSubscriber(tcpReadProbe2.SubscriberProbe))
                     .Run(Materializer).Item2;
             var serverConnection2 = server.WaitAccept();
 
@@ -380,8 +380,8 @@ namespace Akka.Streams.Tests.IO
                 var writeButIgnoreRead = Flow.FromSinkAndSource(Sink.Ignore<ByteString>(),
                     Source.Single(ByteString.FromString("Early response")), Keep.Right);
 
-                var task = 
-                    new Tcp().CreateExtension(Sys as ExtendedActorSystem)
+                var task =
+                    Sys.TcpStream()
                         .Bind(serverAddress.Address.ToString(), serverAddress.Port, halfClose: false)
                         .ToMaterialized(
                             Sink.ForEach<Tcp.IncomingConnection>(conn => conn.Flow.Join(writeButIgnoreRead)),
@@ -411,8 +411,7 @@ namespace Akka.Streams.Tests.IO
         {
             var serverAddress = TestUtils.TemporaryServerAddress();
 
-            var task =
-                new Tcp().CreateExtension(Sys as ExtendedActorSystem)
+            var task = Sys.TcpStream()
                     .Bind(serverAddress.Address.ToString(), serverAddress.Port, halfClose: false)
                     .ToMaterialized(
                         Sink.ForEach<Tcp.IncomingConnection>(conn => conn.Flow.Join(Flow.Create<ByteString>())),
@@ -439,7 +438,7 @@ namespace Akka.Streams.Tests.IO
             var mat2 = ActorMaterializer.Create(system2);
 
             var serverAddress = TestUtils.TemporaryServerAddress();
-            var binding = new Tcp().CreateExtension(system2 as ExtendedActorSystem)
+            var binding = Sys.TcpStream()
                 .BindAndHandle(Flow.Create<ByteString>(), mat2, serverAddress.Address.ToString(), serverAddress.Port);
 
             var result = Source.Maybe<ByteString>()
@@ -464,11 +463,7 @@ namespace Akka.Streams.Tests.IO
             writeProbe.Write(testData);
             serverConnection.WaitRead().ShouldBeEquivalentTo(testData);
         }
-
-
-
-
-
+        
         private Sink<Tcp.IncomingConnection, Task> EchoHandler() =>
             Sink.ForEach<Tcp.IncomingConnection>(c => c.Flow.Join(Flow.Create<ByteString>()).Run(Materializer));
 
@@ -476,7 +471,7 @@ namespace Akka.Streams.Tests.IO
         public void Tcp_listen_stream_must_be_able_to_implement_echo()
         {
             var serverAddress = TestUtils.TemporaryServerAddress();
-            var t = new Tcp().CreateExtension(Sys as ExtendedActorSystem)
+            var t = Sys.TcpStream()
                 .Bind(serverAddress.Address.ToString(), serverAddress.Port)
                 .ToMaterialized(EchoHandler(), Keep.Both)
                 .Run(Materializer);
@@ -491,7 +486,7 @@ namespace Akka.Streams.Tests.IO
             var expectedOutput = testInput.Aggregate(ByteString.Empty, (agg, b) => agg.Concat(b));
             var resultFuture =
                 Source.From(testInput)
-                    .Via(new Tcp().CreateExtension(Sys as ExtendedActorSystem).OutgoingConnection(serverAddress))
+                    .Via(Sys.TcpStream().OutgoingConnection(serverAddress))
                     .RunFold(ByteString.Empty, (agg, b) => agg.Concat(b), Materializer);
 
             resultFuture.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -504,7 +499,7 @@ namespace Akka.Streams.Tests.IO
         public void Tcp_listen_stream_must_work_with_a_chain_of_echoes()
         {
             var serverAddress = TestUtils.TemporaryServerAddress();
-            var t = new Tcp().CreateExtension(Sys as ExtendedActorSystem)
+            var t = Sys.TcpStream()
                 .Bind(serverAddress.Address.ToString(), serverAddress.Port)
                 .ToMaterialized(EchoHandler(), Keep.Both)
                 .Run(Materializer);
@@ -515,7 +510,7 @@ namespace Akka.Streams.Tests.IO
             bindingFuture.Wait(100).Should().BeTrue();
             var binding = bindingFuture.Result;
 
-            var echoConnection = new Tcp().CreateExtension(Sys as ExtendedActorSystem).OutgoingConnection(serverAddress);
+            var echoConnection = Sys.TcpStream().OutgoingConnection(serverAddress);
 
             var testInput = Enumerable.Range(0, 255).Select(i => ByteString.Create(new[] { Convert.ToByte(i) })).ToList();
             var expectedOutput = testInput.Aggregate(ByteString.Empty, (agg, b) => agg.Concat(b));
@@ -581,7 +576,7 @@ namespace Akka.Streams.Tests.IO
             this.AssertAllStagesStopped(() =>
             {
                 var serverAddress = TestUtils.TemporaryServerAddress();
-                new Tcp().CreateExtension(Sys as ExtendedActorSystem)
+                Sys.TcpStream()
                     .Bind(serverAddress.Address.ToString(), serverAddress.Port)
                     .Take(1).RunForeach(c =>
                     {
@@ -591,7 +586,7 @@ namespace Akka.Streams.Tests.IO
 
                 var total = Source.From(
                     Enumerable.Range(0, 1000).Select(_ => ByteString.Create(new byte[] {0})))
-                    .Via(new Tcp().CreateExtension(Sys as ExtendedActorSystem).OutgoingConnection(serverAddress))
+                    .Via(Sys.TcpStream().OutgoingConnection(serverAddress))
                     .RunFold(0, (i, s) => i + s.Count, Materializer);
 
                 total.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -612,13 +607,13 @@ namespace Akka.Streams.Tests.IO
                     return c;
                 }).Grouped(2).Take(1).Map(e => e.First());
 
-                new Tcp().CreateExtension(Sys as ExtendedActorSystem)
+                Sys.TcpStream()
                     .Bind(serverAddress.Address.ToString(), serverAddress.Port)
                     .Via(takeTwoAndDropSecond)
                     .RunForeach(c => c.Flow.Join(Flow.Create<ByteString>()).Run(Materializer), Materializer);
 
                 var folder = Source.From(Enumerable.Range(0, 100).Select(_ => ByteString.Create(new byte[] {0})))
-                    .Via(new Tcp().CreateExtension(Sys as ExtendedActorSystem).OutgoingConnection(serverAddress))
+                    .Via(Sys.TcpStream().OutgoingConnection(serverAddress))
                     .Fold(0, (i, s) => i + s.Count)
                     .ToMaterialized(Sink.First<int>(), Keep.Right);
 

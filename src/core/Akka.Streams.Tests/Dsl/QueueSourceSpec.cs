@@ -37,7 +37,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var s = this.CreateManualProbe<int>();
             var queue =
-                Source.Queue<int>(10, OverflowStrategy.Fail).To(Sink.FromSubscriber<int, Unit>(s)).Run(_materializer);
+                Source.Queue<int>(10, OverflowStrategy.Fail).To(Sink.FromSubscriber(s)).Run(_materializer);
             var sub = s.ExpectSubscription();
 
             sub.Request(2);
@@ -55,7 +55,7 @@ namespace Akka.Streams.Tests.Dsl
             var s = this.CreateManualProbe<int>();
             var queue =
                 Source.Queue<int>(100, OverflowStrategy.DropHead)
-                    .To(Sink.FromSubscriber<int, Unit>(s))
+                    .To(Sink.FromSubscriber(s))
                     .Run(_materializer);
             var sub = s.ExpectSubscription();
 
@@ -79,7 +79,7 @@ namespace Akka.Streams.Tests.Dsl
                 var s = this.CreateManualProbe<int>();
                 var queue =
                     Source.Queue<int>(0, OverflowStrategy.DropHead)
-                        .To(Sink.FromSubscriber<int, Unit>(s))
+                        .To(Sink.FromSubscriber(s))
                         .Run(_materializer);
                 var sub = s.ExpectSubscription();
 
@@ -98,7 +98,7 @@ namespace Akka.Streams.Tests.Dsl
                 var s = this.CreateManualProbe<int>();
                 var queue =
                     Source.Queue<int>(0, OverflowStrategy.DropHead)
-                        .To(Sink.FromSubscriber<int, Unit>(s))
+                        .To(Sink.FromSubscriber(s))
                         .Run(_materializer);
                 var sub = s.ExpectSubscription();
 
@@ -119,7 +119,7 @@ namespace Akka.Streams.Tests.Dsl
                 var s = this.CreateManualProbe<int>();
                 var queue =
                     Source.Queue<int>(0, OverflowStrategy.DropHead)
-                        .To(Sink.FromSubscriber<int, Unit>(s))
+                        .To(Sink.FromSubscriber(s))
                         .Run(_materializer);
                 var sub = s.ExpectSubscription();
 
@@ -143,7 +143,7 @@ namespace Akka.Streams.Tests.Dsl
                 var s = this.CreateManualProbe<int>();
                 var queue =
                     Source.Queue<int>(1, OverflowStrategy.Fail)
-                        .To(Sink.FromSubscriber<int, Unit>(s))
+                        .To(Sink.FromSubscriber(s))
                         .Run(_materializer);
                 s.ExpectSubscription();
 
@@ -162,7 +162,7 @@ namespace Akka.Streams.Tests.Dsl
                 var probe = CreateTestProbe();
                 var queue = TestSourceStage<int, ISourceQueue<int>>.Create(
                     new QueueSource<int>(1, OverflowStrategy.DropHead), probe)
-                    .To(Sink.FromSubscriber<int, Unit>(s))
+                    .To(Sink.FromSubscriber(s))
                     .Run(_materializer);
                 var sub = s.ExpectSubscription();
 
@@ -182,7 +182,7 @@ namespace Akka.Streams.Tests.Dsl
                 var s = this.CreateManualProbe<int>();
                 var queue =
                     Source.Queue<int>(5, OverflowStrategy.Backpressure)
-                        .To(Sink.FromSubscriber<int, Unit>(s))
+                        .To(Sink.FromSubscriber(s))
                         .Run(_materializer);
                 var sub = s.ExpectSubscription();
 
@@ -210,7 +210,7 @@ namespace Akka.Streams.Tests.Dsl
                 var s = this.CreateManualProbe<int>();
                 var queue =
                     Source.Queue<int>(1, OverflowStrategy.Fail)
-                        .To(Sink.FromSubscriber<int, Unit>(s))
+                        .To(Sink.FromSubscriber(s))
                         .Run(_materializer);
                 queue.WatchCompletionAsync().PipeTo(TestActor);
                 queue.OfferAsync(1); // need to wait when first offer is done as initialization can be done in this moment
@@ -227,7 +227,7 @@ namespace Akka.Streams.Tests.Dsl
                 var s = this.CreateManualProbe<int>();
                 var queue =
                     Source.Queue<int>(1, OverflowStrategy.DropNew)
-                        .To(Sink.FromSubscriber<int, Unit>(s))
+                        .To(Sink.FromSubscriber(s))
                         .Run(_materializer);
                 var sub = s.ExpectSubscription();
 
@@ -249,7 +249,7 @@ namespace Akka.Streams.Tests.Dsl
                 var s = this.CreateManualProbe<int>();
                 var queue =
                     Source.Queue<int>(1, OverflowStrategy.Backpressure)
-                        .To(Sink.FromSubscriber<int, Unit>(s))
+                        .To(Sink.FromSubscriber(s))
                         .Run(_materializer);
                 var sub = s.ExpectSubscription();
                 AssertSuccess(queue.OfferAsync(1));
@@ -276,7 +276,7 @@ namespace Akka.Streams.Tests.Dsl
                 var s = this.CreateManualProbe<int>();
                 var queue =
                     Source.Queue<int>(1, OverflowStrategy.DropNew)
-                        .To(Sink.FromSubscriber<int, Unit>(s))
+                        .To(Sink.FromSubscriber(s))
                         .Run(_materializer);
                 var sub = s.ExpectSubscription();
 

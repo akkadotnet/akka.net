@@ -72,9 +72,9 @@ namespace Akka.Streams.Tests.Dsl
             var publisher = TestPublisher.CreateProbe<int>(this);
             var subscriber = TestSubscriber.CreateManualProbe<int>(this);
 
-            Source.FromPublisher<int, Unit>(publisher)
+            Source.FromPublisher(publisher)
                 .Buffer(100, OverflowStrategy.Backpressure)
-                .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                .To(Sink.FromSubscriber(subscriber))
                 .Run(Materializer);
 
             var sub = subscriber.ExpectSubscription();
@@ -98,9 +98,9 @@ namespace Akka.Streams.Tests.Dsl
             var publisher = TestPublisher.CreateProbe<int>(this);
             var subscriber = TestSubscriber.CreateManualProbe<int>(this);
 
-            Source.FromPublisher<int, Unit>(publisher)
+            Source.FromPublisher(publisher)
                 .Buffer(100, OverflowStrategy.DropHead)
-                .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                .To(Sink.FromSubscriber(subscriber))
                 .Run(Materializer);
 
             var sub = subscriber.ExpectSubscription();
@@ -134,9 +134,9 @@ namespace Akka.Streams.Tests.Dsl
             var publisher = TestPublisher.CreateProbe<int>(this);
             var subscriber = TestSubscriber.CreateManualProbe<int>(this);
 
-            Source.FromPublisher<int, Unit>(publisher)
+            Source.FromPublisher(publisher)
                 .Buffer(100, OverflowStrategy.DropTail)
-                .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                .To(Sink.FromSubscriber(subscriber))
                 .Run(Materializer);
 
             var sub = subscriber.ExpectSubscription();
@@ -173,9 +173,9 @@ namespace Akka.Streams.Tests.Dsl
             var publisher = TestPublisher.CreateProbe<int>(this);
             var subscriber = TestSubscriber.CreateManualProbe<int>(this);
 
-            Source.FromPublisher<int, Unit>(publisher)
+            Source.FromPublisher(publisher)
                 .Buffer(100, OverflowStrategy.DropBuffer)
-                .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                .To(Sink.FromSubscriber(subscriber))
                 .Run(Materializer);
 
             var sub = subscriber.ExpectSubscription();
@@ -243,9 +243,9 @@ namespace Akka.Streams.Tests.Dsl
                 var publisher = TestPublisher.CreateProbe<int>(this);
                 var subscriber = TestSubscriber.CreateManualProbe<int>(this);
 
-                Source.FromPublisher<int, Unit>(publisher)
+                Source.FromPublisher(publisher)
                     .Buffer(100, OverflowStrategy.Fail)
-                    .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                    .To(Sink.FromSubscriber(subscriber))
                     .Run(Materializer);
 
                 var sub = subscriber.ExpectSubscription();
@@ -281,9 +281,9 @@ namespace Akka.Streams.Tests.Dsl
             var publisher = TestPublisher.CreateProbe<int>(this);
             var subscriber = TestSubscriber.CreateManualProbe<int>(this);
 
-            Source.FromPublisher<int, Unit>(publisher)
+            Source.FromPublisher(publisher)
                 .Buffer(1, strategy)
-                .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                .To(Sink.FromSubscriber(subscriber))
                 .Run(Materializer);
 
             var sub = subscriber.ExpectSubscription();

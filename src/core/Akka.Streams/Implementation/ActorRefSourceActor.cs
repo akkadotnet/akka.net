@@ -5,7 +5,7 @@ using Akka.Streams.Actors;
 
 namespace Akka.Streams.Implementation
 {
-    internal class ActorRefSourceActor : Actors.ActorPublisher<object>
+    internal class ActorRefSourceActor<T> : Actors.ActorPublisher<T>
     {
         public static Props Props(int bufferSize, OverflowStrategy overflowStrategy, ActorMaterializerSettings settings)
         {
@@ -13,10 +13,10 @@ namespace Akka.Streams.Implementation
                 throw new NotSupportedException("Backpressure overflow strategy not supported");
 
             var maxFixedBufferSize = settings.MaxFixedBufferSize;
-            return Actor.Props.Create(() => new ActorRefSourceActor(bufferSize, overflowStrategy, maxFixedBufferSize));
+            return Actor.Props.Create(() => new ActorRefSourceActor<T>(bufferSize, overflowStrategy, maxFixedBufferSize));
         }
 
-        protected readonly IBuffer<object> Buffer;
+        protected readonly IBuffer<T> Buffer;
 
         public readonly int BufferSize;
         public readonly OverflowStrategy OverflowStrategy;
@@ -26,19 +26,19 @@ namespace Akka.Streams.Implementation
         {
             BufferSize = bufferSize;
             OverflowStrategy = overflowStrategy;
-            Buffer = bufferSize != 0 ?  Implementation.Buffer.Create<object>(bufferSize, maxFixedBufferSize) : null;
+            Buffer = bufferSize != 0 ?  Implementation.Buffer.Create<T>(bufferSize, maxFixedBufferSize) : null;
         }
 
         protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
 
         protected override bool Receive(object message)
         {
-            return DefaultReceive(message) || RequestElement(message) || ReceiveElement(message);
+            return DefaultReceive(message) || RequestElement(message) || (message is T && ReceiveElement((T)message));
         }
 
         protected bool DefaultReceive(object message)
         {
-            if (message is Cancel)
+            if (message is Akka.Streams.Actors.Cancel)
                 Context.Stop(Self);
             else if (message is Status.Success)
             {
@@ -69,7 +69,7 @@ namespace Akka.Streams.Implementation
             return false;
         }
 
-        protected virtual bool ReceiveElement(object message)
+        protected virtual bool ReceiveElement(T message)
         {
             if (IsActive)
             {

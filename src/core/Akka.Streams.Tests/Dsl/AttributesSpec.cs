@@ -38,7 +38,7 @@ namespace Akka.Streams.Tests.Dsl
         public void Attributes_must_keep_the_outermost_attribute_as_the_least_specific()
         {
             var runnable =
-                RunnableGraph<Task<Attributes>>.FromGraph(
+                RunnableGraph.FromGraph(
                     Source.Empty<Unit>()
                         .ToMaterialized(AttributesSink.Create(), Keep.Right)
                         .WithAttributes(Attributes.CreateName("new-name")));

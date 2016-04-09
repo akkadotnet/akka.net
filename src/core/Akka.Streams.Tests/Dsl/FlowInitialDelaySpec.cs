@@ -58,7 +58,7 @@ namespace Akka.Streams.Tests.Dsl
                 var probe = TestSubscriber.CreateProbe<int>(this);
                 Source.From(Enumerable.Range(1, 10))
                     .InitialDelay(TimeSpan.FromSeconds(0.5))
-                    .RunWith(Sink.FromSubscriber<int, Unit>(probe), Materializer);
+                    .RunWith(Sink.FromSubscriber(probe), Materializer);
 
                 probe.EnsureSubscription();
                 probe.ExpectNoMsg(TimeSpan.FromSeconds(1.5));

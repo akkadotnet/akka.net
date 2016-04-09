@@ -141,7 +141,7 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void FileSource_should_onError_wen_trying_to_read_from_file_which_does_not_exist()
+        public void FileSource_should_onError_when_trying_to_read_from_file_which_does_not_exist()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -267,8 +267,8 @@ namespace Akka.Streams.Tests.IO
         {
             base.AfterAll();
 
-            _manyLinesPath.Delete();
-            _testFilePath.Delete();
+            _manyLinesPath?.Delete();
+            _testFilePath?.Delete();
         }
     }
 }

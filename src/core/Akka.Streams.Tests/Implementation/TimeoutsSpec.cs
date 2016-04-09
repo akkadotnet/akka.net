@@ -60,7 +60,7 @@ namespace Akka.Streams.Tests.Implementation
                 var downstreamProbe = this.CreateProbe<int>();
                 Source.Maybe<int>()
                 .InitialTimeout(TimeSpan.FromSeconds(1))
-                .RunWith(Sink.FromSubscriber<int, Unit>(downstreamProbe), Materializer);
+                .RunWith(Sink.FromSubscriber(downstreamProbe), Materializer);
 
                 downstreamProbe.ExpectSubscription();
                 downstreamProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
@@ -108,9 +108,9 @@ namespace Akka.Streams.Tests.Implementation
                 var upstreamProbe = TestPublisher.CreateProbe<int>(this);
                 var downstreamProbe = this.CreateProbe<int>();
 
-                Source.FromPublisher<int, Unit>(upstreamProbe)
+                Source.FromPublisher<int>(upstreamProbe)
                     .CompletionTimeout(TimeSpan.FromSeconds(2))
-                    .RunWith(Sink.FromSubscriber<int, Unit>(downstreamProbe), Materializer);
+                    .RunWith(Sink.FromSubscriber(downstreamProbe), Materializer);
 
 
                 upstreamProbe.SendNext(1);
@@ -164,9 +164,9 @@ namespace Akka.Streams.Tests.Implementation
                 var upstreamProbe = TestPublisher.CreateProbe<int>(this);
                 var downstreamProbe = this.CreateProbe<int>();
 
-                Source.FromPublisher<int, Unit>(upstreamProbe)
+                Source.FromPublisher<int>(upstreamProbe)
                     .IdleTimeout(TimeSpan.FromSeconds(1))
-                    .RunWith(Sink.FromSubscriber<int, Unit>(downstreamProbe), Materializer);
+                    .RunWith(Sink.FromSubscriber(downstreamProbe), Materializer);
 
                 // Two seconds in overall, but won't timeout until time between elements is large enough
                 // (i.e. this works differently from completionTimeout)
@@ -208,9 +208,9 @@ namespace Akka.Streams.Tests.Implementation
                 var downstreamWriter = TestPublisher.CreateProbe<string>(this);
 
                 var upstream = Flow.FromSinkAndSource(Sink.Ignore<string>(),
-                    Source.FromPublisher<int, Unit>(upstreamWriter), Keep.Left);
+                    Source.FromPublisher<int>(upstreamWriter), Keep.Left);
                 var downstream = Flow.FromSinkAndSource(Sink.Ignore<int>(),
-                    Source.FromPublisher<string, Unit>(downstreamWriter), Keep.Left);
+                    Source.FromPublisher<string>(downstreamWriter), Keep.Left);
 
                 var assembly = upstream.JoinMaterialized(
                     BidiFlow.BidirectionalIdleTimeout<int, string>(TimeSpan.FromSeconds(2)),
@@ -245,14 +245,14 @@ namespace Akka.Streams.Tests.Implementation
                 var downWrite = TestPublisher.CreateProbe<int>(this);
                 var downRead = TestSubscriber.CreateProbe<string>(this);
 
-                RunnableGraph<Unit>.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
                 {
                     var timeoutStage = b.Add(BidiFlow.BidirectionalIdleTimeout<string, int>(TimeSpan.FromSeconds(2)));
 
-                    b.From(Source.FromPublisher<string, Unit>(upWrite)).To(timeoutStage.Inlet1);
-                    b.From(timeoutStage.Outlet1).To(Sink.FromSubscriber<string, Unit>(downRead));
-                    b.From(timeoutStage.Outlet2).To(Sink.FromSubscriber<int, Unit>(upRead));
-                    b.From(Source.FromPublisher<int, Unit>(downWrite)).To(timeoutStage.Inlet2);
+                    b.From(Source.FromPublisher<string>(upWrite)).To(timeoutStage.Inlet1);
+                    b.From(timeoutStage.Outlet1).To(Sink.FromSubscriber(downRead));
+                    b.From(timeoutStage.Outlet2).To(Sink.FromSubscriber(upRead));
+                    b.From(Source.FromPublisher<int>(downWrite)).To(timeoutStage.Inlet2);
 
                     return ClosedShape.Instance;
                 })).Run(Materializer);
@@ -300,14 +300,14 @@ namespace Akka.Streams.Tests.Implementation
                 var downWrite = TestPublisher.CreateProbe<int>(this);
                 var downRead = TestSubscriber.CreateProbe<string>(this);
 
-                RunnableGraph<Unit>.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
                 {
                     var timeoutStage = b.Add(BidiFlow.BidirectionalIdleTimeout<string, int>(TimeSpan.FromSeconds(2)));
 
-                    b.From(Source.FromPublisher<string, Unit>(upWrite)).To(timeoutStage.Inlet1);
-                    b.From(timeoutStage.Outlet1).To(Sink.FromSubscriber<string, Unit>(downRead));
-                    b.From(timeoutStage.Outlet2).To(Sink.FromSubscriber<int, Unit>(upRead));
-                    b.From(Source.FromPublisher<int, Unit>(downWrite)).To(timeoutStage.Inlet2);
+                    b.From(Source.FromPublisher<string>(upWrite)).To(timeoutStage.Inlet1);
+                    b.From(timeoutStage.Outlet1).To(Sink.FromSubscriber(downRead));
+                    b.From(timeoutStage.Outlet2).To(Sink.FromSubscriber(upRead));
+                    b.From(Source.FromPublisher<int>(downWrite)).To(timeoutStage.Inlet2);
 
                     return ClosedShape.Instance;
                 })).Run(Materializer);

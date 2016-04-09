@@ -360,7 +360,7 @@ namespace Akka.Streams.Actors
                 case LifecycleState.Active:
                 case LifecycleState.PreSubscriber:
                     _lifecycleState = LifecycleState.ErrorEmitted;
-                    _onError = new OnErrorBlock(cause, false);
+                    _onError = new OnErrorBlock(cause, stop: true);
                     if (_subscriber != null)
                     {
                         // otherwise onError will be called when the subscription arrives

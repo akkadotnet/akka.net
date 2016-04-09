@@ -149,7 +149,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="remoteAddress"> The remote address to connect to</param>
         /// <param name="localAddress">Optional local address for the connection</param>
-        /// <param name="options">TCP options for the connections, see <see cref="IO.Tcp"/> for details</param>
+        /// <param name="options">TCP options for the connections, see <see cref="Akka.IO.Tcp"/> for details</param>
         /// <param name="halfClose"> Controls whether the connection is kept open even after writing has been completed to the accepted TCP connections.
         /// If set to true, the connection will implement the TCP half-close mechanism, allowing the server to
         /// write to the connection even after the client has finished writing.The TCP socket is only closed
@@ -178,5 +178,13 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public Flow<ByteString, ByteString, Task<Tcp.OutgoingConnection>> OutgoingConnection(string host, int port)
             => OutgoingConnection(new DnsEndPoint(host, port));
+    }
+
+    public static class TcpStreamExtensions
+    {
+        public static TcpExt TcpStream(this ActorSystem system)
+        {
+            return system.WithExtension<TcpExt, Tcp>();
+        }
     }
 }

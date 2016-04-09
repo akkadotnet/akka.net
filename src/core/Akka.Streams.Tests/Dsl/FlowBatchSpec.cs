@@ -30,9 +30,9 @@ namespace Akka.Streams.Tests.Dsl
             var publisher = TestPublisher.CreateProbe<int>(this);
             var subscriber = TestSubscriber.CreateProbe<int>(this);
 
-            Source.FromPublisher<int, Unit>(publisher)
+            Source.FromPublisher(publisher)
                 .Batch(max: 2, seed: i => i, aggregate: (sum, i) => sum + i)
-                .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                .To(Sink.FromSubscriber(subscriber))
                 .Run(Materializer);
 
             var sub = subscriber.ExpectSubscription();
@@ -53,11 +53,11 @@ namespace Akka.Streams.Tests.Dsl
             var publisher = TestPublisher.CreateProbe<int>(this);
             var subscriber = TestSubscriber.CreateProbe<List<int>>(this);
 
-            Source.FromPublisher<int, Unit>(publisher).Batch(long.MaxValue, i => new List<int> {i}, (ints, i) =>
+            Source.FromPublisher(publisher).Batch(long.MaxValue, i => new List<int> {i}, (ints, i) =>
             {
                 ints.Add(i);
                 return ints;
-            }).To(Sink.FromSubscriber<List<int>, Unit>(subscriber)).Run(Materializer);
+            }).To(Sink.FromSubscriber(subscriber)).Run(Materializer);
             var sub = subscriber.ExpectSubscription();
 
             for (var i = 1; i <= 10; i++)
@@ -88,9 +88,9 @@ namespace Akka.Streams.Tests.Dsl
             var publisher = TestPublisher.CreateProbe<int>(this);
             var subscriber = TestSubscriber.CreateProbe<int>(this);
 
-            Source.FromPublisher<int, Unit>(publisher)
+            Source.FromPublisher(publisher)
                 .Batch(2, i => i, (sum, i) => sum + i)
-                .To(Sink.FromSubscriber<int, Unit>(subscriber))
+                .To(Sink.FromSubscriber(subscriber))
                 .Run(Materializer);
             var sub = subscriber.EnsureSubscription();
 

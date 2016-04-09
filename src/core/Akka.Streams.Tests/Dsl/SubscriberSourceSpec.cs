@@ -24,7 +24,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var f = Source.AsSubscriber<int>()
                 .MapMaterializedValue(
-                    s => Source.From(Enumerable.Range(1, 3)).RunWith(Sink.FromSubscriber<int, Unit>(s), Materializer))
+                    s => Source.From(Enumerable.Range(1, 3)).RunWith(Sink.FromSubscriber(s), Materializer))
                 .RunWith(Sink.Fold<int, int>(0, (sum, i) => sum + i), Materializer);
 
             f.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
