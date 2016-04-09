@@ -1400,6 +1400,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         private sealed class Logic : TimerGraphStageLogic
         {
+            private const long SchedulerSensitivity = TimeSpan.TicksPerSecond/100; // 10ms
             private const string TimerName = "DelayedTimer";
             private readonly Delay<T> _stage;
             private IBuffer<Tuple<long, T>> _buffer; // buffer has pairs timestamp with upstream element
@@ -1455,7 +1456,7 @@ namespace Akka.Streams.Implementation.Fusing
                 if (!_buffer.IsEmpty)
                 {
                     var waitTime = NextElementWaitTime;
-                    if (waitTime > 10) ScheduleOnce(TimerName, new TimeSpan(waitTime));
+                    if (waitTime > SchedulerSensitivity) ScheduleOnce(TimerName, new TimeSpan(waitTime));
                 }
 
                 CompleteIfReady();

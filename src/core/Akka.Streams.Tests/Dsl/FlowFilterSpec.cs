@@ -16,25 +16,23 @@ namespace Akka.Streams.Tests.Dsl
     public class FlowFilterSpec : ScriptedTest
     {
         private ActorMaterializerSettings Settings { get; }
-        private ActorMaterializer Materializer { get; }
 
         public FlowFilterSpec(ITestOutputHelper helper) : base(helper)
         {
             Settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 16);
-            Materializer = ActorMaterializer.Create(Sys, Settings);
         }
 
         [Fact]
         public void A_Filter_must_filter()
         {
             var random = new Random();
-            Func<Script<int, int>> script = () => Script.Create(RandomTestRange(Sys).Select(_ =>
+            Script<int, int> script = Script.Create(RandomTestRange(Sys).Select(_ =>
             {
                 var x = random.Next();
                 return new Tuple<ICollection<int>, ICollection<int>>(new[] {x}, (x & 1) == 0 ? new[] {x} : new int[] {});
             }).ToArray());
 
-            RandomTestRange(Sys).ForEach(_ => RunScript(script(), Settings, flow => flow.Filter(x => x%2 == 0)));
+            RandomTestRange(Sys).ForEach(_ => RunScript(script, Settings, flow => flow.Filter(x => x%2 == 0)));
         }
 
         [Fact]
@@ -60,13 +58,13 @@ namespace Akka.Streams.Tests.Dsl
         public void A_FilterNot_must_filter_based_on_inverted_predicate()
         {
             var random = new Random();
-            Func<Script<int, int>> script = () => Script.Create(RandomTestRange(Sys).Select(_ =>
+            Script<int, int> script = Script.Create(RandomTestRange(Sys).Select(_ =>
             {
                 var x = random.Next();
                 return new Tuple<ICollection<int>, ICollection<int>>(new[] { x }, (x & 1) == 1 ? new[] { x } : new int[] { });
             }).ToArray());
 
-            RandomTestRange(Sys).ForEach(_ => RunScript(script(), Settings, flow => flow.FilterNot(x => x % 2 == 0)));
+            RandomTestRange(Sys).ForEach(_ => RunScript(script, Settings, flow => flow.FilterNot(x => x % 2 == 0)));
         }
     }
 }

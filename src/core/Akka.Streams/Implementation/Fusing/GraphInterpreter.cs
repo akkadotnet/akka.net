@@ -151,19 +151,22 @@ namespace Akka.Streams.Implementation.Fusing
         public const int KeepGoingFlag = 0x4000000;
         public const int KeepGoingMask = 0x3ffffff;
 
-        private static readonly ThreadLocal<GraphInterpreter> _currentInterpreter = new ThreadLocal<GraphInterpreter>(() => null);
+        // Using an Object-array avoids holding on to the GraphInterpreter class
+        // when this accidentally leaks onto threads that are not stopped when this
+        // class should be unloaded.
+        private static readonly ThreadLocal<object[]> CurrentInterpreter = new ThreadLocal<object[]>(() => new object[1]);
 
         public static GraphInterpreter Current
         {
             get
             {
-                if (_currentInterpreter.Value == null)
+                if (CurrentInterpreter.Value[0] == null)
                     throw new ApplicationException("Something went terribly wrong!");
-                return _currentInterpreter.Value;
+                return (GraphInterpreter) CurrentInterpreter.Value[0];
             }
         }
 
-        public static GraphInterpreter CurrentInterpreterOrNull => _currentInterpreter.Value;
+        public static GraphInterpreter CurrentInterpreterOrNull => (GraphInterpreter) CurrentInterpreter.Value[0];
 
         public static readonly Attributes[] SingleNoAttribute = { Attributes.None };
 
@@ -193,15 +196,15 @@ namespace Akka.Streams.Implementation.Fusing
         // An event queue implemented as a circular buffer
         private readonly int[] _eventQueue;
         private readonly int _mask;
-        private int _queueHead = 0;
-        private int _queueTail = 0;
+        private int _queueHead;
+        private int _queueTail;
 
         public GraphInterpreter(
             GraphAssembly assembly,
             IMaterializer materializer,
             ILoggingAdapter log,
-            InHandler[] inHandlers,
-            OutHandler[] outHandlers,
+            IInHandler[] inHandlers,
+            IOutHandler[] outHandlers,
             GraphStageLogic[] logics,
             Action<GraphStageLogic, object, Action<object>> onAsyncInput,
             bool fuzzingMode)
@@ -381,8 +384,9 @@ namespace Akka.Streams.Implementation.Fusing
         public void Execute(int eventLimit)
         {
             if (IsDebug) Console.WriteLine($"{Name} ---------------- EXECUTE {QueueStatus()} (running={RunningStagesCount}, shutdown={ShutdownCounters()})");
-            var previousInterpreter = _currentInterpreter.Value;
-            _currentInterpreter.Value = this;
+            var currentInterpreterHolder = CurrentInterpreter.Value;
+            var previousInterpreter = currentInterpreterHolder[0];
+            currentInterpreterHolder[0] = this;
             try
             {
                 var eventsRemaining = eventLimit;
@@ -411,7 +415,7 @@ namespace Akka.Streams.Implementation.Fusing
             }
             finally
             {
-                _currentInterpreter.Value = previousInterpreter;
+                currentInterpreterHolder[0] = previousInterpreter;
             }
             if (IsDebug) Console.WriteLine($"{Name} ---------------- {QueueStatus()} (running={RunningStagesCount}, shutdown={ShutdownCounters()})");
             // TODO: deadlock detection
@@ -422,8 +426,9 @@ namespace Akka.Streams.Implementation.Fusing
             if (!IsStageCompleted(logic))
             {
                 if (IsDebug) Console.WriteLine($"{Name} ASYNC {evt} ({handler}) [{logic}]");
-                var previousInterpreter = _currentInterpreter.Value;
-                _currentInterpreter.Value = this;
+                var currentInterpreterHolder = CurrentInterpreter.Value;
+                var previousInterpreter = currentInterpreterHolder[0];
+                currentInterpreterHolder[0] = this;
                 try
                 {
                     ActiveStage = logic;
@@ -439,7 +444,7 @@ namespace Akka.Streams.Implementation.Fusing
                 }
                 finally
                 {
-                    _currentInterpreter.Value = previousInterpreter;
+                    currentInterpreterHolder[0] = previousInterpreter;
                 }
             }
         }

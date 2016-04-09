@@ -7,7 +7,6 @@ using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Streams.Dsl;
-using Akka.Streams.Util;
 using Akka.TestKit;
 using Akka.Util;
 using Xunit.Abstractions;

@@ -197,9 +197,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_GroupedWithin_must_group_early()
         {
             var random = new Random();
-            Func<Script<int, IEnumerable<int>>> script = () =>
-            {
-                return Script.Create(RandomTestRange(Sys).Select(_ =>
+            var script = Script.Create(RandomTestRange(Sys).Select(_ =>
                 {
                     var x = random.Next();
                     var y = random.Next();
@@ -208,10 +206,9 @@ namespace Akka.Streams.Tests.Dsl
                     return Tuple.Create<ICollection<int>, ICollection<IEnumerable<int>>>(new[] {x, y, z},
                         new[] {new[] {x, y, z}});
                 }).ToArray());
-            };
 
             RandomTestRange(Sys)
-                .ForEach(_ => RunScript(script(), Settings, flow => flow.GroupedWithin(3, TimeSpan.FromMinutes(10))));
+                .ForEach(_ => RunScript(script, Settings, flow => flow.GroupedWithin(3, TimeSpan.FromMinutes(10))));
         }
 
         [Fact]

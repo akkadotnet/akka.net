@@ -266,7 +266,7 @@ namespace Akka.Streams.Tests.Dsl
                 var subscriber = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, Unit>>>(this);
 
                 Source.FromPublisher<int, Unit>(publisher)
-                    .PrefixAndTail(1)
+                    .PrefixAndTail(3)
                     .To(Sink.FromSubscriber<Tuple<IImmutableList<int>, Source<int, Unit>>, Unit>(subscriber))
                     .Run(Materializer);
 

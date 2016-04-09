@@ -26,85 +26,89 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         }
 
         [Fact]
-        public async void ActorGraphInterpreter_should_be_able_to_interpret_a_simple_identity_graph_stage()
+        public void ActorGraphInterpreter_should_be_able_to_interpret_a_simple_identity_graph_stage()
         {
-            await this.AssertAllStagesStopped(async () =>
+            this.AssertAllStagesStopped(() =>
             {
                 var identity = GraphStages.Identity<int>();
 
-                var result = await Source.From(Enumerable.Range(1, 100))
+                var task = Source.From(Enumerable.Range(1, 100))
                     .Via(identity)
                     .Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), _materializer);
 
-                result.Should().Equal(Enumerable.Range(1, 100));
+                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                task.Result.Should().Equal(Enumerable.Range(1, 100));
             }, _materializer);
         }
 
         [Fact]
-        public async void ActorGraphInterpreter_should_be_able_to_reuse_a_simple_identity_graph_stage()
+        public void ActorGraphInterpreter_should_be_able_to_reuse_a_simple_identity_graph_stage()
         {
-            await this.AssertAllStagesStopped(async () =>
+            this.AssertAllStagesStopped(() =>
             {
                 var identity = GraphStages.Identity<int>();
 
-                var result = await Source.From(Enumerable.Range(1, 100))
+                var task = Source.From(Enumerable.Range(1, 100))
                     .Via(identity)
                     .Via(identity)
                     .Via(identity)
                     .Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), _materializer);
 
-                result.Should().Equal(Enumerable.Range(1, 100));
+                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                task.Result.Should().Equal(Enumerable.Range(1, 100));
             }, _materializer);
         }
 
         [Fact]
-        public async void ActorGraphInterpreter_should_be_able_to_interpret_a_simple_bidi_stage()
+        public void ActorGraphInterpreter_should_be_able_to_interpret_a_simple_bidi_stage()
         {
-            await this.AssertAllStagesStopped(async () =>
+            this.AssertAllStagesStopped(() =>
             {
                 var identityBidi = new IdentityBidiGraphStage();
                 var identity = BidiFlow.FromGraph(identityBidi).Join(Flow.Identity<int>().Map(x => x));
 
-                var result = await Source.From(Enumerable.Range(1, 10))
+                var task = Source.From(Enumerable.Range(1, 10))
                     .Via(identity)
                     .Grouped(100)
                     .RunWith(Sink.First<IEnumerable<int>>(), _materializer);
 
-                result.Should().Equal(Enumerable.Range(1, 10));
+                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                task.Result.Should().Equal(Enumerable.Range(1, 10));
             }, _materializer);
         }
 
         [Fact]
-        public async void ActorGraphInterpreter_should_be_able_to_interpret_and_reuse_a_simple_bidi_stage()
+        public void ActorGraphInterpreter_should_be_able_to_interpret_and_reuse_a_simple_bidi_stage()
         {
-            await this.AssertAllStagesStopped(async () =>
+            this.AssertAllStagesStopped(() =>
             {
                 var identityBidi = new IdentityBidiGraphStage();
                 var identityBidiFlow = BidiFlow.FromGraph(identityBidi);
                 var identity = identityBidiFlow.Atop(identityBidiFlow).Atop(identityBidiFlow).Join(Flow.Identity<int>().Map(x => x));
 
-                var result = await Source.From(Enumerable.Range(1, 10))
+                var task = Source.From(Enumerable.Range(1, 10))
                     .Via(identity)
                     .Grouped(100)
                     .RunWith(Sink.First<IEnumerable<int>>(), _materializer);
 
-                result.Should().Equal(Enumerable.Range(1, 10));
+                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                task.Result.Should().Equal(Enumerable.Range(1, 10));
             }, _materializer);
         }
 
         [Fact]
-        public async void ActorGraphInterpreter_should_be_able_to_interpret_a_rotated_identity_bidi_stage()
+        public void ActorGraphInterpreter_should_be_able_to_interpret_a_rotated_identity_bidi_stage()
         {
-            await this.AssertAllStagesStopped(async () =>
+            this.AssertAllStagesStopped(() =>
             {
                 var rotatedBidi = new RotatedIdentityBidiGraphStage();
                 var takeAll = Flow.Identity<int>()
                     .Grouped(200)
                     .ToMaterialized(Sink.First<IEnumerable<int>>(), Keep.Right);
 
-                var result = RunnableGraph<Tuple<Task<IEnumerable<int>>, Task<IEnumerable<int>>>>.FromGraph(
+                var tasks = RunnableGraph<Tuple<Task<IEnumerable<int>>, Task<IEnumerable<int>>>>.FromGraph(
                     GraphDsl.Create(takeAll, takeAll, Keep.Both, (builder, shape1, shape2) =>
                     {
                         var bidi = builder.Add(rotatedBidi);
@@ -121,11 +125,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                         return ClosedShape.Instance;
                     })).Run(_materializer);
 
-                var f1 = await result.Item1;
-                var f2 = await result.Item2;
+                tasks.Item1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                tasks.Item2.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
 
-                f1.Should().Equal(Enumerable.Range(1, 100));
-                f2.Should().Equal(Enumerable.Range(1, 10));
+                tasks.Item1.Result.Should().Equal(Enumerable.Range(1, 100));
+                tasks.Item2.Result.Should().Equal(Enumerable.Range(1, 10));
             }, _materializer);
         }
 
@@ -134,9 +138,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             var failyStage = new FailyGraphStage();
 
-            EventFilter.Exception<ArgumentException>(new Regex("Error in stage.*")).ExpectOne(async () =>
+            EventFilter.Exception<ArgumentException>(new Regex("Error in stage.*")).ExpectOne(() =>
             {
-                await Source.FromGraph(failyStage).RunWith(Sink.Ignore<int>(), _materializer);
+                Source.FromGraph(failyStage).RunWith(Sink.Ignore<int>(), _materializer).Wait(TimeSpan.FromSeconds(3));
             });
         }
 
