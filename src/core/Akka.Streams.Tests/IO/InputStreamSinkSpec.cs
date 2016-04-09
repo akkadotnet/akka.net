@@ -97,9 +97,10 @@ namespace Akka.Streams.Tests.IO
                         .Run(_materializer);
                 var probe = run.Item1;
                 var inputStream = run.Item2;
-                var f = new Task<int>(() => inputStream.Read(new byte[_byteString.Count], 0, _byteString.Count));
+                var f = Task.Run(() => inputStream.Read(new byte[_byteString.Count], 0, _byteString.Count));
 
                 f.Wait(Timeout).Should().BeFalse();
+
                 probe.SendNext(_byteString);
                 f.Wait(Timeout).Should().BeTrue();
                 f.Result.Should().Be(_byteString.Count);
@@ -126,7 +127,8 @@ namespace Akka.Streams.Tests.IO
                 inputStream.Close();
                 probe.ExpectCancellation();
 
-                inputStream.Invoking(s => s.Read(new byte[1], 0, 1)).ShouldThrow<IOException>();
+                Action block = () => inputStream.Read(new byte[1], 0, 1);
+                block.ShouldThrow<IOException>();
             }, _materializer);
         }
 
@@ -142,6 +144,9 @@ namespace Akka.Streams.Tests.IO
                 var bytes = RandomByteString(1);
 
                 probe.SendNext(bytes);
+                sinkProbe.ExpectMsg<GraphStageMessages.Push>();
+
+                probe.SendComplete();
                 sinkProbe.ExpectMsg<GraphStageMessages.UpstreamFinish>();
 
                 var result = ReadN(inputStream, 3);
@@ -180,12 +185,14 @@ namespace Akka.Streams.Tests.IO
                 var inputStream = Source.Single(_byteString).RunWith(StreamConverters.AsInputStream(), _materializer);
                 var buf = new byte[3];
 
-                inputStream.Invoking(s => s.Read(buf, -1, 2)).ShouldThrow<ArgumentException>();
-                inputStream.Invoking(s => s.Read(buf, 0, 5)).ShouldThrow<ArgumentException>();
-                inputStream.Invoking(s => s.Read(new byte[0], 0, 1)).ShouldThrow<ArgumentException>();
-                inputStream.Invoking(s => s.Read(buf, 0, 0)).ShouldThrow<ArgumentException>();
+                Action(() => inputStream.Read(buf, -1, 2)).ShouldThrow<ArgumentException>();
+                Action(() => inputStream.Read(buf, 0, 5)).ShouldThrow<ArgumentException>();
+                Action(() => inputStream.Read(new byte[0], 0, 1)).ShouldThrow<ArgumentException>();
+                Action(() => inputStream.Read(buf, 0, 0)).ShouldThrow<ArgumentException>();
             }, _materializer);
         }
+
+        private Action Action(Action a) => a;
 
         [Fact]
         public void InputStreamSink_should_successfully_read_several_chunks_at_once()
@@ -273,8 +280,11 @@ namespace Akka.Streams.Tests.IO
                 sinkProbe.ExpectMsg<GraphStageMessages.Failure>().Ex.Should().Be(ex);
 
                 var task = Task.Run(() => inputStream.ReadByte());
-                task.Wait(Timeout);
-                task.Exception.InnerException.Should().Be(ex);
+
+                Action block = () => task.Wait(Timeout);
+                block.ShouldThrow<IOException>();
+
+                task.Exception.InnerException.InnerException.Should().Be(ex);
 
             }, _materializer);
         }
@@ -290,7 +300,8 @@ namespace Akka.Streams.Tests.IO
                 {
                     this.SourceProbe<ByteString>().RunWith(StreamConverters.AsInputStream(), materializer);
                     (materializer as ActorMaterializerImpl).Supervisor.Tell(StreamSupervisor.GetChildren.Instance, TestActor);
-                    var actorRef = ExpectMsg<StreamSupervisor.Children>().Refs.First(c => c.Path.ToString().Contains("inputStreamSink"));
+                    var children = ExpectMsg<StreamSupervisor.Children>().Refs;
+                    var actorRef = children.First(c => c.Path.ToString().Contains("inputStreamSink"));
                     Utils.AssertDispatcher(actorRef, "akka.stream.default-blocking-io-dispatcher");
                 }
                 finally

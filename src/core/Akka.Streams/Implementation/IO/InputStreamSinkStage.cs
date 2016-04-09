@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Threading;
 using Akka.IO;
+using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using static Akka.Streams.Implementation.IO.InputStreamSinkStage;
 
@@ -108,8 +109,7 @@ namespace Akka.Streams.Implementation.IO
         private readonly BlockingCollection<IStreamToAdapterMessage> _dataQueue;
         private readonly SinkShape<ByteString> _shape;
         private readonly TimeSpan _readTimeout;
-
-
+        
         public InputStreamSinkStage(TimeSpan readTimeout)
         {
             _readTimeout = readTimeout;
@@ -122,10 +122,15 @@ namespace Akka.Streams.Implementation.IO
             _dataQueue = new BlockingCollection<IStreamToAdapterMessage>(maxBuffer + 1);
         }
 
+        protected override Attributes InitialAttributes => DefaultAttributes.InputStreamSink;
         public override SinkShape<ByteString> Shape => _shape;
 
         public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Stream materialized)
         {
+            var maxBuffer = inheritedAttributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;
+            if (maxBuffer <= 0)
+                throw new ArgumentException("Buffer size must be greather than 0");
+
             var logic = new InputStreamSinkStageLogic(Shape, this);
             materialized = new InputStreamAdapter(_dataQueue, logic, _readTimeout);
             return logic;
@@ -206,16 +211,18 @@ namespace Akka.Streams.Implementation.IO
             _isActive = false;
         }
 
+        public sealed override int ReadByte()
+        {
+            var a = new byte[1];
+            return Read(a, 0, 1) != -1 ? a[0] : -1;
+        }
+
         public override int Read(byte[] buffer, int offset, int count)
         {
-            if (buffer.Length <= 0)
-                throw new ArgumentException("array size must be > 0");
-            if (offset < 0)
-                throw new ArgumentException("offset must be >= 0");
-            if (count <= 0)
-                throw new ArgumentException("count must be > 0");
-            if (offset + count > buffer.Length)
-                throw new AggregateException("offset + count must be smaller or equal to the array length");
+            if (buffer.Length <= 0) throw new ArgumentException("array size must be > 0");
+            if (offset < 0) throw new ArgumentException("offset must be >= 0");
+            if (count <= 0) throw new ArgumentException("count must be > 0");
+            if (offset + count > buffer.Length) throw new ArgumentException("offset + count must be smaller or equal to the array length");
 
             return ExecuteIfNotClosed(() =>
             {
