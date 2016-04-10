@@ -280,7 +280,7 @@ namespace Akka.Persistence.Tests
         #endregion
 
         public PersistentActorFailureSpec()
-            : base(Configuration("inmem", "PersistentActorFailureSpec",
+            : base(Configuration("PersistentActorFailureSpec",
                 extraConfig:
                     @"akka.persistence.journal.inmem.class = ""Akka.Persistence.Tests.PersistentActorFailureSpec+FailingMemoryJournal, Akka.Persistence.Tests""
                     akka.actor.serialize-messages=off"))

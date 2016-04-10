@@ -104,7 +104,7 @@ namespace Akka.Persistence.Tests
             }
         }
 
-        public PersistentActorDeleteFailureSpec() : base(Configuration("inmem", "PersistentActorDeleteFailureSpec",
+        public PersistentActorDeleteFailureSpec() : base(Configuration("PersistentActorDeleteFailureSpec",
             serialization: "off",
             extraConfig: "akka.persistence.journal.inmem.class = \"Akka.Persistence.Tests.PersistentActorDeleteFailureSpec+DeleteFailingMemoryJournal, Akka.Persistence.Tests\""))
         {

@@ -20,7 +20,7 @@ namespace Akka.Persistence.Tests
         protected TestProbe _viewProbe;
 
         public PersistentViewSpec()
-            : base(Configuration("inmem", "PersistentViewSpec"))
+            : base(Configuration("PersistentViewSpec"))
         {
             _prefProbe = CreateTestProbe();
             _viewProbe = CreateTestProbe();

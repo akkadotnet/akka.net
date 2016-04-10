@@ -181,7 +181,7 @@ namespace Akka.Persistence.Tests
             }
         }
 
-        public SnapshotFailureRobustnessSpec() : base(Configuration("inmem", "SnapshotFailureRobustnessSpec", serialization: "off",
+        public SnapshotFailureRobustnessSpec() : base(Configuration("SnapshotFailureRobustnessSpec", serialization: "off",
             extraConfig: @"
 akka.persistence.snapshot-store.local.class = ""Akka.Persistence.Tests.SnapshotFailureRobustnessSpec+FailingLocalSnapshotStore, Akka.Persistence.Tests""
 akka.persistence.snapshot-store.local-delete-fail.class = ""Akka.Persistence.Tests.SnapshotFailureRobustnessSpec+DeleteFailingLocalSnapshotStore, Akka.Persistence.Tests""

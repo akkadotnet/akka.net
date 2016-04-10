@@ -145,7 +145,7 @@ namespace Akka.Persistence.Tests
         #endregion
 
         public SnapshotSpec()
-            : base(Configuration("inmem", "SnapshotSpec"))
+            : base(Configuration("SnapshotSpec"))
         {
             var pref = ActorOf(() => new SaveSnapshotTestActor(Name, TestActor));
             pref.Tell("a");

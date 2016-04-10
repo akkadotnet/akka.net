@@ -268,7 +268,7 @@ namespace Akka.Persistence.Tests
         }
 
         public PersistentActorStashingSpec()
-            : base(Configuration("inmem", "PersistentActorStashingSpec"))
+            : base(Configuration("PersistentActorStashingSpec"))
         {
         }
 
@@ -438,7 +438,7 @@ namespace Akka.Persistence.Tests
         }
 
         public SteppingMemoryPersistentActorStashingSpec()
-            : base(SteppingMemoryJournal.Config("persistence-stash").WithFallback(Configuration("stepping-inmem", "SteppingMemoryPersistentActorStashingSpec")))
+            : base(SteppingMemoryJournal.Config("persistence-stash").WithFallback(Configuration("SteppingMemoryPersistentActorStashingSpec")))
         {
         }
 

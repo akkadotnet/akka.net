@@ -327,7 +327,7 @@ namespace Akka.Persistence.Tests
         #endregion
 
         public AtLeastOnceDeliverySpec()
-            : base(PersistenceSpec.Configuration("inmem", "AtLeastOnceDeliverySpec"))
+            : base(Configuration("AtLeastOnceDeliverySpec"))
         {
         }
 
