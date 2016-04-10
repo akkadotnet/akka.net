@@ -9,24 +9,24 @@ using Akka.Cluster.Sharding;
 
 namespace ClusterSharding.Node
 {
-    public sealed class MessageExtractor : IMessageExtractor
+    public sealed class ShardEnvelope
     {
-        public string EntityId(object message)
-        {
-            var env = message as Printer.Env;
-            return env != null ? env.EntityId.ToString() : null;
-        }
+        public readonly string EntityId;
+        public readonly object Payload;
 
-        public object EntityMessage(object message)
+        public ShardEnvelope(string entityId, object payload)
         {
-            var env = message as Printer.Env;
-            return env != null ? env.Message : null;
+            EntityId = entityId;
+            Payload = payload;
         }
+    }
 
-        public string ShardId(object message)
-        {
-            var env = message as Printer.Env;
-            return env != null ? env.ShardId.ToString() : null;
-        }
+    public sealed class MessageExtractor : HashCodeMessageExtractor
+    {
+        public MessageExtractor(int maxNumberOfShards) : base(maxNumberOfShards) { }
+
+        public override string EntityId(object message) => (message as ShardEnvelope)?.EntityId;
+
+        public override object EntityMessage(object message) => (message as ShardEnvelope)?.Payload;
     }
 }
