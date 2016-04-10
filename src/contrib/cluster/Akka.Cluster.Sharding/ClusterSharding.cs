@@ -213,8 +213,15 @@ namespace Akka.Cluster.Sharding
             });
         }
 
-        public ClusterShardingSettings Settings { get; private set; }
+        /// <summary>
+        /// Gets object representing settings for the current cluster sharding plugin.
+        /// </summary>
+        public ClusterShardingSettings Settings { get; }
 
+        /// <summary>
+        /// Default HOCON settings for cluster sharding.
+        /// </summary>
+        /// <returns></returns>
         public static Config DefaultConfig()
         {
             return ConfigurationFactory.FromResource<ClusterSharding>("Akka.Cluster.Sharding.reference.conf");
@@ -601,6 +608,9 @@ namespace Akka.Cluster.Sharding
         /// The entity type must be registered with the <see cref="ClusterShardingGuardian.Start"/> method before it can be used here.
         /// Messages to the entity is always sent via the <see cref="Sharding.ShardRegion"/>.
         /// </summary>
+        /// <exception cref="ArgumentException">
+        /// Thrown when shard region for provided <paramref name="typeName"/> has not been started yet.
+        /// </exception>
         public IActorRef ShardRegion(string typeName)
         {
             IActorRef region;
