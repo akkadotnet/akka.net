@@ -260,6 +260,7 @@ namespace Akka.Cluster.Tools.Singleton
         private IActorRef _oldestChangedBuffer;
         // keep track of previously removed members
         private ImmutableDictionary<Address, Deadline> _removed = ImmutableDictionary<Address, Deadline>.Empty;
+        private readonly TimeSpan _removalMargin;
         private readonly int _maxHandOverRetries;
         private readonly int _maxTakeOverRetries;
         private readonly Cluster _cluster = Cluster.Get(Context.System);
@@ -275,8 +276,15 @@ namespace Akka.Cluster.Tools.Singleton
             _terminationMessage = terminationMessage;
             _settings = settings;
 
-            var n = (int)(_settings.RemovalMargin.TotalMilliseconds / _settings.HandOverRetryInterval.TotalMilliseconds);
-            _maxHandOverRetries = n + 3;
+            _removalMargin = (settings.RemovalMargin <= TimeSpan.Zero) ? _cluster.Settings.DownRemovalMargin : settings.RemovalMargin;
+
+            var n = (int)(_removalMargin.TotalMilliseconds / _settings.HandOverRetryInterval.TotalMilliseconds);
+
+            var minRetries = Context.System.Settings.Config.GetInt("akka.cluster.singleton.min-number-of-hand-over-retries");
+            if (minRetries < 1)
+                throw new ConfigurationException("min-number-of-hand-over-retries must be >= 1");
+
+            _maxHandOverRetries = Math.Max(minRetries, n + 3);
             _maxTakeOverRetries = Math.Max(1, n - 3);
 
             InitializeFSM();
@@ -612,7 +620,7 @@ namespace Akka.Cluster.Tools.Singleton
                         if (wasOldestData.NewOldest != null)
                             Peer(wasOldestData.NewOldest).Tell(ClusterSingletonMessage.TakeOverFromMe);
 
-                        SetTimer(TakeOverRetryTimer, new TakeOverRetry(takeOverRetry.Count), _settings.HandOverRetryInterval);
+                        SetTimer(TakeOverRetryTimer, new TakeOverRetry(takeOverRetry.Count + 1), _settings.HandOverRetryInterval);
                         return Stay();
                     }
                     else
@@ -749,10 +757,10 @@ namespace Akka.Cluster.Tools.Singleton
 
         private void ScheduleDelayedMemberRemoved(Member member)
         {
-            if (_settings.RemovalMargin > TimeSpan.Zero)
+            if (_removalMargin > TimeSpan.Zero)
             {
                 Log.Debug("Schedule DelayedMemberRemoved for {0}", member.Address);
-                Context.System.Scheduler.ScheduleTellOnce(_settings.RemovalMargin, Self, new DelayedMemberRemoved(member), Self);
+                Context.System.Scheduler.ScheduleTellOnce(_removalMargin, Self, new DelayedMemberRemoved(member), Self);
             }
             else Self.Tell(new DelayedMemberRemoved(member));
         }
