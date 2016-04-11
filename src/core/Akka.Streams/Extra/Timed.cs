@@ -58,21 +58,6 @@ namespace Akka.Streams.Extra
         /// 
         /// Measures rolling interval between immediately subsequent `matching(o: O)` elements.
         /// </summary>
-        public static Source<TOut, TMat> TimedIntervalBetween<TOut, TMat>(Source<TOut, TMat> source, Func<TOut, bool> matching, Action<TimeSpan> onInterval)
-        {
-            var timedInterval =
-                Flow.Create<TOut>()
-                    .Transform(() => new TimedIntervall<TOut>(matching, onInterval))
-                    .Named("timedInterval");
-
-            return source.Via(timedInterval);
-        }
-
-        /// <summary>
-        /// INTERNAL API
-        /// 
-        /// Measures rolling interval between immediately subsequent `matching(o: O)` elements.
-        /// </summary>
         public static IFlow<TIn, TMat> TimedIntervalBetween<TIn, TMat>(IFlow<TIn, TMat> flow, Func<TIn, bool> matching, Action<TimeSpan> onInterval)
         {
             var timedInterval =

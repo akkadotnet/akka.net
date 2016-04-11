@@ -20,7 +20,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// Fuse everything that is not forbidden via AsyncBoundary attribute.
         /// </summary>
         /// <returns></returns>
-        public static FusedGraph<TShape, TMat> Aggressive<TShape, TMat>(IGraph<TShape, TMat> graph)
+        public static Streams.Fusing.FusedGraph<TShape, TMat> Aggressive<TShape, TMat>(IGraph<TShape, TMat> graph)
             where TShape : Shape
         {
             var structInfo = new BuildStructuralInfo();
@@ -65,7 +65,7 @@ namespace Akka.Streams.Implementation.Fusing
             if (StreamLayout.IsDebug) StreamLayout.Validate(module);
             if (IsDebug) Console.WriteLine(module.ToString());
 
-            return new FusedGraph<TShape, TMat>(module, (TShape) shape);
+            return new Streams.Fusing.FusedGraph<TShape, TMat>(module, (TShape) shape);
         }
 
         /// <summary>
@@ -851,44 +851,6 @@ namespace Akka.Streams.Implementation.Fusing
         {
             return
                 $"{shape.GetType().Name}(ins={string.Join(",", shape.Inlets.Select(Hash))} outs={string.Join(",", shape.Outlets.Select(Hash))}";
-        }
-    }
-
-    /// <summary>
-    /// A fused graph of the right shape, containing a <see cref="FusedModule"/> which holds more information 
-    /// on the operation structure of the contained stream topology for convenient graph traversal.
-    /// </summary>
-    internal sealed class FusedGraph<TShape, TMat> : IGraph<TShape, TMat> where TShape : Shape
-    {
-        public FusedGraph(FusedModule module, TShape shape)
-        {
-            if (module == null) throw new ArgumentNullException(nameof(module));
-            if (shape == null) throw new ArgumentNullException(nameof(shape));
-
-            Module = module;
-            Shape = shape;
-        }
-
-        public TShape Shape { get; }
-        public IModule Module { get; }
-        public IGraph<TShape, TMat> WithAttributes(Attributes attributes)
-        {
-            return new FusedGraph<TShape, TMat>(Module.WithAttributes(attributes) as FusedModule, Shape);
-        }
-
-        public IGraph<TShape, TMat> AddAttributes(Attributes attributes)
-        {
-            return WithAttributes(Module.Attributes.And(attributes));
-        }
-
-        public IGraph<TShape, TMat> Named(string name)
-        {
-            return AddAttributes(Attributes.CreateName(name));
-        }
-
-        public IGraph<TShape, TMat> Async()
-        {
-            return AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
         }
     }
 }

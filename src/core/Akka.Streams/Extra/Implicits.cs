@@ -22,7 +22,7 @@ namespace Akka.Streams.Extra
         /// </summary>
         public static Source<TIn, TMat> TimedIntervalBetween<TIn, TMat>(this Source<TIn, TMat> source,
             Func<TIn, bool> matching, Action<TimeSpan> onInterval)
-            => TimedIntervalBetweenOps.TimedIntervalBetween(source, matching, onInterval);
+            => (Source<TIn, TMat>)TimedIntervalBetweenOps.TimedIntervalBetween(source, matching, onInterval);
     }
 
     /// <summary>
@@ -42,8 +42,8 @@ namespace Akka.Streams.Extra
         /// <summary>
         /// Measures rolling interval between immediately subsequent `matching(o: O)` elements.
         /// </summary>
-        public static IFlow<TIn, TMat> TimedIntervalBetween<TIn, TMat>(this IFlow<TIn, TMat> flow,
-            Func<TIn, bool> matching, Action<TimeSpan> onInterval)
-            => TimedIntervalBetweenOps.TimedIntervalBetween(flow, matching, onInterval);
+        public static Flow<TIn, TOut, TMat> TimedIntervalBetween<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow,
+            Func<TOut, bool> matching, Action<TimeSpan> onInterval)
+            => (Flow<TIn, TOut, TMat>)TimedIntervalBetweenOps.TimedIntervalBetween(flow, matching, onInterval);
     }
 }

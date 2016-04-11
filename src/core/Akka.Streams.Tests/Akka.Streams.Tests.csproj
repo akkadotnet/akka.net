@@ -109,6 +109,7 @@
     <Compile Include="Dsl\FlowSpec.cs" />
     <Compile Include="Dsl\FlowStatefulMapConcatSpec.cs" />
     <Compile Include="Dsl\FramingSpec.cs" />
+    <Compile Include="Dsl\GraphBackedFlowSpec.cs" />
     <Compile Include="Dsl\PublisherSinkSpec.cs" />
     <Compile Include="Dsl\QueueSourceSpec.cs" />
     <Compile Include="Actor\ActorPublisherSpec.cs" />
@@ -140,6 +141,8 @@
     <Compile Include="Dsl\SubscriberSourceSpec.cs" />
     <Compile Include="Dsl\TestConfig.cs" />
     <Compile Include="Dsl\TickSourceSpec.cs" />
+    <Compile Include="Extra\FlowTimedSpec.cs" />
+    <Compile Include="FusingSpec.cs" />
     <Compile Include="Implementation\Fusing\ActorGraphInterpreterSpec.cs" />
     <Compile Include="Implementation\Fusing\GraphInterpreterFailureModesSpec.cs" />
     <Compile Include="Implementation\Fusing\GraphInterpreterPortsSpec.cs" />

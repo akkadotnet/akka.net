@@ -182,6 +182,11 @@ namespace Akka.Streams
             return new Attributes(new InputBuffer(initial, max));
         }
 
+        public static Attributes CreateAsyncBoundary()
+        {
+            return new Attributes(AsyncBoundary.Instance);
+        }
+
         ///<summary>
         /// Configures `log()` stage log-levels to be used when logging.
         /// Logging a certain operation can be completely disabled by using <see cref="LogLevels.Off"/>
