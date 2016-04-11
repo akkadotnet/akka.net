@@ -113,6 +113,7 @@
     <Compile Include="Dsl\GraphBalanceSpec.cs" />
     <Compile Include="Dsl\GraphBroadcastSpec.cs" />
     <Compile Include="Dsl\GraphConcatSpec.cs" />
+    <Compile Include="Dsl\GraphMatValueSpec.cs" />
     <Compile Include="Dsl\PublisherSinkSpec.cs" />
     <Compile Include="Dsl\QueueSourceSpec.cs" />
     <Compile Include="Actor\ActorPublisherSpec.cs" />
