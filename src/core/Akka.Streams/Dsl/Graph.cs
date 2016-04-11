@@ -641,7 +641,7 @@ namespace Akka.Streams.Dsl
 
         public Broadcast(int outputPorts, bool eagerCancel = false)
         {
-            if (outputPorts <= 1) throw new ArgumentException("Broadcast require more than 1 output port", nameof(outputPorts));
+            if (outputPorts < 1) throw new ArgumentException("A Broadcast must have one or more output ports", nameof(outputPorts));
             _outputPorts = outputPorts;
             _eagerCancel = eagerCancel;
 
