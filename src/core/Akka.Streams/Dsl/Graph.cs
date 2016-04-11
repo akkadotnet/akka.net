@@ -754,7 +754,7 @@ namespace Akka.Streams.Dsl
 
         public Balance(int outputPorts, bool waitForAllDownstreams = false)
         {
-            if (outputPorts <= 1) throw new ArgumentException("A Balance must have more than 1 output ports");
+            if (outputPorts < 1) throw new ArgumentException("A Balance must have one or more output ports");
             _outputPorts = outputPorts;
             _waitForAllDownstreams = waitForAllDownstreams;
 
