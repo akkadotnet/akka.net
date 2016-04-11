@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Remote.Transport.Helios;
 
 namespace Akka.Remote.Transport.Streaming
 {
@@ -46,28 +47,9 @@ namespace Akka.Remote.Transport.Streaming
             if (string.IsNullOrEmpty(bindHostname))
                 bindHostname = Hostname;
 
-            IPAddress ip;
-            if (Hostname.Equals("localhost", StringComparison.OrdinalIgnoreCase))
-            {
-                BindIp = IPAddress.Loopback;
-            }
-            else if (IPAddress.TryParse(bindHostname, out ip))
-            {
-                // The socket is using DualMode, if ipv6 is supported, listening on IPv6Any
-                // will work for any address (ipv4 and ipv6)
-                if (IPAddress.Any.Equals(ip) && Socket.OSSupportsIPv6)
-                    ip = IPAddress.IPv6Any;
-
-                BindIp = ip;
-            }
-            else
-            {
-                // If hostname is not localhost or an ip, bind to IPAny
-                BindIp = Socket.OSSupportsIPv6 ? IPAddress.IPv6Any : IPAddress.Any;
-            }
+            BindIp = GetBindIp(bindHostname, dualMode: true);
 
             string bindPortString = config.GetString("bind-port");
-
             BindPort = string.IsNullOrEmpty(bindPortString) ? Port : int.Parse(bindPortString);
 
             ConnectionTimeout = config.GetTimeSpan("connection-timeout");
@@ -77,6 +59,44 @@ namespace Akka.Remote.Transport.Streaming
             Backlog = config.GetInt("backlog");
             TcpNoDelay = config.GetBoolean("tcp-nodelay");
             TcpKeepAlive = config.GetBoolean("tcp-keepalive");
+        }
+
+        internal NetworkStreamTransportSettings(HeliosTransportSettings heliosSettings)
+            : base(heliosSettings)
+        {
+            Hostname = heliosSettings.PublicHostname;
+
+            BindIp = GetBindIp(heliosSettings.Hostname, dualMode:false);
+            Port = BindPort = heliosSettings.Port;
+
+            ConnectionTimeout = heliosSettings.ConnectTimeout;
+            SendBufferSize = (int)(heliosSettings.SendBufferSize ?? 256000);
+            ReceiveBufferSize = (int)(heliosSettings.ReceiveBufferSize ?? 256000);
+
+            Backlog = heliosSettings.Backlog;
+            TcpNoDelay = heliosSettings.TcpNoDelay;
+            TcpKeepAlive = heliosSettings.TcpKeepAlive;
+        }
+
+        private static IPAddress GetBindIp(string hostname, bool dualMode)
+        {
+            if (hostname.Equals("localhost", StringComparison.OrdinalIgnoreCase))
+                return IPAddress.Loopback;
+
+            IPAddress ip;
+
+            if (IPAddress.TryParse(hostname, out ip))
+            {
+                // The socket is using DualMode, if ipv6 is supported, listening on IPv6Any
+                // will work for any address (ipv4 and ipv6)
+                if (IPAddress.Any.Equals(ip) && Socket.OSSupportsIPv6 && dualMode)
+                    ip = IPAddress.IPv6Any;
+
+                return ip;
+            }
+
+            // If hostname is not localhost or an ip, bind to IPAny
+            return (Socket.OSSupportsIPv6 && dualMode) ? IPAddress.IPv6Any : IPAddress.Any;
         }
 
         public void ConfigureSocket(Socket s)

@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Remote.Transport.Helios;
 
 namespace Akka.Remote.Transport.Streaming
 {
@@ -34,6 +35,18 @@ namespace Akka.Remote.Transport.Streaming
             FlushWaitTimeout = config.GetTimeSpan("flush-wait-on-shutdown");
             ChunkedReadThreshold = GetByteSize(config, "chunked-read-threshold");
             FrameSizeHardLimit = GetByteSize(config, "frame-size-hard-limit", 32000);
+        }
+
+        internal StreamTransportSettings(HeliosTransportSettings heliosSettings)
+        {
+            Config = heliosSettings.Config;
+
+            StreamWriteBufferSize = 4096;
+            StreamReadBufferSize = 65536;
+            MaximumFrameSize = heliosSettings.MaxFrameSize;
+            FlushWaitTimeout = TimeSpan.FromSeconds(2);
+            ChunkedReadThreshold = 4096;
+            FrameSizeHardLimit = 67108864;
         }
 
         protected static int GetByteSize(Config config, string path, int minValue = 0, int maxValue = int.MaxValue)

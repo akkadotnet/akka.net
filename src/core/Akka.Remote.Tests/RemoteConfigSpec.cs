@@ -92,7 +92,7 @@ namespace Akka.Remote.Tests
             Assert.Equal(4096, s.Backlog);
             Assert.True(s.TcpNoDelay);
             Assert.True(s.TcpKeepAlive);
-            Assert.True(s.TcpReuseAddr);
+            Assert.False(s.TcpReuseAddr);
             Assert.True(string.IsNullOrEmpty(c.GetString("hostname")));
             Assert.Equal(1, s.ServerSocketWorkerPoolSize);
             Assert.Equal(1, s.ClientSocketWorkerPoolSize);
