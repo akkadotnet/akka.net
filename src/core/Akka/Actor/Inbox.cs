@@ -229,9 +229,9 @@ namespace Akka.Actor
         object ReceiveWhere(Predicate<object> predicate, TimeSpan timeout);
 
         /// <summary>
-        /// Makes an internal actor act as a proxy of given <paramref name="message"/>, 
-        /// which will be send to given <paramref cref="target"/> actor. It means, 
-        /// that all <paramref name="target"/>'s replies will be sent to current inbox instead.
+        /// Makes an internal actor act as a proxy of a given <paramref name="message"/>, 
+        /// which is sent to a given target actor. It means, that all <paramref name="target"/>'s
+        /// replies will be sent to current inbox instead.
         /// </summary>
         void Send(IActorRef target, object message);
     }

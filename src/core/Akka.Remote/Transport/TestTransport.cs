@@ -421,7 +421,7 @@ namespace Akka.Remote.Transport
             _transportTable = new ConcurrentDictionary<Address, Tuple<TestTransport, Task<IAssociationEventListener>>>();
 
         /// <summary>
-        /// Retrieves the specified <see cref="AssociationRegistry"/> associated with the <see cref="key"/>.
+        /// Retrieves the specified <see cref="AssociationRegistry"/> associated with the <paramref name="key"/>.
         /// </summary>
         /// <param name="key">The registry key - see the HOCON example for details.</param>
         /// <returns>An existing or new <see cref="AssociationRegistry"/> instance.</returns>

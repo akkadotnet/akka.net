@@ -238,7 +238,7 @@ namespace Akka.Persistence
         /// persisted event data, notify listeners and reply to command senders.
         /// 
         ///
-        /// If persistence of an event fails, <see cref="OnPersistFailure"> will be invoked and the actor will
+        /// If persistence of an event fails, <see cref="OnPersistFailure" /> will be invoked and the actor will
         /// unconditionally be stopped. The reason that it cannot resume when persist fails is that it
         /// is unknown if the event was actually persisted or not, and therefore it is in an inconsistent
         /// state. Restarting on persistent failures will most likely fail anyway, since the journal
@@ -299,7 +299,7 @@ namespace Akka.Persistence
         /// persisted event data, notify listeners and reply to command senders.
         /// 
         /// 
-        /// If persistence of an event fails, <see cref="OnPersistFailure"> will be invoked and the actor will
+        /// If persistence of an event fails, <see cref="OnPersistFailure" /> will be invoked and the actor will
         /// unconditionally be stopped. The reason that it cannot resume when persist fails is that it
         /// is unknown if the event was actually persisted or not, and therefore it is in an inconsistent
         /// state. Restarting on persistent failures will most likely fail anyway, since the journal
