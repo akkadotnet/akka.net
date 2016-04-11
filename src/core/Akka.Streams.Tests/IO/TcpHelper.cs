@@ -7,12 +7,13 @@ using Akka.IO;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
+using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.IO
 {
     public abstract class TcpHelper : AkkaSpec
     {
-        protected TcpHelper(string config) : base(config)
+        protected TcpHelper(string config, ITestOutputHelper helper) : base(config, helper)
         {
             Settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(4, 4);
             Materializer = Sys.Materializer(Settings);
@@ -182,7 +183,7 @@ namespace Akka.Streams.Tests.IO
             public TestServer(EndPoint address, IActorRef probe)
             {
                 _probe = probe;
-                Context.System.Tcp().Tell(new Tcp.Bind(Self, address, 100, null, pullMode: true));
+                Context.System.Tcp().Tell(new Tcp.Bind(Self, address, pullMode: true));
             }
 
             protected override void OnReceive(object message)
@@ -323,7 +324,7 @@ namespace Akka.Streams.Tests.IO
                 _demand -= 1;
             }
 
-            public void Close() => TcpWriteSubscription.Value.Cancel();
+            public void Close() => TcpWriteSubscription.Value.SendComplete();
         }
     }
 

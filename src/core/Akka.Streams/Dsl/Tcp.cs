@@ -99,7 +99,7 @@ namespace Akka.Streams.Dsl
         /// <param name="host">The host to listen on</param>
         /// <param name="port">The port to listen on</param>
         /// <param name="backlog">Controls the size of the connection backlog</param>
-        /// <param name="options">TCP options for the connections, see <see cref="IO.Tcp"/> for details</param>
+        /// <param name="options">TCP options for the connections, see <see cref="Akka.IO.Tcp"/> for details</param>
         /// <param name="halfClose">Controls whether the connection is kept open even after writing has been completed to the accepted TCP connections.
         /// If set to true, the connection will implement the TCP half-close mechanism, allowing the client to
         /// write to the connection even after the server has finished writing. The TCP socket is only closed
@@ -111,7 +111,12 @@ namespace Akka.Streams.Dsl
         public Source<Tcp.IncomingConnection, Task<Tcp.ServerBinding>> Bind(string host, int port, int backlog = 100,
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = false, TimeSpan? idleTimeout = null)
         {
-            return Source.FromGraph(new ConnectionSourceStage(_system.Tcp(), new DnsEndPoint(host, port), backlog,
+            // DnsEnpoint isn't allowed
+            var ipAddresses = System.Net.Dns.GetHostAddresses(host);
+            if (ipAddresses.Length == 0)
+                throw new ArgumentException($"Couldn't resolve IpAdress for host {host}", nameof(host));
+
+            return Source.FromGraph(new ConnectionSourceStage(_system.Tcp(), new IPEndPoint(ipAddresses[0], port), backlog,
                 options, halfClose, idleTimeout, BindShutdownTimeout));
         }
 
@@ -127,7 +132,7 @@ namespace Akka.Streams.Dsl
         /// <param name="host">The host to listen on</param>
         /// <param name="port">The port to listen on</param>
         /// <param name="backlog">Controls the size of the connection backlog</param>
-        /// <param name="options">TCP options for the connections, see <see cref="IO.Tcp"/> for details</param>
+        /// <param name="options">TCP options for the connections, see <see cref="Akka.IO.Tcp"/> for details</param>
         /// <param name="halfClose">Controls whether the connection is kept open even after writing has been completed to the accepted TCP connections.
         /// If set to true, the connection will implement the TCP half-close mechanism, allowing the client to
         /// write to the connection even after the server has finished writing. The TCP socket is only closed

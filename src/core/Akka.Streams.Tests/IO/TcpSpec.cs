@@ -12,13 +12,14 @@ using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 using Tcp = Akka.Streams.Dsl.Tcp;
 
 namespace Akka.Streams.Tests.IO
 {
     public class TcpSpec : TcpHelper
     {
-        public TcpSpec() : base("akka.stream.materializer.subscription-timeout.timeout = 2s")
+        public TcpSpec(ITestOutputHelper helper) : base("akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
         {
         }
 
@@ -40,6 +41,10 @@ namespace Akka.Streams.Tests.IO
                 var serverConnection = server.WaitAccept();
 
                 ValidateServerClientCommunication(testData, serverConnection, tcpReadProbe, tcpWriteProbe);
+
+                tcpWriteProbe.Close();
+                tcpReadProbe.Close();
+                server.Close();
             }, Materializer);
         }
 
@@ -47,8 +52,8 @@ namespace Akka.Streams.Tests.IO
         public void Outgoing_TCP_stream_must_be_able_to_write_a_sequence_of_ByteStrings()
         {
             var server = new Server(this);
-            var testInput = Enumerable.Range(0, 255).Select(i => ByteString.Create(new[] {Convert.ToByte(i)}));
-            var expectedOutput = ByteString.Create(Enumerable.Range(0, 255).Select(Convert.ToByte).ToArray());
+            var testInput = Enumerable.Range(0, 256).Select(i => ByteString.Create(new[] {Convert.ToByte(i)}));
+            var expectedOutput = ByteString.Create(Enumerable.Range(0, 256).Select(Convert.ToByte).ToArray());
 
             Source.From(testInput)
                 .Via(Sys.TcpStream().OutgoingConnection(server.Address))
@@ -184,7 +189,7 @@ namespace Akka.Streams.Tests.IO
                 serverConnection.Read(5);
                 serverConnection.WaitRead().ShouldBeEquivalentTo(testData);
 
-                // Close clint side write
+                // Close client side write
                 tcpWriteProbe.Close();
 
                 // Need a write on the server side to detect the close event
@@ -363,7 +368,7 @@ namespace Akka.Streams.Tests.IO
             // Since we have already communicated over the connections we can have short timeouts for the tasks
             ((IPEndPoint) conn1.RemoteAddress).Port.Should().Be(((IPEndPoint) server.Address).Port);
             ((IPEndPoint) conn2.RemoteAddress).Port.Should().Be(((IPEndPoint) server.Address).Port);
-            ((IPEndPoint) conn1.LocalAddress).Port.Should().Be(((IPEndPoint) conn2.LocalAddress).Port);
+            ((IPEndPoint) conn1.LocalAddress).Port.Should().NotBe(((IPEndPoint) conn2.LocalAddress).Port);
 
             tcpWriteProbe1.Close();
             tcpReadProbe1.Close();
@@ -384,14 +389,14 @@ namespace Akka.Streams.Tests.IO
                     Sys.TcpStream()
                         .Bind(serverAddress.Address.ToString(), serverAddress.Port, halfClose: false)
                         .ToMaterialized(
-                            Sink.ForEach<Tcp.IncomingConnection>(conn => conn.Flow.Join(writeButIgnoreRead)),
+                            Sink.ForEach<Tcp.IncomingConnection>(conn => conn.Flow.Join(writeButIgnoreRead).Run(Materializer)),
                             Keep.Left)
                         .Run(Materializer);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 var binding = task.Result;
 
                 var t = Source.Maybe<ByteString>()
-                    .Via(new Tcp().CreateExtension(Sys as ExtendedActorSystem).OutgoingConnection(serverAddress.Address.ToString(), serverAddress.Port))
+                    .Via(Sys.TcpStream().OutgoingConnection(serverAddress.Address.ToString(), serverAddress.Port))
                     .ToMaterialized(Sink.Fold<ByteString, ByteString>(ByteString.Empty, (s, s1) => s + s1), Keep.Both)
                     .Run(Materializer);
                 var promise = t.Item1;
@@ -400,7 +405,7 @@ namespace Akka.Streams.Tests.IO
                 result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 result.Result.ShouldBeEquivalentTo(ByteString.FromString("Early response"));
 
-                promise.SetResult(null);
+                promise.SetResult(null); // close client upstream, no more data
                 binding.Unbind();
 
             }, Materializer);
@@ -422,7 +427,7 @@ namespace Akka.Streams.Tests.IO
 
             var result = Source.From(Enumerable.Repeat(0, 1000)
                 .Select(i => ByteString.Create(new[] {Convert.ToByte(i)})))
-                .Via(new Tcp().CreateExtension(Sys as ExtendedActorSystem).OutgoingConnection(serverAddress))
+                .Via(Sys.TcpStream().OutgoingConnection(serverAddress))
                 .RunFold(0, (i, s) => i + s.Count, Materializer);
 
             result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -438,18 +443,16 @@ namespace Akka.Streams.Tests.IO
             var mat2 = ActorMaterializer.Create(system2);
 
             var serverAddress = TestUtils.TemporaryServerAddress();
-            var binding = Sys.TcpStream()
+            var binding = system2.TcpStream()
                 .BindAndHandle(Flow.Create<ByteString>(), mat2, serverAddress.Address.ToString(), serverAddress.Port);
 
             var result = Source.Maybe<ByteString>()
-                .Via(new Tcp().CreateExtension(system2 as ExtendedActorSystem).OutgoingConnection(serverAddress))
+                .Via(system2.TcpStream().OutgoingConnection(serverAddress))
                 .RunFold(0, (i, s) => i + s.Count, mat2);
 
             // Getting rid of existing connection actors by using a blunt instrument
-            system2.ActorSelection(Akka.IO.Tcp.Manager(system2).Path/"selectors"/"$a"/"*").Tell(Kill.Instance);
-
-            result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            result.Exception.InnerExceptions.Any(e => e is StreamTcpException).Should().BeTrue();
+            system2.ActorSelection(system2.Tcp().Path/"selectors"/"$b"/"*").Tell(Kill.Instance);
+            result.Invoking(r => r.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<StreamTcpException>();
 
             binding.Result.Unbind().Wait();
             system2.Terminate().Wait();
