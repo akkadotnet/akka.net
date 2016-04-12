@@ -628,6 +628,7 @@ namespace Akka.Remote
                         _transportMapping[send.Recipient.LocalAddressToUse], _settings, writing: true,
                         handleOption: null, refuseUid: refuseUid), uid: null, refuseUid: refuseUid);
 
+                // pattern match won't throw a NullReferenceException if one is returned by WritableEndpointWithPolicyFor
                 _endpoints.WritableEndpointWithPolicyFor(recipientAddress).Match()
                     .With<Pass>(
                         pass =>
@@ -658,7 +659,7 @@ namespace Akka.Remote
             Receive<EndpointWriter.TookOver>(tookover => RemovePendingReader(tookover.Writer, tookover.ProtocolHandle));
             Receive<ReliableDeliverySupervisor.GotUid>(gotuid =>
             {
-                _endpoints.RegisterWritableEndpointUid(Sender, gotuid.Uid);
+                _endpoints.RegisterWritableEndpointUid(gotuid.RemoteAddress, gotuid.Uid);
                 HandleStashedInbound(Sender, writerIsIdle: false);
             });
             Receive<ReliableDeliverySupervisor.Idle>(idle =>
