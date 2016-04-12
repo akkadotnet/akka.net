@@ -671,6 +671,139 @@ namespace Akka.Streams.Dsl
     }
 
     /// <summary>
+    /// Fan-out the stream to several streams. emitting an incoming upstream element to one downstream consumer according
+    /// to the partitioner function applied to the element
+    /// <para>
+    /// '''Emits when''' an element is available from the input and the chosen output has demand
+    /// </para>
+    /// '''Backpressures when''' the currently chosen output back-pressures
+    /// <para>
+    /// '''Completes when''' upstream completes and no output is pending
+    /// </para>
+    /// '''Cancels when''' when all downstreams cancel
+    /// </summary>
+    public sealed class Partition<T> : GraphStage<UniformFanOutShape<T, T>>
+    {
+        #region internal classes
+
+        private sealed class Logic : GraphStageLogic
+        {
+            private object _outPendingElement;
+            private int _outPendingIndex;
+            private int _downstreamRunning;
+
+            public Logic(Partition<T> stage) : base(stage.Shape)
+            {
+                _downstreamRunning = stage._outputPorts;
+
+                SetHandler(stage.In, onPush: () =>
+                {
+                    var element = Grab(stage.In);
+                    var index = stage._partitioner(element);
+                    if (index < 0 || index >= stage._outputPorts)
+                        FailStage(
+                            new PartitionOutOfBoundsException(
+                                $"partitioner must return an index in the range [0,{stage._outputPorts - 1}]. returned: [{index}] for input [{element.GetType().Name}]."));
+                    else if (!IsClosed(stage.Out(index)))
+                    {
+                        if (IsAvailable(stage.Out(index)))
+                        {
+                            Push(stage.Out(index), element);
+                            if (stage.Shape.Outlets.Any(IsAvailable))
+                                Pull(stage.In);
+                        }
+                        else
+                        {
+                            _outPendingElement = element;
+                            _outPendingIndex = index;
+                        }
+                    }
+                    else if (stage.Shape.Outlets.Any(IsAvailable))
+                        Pull(stage.In);
+                }, onUpstreamFinish: () =>
+                {
+                    if(_outPendingElement == null)
+                        CompleteStage();
+                });
+
+                for (var i = 0; i < stage._outputPorts; i++)
+                {
+                    var output = stage.Shape.Outlets[i];
+                    var index = i;
+
+                    SetHandler(output, onPull: () =>
+                    {
+                        if (_outPendingElement != null)
+                        {
+                            var element = (T) _outPendingElement;
+                            if (index == _outPendingIndex)
+                            {
+                                Push(output, element);
+                                _outPendingElement = null;
+                                if (!IsClosed(stage.In))
+                                {
+                                    if (!HasBeenPulled(stage.In))
+                                        Pull(stage.In);
+                                }
+                                else
+                                    CompleteStage();
+                            }
+                        }
+                        else if (!HasBeenPulled(stage.In))
+                            Pull(stage.In);
+                    }, onDownstreamFinish: () =>
+                    {
+                        _downstreamRunning--;
+                        if(_downstreamRunning == 0)
+                            CompleteStage();
+                        else if (_outPendingElement != null)
+                        {
+                            if (index == _outPendingIndex)
+                            {
+                                _outPendingElement = null;
+                                if(!HasBeenPulled(stage.In))
+                                    Pull(stage.In);
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        #endregion
+
+        private readonly int _outputPorts;
+        private readonly Func<T, int> _partitioner;
+
+        public Partition(int outputPorts, Func<T, int> partitioner)
+        {
+            _outputPorts = outputPorts;
+            _partitioner = partitioner;
+            var outlets = Enumerable.Range(0, outputPorts).Select(i => new Outlet<T>("Partition.out" + i)).ToArray();
+            Shape = new UniformFanOutShape<T, T>(In, outlets);
+        }
+
+        public readonly Inlet<T> In = new Inlet<T>("Partition.in");
+
+        public Outlet Out(int id) => Shape.Out(id);
+
+        public override UniformFanOutShape<T, T> Shape { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+        public override string ToString() => $"Partition({_outputPorts})";
+
+    }
+
+    public sealed class PartitionOutOfBoundsException : Exception
+    {
+        public PartitionOutOfBoundsException(string message) : base(message)
+        {
+            
+        }
+    }
+
+    /// <summary>
     /// Fan-out the stream to several streams. Each upstream element is emitted to the first available downstream consumer.
     /// It will not shut down until the subscriptions
     /// for at least two downstream subscribers have been established.
