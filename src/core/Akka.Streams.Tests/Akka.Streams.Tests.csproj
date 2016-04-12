@@ -126,6 +126,7 @@
     <Compile Include="Dsl\GraphZipSpec.cs" />
     <Compile Include="Dsl\GraphZipWithSpec.cs" />
     <Compile Include="Dsl\PublisherSinkSpec.cs" />
+    <Compile Include="Dsl\QueueSinkSpec.cs" />
     <Compile Include="Dsl\QueueSourceSpec.cs" />
     <Compile Include="Actor\ActorPublisherSpec.cs" />
     <Compile Include="Dsl\ActorRefBackpressureSinkSpec.cs" />
