@@ -167,8 +167,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 builder(_broadcast)
                     .Connect(source, _broadcast.In)
-                    .Connect(_broadcast.Out[0], sink1)
-                    .Connect(_broadcast.Out[1], sink2)
+                    .Connect(_broadcast.Out(0), sink1)
+                    .Connect(_broadcast.Out(1), sink2)
                     .Init();
 
                 lastEvents().Should().BeEmpty();
@@ -195,8 +195,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 builder(new IGraphStageWithMaterializedValue[] {zip, _broadcast})
                     .Connect(source, _broadcast.In)
-                    .Connect(_broadcast.Out[0], zip.In0)
-                    .Connect(_broadcast.Out[1], zip.In1)
+                    .Connect(_broadcast.Out(0), zip.In0)
+                    .Connect(_broadcast.Out(1), zip.In1)
                     .Connect(zip.Out, sink)
                     .Init();
 
@@ -230,8 +230,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     .Connect(source1, zip.In0)
                     .Connect(source2, zip.In1)
                     .Connect(zip.Out, broadcast.In)
-                    .Connect(broadcast.Out[0], sink1)
-                    .Connect(broadcast.Out[1], sink2)
+                    .Connect(broadcast.Out(0), sink1)
+                    .Connect(broadcast.Out(1), sink2)
                     .Init();
 
                 lastEvents().Should().BeEmpty();
@@ -262,8 +262,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 var sink = setup.NewDownstreamProbe<int>("sink");
 
                 builder(_merge)
-                    .Connect(source1, _merge.In[0])
-                    .Connect(source2, _merge.In[1])
+                    .Connect(source1, _merge.In(0))
+                    .Connect(source2, _merge.In(1))
                     .Connect(_merge.Out, sink)
                     .Init();
 
@@ -306,8 +306,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 builder(_balance)
                     .Connect(source, _balance.In)
-                    .Connect(_balance.Out[0], sink1)
-                    .Connect(_balance.Out[1], sink2)
+                    .Connect(_balance.Out(0), sink1)
+                    .Connect(_balance.Out(1), sink2)
                     .Init();
 
                 lastEvents().Should().BeEmpty();
@@ -335,10 +335,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 var sink = setup.NewDownstreamProbe<int>("sink");
 
                 builder(new IGraphStageWithMaterializedValue[] { _merge, _balance })
-                    .Connect(source, _merge.In[0])
+                    .Connect(source, _merge.In(0))
                     .Connect(_merge.Out, _balance.In)
-                    .Connect(_balance.Out[0], sink)
-                    .Connect(_balance.Out[1], _merge.In[1])
+                    .Connect(_balance.Out(0), sink)
+                    .Connect(_balance.Out(1), _merge.In(1))
                     .Init();
 
                 lastEvents().Should().BeEmpty();
@@ -368,11 +368,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 var sink = setup.NewDownstreamProbe<int>("sink");
 
                 builder(new IGraphStageWithMaterializedValue[] { _detach, _balance, _merge })
-                    .Connect(source, _merge.In[0])
+                    .Connect(source, _merge.In(0))
                     .Connect(_merge.Out, _balance.In)
-                    .Connect(_balance.Out[0], sink)
-                    .Connect(_balance.Out[1], _detach.Shape.Inlet)
-                    .Connect(_detach.Shape.Outlet, _merge.In[1])
+                    .Connect(_balance.Out(0), sink)
+                    .Connect(_balance.Out(1), _detach.Shape.Inlet)
+                    .Connect(_detach.Shape.Outlet, _merge.In(1))
                     .Init();
 
                 lastEvents().Should().BeEmpty();
