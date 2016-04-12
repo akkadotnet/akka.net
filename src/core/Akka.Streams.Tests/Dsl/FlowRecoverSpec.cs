@@ -55,7 +55,7 @@ namespace Akka.Streams.Tests.Dsl
                         throw Ex;
                     return x;
                 })
-                    .Recover(_ => null)
+                    .Recover(_ => Option<int>.None)
                     .Map(x=>x.Value)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .RequestNext(1)

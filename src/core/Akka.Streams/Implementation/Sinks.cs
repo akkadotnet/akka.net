@@ -460,7 +460,7 @@ namespace Akka.Streams.Implementation
             private readonly QueueSink<T> _stage;
             private readonly int _maxBuffer;
             private IBuffer<Result<Option<T>>> _buffer;
-            private readonly Option<TaskCompletionSource<Option<T>>>_currentRequest;
+            private Option<TaskCompletionSource<Option<T>>>_currentRequest;
 
             public Logic(Shape shape, QueueSink<T> stage, int maxBuffer) : base(shape)
             {
@@ -474,7 +474,7 @@ namespace Akka.Streams.Implementation
                         EnqueueAndNotify(new Result<Option<T>>(new Option<T>(Grab(_stage.In))));
                         if (_buffer.Used < _maxBuffer) Pull(_stage.In);
                     },
-                    onUpstreamFinish: () => EnqueueAndNotify(new Result<Option<T>>(new Option<T>())),
+                    onUpstreamFinish: () => EnqueueAndNotify(new Result<Option<T>>(Option<T>.None)),
                     onUpstreamFailure: ex => EnqueueAndNotify(new Result<Option<T>>(ex)));
             }
 
@@ -498,13 +498,18 @@ namespace Akka.Streams.Implementation
                     promise =>
                     {
                         if (_currentRequest.HasValue)
-                            promise.SetException(new IllegalStateException("You have to wait for previous future to be resolved to send another request"));
-                        if (_buffer.IsEmpty)
-                            _currentRequest.Value = promise;
+                            promise.SetException(
+                                new IllegalStateException(
+                                    "You have to wait for previous future to be resolved to send another request"));
                         else
                         {
-                            if (_buffer.Used == _maxBuffer) TryPull(_stage.In);
-                            SendDownstream(promise);
+                            if (_buffer.IsEmpty)
+                                _currentRequest = promise;
+                            else
+                            {
+                                if (_buffer.Used == _maxBuffer) TryPull(_stage.In);
+                                SendDownstream(promise);
+                            }
                         }
                     });
             }
@@ -531,7 +536,7 @@ namespace Akka.Streams.Implementation
                 if (_currentRequest.HasValue)
                 {
                     SendDownstream(_currentRequest.Value);
-                    _currentRequest.Reset();
+                    _currentRequest = Option<TaskCompletionSource<Option<T>>>.None;
                 }
             }
 
@@ -572,7 +577,7 @@ namespace Akka.Streams.Implementation
 
         public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out ISinkQueue<T> materialized)
         {
-            var maxBuffer = Module.Attributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;
+            var maxBuffer = inheritedAttributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;
             if (maxBuffer <= 0) throw new ArgumentException("Buffer must be greater than zero", nameof(inheritedAttributes));
 
             var stageLogic = new Logic(Shape, this, maxBuffer);

@@ -150,13 +150,13 @@ namespace Akka.Streams.Implementation.Fusing
 
         public override ISyncDirective OnPull(IContext<Option<T>> context)
         {
-            return _recovered != null ? (ISyncDirective) context.PushAndFinish(_recovered) : context.Pull();
+            return _recovered.HasValue ? (ISyncDirective) context.PushAndFinish(_recovered) : context.Pull();
         }
 
         public override ITerminationDirective OnUpstreamFailure(Exception cause, IContext<Option<T>> context)
         {
             var result = _recovery(cause);
-            if (result == null || !result.HasValue)
+            if (!result.HasValue)
                 return context.Fail(cause);
 
             _recovered = result;
@@ -658,9 +658,9 @@ namespace Akka.Streams.Implementation.Fusing
             private readonly FlowShape<TIn, TOut> _shape;
             private readonly Batch<TIn, TOut> _stage;
             private readonly Decider _decider;
-            private readonly Option<TOut> _aggregate = new Option<TOut>();
+            private Option<TOut> _aggregate;
             private long _left;
-            private readonly Option<TIn> _pending = new Option<TIn>();
+            private Option<TIn> _pending;
 
             public BatchGraphStageLogic(FlowShape<TIn, TOut> shape, Attributes inheritedAttributes, Batch<TIn, TOut> stage) : base(shape)
             {
@@ -678,7 +678,7 @@ namespace Akka.Streams.Implementation.Fusing
                     {
                         try
                         {
-                            _aggregate.Value = _stage.Seed(element);
+                            _aggregate = _stage.Seed(element);
                             _left -= cost;
                         }
                         catch (Exception ex)
@@ -698,13 +698,13 @@ namespace Akka.Streams.Implementation.Fusing
                     }
                     else if (_left < cost)
                     {
-                        _pending.Value = element;
+                        _pending = element;
                     }
                     else
                     {
                         try
                         {
-                            _aggregate.Value = _stage.Aggregate(_aggregate.Value, element);
+                            _aggregate = _stage.Aggregate(_aggregate.Value, element);
                             _left -= cost;
                         }
                         catch (Exception ex)
@@ -742,7 +742,7 @@ namespace Akka.Streams.Implementation.Fusing
                         {
                             try
                             {
-                                _aggregate.Value = _stage.Seed(_pending.Value);
+                                _aggregate = _stage.Seed(_pending.Value);
                             }
                             catch (Exception ex)
                             {
@@ -759,7 +759,7 @@ namespace Akka.Streams.Implementation.Fusing
                                         break;
                                 }
                             }
-                            _pending.Reset();
+                            _pending = Option<TIn>.None;
                         }
                     }
                     else
@@ -781,9 +781,9 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     try
                     {
-                        _aggregate.Value = _stage.Seed(_pending.Value);
+                        _aggregate = _stage.Seed(_pending.Value);
                         _left -= _stage.CostFunc(_pending.Value);
-                        _pending.Reset();
+                        _pending = Option<TIn>.None;
                     }
                     catch (Exception ex)
                     {
@@ -796,14 +796,14 @@ namespace Akka.Streams.Implementation.Fusing
                                 RestartState();
                                 break;
                             case Directive.Resume:
-                                _pending.Reset();
+                                _pending = Option<TIn>.None;
                                 break;
                         }
                     }
                 }
                 else
                 {
-                    _aggregate.Reset();
+                    _aggregate = Option<TOut>.None;
                 }
             }
 
@@ -814,9 +814,9 @@ namespace Akka.Streams.Implementation.Fusing
 
             private void RestartState()
             {
-                _aggregate.Reset();
+                _aggregate = Option<TOut>.None;
                 _left = _stage.Max;
-                _pending.Reset();
+                _pending = Option<TIn>.None;
             }
         }
 

@@ -1308,7 +1308,7 @@ namespace Akka.Streams.Stage
         {
             private readonly string _name;
             private InHandler _handler;
-            private readonly Option<T> _elem;
+            private Option<T> _elem;
             private bool _closed;
             private bool _pulled;
             private readonly SubSink<T> _sink;
@@ -1316,7 +1316,6 @@ namespace Akka.Streams.Stage
             public SubSinkInlet(GraphStageLogic logic, string name)
             {
                 _name = name;
-                _elem = new Option<T>();
                 _sink = new SubSink<T>(name, logic.GetAsyncCallback<IActorSubscriberMessage>(
                     msg =>
                     {
@@ -1325,7 +1324,7 @@ namespace Akka.Streams.Stage
 
                         if (msg is OnNext)
                         {
-                            _elem.Value = (T) ((OnNext) msg).Element;
+                            _elem = (T) ((OnNext) msg).Element;
                             _pulled = false;
                             _handler.OnPush();
                         }
@@ -1359,7 +1358,7 @@ namespace Akka.Streams.Stage
                     throw new IllegalStateException($"cannot grab element from port {this} when data have not yet arrived");
 
                 var ret = _elem.Value;
-                _elem.Reset();
+                _elem = Option<T>.None;
                 return ret;
             }
 
