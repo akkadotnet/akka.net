@@ -8,11 +8,16 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit.Tests;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
     public class GraphMergePreferredSpec : TwoStreamsSetup<int>
     {
+        public GraphMergePreferredSpec(ITestOutputHelper helper) : base(helper)
+        {
+        }
+
         protected override Fixture CreateFixture(GraphDsl.Builder<Unit> builder) => new MergePreferredFixture(builder);
 
         private sealed class MergePreferredFixture : Fixture

@@ -7,6 +7,7 @@ using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 // ReSharper disable InvokeAsExtensionMethod
 
@@ -14,6 +15,10 @@ namespace Akka.Streams.Tests.Dsl
 {
     public class GraphConcatSpec : TwoStreamsSetup<int>
     {
+        public GraphConcatSpec(ITestOutputHelper helper) : base(helper)
+        {
+        }
+
         protected override Fixture CreateFixture(GraphDsl.Builder<Unit> builder) => new ConcatFixture(builder);
 
         private class ConcatFixture : Fixture

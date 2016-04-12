@@ -461,6 +461,7 @@ namespace Akka.Streams.Dsl
     public sealed class MergeSorted<T> : GraphStage<FanInShape<T, T, T>>
     {
         #region stage logic
+
         private sealed class MergeSortedStageLogic : GraphStageLogic
         {
             private readonly MergeSorted<T> _stage;
@@ -478,33 +479,34 @@ namespace Akka.Streams.Dsl
                 _stage = stage;
                 _dispatchRight = right => Dispatch(_other, right);
                 _dispatchLeft = left => Dispatch(left, _other);
-                _passRight = () => Emit(_stage.Out, _other, () =>
+                _passRight = () => Emit(_stage._out, _other, () =>
                 {
                     NullOut();
-                    PassAlong(_stage.Right, _stage.Out, doPull: true);
+                    PassAlong(_stage._right, _stage._out, doPull: true);
                 });
-                _passLeft = () => Emit(_stage.Out, _other, () =>
+                _passLeft = () => Emit(_stage._out, _other, () =>
                 {
                     NullOut();
-                    PassAlong(_stage.Left, _stage.Out, doPull: true);
+                    PassAlong(_stage._left, _stage._out, doPull: true);
                 });
-                _readRight = () => Read(_stage.Right, _dispatchRight, _passLeft);
-                _readLeft = () => Read(_stage.Left, _dispatchLeft, _passRight);
+                _readRight = () => Read(_stage._right, _dispatchRight, _passLeft);
+                _readLeft = () => Read(_stage._left, _dispatchLeft, _passRight);
 
-                SetHandler(_stage.Left, IgnoreTerminateInput);
-                SetHandler(_stage.Right, IgnoreTerminateInput);
-                SetHandler(_stage.Out, EagerTerminateOutput);
+                SetHandler(_stage._left, IgnoreTerminateInput);
+                SetHandler(_stage._right, IgnoreTerminateInput);
+                SetHandler(_stage._out, EagerTerminateOutput);
             }
 
             public override void PreStart()
             {
                 // all fan-in stages need to eagerly pull all inputs to get cycles started
-                Pull(_stage.Right);
-                Read(_stage.Left, left =>
+                Pull(_stage._right);
+                Read(_stage._left, left =>
                 {
                     _other = left;
+                    _readRight();
                 },
-                () => PassAlong(_stage.Right, _stage.Out));
+                () => PassAlong(_stage._right, _stage._out));
             }
 
             private void NullOut()
@@ -517,30 +519,32 @@ namespace Akka.Streams.Dsl
                 if (_stage._compare(left, right) == -1)
                 {
                     _other = right;
-                    Emit(_stage.Out, left, _readLeft);
+                    Emit(_stage._out, left, _readLeft);
                 }
                 else
                 {
                     _other = left;
-                    Emit(_stage.Out, right, _readRight);
+                    Emit(_stage._out, right, _readRight);
                 }
             }
         }
+
         #endregion
 
         private readonly Func<T, T, int> _compare;
 
-        public readonly Inlet<T> Left = new Inlet<T>("left");
-        public readonly Inlet<T> Right = new Inlet<T>("right");
-        public readonly Outlet<T> Out = new Outlet<T>("out");
+        private readonly Inlet<T> _left = new Inlet<T>("left");
+        private readonly Inlet<T> _right = new Inlet<T>("right");
+        private readonly Outlet<T> _out = new Outlet<T>("out");
 
         public MergeSorted(Func<T, T, int> compare)
         {
             _compare = compare;
-            Shape = new FanInShape<T, T, T>(Out, Left, Right);
+            Shape = new FanInShape<T, T, T>(_out, _left, _right);
         }
 
         public override FanInShape<T, T, T> Shape { get; }
+
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new MergeSortedStageLogic(Shape, this);
