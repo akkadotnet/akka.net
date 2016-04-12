@@ -118,6 +118,7 @@
     <Compile Include="Dsl\GraphMergeSortedSpec.cs" />
     <Compile Include="Dsl\GraphMergeSpec.cs" />
     <Compile Include="Dsl\GraphOpsIntegrationSpec.cs" />
+    <Compile Include="Dsl\GraphPartialSpec.cs" />
     <Compile Include="Dsl\PublisherSinkSpec.cs" />
     <Compile Include="Dsl\QueueSourceSpec.cs" />
     <Compile Include="Actor\ActorPublisherSpec.cs" />
