@@ -440,7 +440,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// <see cref="ActorNotFoundException"/> that takes a descriptive <see cref="message"/> and optional <see cref="innerException"/>.
+        /// <see cref="ActorNotFoundException"/> that takes a descriptive <paramref name="message"/> and optional <paramref name="innerException"/>.
         /// </summary>
         /// <param name="message">A user-defined error message.</param>
         /// <param name="innerException">An inner <see cref="Exception"/>.</param>

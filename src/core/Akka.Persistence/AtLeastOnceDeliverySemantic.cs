@@ -166,7 +166,7 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// This exception is thrown when the <see cref=AtLeastOnceDeliverySemantic."MaxUnconfirmedMessages" /> threshold has been exceeded.
+    /// This exception is thrown when the <see cref="AtLeastOnceDeliverySemantic.MaxUnconfirmedMessages" /> threshold has been exceeded.
     /// </summary>
     public class MaxUnconfirmedMessagesExceededException : Exception
     {
