@@ -45,6 +45,7 @@ namespace Akka.Actor.Internal
             : this(name, ConfigurationFactory.Load())
         {
         }
+
         public ActorSystemImpl(string name, Config config)
         {
             if(!Regex.Match(name, "^[a-zA-Z0-9][a-zA-Z0-9-]*$").Success)

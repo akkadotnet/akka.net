@@ -9,6 +9,7 @@ using System;
 using System.Configuration;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using Akka.Configuration.Hocon;
 using Newtonsoft.Json;
@@ -55,6 +56,7 @@ namespace Akka.Configuration
             return ParseString(hocon, null);
         }
 
+
         /// <summary>
         /// Loads a configuration defined in the current application's
         /// configuration file, e.g. app.config or web.config
@@ -62,11 +64,16 @@ namespace Akka.Configuration
         /// <returns>The configuration defined in the configuration file.</returns>
         public static Config Load()
         {
+#if !ANDROID
             var section = (AkkaConfigurationSection)ConfigurationManager.GetSection("akka") ?? new AkkaConfigurationSection();
             var config = section.AkkaConfig;
 
             return config;
+#else
+            return Default();
+#endif
         }
+
 
         /// <summary>
         /// Retrieves the default configuration that Akka.NET uses
@@ -75,7 +82,11 @@ namespace Akka.Configuration
         /// <returns>The configuration that contains default values for all options.</returns>
         public static Config Default()
         {
+#if !ANDROID
             return FromResource("Akka.Configuration.Pigeon.conf");
+#else
+            return FromResource("Akka.Android.Configuration.Pigeon.conf");
+#endif
         }
 
         /// <summary>
@@ -129,7 +140,7 @@ namespace Akka.Configuration
         /// <returns>The configuration defined in the assembly that contains the given resource.</returns>
         public static Config FromResource(string resourceName, Assembly assembly)
         {
-            using(Stream stream = assembly.GetManifestResourceStream(resourceName))
+            using (Stream stream = assembly.GetManifestResourceStream(resourceName))
             {
                 Debug.Assert(stream != null, "stream != null");
                 using (var reader = new StreamReader(stream))

@@ -1,0 +1,42 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.24720.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Akka.Shared", "core\Akka\Akka.Shared.shproj", "{F44D2344-11DD-4DFB-8859-9F65D9C20C34}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Android", "android\Akka.Android\Akka.Android.csproj", "{AB09183E-6FCE-4962-A1D2-D6066781A2B3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Android.Demo", "android\Akka.Android.Demo\Akka.Android.Demo.csproj", "{A4FB1239-C328-4FC6-896F-8176964EC350}"
+EndProject
+Global
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		core\Akka\Akka.Shared.projitems*{ab09183e-6fce-4962-a1d2-d6066781a2b3}*SharedItemsImports = 4
+		core\Akka\Akka.Shared.projitems*{f44d2344-11dd-4dfb-8859-9f65d9c20c34}*SharedItemsImports = 13
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Android|Any CPU = Android|Any CPU
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AB09183E-6FCE-4962-A1D2-D6066781A2B3}.Android|Any CPU.ActiveCfg = Release|Any CPU
+		{AB09183E-6FCE-4962-A1D2-D6066781A2B3}.Android|Any CPU.Build.0 = Release|Any CPU
+		{AB09183E-6FCE-4962-A1D2-D6066781A2B3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AB09183E-6FCE-4962-A1D2-D6066781A2B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AB09183E-6FCE-4962-A1D2-D6066781A2B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AB09183E-6FCE-4962-A1D2-D6066781A2B3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A4FB1239-C328-4FC6-896F-8176964EC350}.Android|Any CPU.ActiveCfg = Release|Any CPU
+		{A4FB1239-C328-4FC6-896F-8176964EC350}.Android|Any CPU.Build.0 = Release|Any CPU
+		{A4FB1239-C328-4FC6-896F-8176964EC350}.Android|Any CPU.Deploy.0 = Release|Any CPU
+		{A4FB1239-C328-4FC6-896F-8176964EC350}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4FB1239-C328-4FC6-896F-8176964EC350}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A4FB1239-C328-4FC6-896F-8176964EC350}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{A4FB1239-C328-4FC6-896F-8176964EC350}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A4FB1239-C328-4FC6-896F-8176964EC350}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A4FB1239-C328-4FC6-896F-8176964EC350}.Release|Any CPU.Deploy.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
