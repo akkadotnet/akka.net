@@ -116,6 +116,7 @@
     <Compile Include="Dsl\GraphMatValueSpec.cs" />
     <Compile Include="Dsl\GraphMergePreferredSpec.cs" />
     <Compile Include="Dsl\GraphMergeSortedSpec.cs" />
+    <Compile Include="Dsl\GraphMergeSpec.cs" />
     <Compile Include="Dsl\PublisherSinkSpec.cs" />
     <Compile Include="Dsl\QueueSourceSpec.cs" />
     <Compile Include="Actor\ActorPublisherSpec.cs" />
