@@ -4,6 +4,8 @@ using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch;
+using Akka.Dispatch.MessageQueues;
+using Akka.Pattern;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
@@ -86,7 +88,7 @@ namespace Akka.Streams.Dsl
         public static Sink<TIn, TMat> Wrap<TIn, TMat>(IGraph<SinkShape<TIn>, TMat> graph)
         {
             return graph is Sink<TIn, TMat>
-                ? graph as Sink<TIn, TMat>
+                ? (Sink<TIn, TMat>) graph
                 : new Sink<TIn, TMat>(graph.Module);
         }
 
@@ -166,7 +168,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Sink<TIn, Task> Ignore<TIn>()
         {
-            return new Sink<TIn, Task>(new SinkholeSink<TIn>(Shape<TIn>("BlackholeSink"), DefaultAttributes.IgnoreSink)); ;
+            return new Sink<TIn, Task>(new SinkholeSink<TIn>(Shape<TIn>("BlackholeSink"), DefaultAttributes.IgnoreSink));
         }
 
         /// <summary>
@@ -318,7 +320,7 @@ namespace Akka.Streams.Dsl
             onFailureMessage = onFailureMessage ?? (ex => new Status.Failure(ex));
 
             return
-                Sink.FromGraph(new ActorRefBackpressureSinkStage<TIn>(actorRef, onInitMessage, ackMessage,
+                FromGraph(new ActorRefBackpressureSinkStage<TIn>(actorRef, onInitMessage, ackMessage,
                     onCompleteMessage, onFailureMessage));
         }
 
@@ -333,19 +335,27 @@ namespace Akka.Streams.Dsl
         }
 
         ///<summary>
+        /// <para>
         /// Creates a <see cref="Sink{TIn,TMat}"/> that is materialized as an <see cref="ISinkQueue{TIn}"/>.
-        /// <see cref="ISinkQueue{TIn}.PullAsync"/> method is pulling element from the stream and returns <see cref="Task{TIn}"/>.
+        /// <see cref="ISinkQueue{TIn}.PullAsync"/> method is pulling element from the stream and returns <see cref="Task{Option}"/>.
         /// <see cref="Task"/> completes when element is available.
-        /// 
-        /// <see cref="Sink{TIn,TMat}"/> will request at most <paramref name="bufferSize"/> number of elements from
-        /// upstream and then stop back pressure.
+        /// </para>
+        /// <para>
+        /// Before calling the pull method a second time you need to wait until previous future completes.
+        /// Pull returns failed future with <see cref="IllegalStateException"/> if previous future has not yet completed.
+        /// </para>
+        /// <para>
+        /// <see cref="Sink{TIn,TMat}"/> will request at most number of elements equal to size of inputBuffer from
+        /// upstream and then stop back pressure. You can configure size of input by using WithAttributes method.
+        /// </para>
+        /// <para>
+        /// For stream completion you need to pull all elements from <see cref="ISinkQueue{T}"/> including last None
+        /// as completion marker.
+        /// </para>
         ///</summary>
-        /// <param name="bufferSize">The size of the buffer in element count</param>
-        /// <param name="timeout">Timeout for <see cref="ISinkQueue{T}.PullAsync"/></param>
-        public static Sink<TIn, ISinkQueue<TIn>> Queue<TIn>(int bufferSize, TimeSpan? timeout = null)
+        public static Sink<TIn, ISinkQueue<TIn>> Queue<TIn>()
         {
-            if (bufferSize < 0) throw new ArgumentException("Buffer size must be greater than or equal 0");
-            return FromGraph(new QueueSink<TIn>().WithAttributes(DefaultAttributes.QueueSink));
+            return FromGraph(new QueueSink<TIn>());
         }
 
         /// <summary>
