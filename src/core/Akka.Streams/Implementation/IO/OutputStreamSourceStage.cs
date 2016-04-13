@@ -146,11 +146,11 @@ namespace Akka.Streams.Implementation.IO
 
         public override SourceShape<ByteString> Shape => _shape;
 
-        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Stream materialized)
+        public override ILogicAndMaterializedValue<Stream> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var logic = new OutputStreamSourceStageLogic(Shape, this);
-            materialized = new OutputStreamAdapter(_dataQueue, _downstreamStatus, logic, _writeTimeout);
-            return logic;
+            return new LogicAndMaterializedValue<Stream>(logic,
+                new OutputStreamAdapter(_dataQueue, _downstreamStatus, logic, _writeTimeout));
         }
     }
 

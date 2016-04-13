@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Reactive.Streams;
 using System.Threading;
@@ -45,9 +44,9 @@ namespace Akka.Streams.Implementation.Fusing
 
     internal class GraphStageModule : AtomicModule
     {
-        public readonly IGraphStageWithMaterializedValue Stage;
+        public readonly IGraphStageWithMaterializedValue<Shape, object> Stage;
 
-        public GraphStageModule(Shape shape, Attributes attributes, IGraphStageWithMaterializedValue stage)
+        public GraphStageModule(Shape shape, Attributes attributes, IGraphStageWithMaterializedValue<Shape, object> stage)
         {
             Shape = shape;
             Attributes = attributes;
@@ -80,17 +79,16 @@ namespace Akka.Streams.Implementation.Fusing
     {
         public readonly Inlet<T> Inlet;
         public readonly Outlet<T> Outlet;
-        private readonly FlowShape<T, T> _shape;
 
         protected SimpleLinearGraphStage()
         {
             var name = GetType().Name;
             Inlet = new Inlet<T>(name + ".in");
             Outlet = new Outlet<T>(name + ".out");
-            _shape = new FlowShape<T, T>(Inlet, Outlet);
+            Shape = new FlowShape<T, T>(Inlet, Outlet);
         }
 
-        public override FlowShape<T, T> Shape { get { return _shape; } }
+        public override FlowShape<T, T> Shape { get; }
     }
 
     internal sealed class Identity<T> : SimpleLinearGraphStage<T>
@@ -240,11 +238,10 @@ namespace Akka.Streams.Implementation.Fusing
 
         public override FlowShape<T, T> Shape { get; }
 
-        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Task<Unit> materialized)
+        public override ILogicAndMaterializedValue<Task<Unit>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var finishPromise = new TaskCompletionSource<Unit>();
-            materialized = finishPromise.Task;
-            return new TerminationWatcherLogic(this, finishPromise);
+            return new LogicAndMaterializedValue<Task<Unit>>(new TerminationWatcherLogic(this, finishPromise), finishPromise.Task);
         }
 
         public override string ToString() => "TerminationWatcher";
@@ -339,13 +336,12 @@ namespace Akka.Streams.Implementation.Fusing
 
         protected override Attributes InitialAttributes { get; }
         public override SourceShape<T> Shape { get; }
-        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out ICancelable cancellable)
+        public override ILogicAndMaterializedValue<ICancelable> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var cancelled = new AtomicBoolean(false);
+            var cancelled = new AtomicBoolean();
             var c = new TickSourceCancellable(cancelled);
             var logic = new TickStageLogic(Shape, c, this);
-            cancellable = c;
-            return logic;
+            return new LogicAndMaterializedValue<ICancelable>(logic, c);
         }
     }
 

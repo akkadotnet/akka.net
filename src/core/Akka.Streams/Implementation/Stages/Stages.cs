@@ -432,11 +432,10 @@ namespace Akka.Streams.Implementation.Stages
         
         public override SinkShape<TIn> Shape => new SinkShape<TIn>(_in);
 
-        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Task<TIn> materialized)
+        public override ILogicAndMaterializedValue<Task<TIn>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var logic = new HeadOrDefaultGraphStateLogic<TIn>(Shape, _in, _throwOnDefault);
-            materialized = logic.Task;
-            return logic;
+            return new LogicAndMaterializedValue<Task<TIn>>(logic, logic.Task);
         }
 
         public override string ToString() => "FirstOrDefaultStage";
@@ -500,11 +499,10 @@ namespace Akka.Streams.Implementation.Stages
 
         public override SinkShape<TIn> Shape => new SinkShape<TIn>(_in);
 
-        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Task<TIn> materialized)
+        public override ILogicAndMaterializedValue<Task<TIn>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var logic = new LastOrDefaultGraphStateLogic<TIn>(Shape, _in, _throwOnDefault);
-            materialized = logic.Task;
-            return logic;
+            return new LogicAndMaterializedValue<Task<TIn>>(logic, logic.Task);
         }
 
         public override string ToString() => "LastOrDefaultStage";

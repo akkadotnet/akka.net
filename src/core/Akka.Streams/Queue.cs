@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Akka.Streams.Util;
 
 namespace Akka.Streams
 {
@@ -43,6 +44,6 @@ namespace Akka.Streams
         /// <para>- completes with None in case if stream is completed after we got task</para>
         /// <para>- completes with `Some(element)` in case next element is available from stream.</para>
         /// </summary>
-        Task<T> PullAsync();
+        Task<Option<T>> PullAsync();
     }
 }

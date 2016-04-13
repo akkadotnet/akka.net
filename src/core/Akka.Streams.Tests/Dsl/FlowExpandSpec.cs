@@ -102,7 +102,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Expand_musst_work_on_a_variable_rate_chain()
+        public void Expand_must_work_on_a_variable_rate_chain()
         {
             var future = Source.From(Enumerable.Range(1, 100))
                 .Map(x =>

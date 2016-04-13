@@ -43,14 +43,14 @@ namespace Akka.Streams.Implementation.Fusing
      */
     public sealed class GraphAssembly
     {
-        public static GraphAssembly Create(IList<Inlet> inlets, IList<Outlet> outlets, IList<IGraphStageWithMaterializedValue> stages)
+        public static GraphAssembly Create(IList<Inlet> inlets, IList<Outlet> outlets, IList<IGraphStageWithMaterializedValue<Shape, object>> stages)
         {
             // add the contents of an iterator to an array starting at idx
             var inletsCount = inlets.Count;
             var outletsCount = outlets.Count;
             var connectionsCount = inletsCount + outletsCount;
 
-            if (connectionsCount <= 0) throw new ArgumentException(string.Format("Sum of inlets ({0}) and outlets ({1}) must be > 0", inletsCount, outletsCount));
+            if (connectionsCount <= 0) throw new ArgumentException($"Sum of inlets ({inletsCount}) and outlets ({outletsCount}) must be > 0");
 
             return new GraphAssembly(
                 stages: stages.ToArray(),
@@ -77,14 +77,14 @@ namespace Akka.Streams.Implementation.Fusing
             return array;
         }
 
-        public readonly IGraphStageWithMaterializedValue[] Stages;
+        public readonly IGraphStageWithMaterializedValue<Shape, object>[] Stages;
         public readonly Attributes[] OriginalAttributes;
         public readonly Inlet[] Inlets;
         public readonly int[] InletOwners;
         public readonly Outlet[] Outlets;
         public readonly int[] OutletOwners;
 
-        public GraphAssembly(IGraphStageWithMaterializedValue[] stages, Attributes[] originalAttributes, Inlet[] inlets, int[] inletOwners, Outlet[] outlets, int[] outletOwners)
+        public GraphAssembly(IGraphStageWithMaterializedValue<Shape, object>[] stages, Attributes[] originalAttributes, Inlet[] inlets, int[] inletOwners, Outlet[] outlets, int[] outletOwners)
         {
             if (inlets.Length != inletOwners.Length)
                 throw new ArgumentException("'inlets' and 'inletOwners' must have the same length.", nameof(inletOwners));
@@ -101,7 +101,7 @@ namespace Akka.Streams.Implementation.Fusing
             OutletOwners = outletOwners;
         }
 
-        public int ConnectionCount { get { return Inlets.Length; } }
+        public int ConnectionCount => Inlets.Length;
 
         /**
          * Takes an interpreter and returns three arrays required by the interpreter containing the input, output port
@@ -113,14 +113,14 @@ namespace Akka.Streams.Implementation.Fusing
          *  - array of the logics
          *  - materialized value
          */
-        public Tuple<InHandler[], OutHandler[], GraphStageLogic[]> Materialize(
+        public Tuple<IInHandler[], IOutHandler[], GraphStageLogic[]> Materialize(
             Attributes inheritedAttributes,
             IModule[] copiedModules,
             IDictionary<IModule, object> materializedValues,
             Action<IMaterializedValueSource> register)
         {
             var logics = new GraphStageLogic[Stages.Length];
-            for (int i = 0; i < Stages.Length; i++)
+            for (var i = 0; i < Stages.Length; i++)
             {
                 // Port initialization loops, these must come first
                 var shape = Stages[i].Shape;
@@ -131,7 +131,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     var inlet = inletEnumerator.Current;
                     if (inlet.Id != -1 && inlet.Id != idx)
-                        throw new ArgumentException(string.Format("Inlet {0} was shared among multiple stages. That is illegal.", inlet));
+                        throw new ArgumentException($"Inlet {inlet} was shared among multiple stages. That is illegal.");
                     inlet.Id = idx;
                     idx++;
                 }
@@ -142,7 +142,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     var outlet = outletEnumerator.Current;
                     if (outlet.Id != -1 && outlet.Id != idx)
-                        throw new ArgumentException(string.Format("Outlet {0} was shared among multiple stages. That is illegal.", outlet));
+                        throw new ArgumentException($"Outlet {outlet} was shared among multiple stages. That is illegal.");
                     outlet.Id = idx;
                     idx++;
                 }
@@ -152,18 +152,16 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     var copy = ((IMaterializedValueSource) stage).CopySource();
                     register(copy);
-                    stage = (IGraphStageWithMaterializedValue)copy;
+                    stage = (IGraphStageWithMaterializedValue<Shape, object>)copy;
                 }
 
-                object materialized;
-                var logic = stage.CreateLogicAndMaterializedValue(inheritedAttributes.And(OriginalAttributes[i]), out materialized);
-                materializedValues[copiedModules[i]] = materialized;
-
-                logics[i] = logic;
+                var logicAndMaterialized = stage.CreateLogicAndMaterializedValue(inheritedAttributes.And(OriginalAttributes[i]));
+                materializedValues[copiedModules[i]] = logicAndMaterialized.MaterializedValue;
+                logics[i] = logicAndMaterialized.Logic;
             }
 
-            var inHandlers = new InHandler[ConnectionCount];
-            var outHandlers = new OutHandler[ConnectionCount];
+            var inHandlers = new IInHandler[ConnectionCount];
+            var outHandlers = new IOutHandler[ConnectionCount];
 
             for (int i = 0; i < ConnectionCount; i++)
             {
@@ -174,7 +172,7 @@ namespace Akka.Streams.Implementation.Fusing
                     var logic = logics[owner];
                     var h = logic.Handlers[inlet.Id] as InHandler;
 
-                    if (h == null) throw new IllegalStateException(string.Format("No handler defined in stage {0} for port {1}", logic, inlet));
+                    if (h == null) throw new IllegalStateException($"No handler defined in stage {logic} for port {inlet}");
                     inHandlers[i] = h;
 
                     logic.PortToConn[inlet.Id] = i;
@@ -188,7 +186,7 @@ namespace Akka.Streams.Implementation.Fusing
                     var inCount = logic.InCount;
                     var h = logic.Handlers[outlet.Id + inCount] as OutHandler;
 
-                    if (h == null) throw new IllegalStateException(string.Format("No handler defined in stage {0} for port {1}", logic, outlet));
+                    if (h == null) throw new IllegalStateException($"No handler defined in stage {logic} for port {outlet}");
                     outHandlers[i] = h;
 
                     logic.PortToConn[outlet.Id + inCount] = i;
@@ -201,7 +199,7 @@ namespace Akka.Streams.Implementation.Fusing
         public override string ToString()
         {
             return "GraphAssembly\n  " +
-                   "[" + string.Join<IGraphStageWithMaterializedValue>(",", Stages) + "]\n  " +
+                   "[" + string.Join<IGraphStageWithMaterializedValue<Shape, object>>(",", Stages) + "]\n  " +
                    "[" + string.Join<Attributes>(",", OriginalAttributes) + "]\n  " +
                    "[" + string.Join<Inlet>(",", Inlets) + "]\n  " +
                    "[" + string.Join(",", InletOwners) + "]\n  " +

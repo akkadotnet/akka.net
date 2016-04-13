@@ -63,7 +63,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 // Constructing an assembly by hand and resolving ambiguities
                 var assembly = new GraphAssembly(
-                    stages: new IGraphStageWithMaterializedValue[] {_identity, _identity},
+                    stages: new IGraphStageWithMaterializedValue<Shape, object>[] {_identity, _identity},
                     originalAttributes: new[] {Attributes.None, Attributes.None},
                     inlets: new Inlet[] {_identity.Inlet, _identity.Inlet, null},
                     inletOwners: new[] {0, 1, -1},
@@ -193,7 +193,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 var sink = setup.NewDownstreamProbe<Tuple<int, int>>("sink");
                 var zip = new Zip<int, int>();
 
-                builder(new IGraphStageWithMaterializedValue[] {zip, _broadcast})
+                builder(new IGraphStageWithMaterializedValue<Shape, object>[] {zip, _broadcast})
                     .Connect(source, _broadcast.In)
                     .Connect(_broadcast.Out(0), zip.In0)
                     .Connect(_broadcast.Out(1), zip.In1)
@@ -226,7 +226,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 var zip = new Zip<int, int>();
                 var broadcast = new Broadcast<Tuple<int, int>>(2);
 
-                builder(new IGraphStageWithMaterializedValue[] {broadcast, zip})
+                builder(new IGraphStageWithMaterializedValue<Shape, object>[] {broadcast, zip})
                     .Connect(source1, zip.In0)
                     .Connect(source2, zip.In1)
                     .Connect(zip.Out, broadcast.In)
@@ -334,7 +334,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 var source = setup.NewUpstreamProbe<int>("source");
                 var sink = setup.NewDownstreamProbe<int>("sink");
 
-                builder(new IGraphStageWithMaterializedValue[] { _merge, _balance })
+                builder(new IGraphStageWithMaterializedValue<Shape, object>[] { _merge, _balance })
                     .Connect(source, _merge.In(0))
                     .Connect(_merge.Out, _balance.In)
                     .Connect(_balance.Out(0), sink)
@@ -367,7 +367,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 var source = setup.NewUpstreamProbe<int>("source");
                 var sink = setup.NewDownstreamProbe<int>("sink");
 
-                builder(new IGraphStageWithMaterializedValue[] { _detach, _balance, _merge })
+                builder(new IGraphStageWithMaterializedValue<Shape, object>[] { _detach, _balance, _merge })
                     .Connect(source, _merge.In(0))
                     .Connect(_merge.Out, _balance.In)
                     .Connect(_balance.Out(0), sink)

@@ -176,12 +176,11 @@ namespace Akka.Streams.Implementation.IO
         protected override Attributes InitialAttributes { get; } = Attributes.CreateName("ConnectionSource");
 
         // TODO: Timeout on bind
-        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Task<StreamTcp.ServerBinding> materialized)
+        public override ILogicAndMaterializedValue<Task<StreamTcp.ServerBinding>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var bindingPromise = new TaskCompletionSource<StreamTcp.ServerBinding>();
             var logic = new ConnectionSourceStageLogic(Shape, this, bindingPromise);
-            materialized = bindingPromise.Task;
-            return logic;
+            return new LogicAndMaterializedValue<Task<StreamTcp.ServerBinding>>(logic, bindingPromise.Task);
         }
     }
 
@@ -441,7 +440,6 @@ namespace Akka.Streams.Implementation.IO
         private readonly Inlet<ByteString> _bytesIn = new Inlet<ByteString>("IncomingTCP.in");
         private readonly Outlet<ByteString> _bytesOut = new Outlet<ByteString>("IncomingTCP.out");
 
-
         public OutgoingConnectionStage(IActorRef tcpManager, EndPoint remoteAddress, EndPoint localAddress = null,
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = true, TimeSpan? connectionTimeout = null)
         {
@@ -458,7 +456,7 @@ namespace Akka.Streams.Implementation.IO
 
         public override FlowShape<ByteString, ByteString> Shape { get; }
 
-        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Task<StreamTcp.OutgoingConnection> materialized)
+        public override ILogicAndMaterializedValue<Task<StreamTcp.OutgoingConnection>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var localAddressPromise = new TaskCompletionSource<EndPoint>();
             var outgoingConnectionPromise = new TaskCompletionSource<StreamTcp.OutgoingConnection>();
@@ -477,9 +475,8 @@ namespace Akka.Streams.Implementation.IO
                 new TcpConnectionStage.Outbound(_tcpManager,
                     new Tcp.Connect(_remoteAddress, _localAddress, _options, _connectionTimeout, pullMode: true),
                     localAddressPromise, _halfClose));
-            materialized = outgoingConnectionPromise.Task;
 
-            return logic;
+            return new LogicAndMaterializedValue<Task<StreamTcp.OutgoingConnection>>(logic, outgoingConnectionPromise.Task);
         }
 
         public override string ToString() => $"TCP-to {_remoteAddress}";

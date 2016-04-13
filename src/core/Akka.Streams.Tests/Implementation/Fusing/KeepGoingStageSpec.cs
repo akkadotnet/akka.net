@@ -172,10 +172,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             public override SinkShape<int> Shape { get; } = new SinkShape<int>(new Inlet<int>("ping.in"));
 
-            public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Task<PingRef> materialized)
+            public override ILogicAndMaterializedValue<Task<PingRef>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
             {
-                materialized = _promise.Task;
-                return new PingableLogic(this);
+                return new LogicAndMaterializedValue<Task<PingRef>>(new PingableLogic(this), _promise.Task);
             }
         }
 

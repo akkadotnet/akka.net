@@ -339,9 +339,9 @@ namespace Akka.Streams.Implementation.Fusing
                     _logic = logic;
                 }
 
-                public bool HasInitialElement => FirstElement != null;
+                public bool HasInitialElement => FirstElement.HasValue;
 
-                public Option<T> FirstElement { get; } = new Option<T>();
+                public Option<T> FirstElement { private get; set; }
 
                 private void CloseThis(SubstreamHandler handler, T currentElem)
                 {
@@ -356,7 +356,7 @@ namespace Akka.Streams.Implementation.Fusing
                     }
                     else if (decision == Split.SplitDecision.SplitBefore)
                     {
-                        handler.FirstElement.Value = currentElem;
+                        handler.FirstElement = currentElem;
                         if (!_logic._substreamCancelled)
                             _logic._substreamSource.Complete();
                     }
@@ -367,7 +367,7 @@ namespace Akka.Streams.Implementation.Fusing
                     if (HasInitialElement)
                     {
                         _logic._substreamSource.Push(FirstElement.Value);
-                        FirstElement.Reset();
+                        FirstElement = Option<T>.None;
                         _logic.SetKeepGoing(false);
 
                         if (_willCompleteAfterInitialElement)
@@ -478,7 +478,7 @@ namespace Akka.Streams.Implementation.Fusing
                     }
                     // Next pull will come from the next substream that we will open
                     else
-                        handler.FirstElement.Value = elem;
+                        handler.FirstElement = elem;
 
                     HandOver(handler);
                 }, onUpstreamFinish: CompleteStage);

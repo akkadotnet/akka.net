@@ -109,7 +109,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_error_handling_should_resume_when_Map_throws_before_Grouped()
         {
-            WithOneBoundedSetup<int>(new IGraphStageWithMaterializedValue[] {
+            WithOneBoundedSetup<int>(new IGraphStageWithMaterializedValue<Shape, object>[] {
                 ToGraphStage(new Map<int, int>(x => x + 1, resumingDecider)),
                 ToGraphStage(new Map<int, int>(x => { if (x == 0) throw TE(); return x + 10; }, resumingDecider)),
                 ToGraphStage(new Grouped<int>(3))
@@ -135,7 +135,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_error_handling_should_complete_after_resume_when_Map_throws_before_Grouped()
         {
-            WithOneBoundedSetup<int>(new IGraphStageWithMaterializedValue[] {
+            WithOneBoundedSetup<int>(new IGraphStageWithMaterializedValue<Shape, object>[] {
                 ToGraphStage(new Map<int, int>(x => x + 1, resumingDecider)),
                 ToGraphStage(new Map<int, int>(x => { if (x == 0) throw TE(); return x + 10; }, resumingDecider)),
                 ToGraphStage(new Grouped<int>(1000))

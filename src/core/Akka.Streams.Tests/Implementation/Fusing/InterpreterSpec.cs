@@ -398,7 +398,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_work_with_batch_batch_conflate_conflate()
         {
-            WithOneBoundedSetup<int>(new IGraphStageWithMaterializedValue[]
+            WithOneBoundedSetup<int>(new IGraphStageWithMaterializedValue<Shape, object>[]
             {
                 new Batch<int, int>(1L, e => 0L, e => e, (agg, x) => agg + x),
                 new Batch<int, int>(1L, e => 0L, e => e, (agg, x) => agg + x)
@@ -436,7 +436,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_work_with_expand_expand()
         {
-            WithOneBoundedSetup<int>(new IGraphStageWithMaterializedValue[]
+            WithOneBoundedSetup<int>(new IGraphStageWithMaterializedValue<Shape, object>[]
             {
                 new Expand<int, int>(e => Enumerable.Range(e, 100).GetEnumerator()),
                 new Expand<int, int>(e => Enumerable.Range(e, 100).GetEnumerator())
@@ -476,7 +476,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_implement_batch_expand_conflate_expand()
         {
-            WithOneBoundedSetup<int>(new IGraphStageWithMaterializedValue[]
+            WithOneBoundedSetup<int>(new IGraphStageWithMaterializedValue<Shape, object>[]
             {
                 new Batch<int, int>(1L, e => 0L, e => e, (agg, x) => agg + x),
                 new Expand<int, int>(e => Enumerable.Repeat(e, int.MaxValue).GetEnumerator())
@@ -514,7 +514,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_implement_doubler_batch_doubler_conflate()
         {
-            WithOneBoundedSetup<int>(new IGraphStageWithMaterializedValue[]
+            WithOneBoundedSetup<int>(new IGraphStageWithMaterializedValue<Shape, object>[]
             {
                 ToGraphStage(new Doubler<int>()),
                 new Batch<int, int>(1L, e => 0L, e => e, (agg, x) => agg + x)

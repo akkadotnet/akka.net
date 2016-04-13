@@ -227,7 +227,7 @@ namespace Akka.Streams.Implementation.Fusing
             RunningStagesCount = Assembly.Stages.Length;
 
             _shutdownCounter = new int[assembly.Stages.Length];
-            for (int i = 0; i < _shutdownCounter.Length; i++)
+            for (var i = 0; i < _shutdownCounter.Length; i++)
             {
                 var shape = assembly.Stages[i].Shape;
                 _shutdownCounter[i] = shape.Inlets.Count() + shape.Outlets.Count();
@@ -296,12 +296,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Returns true if there are pending unprocessed events in the event queue.
         /// </summary>
-        public bool IsSuspended { get { return _queueHead != _queueTail; } }
+        public bool IsSuspended => _queueHead != _queueTail;
 
         /// <summary>
         /// Returns true if there are no more running stages and pending events.
         /// </summary>
-        public bool IsCompleted { get { return RunningStagesCount == 0 && !IsSuspended; } }
+        public bool IsCompleted => RunningStagesCount == 0 && !IsSuspended;
 
         /// <summary>
         /// Initializes the states of all the stage logics by calling <see cref="GraphStageLogic.PreStart"/>.
@@ -399,7 +399,7 @@ namespace Akka.Streams.Implementation.Fusing
                     }
                     catch (Exception e)
                     {
-                        if (ActiveStage == null) throw e;
+                        if (ActiveStage == null) throw;
                         else
                         {
                             var stage = Assembly.Stages[ActiveStage.StageId];

@@ -3,9 +3,11 @@ using System.Collections.Immutable;
 using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
+using Akka.Streams.Util;
 using Akka.Util;
 
 namespace Akka.Streams.Implementation
@@ -338,11 +340,10 @@ namespace Akka.Streams.Implementation
         }
 
         public override SinkShape<T> Shape { get; }
-        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Task<T> materialized)
+        public override ILogicAndMaterializedValue<Task<T>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var promise = new TaskCompletionSource<T>();
-            materialized = promise.Task;
-            return new LastOrDefaultLogic(Shape, promise, this);
+            return new LogicAndMaterializedValue<Task<T>>(new LastOrDefaultLogic(Shape, promise, this), promise.Task);
         }
     }
 
@@ -388,11 +389,10 @@ namespace Akka.Streams.Implementation
         }
 
         public override SinkShape<T> Shape { get; }
-        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Task<T> materialized)
+        public override ILogicAndMaterializedValue<Task<T>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var promise = new TaskCompletionSource<T>();
-            materialized = promise.Task;
-            return new FirstOrDefaultLogic(Shape, promise, this);
+            return new LogicAndMaterializedValue<Task<T>>(new FirstOrDefaultLogic(Shape, promise, this), promise.Task);
         }
     }
 
@@ -440,11 +440,10 @@ namespace Akka.Streams.Implementation
 
         public override SinkShape<T> Shape { get; }
 
-        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Task<IImmutableList<T>> materialized)
+        public override ILogicAndMaterializedValue<Task<IImmutableList<T>>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var promise = new TaskCompletionSource<IImmutableList<T>>();
-            materialized = promise.Task;
-            return new SeqStageLogic(this, promise);
+            return new LogicAndMaterializedValue<Task<IImmutableList<T>>>(new SeqStageLogic(this, promise), promise.Task);
         }
 
         public override string ToString() => "SeqStage";
@@ -453,45 +452,110 @@ namespace Akka.Streams.Implementation
     internal class QueueSink<T> : GraphStageWithMaterializedValue<SinkShape<T>, ISinkQueue<T>>
     {
         #region stage logic
-
-        private interface IRequestElementCallback
+        private sealed class Logic : GraphStageLogicWithCallbackWrapper<TaskCompletionSource<Option<T>>>
         {
-            AtomicReference<TaskCompletionSource<T>> RequestElement { get; }
-        }
+            private readonly QueueSink<T> _stage;
+            private readonly int _maxBuffer;
+            private IBuffer<Result<Option<T>>> _buffer;
+            private Option<TaskCompletionSource<Option<T>>>_currentRequest;
 
-        private sealed class QueueStageLogic : GraphStageLogic, IRequestElementCallback
-        {
-            public AtomicReference<TaskCompletionSource<T>> RequestElement { get; set; }
-
-            private QueueSink<T> _stage;
-
-            public QueueStageLogic(Shape shape, QueueSink<T> stage) : base(shape)
+            public Logic(Shape shape, QueueSink<T> stage, int maxBuffer) : base(shape)
             {
                 _stage = stage;
+                _maxBuffer = maxBuffer;
+                _currentRequest = new Option<TaskCompletionSource<Option<T>>>();
+
+                SetHandler(_stage.In,
+                    onPush: () =>
+                    {
+                        EnqueueAndNotify(new Result<Option<T>>(new Option<T>(Grab(_stage.In))));
+                        if (_buffer.Used < _maxBuffer) Pull(_stage.In);
+                    },
+                    onUpstreamFinish: () => EnqueueAndNotify(new Result<Option<T>>(Option<T>.None)),
+                    onUpstreamFailure: ex => EnqueueAndNotify(new Result<Option<T>>(ex)));
             }
 
             public override void PreStart()
             {
-                throw new NotImplementedException();
+                // Allocates one additional element to hold stream closed/failure indicators
+                _buffer = Buffer.Create<Result<Option<T>>>(_maxBuffer + 1, Materializer);
+                SetKeepGoing(true);
+                InitCallback(Callback());
+                Pull(_stage.In);
+            }
+
+            public override void PostStop()
+            {
+                StopCallback(promise => promise.SetException(new IllegalStateException("Stream is terminated. QueueSink is detached")));
+            }
+
+            private Action<TaskCompletionSource<Option<T>>> Callback()
+            {
+                return GetAsyncCallback<TaskCompletionSource<Option<T>>>(
+                    promise =>
+                    {
+                        if (_currentRequest.HasValue)
+                            promise.SetException(
+                                new IllegalStateException(
+                                    "You have to wait for previous future to be resolved to send another request"));
+                        else
+                        {
+                            if (_buffer.IsEmpty)
+                                _currentRequest = promise;
+                            else
+                            {
+                                if (_buffer.Used == _maxBuffer) TryPull(_stage.In);
+                                SendDownstream(promise);
+                            }
+                        }
+                    });
+            }
+
+            private void SendDownstream(TaskCompletionSource<Option<T>> promise)
+            {
+                var e = _buffer.Dequeue();
+                if (e.IsSuccess)
+                {
+                    promise.SetResult(e.Value);
+                    if (!e.Value.HasValue)
+                        CompleteStage();
+                }
+                else
+                {
+                    promise.SetException(e.Exception);
+                    FailStage(e.Exception);
+                }
+            }
+
+            private void EnqueueAndNotify(Result<Option<T>> requested)
+            {
+                _buffer.Enqueue(requested);
+                if (_currentRequest.HasValue)
+                {
+                    SendDownstream(_currentRequest.Value);
+                    _currentRequest = Option<TaskCompletionSource<Option<T>>>.None;
+                }
+            }
+
+            internal void Invoke(TaskCompletionSource<Option<T>> tuple)
+            {
+                InvokeCallbacks(tuple);
             }
         }
 
-        private sealed class SinkQueue : ISinkQueue<T>
+        private sealed class Materialized : ISinkQueue<T>
         {
-            private IRequestElementCallback _stageLogic;
+            private readonly Action<TaskCompletionSource<Option<T>>> _invokeLogic;
 
-            public SinkQueue(IRequestElementCallback stageLogic)
+            public Materialized(Action<TaskCompletionSource<Option<T>>> invokeLogic)
             {
-                _stageLogic = stageLogic;
+                _invokeLogic = invokeLogic;
             }
 
-            public Task<T> PullAsync()
+            public Task<Option<T>> PullAsync()
             {
-                var reference = _stageLogic.RequestElement;
-                var promise = new TaskCompletionSource<T>();
-
-                //TODO
-
+                var promise = new TaskCompletionSource<Option<T>>();
+                _invokeLogic(promise);
                 return promise.Task;
             }
         }
@@ -504,18 +568,17 @@ namespace Akka.Streams.Implementation
             Shape = new SinkShape<T>(In);
         }
 
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.QueueSink;
+
         public override SinkShape<T> Shape { get; }
-        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out ISinkQueue<T> materialized)
+
+        public override ILogicAndMaterializedValue<ISinkQueue<T>>  CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var maxBuffer = Module.Attributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;
+            var maxBuffer = inheritedAttributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;
             if (maxBuffer <= 0) throw new ArgumentException("Buffer must be greater than zero", nameof(inheritedAttributes));
 
-            //var buffer = FixedSizeBuffer.Create<Result<T>>(maxBuffer);
-            //var currentRequest = default(TaskCompletionSource<T>);  
-            
-            var stageLogic = new QueueStageLogic(Shape, this);
-            materialized = new SinkQueue(stageLogic);
-            return stageLogic;
+            var logic = new Logic(Shape, this, maxBuffer);
+            return new LogicAndMaterializedValue<ISinkQueue<T>>(logic, new Materialized(t => logic.Invoke(t)));
         }
     }
 }

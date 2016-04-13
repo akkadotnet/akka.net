@@ -47,16 +47,16 @@ namespace Akka.Streams.TestKit
         }
     }
 
-    public sealed class TestSinkStage<T, M> : GraphStageWithMaterializedValue<SinkShape<T>, M>
+    public sealed class TestSinkStage<T, TMat> : GraphStageWithMaterializedValue<SinkShape<T>, TMat>
     {
-        public static TestSinkStage<T, M> Create(GraphStageWithMaterializedValue<SinkShape<T>, M> stageUnderTest,
-            TestProbe probe) => new TestSinkStage<T, M>(stageUnderTest, probe);
+        public static TestSinkStage<T, TMat> Create(GraphStageWithMaterializedValue<SinkShape<T>, TMat> stageUnderTest,
+            TestProbe probe) => new TestSinkStage<T, TMat>(stageUnderTest, probe);
 
         private readonly Inlet<T> _in = new Inlet<T>("testSinkStage.in");
-        private readonly GraphStageWithMaterializedValue<SinkShape<T>, M> _stageUnderTest;
+        private readonly GraphStageWithMaterializedValue<SinkShape<T>, TMat> _stageUnderTest;
         private readonly TestProbe _probe;
 
-        private TestSinkStage(GraphStageWithMaterializedValue<SinkShape<T>, M> stageUnderTest, TestProbe probe)
+        private TestSinkStage(GraphStageWithMaterializedValue<SinkShape<T>, TMat> stageUnderTest, TestProbe probe)
         {
             _stageUnderTest = stageUnderTest;
             _probe = probe;
@@ -65,12 +65,13 @@ namespace Akka.Streams.TestKit
 
         public override SinkShape<T> Shape { get; }
 
-        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out M materialized)
+        public override ILogicAndMaterializedValue<TMat> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             _stageUnderTest.Shape.Inlet.Id = _in.Id;
-            var logic = _stageUnderTest.CreateLogicAndMaterializedValue(inheritedAttributes, out materialized);
+            var logicAndMaterialized = _stageUnderTest.CreateLogicAndMaterializedValue(inheritedAttributes);
+            var logic = logicAndMaterialized.Logic;
 
-            var inHandler = logic.Handlers[_in.Id] as InHandler;
+            var inHandler = (IInHandler) logic.Handlers[_in.Id];
             logic.SetHandler(_in, onPush: () =>
             {
                 _probe.Ref.Tell(GraphStageMessages.Push.Instance);
@@ -85,20 +86,20 @@ namespace Akka.Streams.TestKit
                 inHandler.OnUpstreamFailure(e);
             });
 
-            return logic;
+            return logicAndMaterialized;
         }
     }
 
-    public sealed class TestSourceStage<T, M> : GraphStageWithMaterializedValue<SourceShape<T>, M>
+    public sealed class TestSourceStage<T, TMat> : GraphStageWithMaterializedValue<SourceShape<T>, TMat>
     {
-        public static Source<T, M> Create(GraphStageWithMaterializedValue<SourceShape<T>, M> stageUnderTest,
-            TestProbe probe) => Source.FromGraph(new TestSourceStage<T, M>(stageUnderTest, probe));
+        public static Source<T, TMat> Create(GraphStageWithMaterializedValue<SourceShape<T>, TMat> stageUnderTest,
+            TestProbe probe) => Source.FromGraph(new TestSourceStage<T, TMat>(stageUnderTest, probe));
 
         private readonly Outlet<T> _out = new Outlet<T>("testSourceStage.out");
-        private readonly GraphStageWithMaterializedValue<SourceShape<T>, M> _stageUnderTest;
+        private readonly GraphStageWithMaterializedValue<SourceShape<T>, TMat> _stageUnderTest;
         private readonly TestProbe _probe;
 
-        private TestSourceStage(GraphStageWithMaterializedValue<SourceShape<T>, M> stageUnderTest, TestProbe probe)
+        private TestSourceStage(GraphStageWithMaterializedValue<SourceShape<T>, TMat> stageUnderTest, TestProbe probe)
         {
             _stageUnderTest = stageUnderTest;
             _probe = probe;
@@ -107,12 +108,13 @@ namespace Akka.Streams.TestKit
 
         public override SourceShape<T> Shape { get; }
 
-        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out M materialized)
+        public override ILogicAndMaterializedValue<TMat> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             _stageUnderTest.Shape.Outlet.Id = _out.Id;
-            var logic = _stageUnderTest.CreateLogicAndMaterializedValue(inheritedAttributes, out materialized);
+            var logicAndMaterialized = _stageUnderTest.CreateLogicAndMaterializedValue(inheritedAttributes);
+            var logic = logicAndMaterialized.Logic;
 
-            var outHandler = logic.Handlers[_out.Id] as OutHandler;
+            var outHandler = (IOutHandler) logic.Handlers[_out.Id];
             logic.SetHandler(_out, onPull: () =>
             {
                 _probe.Ref.Tell(GraphStageMessages.Pull.Instance);
@@ -123,7 +125,7 @@ namespace Akka.Streams.TestKit
                 outHandler.OnDownstreamFinish();
             });
 
-            return logic;
+            return logicAndMaterialized;
         }
     }
 }

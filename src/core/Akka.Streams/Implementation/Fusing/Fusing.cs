@@ -93,7 +93,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         private static GraphModule FuseGroup(BuildStructuralInfo info, ISet<IModule> group)
         {
-            var stages = new IGraphStageWithMaterializedValue[group.Count];
+            var stages = new IGraphStageWithMaterializedValue<Shape, object>[group.Count];
             var materializedValueIds = new IModule[group.Count];
             var attributes = new Attributes[group.Count];
 
@@ -610,7 +610,7 @@ namespace Akka.Streams.Implementation.Fusing
                 if (group.Count > 1)
                 {
                     var subgroups = group.GroupBy(Fusing.GetDispatcher).ToArray();
-                    if (subgroups.Count() > 1)
+                    if (subgroups.Length > 1)
                     {
                         group.Clear();
                         foreach (var subgroup in subgroups)

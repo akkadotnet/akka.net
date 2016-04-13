@@ -20,7 +20,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Limit_must_produce_empty_sequenz_when_source_is_empty_and_n_is_equal_to_zero()
+        public void A_Limit_must_produce_empty_sequence_when_source_is_empty_and_n_is_equal_to_zero()
         {
             var input = Enumerable.Empty<int>().ToList();
             var n = input.Count;
@@ -30,6 +30,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.FirstOrDefault<IEnumerable<int>>(), Materializer);
 
             future.Wait(TimeSpan.FromMilliseconds(300)).Should().BeTrue();
+            future.Result.Should().BeNull();
         }
 
         [Fact]
