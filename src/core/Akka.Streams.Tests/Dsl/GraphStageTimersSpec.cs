@@ -9,6 +9,8 @@ using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
+
 // ReSharper disable InvokeAsExtensionMethod
 
 namespace Akka.Streams.Tests.Dsl
@@ -17,7 +19,7 @@ namespace Akka.Streams.Tests.Dsl
     {
         private ActorMaterializer Materializer { get; }
 
-        public GraphStageTimersSpec()
+        public GraphStageTimersSpec(ITestOutputHelper helper) : base(helper)
         {
             var settings = ActorMaterializerSettings.Create(Sys);
             Materializer = ActorMaterializer.Create(Sys, settings);

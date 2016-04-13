@@ -918,10 +918,7 @@ namespace Akka.Streams.Dsl
     {
         public Zip() : base((a, b) => new Tuple<T1, T2>(a, b)) { }
 
-        public override string ToString()
-        {
-            return "Zip";
-        }
+        public override string ToString() => "Zip";
     }
 
     /// <summary>
@@ -957,6 +954,8 @@ namespace Akka.Streams.Dsl
     public sealed class UnZip<T1, T2> : UnzipWith<KeyValuePair<T1, T2>, T1, T2>
     {
         public UnZip() : base(kv => Tuple.Create(kv.Key, kv.Value)) { }
+
+        public override string ToString() => "Unzip";
     }
 
     /// <summary>
