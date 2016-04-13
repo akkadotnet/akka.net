@@ -118,7 +118,6 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
         
-
         [Fact]
         public void UnzipWith_must_work_in_the_sad_case()
         {
