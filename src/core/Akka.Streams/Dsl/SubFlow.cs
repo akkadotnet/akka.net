@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Reactive.Streams;
-using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Stages;
 
 namespace Akka.Streams.Dsl
 {
     /// <summary>
-    /// A “stream of streams” sub-flow of data elements, e.g. produced by <see cref="GroupBy{TIn,TOut,TMat}"/>.
+    /// A “stream of streams” sub-flow of data elements, e.g. produced by <see cref="GroupBy"/>.
     /// SubFlows cannot contribute to the super-flow’s materialized value since they
     /// are materialized later, during the runtime of the flow graph processing.
     /// </summary>
@@ -15,6 +14,12 @@ namespace Akka.Streams.Dsl
         public abstract IFlow<T2, TMat> Via<T2, TMat2>(IGraph<FlowShape<TOut, T2>, TMat2> flow);
 
         public abstract IFlow<T2, TMat3> ViaMaterialized<T2, TMat2, TMat3>(IGraph<FlowShape<TOut, T2>, TMat2> flow, Func<TMat, TMat2, TMat3> combine);
+
+        /// <summary>
+        /// Connect this `Source` to a `Sink` and run it. The returned value is the materialized value
+        /// of the `Sink`, e.g. the `Publisher` of a <see cref="Publisher"/>.
+        /// </summary>
+        public abstract TMat2 RunWith<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink, IMaterializer materializer);
 
         /// <summary>
         /// Attach a <see cref="Sink"/> to each sub-flow, closing the overall Graph that is being
@@ -27,7 +32,7 @@ namespace Akka.Streams.Dsl
         /// without parallelism limit (i.e. having an unbounded number of sub-flows
         /// active concurrently).
         /// </summary>
-        public virtual IFlow<TOut, Unit> MergeSubstreams()
+        public virtual IFlow<TOut, TMat> MergeSubstreams()
         {
             return MergeSubstreamsWithParallelism(int.MaxValue);
         }
@@ -40,7 +45,7 @@ namespace Akka.Streams.Dsl
         /// be exerted at the operator that creates the substreams when the parallelism
         /// limit is reached.
         /// </summary>
-        public abstract IFlow<TOut, Unit> MergeSubstreamsWithParallelism(int parallelism);
+        public abstract IFlow<TOut, TMat> MergeSubstreamsWithParallelism(int parallelism);
 
         /// <summary>
         /// Flatten the sub-flows back into the super-flow by concatenating them.
@@ -49,7 +54,7 @@ namespace Akka.Streams.Dsl
         /// substream until the first has finished and the <see cref="GroupBy"/> stage will get
         /// back-pressure from the second stream.
         /// </summary>
-        public virtual IFlow<TOut, Unit> ConcatSubstream()
+        public virtual IFlow<TOut, TMat> ConcatSubstream()
         {
             return MergeSubstreamsWithParallelism(1);
         }

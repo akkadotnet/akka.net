@@ -1016,8 +1016,7 @@ namespace Akka.Streams.Dsl.Internal
         /// '''Cancels when''' downstream cancels and substreams cancel
         /// </summary>
         /// <seealso cref="SplitWhen{T,TMat,TVal}"/> 
-        public static IFlow<Source<TVal, TMat>, TMat> SplitAfter<T, TMat, TVal>(this IFlow<T, TMat> flow,
-            Predicate<T> predicate) where TVal : T
+        public static IFlow<Source<TVal, TMat>, TMat> SplitAfter<T, TMat, TVal>(this IFlow<T, TMat> flow, SubstreamCancelStrategy substreamCancelStrategy, Predicate<T> predicate) where TVal : T
         {
             //val merge = new SubFlowImpl.MergeBack[Out, Repr] {
             //  override def apply[T](flow: Flow[Out, T, Unit], breadth: Int): Repr[T] =

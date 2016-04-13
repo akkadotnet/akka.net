@@ -107,6 +107,7 @@
     <Compile Include="Dsl\FlowSectionSpec.cs" />
     <Compile Include="Dsl\FlowSlidingSpec.cs" />
     <Compile Include="Dsl\FlowSpec.cs" />
+    <Compile Include="Dsl\FlowSplitAfterSpec.cs" />
     <Compile Include="Dsl\FlowStatefulMapConcatSpec.cs" />
     <Compile Include="Dsl\FramingSpec.cs" />
     <Compile Include="Dsl\GraphBackedFlowSpec.cs" />

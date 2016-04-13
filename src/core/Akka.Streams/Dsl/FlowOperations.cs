@@ -963,9 +963,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels and substreams cancel
         /// </summary>
-        public static Flow<TIn, Source<TVal, TMat>, TMat> SplitAfter<TIn, TOut, TMat, TVal>(this Flow<TIn, TOut, TMat> flow, Predicate<TOut> predicate) where TVal : TOut
+        public static Flow<TIn, Source<TVal, TMat>, TMat> SplitAfter<TIn, TOut, TMat, TVal>(this Flow<TIn, TOut, TMat> flow, Predicate<TOut> predicate, SubstreamCancelStrategy substreamCancelStrategy = SubstreamCancelStrategy.Drain) where TVal : TOut
         {
-            return (Flow<TIn, Source<TVal, TMat>, TMat>)InternalFlowOperations.SplitAfter<TOut, TMat, TVal>(flow, predicate);
+            return (Flow<TIn, Source<TVal, TMat>, TMat>)InternalFlowOperations.SplitAfter<TOut, TMat, TVal>(flow, substreamCancelStrategy, predicate);
         }
 
         /// <summary>
