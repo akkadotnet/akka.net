@@ -56,8 +56,8 @@ namespace Akka.Streams.Implementation.Fusing
     internal sealed class GraphInterpreterShell
     {
         private readonly GraphAssembly _assembly;
-        private readonly InHandler[] _inHandlers;
-        private readonly OutHandler[] _outHandlers;
+        private readonly IInHandler[] _inHandlers;
+        private readonly IOutHandler[] _outHandlers;
         private readonly GraphStageLogic[] _logics;
         private readonly Shape _shape;
         private readonly ActorMaterializerSettings _settings;
@@ -85,7 +85,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly ActorGraphInterpreter.Resume _resume;
 
-        public GraphInterpreterShell(GraphAssembly assembly, InHandler[] inHandlers, OutHandler[] outHandlers, GraphStageLogic[] logics, Shape shape, ActorMaterializerSettings settings, ActorMaterializerImpl materializer)
+        public GraphInterpreterShell(GraphAssembly assembly, IInHandler[] inHandlers, IOutHandler[] outHandlers, GraphStageLogic[] logics, Shape shape, ActorMaterializerSettings settings, ActorMaterializerImpl materializer)
         {
             _assembly = assembly;
             _inHandlers = inHandlers;

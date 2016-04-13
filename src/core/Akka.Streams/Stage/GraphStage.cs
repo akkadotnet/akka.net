@@ -18,57 +18,61 @@ using Akka.Util.Internal;
 
 namespace Akka.Streams.Stage
 {
-    public interface IGraphStageWithMaterializedValue
+    public interface ILogicAndMaterializedValue<out TMaterialized>
     {
-        Shape Shape { get; }
-        IModule Module { get; }
-        GraphStageLogic CreateLogicAndMaterializedValue(Attributes attributes, out object materialized);
+        GraphStageLogic Logic { get; }
+        TMaterialized MaterializedValue { get; }
     }
 
-    public abstract class GraphStageWithMaterializedValue<TShape, TMat> : IGraph<TShape, TMat>,
-        IGraphStageWithMaterializedValue where TShape : Shape
+    public struct LogicAndMaterializedValue<TMaterialized> : ILogicAndMaterializedValue<TMaterialized>
+    {
+        public LogicAndMaterializedValue(GraphStageLogic logic, TMaterialized materializedValue)
+        {
+            Logic = logic;
+            MaterializedValue = materializedValue;
+        }
+
+        public GraphStageLogic Logic { get; }
+        public TMaterialized MaterializedValue { get; }
+    }
+
+    public interface IGraphStageWithMaterializedValue<out TShape, out TMaterialized> : IGraph<TShape, TMaterialized> where TShape : Shape
+    {
+        ILogicAndMaterializedValue<TMaterialized> CreateLogicAndMaterializedValue(Attributes attributes);
+    }
+
+    public abstract class GraphStageWithMaterializedValue<TShape, TMaterialized> : IGraphStageWithMaterializedValue<TShape, TMaterialized> where TShape : Shape
     {
         #region anonymous graph class
 
-        private sealed class Graph : IGraph<TShape, TMat>
+        private sealed class Graph : IGraph<TShape, TMaterialized>
         {
-            private readonly TShape _shape;
-            private readonly IModule _module;
-            private readonly Attributes _attributes;
-
             public Graph(TShape shape, IModule module, Attributes attributes)
             {
-                _shape = shape;
-                _module = module.WithAttributes(attributes);
-                _attributes = attributes;
+                Shape = shape;
+                Module = module.WithAttributes(attributes);
             }
 
-            public TShape Shape
+            public TShape Shape { get; }
+
+            public IModule Module { get; }
+
+            public IGraph<TShape, TMaterialized> WithAttributes(Attributes attributes)
             {
-                get { return _shape; }
+                return new Graph(Shape, Module, attributes);
             }
 
-            public IModule Module
-            {
-                get { return _module; }
-            }
-
-            public IGraph<TShape, TMat> WithAttributes(Attributes attributes)
-            {
-                return new Graph(_shape, _module, attributes);
-            }
-
-            public IGraph<TShape, TMat> AddAttributes(Attributes attributes)
+            public IGraph<TShape, TMaterialized> AddAttributes(Attributes attributes)
             {
                 return WithAttributes(Module.Attributes.And(attributes));
             }
 
-            public IGraph<TShape, TMat> Named(string name)
+            public IGraph<TShape, TMaterialized> Named(string name)
             {
                 return AddAttributes(Attributes.CreateName(name));
             }
 
-            public IGraph<TShape, TMat> Async()
+            public IGraph<TShape, TMaterialized> Async()
             {
                 return AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
             }
@@ -80,44 +84,36 @@ namespace Akka.Streams.Stage
 
         protected GraphStageWithMaterializedValue()
         {
-            _module = new Lazy<IModule>(() => new GraphStageModule(Shape, InitialAttributes, this));
+            _module =
+                new Lazy<IModule>(
+                    () =>
+                        new GraphStageModule(Shape, InitialAttributes,
+                            (IGraphStageWithMaterializedValue<Shape, object>) this));
         }
 
         protected virtual Attributes InitialAttributes => Attributes.None;
         public abstract TShape Shape { get; }
-        Shape IGraphStageWithMaterializedValue.Shape => Shape;
 
-        public IGraph<TShape, TMat> WithAttributes(Attributes attributes)
+        public IGraph<TShape, TMaterialized> WithAttributes(Attributes attributes)
         {
             return new Graph(Shape, Module, attributes);
         }
 
-        public abstract GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes,
-            out TMat materialized);
-
-        GraphStageLogic IGraphStageWithMaterializedValue.CreateLogicAndMaterializedValue(Attributes attributes,
-            out object materialized)
-        {
-            TMat m;
-            var result = CreateLogicAndMaterializedValue(attributes, out m);
-            materialized = m;
-            return result;
-        }
-
+        public abstract ILogicAndMaterializedValue<TMaterialized> CreateLogicAndMaterializedValue(Attributes inheritedAttributes);
 
         public IModule Module => _module.Value;
 
-        public IGraph<TShape, TMat> AddAttributes(Attributes attributes)
+        public IGraph<TShape, TMaterialized> AddAttributes(Attributes attributes)
         {
             return WithAttributes(Module.Attributes.And(attributes));
         }
 
-        public IGraph<TShape, TMat> Named(string name)
+        public IGraph<TShape, TMaterialized> Named(string name)
         {
             return AddAttributes(Attributes.CreateName(name));
         }
 
-        public IGraph<TShape, TMat> Async()
+        public IGraph<TShape, TMaterialized> Async()
         {
             return AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
         }
@@ -130,10 +126,9 @@ namespace Akka.Streams.Stage
     /// </summary>
     public abstract class GraphStage<TShape> : GraphStageWithMaterializedValue<TShape, Unit> where TShape : Shape
     {
-        public sealed override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Unit materialized)
+        public sealed override ILogicAndMaterializedValue<Unit> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            materialized = Unit.Instance;
-            return CreateLogic(inheritedAttributes);
+            return new LogicAndMaterializedValue<Unit>(CreateLogic(inheritedAttributes), Unit.Instance);
         }
 
         protected abstract GraphStageLogic CreateLogic(Attributes inheritedAttributes);

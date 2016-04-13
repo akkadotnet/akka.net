@@ -21,8 +21,8 @@ namespace Akka.Streams
     /// <summary>
     /// </summary>
     /// <typeparam name="TShape">Type-level accessor for the shape parameter of this graph.</typeparam>
-    /// <typeparam name="TMaterializer"></typeparam>
-    public interface IGraph<out TShape, TMaterializer> : IGraph<TShape> where TShape : Shape
+    /// <typeparam name="TMaterialized"></typeparam>
+    public interface IGraph<out TShape, out TMaterialized> : IGraph<TShape> where TShape : Shape
     {
         /// <summary>
         /// Change the attributes of this <see cref="IGraph{TShape}"/> to the given ones
@@ -31,7 +31,7 @@ namespace Akka.Streams
         /// operation has no effect on an empty Flow (because the attributes apply
         /// only to the contained processing stages).
         /// </summary>
-        IGraph<TShape, TMaterializer> WithAttributes(Attributes attributes);
+        IGraph<TShape, TMaterialized> WithAttributes(Attributes attributes);
 
         /// <summary>
         /// Add the given attributes to this <see cref="IGraph{TShape}"/>.
@@ -40,16 +40,16 @@ namespace Akka.Streams
         /// operation has no effect on an empty Flow (because the attributes apply
         /// only to the contained processing stages).
         /// </summary>
-        IGraph<TShape, TMaterializer> AddAttributes(Attributes attributes);
+        IGraph<TShape, TMaterialized> AddAttributes(Attributes attributes);
 
         /// <summary>
         /// Add a 'name' attribute to this Flow.
         /// </summary>
-        IGraph<TShape, TMaterializer> Named(string name);
+        IGraph<TShape, TMaterialized> Named(string name);
 
         /// <summary>
         /// Put an asynchronous boundary around this Source.
         /// </summary>
-        IGraph<TShape, TMaterializer> Async();
+        IGraph<TShape, TMaterialized> Async();
     }
 }

@@ -306,11 +306,10 @@ namespace Akka.Streams.Tests.Dsl
 
             public override SinkShape<int> Shape { get; }
 
-            public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Task<int> materialized)
+            public override ILogicAndMaterializedValue<Task<int>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
             {
                 var promise = new TaskCompletionSource<int>();
-                materialized = promise.Task;
-                return new Logic(this, promise);
+                return new LogicAndMaterializedValue<Task<int>>(new Logic(this, promise), promise.Task);
             }
         }
     }

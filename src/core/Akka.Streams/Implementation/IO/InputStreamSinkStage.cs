@@ -125,15 +125,14 @@ namespace Akka.Streams.Implementation.IO
         protected override Attributes InitialAttributes => DefaultAttributes.InputStreamSink;
         public override SinkShape<ByteString> Shape => _shape;
 
-        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Stream materialized)
+        public override ILogicAndMaterializedValue<Stream> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var maxBuffer = inheritedAttributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;
             if (maxBuffer <= 0)
                 throw new ArgumentException("Buffer size must be greather than 0");
 
             var logic = new InputStreamSinkStageLogic(Shape, this);
-            materialized = new InputStreamAdapter(_dataQueue, logic, _readTimeout);
-            return logic;
+            return new LogicAndMaterializedValue<Stream>(logic, new InputStreamAdapter(_dataQueue, logic, _readTimeout));
         }
     }
 

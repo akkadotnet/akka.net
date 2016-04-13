@@ -203,11 +203,10 @@ namespace Akka.Streams.Implementation
 
         public override SourceShape<TOut> Shape { get; }
 
-        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out ISourceQueue<TOut> materialized)
+        public override ILogicAndMaterializedValue<ISourceQueue<TOut>>  CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var stageLogic = new Logic(Shape, this);
-            materialized = new Materialized(this, t => stageLogic.Invoke(t));
-            return stageLogic;
+            var logic = new Logic(Shape, this);
+            return new LogicAndMaterializedValue<ISourceQueue<TOut>>(logic, new Materialized(this, t => logic.Invoke(t)));
         }
     }
 }

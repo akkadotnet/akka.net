@@ -143,7 +143,7 @@ namespace Akka.Streams.Implementation.Fusing
             var inOwners = new int[length + 1];
             var outs = new Outlet[length + 1];
             var outOwners = new int[length + 1];
-            var stages = new IGraphStageWithMaterializedValue[length];
+            var stages = new IGraphStageWithMaterializedValue<Shape, object>[length];
 
             ins[length] = null;
             inOwners[length] = GraphInterpreter.Boundary;

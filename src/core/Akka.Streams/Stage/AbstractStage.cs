@@ -208,11 +208,13 @@ namespace Akka.Streams.Stage
         protected override Attributes InitialAttributes { get; }
         public override FlowShape<TIn, TOut> Shape { get; }
 
-        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out TMat materialized)
+        public override ILogicAndMaterializedValue<TMat> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var stageAndMat = Factory(inheritedAttributes);
-            materialized = stageAndMat.Item2;
-            return new PushPullGraphLogic<TIn, TOut>(Shape, inheritedAttributes, (AbstractStage<TIn, TOut>)stageAndMat.Item1);
+            return
+                new LogicAndMaterializedValue<TMat>(
+                    new PushPullGraphLogic<TIn, TOut>(Shape, inheritedAttributes,
+                        (AbstractStage<TIn, TOut>) stageAndMat.Item1), stageAndMat.Item2);
         }
 
         public sealed override string ToString()

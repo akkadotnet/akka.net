@@ -340,11 +340,10 @@ namespace Akka.Streams.Implementation
         }
 
         public override SinkShape<T> Shape { get; }
-        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Task<T> materialized)
+        public override ILogicAndMaterializedValue<Task<T>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var promise = new TaskCompletionSource<T>();
-            materialized = promise.Task;
-            return new LastOrDefaultLogic(Shape, promise, this);
+            return new LogicAndMaterializedValue<Task<T>>(new LastOrDefaultLogic(Shape, promise, this), promise.Task);
         }
     }
 
@@ -390,11 +389,10 @@ namespace Akka.Streams.Implementation
         }
 
         public override SinkShape<T> Shape { get; }
-        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Task<T> materialized)
+        public override ILogicAndMaterializedValue<Task<T>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var promise = new TaskCompletionSource<T>();
-            materialized = promise.Task;
-            return new FirstOrDefaultLogic(Shape, promise, this);
+            return new LogicAndMaterializedValue<Task<T>>(new FirstOrDefaultLogic(Shape, promise, this), promise.Task);
         }
     }
 
@@ -442,11 +440,10 @@ namespace Akka.Streams.Implementation
 
         public override SinkShape<T> Shape { get; }
 
-        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out Task<IImmutableList<T>> materialized)
+        public override ILogicAndMaterializedValue<Task<IImmutableList<T>>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var promise = new TaskCompletionSource<IImmutableList<T>>();
-            materialized = promise.Task;
-            return new SeqStageLogic(this, promise);
+            return new LogicAndMaterializedValue<Task<IImmutableList<T>>>(new SeqStageLogic(this, promise), promise.Task);
         }
 
         public override string ToString() => "SeqStage";
@@ -575,14 +572,13 @@ namespace Akka.Streams.Implementation
 
         public override SinkShape<T> Shape { get; }
 
-        public override GraphStageLogic CreateLogicAndMaterializedValue(Attributes inheritedAttributes, out ISinkQueue<T> materialized)
+        public override ILogicAndMaterializedValue<ISinkQueue<T>>  CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var maxBuffer = inheritedAttributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;
             if (maxBuffer <= 0) throw new ArgumentException("Buffer must be greater than zero", nameof(inheritedAttributes));
 
-            var stageLogic = new Logic(Shape, this, maxBuffer);
-            materialized = new Materialized(t => stageLogic.Invoke(t));
-            return stageLogic;
+            var logic = new Logic(Shape, this, maxBuffer);
+            return new LogicAndMaterializedValue<ISinkQueue<T>>(logic, new Materialized(t => logic.Invoke(t)));
         }
     }
 }

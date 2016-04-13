@@ -675,7 +675,7 @@ namespace Akka.Streams.Tests.Dsl
             Func<Flow<TOut, TOut2, Unit>> createGraph = () =>
             {
                 var stage = new FaultyFlowStage<TOut, TOut2>();
-                var assembly = new GraphAssembly(new IGraphStageWithMaterializedValue[] { stage }, new[] { Attributes.None },
+                var assembly = new GraphAssembly(new IGraphStageWithMaterializedValue<Shape, object>[] { stage }, new[] { Attributes.None },
                     new Inlet[] { stage.Shape.Inlet , null}, new[] { 0, -1 }, new Outlet[] { null, stage.Shape.Outlet }, new[] { -1, 0 });
 
                 var t = assembly.Materialize(Attributes.None, assembly.Stages.Select(s => s.Module).ToArray(),
