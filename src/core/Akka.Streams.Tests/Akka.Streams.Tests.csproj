@@ -122,6 +122,7 @@
     <Compile Include="Dsl\GraphPartitionSpec.cs" />
     <Compile Include="Dsl\GraphStageTimersSpec.cs" />
     <Compile Include="Dsl\GraphUnzipSpec.cs" />
+    <Compile Include="Dsl\GraphUnzipWithSpec.cs" />
     <Compile Include="Dsl\PublisherSinkSpec.cs" />
     <Compile Include="Dsl\QueueSourceSpec.cs" />
     <Compile Include="Actor\ActorPublisherSpec.cs" />
