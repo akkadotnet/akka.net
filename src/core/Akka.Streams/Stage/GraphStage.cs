@@ -1746,7 +1746,7 @@ namespace Akka.Streams.Stage
             _behavior = initialReceive;
             _path = path;
 
-            _callback = getAsyncCallback(initialReceive);
+            _callback = getAsyncCallback(InternalReceive);
         }
 
         public override ActorPath Path { get { return _path; } }

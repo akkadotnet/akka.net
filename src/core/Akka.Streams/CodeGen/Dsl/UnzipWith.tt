@@ -51,8 +51,8 @@ namespace Akka.Streams.Dsl
 		{
 			public UnzipWithStageLogic(Shape shape, UnzipWith<TIn, <#= typeParams #>> stage) : base(shape)
 			{
-				var pendingCount = 1;
-				var downstreamRunning = 1;
+				var pendingCount = <#=i#>;
+				var downstreamRunning = <#=i#>;
 				<# for (var t = 0; t < i; t++) { #>
 var pending<#=t#> = true;
 				<# } #>
@@ -61,14 +61,20 @@ var pending<#=t#> = true;
 					var elements = stage._unzipper(Grab(stage.In));
 					
 					<# for (var t = 0; t < i; t++) { #>
-if (!IsClosed(stage.Out<#=t#>)) Push(stage.Out<#=t#>, elements.Item<#=t+1#>);
+if (!IsClosed(stage.Out<#=t#>)) 
+					{
+						Push(stage.Out<#=t#>, elements.Item<#=t+1#>);
+						pending<#=t#> = true;
+					}
 					<# } #>
 
+					pendingCount = downstreamRunning;
 				});				
 				<# for (var t = 0; t < i; t++) { #>
 
 				SetHandler(stage.Out<#=t#>, onPull: () => {
 					pendingCount--;
+					pending<#=t#> = false;
 					if (pendingCount == 0) Pull(stage.In);
 				},
 				onDownstreamFinish: () => {
@@ -77,7 +83,7 @@ if (!IsClosed(stage.Out<#=t#>)) Push(stage.Out<#=t#>, elements.Item<#=t+1#>);
 					else 
 					{
 						if (pending<#=t#>) pendingCount--;
-						if (pendingCount == 0) Pull(stage.In);
+						if (pendingCount == 0 && !HasBeenPulled(stage.In)) Pull(stage.In);
 					}
 				});
 				<# } #>

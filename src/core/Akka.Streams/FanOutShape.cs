@@ -103,17 +103,17 @@ namespace Akka.Streams
         public UniformFanOutShape(int n, IInit init) : base(init)
         {
             _n = n;
-            _out = Enumerable.Range(0, n).Select(i => NewOutlet<TOut>($"out{i}")).ToArray();
+            Outs = Enumerable.Range(0, n).Select(i => NewOutlet<TOut>($"out{i}")).ToImmutableList();
         }
 
         public UniformFanOutShape(int n) : this(n, new InitName("UniformFanOut")) { }
         public UniformFanOutShape(int n, string name) : this(n, new InitName(name)) { }
         public UniformFanOutShape(Inlet<TIn> inlet, params Outlet<TOut>[] outlets) : this(outlets.Length, new InitPorts(inlet, outlets)) { }
 
-        public Outlet<TOut> Out(int n)
-        {
-            return _out[n];
-        }
+
+        public IImmutableList<Outlet<TOut>> Outs { get; }
+
+        public Outlet<TOut> Out(int n) => Outs[n];
 
         protected override FanOutShape<TIn> Construct(IInit init)
         {

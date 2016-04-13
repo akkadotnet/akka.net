@@ -1502,11 +1502,10 @@ namespace Akka.Streams.Dsl.Internal
         private static IGraph<FlowShape<T, T>, TMat> MergeOrderedGraph<T, TMat>(IGraph<SourceShape<T>, TMat> other,
             Func<T, T, int> compare)
         {
-            return GraphDsl.Create(other, (builder, shape) =>
+            return GraphDsl.Create(other, (builder, r) =>
             {
                 var merge = builder.Add(new MergeSorted<T>(compare));
-                var r = builder.From(shape);
-                r.To(merge.In1);
+                builder.From(r).To(merge.In1);
                 return new FlowShape<T, T>(merge.In0, merge.Out);
             });
         }

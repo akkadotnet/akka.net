@@ -7,11 +7,17 @@
 
 using System.Reactive.Streams;
 using Akka.Streams.Dsl;
+using Xunit.Abstractions;
 
 namespace Akka.Streams.TestKit.Tests
 {
     public abstract class TwoStreamsSetup<TOutputs> : BaseTwoStreamsSetup<TOutputs>
     {
+        protected TwoStreamsSetup(ITestOutputHelper helper) : base(helper)
+        {
+            
+        }
+
         protected abstract class Fixture
         {
             protected GraphDsl.Builder<Unit> Builder { get; private set; }

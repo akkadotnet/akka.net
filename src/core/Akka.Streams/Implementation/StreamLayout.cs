@@ -344,8 +344,8 @@ namespace Akka.Streams.Implementation
             if (!InPorts.Contains(to))
             {
                 var message = Upstreams.ContainsKey(to)
-                    ? $"The input port [{@from}] is already connected"
-                    : $"The input port [{@from}] is not part of underlying graph";
+                    ? $"The input port [{to}] is already connected"
+                    : $"The input port [{to}] is not part of underlying graph";
                 throw new ArgumentException(message);
             }
 
