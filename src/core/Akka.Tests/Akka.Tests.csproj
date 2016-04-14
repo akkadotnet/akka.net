@@ -115,6 +115,7 @@
     <Compile Include="Actor\AskTimeoutSpec.cs" />
     <Compile Include="Actor\Cancellation\AlreadyCancelledCancelableTests.cs" />
     <Compile Include="Actor\Cancellation\CancelableTests.cs" />
+    <Compile Include="Actor\HotSwapSpec.cs" />
     <Compile Include="Actor\InboxSpec.cs" />
     <Compile Include="Actor\LocalActorRefProviderSpec.cs" />
     <Compile Include="Actor\PipeToSupportSpec.cs" />
