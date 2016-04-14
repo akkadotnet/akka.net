@@ -10,11 +10,11 @@ namespace Akka.Streams.Tests.Dsl
 {
     internal static class LiftExtensions
     {
-        public static SubFlowImpl<int, Source<int, Unit>, TMat, IRunnableGraph<TMat>> Lift<TMat>(this SubFlow<int, TMat, IRunnableGraph<TMat>> source)
+        public static Source<Source<int, Unit>, TMat> Lift<TMat>(this SubFlow<int, TMat, IRunnableGraph<TMat>> source)
         {
             return
-                (SubFlowImpl<int, Source<int, Unit>, TMat, IRunnableGraph<TMat>>)
-                    ((SubFlow<Source<int, Unit>, TMat, IRunnableGraph<TMat>>)source.PrefixAndTail(0).Map(x => x.Item2))
+                (Source<Source<int, Unit>, TMat>)
+                    ((SubFlow<Source<int, Unit>, TMat, IRunnableGraph<TMat>>) source.PrefixAndTail(0).Map(x => x.Item2))
                         .ConcatSubstream();
         }
 

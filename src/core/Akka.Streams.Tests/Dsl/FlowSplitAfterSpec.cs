@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Streams;
 using Akka.Streams.Dsl;
-using Akka.Streams.Dsl.Internal;
-using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
@@ -138,12 +136,12 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var f= Source.From(Enumerable.Range(1, 10))
+                var task = Source.From(Enumerable.Range(1, 10))
                     .SplitAfter<int, Unit, int>(_ => true)
                     .Lift()
                     .MapAsync(1, s => s.RunWith(Sink.First<int>(), Materializer))
-                    .Grouped(10);
-                var task = ((SubFlowImpl<int, IEnumerable<int>, Unit, IRunnableGraph<Unit>>) f).RunWith(Sink.First<IEnumerable<int>>(), Materializer);
+                    .Grouped(10)
+                    .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
