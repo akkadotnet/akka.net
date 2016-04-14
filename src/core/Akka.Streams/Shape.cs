@@ -273,8 +273,8 @@ namespace Akka.Streams
 
         public FlowShape(Inlet<TIn> inlet, Outlet<TOut> outlet)
         {
-            if (inlet == null) throw new ArgumentNullException("inlet", "FlowShape expected non-null inlet");
-            if (outlet == null) throw new ArgumentNullException("outlet", "FlowShape expected non-null outlet");
+            if (inlet == null) throw new ArgumentNullException(nameof(inlet), "FlowShape expected non-null inlet");
+            if (outlet == null) throw new ArgumentNullException(nameof(outlet), "FlowShape expected non-null outlet");
 
             Inlet = inlet;
             Outlet = outlet;

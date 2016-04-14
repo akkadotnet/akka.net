@@ -851,9 +851,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels and all substreams cancel
         /// </summary> 
-        public static SubFlow<KeyValuePair<TKey, Source<TVal, TMat>>, TMat> GroupBy<TOut, TMat, TKey, TVal>(this Source<TOut, TMat> flow, int maxSubstreams, Func<TOut, TKey> groupingFunc) where TVal : TOut
+        public static SubFlow<KeyValuePair<TKey, Source<TVal, TMat>>, TMat, IRunnableGraph<TMat>> GroupBy<TOut, TMat, TKey, TVal>(this Source<TOut, TMat> flow, int maxSubstreams, Func<TOut, TKey> groupingFunc) where TVal : TOut
         {
-            return (SubFlow<KeyValuePair<TKey, Source<TVal, TMat>>, TMat>)InternalFlowOperations.GroupBy<TOut, TMat, TKey, TVal>(flow, maxSubstreams, groupingFunc);
+            return (SubFlow<KeyValuePair<TKey, Source<TVal, TMat>>, TMat, IRunnableGraph<TMat>>)InternalFlowOperations.GroupBy<TOut, TMat, TKey, TVal>(flow, maxSubstreams, groupingFunc);
         }
 
         /// <summary>
@@ -908,19 +908,19 @@ namespace Akka.Streams.Dsl
         /// '''Cancels when''' downstream cancels and substreams cancel
         /// </summary>
         /// <seealso cref="SplitAfter{T,TMat,TVal}"/> 
-        public static SubFlow<TOut, TMat> SplitWhen<TOut, TMat, TVal>(this Source<TOut, TMat> flow, Func<TOut, bool> predicate) where TVal : TOut
+        public static SubFlow<TOut, TMat, IRunnableGraph<TMat>> SplitWhen<TOut, TMat>(this Source<TOut, TMat> flow, SubstreamCancelStrategy substreamCancelStrategy, Func<TOut, bool> predicate)
         {
-            return (SubFlow<TOut, TMat>)InternalFlowOperations.SplitWhen<TOut, TMat, TVal>(flow, predicate);
-  ;      }
+            return flow.SplitWhen(substreamCancelStrategy, predicate, (f, s) => ((Source<Source<TOut, Unit>, TMat>) f).To(s));
+        }
 
         /// <summary>
         /// This operation applies the given predicate to all incoming elements and
         /// emits them to a stream of output streams, always beginning a new one with
         /// the current element if the given predicate returns true for it.
         /// </summary>
-        public static SubFlow<TOut, TMat> SplitWhen<TOut, TMat, TVal>(this Source<TOut, TMat> flow, SubstreamCancelStrategy substreamCancelStrategy, Func<TOut, bool> predicate) where TVal : TOut
+        public static SubFlow<TOut, TMat, IRunnableGraph<TMat>> SplitWhen<TOut, TMat>(this Source<TOut, TMat> flow, Func<TOut, bool> predicate)
         {
-            return (SubFlow<TOut, TMat>)InternalFlowOperations.SplitWhen<TOut, TMat, TVal>(flow, substreamCancelStrategy, predicate);
+            return SplitWhen(flow, SubstreamCancelStrategy.Drain, predicate);
         }
 
         /// <summary>
@@ -965,9 +965,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels and substreams cancel
         /// </summary>
-        public static SubFlow<TOut, TMat> SplitAfter<TOut, TMat, TVal>(this Source<TOut, TMat> flow, Predicate<TOut> predicate, SubstreamCancelStrategy substreamCancelStrategy = SubstreamCancelStrategy.Drain) where TVal : TOut
+        public static SubFlow<TOut, TMat, IRunnableGraph<TMat>> SplitAfter<TOut, TMat, TVal>(this Source<TOut, TMat> flow, Predicate<TOut> predicate, SubstreamCancelStrategy substreamCancelStrategy = SubstreamCancelStrategy.Drain) where TVal : TOut
         {
-            return (SubFlow<TOut, TMat>)InternalFlowOperations.SplitAfter<TOut, TMat, TVal>(flow, substreamCancelStrategy, predicate);
+            return (SubFlow<TOut, TMat, IRunnableGraph<TMat>>)InternalFlowOperations.SplitAfter<TOut, TMat, TVal>(flow, substreamCancelStrategy, predicate);
         }
 
         /// <summary>

@@ -118,14 +118,14 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GroupBy_must_workin_normal_user_scenario()
+        public void GroupBy_must_work_in_normal_user_scenario()
         {
             var sub = Source.From(new[] {"Aaa", "Abb", "Bcc", "Cdd", "Cee"})
                 .GroupBy<string, Unit, string, string>(3, s => s.Substring(0, 1))
                 .MergeSubstreams()
                 .Grouped(10);
             var task =
-                ((SubFlowImpl<string, IEnumerable<KeyValuePair<string, Source<string, Unit>>>, Unit>) sub).RunWith(
+                ((SubFlowImpl<string, IEnumerable<KeyValuePair<string, Source<string, Unit>>>, Unit, IRunnableGraph<Unit>>) sub).RunWith(
                     Sink.First<IEnumerable<KeyValuePair<string, Source<string, Unit>>>>(), Materializer);
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             // TODO resolve this issue later once the implementation is ready
@@ -353,7 +353,7 @@ namespace Akka.Streams.Tests.Dsl
                     Source.AsSubscriber<int>()
                         .GroupBy<int, ISubscriber<int>, int, int>(2, x => x%2)
                         .Lift(x => x%2)
-                        .ToSub(Sink.FromSubscriber(down)).Run(Materializer);
+                        .To(Sink.FromSubscriber(down)).Run(Materializer);
                 
                 var downstream = down.ExpectSubscription();
                 downstream.Cancel();
@@ -369,7 +369,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var sub = Flow.Create<int>().GroupBy<int, int, Unit, int, int>(1, x => x%2).PrefixAndTail(0);
-                var f = ((SubFlowImpl<int,Tuple<IImmutableList<KeyValuePair<int, Source<int, Unit>>>,Source<KeyValuePair<int, Source<int, Unit>>, Unit>>, Unit>) sub).MergeSubstreams();
+                var f = ((SubFlowImpl<int,Tuple<IImmutableList<KeyValuePair<int, Source<int, Unit>>>,Source<KeyValuePair<int, Source<int, Unit>>, Unit>>, Unit, IRunnableGraph<Unit>>) sub).MergeSubstreams();
                 var t = ((Flow<int, Tuple<IImmutableList<KeyValuePair<int, Source<int, Unit>>>, Source<KeyValuePair<int, Source<int, Unit>>, Unit>>, Unit>)f).RunWith(this.SourceProbe<int>(), this.SinkProbe<Tuple<IImmutableList<KeyValuePair<int, Source<int, Unit>>>, Source<KeyValuePair<int, Source<int, Unit>>, Unit>>>(), Materializer);
                 var up = t.Item1;
                 var down = t.Item2;

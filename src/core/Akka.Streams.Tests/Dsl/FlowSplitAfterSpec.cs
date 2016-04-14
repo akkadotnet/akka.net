@@ -143,7 +143,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Lift()
                     .MapAsync(1, s => s.RunWith(Sink.First<int>(), Materializer))
                     .Grouped(10);
-                var task = ((SubFlowImpl<int, IEnumerable<int>, Unit>) f).RunWith(Sink.First<IEnumerable<int>>(), Materializer);
+                var task = ((SubFlowImpl<int, IEnumerable<int>, Unit, IRunnableGraph<Unit>>) f).RunWith(Sink.First<IEnumerable<int>>(), Materializer);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
@@ -227,12 +227,12 @@ namespace Akka.Streams.Tests.Dsl
                 var up = TestPublisher.CreateManualProbe<int>(this);
                 var down = TestSubscriber.CreateManualProbe<Source<int, Unit>>(this);
 
-                var f =
+                var flowSubscriber =
                     Source.AsSubscriber<int>()
                         .SplitAfter<int, ISubscriber<int>, int>(i => i%3 == 0)
                         .Lift()
-                        .To(Sink.FromSubscriber(down));
-                var flowSubscriber = ((SubFlowImpl<int, Source<int, Unit>, ISubscriber<int>>) f).Run(Materializer);
+                        .To(Sink.FromSubscriber(down))
+                        .Run(Materializer);
                 var downstream = down.ExpectSubscription();
                 downstream.Cancel();
                 up.Subscribe(flowSubscriber);

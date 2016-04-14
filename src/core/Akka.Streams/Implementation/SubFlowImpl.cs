@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Reactive.Streams;
 using Akka.Streams.Dsl;
 
 namespace Akka.Streams.Implementation
@@ -9,12 +8,12 @@ namespace Akka.Streams.Implementation
         IFlow<TOut, TMat> Apply<TOut>(Flow<TIn, TOut, TMat> flow, int breadth);
     }
     
-    public class SubFlowImpl<TIn, TOut, TMat> : SubFlow<TOut, TMat>
+    public class SubFlowImpl<TIn, TOut, TMat, TClosed> : SubFlow<TOut, TMat, TClosed>
     {
         private readonly IMergeBack<TIn, TMat> _mergeBackFunction;
-        private readonly Func<Sink<TIn, TMat>, IFlow<TOut, TMat>> _finishFunction;
+        private readonly Func<Sink<TIn, TMat>, TClosed> _finishFunction;
 
-        public SubFlowImpl(Flow<TIn, TOut, TMat> flow, IMergeBack<TIn, TMat> mergeBackFunction, Func<Sink<TIn, TMat>, IFlow<TOut, TMat>> finishFunction)
+        public SubFlowImpl(Flow<TIn, TOut, TMat> flow, IMergeBack<TIn, TMat> mergeBackFunction, Func<Sink<TIn, TMat>, TClosed> finishFunction)
         {
             _mergeBackFunction = mergeBackFunction;
             _finishFunction = finishFunction;
@@ -25,7 +24,7 @@ namespace Akka.Streams.Implementation
 
         public override IFlow<T2, TMat> Via<T2, TMat2>(IGraph<FlowShape<TOut, T2>, TMat2> flow)
         {
-            return new SubFlowImpl<TIn, T2, TMat>(Flow.Via(flow), _mergeBackFunction, sink => (IFlow<T2, TMat>)_finishFunction(sink));
+            return new SubFlowImpl<TIn, T2, TMat, TClosed>(Flow.Via(flow), _mergeBackFunction, sink => _finishFunction(sink));
         }
 
         public override IFlow<T2, TMat3> ViaMaterialized<T2, TMat2, TMat3>(IGraph<FlowShape<TOut, T2>, TMat2> flow, Func<TMat, TMat2, TMat3> combine)
@@ -38,16 +37,9 @@ namespace Akka.Streams.Implementation
             throw new NotImplementedException();
         }
 
-        public override IFlow<TOut, TMat> To<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink)
+        public override TClosed To<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink)
         {
-            var result = _finishFunction(Flow.To(sink));
-            return result;
-        }
-
-        public SubFlowImpl<TIn, TOut, TMat> ToSub<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink)
-        {
-            var result = _finishFunction(Flow.To(sink));
-            return (SubFlowImpl<TIn, TOut, TMat>)result;
+            return _finishFunction(Flow.To(sink));
         }
 
         public override IFlow<TOut, TMat> MergeSubstreamsWithParallelism(int parallelism)
@@ -55,17 +47,12 @@ namespace Akka.Streams.Implementation
             return _mergeBackFunction.Apply(Flow, parallelism);
         }
 
-        public TMat Run(ActorMaterializer materializer)
-        {
-            throw new NotImplementedException();
-        }
-
         /// <summary>
         /// Change the attributes of this <see cref="Flow{TIn,TOut,TMat}"/> to the given ones. Note that this
         /// operation has no effect on an empty Flow (because the attributes apply
         /// only to the contained processing stages).
         /// </summary>
-        public SubFlowImpl<TIn, TOut, TMat> WithAttributes(Attributes attributes)
+        public SubFlowImpl<TIn, TOut, TMat, TClosed> WithAttributes(Attributes attributes)
         {
             throw new NotSupportedException();
         }

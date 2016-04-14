@@ -12,21 +12,18 @@ using Akka.Util;
 
 namespace Akka.Streams.Implementation.Fusing
 {
-    /// <summary>
-    /// INTERNAL API
-    /// </summary>
-    internal sealed class FlattenMerge<T, TMat> : GraphStage<FlowShape<IGraph<SourceShape<T>, TMat>, T>>
+    internal sealed class FlattenMerge<TGraph, T, TMat> : GraphStage<FlowShape<TGraph, T>> where TGraph : IGraph<SourceShape<T>, TMat>
     {
         #region internal classes
 
         private sealed class Logic : GraphStageLogic
         {
-            private readonly FlattenMerge<T, TMat> _stage;
+            private readonly FlattenMerge<TGraph, T, TMat> _stage;
             private readonly HashSet<SubSinkInlet<T>> _sources = new HashSet<SubSinkInlet<T>>();
             private IBuffer<SubSinkInlet<T>> _q;
             private readonly Action _outHandler;
 
-            public Logic(FlattenMerge<T, TMat> stage) : base(stage.Shape)
+            public Logic(FlattenMerge<TGraph, T, TMat> stage) : base(stage.Shape)
             {
                 _stage = stage;
                 _outHandler = () =>
@@ -124,7 +121,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         #endregion
 
-        private readonly Inlet<IGraph<SourceShape<T>, TMat>> _in = new Inlet<IGraph<SourceShape<T>, TMat>>("flatten.in");
+        private readonly Inlet<TGraph> _in = new Inlet<TGraph>("flatten.in");
         private readonly Outlet<T> _out = new Outlet<T>("flatten.out");
 
         private readonly int _breadth;
@@ -134,12 +131,12 @@ namespace Akka.Streams.Implementation.Fusing
             _breadth = breadth;
 
             InitialAttributes = DefaultAttributes.FlattenMerge;
-            Shape = new FlowShape<IGraph<SourceShape<T>, TMat>, T>(_in, _out);
+            Shape = new FlowShape<TGraph, T>(_in, _out);
         }
 
         protected override Attributes InitialAttributes { get; }
 
-        public override FlowShape<IGraph<SourceShape<T>, TMat>, T> Shape { get; }
+        public override FlowShape<TGraph, T> Shape { get; }
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 

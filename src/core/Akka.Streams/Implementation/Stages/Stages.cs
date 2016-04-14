@@ -534,40 +534,6 @@ namespace Akka.Streams.Implementation.Stages
         }
     }
 
-    internal sealed class Split : StageModule
-    {
-        public static Split When<TIn>(Predicate<TIn> predicate)
-        {
-            Predicate<object> predicateAs = o => predicate((TIn)o);
-            return new Split(element => predicateAs(element) ? SplitDecision.SplitBefore : SplitDecision.Continue, Attributes.CreateName("splitWhen"));
-        }
-
-        public static Split After<TIn>(Predicate<TIn> predicate)
-        {
-            Predicate<object> predicateAs = o => predicate((TIn)o);
-            return new Split(element => predicateAs(element) ? SplitDecision.SplitAfter : SplitDecision.Continue, Attributes.CreateName("splitAfter"));
-        }
-
-        private readonly Func<object, SplitDecision> _splitDecision;
-
-        public Split(Func<object, SplitDecision> splitDecision, Attributes attributes = null)
-        {
-            _splitDecision = splitDecision;
-            Attributes = attributes ?? DefaultAttributes.Split;
-        }
-
-        public override IModule CarbonCopy()
-        {
-            return new Split(_splitDecision, Attributes);
-        }
-
-        public override Attributes Attributes { get; }
-        public override IModule WithAttributes(Attributes attributes)
-        {
-            return new Split(_splitDecision, attributes);
-        }
-    }
-
     internal sealed class DirectProcessor : StageModule
     {
         public readonly Func<Tuple<IProcessor<object, object>, object>> ProcessorFactory;
