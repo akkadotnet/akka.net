@@ -12,6 +12,7 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 // ReSharper disable InvokeAsExtensionMethod
+// ReSharper disable UnusedMember.Local
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -32,29 +33,27 @@ namespace Akka.Streams.Tests.Dsl
 
         private sealed class StreamPuppet
         {
+            private readonly TestSubscriber.ManualProbe<int> _probe;
+            private readonly ISubscription _subscription;
 
             public StreamPuppet(IPublisher<int> p, TestKitBase kit)
             {
-                Probe = TestSubscriber.CreateManualProbe<int>(kit);
-                p.Subscribe(Probe);
-                Subscription = Probe.ExpectSubscription();
+                _probe = TestSubscriber.CreateManualProbe<int>(kit);
+                p.Subscribe(_probe);
+                _subscription = _probe.ExpectSubscription();
             }
 
-            public TestSubscriber.ManualProbe<int> Probe { get; }
+            public void Request(int demand) => _subscription.Request(demand);
 
-            public ISubscription Subscription { get; }
+            public void ExpectNext(int element) => _probe.ExpectNext(element);
 
-            public void Request(int demand) => Subscription.Request(demand);
+            public void ExpectNoMsg(TimeSpan max) => _probe.ExpectNoMsg(max);
 
-            public void ExpectNext(int element) => Probe.ExpectNext(element);
+            public void ExpectComplete() => _probe.ExpectComplete();
 
-            public void ExpectNoMsg(TimeSpan max) => Probe.ExpectNoMsg(max);
+            public void ExpectError(Exception ex) => _probe.ExpectError().Should().Be(ex);
 
-            public void ExpectComplete() => Probe.ExpectComplete();
-
-            public void ExpectError(Exception ex) => Probe.ExpectError().Should().Be(ex);
-
-            public void Cancel() => Subscription.Cancel();
+            public void Cancel() => _subscription.Cancel();
         }
 
         private void WithSubstreamsSupport(int splitAfter = 3, int elementCount = 6,
@@ -71,7 +70,7 @@ namespace Akka.Streams.Tests.Dsl
             groupStream.Subscribe(masterSubscriber);
             var masterSubscription = masterSubscriber.ExpectSubscription();
 
-            run(masterSubscriber, masterSubscription, () =>
+            run?.Invoke(masterSubscriber, masterSubscription, () =>
             {
                 masterSubscription.Request(1);
                 return masterSubscriber.ExpectNext();
