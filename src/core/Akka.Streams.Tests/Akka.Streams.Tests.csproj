@@ -84,6 +84,7 @@
     <Compile Include="Dsl\FlowForeachSpec.cs" />
     <Compile Include="Dsl\FlowFromFutureSpec.cs" />
     <Compile Include="Dsl\FlowGraphCompileSpec.cs" />
+    <Compile Include="Dsl\FlowGroupBySpec.cs" />
     <Compile Include="Dsl\FlowGroupedSpec.cs" />
     <Compile Include="Dsl\FlowGroupedWithinSpec.cs" />
     <Compile Include="Dsl\FlowIdleInjectSpec.cs" />
@@ -127,6 +128,7 @@
     <Compile Include="Dsl\GraphUnzipWithSpec.cs" />
     <Compile Include="Dsl\GraphZipSpec.cs" />
     <Compile Include="Dsl\GraphZipWithSpec.cs" />
+    <Compile Include="Dsl\LiftExtensions.cs" />
     <Compile Include="Dsl\PublisherSinkSpec.cs" />
     <Compile Include="Dsl\QueueSinkSpec.cs" />
     <Compile Include="Dsl\QueueSourceSpec.cs" />

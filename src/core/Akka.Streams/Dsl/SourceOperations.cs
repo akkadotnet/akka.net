@@ -851,9 +851,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels and all substreams cancel
         /// </summary> 
-        public static Source<KeyValuePair<TKey, Source<TVal, TMat>>, TMat> GroupBy<TOut, TMat, TKey, TVal>(this Source<TOut, TMat> flow, Func<TOut, TKey> groupingFunc) where TVal : TOut
+        public static SubFlow<KeyValuePair<TKey, Source<TVal, TMat>>, TMat> GroupBy<TOut, TMat, TKey, TVal>(this Source<TOut, TMat> flow, int maxSubstreams, Func<TOut, TKey> groupingFunc) where TVal : TOut
         {
-            return (Source<KeyValuePair<TKey, Source<TVal, TMat>>, TMat>)InternalFlowOperations.GroupBy<TOut, TMat, TKey, TVal>(flow, groupingFunc);
+            return (SubFlow<KeyValuePair<TKey, Source<TVal, TMat>>, TMat>)InternalFlowOperations.GroupBy<TOut, TMat, TKey, TVal>(flow, maxSubstreams, groupingFunc);
         }
 
         /// <summary>

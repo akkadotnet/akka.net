@@ -258,17 +258,4 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
     }
-
-
-    internal static class LiftExtension
-    {
-        public static SubFlowImpl<int, Source<int, Unit>, TMat> Lift<TMat>(this SubFlow<int, TMat> source)
-        {
-            return
-                (SubFlowImpl<int, Source<int, Unit>, TMat>)
-                    ((SubFlow<Source<int, Unit>, TMat>)source.PrefixAndTail(0).Map(x => x.Item2))
-                        .ConcatSubstream();
-        }
-    }
-
 }

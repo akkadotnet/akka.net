@@ -889,7 +889,7 @@ namespace Akka.Streams.Dsl.Internal
         /// '''Cancels when''' downstream cancels and all substreams cancel
         /// </summary> 
         public static IFlow<KeyValuePair<TKey, Source<TVal, TMat>>, TMat> GroupBy<T, TMat, TKey, TVal>(
-            this IFlow<T, TMat> flow, Func<T, TKey> groupingFunc) where TVal : T
+            this IFlow<T, TMat> flow, int maxSubstreams, Func<T, TKey> groupingFunc) where TVal : T
         {
             //implicit def mat = GraphInterpreter.currentInterpreter.materializer
             //val merge = new SubFlowImpl.MergeBack[Out, Repr] {

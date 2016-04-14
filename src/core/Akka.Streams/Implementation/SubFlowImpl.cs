@@ -44,6 +44,12 @@ namespace Akka.Streams.Implementation
             return result;
         }
 
+        public SubFlowImpl<TIn, TOut, TMat> ToSub<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink)
+        {
+            var result = _finishFunction(Flow.To(sink));
+            return (SubFlowImpl<TIn, TOut, TMat>)result;
+        }
+
         public override IFlow<TOut, TMat> MergeSubstreamsWithParallelism(int parallelism)
         {
             return _mergeBackFunction.Apply(Flow, parallelism);
@@ -52,6 +58,16 @@ namespace Akka.Streams.Implementation
         public TMat Run(ActorMaterializer materializer)
         {
             throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Change the attributes of this <see cref="Flow{TIn,TOut,TMat}"/> to the given ones. Note that this
+        /// operation has no effect on an empty Flow (because the attributes apply
+        /// only to the contained processing stages).
+        /// </summary>
+        public SubFlowImpl<TIn, TOut, TMat> WithAttributes(Attributes attributes)
+        {
+            throw new NotSupportedException();
         }
     }
 }
