@@ -34,6 +34,10 @@
       <HintPath>..\..\packages\NBench.0.2.1\lib\net45\NBench.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="NBench.PerformanceCounters, Version=0.2.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\NBench.PerformanceCounters.0.2.1\lib\net45\NBench.PerformanceCounters.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="Microsoft.CSharp" />
@@ -53,6 +57,7 @@
     <Compile Include="Dispatch\MailboxMemoryFootprintSpec.cs" />
     <Compile Include="Actor\ActorThroughputSpecBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Util\StandardOutWriterMemoryBenchmark.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj">

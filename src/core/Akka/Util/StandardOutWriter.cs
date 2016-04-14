@@ -24,9 +24,10 @@ namespace Akka.Util
         /// <param name="message">The <see cref="string"/> value to write</param>
         /// <param name="foregroundColor">Optional: The foreground color</param>
         /// <param name="backgroundColor">Optional: The background color</param>
-        public static void Write(string message, ConsoleColor? foregroundColor = null, ConsoleColor? backgroundColor = null)
+        public static void Write(string message, ConsoleColor? foregroundColor = null,
+            ConsoleColor? backgroundColor = null)
         {
-            WriteToConsole(() => Console.Write(message), foregroundColor, backgroundColor);
+            WriteToConsole(message, foregroundColor, backgroundColor, false);
         }
 
         /// <summary>
@@ -37,33 +38,38 @@ namespace Akka.Util
         /// <param name="foregroundColor">Optional: The foreground color</param>
         /// <param name="backgroundColor">Optional: The background color</param>
 
-        public static void WriteLine(string message, ConsoleColor? foregroundColor = null, ConsoleColor? backgroundColor = null)
+        public static void WriteLine(string message, ConsoleColor? foregroundColor = null,
+            ConsoleColor? backgroundColor = null)
         {
-            WriteToConsole(() => Console.WriteLine(message), foregroundColor, backgroundColor);
+            WriteToConsole(message, foregroundColor, backgroundColor);
         }
 
-        private static void WriteToConsole(Action write, ConsoleColor? foregroundColor = null, ConsoleColor? backgroundColor = null)
+        private static void WriteToConsole(string message, ConsoleColor? foregroundColor = null,
+            ConsoleColor? backgroundColor = null, bool line = true)
         {
-            lock(_lock)
+            lock (_lock)
             {
                 ConsoleColor? fg = null;
-                if(foregroundColor.HasValue)
+                if (foregroundColor.HasValue)
                 {
                     fg = Console.ForegroundColor;
                     Console.ForegroundColor = foregroundColor.Value;
                 }
                 ConsoleColor? bg = null;
-                if(backgroundColor.HasValue)
+                if (backgroundColor.HasValue)
                 {
                     bg = Console.BackgroundColor;
                     Console.BackgroundColor = backgroundColor.Value;
                 }
-                write();
-                if(fg.HasValue)
+                if (line)
+                    Console.WriteLine(message);
+                else
+                    Console.Write(message);
+                if (fg.HasValue)
                 {
                     Console.ForegroundColor = fg.Value;
                 }
-                if(bg.HasValue)
+                if (bg.HasValue)
                 {
                     Console.BackgroundColor = bg.Value;
                 }
@@ -71,4 +77,3 @@ namespace Akka.Util
         }
     }
 }
-
