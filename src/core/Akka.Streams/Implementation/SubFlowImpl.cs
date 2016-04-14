@@ -4,24 +4,24 @@ using Akka.Streams.Dsl;
 
 namespace Akka.Streams.Implementation
 {
-    public interface IMergeBack<TIn>
+    public interface IMergeBack<TIn, TMat>
     {
-        IFlow<TOut, Unit> Apply<TOut>(Flow<TIn, TOut, Unit> flow, int breadth);
+        IFlow<TOut, TMat> Apply<TOut>(Flow<TIn, TOut, TMat> flow, int breadth);
     }
     
     public class SubFlowImpl<TIn, TOut, TMat> : SubFlow<TOut, TMat>
     {
-        private readonly IMergeBack<TIn> _mergeBackFunction;
-        private readonly Func<Sink<TIn, Unit>, IFlow<TOut, TMat>> _finishFunction;
+        private readonly IMergeBack<TIn, TMat> _mergeBackFunction;
+        private readonly Func<Sink<TIn, TMat>, IFlow<TOut, TMat>> _finishFunction;
 
-        public SubFlowImpl(Flow<TIn, TOut, Unit> flow, IMergeBack<TIn> mergeBackFunction, Func<Sink<TIn, Unit>, IFlow<TOut, TMat>> finishFunction)
+        public SubFlowImpl(Flow<TIn, TOut, TMat> flow, IMergeBack<TIn, TMat> mergeBackFunction, Func<Sink<TIn, TMat>, IFlow<TOut, TMat>> finishFunction)
         {
             _mergeBackFunction = mergeBackFunction;
             _finishFunction = finishFunction;
             Flow = flow;
         }
 
-        public Flow<TIn, TOut, Unit> Flow { get; }
+        public Flow<TIn, TOut, TMat> Flow { get; }
 
         public override IFlow<T2, TMat> Via<T2, TMat2>(IGraph<FlowShape<TOut, T2>, TMat2> flow)
         {
@@ -33,15 +33,41 @@ namespace Akka.Streams.Implementation
             throw new NotImplementedException();
         }
 
+        public override TMat2 RunWith<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink, IMaterializer materializer)
+        {
+            throw new NotImplementedException();
+        }
+
         public override IFlow<TOut, TMat> To<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink)
         {
             var result = _finishFunction(Flow.To(sink));
             return result;
         }
 
-        public override IFlow<TOut, Unit> MergeSubstreamsWithParallelism(int parallelism)
+        public SubFlowImpl<TIn, TOut, TMat> ToSub<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink)
+        {
+            var result = _finishFunction(Flow.To(sink));
+            return (SubFlowImpl<TIn, TOut, TMat>)result;
+        }
+
+        public override IFlow<TOut, TMat> MergeSubstreamsWithParallelism(int parallelism)
         {
             return _mergeBackFunction.Apply(Flow, parallelism);
+        }
+
+        public TMat Run(ActorMaterializer materializer)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Change the attributes of this <see cref="Flow{TIn,TOut,TMat}"/> to the given ones. Note that this
+        /// operation has no effect on an empty Flow (because the attributes apply
+        /// only to the contained processing stages).
+        /// </summary>
+        public SubFlowImpl<TIn, TOut, TMat> WithAttributes(Attributes attributes)
+        {
+            throw new NotSupportedException();
         }
     }
 }

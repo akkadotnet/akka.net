@@ -84,6 +84,7 @@
     <Compile Include="Dsl\FlowForeachSpec.cs" />
     <Compile Include="Dsl\FlowFromFutureSpec.cs" />
     <Compile Include="Dsl\FlowGraphCompileSpec.cs" />
+    <Compile Include="Dsl\FlowGroupBySpec.cs" />
     <Compile Include="Dsl\FlowGroupedSpec.cs" />
     <Compile Include="Dsl\FlowGroupedWithinSpec.cs" />
     <Compile Include="Dsl\FlowIdleInjectSpec.cs" />
@@ -107,6 +108,8 @@
     <Compile Include="Dsl\FlowSectionSpec.cs" />
     <Compile Include="Dsl\FlowSlidingSpec.cs" />
     <Compile Include="Dsl\FlowSpec.cs" />
+    <Compile Include="Dsl\FlowSplitAfterSpec.cs" />
+    <Compile Include="Dsl\FlowSplitWhenSpec.cs" />
     <Compile Include="Dsl\FlowStatefulMapConcatSpec.cs" />
     <Compile Include="Dsl\FramingSpec.cs" />
     <Compile Include="Dsl\GraphBackedFlowSpec.cs" />
@@ -125,6 +128,7 @@
     <Compile Include="Dsl\GraphUnzipWithSpec.cs" />
     <Compile Include="Dsl\GraphZipSpec.cs" />
     <Compile Include="Dsl\GraphZipWithSpec.cs" />
+    <Compile Include="Dsl\LiftExtensions.cs" />
     <Compile Include="Dsl\PublisherSinkSpec.cs" />
     <Compile Include="Dsl\QueueSinkSpec.cs" />
     <Compile Include="Dsl\QueueSourceSpec.cs" />
@@ -155,6 +159,7 @@
     <Compile Include="Dsl\StageActorRefSpec.cs" />
     <Compile Include="Dsl\SubscriberSinkSpec.cs" />
     <Compile Include="Dsl\SubscriberSourceSpec.cs" />
+    <Compile Include="Dsl\SubstreamSubscriptionTimeoutSpec.cs" />
     <Compile Include="Dsl\TestConfig.cs" />
     <Compile Include="Dsl\TickSourceSpec.cs" />
     <Compile Include="Extra\FlowTimedSpec.cs" />
