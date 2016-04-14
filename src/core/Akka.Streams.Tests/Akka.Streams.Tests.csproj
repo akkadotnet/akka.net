@@ -159,6 +159,7 @@
     <Compile Include="Dsl\StageActorRefSpec.cs" />
     <Compile Include="Dsl\SubscriberSinkSpec.cs" />
     <Compile Include="Dsl\SubscriberSourceSpec.cs" />
+    <Compile Include="Dsl\SubstreamSubscriptionTimeoutSpec.cs" />
     <Compile Include="Dsl\TestConfig.cs" />
     <Compile Include="Dsl\TickSourceSpec.cs" />
     <Compile Include="Extra\FlowTimedSpec.cs" />

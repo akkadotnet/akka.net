@@ -306,7 +306,7 @@ namespace Akka.Streams.Tests.Dsl
                 Flow.Create<string>()
                     .Map<string, string, IFruit, Unit>(_ => new Apple())
                     .SplitWhen<string, IFruit, Unit, IFruit>(_ => true);
-            Flow<string, KeyValuePair<int, Source<IFruit, Unit>>, Unit> d2 =
+            SubFlow<KeyValuePair<int, Source<IFruit, Unit>>, Unit> d2 =
                 Flow.Create<string>()
                     .Map<string, string, IFruit, Unit>(_ => new Apple())
                     .GroupBy<string, IFruit, Unit, int, IFruit>(-1,_ => 2);
