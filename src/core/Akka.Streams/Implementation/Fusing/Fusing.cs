@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Pattern;
 using Akka.Streams.Stage;
+using Akka.Streams.Util;
 using Akka.Util.Internal;
 using Atomic = Akka.Streams.Implementation.StreamLayout.Atomic;
 using Combine = Akka.Streams.Implementation.StreamLayout.Combine;
@@ -736,11 +737,11 @@ namespace Akka.Streams.Implementation.Fusing
         {
             if (Fusing.IsDebug) Fusing.Log(indent, $"wiring {outPort} ({Hash(outPort)}) -> {inPort} ({Hash(inPort)})");
             var newOut = RemoveMapping(outPort, NewOutputs);
-            if (newOut == null) throw new ArgumentException($"wiring {outPort} -> {inPort}", nameof(outPort));
+            if (!newOut.HasValue) throw new ArgumentException($"wiring {outPort} -> {inPort}", nameof(outPort));
             var newIn = RemoveMapping(inPort, NewInputs);
-            if (newIn == null) throw new ArgumentException($"wiring {outPort} -> {inPort}", nameof(inPort));
-            Downstreams.Add(newOut, newIn);
-            Upstreams.Add(newIn, newOut);
+            if (!newIn.HasValue) throw new ArgumentException($"wiring {outPort} -> {inPort}", nameof(inPort));
+            Downstreams.Add(newOut.Value, newIn.Value);
+            Upstreams.Add(newIn.Value, newOut.Value);
         }
 
         /// <summary>
@@ -755,9 +756,9 @@ namespace Akka.Streams.Implementation.Fusing
                 while (oins.MoveNext() && nins.MoveNext())
                 {
                     var x = RemoveMapping(oins.Current, NewInputs);
-                    if (x == null)
+                    if (!x.HasValue)
                         throw new ArgumentException($"rewiring {oins.Current} -> {nins.Current}", nameof(oldShape));
-                    AddMapping(nins.Current, x, NewInputs);
+                    AddMapping(nins.Current, x.Value, NewInputs);
                 }
             }
             {
@@ -766,9 +767,9 @@ namespace Akka.Streams.Implementation.Fusing
                 while (oouts.MoveNext() && nouts.MoveNext())
                 {
                     var x = RemoveMapping(oouts.Current, NewOutputs);
-                    if (x == null)
+                    if (!x.HasValue)
                         throw new ArgumentException($"rewiring {oouts.Current} -> {nouts.Current}", nameof(oldShape));
-                    AddMapping(nouts.Current, x, NewOutputs);
+                    AddMapping(nouts.Current, x.Value, NewOutputs);
                 }
             }
         }
@@ -807,7 +808,7 @@ namespace Akka.Streams.Implementation.Fusing
             else map.Add(orig, new LinkedList<T>(new[] { mapd }));
         }
 
-        private T RemoveMapping<T>(T orig, IDictionary<T, LinkedList<T>> map) where T : class
+        private Option<T> RemoveMapping<T>(T orig, IDictionary<T, LinkedList<T>> map)
         {
             LinkedList<T> values;
             if (map.TryGetValue(orig, out values))
@@ -820,7 +821,7 @@ namespace Akka.Streams.Implementation.Fusing
                     return x;
                 }
             }
-            return null;
+            return Option<T>.None;
         }
 
         /// <summary>

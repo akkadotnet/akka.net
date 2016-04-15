@@ -468,7 +468,7 @@ namespace Akka.Streams.Implementation
                 SetHandler(_stage.In,
                     onPush: () =>
                     {
-                        EnqueueAndNotify(new Result<Option<T>>(new Option<T>(Grab(_stage.In))));
+                        EnqueueAndNotify(new Result<Option<T>>(Grab(_stage.In)));
                         if (_buffer.Used < _maxBuffer) Pull(_stage.In);
                     },
                     onUpstreamFinish: () => EnqueueAndNotify(new Result<Option<T>>(Option<T>.None)),

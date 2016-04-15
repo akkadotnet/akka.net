@@ -145,7 +145,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         public override ISyncDirective OnPush(T element, IContext<Option<T>> context)
         {
-            return context.Push(new Option<T>(element));
+            return context.Push(element);
         }
 
         public override ISyncDirective OnPull(IContext<Option<T>> context)
