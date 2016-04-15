@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
@@ -12,6 +13,7 @@ using Akka.Streams.TestKit.Tests;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.IO
 {
@@ -21,7 +23,7 @@ namespace Akka.Streams.Tests.IO
         private readonly List<string> _testLines = new List<string>();
         private readonly List<ByteString> _testByteStrings;
 
-        public FileSinkSpec() : base(Utils.UnboundedMailboxConfig)
+        public FileSinkSpec(ITestOutputHelper helper) : base(Utils.UnboundedMailboxConfig, helper)
         {
             Sys.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
             var settings = ActorMaterializerSettings.Create(Sys).WithDispatcher("akka.actor.default-dispatcher");
@@ -214,6 +216,8 @@ namespace Akka.Streams.Tests.IO
             }
             finally
             {
+                //give the system enough time to shutdown and release the file handle
+                Thread.Sleep(500);
                 targetFile.Delete();
             }
         }

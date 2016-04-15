@@ -26,23 +26,22 @@ namespace Akka.Streams.Implementation.IO
                     .WithDeploy(Deploy.Local);
         }
 
-        private readonly Stream _os;
+        private readonly Stream _outputStream;
         private readonly TaskCompletionSource<IOResult> _completionPromise;
         private readonly bool _autoFlush;
-        private readonly IRequestStrategy _requestStrategy;
         private long _bytesWritten;
         private readonly ILoggingAdapter _log;
 
-        public OutputStreamSubscriber(Stream os, TaskCompletionSource<IOResult> completionPromise, int bufferSize, bool autoFlush)
+        public OutputStreamSubscriber(Stream outputStream, TaskCompletionSource<IOResult> completionPromise, int bufferSize, bool autoFlush)
         {
-            _os = os;
+            _outputStream = outputStream;
             _completionPromise = completionPromise;
             _autoFlush = autoFlush;
-            _requestStrategy = new WatermarkRequestStrategy(highWatermark: bufferSize);
+            RequestStrategy = new WatermarkRequestStrategy(highWatermark: bufferSize);
             _log = Context.GetLogger();
         }
 
-        public override IRequestStrategy RequestStrategy => _requestStrategy;
+        public override IRequestStrategy RequestStrategy { get; }
 
         protected override bool Receive(object message)
         {
@@ -53,10 +52,10 @@ namespace Akka.Streams.Implementation.IO
                     {
                         var bytes = next.Element as ByteString;
                         //blocking write
-                        _os.Write(bytes.ToArray(), 0, bytes.Count);
+                        _outputStream.Write(bytes.ToArray(), 0, bytes.Count);
                         _bytesWritten += bytes.Count;
                         if (_autoFlush)
-                            _os.Flush();
+                            _outputStream.Flush();
                     }
                     catch (Exception ex)
                     {
@@ -74,7 +73,7 @@ namespace Akka.Streams.Implementation.IO
                 .With<OnComplete>(() =>
                 {
                     Context.Stop(Self);
-                    _os.Flush();
+                    _outputStream.Flush();
                 })
                 .WasHandled;
         }
@@ -83,8 +82,7 @@ namespace Akka.Streams.Implementation.IO
         {
             try
             {
-                if (_os != null)
-                    _os.Close();
+                _outputStream?.Close();
             }
             catch (Exception ex)
             {

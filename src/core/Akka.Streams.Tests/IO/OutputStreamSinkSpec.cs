@@ -7,6 +7,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.IO
 {
@@ -140,7 +141,7 @@ namespace Akka.Streams.Tests.IO
 
         private readonly ActorMaterializer _materializer;
 
-        public OutputStreamSinkSpec() : base(Utils.UnboundedMailboxConfig)
+        public OutputStreamSinkSpec(ITestOutputHelper helper) : base(Utils.UnboundedMailboxConfig, helper)
         {
             Sys.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
             var settings = ActorMaterializerSettings.Create(Sys).WithDispatcher("akka.actor.default-dispatcher");

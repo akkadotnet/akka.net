@@ -4,6 +4,7 @@ using System.IO;
 using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.IO;
+using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Util;
 using static Akka.Streams.Implementation.IO.OutputStreamSourceStage;
@@ -19,49 +20,97 @@ namespace Akka.Streams.Implementation.IO
         #region internal classes
 
         internal interface IAdapterToStageMessage { }
-        internal struct Flush : IAdapterToStageMessage { }
-        internal struct Close : IAdapterToStageMessage { }
+
+        internal class Flush : IAdapterToStageMessage
+        {
+            public static readonly Flush Instance = new Flush();
+
+            private Flush()
+            {
+                
+            }
+        }
+
+        internal class Close : IAdapterToStageMessage
+        {
+            public static readonly Close Instance = new Close();
+
+            private Close()
+            {
+
+            }
+        }
 
         internal interface IDownstreamStatus { }
-        internal struct Ok : IDownstreamStatus { }
-        internal struct Canceled : IDownstreamStatus { }
+
+        internal class Ok : IDownstreamStatus
+        {
+            public static readonly Ok Instance = new Ok();
+
+            private Ok()
+            {
+
+            }
+        }
+
+        internal class Canceled : IDownstreamStatus
+        {
+            public static readonly Canceled Instance = new Canceled();
+
+            private Canceled()
+            {
+
+            }
+        }
 
         internal interface IStageWithCallback
         {
             Task WakeUp(IAdapterToStageMessage msg);
         }
 
-        private sealed class OutputStreamSourceStageLogic : GraphStageLogic, IStageWithCallback
+        private sealed class Logic : GraphStageLogic, IStageWithCallback
         {
             private readonly OutputStreamSourceStage _stage;
             private TaskCompletionSource<Unit> _flush;
             private TaskCompletionSource<Unit> _close;
+            private Action<Either<ByteString, Exception>> _downstreamCallback;
+            private Action<Tuple<IAdapterToStageMessage, TaskCompletionSource<Unit>>> _upstreamCallback;
 
-            public OutputStreamSourceStageLogic(Shape shape, OutputStreamSourceStage stage) : base(shape)
+            public Logic(OutputStreamSourceStage stage) : base(stage.Shape)
             {
                 _stage = stage;
-
+                _downstreamCallback = GetAsyncCallback((Either<ByteString, Exception> result) =>
+                {
+                    if(result.IsLeft)
+                        OnPush(result.Value as ByteString);
+                    else
+                        FailStage(result.Value as Exception);
+                });
+                _upstreamCallback = GetAsyncCallback<Tuple<IAdapterToStageMessage, TaskCompletionSource<Unit>>>(OnAsyncMessage);
                 SetHandler(_stage._out, onPull: OnPull, onDownstreamFinish: OnDownstreamFinish);
             }
 
             private void OnDownstreamFinish()
             {
                 //assuming there can be no further in messages
-                _stage._downstreamStatus.Value = new Canceled();
+                _stage._downstreamStatus.Value = Canceled.Instance;
                 _stage._dataQueue = null;
                 CompleteStage();
             }
 
             private void OnPull()
             {
-                try
+                Interpreter.Materializer.ExecutionContext.Schedule(() =>
                 {
-                    OnPush(_stage._dataQueue.Take());
-                }
-                catch (Exception ex)
-                {
-                    FailStage(ex);
-                }
+                    try
+                    {
+                        _downstreamCallback(new Left<ByteString, Exception>(_stage._dataQueue.Take()));
+                    }
+                    catch (Exception ex)
+                    {
+                        _downstreamCallback(new Right<ByteString, Exception>(ex));
+                    }
+                });
             }
 
             private void OnPush(ByteString data)
@@ -76,11 +125,11 @@ namespace Akka.Streams.Implementation.IO
             public Task WakeUp(IAdapterToStageMessage msg)
             {
                 var p = new TaskCompletionSource<Unit>();
-                UpstreamCallback(new Tuple<IAdapterToStageMessage, TaskCompletionSource<Unit>>(msg, p));
+                _upstreamCallback(new Tuple<IAdapterToStageMessage, TaskCompletionSource<Unit>>(msg, p));
                 return p.Task;
             }
 
-            private void UpstreamCallback(Tuple<IAdapterToStageMessage, TaskCompletionSource<Unit>> @event)
+            private void OnAsyncMessage(Tuple<IAdapterToStageMessage, TaskCompletionSource<Unit>> @event)
             {
                 if (@event.Item1 is Flush)
                 {
@@ -92,7 +141,7 @@ namespace Akka.Streams.Implementation.IO
                     _close = @event.Item2;
                     if (_stage._dataQueue.Count == 0)
                     {
-                        _stage._downstreamStatus.Value = new Canceled();
+                        _stage._downstreamStatus.Value = Canceled.Instance;
                         CompleteStage();
                         UnblockUpsteam();
                     }
@@ -101,20 +150,21 @@ namespace Akka.Streams.Implementation.IO
                 }
             }
 
-            private void UnblockUpsteam()
+            private bool UnblockUpsteam()
             {
                 if (_flush != null)
                 {
                     _flush.TrySetResult(Unit.Instance);
                     _flush = null;
-                    return;
+                    return true;
                 }
 
                 if (_close == null)
-                    return;
+                    return false;
 
                 _close.TrySetResult(Unit.Instance);
                 _close = null;
+                return true;
             }
 
             private void SendResponseIfNeeded()
@@ -127,28 +177,30 @@ namespace Akka.Streams.Implementation.IO
         #endregion
 
         private readonly TimeSpan _writeTimeout;
-        private readonly AtomicReference<IDownstreamStatus> _downstreamStatus = new AtomicReference<IDownstreamStatus>(new Ok());
+        private readonly AtomicReference<IDownstreamStatus> _downstreamStatus = new AtomicReference<IDownstreamStatus>(Ok.Instance);
         private readonly Outlet<ByteString> _out = new Outlet<ByteString>("OutputStreamSource.out");
-        private readonly SourceShape<ByteString> _shape;
         private BlockingCollection<ByteString> _dataQueue;
 
         public OutputStreamSourceStage(TimeSpan writeTimeout)
         {
             _writeTimeout = writeTimeout;
-            _shape = new SourceShape<ByteString>(_out);
+            Shape = new SourceShape<ByteString>(_out);
+        }
+
+        public override SourceShape<ByteString> Shape { get; }
+
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.OutputStreamSource;
+
+        public override ILogicAndMaterializedValue<Stream> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        {
             // has to be in this order as module depends on shape
-            var maxBuffer = Module.Attributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;
+            var maxBuffer = inheritedAttributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;
             if (maxBuffer <= 0)
                 throw new ArgumentException("Buffer size must be greather than 0");
 
             _dataQueue = new BlockingCollection<ByteString>(maxBuffer);
-        }
 
-        public override SourceShape<ByteString> Shape => _shape;
-
-        public override ILogicAndMaterializedValue<Stream> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
-        {
-            var logic = new OutputStreamSourceStageLogic(Shape, this);
+            var logic = new Logic(this);
             return new LogicAndMaterializedValue<Stream>(logic,
                 new OutputStreamAdapter(_dataQueue, _downstreamStatus, logic, _writeTimeout));
         }
@@ -231,7 +283,14 @@ namespace Akka.Streams.Implementation.IO
         {
             Send(() =>
             {
-                _dataQueue.Add(data);
+                try
+                {
+                    _dataQueue.Add(data);
+                }
+                catch (Exception ex)
+                {
+                    throw new IOException(string.Empty, ex);
+                }
 
                 if (_downstreamStatus.Value is Canceled)
                 {
@@ -245,24 +304,35 @@ namespace Akka.Streams.Implementation.IO
         {
             Send(() =>
             {
-                _stageWithCallback.WakeUp(msg).Wait(_writeTimeout);
-                if (_downstreamStatus.Value is Canceled && handleCancelled)
+                try
                 {
-                    //Publisher considered to be terminated at earliest convenience to minimize messages sending back and forth
-                    _isPublisherAlive = false;
-                    throw PublisherClosedException;
+                    _stageWithCallback.WakeUp(msg).Wait(_writeTimeout);
+                    if (_downstreamStatus.Value is Canceled && handleCancelled)
+                    {
+                        //Publisher considered to be terminated at earliest convenience to minimize messages sending back and forth
+                        _isPublisherAlive = false;
+                        throw PublisherClosedException;
+                    }
+                }
+                catch (IOException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    throw new IOException(string.Empty, ex);
                 }
             });
         }
 
-        public override void Flush() => SendMessage(new Flush());
+        public override void Flush() => SendMessage(OutputStreamSourceStage.Flush.Instance);
 
         public override void Write(byte[] buffer, int offset, int count)
             => SendData(ByteString.Create(buffer, offset, count));
 
         public override void Close()
         {
-            SendMessage(new Close(), false);
+            SendMessage(OutputStreamSourceStage.Close.Instance, false);
             _isActive = false;
         }
 
