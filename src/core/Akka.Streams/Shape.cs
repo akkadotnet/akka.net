@@ -231,12 +231,11 @@ namespace Akka.Streams
     /// </summary>
     public sealed class SourceShape<TOut> : Shape
     {
-        private readonly ImmutableArray<Outlet> _outlets;
         public readonly Outlet<TOut> Outlet;
 
         public SourceShape(Outlet<TOut> outlet)
         {
-            if (outlet == null) throw new ArgumentNullException("outlet");
+            if (outlet == null) throw new ArgumentNullException(nameof(outlet));
             Outlet = outlet;
             Outlets = ImmutableArray.Create<Outlet>(outlet);
         }

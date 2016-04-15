@@ -188,13 +188,13 @@ namespace Akka.Streams.Dsl
                 .Wire(copy.Shape.Outlets.First(), Shape.Inlet));
         }
 
-        internal Flow<TIn, TOut2, TMat> DeprecatedAndThen<TOut2>(StageModule op)
+        internal Flow<TIn, TOut2, TMat> DeprecatedAndThen<TOut2>(StageModule<TOut, TOut2> op)
         {
             //No need to copy here, op is a fresh instance
             return IsIdentity
                 ? new Flow<TIn, TOut2, TMat>(op)
                 : new Flow<TIn, TOut2, TMat>(
-                    Module.Fuse(op, Shape.Outlet, op.In).ReplaceShape(new FlowShape<TIn, object>(Shape.Inlet, op.Out)));
+                    Module.Fuse(op, Shape.Outlet, op.In).ReplaceShape(new FlowShape<TIn, TOut2>(Shape.Inlet, op.Out)));
         }
 
         /// <summary>

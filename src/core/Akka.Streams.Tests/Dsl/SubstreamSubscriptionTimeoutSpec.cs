@@ -137,10 +137,10 @@ namespace Akka.Streams.Tests.Dsl
             Thread.Sleep(1500);
             s2Subscription.Request(100);
             s2SubscriberProbe.ExpectNext().Should().Be(2);
-            s2Subscription.Request(100);
+            s1Subscription.Request(100);
             publisherProbe.SendNext(3);
             publisherProbe.SendNext(4);
-            s2SubscriberProbe.ExpectNext().Should().Be(3);
+            s1SubscriberProbe.ExpectNext().Should().Be(3);
             s2SubscriberProbe.ExpectNext().Should().Be(4);
         }
     }

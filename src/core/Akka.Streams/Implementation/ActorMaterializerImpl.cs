@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Reactive.Streams;
+using System.Reflection;
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Event;
@@ -20,6 +21,9 @@ namespace Akka.Streams.Implementation
 
         private sealed class ActorMaterializerSession : MaterializerSession
         {
+            private static readonly MethodInfo ProcessorForMethod =
+                typeof(ActorMaterializerSession).GetMethod("ProcessorFor",
+                    BindingFlags.NonPublic | BindingFlags.Instance);
             private readonly ActorMaterializerImpl _materializer;
             private readonly Func<GraphInterpreterShell, IActorRef> _subflowFuser;
             private readonly string _flowName;
@@ -52,15 +56,18 @@ namespace Akka.Streams.Implementation
                     AssignPort(source.Shape.Outlets.First(), publisher);
                     materializedValues.Add(atomic, materialized);
                 }
-                else if (atomic is StageModule)
+                else if (atomic is IStageModule)
                 {
                     // FIXME: Remove this, only stream-of-stream ops need it
-                    var stage = (StageModule) atomic;
-                    object materialized;
-                    var processor = ProcessorFor(stage, effectiveAttributes,
-                        _materializer.EffectiveSettings(effectiveAttributes), out materialized);
-                    AssignPort(stage.In, processor);
-                    AssignPort(stage.Out, processor);
+                    var stage = (IStageModule) atomic;
+                    // assumes BaseType is StageModule<>
+                    var methodInfo = ProcessorForMethod.MakeGenericMethod(atomic.GetType().BaseType.GenericTypeArguments);
+                    var parameters = new object[]
+                    {stage, effectiveAttributes, _materializer.EffectiveSettings(effectiveAttributes), null};
+                    var processor = methodInfo.Invoke(this, parameters);
+                    object materialized = parameters[3];
+                    AssignPort(stage.In, (ISubscriber) processor);
+                    AssignPort(stage.Out, (IPublisher) processor);
                     materializedValues.Add(atomic, materialized);
                 }
                 //else if (atomic is TlsModule)
@@ -132,10 +139,11 @@ namespace Akka.Streams.Implementation
                 }
             }
 
-            private IProcessor<object, object> ProcessorFor(StageModule op, Attributes effectiveAttributes, ActorMaterializerSettings settings, out object materialized)
+            // ReSharper disable once UnusedMember.Local
+            private IProcessor<TIn, TOut> ProcessorFor<TIn, TOut>(StageModule<TIn, TOut> op, Attributes effectiveAttributes, ActorMaterializerSettings settings, out object materialized)
             {
-                DirectProcessor processor;
-                if ((processor = op as DirectProcessor) != null)
+                DirectProcessor<TIn, TOut> processor;
+                if ((processor = op as DirectProcessor<TIn, TOut>) != null)
                 {
                     var t = processor.ProcessorFactory();
                     materialized = t.Item2;
@@ -144,7 +152,7 @@ namespace Akka.Streams.Implementation
                 else
                 {
                     var props = ActorProcessorFactory.Props(_materializer, op, effectiveAttributes, out materialized);
-                    return ActorProcessorFactory.Create<object, object>(_materializer.ActorOf(props, StageName(effectiveAttributes), settings.Dispatcher));
+                    return ActorProcessorFactory.Create<TIn, TOut>(_materializer.ActorOf(props, StageName(effectiveAttributes), settings.Dispatcher));
                 }
             }
         }
@@ -438,7 +446,7 @@ namespace Akka.Streams.Implementation
 
     internal static class ActorProcessorFactory
     {
-        public static Props Props(ActorMaterializer materializer, StageModule op, Attributes parentAttributes, out object materialized)
+        public static Props Props<TIn, TOut>(ActorMaterializer materializer, StageModule<TIn, TOut> op, Attributes parentAttributes, out object materialized)
         {
             var attr = parentAttributes.And(op.Attributes);
             // USE THIS TO AVOID CLOSING OVER THE MATERIALIZER BELOW
@@ -447,16 +455,15 @@ namespace Akka.Streams.Implementation
             Props result = null;
             materialized = null;
 
-            op.Match()
-                .With<GroupBy>(groupBy =>
-                {
-                    result = GroupByProcessorImpl.Props(settings, groupBy.MaxSubstreams, groupBy.Extractor);
-                })
-                .With<DirectProcessor>(processor =>
-                {
-                    throw new ArgumentException("DirectProcessor cannot end up in ActorProcessorFactory");
-                })
-                .Default(_ => { throw new ArgumentException($"StageModule type {op.GetType()} is not supported"); });
+            if (op is IGroupBy)
+            {
+                var groupBy = (IGroupBy) op;
+                result = GroupByProcessorImpl<TIn>.Props(settings, groupBy.MaxSubstreams, groupBy.Extractor);
+            }
+            else if (op.GetType().IsGenericType && op.GetType().GetGenericTypeDefinition() == typeof(DirectProcessor<,>))
+                throw new ArgumentException("DirectProcessor cannot end up in ActorProcessorFactory");
+            else
+                throw new ArgumentException($"StageModule type {op.GetType()} is not supported");
 
             return result;
         }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Event;
+using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
 using Akka.Streams.Util;
@@ -99,8 +100,16 @@ namespace Akka.Streams.Implementation.Stages
     }
     
     // FIXME: To be deprecated as soon as stream-of-stream operations are stages
-    internal abstract class StageModule : FlowModule<Object, object, object>
+    internal interface IStageModule
     {
+        InPort In { get; }
+        OutPort Out { get; }
+    }
+
+    internal abstract class StageModule<TIn, TOut> : FlowModule<TIn, TOut>, IStageModule
+    {
+        InPort IStageModule.In => In;
+        OutPort IStageModule.Out => Out;
     }
 
     /// <summary>
@@ -510,35 +519,48 @@ namespace Akka.Streams.Implementation.Stages
 
     // FIXME: These are not yet proper stages, therefore they use the deprecated StageModule infrastructure
 
-    internal sealed class GroupBy : StageModule
+    internal interface IGroupBy
     {
-        public readonly int MaxSubstreams;
-        public readonly Func<object, object> Extractor;
+        int MaxSubstreams { get; }
+        Func<object, object> Extractor { get; }
+    }
 
-        public GroupBy(int maxSubstreams, Func<object, object> extractor, Attributes attributes = null)
+    internal sealed class GroupBy<TIn, TKey> : StageModule<TIn, Source<TIn, Unit>>, IGroupBy
+    {
+        private readonly Func<TIn, TKey> _extractor;
+        private readonly Func<object, object> _extractorWrapper;
+
+        public GroupBy(int maxSubstreams, Func<TIn, TKey> extractor, Attributes attributes = null)
         {
             MaxSubstreams = maxSubstreams;
-            Extractor = extractor;
+            _extractor = extractor;
+            _extractorWrapper = _ => _extractor((TIn) _);
             Attributes = attributes ?? DefaultAttributes.GroupBy;
         }
 
+        public int MaxSubstreams { get; }
+
+        public Func<TIn, TKey> Extractor => _extractor;
+
+        Func<object, object> IGroupBy.Extractor => _extractorWrapper;
+
         public override IModule CarbonCopy()
         {
-            return new GroupBy(MaxSubstreams, Extractor, Attributes);
+            return new GroupBy<TIn, TKey>(MaxSubstreams, Extractor, Attributes);
         }
 
         public override Attributes Attributes { get; }
         public override IModule WithAttributes(Attributes attributes)
         {
-            return new GroupBy(MaxSubstreams, Extractor, attributes);
+            return new GroupBy<TIn, TKey>(MaxSubstreams, Extractor, attributes);
         }
     }
 
-    internal sealed class DirectProcessor : StageModule
+    internal sealed class DirectProcessor<TIn, TOut> : StageModule<TIn, TOut>
     {
-        public readonly Func<Tuple<IProcessor<object, object>, object>> ProcessorFactory;
+        public readonly Func<Tuple<IProcessor<TIn, TOut>, object>> ProcessorFactory;
 
-        public DirectProcessor(Func<Tuple<IProcessor<object, object>, object>> processorFactory, Attributes attributes = null)
+        public DirectProcessor(Func<Tuple<IProcessor<TIn, TOut>, object>> processorFactory, Attributes attributes = null)
         {
             ProcessorFactory = processorFactory;
             Attributes = attributes ?? DefaultAttributes.Processor;
@@ -546,13 +568,13 @@ namespace Akka.Streams.Implementation.Stages
 
         public override IModule CarbonCopy()
         {
-            return new DirectProcessor(ProcessorFactory, Attributes);
+            return new DirectProcessor<TIn, TOut>(ProcessorFactory, Attributes);
         }
 
         public override Attributes Attributes { get; }
         public override IModule WithAttributes(Attributes attributes)
         {
-            return new DirectProcessor(ProcessorFactory, attributes);
+            return new DirectProcessor<TIn, TOut>(ProcessorFactory, attributes);
         }
     }
 }

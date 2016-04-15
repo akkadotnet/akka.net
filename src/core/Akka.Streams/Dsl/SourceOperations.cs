@@ -3,13 +3,8 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Reactive.Streams;
 using System.Threading.Tasks;
-using Akka.Dispatch.SysMsg;
 using Akka.Event;
-using Akka.IO;
 using Akka.Streams.Dsl.Internal;
-using Akka.Streams.Implementation;
-using Akka.Streams.Implementation.Fusing;
-using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Streams.Util;
 

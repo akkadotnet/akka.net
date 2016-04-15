@@ -107,7 +107,7 @@ namespace Akka.Streams.Dsl
                 var flowCopy = flow.Module.CarbonCopy();
                 return new Source<TOut2, TMat3>(Module
                     .Fuse(flowCopy, Shape.Outlet, flowCopy.Shape.Inlets.First(), combine)
-                    .ReplaceShape(new SourceShape<TOut2>((Outlet<TOut2>)flowCopy.Shape.Outlets.First())));
+                    .ReplaceShape(new SourceShape<TOut2>((Outlet<TOut2>) flowCopy.Shape.Outlets.First())));
             }
         }
 
@@ -134,12 +134,12 @@ namespace Akka.Streams.Dsl
             return new Source<TOut, TMat2>(Module.TransformMaterializedValue(mapFunc));
         }
 
-        internal Source<TOut2, TMat> DeprecatedAndThen<TOut2>(StageModule op)
+        internal Source<TOut2, TMat> DeprecatedAndThen<TOut2>(StageModule<TOut, TOut2> op)
         {
             //No need to copy here, op is a fresh instance
             return new Source<TOut2, TMat>(Module
                 .Fuse(op, Shape.Outlet, op.In)
-                .ReplaceShape(new SourceShape<object>(op.Out)));
+                .ReplaceShape(new SourceShape<TOut2>(op.Out)));
         }
 
         /// <summary>

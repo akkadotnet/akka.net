@@ -14,7 +14,7 @@ namespace Akka.Streams.Implementation
         private readonly IPump _pump;
         private readonly Action _afterShutdown;
 
-        protected ActorPublisher<T> ExposedPublisher;
+        protected IActorPublisher ExposedPublisher;
 
         public SubReceive SubReceive { get; }
 
@@ -44,7 +44,7 @@ namespace Akka.Streams.Implementation
                 if (publisher == null)
                     throw new IllegalStateException($"The first message must be ExposedPublisher but was {message}");
 
-                ExposedPublisher = (ActorPublisher<T>) publisher.Publisher;
+                ExposedPublisher = publisher.Publisher;
                 SubReceive.Become(DownstreamRunning);
                 return true;
             });
@@ -96,7 +96,7 @@ namespace Akka.Streams.Implementation
         {
             ReactiveStreamsCompliance.RequireNonNullElement(element);
             _downstreamBufferSpace -= 1;
-            PushToDownstream((T)element);
+            PushToDownstream((T) element);
         }
 
         public void Complete()
@@ -126,7 +126,7 @@ namespace Akka.Streams.Implementation
         public bool IsOpen => !IsClosed;
     }
 
-    internal sealed class FanoutProcessorImpl<T> : ActorProcessorImpl<T>
+    internal sealed class FanoutProcessorImpl<T> : ActorProcessorImpl
     {
         public static Props Props(ActorMaterializerSettings settings)
         {

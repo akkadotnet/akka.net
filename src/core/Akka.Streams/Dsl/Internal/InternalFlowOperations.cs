@@ -893,14 +893,14 @@ namespace Akka.Streams.Dsl.Internal
             int maxSubstreams,
             Func<T, TKey> groupingFunc,
             Func<IFlow<Source<T, Unit>, TMat>, Sink<Source<T, Unit>, Task>, TClosed> toFunc,
-            Func<IFlow<T, TMat>, StageModule, IFlow<Source<T, Unit>, TMat>> deprecatedAndThenFunc)
+            Func<IFlow<T, TMat>, StageModule<T, Source<T, Unit>>, IFlow<Source<T, Unit>, TMat>> deprecatedAndThenFunc)
         {
             var merge = new GroupByMergeBack<T, TMat, TKey>(flow, deprecatedAndThenFunc, maxSubstreams, groupingFunc);
 
             Func<Sink<T, TMat>, TClosed> finish = s =>
             {
                 return toFunc(
-                    deprecatedAndThenFunc(flow, new GroupBy(maxSubstreams, o => groupingFunc((T) o))),
+                    deprecatedAndThenFunc(flow, new GroupBy<T, TKey>(maxSubstreams, groupingFunc)),
                     Sink.ForEach<Source<T, Unit>>(e => e.RunWith(s, Fusing.GraphInterpreter.Current.Materializer)));
             };
 
@@ -910,12 +910,12 @@ namespace Akka.Streams.Dsl.Internal
         internal class GroupByMergeBack<TOut, TMat, TKey> : IMergeBack<TOut, TMat>
         {
             private readonly IFlow<TOut, TMat> _self;
-            private readonly Func<IFlow<TOut, TMat>, StageModule, IFlow<Source<TOut, Unit>, TMat>> _deprecatedAndThenFunc;
+            private readonly Func<IFlow<TOut, TMat>, StageModule<TOut, Source<TOut, Unit>>, IFlow<Source<TOut, Unit>, TMat>> _deprecatedAndThenFunc;
             private readonly int _maxSubstreams;
             private readonly Func<TOut, TKey> _groupingFunc;
 
             public GroupByMergeBack(IFlow<TOut, TMat> self,
-                Func<IFlow<TOut, TMat>, StageModule, IFlow<Source<TOut, Unit>, TMat>> deprecatedAndThenFunc,
+                Func<IFlow<TOut, TMat>, StageModule<TOut, Source<TOut, Unit>>, IFlow<Source<TOut, Unit>, TMat>> deprecatedAndThenFunc,
                 int maxSubstreams,
                 Func<TOut, TKey> groupingFunc)
             {
@@ -927,7 +927,7 @@ namespace Akka.Streams.Dsl.Internal
 
             public IFlow<T, TMat> Apply<T>(Flow<TOut, T, TMat> flow, int breadth)
             {
-                return _deprecatedAndThenFunc(_self, new GroupBy(_maxSubstreams, o => _groupingFunc((TOut) o)))
+                return _deprecatedAndThenFunc(_self, new GroupBy<TOut, TKey>(_maxSubstreams, o => _groupingFunc(o)))
                     .Map(f => f.Via(flow))
                     .Via(new Fusing.FlattenMerge<Source<T, Unit>, T, Unit>(breadth));
             }

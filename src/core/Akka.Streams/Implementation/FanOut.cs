@@ -12,7 +12,7 @@ namespace Akka.Streams.Implementation
     {
         #region internal classes
 
-        private sealed class FanoutOutputs : SimpleOutputs<T>
+        private sealed class FanoutOutputs : SimpleOutputs
         {
             private readonly int _id;
 

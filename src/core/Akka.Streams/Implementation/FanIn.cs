@@ -4,7 +4,6 @@ using System.Runtime.CompilerServices;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Pattern;
-using Akka.Streams.Actors;
 
 namespace Akka.Streams.Implementation
 {
@@ -421,14 +420,14 @@ namespace Akka.Streams.Implementation
 
         protected readonly ActorMaterializerSettings Settings;
         protected readonly int InputCount;
-        protected readonly SimpleOutputs<T> PrimaryOutputs;
+        protected readonly SimpleOutputs PrimaryOutputs;
         protected readonly InputBunch InputBunch;
 
         protected FanIn(ActorMaterializerSettings settings, int inputCount)
         {
             Settings = settings;
             InputCount = inputCount;
-            PrimaryOutputs = new SimpleOutputs<T>(Self, this);
+            PrimaryOutputs = new SimpleOutputs(Self, this);
             InputBunch = new AnonymousInputBunch(inputCount, settings.MaxInputBufferSize, this);
             
             TransferState = NotInitialized.Instance;

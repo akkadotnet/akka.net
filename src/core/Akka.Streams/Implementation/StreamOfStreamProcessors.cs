@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reactive.Streams;
 using Akka.Actor;
 using Akka.Event;
@@ -8,7 +9,7 @@ using Akka.Util;
 
 namespace Akka.Streams.Implementation
 {
-    internal abstract class MultiStreamOutputProcessor<T> : ActorProcessorImpl<T>, IStreamSubscriptionTimeoutSupport<T>
+    internal abstract class MultiStreamOutputProcessor<T> : ActorProcessorImpl, IStreamSubscriptionTimeoutSupport
     {
         #region internal classes
 
@@ -103,7 +104,7 @@ namespace Akka.Streams.Implementation
 
             public SubstreamSubscription(IActorRef parent, SubstreamKey substream)
             {
-                if (ReferenceEquals(parent, null)) throw new ArgumentNullException("parent", "Parent actor ref cannot be null");
+                if (ReferenceEquals(parent, null)) throw new ArgumentNullException(nameof(parent), "Parent actor ref cannot be null");
                 Parent = parent;
                 Substream = substream;
             }
@@ -142,7 +143,7 @@ namespace Akka.Streams.Implementation
             }
         }
 
-        internal class SubstreamOutput : SimpleOutputs<T>, IPublisher<T>
+        internal class SubstreamOutput : SimpleOutputs, IPublisher<T>
         {
             #region Internal classes
 
@@ -159,9 +160,9 @@ namespace Akka.Streams.Implementation
             [Serializable]
             public sealed class Attached : IPublisherState
             {
-                public readonly ISubscriber<T> Subscriber;
+                public readonly ISubscriber Subscriber;
 
-                public Attached(ISubscriber<T> subscriber)
+                public Attached(ISubscriber subscriber)
                 {
                     Subscriber = subscriber;
                 }
@@ -204,10 +205,11 @@ namespace Akka.Streams.Implementation
             {
                 Key = key;
                 SubscriptionTimeout = subscriptionTimeout;
+                _subscription = new SubstreamSubscription(actor, key);
             }
 
             public override SubReceive SubReceive { get { throw new NotSupportedException("Substream outputs are managed in a dedicated receive block"); } }
-            public bool IsAttached { get { return _state.Value is Attached; } }
+            public bool IsAttached => _state.Value is Attached;
 
             public void EnqueueOutputDemand(long demand)
             {
@@ -293,7 +295,7 @@ namespace Akka.Streams.Implementation
                 }
             }
 
-            private void CloseSubscriber(ISubscriber<T> subscriber, ICompletedState withState)
+            private void CloseSubscriber(ISubscriber subscriber, ICompletedState withState)
             {
                 var f = withState as Failed;
                 if (withState is Completed) ReactiveStreamsCompliance.TryOnComplete(subscriber);
@@ -305,20 +307,14 @@ namespace Akka.Streams.Implementation
 
         // stream keys will be removed from this map on cancellation/subscription-timeout, never assume a key is present
         private readonly IDictionary<SubstreamKey, SubstreamOutput> _substreamOutputs = new Dictionary<SubstreamKey, SubstreamOutput>();
-        private long _nextId = 0L;
+        private long _nextId;
 
         protected MultiStreamOutputProcessor(ActorMaterializerSettings settings) : base(settings) { }
 
         private ILoggingAdapter _log;
-        protected ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+        protected new ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
 
-        public StreamSubscriptionTimeoutSettings SubscriptionTimeoutSettings
-        {
-            get
-            {
-                return Settings.SubscriptionTimeoutSettings;
-            }
-        }
+        public StreamSubscriptionTimeoutSettings SubscriptionTimeoutSettings => Settings.SubscriptionTimeoutSettings;
 
         protected override void Fail(Exception e)
         {
@@ -438,7 +434,7 @@ namespace Akka.Streams.Implementation
                 : Context.System.Scheduler.ScheduleTellOnceCancelable(SubscriptionTimeoutSettings.Timeout, actorRef, message, Self);
         }
 
-        public void SubscriptionTimedOut(IPublisher<T> target)
+        public void SubscriptionTimedOut(IPublisher target)
         {
             switch (SubscriptionTimeoutSettings.Mode)
             {
@@ -450,7 +446,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// Callback that should ensure that the target is canceled with the given cause.
         /// </summary>
-        public void HandleSubscriptionTimeout(IPublisher<T> target, Exception cause)
+        public void HandleSubscriptionTimeout(IPublisher target, Exception cause)
         {
             SubstreamOutput output;
             if ((output = target as SubstreamOutput) != null)
@@ -460,468 +456,31 @@ namespace Akka.Streams.Implementation
             }
         }
 
-        private void Cancel(IPublisher<T> target, TimeSpan timeout)
+        private void Cancel(IPublisher target, TimeSpan timeout)
         {
-            Log.Debug("Cancelling {0} (after {1})", target, timeout);
-            HandleSubscriptionTimeout(target, new SubscriptionTimeoutException(string.Format("Publisher was not attached within {0} or it has been shut-down", timeout)));
-            //val millis = timeout.toMillis
-            //target match {
-            //  case p: Processor[_, _] ⇒
-            //    log.debug("Cancelling {} Processor's publisher and subscriber sides (after {} ms)", p, millis)
-            //    handleSubscriptionTimeout(target, new SubscriptionTimeoutException(s"Publisher was not attached to upstream within deadline ($millis) ms") with NoStackTrace)
-
-            //  case p: Publisher[_] ⇒
-            //    log.debug("Cancelling {} (after: {} ms)", p, millis)
-            //    handleSubscriptionTimeout(target, new SubscriptionTimeoutException(s"Publisher ($p) you are trying to subscribe to has been shut-down " +
-            //      s"because exceeding it's subscription-timeout.") with NoStackTrace)
-            //}
+            if (
+                target.GetType()
+                    .GetInterfaces()
+                    .Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IProcessor<,>)))
+            {
+                if (Log.IsDebugEnabled)
+                    Log.Debug(
+                        $"Cancelling {target} Processor's publisher and subscriber sides (after {timeout.TotalMilliseconds} ms)");
+                HandleSubscriptionTimeout(target, new SubscriptionTimeoutException(
+                    $"Publisher was not attached to upstream within deadline {timeout.TotalMilliseconds} ms"));
+                
+            }
+            else
+                if (Log.IsDebugEnabled)
+                    Log.Debug(
+                        $"Cancelling {target} (after {timeout.TotalMilliseconds} ms)");
+                HandleSubscriptionTimeout(target, new SubscriptionTimeoutException(
+                    $"Publisher {target} you are trying to subscribe to has been shut-down because exceeing its subscription timeout"));
         }
 
-        private void Warn(IPublisher<T> target, TimeSpan timeout)
+        private void Warn(IPublisher target, TimeSpan timeout)
         {
             Log.Warning("Timed out {0} detected (after {1})! You should investigate if you either cancel or consume all {2} instances", target, timeout, target.GetType().Name);
-        }
-
-        #endregion
-    }
-
-    internal sealed class TwoStreamInputProcessor<T> : ActorProcessorImpl<T>
-    {
-        #region Internal classes
-
-        [Serializable]
-        public sealed class OtherStreamOnComplete
-        {
-            public static readonly OtherStreamOnComplete Instance = new OtherStreamOnComplete();
-            private OtherStreamOnComplete() { }
-        }
-
-        [Serializable]
-        public struct OtherStreamOnNext
-        {
-            public readonly object Element;
-
-            public OtherStreamOnNext(object element)
-            {
-                Element = element;
-            }
-        }
-
-        [Serializable]
-        public struct OtherStreamOnError
-        {
-            public readonly Exception Cause;
-
-            public OtherStreamOnError(Exception cause)
-            {
-                Cause = cause;
-            }
-        }
-
-        [Serializable]
-        public struct OtherStreamOnSubscribe
-        {
-            public readonly ISubscription Subscription;
-
-            public OtherStreamOnSubscribe(ISubscription subscription)
-            {
-                Subscription = subscription;
-            }
-        }
-
-        public sealed class OtherActorSubscriber : ISubscriber<T>
-        {
-            protected readonly IActorRef Impl;
-
-            public OtherActorSubscriber(IActorRef impl)
-            {
-                Impl = impl;
-            }
-
-            public void OnNext(T element)
-            {
-                ReactiveStreamsCompliance.RequireNonNullElement(element);
-                Impl.Tell(new OtherStreamOnNext(element));
-            }
-
-            void ISubscriber.OnNext(object element)
-            {
-                OnNext((T)element);
-            }
-
-            public void OnSubscribe(ISubscription subscription)
-            {
-                ReactiveStreamsCompliance.RequireNonNullSubscription(subscription);
-                Impl.Tell(new OtherStreamOnSubscribe(subscription));
-            }
-
-            public void OnError(Exception cause)
-            {
-                ReactiveStreamsCompliance.RequireNonNullException(cause);
-                Impl.Tell(new OtherStreamOnError(cause));
-            }
-
-            public void OnComplete()
-            {
-                Impl.Tell(OtherStreamOnComplete.Instance);
-            }
-        }
-
-        private sealed class AnonymousBatchingInputBuffer : BatchingInputBuffer
-        {
-            private readonly TwoStreamInputProcessor<T> _that;
-            public AnonymousBatchingInputBuffer(int count, TwoStreamInputProcessor<T> that) : base(count, that)
-            {
-                _that = that;
-                SubReceive = new SubReceive(WaitingForUpstream);
-            }
-
-            public override SubReceive SubReceive { get; }
-
-            protected override void InputOnError(Exception e)
-            {
-                _that.OnError(e);
-            }
-
-            protected override bool WaitingForUpstream(object message)
-            {
-                return message.Match()
-                    .With<OtherStreamOnComplete>(_ => OnComplete())
-                    .With<OtherStreamOnSubscribe>(subscribe => OnSubscribe(subscribe.Subscription))
-                    .With<OtherStreamOnError>(error => _that.OnError(error.Cause))
-                    .WasHandled;
-            }
-
-            protected override bool UpstreamRunning(object message)
-            {
-                return message.Match()
-                    .With<OtherStreamOnNext>(next => EnqueueInputElement(next.Element))
-                    .With<OtherStreamOnComplete>(_ => OnComplete())
-                    .With<OtherStreamOnError>(error => _that.OnError(error.Cause))
-                    .WasHandled;
-            }
-
-            protected override bool Completed(object message)
-            {
-                if (message is OtherStreamOnSubscribe)
-                {
-                    throw ActorPublisher.NormalShutdownReason;
-                }
-
-                return false;
-            }
-        }
-
-        #endregion
-
-        public readonly IPublisher<T> Other;
-        public readonly BatchingInputBuffer SecondaryInputs;
-
-        public TwoStreamInputProcessor(ActorMaterializerSettings settings, IPublisher<T> other) : base(settings)
-        {
-            Other = other;
-            SecondaryInputs = new AnonymousBatchingInputBuffer(settings.InitialInputBufferSize, this);
-
-            Other.Subscribe(new OtherActorSubscriber(Self));
-        }
-
-        protected override bool ActiveReceive(object message)
-        {
-            return SecondaryInputs.SubReceive.CurrentReceive(message)
-                   || PrimaryInputs.SubReceive.CurrentReceive(message)
-                   || PrimaryOutputs.SubReceive.CurrentReceive(message);
-        }
-
-        public override void PumpFinished()
-        {
-            SecondaryInputs.Cancel();
-            base.PumpFinished();
-        }
-    }
-
-    internal abstract class MultiStreamInputProcessor<T> : ActorProcessorImpl<T>
-    {
-        #region Internal classes
-
-        [Serializable]
-        public struct SubstreamKey : IEquatable<SubstreamKey>
-        {
-            public readonly long Id;
-
-            public SubstreamKey(long id)
-            {
-                Id = id;
-            }
-
-            public bool Equals(SubstreamKey other)
-            {
-                return Id == other.Id;
-            }
-
-            public override bool Equals(object obj)
-            {
-                return obj is SubstreamKey && Equals((SubstreamKey)obj);
-            }
-
-            public override int GetHashCode()
-            {
-                return Id.GetHashCode();
-            }
-
-            public static bool operator ==(SubstreamKey x, SubstreamKey y)
-            {
-                return Equals(x, y);
-            }
-
-            public static bool operator !=(SubstreamKey x, SubstreamKey y)
-            {
-                return !(x == y);
-            }
-        }
-
-        [Serializable]
-        public sealed class SubstreamOnComplete : INoSerializationVerificationNeeded
-        {
-            public readonly SubstreamKey Key;
-
-            public SubstreamOnComplete(SubstreamKey key)
-            {
-                Key = key;
-            }
-        }
-
-        [Serializable]
-        public struct SubstreamOnNext : INoSerializationVerificationNeeded
-        {
-            public readonly SubstreamKey Key;
-            public readonly object Element;
-
-            public SubstreamOnNext(SubstreamKey key, object element)
-            {
-                Key = key;
-                Element = element;
-            }
-        }
-
-        [Serializable]
-        public struct SubstreamOnError : INoSerializationVerificationNeeded
-        {
-            public readonly SubstreamKey Key;
-            public readonly Exception Reason;
-
-            public SubstreamOnError(SubstreamKey key, Exception reason)
-            {
-                Key = key;
-                Reason = reason;
-            }
-        }
-
-        [Serializable]
-        public struct SubstreamOnSubscribe : INoSerializationVerificationNeeded
-        {
-            public readonly SubstreamKey Key;
-            public readonly ISubscription Subscription;
-
-            public SubstreamOnSubscribe(SubstreamKey key, ISubscription subscription)
-            {
-                Key = key;
-                Subscription = subscription;
-            }
-        }
-
-        public sealed class SubstreamSubscriber : AtomicReference<ISubscription>, ISubscriber<T>
-        {
-            public readonly IActorRef Impl;
-            public readonly SubstreamKey Key;
-
-            public SubstreamSubscriber(IActorRef impl, SubstreamKey key)
-            {
-                Impl = impl;
-                Key = key;
-            }
-
-            public void OnSubscribe(ISubscription subscription)
-            {
-                ReactiveStreamsCompliance.RequireNonNullSubscription(subscription);
-                if (CompareAndSet(null, subscription)) Impl.Tell(new SubstreamOnSubscribe(Key, subscription));
-                else subscription.Cancel();
-            }
-
-            public void OnNext(T element)
-            {
-                ReactiveStreamsCompliance.RequireNonNullElement(element);
-                Impl.Tell(new SubstreamOnNext(Key, element));
-            }
-
-            public void OnError(Exception cause)
-            {
-                ReactiveStreamsCompliance.RequireNonNullException(cause);
-                Impl.Tell(new SubstreamOnError(Key, cause));
-            }
-
-            public void OnComplete()
-            {
-                Impl.Tell(new SubstreamOnComplete(Key));
-            }
-
-            void ISubscriber.OnNext(object element)
-            {
-                OnNext((T)element);
-            }
-        }
-        
-        public class SubstreamInput : BatchingInputBuffer
-        {
-            public readonly SubstreamKey Key;
-            public readonly int BufferSize;
-            public readonly MultiStreamInputProcessor<T> Processor;
-            public readonly IPump Pump;
-
-            public SubstreamInput(SubstreamKey key, int bufferCount, MultiStreamInputProcessor<T> processor, IPump pump) : base(bufferCount, pump)
-            {
-                Key = key;
-                BufferSize = bufferCount;
-                Processor = processor;
-                Pump = pump;
-            }
-            
-            public override SubReceive SubReceive { get; } = new SubReceive(_ => false);
-
-            public void SubstreamOnComplete()
-            {
-                OnComplete();
-            }
-
-            public void SubstreamOnSubscribe(ISubscription subscription)
-            {
-                OnSubscribe(subscription);
-            }
-
-            public void SubstreamOnError(Exception e)
-            {
-                OnError(e);
-            }
-
-            public void SubstreamOnNext(object element)
-            {
-                EnqueueInputElement(element);
-            }
-
-            protected override void InputOnError(Exception e)
-            {
-                base.InputOnError(e);
-                Processor.InvalidateSubstreamInput(Key, e);
-            }
-        }
-
-        #endregion
-
-        private readonly IDictionary<SubstreamKey, SubstreamInput> _substreamInputs = new Dictionary<SubstreamKey, SubstreamInput>();
-        private readonly IDictionary<SubstreamKey, SubstreamSubscriber> _waitingForOnSubscribe = new Dictionary<SubstreamKey, SubstreamSubscriber>();
-
-        private long _nextId = 0L;
-
-        protected MultiStreamInputProcessor(ActorMaterializerSettings settings) : base(settings)
-        {
-        }
-
-        protected override void Fail(Exception e)
-        {
-            FailInputs(e);
-            base.Fail(e);
-        }
-
-        public override void PumpFinished()
-        {
-            FinishInputs();
-            base.PumpFinished();
-        }
-
-        protected override bool ActiveReceive(object message)
-        {
-            return PrimaryInputs.SubReceive.CurrentReceive(message)
-                   || PrimaryOutputs.SubReceive.CurrentReceive(message)
-                   || InputSubstreamManagement(message);
-        }
-
-        #region MultiStreamInputProcessorLike
-
-        protected long NextId()
-        {
-            return (++_nextId);
-        }
-
-        protected int InputBufferSize { get { return Settings.InitialInputBufferSize; } }
-
-        public bool InputSubstreamManagement(object message)
-        {
-            return message.Match()
-                .With<SubstreamOnSubscribe>(subscribe =>
-                {
-                    _substreamInputs[subscribe.Key].SubstreamOnSubscribe(subscribe.Subscription);
-                    _waitingForOnSubscribe.Remove(subscribe.Key);
-                })
-                .With<SubstreamOnNext>(next => _substreamInputs[next.Key].SubstreamOnNext(next.Element))
-                .With<SubstreamOnComplete>(complete =>
-                {
-                    _substreamInputs[complete.Key].SubstreamOnComplete();
-                    _substreamInputs.Remove(complete.Key);
-                })
-                .With<SubstreamOnError>(error => _substreamInputs[error.Key].SubstreamOnError(error.Reason))
-                .WasHandled;
-        }
-
-        public SubstreamInput CreateSubstreamInput()
-        {
-            var key = new SubstreamKey(NextId());
-            var input = new SubstreamInput(key, InputBufferSize, this, this);
-            _substreamInputs.Add(key, input);
-            return input;
-        }
-
-        public SubstreamInput CreateAndSubscribeSubstreamInput(IPublisher<T> publisher)
-        {
-            var input = CreateSubstreamInput();
-            var subscriber = new SubstreamSubscriber(Self, input.Key);
-            _waitingForOnSubscribe.Add(input.Key, subscriber);
-            publisher.Subscribe(subscriber);
-            return input;
-        }
-
-        public void InvalidateSubstreamInput(SubstreamKey substream, Exception cause)
-        {
-            _substreamInputs[substream].Cancel();
-            _substreamInputs.Remove(substream);
-            Pump();
-        }
-
-        protected virtual void FailInputs(Exception cause)
-        {
-            CancelWaitingForOnSubscribe();
-            foreach (var input in _substreamInputs.Values)
-            {
-                input.Cancel();
-            }
-        }
-        protected virtual void FinishInputs()
-        {
-            CancelWaitingForOnSubscribe();
-            foreach (var input in _substreamInputs.Values)
-            {
-                input.Cancel();
-            }
-        }
-
-        private void CancelWaitingForOnSubscribe()
-        {
-            foreach (var subscriber in _waitingForOnSubscribe.Values)
-            {
-                var subscription = subscriber.GetAndSet(CancelledSubscription.Instance);
-                if (subscription != null)
-                {
-                    subscription.Cancel();
-                }
-            }
         }
 
         #endregion
