@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Reactive.Streams;
 using System.Threading;
 using Akka.IO;
+using Akka.Pattern;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using static Akka.Streams.Implementation.IO.InputStreamSinkStage;
@@ -17,10 +19,29 @@ namespace Akka.Streams.Implementation.IO
         #region internal classes
 
         internal interface IAdapterToStageMessage { }
-        internal struct ReadElementAcknowledgement : IAdapterToStageMessage { }
-        internal struct Close : IAdapterToStageMessage { }
+
+        internal class ReadElementAcknowledgement : IAdapterToStageMessage
+        {
+            public static readonly ReadElementAcknowledgement Instance = new ReadElementAcknowledgement();
+
+            private ReadElementAcknowledgement()
+            {
+
+            }
+        }
+
+        internal class Close : IAdapterToStageMessage
+        {
+            public static readonly Close Instance = new Close();
+
+            private Close()
+            {
+                
+            }
+        }
 
         internal interface IStreamToAdapterMessage { }
+
         internal struct Data : IStreamToAdapterMessage
         {
             public readonly ByteString Bytes;
@@ -30,7 +51,27 @@ namespace Akka.Streams.Implementation.IO
                 Bytes = bytes;
             }
         }
-        internal struct Finished : IStreamToAdapterMessage { }
+
+        internal class Finished : IStreamToAdapterMessage
+        {
+            public static readonly Finished Instance = new Finished();
+
+            private Finished()
+            {
+
+            }
+        }
+
+        internal class Initialized : IStreamToAdapterMessage
+        {
+            public static readonly Initialized Instance = new Initialized();
+
+            private Initialized()
+            {
+
+            }
+        }
+
         internal struct Failed : IStreamToAdapterMessage
         {
             public readonly Exception Cause;
@@ -46,17 +87,25 @@ namespace Akka.Streams.Implementation.IO
             void WakeUp(IAdapterToStageMessage msg);
         }
 
-        private sealed class InputStreamSinkStageLogic : GraphStageLogic, IStageWithCallback
+        private sealed class Logic : GraphStageLogic, IStageWithCallback
         {
             private readonly InputStreamSinkStage _stage;
-            private bool _pullRequestIsSent = true;
+            private readonly Action<IAdapterToStageMessage> _callback;
 
-            public InputStreamSinkStageLogic(Shape shape, InputStreamSinkStage stage) : base(shape)
+            public Logic(InputStreamSinkStage stage) : base(stage.Shape)
             {
                 _stage = stage;
+                _callback = GetAsyncCallback((IAdapterToStageMessage messagae) =>
+                {
+                    if(messagae is ReadElementAcknowledgement)
+                        SendPullIfAllowed();
+                    else if (messagae is Close)
+                        CompleteStage();
+                });
 
-                SetHandler(stage._in, onPush: OnPush, onUpstreamFailure: OnUpstreamFailure,
-                    onUpstreamFinish: OnUpstreamFinish);
+                SetHandler(stage._in, onPush: OnPush, 
+                    onUpstreamFinish: OnUpstreamFinish,
+                    onUpstreamFailure: OnUpstreamFailure);
             }
 
             private void OnPush()
@@ -64,11 +113,16 @@ namespace Akka.Streams.Implementation.IO
                 //1 is buffer for Finished or Failed callback
                 if (_stage._dataQueue.Count + 1 == _stage._dataQueue.BoundedCapacity)
                     throw new BufferOverflowException("Queue is full");
-
-                _pullRequestIsSent = false;
+                
                 _stage._dataQueue.Add(new Data(Grab(_stage._in)));
-                if (_stage._dataQueue.Count + 1 < _stage._dataQueue.BoundedCapacity)
+                if (_stage._dataQueue.BoundedCapacity - _stage._dataQueue.Count > 1)
                     SendPullIfAllowed();
+            }
+
+            private void OnUpstreamFinish()
+            {
+                _stage._dataQueue.Add(Finished.Instance);
+                CompleteStage();
             }
 
             private void OnUpstreamFailure(Exception ex)
@@ -77,53 +131,36 @@ namespace Akka.Streams.Implementation.IO
                 FailStage(ex);
             }
 
-            private void OnUpstreamFinish()
+            public override void PreStart()
             {
-                _stage._dataQueue.Add(new Finished());
-                CompleteStage();
+                _stage._dataQueue.Add(Initialized.Instance);
+                Pull(_stage._in);
             }
 
-            public override void PreStart() => Pull(_stage._in);
-
-            public void WakeUp(IAdapterToStageMessage msg)
-            {
-                if (msg is ReadElementAcknowledgement)
-                    SendPullIfAllowed();
-                else if (msg is Close)
-                    CompleteStage();
-            }
+            public void WakeUp(IAdapterToStageMessage msg) => _callback(msg);
 
             private void SendPullIfAllowed()
             {
-                if (!_pullRequestIsSent)
-                {
-                    _pullRequestIsSent = true;
+                if (_stage._dataQueue.BoundedCapacity - _stage._dataQueue.Count > 1 && !HasBeenPulled(_stage._in))
                     Pull(_stage._in);
-                }
             }
         }
 
         #endregion
 
         private readonly Inlet<ByteString> _in = new Inlet<ByteString>("InputStreamSink.in");
-        private readonly BlockingCollection<IStreamToAdapterMessage> _dataQueue;
-        private readonly SinkShape<ByteString> _shape;
         private readonly TimeSpan _readTimeout;
-        
+        private BlockingCollection<IStreamToAdapterMessage> _dataQueue;
+
         public InputStreamSinkStage(TimeSpan readTimeout)
         {
             _readTimeout = readTimeout;
-            _shape = new SinkShape<ByteString>(_in);
-            //has to be in this order as module depends on shape
-            var maxBuffer = Module.Attributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;
-            if (maxBuffer <= 0)
-                throw new ArgumentException("Buffer size must be greather than 0");
-
-            _dataQueue = new BlockingCollection<IStreamToAdapterMessage>(maxBuffer + 1);
+            Shape = new SinkShape<ByteString>(_in);
         }
 
         protected override Attributes InitialAttributes => DefaultAttributes.InputStreamSink;
-        public override SinkShape<ByteString> Shape => _shape;
+
+        public override SinkShape<ByteString> Shape { get; }
 
         public override ILogicAndMaterializedValue<Stream> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
@@ -131,7 +168,9 @@ namespace Akka.Streams.Implementation.IO
             if (maxBuffer <= 0)
                 throw new ArgumentException("Buffer size must be greather than 0");
 
-            var logic = new InputStreamSinkStageLogic(Shape, this);
+            _dataQueue = new BlockingCollection<IStreamToAdapterMessage>(maxBuffer + 2);
+
+            var logic = new Logic(this);
             return new LogicAndMaterializedValue<Stream>(logic, new InputStreamAdapter(_dataQueue, logic, _readTimeout));
         }
     }
@@ -192,6 +231,7 @@ namespace Akka.Streams.Implementation.IO
         private readonly TimeSpan _readTimeout;
         private bool _isActive = true;
         private bool _isStageAlive = true;
+        private bool _isInitialized = false;
         private ByteString _detachedChunk;
 
         public InputStreamAdapter(BlockingCollection<IStreamToAdapterMessage> sharedBuffer, IStageWithCallback sendToStage, TimeSpan readTimeout)
@@ -203,11 +243,15 @@ namespace Akka.Streams.Implementation.IO
 
         public override void Close()
         {
-            // at this point Subscriber may be already terminated
-            if (_isStageAlive)
-                _sendToStage.WakeUp(new Close());
+            ExecuteIfNotClosed(() =>
+            {
+                // at this point Subscriber may be already terminated
+                if (_isStageAlive)
+                    _sendToStage.WakeUp(InputStreamSinkStage.Close.Instance);
 
-            _isActive = false;
+                _isActive = false;
+                return Unit.Instance;
+            });
         }
 
         public sealed override int ReadByte()
@@ -250,7 +294,7 @@ namespace Akka.Streams.Implementation.IO
                     }
 
                     _isStageAlive = false;
-                    throw new IOException(string.Empty, ((Failed)msg).Cause);
+                    throw new IOException(string.Empty, ((Failed) msg).Cause);
                 }
                 catch (ThreadInterruptedException ex)
                 {
@@ -262,8 +306,24 @@ namespace Akka.Streams.Implementation.IO
         private T ExecuteIfNotClosed<T>(Func<T> f)
         {
             if (_isActive)
+            {
+                WaitIfNotInitialized();
                 return f();
+            }
             throw SubscriberClosedException;
+        }
+
+        private void WaitIfNotInitialized()
+        {
+            if (!_isInitialized)
+            {
+                IStreamToAdapterMessage message;
+                _sharedBuffer.TryTake(out message, _readTimeout);
+                if (message is Initialized)
+                    _isInitialized = true;
+                else
+                    throw new IllegalStateException("First message must be Initialized notification");
+            }
         }
 
         private int ReadBytes(byte[] buffer, int offset, int count)
@@ -275,7 +335,7 @@ namespace Akka.Streams.Implementation.IO
             var readBytes = GetData(buffer, offset, count, 0);
 
             if (readBytes >= availableInChunk)
-                _sendToStage.WakeUp(new ReadElementAcknowledgement());
+                _sendToStage.WakeUp(ReadElementAcknowledgement.Instance);
 
             return readBytes;
         }
@@ -289,7 +349,7 @@ namespace Akka.Streams.Implementation.IO
             var size = chunk.Count;
             if (size <= count)
             {
-                Array.Copy(chunk.ToArray(), 0, buffer, offset, Math.Min(size, count));
+                Array.Copy(chunk.ToArray(), 0, buffer, offset, size);
                 _detachedChunk = null;
                 if (size == count)
                     return gotBytes + size;
@@ -297,7 +357,7 @@ namespace Akka.Streams.Implementation.IO
                 return GetData(buffer, offset + size, count - size, gotBytes + size);
             }
 
-            chunk.Take(count).ToArray().CopyTo(buffer, offset);
+            Array.Copy(chunk.ToArray(), 0, buffer, offset, count);
             _detachedChunk = chunk.Drop(count);
             return gotBytes + count;
         }
@@ -309,9 +369,14 @@ namespace Akka.Streams.Implementation.IO
 
             var chunk = _sharedBuffer.Take();
             if (chunk is Data)
+            {
                 _detachedChunk = ((Data) chunk).Bytes;
+                return _detachedChunk;
+            }
+            if (chunk is Finished)
+                _isStageAlive = false;
 
-            return _detachedChunk;
+            return null;
         }
         
         public override bool CanRead => true;

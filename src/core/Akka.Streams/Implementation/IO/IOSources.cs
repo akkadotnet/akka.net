@@ -18,7 +18,6 @@ namespace Akka.Streams.Implementation.IO
     {
         private readonly FileInfo _f;
         private readonly int _chunkSize;
-        private readonly Attributes _attributes;
 
         public FileSource(FileInfo f, int chunkSize, Attributes attributes, SourceShape<ByteString> shape) : base(shape)
         {
@@ -27,10 +26,10 @@ namespace Akka.Streams.Implementation.IO
 
             _f = f;
             _chunkSize = chunkSize;
-            _attributes = attributes;
+            Attributes = attributes;
         }
 
-        public override Attributes Attributes => _attributes;
+        public override Attributes Attributes { get; }
 
         public override IModule WithAttributes(Attributes attributes)
             => new FileSource(_f, _chunkSize, attributes, AmendShape(attributes));
@@ -63,16 +62,15 @@ namespace Akka.Streams.Implementation.IO
     {
         private readonly Func<Stream> _createInputStream;
         private readonly int _chunkSize;
-        private readonly Attributes _attributes;
 
         public InputStreamSource(Func<Stream> createInputStream, int chunkSize, Attributes attributes, SourceShape<ByteString> shape) : base(shape)
         {
             _createInputStream = createInputStream;
             _chunkSize = chunkSize;
-            _attributes = attributes;
+            Attributes = attributes;
         }
 
-        public override Attributes Attributes => _attributes;
+        public override Attributes Attributes { get; }
 
         public override IModule WithAttributes(Attributes attributes)
             => new InputStreamSource(_createInputStream, _chunkSize, attributes, AmendShape(attributes));
