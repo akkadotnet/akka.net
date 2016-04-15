@@ -7,6 +7,9 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.IO;
 using Akka.Streams.Dsl.Internal;
+using Akka.Streams.Implementation;
+using Akka.Streams.Implementation.Fusing;
+using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Streams.Util;
 
@@ -851,9 +854,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels and all substreams cancel
         /// </summary> 
-        public static SubFlow<KeyValuePair<TKey, Source<TVal, TMat>>, TMat, IRunnableGraph<TMat>> GroupBy<TOut, TMat, TKey, TVal>(this Source<TOut, TMat> flow, int maxSubstreams, Func<TOut, TKey> groupingFunc) where TVal : TOut
+        public static SubFlow<TOut, TMat, IRunnableGraph<TMat>> GroupBy<TOut, TMat, TKey>(this Source<TOut, TMat> flow, int maxSubstreams, Func<TOut, TKey> groupingFunc)
         {
-            return (SubFlow<KeyValuePair<TKey, Source<TVal, TMat>>, TMat, IRunnableGraph<TMat>>)InternalFlowOperations.GroupBy<TOut, TMat, TKey, TVal>(flow, maxSubstreams, groupingFunc);
+            return flow.GroupBy(maxSubstreams, groupingFunc,
+                (f, s) => ((Source<Source<TOut, Unit>, TMat>) f).To(s),
+                (f, o) => ((Source<TOut, TMat>) f).DeprecatedAndThen<Source<TOut, Unit>>(o)
+                );
         }
 
         /// <summary>

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Linq;
 using System.Reactive.Streams;
+using System.Security.Policy;
 using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
+using Akka.Streams.Implementation.Stages;
 
 namespace Akka.Streams.Dsl
 {
@@ -184,6 +186,15 @@ namespace Akka.Streams.Dsl
                 .Compose(copy, combine)
                 .Wire(Shape.Outlet, copy.Shape.Inlets.First())
                 .Wire(copy.Shape.Outlets.First(), Shape.Inlet));
+        }
+
+        internal Flow<TIn, TOut2, TMat> DeprecatedAndThen<TOut2>(StageModule op)
+        {
+            //No need to copy here, op is a fresh instance
+            return IsIdentity
+                ? new Flow<TIn, TOut2, TMat>(op)
+                : new Flow<TIn, TOut2, TMat>(
+                    Module.Fuse(op, Shape.Outlet, op.In).ReplaceShape(new FlowShape<TIn, object>(Shape.Inlet, op.Out)));
         }
 
         /// <summary>

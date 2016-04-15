@@ -134,6 +134,14 @@ namespace Akka.Streams.Dsl
             return new Source<TOut, TMat2>(Module.TransformMaterializedValue(mapFunc));
         }
 
+        internal Source<TOut2, TMat> DeprecatedAndThen<TOut2>(StageModule op)
+        {
+            //No need to copy here, op is a fresh instance
+            return new Source<TOut2, TMat>(Module
+                .Fuse(op, Shape.Outlet, op.In)
+                .ReplaceShape(new SourceShape<object>(op.Out)));
+        }
+
         /// <summary>
         /// Connect this `Source` to a `Sink` and run it. The returned value is the materialized value
         /// of the `Sink`, e.g. the `Publisher` of a <see cref="Publisher"/>.

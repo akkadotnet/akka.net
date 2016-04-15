@@ -888,21 +888,49 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels and all substreams cancel
         /// </summary> 
-        public static IFlow<KeyValuePair<TKey, Source<TVal, TMat>>, TMat> GroupBy<T, TMat, TKey, TVal>(
-            this IFlow<T, TMat> flow, int maxSubstreams, Func<T, TKey> groupingFunc) where TVal : T
+        public static SubFlow<T, TMat, TClosed> GroupBy<T, TMat, TKey, TClosed>(
+            this IFlow<T, TMat> flow,
+            int maxSubstreams,
+            Func<T, TKey> groupingFunc,
+            Func<IFlow<Source<T, Unit>, TMat>, Sink<Source<T, Unit>, Task>, TClosed> toFunc,
+            Func<IFlow<T, TMat>, StageModule, IFlow<Source<T, Unit>, TMat>> deprecatedAndThenFunc)
         {
-            //implicit def mat = GraphInterpreter.currentInterpreter.materializer
-            //val merge = new SubFlowImpl.MergeBack[Out, Repr] {
-            //  override def apply[T](flow: Flow[Out, T, Unit], breadth: Int): Repr[T] =
-            //    deprecatedAndThen[Source[Out, Unit]](GroupBy(maxSubstreams, f.asInstanceOf[Any ⇒ Any]))
-            //      .map(_.via(flow))
-            //      .via(new FlattenMerge(breadth))
-            //}
-            //val finish: (Sink[Out, Unit]) ⇒ Closed = s ⇒
-            //  deprecatedAndThen[Source[Out, Unit]](GroupBy(maxSubstreams, f.asInstanceOf[Any ⇒ Any]))
-            //    .to(Sink.foreach(_.runWith(s)))
-            //new SubFlowImpl(Flow[Out], merge, finish)
-            throw new NotImplementedException();
+            var merge = new GroupByMergeBack<T, TMat, TKey>(flow, deprecatedAndThenFunc, maxSubstreams, groupingFunc);
+
+            Func<Sink<T, TMat>, TClosed> finish = s =>
+            {
+                return toFunc(
+                    deprecatedAndThenFunc(flow, new GroupBy(maxSubstreams, o => groupingFunc((T) o))),
+                    Sink.ForEach<Source<T, Unit>>(e => e.RunWith(s, Fusing.GraphInterpreter.Current.Materializer)));
+            };
+
+            return new SubFlowImpl<T, T, TMat, TClosed>(Flow.Create<T, TMat>(), merge, finish);
+        }
+
+        internal class GroupByMergeBack<TOut, TMat, TKey> : IMergeBack<TOut, TMat>
+        {
+            private readonly IFlow<TOut, TMat> _self;
+            private readonly Func<IFlow<TOut, TMat>, StageModule, IFlow<Source<TOut, Unit>, TMat>> _deprecatedAndThenFunc;
+            private readonly int _maxSubstreams;
+            private readonly Func<TOut, TKey> _groupingFunc;
+
+            public GroupByMergeBack(IFlow<TOut, TMat> self,
+                Func<IFlow<TOut, TMat>, StageModule, IFlow<Source<TOut, Unit>, TMat>> deprecatedAndThenFunc,
+                int maxSubstreams,
+                Func<TOut, TKey> groupingFunc)
+            {
+                _self = self;
+                _deprecatedAndThenFunc = deprecatedAndThenFunc;
+                _maxSubstreams = maxSubstreams;
+                _groupingFunc = groupingFunc;
+            }
+
+            public IFlow<T, TMat> Apply<T>(Flow<TOut, T, TMat> flow, int breadth)
+            {
+                return _deprecatedAndThenFunc(_self, new GroupBy(_maxSubstreams, o => _groupingFunc((TOut) o)))
+                    .Map(f => f.Via(flow))
+                    .Via(new Fusing.FlattenMerge<Source<T, Unit>, T, Unit>(breadth));
+            }
         }
 
         /// <summary>
