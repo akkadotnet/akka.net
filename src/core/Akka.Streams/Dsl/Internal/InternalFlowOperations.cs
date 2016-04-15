@@ -1034,19 +1034,38 @@ namespace Akka.Streams.Dsl.Internal
         /// '''Cancels when''' downstream cancels and substreams cancel
         /// </summary>
         /// <seealso cref="SplitWhen{T,TMat,TVal}"/> 
-        public static IFlow<Source<TVal, TMat>, TMat> SplitAfter<T, TMat, TVal>(this IFlow<T, TMat> flow, SubstreamCancelStrategy substreamCancelStrategy, Predicate<T> predicate) where TVal : T
+        public static SubFlow<T, TMat, TClosed> SplitAfter<T, TMat, TClosed>(this IFlow<T, TMat> flow,
+            SubstreamCancelStrategy substreamCancelStrategy, Func<T, bool> predicate,
+            Func<IFlow<Source<T, Unit>, TMat>, Sink<Source<T, Unit>, Task>, TClosed> toFunc)
         {
-            //val merge = new SubFlowImpl.MergeBack[Out, Repr] {
-            //  override def apply[T](flow: Flow[Out, T, Unit], breadth: Int): Repr[T] =
-            //    deprecatedAndThen[Source[Out, Unit]](Split.after(p.asInstanceOf[Any ⇒ Boolean]))
-            //      .map(_.via(flow))
-            //      .via(new FlattenMerge(breadth))
-            //}
-            //val finish: (Sink[Out, Unit]) ⇒ Closed = s ⇒
-            //  deprecatedAndThen[Source[Out, Unit]](Split.after(p.asInstanceOf[Any ⇒ Boolean]))
-            //    .to(Sink.foreach(_.runWith(s)(GraphInterpreter.currentInterpreter.materializer)))
-            //new SubFlowImpl(Flow[Out], merge, finish)
-            throw new NotImplementedException();
+            var merge = new SplitAfterMergeBack<T, TMat>(flow, predicate);
+
+            Func<Sink<T, TMat>, TClosed> finish = s =>
+            {
+                return toFunc(flow.Via(Fusing.Split.After(predicate, substreamCancelStrategy)),
+                    Sink.ForEach<Source<T, Unit>>(e => e.RunWith(s, Fusing.GraphInterpreter.Current.Materializer)));
+            };
+
+            return new SubFlowImpl<T, T, TMat, TClosed>(Flow.Create<T, TMat>(), merge, finish);
+        }
+
+        internal class SplitAfterMergeBack<TOut, TMat> : IMergeBack<TOut, TMat>
+        {
+            private readonly IFlow<TOut, TMat> _self;
+            private readonly Func<TOut, bool> _predicate;
+
+            public SplitAfterMergeBack(IFlow<TOut, TMat> self, Func<TOut, bool> predicate)
+            {
+                _self = self;
+                _predicate = predicate;
+            }
+
+            public IFlow<T, TMat> Apply<T>(Flow<TOut, T, TMat> flow, int breadth)
+            {
+                return _self.Via(Fusing.Split.After(_predicate, SubstreamCancelStrategy.Drain))
+                    .Map(f => f.Via(flow))
+                    .Via(new Fusing.FlattenMerge<Source<T, Unit>, T, Unit>(breadth));
+            }
         }
 
         /// <summary>

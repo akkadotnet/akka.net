@@ -61,7 +61,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var source = Source.From(Enumerable.Range(1, elementCount));
             var groupStream =
-                source.SplitAfter<int, Unit, int>(i => i == splitAfter, substreamCancelStrategy)
+                source.SplitAfter(substreamCancelStrategy, i => i == splitAfter)
                     .Lift()
                     .RunWith(Sink.AsPublisher<Source<int, Unit>>(false), Materializer);
             var masterSubscriber = TestSubscriber.CreateManualProbe<Source<int, Unit>>(this);
@@ -137,7 +137,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var task = Source.From(Enumerable.Range(1, 10))
-                    .SplitAfter<int, Unit, int>(_ => true)
+                    .SplitAfter(_ => true)
                     .Lift()
                     .MapAsync(1, s => s.RunWith(Sink.First<int>(), Materializer))
                     .Grouped(10)
@@ -175,7 +175,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var publisherProbe = TestPublisher.CreateManualProbe<int>(this);
                 var ex = new TestException("test");
-                var publisher = Source.FromPublisher(publisherProbe).SplitAfter<int, Unit, int>(i =>
+                var publisher = Source.FromPublisher(publisherProbe).SplitAfter(i =>
                 {
                     if (i == 3)
                         throw ex;
@@ -227,7 +227,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 var flowSubscriber =
                     Source.AsSubscriber<int>()
-                        .SplitAfter<int, ISubscriber<int>, int>(i => i%3 == 0)
+                        .SplitAfter(i => i%3 == 0)
                         .Lift()
                         .To(Sink.FromSubscriber(down))
                         .Run(Materializer);

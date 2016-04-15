@@ -322,16 +322,16 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region internal classes
 
-        private sealed class SplitLogic : TimerGraphStageLogic
+        private sealed class Logic : TimerGraphStageLogic
         {
             #region internal classes 
 
             private sealed class SubstreamHandler : InAndOutHandler
             {
-                private readonly SplitLogic _logic;
+                private readonly Logic _logic;
                 private bool _willCompleteAfterInitialElement;
 
-                public SubstreamHandler(SplitLogic logic)
+                public SubstreamHandler(Logic logic)
                 {
                     _logic = logic;
                 }
@@ -342,7 +342,7 @@ namespace Akka.Streams.Implementation.Fusing
 
                 private void CloseThis(SubstreamHandler handler, T currentElem)
                 {
-                    var decision = _logic._split._decision;
+                    var decision = _logic._stage._decision;
                     if (decision == Split.SplitDecision.SplitAfter)
                     {
                         if (!_logic._substreamCancelled)
@@ -374,26 +374,26 @@ namespace Akka.Streams.Implementation.Fusing
                         }
                     }
                     else
-                        _logic.Pull(_logic._split._in);
+                        _logic.Pull(_logic._stage._in);
                 }
 
                 public override void OnDownstreamFinish()
                 {
                     _logic._substreamCancelled = true;
-                    if (_logic.IsClosed(_logic._split._in) || _logic._split._propagateSubstreamCancel)
+                    if (_logic.IsClosed(_logic._stage._in) || _logic._stage._propagateSubstreamCancel)
                         _logic.CompleteStage();
                     else
                     // Start draining
-                        if (!_logic.HasBeenPulled(_logic._split._in))
-                            _logic.Pull(_logic._split._in);
+                        if (!_logic.HasBeenPulled(_logic._stage._in))
+                            _logic.Pull(_logic._stage._in);
                 }
 
                 public override void OnPush()
                 {
-                    var elem = _logic.Grab(_logic._split._in);
+                    var elem = _logic.Grab(_logic._stage._in);
                     try
                     {
-                        if (_logic._split._p(elem))
+                        if (_logic._stage._predicate(elem))
                         {
                             var handler = new SubstreamHandler(_logic);
                             CloseThis(handler, elem);
@@ -403,7 +403,7 @@ namespace Akka.Streams.Implementation.Fusing
                         {
                             // Drain into the void
                             if (_logic._substreamCancelled)
-                                _logic.Pull(_logic._split._in);
+                                _logic.Pull(_logic._stage._in);
                             else
                                 _logic._substreamSource.Push(elem);
                         }
@@ -440,18 +440,18 @@ namespace Akka.Streams.Implementation.Fusing
             private SubSourceOutlet<T> _substreamSource;
             private bool _substreamPushed;
             private bool _substreamCancelled;
-            private readonly Split<T> _split;
+            private readonly Split<T> _stage;
 
-            public SplitLogic(Split<T> split) : base(split.Shape)
+            public Logic(Split<T> stage) : base(stage.Shape)
             {
-                _split = split;
-                SetHandler(split._out, onPull: () =>
+                _stage = stage;
+                SetHandler(stage._out, onPull: () =>
                 {
                     if (_substreamSource == null)
-                        Pull(split._in);
+                        Pull(stage._in);
                     else if (!_substreamPushed)
                     {
-                        Push(split._out, Source.FromGraph(_substreamSource.Source));
+                        Push(stage._out, Source.FromGraph(_substreamSource.Source));
                         ScheduleOnce(SubscriptionTimer, _timeout);
                         _substreamPushed = true;
                     }
@@ -463,16 +463,13 @@ namespace Akka.Streams.Implementation.Fusing
                 });
 
                 // initial input handler
-                SetHandler(split._in, onPush: () =>
+                SetHandler(stage._in, onPush: () =>
                 {
                     var handler = new SubstreamHandler(this);
-                    var elem = Grab(_split._in);
+                    var elem = Grab(_stage._in);
 
-                    if (_split._decision == Split.SplitDecision.SplitAfter)
-                    {
-                        if (_split._p(elem))
-                            Push(_split._out, Source.Single(elem));
-                    }
+                    if (_stage._decision == Split.SplitDecision.SplitAfter && _stage._predicate(elem))
+                        Push(_stage._out, Source.Single(elem));
                     // Next pull will come from the next substream that we will open
                     else
                         handler.FirstElement = elem;
@@ -485,19 +482,19 @@ namespace Akka.Streams.Implementation.Fusing
 
             private void HandOver(SubstreamHandler handler)
             {
-                if (IsClosed(_split._out))
+                if (IsClosed(_stage._out))
                     CompleteStage();
                 else
                 {
                     _substreamSource = new SubSourceOutlet<T>(this, "SplitSource");
                     _substreamSource.SetHandler(handler);
                     _substreamCancelled = false;
-                    SetHandler(_split._in, handler);
+                    SetHandler(_stage._in, handler);
                     SetKeepGoing(handler.HasInitialElement);
 
-                    if (IsAvailable(_split._out))
+                    if (IsAvailable(_stage._out))
                     {
-                        Push(_split._out, Source.FromGraph(_substreamSource.Source));
+                        Push(_stage._out, Source.FromGraph(_substreamSource.Source));
                         ScheduleOnce(SubscriptionTimer, _timeout);
                         _substreamPushed = true;
                     }
@@ -515,13 +512,13 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Outlet<Source<T, Unit>> _out = new Outlet<Source<T, Unit>>("Split.out");
 
         private readonly Split.SplitDecision _decision;
-        private readonly Func<T, bool> _p;
+        private readonly Func<T, bool> _predicate;
         private readonly bool _propagateSubstreamCancel;
 
-        public Split(Split.SplitDecision decision, Func<T, bool> p, SubstreamCancelStrategy substreamCancelStrategy)
+        public Split(Split.SplitDecision decision, Func<T, bool> predicate, SubstreamCancelStrategy substreamCancelStrategy)
         {
             _decision = decision;
-            _p = p;
+            _predicate = predicate;
             _propagateSubstreamCancel = substreamCancelStrategy == SubstreamCancelStrategy.Propagate;
 
             Shape = new FlowShape<T, Source<T, Unit>>(_in, _out);
@@ -529,7 +526,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         public override FlowShape<T, Source<T, Unit>> Shape { get; }
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new SplitLogic(this);
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
     /// <summary>

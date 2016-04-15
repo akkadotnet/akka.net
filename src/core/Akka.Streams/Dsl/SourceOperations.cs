@@ -907,7 +907,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels and substreams cancel
         /// </summary>
-        /// <seealso cref="SplitAfter{T,TMat,TVal}"/> 
+        /// <seealso cref="SplitAfter{T,TMat}"/> 
         public static SubFlow<TOut, TMat, IRunnableGraph<TMat>> SplitWhen<TOut, TMat>(this Source<TOut, TMat> flow, SubstreamCancelStrategy substreamCancelStrategy, Func<TOut, bool> predicate)
         {
             return flow.SplitWhen(substreamCancelStrategy, predicate, (f, s) => ((Source<Source<TOut, Unit>, TMat>) f).To(s));
@@ -965,9 +965,19 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels and substreams cancel
         /// </summary>
-        public static SubFlow<TOut, TMat, IRunnableGraph<TMat>> SplitAfter<TOut, TMat, TVal>(this Source<TOut, TMat> flow, Predicate<TOut> predicate, SubstreamCancelStrategy substreamCancelStrategy = SubstreamCancelStrategy.Drain) where TVal : TOut
+        public static SubFlow<TOut, TMat, IRunnableGraph<TMat>> SplitAfter<TOut, TMat>(this Source<TOut, TMat> flow, SubstreamCancelStrategy substreamCancelStrategy, Func<TOut, bool> predicate)
         {
-            return (SubFlow<TOut, TMat, IRunnableGraph<TMat>>)InternalFlowOperations.SplitAfter<TOut, TMat, TVal>(flow, substreamCancelStrategy, predicate);
+            return flow.SplitAfter(substreamCancelStrategy, predicate, (f, s) => ((Source<Source<TOut, Unit>, TMat>) f).To(s));
+        }
+
+        /// <summary>
+        /// This operation applies the given predicate to all incoming elements and
+        /// emits them to a stream of output streams. It *ends* the current substream when the
+        /// predicate is true.
+        /// </summary>
+        public static SubFlow<TOut, TMat, IRunnableGraph<TMat>> SplitAfter<TOut, TMat>(this Source<TOut, TMat> flow, Func<TOut, bool> predicate)
+        {
+            return SplitAfter(flow, SubstreamCancelStrategy.Drain, predicate);
         }
 
         /// <summary>
