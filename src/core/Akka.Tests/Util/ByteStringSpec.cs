@@ -94,11 +94,29 @@ namespace Akka.Tests.Util
             {
                 var wasCompact = a.IsCompact();
                 var b = a.Compact();
-                return ((!wasCompact) || (b == a)) && 
-                       b.SequenceEqual(a) && 
-                       b.IsCompact() && 
+                return ((!wasCompact) || (b == a)) &&
+                       b.SequenceEqual(a) &&
+                       b.IsCompact() &&
                        b.Compact() == b;
             }).QuickCheckThrowOnFailure();
+        }
+
+        [Fact(DisplayName = @"A concatenated byte string should return the index of a byte in one the two byte strings.")]
+        public void A_concatenated_bytestring_must_return_correct_index_of_elements_in_string()
+        {
+            var b = ByteString.Create(new byte[] { 1 }) + ByteString.Create(new byte[] { 2 });
+            int offset = b.IndexOf(2);
+
+            Assert.Equal(1, offset);
+        }
+
+        [Fact(DisplayName = @"A concatenated byte string should return -1 when it was not found in the concatenated byte strings")]
+        public void A_concatenated_bytestring_must_return_negative_one_when_an_element_was_not_found()
+        {
+            var b = ByteString.Create(new byte[] { 1 }) + ByteString.Create(new byte[] { 2 });
+            int offset = b.IndexOf(3);
+
+            Assert.Equal(-1, offset);
         }
     }
 }
