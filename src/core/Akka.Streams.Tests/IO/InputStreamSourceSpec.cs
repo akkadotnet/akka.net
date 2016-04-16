@@ -11,6 +11,7 @@ using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.IO
 {
@@ -82,11 +83,9 @@ namespace Akka.Streams.Tests.IO
                 if (_buf.Count == 0)
                     return -1;
 
-                var tail = _buf.Skip(1).ToList();
-                buffer[0] = _buf[0];
-                _buf = tail;
-
-                return 1;
+                _buf.CopyTo(buffer);
+                _buf = new List<byte>();
+                return 3;
             }
 
             public override void Write(byte[] buffer, int offset, int count)
@@ -155,7 +154,7 @@ namespace Akka.Streams.Tests.IO
 
         private readonly ActorMaterializer _materializer;
 
-        public InputStreamSourceSpec() : base(Utils.UnboundedMailboxConfig)
+        public InputStreamSourceSpec(ITestOutputHelper helper) : base(Utils.UnboundedMailboxConfig, helper)
         {
             Sys.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
             var settings = ActorMaterializerSettings.Create(Sys).WithDispatcher("akka.actor.default-dispatcher");
@@ -165,12 +164,9 @@ namespace Akka.Streams.Tests.IO
         [Fact]
         public void InputStreamSource_must_not_signal_when_no_demand()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var f = StreamConverters.FromInputStream(() => new ConstInputStream());
+            var f = StreamConverters.FromInputStream(() => new ConstInputStream());
 
-                f.TakeWithin(TimeSpan.FromSeconds(5)).RunForeach(it => { }, _materializer).Wait(TimeSpan.FromSeconds(10));
-            }, _materializer);
+            f.TakeWithin(TimeSpan.FromSeconds(5)).RunForeach(it => { }, _materializer).Wait(TimeSpan.FromSeconds(10));
         }
 
         [Fact]
@@ -181,6 +177,7 @@ namespace Akka.Streams.Tests.IO
                 var f = StreamConverters.FromInputStream(() => new ListInputStream(new[] {"a", "b", "c"}))
                     .RunWith(Sink.First<ByteString>(), _materializer);
 
+                f.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 f.Result.ShouldBeEquivalentTo(ByteString.FromString("abc"));
             }, _materializer);
         }

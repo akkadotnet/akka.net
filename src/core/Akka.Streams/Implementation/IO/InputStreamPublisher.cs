@@ -57,8 +57,7 @@ namespace Akka.Streams.Implementation.IO
             base.PostStop();
             try
             {
-                if(_inputstream != null)
-                    _inputstream.Close();
+                _inputstream?.Close();
             }
             catch (Exception ex)
             {
@@ -84,11 +83,12 @@ namespace Akka.Streams.Implementation.IO
 
             try
             {
+                // blocking read
                 var readBytes = _inputstream.Read(_bytes, 0, _chunkSize);
-                if (readBytes == 0)
+                if (readBytes == -1)
                 {
                     //had nothing to read into this chunk
-                    _log.Debug("No more bytes available to read (got 0 from read)");
+                    _log.Debug("No more bytes available to read (got -1 from read)");
                     OnCompleteThenStop();
                 }
                 else

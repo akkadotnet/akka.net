@@ -1378,9 +1378,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut, TMat> MergeOrdered<TOut, TMat>(this Source<TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other, Func<TOut, TOut, int> orderFunc)
+        public static Source<TOut, TMat> MergeSorted<TOut, TMat>(this Source<TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other, Func<TOut, TOut, int> orderFunc)
         {
-            return (Source<TOut, TMat>)InternalFlowOperations.MergeOrdered(flow, other, orderFunc);
+            return (Source<TOut, TMat>)InternalFlowOperations.MergeSorted(flow, other, orderFunc);
         }
 
         /// <summary>
@@ -1398,10 +1398,10 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut, TMat> MergeOrdered<TOut, TMat>(this Source<TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other)
+        public static Source<TOut, TMat> MergeSorted<TOut, TMat>(this Source<TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other)
             where TOut : IComparable<TOut>
         {
-            return (Source<TOut, TMat>)InternalFlowOperations.MergeOrdered(flow, other);
+            return (Source<TOut, TMat>)InternalFlowOperations.MergeSorted(flow, other);
         }
 
         /// <summary>
@@ -1419,9 +1419,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Source<TOut, TMat> MergeOrdered<TOut, TMat>(this Source<TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other, IComparer<TOut> comparer)
+        public static Source<TOut, TMat> MergeSorted<TOut, TMat>(this Source<TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other, IComparer<TOut> comparer)
         {
-            return (Source<TOut, TMat>)InternalFlowOperations.MergeOrdered(flow, other, comparer);
+            return (Source<TOut, TMat>)InternalFlowOperations.MergeSorted(flow, other, comparer);
         }
 
         /// <summary>

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Akka.Actor;
 using Akka.IO;
 using Akka.Streams.Dsl;
@@ -11,6 +12,7 @@ using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.IO
 {
@@ -21,7 +23,7 @@ namespace Akka.Streams.Tests.IO
         private readonly FileInfo _testFilePath = new FileInfo(Path.Combine(Path.GetTempPath(), "file-source-spec.tmp"));
         private FileInfo _manyLinesPath;
 
-        public FileSourceSpec() : base(Utils.UnboundedMailboxConfig)
+        public FileSourceSpec(ITestOutputHelper helper) : base(Utils.UnboundedMailboxConfig, helper)
         {
             Sys.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
             var settings = ActorMaterializerSettings.Create(Sys).WithDispatcher("akka.actor.default-dispatcher");
@@ -267,6 +269,8 @@ namespace Akka.Streams.Tests.IO
         {
             base.AfterAll();
 
+            //give the system enough time to shutdown and release the file handle
+            Thread.Sleep(500);
             _manyLinesPath?.Delete();
             _testFilePath?.Delete();
         }

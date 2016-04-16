@@ -465,7 +465,7 @@ namespace Akka.Streams.Dsl
             private readonly Action _readRight;
             private readonly Action _readLeft;
 
-            public Logic(Shape shape, MergeSorted<T> stage) : base(shape)
+            public Logic(MergeSorted<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
                 _dispatchRight = right => Dispatch(_other, right);
@@ -538,7 +538,7 @@ namespace Akka.Streams.Dsl
 
         public override FanInShape<T, T, T> Shape { get; }
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, this);
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
     /// <summary>

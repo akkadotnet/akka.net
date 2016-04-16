@@ -39,8 +39,8 @@ namespace Akka.Streams.Tests.Dsl
         public void MergeSorted_must_work_in_the_nominal_case()
         {
             var random = new Random();
-            var gen = Enumerable.Range(1, 1)
-                .Select(i => Enumerable.Range(1, 10)
+            var gen = Enumerable.Range(1, 10)
+                .Select(i => Enumerable.Range(1, 1000)
                     .Select(_ => random.Next(1, 3) == 2).ToList());
             foreach (var picks in gen)
             {
@@ -49,7 +49,7 @@ namespace Akka.Streams.Tests.Dsl
                 var left = group[0].ToList();
                 var right = group[1].ToList();
                 var task = Source.From(left.Select(t => t.Item2))
-                    .MergeOrdered(Source.From(right.Select(t => t.Item2)))
+                    .MergeSorted(Source.From(right.Select(t => t.Item2)))
                     .Grouped(Math.Max(n, 1))
                     .Concat(Source.Single<IEnumerable<int>>(new List<int>()))
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);

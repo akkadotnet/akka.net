@@ -12,6 +12,7 @@ using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.IO
 {
@@ -23,7 +24,7 @@ namespace Akka.Streams.Tests.IO
         private readonly byte[] _bytesArray;
         private readonly ByteString _byteString;
 
-        public OutputStreamSourceSpec() : base(Utils.UnboundedMailboxConfig)
+        public OutputStreamSourceSpec(ITestOutputHelper helper) : base(Utils.UnboundedMailboxConfig, helper)
         {
             Sys.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
             var settings = ActorMaterializerSettings.Create(Sys).WithDispatcher("akka.actor.default-dispatcher");

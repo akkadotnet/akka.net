@@ -292,7 +292,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Flow<TIn, TOut2, TMat> Collect<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow, Func<TOut1, TOut2> collector) where TOut2 : class
+        public static Flow<TIn, TOut2, TMat> Collect<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow, Func<TOut1, TOut2> collector)
         {
             return (Flow<TIn, TOut2, TMat>)InternalFlowOperations.Collect(flow, collector);
         }
@@ -1380,9 +1380,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Flow<TIn, TOut, TMat> MergeOrdered<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other, Func<TOut, TOut, int> orderFunc)
+        public static Flow<TIn, TOut, TMat> MergeSorted<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other, Func<TOut, TOut, int> orderFunc)
         {
-            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.MergeOrdered(flow, other, orderFunc);
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.MergeSorted(flow, other, orderFunc);
         }
 
         /// <summary>
@@ -1400,10 +1400,10 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Flow<TIn,TOut, TMat> MergeOrdered<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other)
+        public static Flow<TIn,TOut, TMat> MergeSorted<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other)
             where TOut : IComparable<TOut>
         {
-            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.MergeOrdered(flow, other);
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.MergeSorted(flow, other);
         }
 
         /// <summary>
@@ -1421,9 +1421,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static Flow<TIn, TOut, TMat> MergeOrdered<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other, IComparer<TOut> comparer)
+        public static Flow<TIn, TOut, TMat> MergeSorted<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other, IComparer<TOut> comparer)
         {
-            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.MergeOrdered(flow, other, comparer);
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.MergeSorted(flow, other, comparer);
         }
 
         /// <summary>
