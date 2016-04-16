@@ -24,6 +24,9 @@ namespace Akka.Streams.Implementation.Fusing
         public static Streams.Fusing.FusedGraph<TShape, TMat> Aggressive<TShape, TMat>(IGraph<TShape, TMat> graph)
             where TShape : Shape
         {
+            var fusedGraph = graph as Streams.Fusing.FusedGraph<TShape, TMat>;
+            if (fusedGraph != null) return fusedGraph;
+
             var structInfo = new BuildStructuralInfo();
 
             // First perform normalization by descending the module tree and recording information in the BuildStructuralInfo instance.
@@ -688,7 +691,7 @@ namespace Akka.Streams.Implementation.Fusing
                 var orig = orig1.Current;
                 var mapd = mapd1.Current;
                 AddMapping(orig, mapd, NewInputs);
-                InOwners.Add(mapd, copy);
+                InOwners[mapd] = copy;
             }
 
             var orig2 = oldShape.Outlets.GetEnumerator();
@@ -698,7 +701,7 @@ namespace Akka.Streams.Implementation.Fusing
                 var orig = orig2.Current;
                 var mapd = mapd2.Current;
                 AddMapping(orig, mapd, NewOutputs);
-                OutOwners.Add(mapd, copy);
+                OutOwners[mapd] = copy;
             }
 
             /*

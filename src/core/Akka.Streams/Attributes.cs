@@ -20,19 +20,26 @@ namespace Akka.Streams
     {
         public interface IAttribute { }
 
-        public sealed class Name : IAttribute
+        public sealed class Name : IAttribute, IEquatable<Name>
         {
             public readonly string Value;
 
             public Name(string value)
             {
+                if (string.IsNullOrEmpty(value)) throw new ArgumentNullException(nameof(value), "Name attribute cannot be empty");
                 Value = value;
             }
+
+            public bool Equals(Name other) => !ReferenceEquals(other, null) && Equals(Value, other.Value);
+
+            public override bool Equals(object obj) => obj is Name && Equals((Name)obj);
+
+            public override int GetHashCode() => Value.GetHashCode();
 
             public override string ToString() => $"Name({Value})";
         }
 
-        public sealed class InputBuffer : IAttribute
+        public sealed class InputBuffer : IAttribute, IEquatable<InputBuffer>
         {
             public readonly int Initial;
             public readonly int Max;
@@ -43,10 +50,27 @@ namespace Akka.Streams
                 Max = max;
             }
 
+            public bool Equals(InputBuffer other)
+            {
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(other, this)) return true;
+                return Initial == other.Initial && Max == other.Max;
+            }
+
+            public override bool Equals(object obj) => obj is InputBuffer && Equals((InputBuffer) obj);
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return (Initial*397) ^ Max;
+                }
+            }
+
             public override string ToString() => $"InputBuffer(initial={Initial}, max={Max})";
         }
 
-        public sealed class LogLevels : IAttribute
+        public sealed class LogLevels : IAttribute, IEquatable<LogLevels>
         {
             /// <summary>
             /// Use to disable logging on certain operations when configuring <see cref="LogLevels"/>
@@ -64,14 +88,41 @@ namespace Akka.Streams
                 OnFailure = onFailure;
             }
 
+            public bool Equals(LogLevels other)
+            {
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(other, this)) return true;
+                return OnElement == other.OnElement && OnFinish == other.OnFinish && OnFailure == other.OnFailure;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is LogLevels && Equals((LogLevels) obj);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hashCode = (int) OnElement;
+                    hashCode = (hashCode*397) ^ (int) OnFinish;
+                    hashCode = (hashCode*397) ^ (int) OnFailure;
+                    return hashCode;
+                }
+            }
+
             public override string ToString() => $"LogLevel(element={OnElement}, finish={OnFinish}, failure={OnFailure})";
         }
-        
-        public sealed class AsyncBoundary : IAttribute
+
+        public sealed class AsyncBoundary : IAttribute, IEquatable<AsyncBoundary>
         {
             public static readonly AsyncBoundary Instance = new AsyncBoundary();
             private AsyncBoundary() { }
 
+            public bool Equals(AsyncBoundary other) => true;
+
+            public override bool Equals(object obj) => obj is AsyncBoundary;
+            
             public override string ToString() => "AsyncBoundary";
         }
 
@@ -131,7 +182,7 @@ namespace Akka.Streams
         /// <summary>
         /// Adds given attribute to the end of these attributes.
         /// </summary>
-        public Attributes And(IAttribute other) => new Attributes(_attributes.Concat(new[] {other}).ToArray());
+        public Attributes And(IAttribute other) => new Attributes(_attributes.Concat(new[] { other }).ToArray());
 
         /// <summary>
         /// Extracts Name attributes and concatenates them.
@@ -219,7 +270,7 @@ namespace Akka.Streams
     /// </summary>
     public static class ActorAttributes
     {
-        public sealed class Dispatcher : Attributes.IAttribute
+        public sealed class Dispatcher : Attributes.IAttribute, IEquatable<Dispatcher>
         {
             public readonly string Name;
 
@@ -227,6 +278,20 @@ namespace Akka.Streams
             {
                 Name = name;
             }
+
+            public bool Equals(Dispatcher other)
+            {
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(other, this)) return true;
+                return Equals(Name, other.Name);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is Dispatcher && Equals((Dispatcher) obj);
+            }
+
+            public override int GetHashCode() => (Name != null ? Name.GetHashCode() : 0);
 
             public override string ToString() => $"Dispatcher({Name})";
         }
