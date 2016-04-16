@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
@@ -151,8 +150,7 @@ namespace Akka.Streams.Implementation.IO
 
             try
             {
-                if (_chan != null)
-                    _chan.Close();
+                _chan?.Close();
             }
             catch (Exception ex)
             {

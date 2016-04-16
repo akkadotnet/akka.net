@@ -283,14 +283,7 @@ namespace Akka.Streams.Implementation.IO
         {
             Send(() =>
             {
-                try
-                {
-                    _dataQueue.Add(data);
-                }
-                catch (Exception ex)
-                {
-                    throw new IOException(string.Empty, ex);
-                }
+                _dataQueue.Add(data);
 
                 if (_downstreamStatus.Value is Canceled)
                 {
@@ -304,23 +297,12 @@ namespace Akka.Streams.Implementation.IO
         {
             Send(() =>
             {
-                try
+                _stageWithCallback.WakeUp(msg).Wait(_writeTimeout);
+                if (_downstreamStatus.Value is Canceled && handleCancelled)
                 {
-                    _stageWithCallback.WakeUp(msg).Wait(_writeTimeout);
-                    if (_downstreamStatus.Value is Canceled && handleCancelled)
-                    {
-                        //Publisher considered to be terminated at earliest convenience to minimize messages sending back and forth
-                        _isPublisherAlive = false;
-                        throw PublisherClosedException;
-                    }
-                }
-                catch (IOException)
-                {
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    throw new IOException(string.Empty, ex);
+                    //Publisher considered to be terminated at earliest convenience to minimize messages sending back and forth
+                    _isPublisherAlive = false;
+                    throw PublisherClosedException;
                 }
             });
         }

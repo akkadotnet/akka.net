@@ -177,7 +177,7 @@ namespace Akka.Streams.Tests.IO
                 var f = StreamConverters.FromInputStream(() => new ListInputStream(new[] {"a", "b", "c"}))
                     .RunWith(Sink.First<ByteString>(), _materializer);
 
-                f.Wait(TimeSpan.FromSeconds(300)).Should().BeTrue();
+                f.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 f.Result.ShouldBeEquivalentTo(ByteString.FromString("abc"));
             }, _materializer);
         }

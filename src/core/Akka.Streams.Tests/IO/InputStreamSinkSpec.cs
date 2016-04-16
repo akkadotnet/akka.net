@@ -260,7 +260,7 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void InputStreamSink_should_return_IOException_when_stream_is_failed()
+        public void InputStreamSink_should_return_Exception_when_stream_is_failed()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -283,9 +283,9 @@ namespace Akka.Streams.Tests.IO
                 var task = Task.Run(() => inputStream.ReadByte());
 
                 Action block = () => task.Wait(Timeout);
-                block.ShouldThrow<IOException>();
+                block.ShouldThrow<Exception>();
 
-                task.Exception.InnerException.InnerException.Should().Be(ex);
+                task.Exception.InnerException.Should().Be(ex);
 
             }, _materializer);
         }

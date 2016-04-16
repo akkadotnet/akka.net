@@ -1515,10 +1515,10 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<T, TMat> MergeOrdered<T, TMat>(this IFlow<T, TMat> flow, IGraph<SourceShape<T>, TMat> other,
+        public static IFlow<T, TMat> MergeSorted<T, TMat>(this IFlow<T, TMat> flow, IGraph<SourceShape<T>, TMat> other,
             Func<T, T, int> orderFunc)
         {
-            return flow.Via(MergeOrderedGraph(other, orderFunc));
+            return flow.Via(MergeSortedGraph(other, orderFunc));
         }
 
         /// <summary>
@@ -1536,10 +1536,10 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<T, TMat> MergeOrdered<T, TMat>(this IFlow<T, TMat> flow, IGraph<SourceShape<T>, TMat> other)
+        public static IFlow<T, TMat> MergeSorted<T, TMat>(this IFlow<T, TMat> flow, IGraph<SourceShape<T>, TMat> other)
             where T : IComparable<T>
         {
-            return flow.Via(MergeOrderedGraph(other, (x, y) => x.CompareTo(y)));
+            return flow.Via(MergeSortedGraph(other, (x, y) => x.CompareTo(y)));
         }
 
         /// <summary>
@@ -1557,13 +1557,13 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// '''Cancels when''' downstream cancels
         /// </summary>
-        public static IFlow<T, TMat> MergeOrdered<T, TMat>(this IFlow<T, TMat> flow, IGraph<SourceShape<T>, TMat> other,
+        public static IFlow<T, TMat> MergeSorted<T, TMat>(this IFlow<T, TMat> flow, IGraph<SourceShape<T>, TMat> other,
             IComparer<T> comparer)
         {
-            return flow.Via(MergeOrderedGraph(other, comparer.Compare));
+            return flow.Via(MergeSortedGraph(other, comparer.Compare));
         }
 
-        private static IGraph<FlowShape<T, T>, TMat> MergeOrderedGraph<T, TMat>(IGraph<SourceShape<T>, TMat> other,
+        private static IGraph<FlowShape<T, T>, TMat> MergeSortedGraph<T, TMat>(IGraph<SourceShape<T>, TMat> other,
             Func<T, T, int> compare)
         {
             return GraphDsl.Create(other, (builder, r) =>

@@ -274,32 +274,25 @@ namespace Akka.Streams.Implementation.IO
 
                 if (_detachedChunk != null)
                     return ReadBytes(buffer, offset, count);
-                
-                try
+
+                IStreamToAdapterMessage msg;
+                var success = _sharedBuffer.TryTake(out msg, _readTimeout);
+                if (!success)
+                    throw new IOException("Timeout on waiting for new data");
+
+                if (msg is Data)
                 {
-                    IStreamToAdapterMessage msg;
-                    var success = _sharedBuffer.TryTake(out msg, _readTimeout);
-                    if (!success)
-                        throw new IOException("Timeout on waiting for new data");
-
-                    if (msg is Data)
-                    {
-                        _detachedChunk = ((Data)msg).Bytes;
-                        return ReadBytes(buffer, offset, count);
-                    }
-                    if (msg is Finished)
-                    {
-                        _isStageAlive = false;
-                        return -1;
-                    }
-
+                    _detachedChunk = ((Data) msg).Bytes;
+                    return ReadBytes(buffer, offset, count);
+                }
+                if (msg is Finished)
+                {
                     _isStageAlive = false;
-                    throw new IOException(string.Empty, ((Failed) msg).Cause);
+                    return -1;
                 }
-                catch (ThreadInterruptedException ex)
-                {
-                    throw new IOException(string.Empty, ex);
-                }
+
+                _isStageAlive = false;
+                throw ((Failed) msg).Cause;
             });
         }
 

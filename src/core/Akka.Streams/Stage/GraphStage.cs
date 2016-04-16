@@ -1049,14 +1049,14 @@ namespace Akka.Streams.Stage
         protected void Read<T>(Inlet<T> inlet, Action<T> andThen, Action onClose)
         {
             if (IsAvailable(inlet))
-                andThen(Grab<T>(inlet));
+                andThen(Grab(inlet));
             else if (IsClosed(inlet))
                 onClose();
             else
             {
                 RequireNotReading(inlet);
                 if (!HasBeenPulled(inlet)) Pull(inlet);
-                else SetHandler(inlet, new Reading<T>(inlet, 1, GetHandler(inlet), andThen, onClose, this));
+                SetHandler(inlet, new Reading<T>(inlet, 1, GetHandler(inlet), andThen, onClose, this));
             }
         }
 
