@@ -1,9 +1,7 @@
 ﻿using System;
-using System.CodeDom;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Streams;
-using System.Runtime.Remoting.Channels;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -247,7 +245,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void FlowGraphs_when_turned_into_sinks_should_work_with_a_Source_when_having_KeyedSource_inside()
+        public void FlowGraphs_when_turned_into_sinks_should_work_with_a_Source_when_having_KeyedSink_inside()
         {
             var probe = TestSubscriber.CreateManualProbe<int>(this);
             var pubSink = Sink.AsPublisher<int>(false);
