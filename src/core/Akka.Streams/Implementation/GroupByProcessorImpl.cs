@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reactive.Streams;
 using Akka.Actor;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
@@ -9,11 +8,11 @@ using Directive = Akka.Streams.Supervision.Directive;
 
 namespace Akka.Streams.Implementation
 {
-    internal sealed class GroupByProcessorImpl : MultiStreamOutputProcessor<object>
+    internal sealed class GroupByProcessorImpl<T> : MultiStreamOutputProcessor<T>
     {
         public static Props Props(ActorMaterializerSettings settings, int maxSubstreams, Func<object, object> keyFor)
         {
-            return Actor.Props.Create(() => new GroupByProcessorImpl(settings, maxSubstreams, keyFor)).WithDeploy(Deploy.Local);
+            return Actor.Props.Create(() => new GroupByProcessorImpl<T>(settings, maxSubstreams, keyFor)).WithDeploy(Deploy.Local);
         }
 
         private readonly int _maxSubstreams;
@@ -26,7 +25,7 @@ namespace Akka.Streams.Implementation
 
         private SubstreamOutput _pendingSubstreamOutput;
 
-        private GroupByProcessorImpl(ActorMaterializerSettings settings, int maxSubstreams, Func<object, object> keyFor) : base(settings)
+        public GroupByProcessorImpl(ActorMaterializerSettings settings, int maxSubstreams, Func<object, object> keyFor) : base(settings)
         {
             _maxSubstreams = maxSubstreams;
             _keyFor = keyFor;
@@ -99,7 +98,7 @@ namespace Akka.Streams.Implementation
                 else
                 {
                     if (_keyToSubstreamOutput.Count == _maxSubstreams)
-                        throw new IllegalStateException(string.Format("Cannot open substream for key '{0}': too many substreams open", key));
+                        throw new IllegalStateException($"Cannot open substream for key '{key}': too many substreams open");
                     var substreamOutput = CreateSubstreamOutput();
                     var substreamFlow = Source.FromPublisher(substreamOutput);
                     PrimaryOutputs.EnqueueOutputElement(substreamFlow);

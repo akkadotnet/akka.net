@@ -5,7 +5,6 @@ using System.Linq;
 using System.Reactive.Streams;
 using Akka.Streams.Dsl;
 using Akka.Streams.Dsl.Internal;
-using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -53,26 +52,27 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         private void WithSubstreamsSupport(int groupCount = 2, int elementCount = 6, int maxSubstream = -1,
-            Action<TestSubscriber.ManualProbe<KeyValuePair<int, Source<int, Unit>>>, ISubscription, Func<int, Source<int, Unit>>> run = null)
+            Action<TestSubscriber.ManualProbe<Tuple<int, Source<int, Unit>>>, ISubscription, Func<int, Source<int, Unit>>> run = null)
         {
 
             var source = Source.From(Enumerable.Range(1, elementCount)).RunWith(Sink.AsPublisher<int>(false), Materializer);
             var max = maxSubstream > 0 ? maxSubstream : groupCount;
             var groupStream =
                 Source.FromPublisher(source)
-                    .GroupBy<int, Unit, int, int>(max, x => x%groupCount)
+                    .GroupBy(max, x => x%groupCount)
                     .Lift(x => x%groupCount)
-                    .RunWith(Sink.AsPublisher<KeyValuePair<KeyValuePair<int, Source<int, Unit>>, Source<KeyValuePair<int, Source<int, Unit>>, Unit>>>(false), Materializer);
-            var masterSubscriber = TestSubscriber.CreateManualProbe<KeyValuePair<int, Source<int, Unit>>>(this);
+                    .RunWith(Sink.AsPublisher<Tuple<int, Source<int, Unit>>>(false), Materializer);
+            var masterSubscriber = TestSubscriber.CreateManualProbe<Tuple<int, Source<int, Unit>>>(this);
+
             groupStream.Subscribe(masterSubscriber);
             var masterSubscription = masterSubscriber.ExpectSubscription();
 
             run?.Invoke(masterSubscriber, masterSubscription, expectedKey =>
             {
                 masterSubscription.Request(1);
-                var keyValue =  masterSubscriber.ExpectNext();
-                keyValue.Key.Should().Be(expectedKey);
-                return keyValue.Value;
+                var tuple =  masterSubscriber.ExpectNext();
+                tuple.Item1.Should().Be(expectedKey);
+                return tuple.Item2;
             });
         }
 
@@ -81,9 +81,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                WithSubstreamsSupport(2, run: (masterSubscriber, masterSubscription, expectSubFlow) =>
+                WithSubstreamsSupport(2, run: (masterSubscriber, masterSubscription, getSubFlow) =>
                 {
-                    var s1 = new StreamPuppet(expectSubFlow(1).RunWith(Sink.AsPublisher<int>(false), Materializer), this);
+                    var s1 = new StreamPuppet(getSubFlow(1).RunWith(Sink.AsPublisher<int>(false), Materializer), this);
                     masterSubscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
                     s1.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
@@ -91,7 +91,7 @@ namespace Akka.Streams.Tests.Dsl
                     s1.ExpectNext(1);
                     s1.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
-                    var s2 = new StreamPuppet(expectSubFlow(0).RunWith(Sink.AsPublisher<int>(false), Materializer), this);
+                    var s2 = new StreamPuppet(getSubFlow(0).RunWith(Sink.AsPublisher<int>(false), Materializer), this);
                     s2.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
                     s2.Request(2);
                     s2.ExpectNext(2);
@@ -118,18 +118,16 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GroupBy_must_workin_normal_user_scenario()
+        public void GroupBy_must_work_in_normal_user_scenario()
         {
-            var sub = Source.From(new[] {"Aaa", "Abb", "Bcc", "Cdd", "Cee"})
-                .GroupBy<string, Unit, string, string>(3, s => s.Substring(0, 1))
-                .MergeSubstreams()
+            var sub = (SubFlow<IEnumerable<string>, Unit, IRunnableGraph<Unit>>) Source.From(new[] {"Aaa", "Abb", "Bcc", "Cdd", "Cee"})
+                .GroupBy(3, s => s.Substring(0, 1))
                 .Grouped(10);
-            var task =
-                ((SubFlowImpl<string, IEnumerable<KeyValuePair<string, Source<string, Unit>>>, Unit>) sub).RunWith(
-                    Sink.First<IEnumerable<KeyValuePair<string, Source<string, Unit>>>>(), Materializer);
+            var source = (Source<IEnumerable<string>, Unit>)sub.MergeSubstreams();
+            var task  = source.Grouped(10).RunWith(Sink.First<IEnumerable<IEnumerable<string>>>(), Materializer);
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            // TODO resolve this issue later once the implementation is ready
-            //task.result.sortBy(_.head) should ===(List(List("Aaa", "Abb"), List("Bcc"), List("Cdd", "Cee")))
+            task.Result.OrderBy(e => e.First())
+                .ShouldBeEquivalentTo(new[] {new[] {"Aaa", "Abb"}, new[] {"Bcc"}, new[] {"Cdd", "Cee"}});
         }
 
         [Fact]
@@ -165,10 +163,10 @@ namespace Akka.Streams.Tests.Dsl
                 var publisherProbe = TestPublisher.CreateManualProbe<int>(this);
                 var publisher =
                     Source.FromPublisher(publisherProbe)
-                        .GroupBy<int, Unit, int, int>(2, x => x%2)
+                        .GroupBy(2, x => x%2)
                         .Lift(x => x%2)
-                        .RunWith(Sink.AsPublisher<KeyValuePair<KeyValuePair<int, Source<int, Unit>>, Source<KeyValuePair<int, Source<int, Unit>>, Unit>>>(false), Materializer);
-                var subscriber = TestSubscriber.CreateManualProbe<KeyValuePair<int, Source<int, Unit>>>(this);
+                        .RunWith(Sink.AsPublisher<Tuple<int, Source<int, Unit>>>(false), Materializer);
+                var subscriber = TestSubscriber.CreateManualProbe<Tuple<int, Source<int, Unit>>>(this);
                 publisher.Subscribe(subscriber);
 
                 var upstreamSubscription = publisherProbe.ExpectSubscription();
@@ -184,11 +182,11 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var publisher =
-                     Source.From(new List<int>())
-                         .GroupBy<int, Unit, int, int>(2, x => x % 2)
-                         .Lift(x => x % 2)
-                         .RunWith(Sink.AsPublisher<KeyValuePair<KeyValuePair<int, Source<int, Unit>>, Source<KeyValuePair<int, Source<int, Unit>>, Unit>>>(false), Materializer);
-                var subscriber = TestSubscriber.CreateManualProbe<KeyValuePair<int, Source<int, Unit>>>(this);
+                    Source.From(new List<int>())
+                        .GroupBy(2, x => x%2)
+                        .Lift(x => x%2)
+                        .RunWith(Sink.AsPublisher<Tuple<int, Source<int, Unit>>>(false), Materializer);
+                var subscriber = TestSubscriber.CreateManualProbe<Tuple<int, Source<int, Unit>>>(this);
                 publisher.Subscribe(subscriber);
 
                 subscriber.ExpectSubscriptionAndComplete();
@@ -203,10 +201,10 @@ namespace Akka.Streams.Tests.Dsl
                 var publisherProbe = TestPublisher.CreateManualProbe<int>(this);
                 var publisher =
                     Source.FromPublisher(publisherProbe)
-                        .GroupBy<int, Unit, int, int>(2, x => x % 2)
+                        .GroupBy(2, x => x % 2)
                         .Lift(x => x % 2)
-                        .RunWith(Sink.AsPublisher<KeyValuePair<KeyValuePair<int, Source<int, Unit>>, Source<KeyValuePair<int, Source<int, Unit>>, Unit>>>(false), Materializer);
-                var subscriber = TestSubscriber.CreateManualProbe<KeyValuePair<int, Source<int, Unit>>>(this);
+                        .RunWith(Sink.AsPublisher<Tuple<int, Source<int, Unit>>>(false), Materializer);
+                var subscriber = TestSubscriber.CreateManualProbe<Tuple<int, Source<int, Unit>>>(this);
                 publisher.Subscribe(subscriber);
 
                 var upstreamSubscription = publisherProbe.ExpectSubscription();
@@ -227,17 +225,17 @@ namespace Akka.Streams.Tests.Dsl
                 var publisherProbe = TestPublisher.CreateManualProbe<int>(this);
                 var publisher =
                     Source.FromPublisher(publisherProbe)
-                        .GroupBy<int, Unit, int, int>(2, x => x % 2)
+                        .GroupBy(2, x => x % 2)
                         .Lift(x => x % 2)
-                        .RunWith(Sink.AsPublisher<KeyValuePair<KeyValuePair<int, Source<int, Unit>>, Source<KeyValuePair<int, Source<int, Unit>>, Unit>>>(false), Materializer);
-                var subscriber = TestSubscriber.CreateManualProbe<KeyValuePair<int, Source<int, Unit>>>(this);
+                        .RunWith(Sink.AsPublisher<Tuple<int, Source<int, Unit>>>(false), Materializer);
+                var subscriber = TestSubscriber.CreateManualProbe<Tuple<int, Source<int, Unit>>>(this);
                 publisher.Subscribe(subscriber);
 
                 var upstreamSubscription = publisherProbe.ExpectSubscription();
                 var downstreamSubscription = subscriber.ExpectSubscription();
                 downstreamSubscription.Request(100);
                 upstreamSubscription.SendNext(1);
-                var substream = subscriber.ExpectNext().Value;
+                var substream = subscriber.ExpectNext().Item2;
                 var substreamPuppet = new StreamPuppet(substream.RunWith(Sink.AsPublisher<int>(false), Materializer), this);
 
                 substreamPuppet.Request(1);
@@ -258,14 +256,17 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var publisherProbe = TestPublisher.CreateManualProbe<int>(this);
                 var ex = new TestException("test");
-                var publisher = Source.FromPublisher(publisherProbe).GroupBy<int, Unit, int, int>(2, i =>
+                var publisher = Source.FromPublisher(publisherProbe).GroupBy(2, i =>
                 {
                     if (i == 2)
                         throw ex;
                     return i%2;
-                }).Lift(x=>x%2).RunWith(Sink.AsPublisher<KeyValuePair<KeyValuePair<int, Source<int, Unit>>, Source<KeyValuePair<int, Source<int, Unit>>, Unit>>>(false), Materializer);
+                })
+                    .Lift(x => x%2)
+                    .RunWith(Sink.AsPublisher<Tuple<int, Source<int, Unit>>>(false), Materializer);
 
-                var subscriber = TestSubscriber.CreateManualProbe<KeyValuePair<int, Source<int, Unit>>>(this);
+
+                var subscriber = TestSubscriber.CreateManualProbe<Tuple<int, Source<int, Unit>>>(this);
                 publisher.Subscribe(subscriber);
 
                 var upstreamSubscription = publisherProbe.ExpectSubscription();
@@ -274,7 +275,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 upstreamSubscription.SendNext(1);
 
-                var substream = subscriber.ExpectNext().Value;
+                var substream = subscriber.ExpectNext().Item2;
                 var substreamPuppet = new StreamPuppet(substream.RunWith(Sink.AsPublisher<int>(false), Materializer), this);
 
                 substreamPuppet.Request(1);
@@ -294,7 +295,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var publisherProbe = TestPublisher.CreateManualProbe<int>(this);
                 var ex = new TestException("test");
-                var publisher = Source.FromPublisher(publisherProbe).GroupBy<int, Unit, int, int>(2, i =>
+                var publisher = Source.FromPublisher(publisherProbe).GroupBy(2, i =>
                 {
                     if (i == 2)
                         throw ex;
@@ -302,9 +303,9 @@ namespace Akka.Streams.Tests.Dsl
                 })
                     .Lift(x => x%2)
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
-                    .RunWith(Sink.AsPublisher<KeyValuePair<KeyValuePair<int, Source<int, Unit>>,Source<KeyValuePair<int, Source<int, Unit>>, Unit>>>(false), Materializer);
+                    .RunWith(Sink.AsPublisher<Tuple<int, Source<int, Unit>>>(false), Materializer);
 
-                var subscriber = TestSubscriber.CreateManualProbe<KeyValuePair<int, Source<int, Unit>>>(this);
+                var subscriber = TestSubscriber.CreateManualProbe<Tuple<int, Source<int, Unit>>>(this);
                 publisher.Subscribe(subscriber);
 
                 var upstreamSubscription = publisherProbe.ExpectSubscription();
@@ -313,7 +314,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 upstreamSubscription.SendNext(1);
 
-                var substream = subscriber.ExpectNext().Value;
+                var substream = subscriber.ExpectNext().Item2;
                 var substreamPuppet1 = new StreamPuppet(substream.RunWith(Sink.AsPublisher<int>(false), Materializer), this);
 
                 substreamPuppet1.Request(10);
@@ -322,7 +323,7 @@ namespace Akka.Streams.Tests.Dsl
                 upstreamSubscription.SendNext(2);
                 upstreamSubscription.SendNext(4);
 
-                var substream2 = subscriber.ExpectNext().Value;
+                var substream2 = subscriber.ExpectNext().Item2;
                 var substreamPuppet2 = new StreamPuppet(substream2.RunWith(Sink.AsPublisher<int>(false), Materializer), this);
                 substreamPuppet2.Request(10);
                 substreamPuppet2.ExpectNext(4);
@@ -347,13 +348,13 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var up = TestPublisher.CreateManualProbe<int>(this);
-                var down = TestSubscriber.CreateManualProbe<KeyValuePair<KeyValuePair<int, Source<int, ISubscriber<int>>>, Source<KeyValuePair<int, Source<int, ISubscriber<int>>>, ISubscriber<int>>>>(this);
+                var down = TestSubscriber.CreateManualProbe<Tuple<int, Source<int, Unit>>>(this);
 
                 var flowSubscriber =
                     Source.AsSubscriber<int>()
-                        .GroupBy<int, ISubscriber<int>, int, int>(2, x => x%2)
+                        .GroupBy(2, x => x%2)
                         .Lift(x => x%2)
-                        .ToSub(Sink.FromSubscriber(down)).Run(Materializer);
+                        .To(Sink.FromSubscriber(down)).Run(Materializer);
                 
                 var downstream = down.ExpectSubscription();
                 downstream.Cancel();
@@ -368,27 +369,25 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var sub = Flow.Create<int>().GroupBy<int, int, Unit, int, int>(1, x => x%2).PrefixAndTail(0);
-                var f = ((SubFlowImpl<int,Tuple<IImmutableList<KeyValuePair<int, Source<int, Unit>>>,Source<KeyValuePair<int, Source<int, Unit>>, Unit>>, Unit>) sub).MergeSubstreams();
-                var t = ((Flow<int, Tuple<IImmutableList<KeyValuePair<int, Source<int, Unit>>>, Source<KeyValuePair<int, Source<int, Unit>>, Unit>>, Unit>)f).RunWith(this.SourceProbe<int>(), this.SinkProbe<Tuple<IImmutableList<KeyValuePair<int, Source<int, Unit>>>, Source<KeyValuePair<int, Source<int, Unit>>, Unit>>>(), Materializer);
+                var sub = Flow.Create<int>().GroupBy(1, x => x%2).PrefixAndTail(0);
+                var f = ((SubFlow<Tuple<IImmutableList<int>, Source<int, Unit>>, Unit, Sink<int, Unit>>) sub).MergeSubstreams();
+                var t = ((Flow<int, Tuple<IImmutableList<int>, Source<int, Unit>>, Unit>) f)
+                    .RunWith(TestSource.SourceProbe<int>(this), TestSink.SinkProbe<Tuple<IImmutableList<int>, Source<int, Unit>>>(this), Materializer);
                 var up = t.Item1;
                 var down = t.Item2;
 
                 down.Request(2);
+
                 up.SendNext(1);
                 var first = down.ExpectNext();
-                var s1 =
-                    new StreamPuppet(
-                        first.Item2.RunWith(
-                            Sink.AsPublisher<KeyValuePair<int, Source<int, Unit>>>(false)
-                                .MapMaterializedValue<IPublisher<int>>(_ => null), Materializer), this);
+                var s1 = new StreamPuppet(first.Item2.RunWith(Sink.AsPublisher<int>(false), Materializer), this);
 
                 s1.Request(1);
                 s1.ExpectNext(1);
 
                 up.SendNext(2);
                 var ex = down.ExpectError();
-                ex.Message.Should().Contain("too many ubstreams");
+                ex.Message.Should().Contain("too many substreams");
                 s1.ExpectError(ex);
             }, Materializer);
         }

@@ -66,15 +66,9 @@ namespace Akka.Streams.Implementation
 
         public void Cancel() { }
 
-        public bool IsCancellationRequested
-        {
-            get { return true; }
-        }
+        public bool IsCancellationRequested => true;
 
-        public CancellationToken Token
-        {
-            get { return CancellationToken.None; }
-        }
+        public CancellationToken Token => CancellationToken.None;
 
         public void CancelAfter(TimeSpan delay) { }
 
@@ -90,7 +84,7 @@ namespace Akka.Streams.Implementation
     /// 
     /// See `akka.stream.materializer.subscription-timeout` for configuration options.
     /// </summary>
-    public interface IStreamSubscriptionTimeoutSupport<T>
+    public interface IStreamSubscriptionTimeoutSupport
     {
         /// <summary>
         /// Default settings for subscription timeouts.
@@ -104,13 +98,13 @@ namespace Akka.Streams.Implementation
         ICancelable ScheduleSubscriptionTimeout(IActorRef actorRef, object message);
 
         /// <summary>
-        /// Called by the actor when a subscription has timed out. Expects the actual <see cref="IPublisher{T}"/> or <see cref="IProcessor{T1,T2}"/> target.
+        /// Called by the actor when a subscription has timed out. Expects the actual <see cref="IPublisher"/> or <see cref="IProcessor{T1,T2}"/> target.
         /// </summary>
-        void SubscriptionTimedOut(IPublisher<T> target);
+        void SubscriptionTimedOut(IPublisher target);
 
         /// <summary>
         /// Callback that should ensure that the target is canceled with the given cause.
         /// </summary>
-        void HandleSubscriptionTimeout(IPublisher<T> target, Exception cause);
+        void HandleSubscriptionTimeout(IPublisher target, Exception cause);
     }
 }

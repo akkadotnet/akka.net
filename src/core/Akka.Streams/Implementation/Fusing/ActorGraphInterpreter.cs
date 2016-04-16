@@ -73,7 +73,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         // Limits the number of events processed by the interpreter on an abort event.
         private readonly int _abortLimit;
-        private readonly ActorGraphInterpreter.BatchingActorInputBoundary<object>[] _inputs;
+        private readonly ActorGraphInterpreter.BatchingActorInputBoundary[] _inputs;
         private readonly ActorGraphInterpreter.IActorOutputBoundary[] _outputs;
 
         private ILoggingAdapter _log;
@@ -95,7 +95,7 @@ namespace Akka.Streams.Implementation.Fusing
             _settings = settings;
             Materializer = materializer;
 
-            _inputs = new ActorGraphInterpreter.BatchingActorInputBoundary<object>[shape.Inlets.Count()];
+            _inputs = new ActorGraphInterpreter.BatchingActorInputBoundary[shape.Inlets.Count()];
             _outputs = new ActorGraphInterpreter.IActorOutputBoundary[shape.Outlets.Count()];
             _subscribersPending = _inputs.Length;
             _publishersPending = _outputs.Length;
@@ -119,7 +119,7 @@ namespace Akka.Streams.Implementation.Fusing
             Self = self;
             for (int i = 0; i < _inputs.Length; i++)
             {
-                var input = new ActorGraphInterpreter.BatchingActorInputBoundary<object>(_settings.MaxInputBufferSize, i);
+                var input = new ActorGraphInterpreter.BatchingActorInputBoundary(_settings.MaxInputBufferSize, i);
                 _inputs[i] = input;
                 Interpreter.AttachUpstreamBoundary(i, input);
             }
@@ -558,14 +558,14 @@ namespace Akka.Streams.Implementation.Fusing
             }
         }
 
-        public class BatchingActorInputBoundary<T> : GraphInterpreter.UpstreamBoundaryStageLogic
+        public class BatchingActorInputBoundary : GraphInterpreter.UpstreamBoundaryStageLogic
         {
             #region OutHandler
             private sealed class OutHandler : Stage.OutHandler
             {
-                private readonly BatchingActorInputBoundary<T> _that;
+                private readonly BatchingActorInputBoundary _that;
 
-                public OutHandler(BatchingActorInputBoundary<T> that)
+                public OutHandler(BatchingActorInputBoundary that)
                 {
                     _that = that;
                 }
@@ -612,7 +612,7 @@ namespace Akka.Streams.Implementation.Fusing
             private bool _downstreamCanceled;
             private readonly int _requestBatchSize;
             private int _batchRemaining;
-            private readonly Outlet<T> _outlet;
+            private readonly Outlet _outlet;
 
             public BatchingActorInputBoundary(int size, int id)
             {
@@ -625,7 +625,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _indexMask = size - 1;
                 _requestBatchSize = Math.Max(1, _inputBuffer.Length/2);
                 _batchRemaining = _requestBatchSize;
-                _outlet = new Outlet<T>("UpstreamBoundary" + id) { Id = 0 };
+                _outlet = new Outlet<object>("UpstreamBoundary" + id) { Id = 0 };
 
                 SetHandler(_outlet, new OutHandler(this));
             }
@@ -680,7 +680,7 @@ namespace Akka.Streams.Implementation.Fusing
                 }
             }
 
-            public void OnNext(T element)
+            public void OnNext(object element)
             {
                 if (!_upstreamCompleted)
                 {
@@ -702,9 +702,9 @@ namespace Akka.Streams.Implementation.Fusing
                 }
             }
 
-            private T Dequeue()
+            private object Dequeue()
             {
-                var element = (T)_inputBuffer[_nextInputElementCursor];
+                var element = _inputBuffer[_nextInputElementCursor];
                 if (element == null) throw new IllegalStateException("Internal queue must never contain a null");
                 _inputBuffer[_nextInputElementCursor] = null;
 

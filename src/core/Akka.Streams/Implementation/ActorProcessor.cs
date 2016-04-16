@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reactive.Streams;
 using Akka.Actor;
 using Akka.Event;
@@ -212,13 +213,13 @@ namespace Akka.Streams.Implementation
         }
     }
 
-    internal class SimpleOutputs<TOut> : IOutputs
+    internal class SimpleOutputs : IOutputs
     {
         public readonly IActorRef Actor;
         public readonly IPump Pump;
 
-        protected ActorPublisher<TOut> ExposedPublisher;
-        protected ISubscriber<TOut> Subscriber;
+        protected IActorPublisher ExposedPublisher;
+        protected ISubscriber Subscriber;
         protected long DownstreamDemand;
         protected bool IsDownstreamCompleted;
 
@@ -240,16 +241,11 @@ namespace Akka.Streams.Implementation
         public long DemandCount => DownstreamDemand;
         public bool IsDemandAvailable => DownstreamDemand > 0;
 
-        public void EnqueueOutputElement(TOut element)
+        public void EnqueueOutputElement(object element)
         {
             ReactiveStreamsCompliance.RequireNonNullElement(element);
             DownstreamDemand--;
             ReactiveStreamsCompliance.TryOnNext(Subscriber, element);
-        }
-
-        public void EnqueueOutputElement(object element)
-        {
-            EnqueueOutputElement((TOut)element);
         }
 
         public virtual void Complete()
@@ -286,10 +282,10 @@ namespace Akka.Streams.Implementation
 
         protected ISubscription CreateSubscription()
         {
-            return new ActorSubscription<TOut>(Actor, Subscriber);
+            return ActorSubscription.Create(Actor, Subscriber);
         }
 
-        private void SubscribePending(IEnumerable<ISubscriber<TOut>> subscribers)
+        private void SubscribePending(IEnumerable<ISubscriber> subscribers)
         {
             foreach (var subscriber in subscribers)
             {
@@ -306,7 +302,7 @@ namespace Akka.Streams.Implementation
         {
             if (message is ExposedPublisher)
             {
-                ExposedPublisher = (ActorPublisher<TOut>) ((ExposedPublisher)message).Publisher;
+                ExposedPublisher = ((ExposedPublisher)message).Publisher;
                 SubReceive.Become(DownstreamRunning);
                 return true;
             }
@@ -341,14 +337,14 @@ namespace Akka.Streams.Implementation
         }
     }
     
-    internal abstract class ActorProcessorImpl<T> : ActorBase, IPump
+    internal abstract class ActorProcessorImpl : ActorBase, IPump
     {
         #region Internal classes
 
         private sealed class InternalBatchingInputBuffer : BatchingInputBuffer
         {
-            private readonly ActorProcessorImpl<T> _impl;
-            public InternalBatchingInputBuffer(int count, ActorProcessorImpl<T> impl) : base(count, impl)
+            private readonly ActorProcessorImpl _impl;
+            public InternalBatchingInputBuffer(int count, ActorProcessorImpl impl) : base(count, impl)
             {
                 _impl = impl;
             }
@@ -361,8 +357,8 @@ namespace Akka.Streams.Implementation
 
         private sealed class InternalExposedPublisherReceive : ExposedPublisherReceive
         {
-            private readonly ActorProcessorImpl<T> _self;
-            public InternalExposedPublisherReceive(Receive activeReceive, Action<object> unhandled, ActorProcessorImpl<T> self) : base(activeReceive, unhandled)
+            private readonly ActorProcessorImpl _self;
+            public InternalExposedPublisherReceive(Receive activeReceive, Action<object> unhandled, ActorProcessorImpl self) : base(activeReceive, unhandled)
             {
                 _self = self;
             }
@@ -388,7 +384,7 @@ namespace Akka.Streams.Implementation
             Settings = settings;
 
             PrimaryInputs = new InternalBatchingInputBuffer(settings.InitialInputBufferSize, this);
-            PrimaryOutputs = new SimpleOutputs<T>(Self, this);
+            PrimaryOutputs = new SimpleOutputs(Self, this);
 
             _receive = new InternalExposedPublisherReceive(ActiveReceive, Unhandled, this);
             this.Init();

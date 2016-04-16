@@ -296,20 +296,20 @@ namespace Akka.Streams.Tests.Dsl
         {
             Source<IFruit, Unit> f1 = Source.From<IFruit>(Apples());
             IPublisher<IFruit> p1 = Source.From<IFruit>(Apples()).RunWith(Sink.AsPublisher<IFruit>(false), Materializer);
-            SubFlow<IFruit, Unit> f2 =
-                Source.From<IFruit>(Apples()).SplitWhen<IFruit, Unit, IFruit>(_ => true);
-            SubFlow<KeyValuePair<int, Source<IFruit, Unit>>, Unit> f3 =
-                Source.From<IFruit>(Apples()).GroupBy<IFruit, Unit, int, IFruit>(-1,_ => 2);
+            SubFlow<IFruit, Unit, IRunnableGraph<Unit>> f2 =
+                Source.From<IFruit>(Apples()).SplitWhen(_ => true);
+            SubFlow<IFruit, Unit, IRunnableGraph<Unit>> f3 =
+                Source.From<IFruit>(Apples()).GroupBy(2, _ => true);
             Source<Tuple<IImmutableList<IFruit>, Source<IFruit, Unit>>, Unit> f4 =
                 Source.From<IFruit>(Apples()).PrefixAndTail(1);
-            Flow<string, Source<IFruit, Unit>, Unit> d1 =
+            SubFlow<IFruit, Unit, Sink<string, Unit>> d1 =
                 Flow.Create<string>()
                     .Map<string, string, IFruit, Unit>(_ => new Apple())
-                    .SplitWhen<string, IFruit, Unit, IFruit>(_ => true);
-            SubFlow<KeyValuePair<int, Source<IFruit, Unit>>, Unit> d2 =
+                    .SplitWhen(_ => true);
+            SubFlow<IFruit, Unit, Sink<string, Unit>> d2 =
                 Flow.Create<string>()
                     .Map<string, string, IFruit, Unit>(_ => new Apple())
-                    .GroupBy<string, IFruit, Unit, int, IFruit>(-1,_ => 2);
+                    .GroupBy(-1,_ => 2);
             Flow<string, Tuple<IImmutableList<IFruit>, Source<IFruit, Unit>>, Unit> d3 =
                 Flow.Create<string>().Map<string, string, IFruit, Unit>(_ => new Apple()).PrefixAndTail(1);
         }

@@ -5,7 +5,6 @@ using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
-using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -64,7 +63,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var source = Source.From(Enumerable.Range(1, elementCount));
             var groupStream =
-                source.SplitWhen<int, Unit, int>(substreamCancelStrategy,i => i == splitWhen)
+                source.SplitWhen(substreamCancelStrategy, i => i == splitWhen)
                     .Lift()
                     .RunWith(Sink.AsPublisher<Source<int, Unit>>(false), Materializer);
             var masterSubscriber = TestSubscriber.CreateManualProbe<Source<int, Unit>>(this);
@@ -83,7 +82,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                WithSubstreamsSupport(4, run: (masterSubscriber, masterSubscription, getSubFlow) =>
+                WithSubstreamsSupport(elementCount: 4, run: (masterSubscriber, masterSubscription, getSubFlow) =>
                 {
                     var s1 = new StreamPuppet(getSubFlow().RunWith(Sink.AsPublisher<int>(false), Materializer), this);
                     masterSubscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
@@ -98,13 +97,13 @@ namespace Akka.Streams.Tests.Dsl
                     masterSubscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
                     s2.Request(1);
-                    s1.ExpectNext(3);
+                    s2.ExpectNext(3);
                     s2.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
-                    s1.Request(1);
-                    s1.ExpectNext(4);
-                    s1.Request(1);
-                    s1.ExpectComplete();
+                    s2.Request(1);
+                    s2.ExpectNext(4);
+                    s2.Request(1);
+                    s2.ExpectComplete();
 
                     masterSubscription.Request(1);
                     masterSubscriber.ExpectComplete();
@@ -117,13 +116,13 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var sub =
+                var task =
                     Source.Empty<int>()
-                        .SplitWhen<int, Unit, int>(_ => true)
+                        .SplitWhen(_ => true)
                         .Lift()
                         .MapAsync(1, s => s.RunWith(Sink.FirstOrDefault<int>(), Materializer))
-                        .Grouped(10);
-                var task = ((SubFlowImpl<int, IEnumerable<int>, Unit>) sub).RunWith(Sink.FirstOrDefault<IEnumerable<int>>(),
+                        .Grouped(10)
+                        .RunWith(Sink.FirstOrDefault<IEnumerable<int>>(),
                     Materializer);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 task.Result.ShouldBeEquivalentTo(default(IEnumerable<int>));
@@ -177,7 +176,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void SplitWhen_must_support_cancelling_both_mater_and_substream()
+        public void SplitWhen_must_support_cancelling_both_master_and_substream()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -186,12 +185,11 @@ namespace Akka.Streams.Tests.Dsl
                 var substream = TestSubscriber.CreateProbe<int>(this);
                 var masterStream = TestSubscriber.CreateProbe<Unit>(this);
 
-                var sub = Source.FromPublisher(inputs)
-                    .SplitWhen<int, Unit, int>(x => x == 2)
+                Source.FromPublisher(inputs)
+                    .SplitWhen(x => x == 2)
                     .Lift()
-                    .Map(x => x.RunWith(Sink.FromSubscriber(substream), Materializer));
-                ((SubFlowImpl<int, Unit, Unit>) sub).RunWith(Sink.FromSubscriber(masterStream),
-                    Materializer);
+                    .Map(x => x.RunWith(Sink.FromSubscriber(substream), Materializer))
+                    .RunWith(Sink.FromSubscriber(masterStream), Materializer);
 
                 masterStream.Request(1);
                 inputs.SendNext(1);
@@ -204,19 +202,18 @@ namespace Akka.Streams.Tests.Dsl
                 inputs.ExpectCancellation();
 
                 var inputs2 = TestPublisher.CreateProbe<int>(this);
-                var sub2 = Source.FromPublisher(inputs2)
-                    .SplitWhen<int, Unit, int>(x => x == 2)
+                Source.FromPublisher(inputs2)
+                    .SplitWhen(x => x == 2)
                     .Lift()
-                    .Map(x => x.RunWith(Sink.Cancelled<int>(), Materializer));
-                ((SubFlowImpl<int, Unit, Unit>)sub2).RunWith(Sink.Cancelled<Unit>(),
-                    Materializer);
+                    .Map(x => x.RunWith(Sink.Cancelled<int>(), Materializer))
+                    .RunWith(Sink.Cancelled<Unit>(), Materializer);
                 inputs2.ExpectCancellation();
 
                 var inputs3 = TestPublisher.CreateProbe<int>(this);
                 var masterStream3 = TestSubscriber.CreateProbe<Source<int, Unit>>(this);
 
                 Source.FromPublisher(inputs3)
-                    .SplitWhen<int, Unit, int>(x => x == 2)
+                    .SplitWhen(x => x == 2)
                     .Lift()
                     .RunWith(Sink.FromSubscriber(masterStream3), Materializer);
 
@@ -265,9 +262,6 @@ namespace Akka.Streams.Tests.Dsl
                     s1.ExpectNext(4);
                     s1.Request(1);
                     s1.ExpectComplete();
-
-                    masterSubscription.Request(1);
-                    masterSubscriber.ExpectComplete();
                 });
             }, Materializer);
         }
@@ -279,7 +273,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var publisherProbe = TestPublisher.CreateManualProbe<int>(this);
                 var ex = new TestException("test");
-                var publisher = Source.FromPublisher(publisherProbe).SplitWhen<int, Unit, int>(i =>
+                var publisher = Source.FromPublisher(publisherProbe).SplitWhen(i =>
                 {
                     if (i == 3)
                         throw ex;
@@ -317,12 +311,12 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var f = Source.From(Enumerable.Range(1, 100))
-                       .SplitWhen<int, Unit, int>(_ => true)
-                       .Lift()
-                       .MapAsync(1, s => s.RunWith(Sink.First<int>(), Materializer))
-                       .Grouped(200);
-                var task = ((SubFlowImpl<int, IEnumerable<int>, Unit>)f).RunWith(Sink.First<IEnumerable<int>>(), Materializer);
+                var task = Source.From(Enumerable.Range(1, 100))
+                    .SplitWhen(_ => true)
+                    .Lift()
+                    .MapAsync(1, s => s.RunWith(Sink.First<int>(), Materializer)) // Please note that this line *also* implicitly asserts nonempty substreams
+                    .Grouped(200)
+                    .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 100));
             }, Materializer);
@@ -333,19 +327,17 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                Action action = () =>
-                {
-                    var sub = Source.Single(1).SplitWhen<int, Unit, int>(_ => true).Lift().MapAsync(1, source =>
+                var task = Source.Single(1).SplitWhen(_ => true).Lift()
+                    .MapAsync(1, source =>
                     {
                         source.RunWith(Sink.Ignore<int>(), Materializer);
-                        source.RunWith(Sink.Ignore<int>(), Materializer);
-                        return Task.FromResult(1);
-                    });
-                    var task = ((SubFlowImpl<int, int, Unit>)sub).RunWith(Sink.Ignore<int>(), Materializer);
-                    task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                };
-
-                action.ShouldThrow<IllegalStateException>();
+                        // Sink.ignore+mapAsync pipes error back
+                        return source.RunWith(Sink.Ignore<int>(), Materializer)
+                            .ContinueWith(t => 1, TaskContinuationOptions.OnlyOnRanToCompletion);
+                    })
+                    .RunWith(Sink.Ignore<int>(), Materializer);
+                task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
+                    .ShouldThrow<IllegalStateException>();
             }, Materializer);
         }
 
@@ -365,15 +357,14 @@ namespace Akka.Streams.Tests.Dsl
                     Source.Single(1)
                         .MapMaterializedValue<TaskCompletionSource<int>>(_ => null)
                         .Concat(Source.Maybe<int>())
-                        .SplitWhen<int, TaskCompletionSource<int>, int>(_ => true);
+                        .SplitWhen(_ => true);
                 Action action = () =>
                 {
-                    var sub =
+                    var task =
                         testSource.Lift()
                             .Delay(TimeSpan.FromSeconds(1))
-                            .FlatMapConcat(s => s.MapMaterializedValue<TaskCompletionSource<int>>(_ => null));
-                    var task = ((SubFlowImpl<int, int, TaskCompletionSource<int>>) sub).RunWith(Sink.Ignore<int>(),
-                        tightTimeoutMaterializer);
+                            .FlatMapConcat(s => s.MapMaterializedValue<TaskCompletionSource<int>>(_ => null))
+                            .RunWith(Sink.Ignore<int>(), tightTimeoutMaterializer);
                     task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 };
 
@@ -398,12 +389,12 @@ namespace Akka.Streams.Tests.Dsl
                 var up = TestPublisher.CreateManualProbe<int>(this);
                 var down = TestSubscriber.CreateManualProbe<Source<int, Unit>>(this);
 
-                var f =
+                var flowSubscriber =
                     Source.AsSubscriber<int>()
-                        .SplitAfter<int, ISubscriber<int>, int>(i => i % 3 == 0)
+                        .SplitWhen(i => i % 3 == 0)
                         .Lift()
-                        .To(Sink.FromSubscriber(down));
-                var flowSubscriber = ((SubFlowImpl<int, Source<int, Unit>, ISubscriber<int>>)f).Run(Materializer);
+                        .To(Sink.FromSubscriber(down))
+                        .Run(Materializer);
                 var downstream = down.ExpectSubscription();
                 downstream.Cancel();
                 up.Subscribe(flowSubscriber);
@@ -424,7 +415,6 @@ namespace Akka.Streams.Tests.Dsl
                               this);
                           s1.Cancel();
                           masterSubscriber.ExpectComplete();
-
                       });
             }, Materializer);
         }

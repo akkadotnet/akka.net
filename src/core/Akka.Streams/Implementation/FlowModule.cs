@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Collections.Immutable;
 
 namespace Akka.Streams.Implementation
 {
-    internal abstract class FlowModule<TIn, TOut, TMat> : AtomicModule
+    internal abstract class FlowModule<TIn, TOut> : AtomicModule
     {
         public readonly Inlet<TIn> In = new Inlet<TIn>("Flow.in");
         public readonly Outlet<TOut> Out = new Outlet<TOut>("Flow.out");
@@ -18,7 +17,7 @@ namespace Akka.Streams.Implementation
         public override IModule ReplaceShape(Shape shape)
         {
             if (Shape.Equals(shape)) return this;
-            else throw new NotSupportedException("cannot replace the shape of a FlowModule");
+            throw new NotSupportedException("cannot replace the shape of a FlowModule");
         }
     }
 

@@ -231,12 +231,11 @@ namespace Akka.Streams
     /// </summary>
     public sealed class SourceShape<TOut> : Shape
     {
-        private readonly ImmutableArray<Outlet> _outlets;
         public readonly Outlet<TOut> Outlet;
 
         public SourceShape(Outlet<TOut> outlet)
         {
-            if (outlet == null) throw new ArgumentNullException("outlet");
+            if (outlet == null) throw new ArgumentNullException(nameof(outlet));
             Outlet = outlet;
             Outlets = ImmutableArray.Create<Outlet>(outlet);
         }
@@ -273,8 +272,8 @@ namespace Akka.Streams
 
         public FlowShape(Inlet<TIn> inlet, Outlet<TOut> outlet)
         {
-            if (inlet == null) throw new ArgumentNullException("inlet", "FlowShape expected non-null inlet");
-            if (outlet == null) throw new ArgumentNullException("outlet", "FlowShape expected non-null outlet");
+            if (inlet == null) throw new ArgumentNullException(nameof(inlet), "FlowShape expected non-null inlet");
+            if (outlet == null) throw new ArgumentNullException(nameof(outlet), "FlowShape expected non-null outlet");
 
             Inlet = inlet;
             Outlet = outlet;

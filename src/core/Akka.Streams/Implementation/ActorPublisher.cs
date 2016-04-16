@@ -5,6 +5,7 @@ using System.Reactive.Streams;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Pattern;
+using Akka.Streams.Util;
 using Akka.Util;
 
 namespace Akka.Streams.Implementation
@@ -60,6 +61,8 @@ namespace Akka.Streams.Implementation
 
     public interface IActorPublisher : IPublisher
     {
+        void Shutdown(Exception reason);
+        IEnumerable<ISubscriber> TakePendingSubscribers();
     }
 
     internal static class ActorPublisher
@@ -126,6 +129,11 @@ namespace Akka.Streams.Implementation
             return pending ?? ImmutableList<ISubscriber<TOut>>.Empty;
         }
 
+        IEnumerable<ISubscriber> IActorPublisher.TakePendingSubscribers()
+        {
+            return TakePendingSubscribers();
+        }
+
         public void Shutdown(Exception reason)
         {
             _shutdownReason = reason;
@@ -169,12 +177,27 @@ namespace Akka.Streams.Implementation
     {
     }
 
-    public class ActorSubscription<TIn> : IActorSubscription
+    public static class ActorSubscription
+    {
+        public static IActorSubscription Create(IActorRef implementor, ISubscriber subscriber)
+        {
+            var subscribedType = subscriber.GetType().GetSubscribedType();
+            var subscriptionType = typeof(ActorSubscription<>).MakeGenericType(subscribedType);
+            return (IActorSubscription) Activator.CreateInstance(subscriptionType, implementor, subscriber);
+        }
+
+        public static IActorSubscription Create<T>(IActorRef implementor, ISubscriber<T> subscriber)
+        {
+            return new ActorSubscription<T>(implementor, subscriber);
+        }
+    }
+
+    public class ActorSubscription<T> : IActorSubscription
     {
         public readonly IActorRef Implementor;
-        public readonly ISubscriber<TIn> Subscriber;
+        public readonly ISubscriber<T> Subscriber;
 
-        public ActorSubscription(IActorRef implementor, ISubscriber<TIn> subscriber)
+        public ActorSubscription(IActorRef implementor, ISubscriber<T> subscriber)
         {
             Implementor = implementor;
             Subscriber = subscriber;

@@ -127,7 +127,6 @@
     <Compile Include="Implementation\SinkholeSubscriber.cs" />
     <Compile Include="Implementation\Sinks.cs" />
     <Compile Include="Implementation\Sources.cs" />
-    <Compile Include="Implementation\SplitDecisionWhereImpl.cs" />
     <Compile Include="Implementation\StreamOfStreamProcessors.cs" />
     <Compile Include="Implementation\SubFlowImpl.cs" />
     <Compile Include="Implementation\Throttle.cs" />

@@ -285,15 +285,16 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// Register a new subscriber.
         /// </summary>
-        protected void RegisterSubscriber(ISubscriber<T> subscriber)
+        protected void RegisterSubscriber(ISubscriber subscriber)
         {
+            var sub = (ISubscriber<T>) subscriber;
             if (_endOfStream is SubscriberManagement.NotReached)
                 if (_subscriptions.Any(s => s.Subscriber.Equals(subscriber)))
                     ReactiveStreamsCompliance.RejectAdditionalSubscriber(subscriber, "SubscriberManagement");
-                else AddSubscription(subscriber);
+                else AddSubscription(sub);
             else if (_endOfStream is SubscriberManagement.Completed && !_buffer.Value.IsEmpty)
-                AddSubscription(subscriber);
-            else _endOfStream.Apply(subscriber);
+                AddSubscription(sub);
+            else _endOfStream.Apply(sub);
         }
 
         private void AddSubscription(ISubscriber<T> subscriber)

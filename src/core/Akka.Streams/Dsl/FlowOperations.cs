@@ -3,8 +3,11 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Reactive.Streams;
 using System.Threading.Tasks;
+using Akka.Dispatch.SysMsg;
 using Akka.Event;
+using Akka.IO;
 using Akka.Streams.Dsl.Internal;
+using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.Util;
 
@@ -849,9 +852,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels and all substreams cancel
         /// </summary> 
-        public static SubFlow<KeyValuePair<TKey, Source<TVal, TMat>>, TMat> GroupBy<TIn, TOut, TMat, TKey, TVal>(this Flow<TIn, TOut, TMat> flow, int maxSubstreams, Func<TOut, TKey> groupingFunc) where TVal : TOut
+        public static SubFlow<TOut, TMat, Sink<TIn, TMat>> GroupBy<TIn, TOut, TMat, TKey>(this Flow<TIn, TOut, TMat> flow, int maxSubstreams, Func<TOut, TKey> groupingFunc)
         {
-            return (SubFlow<KeyValuePair<TKey, Source<TVal, TMat>>, TMat>)InternalFlowOperations.GroupBy<TOut, TMat, TKey, TVal>(flow, maxSubstreams, groupingFunc);
+            return flow.GroupBy(maxSubstreams, groupingFunc,
+                (f, s) => ((Flow<TIn, Source<TOut, Unit>, TMat>) f).To(s),
+                (f, o) => ((Flow<TIn, TOut, TMat>) f).DeprecatedAndThen<Source<TOut, Unit>>(o)
+                );
         }
 
         /// <summary>
@@ -905,10 +911,10 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels and substreams cancel
         /// </summary>
-        /// <seealso cref="SplitAfter{TIn,TOut,TMat,TVal}"/> 
-        public static Flow<TIn, Source<TVal, TMat>, TMat> SplitWhen<TIn, TOut, TMat, TVal>(this Flow<TIn, TOut, TMat> flow, Func<TOut, bool> predicate) where TVal : TOut
+        /// <seealso cref="SplitAfter{TIn,TOut,TMat}"/> 
+        public static SubFlow<TOut, TMat, Sink<TIn, TMat>> SplitWhen<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, SubstreamCancelStrategy substreamCancelStrategy, Func<TOut, bool> predicate)
         {
-            return (Flow<TIn, Source<TVal, TMat>, TMat>)flow.SplitWhen<TOut, TMat, TVal>(predicate);
+            return flow.SplitWhen(substreamCancelStrategy, predicate, (f, s) => ((Flow<TIn, Source<TOut, Unit>, TMat>) f).To(s));
         }
 
         /// <summary>
@@ -916,9 +922,9 @@ namespace Akka.Streams.Dsl
         /// emits them to a stream of output streams, always beginning a new one with
         /// the current element if the given predicate returns true for it.
         /// </summary>
-        public static Flow<TIn, Source<TVal, TMat>, TMat> SplitWhen<TIn, TOut, TMat, TVal>(this Flow<TIn, TOut, TMat> flow, SubstreamCancelStrategy substreamCancelStrategy, Func<TOut, bool> predicate) where TVal : TOut
+        public static SubFlow<TOut, TMat, Sink<TIn, TMat>> SplitWhen<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Func<TOut, bool> predicate)
         {
-            return (Flow<TIn, Source<TVal, TMat>, TMat>)flow.SplitWhen<TOut, TMat, TVal>(substreamCancelStrategy, predicate);
+            return SplitWhen(flow, SubstreamCancelStrategy.Drain, predicate);
         }
 
         /// <summary>
@@ -963,9 +969,19 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// '''Cancels when''' downstream cancels and substreams cancel
         /// </summary>
-        public static Flow<TIn, Source<TVal, TMat>, TMat> SplitAfter<TIn, TOut, TMat, TVal>(this Flow<TIn, TOut, TMat> flow, Predicate<TOut> predicate, SubstreamCancelStrategy substreamCancelStrategy = SubstreamCancelStrategy.Drain) where TVal : TOut
+        public static SubFlow<TOut, TMat, Sink<TIn, TMat>> SplitAfter<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, SubstreamCancelStrategy substreamCancelStrategy, Func<TOut, bool> predicate)
         {
-            return (Flow<TIn, Source<TVal, TMat>, TMat>)InternalFlowOperations.SplitAfter<TOut, TMat, TVal>(flow, substreamCancelStrategy, predicate);
+            return flow.SplitAfter(substreamCancelStrategy, predicate, (f, s) => ((Flow<TIn, Source<TOut, Unit>, TMat>) f).To(s));
+        }
+
+        /// <summary>
+        /// This operation applies the given predicate to all incoming elements and
+        /// emits them to a stream of output streams. It *ends* the current substream when the
+        /// predicate is true.
+        /// </summary>
+        public static SubFlow<TOut, TMat, Sink<TIn, TMat>> SplitAfter<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Func<TOut, bool> predicate)
+        {
+            return SplitAfter(flow, SubstreamCancelStrategy.Drain, predicate);
         }
 
         /// <summary>

@@ -9,7 +9,7 @@ namespace Akka.Streams.Dsl
     /// SubFlows cannot contribute to the super-flow’s materialized value since they
     /// are materialized later, during the runtime of the flow graph processing.
     /// </summary>
-    public abstract class SubFlow<TOut, TMat> : IFlow<TOut, TMat>
+    public abstract class SubFlow<TOut, TMat, TClosed> : IFlow<TOut, TMat>
     {
         public abstract IFlow<T2, TMat> Via<T2, TMat2>(IGraph<FlowShape<TOut, T2>, TMat2> flow);
 
@@ -17,7 +17,7 @@ namespace Akka.Streams.Dsl
 
         /// <summary>
         /// Connect this `Source` to a `Sink` and run it. The returned value is the materialized value
-        /// of the `Sink`, e.g. the `Publisher` of a <see cref="Publisher"/>.
+        /// of the `Sink`, e.g. the `Publisher` of a <see cref="IPublisher"/>.
         /// </summary>
         public abstract TMat2 RunWith<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink, IMaterializer materializer);
 
@@ -25,7 +25,7 @@ namespace Akka.Streams.Dsl
         /// Attach a <see cref="Sink"/> to each sub-flow, closing the overall Graph that is being
         /// constructed.
         /// </summary>
-        public abstract IFlow<TOut, TMat> To<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink);
+        public abstract TClosed To<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink);
 
         /// <summary>
         /// Flatten the sub-flows back into the super-flow by performing a merge

@@ -710,7 +710,7 @@ namespace Akka.Streams.Implementation
     {
         public sealed override ImmutableArray<IModule> SubModules => ImmutableArray<IModule>.Empty;
         public sealed override IImmutableDictionary<OutPort, InPort> Downstreams => base.Downstreams;
-        public override IImmutableDictionary<InPort, OutPort> Upstreams => base.Upstreams;
+        public sealed override IImmutableDictionary<InPort, OutPort> Upstreams => base.Upstreams;
     }
 
     internal sealed class VirtualProcessor<T> : IProcessor<T, T>
