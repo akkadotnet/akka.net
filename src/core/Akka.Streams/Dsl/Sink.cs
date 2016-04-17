@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -107,7 +108,15 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Sink<TIn, Task<TIn>> First<TIn>()
         {
-            return FromGraph(new FirstOrDefault<TIn>(throwOnDefault: true).WithAttributes(DefaultAttributes.FirstOrDefaultSink));
+            return FromGraph(new FirstOrDefault<TIn>(throwOnDefault: true)
+                .WithAttributes(DefaultAttributes.FirstOrDefaultSink))
+                .MapMaterializedValue(e =>
+                {
+                    if(e.IsCompleted && e.Result == null)
+                        throw new InvalidOperationException("Sink.First materialized on an empty stream");
+
+                    return e;
+                });
         }
 
         /// <summary>
