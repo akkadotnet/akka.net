@@ -277,7 +277,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Reverse_Arrows_in_the_GraphDsl_must__work_across_a_Flow()
+        public void Reverse_Arrows_in_the_GraphDsl_must_work_across_a_Flow()
         {
             var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {

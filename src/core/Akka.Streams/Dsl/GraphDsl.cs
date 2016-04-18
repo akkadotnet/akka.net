@@ -242,25 +242,23 @@ namespace Akka.Streams.Dsl
             where TIn : TOut1
         {
             var b = ops.Builder;
-            var count = junction.Inlets.Count();
-            for (int n = 0; n < count; n++)
-            {
-                var inlet = junction.In(n);
-                if (!b.Module.Upstreams.ContainsKey(inlet))
-                {
-                    b.AddEdge(ops.Out, inlet);
-                    return b;
-                }
-            }
-
-            throw new ArgumentException("No more inlets free on junction", "junction");
+            var inlet = GraphDsl.FindIn(b, junction, 0);
+            b.AddEdge(ops.Out, inlet);
+            return b;
         }
 
         public static GraphDsl.Builder<TMat> To<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, UniformFanOutShape<TIn, TOut2> junction)
             where TIn : TOut1
         {
-            Bind(ops, junction);
-            return ops.Builder;
+            var b = ops.Builder;
+
+            if (!b.Module.Upstreams.ContainsKey(junction.In))
+            {
+                b.AddEdge(ops.Out, junction.In);
+                return b;
+            }
+
+            throw new ArgumentException("No more inlets free on junction", nameof(junction));
         }
 
         private static Outlet<TOut2> Bind<TIn, TOut1, TOut2, TMat>(GraphDsl.ForwardOps<TOut1, TMat> ops, UniformFanOutShape<TIn, TOut2> junction) where TIn : TOut1
@@ -357,7 +355,7 @@ namespace Akka.Streams.Dsl
         {
             var b = ops.Builder;
             var count = junction.Outlets.Count();
-            for (int n = 0; n < count; n++)
+            for (var n = 0; n < count; n++)
             {
                 var outlet = junction.Out(n);
                 if (!b.Module.Downstreams.ContainsKey(outlet))
@@ -367,23 +365,24 @@ namespace Akka.Streams.Dsl
                 }
             }
 
-            throw new ArgumentException("No more inlets free on junction", "junction");
+            throw new ArgumentException("No more inlets free on junction", nameof(junction));
         }
 
-        public static GraphDsl.ReverseOps<TIn, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, FlowShape<TOut1, TOut2> flow)
+        public static GraphDsl.ReverseOps<TOut1, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, FlowShape<TOut1, TOut2> flow)
             where TIn : TOut2
         {
             var b = ops.Builder;
             b.AddEdge(flow.Outlet, ops.In);
-            return new GraphDsl.ReverseOps<TIn, TMat>(b, ops.In);
+            return new GraphDsl.ReverseOps<TOut1, TMat>(b, flow.Inlet);
         }
 
-        public static GraphDsl.ReverseOps<TIn, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, IGraph<FlowShape<TOut1, TOut2>, TMat> flow)
+        public static GraphDsl.ReverseOps<TOut1, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, IGraph<FlowShape<TOut1, TOut2>, TMat> flow)
             where TIn : TOut2
         {
             var b = ops.Builder;
-            b.AddEdge(b.Add(flow).Outlet, ops.In);
-            return new GraphDsl.ReverseOps<TIn, TMat>(b, ops.In);
+            var f = b.Add(flow);
+            b.AddEdge(f.Outlet, ops.In);
+            return new GraphDsl.ReverseOps<TOut1, TMat>(b, f.Inlet);
         }
 
         public static GraphDsl.ReverseOps<TIn, TMat> Via<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, UniformFanInShape<TIn, TOut> junction)
