@@ -856,7 +856,7 @@ namespace Akka.Streams.Dsl
         {
             return flow.GroupBy(maxSubstreams, groupingFunc,
                 (f, s) => ((Flow<TIn, Source<TOut, Unit>, TMat>) f).To(s),
-                (f, o) => ((Flow<TIn, TOut, TMat>) f).DeprecatedAndThen<Source<TOut, Unit>>(o)
+                (f, o) => ((Flow<TIn, TOut, TMat>) f).DeprecatedAndThen(o)
                 );
         }
 
