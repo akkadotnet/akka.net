@@ -332,8 +332,11 @@ namespace Akka.Streams.Tests.Dsl
                     {
                         source.RunWith(Sink.Ignore<int>(), Materializer);
                         // Sink.ignore+mapAsync pipes error back
-                        return source.RunWith(Sink.Ignore<int>(), Materializer)
-                            .ContinueWith(t => 1, TaskContinuationOptions.OnlyOnRanToCompletion);
+                        return Task.Run(() =>
+                        {
+                            source.RunWith(Sink.Ignore<int>(), Materializer).Wait(TimeSpan.FromSeconds(3));
+                            return 1;
+                        });
                     })
                     .RunWith(Sink.Ignore<int>(), Materializer);
                 task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))

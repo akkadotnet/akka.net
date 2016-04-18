@@ -187,7 +187,7 @@ namespace Akka.Streams.Dsl
                 .Wire(Shape.Outlet, copy.Shape.Inlets.First())
                 .Wire(copy.Shape.Outlets.First(), Shape.Inlet));
         }
-
+        
         internal Flow<TIn, TOut2, TMat> DeprecatedAndThen<TOut2>(StageModule<TOut, TOut2> op)
         {
             //No need to copy here, op is a fresh instance
@@ -195,6 +195,21 @@ namespace Akka.Streams.Dsl
                 ? new Flow<TIn, TOut2, TMat>(op)
                 : new Flow<TIn, TOut2, TMat>(
                     Module.Fuse(op, Shape.Outlet, op.In).ReplaceShape(new FlowShape<TIn, TOut2>(Shape.Inlet, op.Out)));
+        }
+
+        internal Flow<TIn, TOut2, TMat2> DeprecatedAndThenMaterialized<TOut2, TMat2>(Func<Tuple<IProcessor<TIn, TOut2>, TMat2>> factory)
+        {
+            var op = new DirectProcessor<TIn, TOut2>(() =>
+            {
+                var t = factory();
+                return Tuple.Create<IProcessor<TIn, TOut2>, object>(t.Item1, t.Item2);
+            });
+            if(IsIdentity)
+                return new Flow<TIn, TOut2, TMat2>(op);
+            return
+                new Flow<TIn, TOut2, TMat2>(
+                    Module.Fuse<TMat, TMat2, TMat2>(op, Shape.Outlet, op.In , Keep.Right)
+                        .ReplaceShape(new FlowShape<TIn, TOut2>(Shape.Inlet, op.Out)));
         }
 
         /// <summary>
@@ -252,7 +267,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Flow<TIn, TOut, TMat> FromProcessorMaterialized<TIn, TOut, TMat>(Func<Tuple<IProcessor<TIn, TOut>, TMat>> factory)
         {
-            throw new NotImplementedException();
+            return Create<TIn>().DeprecatedAndThenMaterialized(factory);
         }
 
         /// <summary>

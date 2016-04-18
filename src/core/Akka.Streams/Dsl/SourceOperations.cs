@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Akka.Event;
 using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Stage;
+using Akka.Streams.Supervision;
 using Akka.Streams.Util;
 
 namespace Akka.Streams.Dsl
@@ -949,11 +950,11 @@ namespace Akka.Streams.Dsl
         /// explicit buffers are filled.
         ///
         /// If the split <paramref name="predicate"/> throws an exception and the supervision decision
-        /// is <see cref="Stop"/> the stream and substreams will be completed
+        /// is <see cref="Directive.Stop"/> the stream and substreams will be completed
         /// with failure.
         ///
         /// If the split <paramref name="predicate"/> throws an exception and the supervision decision
-        /// is <see cref="Directive.Resume"/> or <see cref="Restart"/>
+        /// is <see cref="Directive.Resume"/> or <see cref="Directive.Restart"/>
         /// the element is dropped and the stream and substreams continue.
         /// <para>
         /// '''Emits when''' an element passes through.When the provided predicate is true it emitts the element
