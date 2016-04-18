@@ -251,7 +251,6 @@ namespace Akka.Streams.Tests.Dsl
                             this);
                         s1.Cancel();
                         masterSubscriber.ExpectComplete();
-
                     });
             }, Materializer);
         }

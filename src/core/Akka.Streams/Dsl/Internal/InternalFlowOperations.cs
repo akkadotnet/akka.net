@@ -9,6 +9,7 @@ using Akka.IO;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
+using Akka.Streams.Supervision;
 using Akka.Streams.Util;
 
 namespace Akka.Streams.Dsl.Internal
@@ -989,7 +990,7 @@ namespace Akka.Streams.Dsl.Internal
             SubstreamCancelStrategy substreamCancelStrategy, Func<T, bool> predicate,
             Func<IFlow<Source<T, Unit>, TMat>, Sink<Source<T, Unit>, Task>, TClosed> toFunc)
         {
-            var merge = new SplitWhenMergeBack<T, TMat>(flow, predicate);
+            var merge = new SplitWhenMergeBack<T, TMat>(flow, predicate, substreamCancelStrategy);
 
             Func<Sink<T, TMat>, TClosed> finish = s =>
             {
@@ -1004,16 +1005,18 @@ namespace Akka.Streams.Dsl.Internal
         {
             private readonly IFlow<TOut, TMat> _self;
             private readonly Func<TOut, bool> _predicate;
+            private readonly SubstreamCancelStrategy _substreamCancelStrategy;
 
-            public SplitWhenMergeBack(IFlow<TOut, TMat> self, Func<TOut, bool> predicate)
+            public SplitWhenMergeBack(IFlow<TOut, TMat> self, Func<TOut, bool> predicate, SubstreamCancelStrategy substreamCancelStrategy)
             {
                 _self = self;
                 _predicate = predicate;
+                _substreamCancelStrategy = substreamCancelStrategy;
             }
 
             public IFlow<T, TMat> Apply<T>(Flow<TOut, T, TMat> flow, int breadth)
             {
-                return _self.Via(Fusing.Split.When(_predicate, SubstreamCancelStrategy.Drain))
+                return _self.Via(Fusing.Split.When(_predicate, _substreamCancelStrategy))
                     .Map(f => f.Via(flow))
                     .Via(new Fusing.FlattenMerge<Source<T, Unit>, T, Unit>(breadth));
             }
@@ -1044,11 +1047,11 @@ namespace Akka.Streams.Dsl.Internal
         /// explicit buffers are filled.
         ///
         /// If the split <paramref name="predicate"/> throws an exception and the supervision decision
-        /// is <see cref="Stop"/> the stream and substreams will be completed
+        /// is <see cref="Directive.Stop"/> the stream and substreams will be completed
         /// with failure.
         ///
         /// If the split <paramref name="predicate"/> throws an exception and the supervision decision
-        /// is <see cref="Directive.Resume"/> or <see cref="Restart"/>
+        /// is <see cref="Directive.Resume"/> or <see cref="Directive.Restart"/>
         /// the element is dropped and the stream and substreams continue.
         /// <para>
         /// '''Emits when''' an element passes through.When the provided predicate is true it emitts the element
@@ -1066,7 +1069,7 @@ namespace Akka.Streams.Dsl.Internal
             SubstreamCancelStrategy substreamCancelStrategy, Func<T, bool> predicate,
             Func<IFlow<Source<T, Unit>, TMat>, Sink<Source<T, Unit>, Task>, TClosed> toFunc)
         {
-            var merge = new SplitAfterMergeBack<T, TMat>(flow, predicate);
+            var merge = new SplitAfterMergeBack<T, TMat>(flow, predicate, substreamCancelStrategy);
 
             Func<Sink<T, TMat>, TClosed> finish = s =>
             {
@@ -1081,16 +1084,18 @@ namespace Akka.Streams.Dsl.Internal
         {
             private readonly IFlow<TOut, TMat> _self;
             private readonly Func<TOut, bool> _predicate;
+            private readonly SubstreamCancelStrategy _substreamCancelStrategy;
 
-            public SplitAfterMergeBack(IFlow<TOut, TMat> self, Func<TOut, bool> predicate)
+            public SplitAfterMergeBack(IFlow<TOut, TMat> self, Func<TOut, bool> predicate, SubstreamCancelStrategy substreamCancelStrategy)
             {
                 _self = self;
                 _predicate = predicate;
+                _substreamCancelStrategy = substreamCancelStrategy;
             }
 
             public IFlow<T, TMat> Apply<T>(Flow<TOut, T, TMat> flow, int breadth)
             {
-                return _self.Via(Fusing.Split.After(_predicate, SubstreamCancelStrategy.Drain))
+                return _self.Via(Fusing.Split.After(_predicate, _substreamCancelStrategy))
                     .Map(f => f.Via(flow))
                     .Via(new Fusing.FlattenMerge<Source<T, Unit>, T, Unit>(breadth));
             }
