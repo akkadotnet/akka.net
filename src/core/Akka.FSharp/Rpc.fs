@@ -70,6 +70,10 @@ module Rpc =
 
             x.AsyncResult req
 
+        member x.Self       = orig.Self
+        member x.Sender()   = orig.Sender()
+        member x.Context    = orig.Context
+
     /// <summary>
     /// Spawns an actor using specified actor computation expression, with custom spawn option settings.
     /// The actor can only be used locally. 

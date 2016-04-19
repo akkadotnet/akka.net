@@ -143,3 +143,50 @@ let ``actor that accepts unit will receive unit message`` () =
     let response = aref <? () |> Async.RunSynchronously
     response
     |> equals "SomethingToReturn"
+
+[<Fact>]
+// SUCCEEDS
+let ``actor that wait for 3s`` () =    
+    let timeoutConfig =
+        """
+        akka { 
+            actor {
+                ask-timeout = 5s
+            }
+        }
+        """
+        |> Configuration.parse 
+
+    let system = System.create "my-system" timeoutConfig
+
+    let agentOne (mb: Rpc.Actor<unit>) =
+        let rec loop () = actor {
+            let! msg = mb.Receive()
+            mb.Sender().Tell DateTime.Now
+            return! loop() 
+        }
+        loop ()
+
+    let arefOne = Rpc.spawn system "UnitActor" agentOne
+
+    let agentTwo (mb: Rpc.Actor<DateTime>) =
+        let rec loop () = actor {
+            let! msg = mb.Receive()
+            let sender = mb.Sender
+            let dtPast  = DateTime.Now
+            let! (dtNow : DateTime) =
+                async {
+                    do! Async.Sleep 3000
+                    let! (retVal : DateTime) = arefOne.Ask ((), TimeSpan.FromSeconds 4.0)
+                    return retVal
+                } |> mb.AsyncResult
+            sender().Tell ((dtPast, dtNow))
+            return ()
+        }
+        loop ()
+    let arefTwo = Rpc.spawn system "UnitActor" agentTwo
+
+    let ((dtPast, dtNow) : DateTime * DateTime) = arefTwo <? DateTime.Now |> Async.RunSynchronously
+    
+    (dtNow - dtPast).TotalSeconds |> int
+    |> equals 3
