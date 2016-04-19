@@ -399,9 +399,11 @@ namespace Akka.Streams.Implementation
 
             StreamLayout.IMaterializedValueNode comp;
 
-            if (IsKeepLeft(matFunc) && IsIgnorable(matComputationRight)) comp = matComputationLeft;
-            else if (IsKeepRight(matFunc) && IsIgnorable(matComputationLeft)) comp = matComputationRight;
-            else comp = new StreamLayout.Combine((x, y) => matFunc((T1)x, (T2)y), matComputationLeft, matComputationRight);
+            // TODO this optimization makes to GraphMatValueSpec tests fail, investigate and un-comment
+            // if (IsKeepLeft(matFunc) && IsIgnorable(matComputationRight)) comp = matComputationLeft;
+            // else if (IsKeepRight(matFunc) && IsIgnorable(matComputationLeft)) comp = matComputationRight;
+            // else comp = new StreamLayout.Combine((x, y) => matFunc((T1)x, (T2)y), matComputationLeft, matComputationRight);
+            comp = new StreamLayout.Combine((x, y) => matFunc((T1)x, (T2)y), matComputationLeft, matComputationRight);
 
             return new CompositeModule(
                 subModules: modules1.Concat(modules2).ToImmutableArray(),
@@ -414,6 +416,8 @@ namespace Akka.Streams.Implementation
                 attributes: Attributes.None);
         }
         
+        /*
+        // Commented out, part of the optimization mentioned above
         private static readonly RuntimeMethodHandle KeepRightMethodhandle = typeof (Keep).GetMethod(nameof(Keep.Right)).MethodHandle;
         private bool IsKeepRight<T1, T2, T3>(Func<T1, T2, T3> fn)
         {
@@ -440,7 +444,7 @@ namespace Akka.Streams.Implementation
             if (module is FusedModule) return IsIgnorable(((FusedModule) module).MaterializedValueComputation);
 
             throw new NotSupportedException($"Module of type {module.GetType()} is not supported by this method");
-        }
+        }*/
 
         public IModule ComposeNoMaterialized(IModule that)
         {
@@ -628,8 +632,6 @@ namespace Akka.Streams.Implementation
 
         public override IModule WithAttributes(Attributes attributes) => new CompositeModule(SubModules, Shape, Downstreams, Upstreams, MaterializedValueComputation, attributes);
 
-        public override string ToString() => $"Composite({string.Join(", ", SubModules)})";
-
         public static CompositeModule Create(Module module, Shape shape)
         {
             return new CompositeModule(
@@ -640,6 +642,15 @@ namespace Akka.Streams.Implementation
                 new StreamLayout.Atomic(module),
                 Attributes.None
                 );
+        }
+
+        public override string ToString()
+        {
+            return $"\n  Name: {Attributes.GetNameOrDefault("unnamed")}" +
+                   "\n  Modules:" +
+                   $"\n    {string.Join("\n    ", SubModules.Select(m => m.Attributes.GetNameLifted() ?? m.ToString().Replace("\n", "\n    ")))}" +
+                   $"\n  Downstreams: {string.Join("", Downstreams.Select(kvp => $"\n    {kvp.Key} -> {kvp.Value}"))}" +
+                   $"\n  Upstreams: {string.Join("", Upstreams.Select(kvp => $"\n    {kvp.Key} -> {kvp.Value}"))}";
         }
     }
 
@@ -882,6 +893,8 @@ namespace Akka.Streams.Implementation
 
     internal abstract class MaterializerSession
     {
+        public static readonly bool IsDebug = false;
+
         public class MaterializationPanicException : Exception
         {
             public MaterializationPanicException(Exception innerException) : base("Materialization aborted.", innerException)
@@ -1014,6 +1027,7 @@ namespace Akka.Streams.Implementation
 
         protected void RegisterSource(IMaterializedValueSource materializedSource)
         {
+            if (IsDebug) Console.WriteLine($"Registering source {materializedSource}");
             LinkedList<IMaterializedValueSource> sources;
             if (_materializedValueSources.TryGetValue(materializedSource.Computation, out sources))
                 sources.AddFirst(materializedSource);
@@ -1050,6 +1064,14 @@ namespace Akka.Streams.Implementation
                     materializedValues.Add(submodule, MaterializeComposite(submodule, subEffectiveAttributes));
             }
 
+            if (IsDebug)
+            {
+                Console.WriteLine("RESOLVING");
+                Console.WriteLine($"  module = {module}");
+                Console.WriteLine($"  computation = {module.MaterializedValueComputation}");
+                Console.WriteLine($"  matValSrc = {_materializedValueSources}");
+                Console.WriteLine($"  matVals = {materializedValues}");
+            }
             return ResolveMaterialized(module.MaterializedValueComputation, materializedValues, "  ");
         }
 
@@ -1062,6 +1084,7 @@ namespace Akka.Streams.Implementation
 
         private object ResolveMaterialized(StreamLayout.IMaterializedValueNode node, IDictionary<IModule, object> values, string indent)
         {
+            if (IsDebug) Console.WriteLine($"{indent}{node}");
             object result;
             if (node is StreamLayout.Atomic)
             {
@@ -1081,9 +1104,11 @@ namespace Akka.Streams.Implementation
             }
             else result = null;
 
+            if (IsDebug) Console.WriteLine($"{indent}result = {result}");
             LinkedList<IMaterializedValueSource> sources;
             if (_materializedValueSources.TryGetValue(node, out sources))
             {
+                if (IsDebug) Console.WriteLine($"{indent}triggering sources {sources}");
                 _materializedValueSources.Remove(node);
                 foreach (var source in sources)
                     source.SetValue(result);

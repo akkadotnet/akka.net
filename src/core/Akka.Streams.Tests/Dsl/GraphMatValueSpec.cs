@@ -76,8 +76,9 @@ namespace Akka.Streams.Tests.Dsl
         private static Source<Task<int>, Task<int>> FoldFeedbackSource => Source.FromGraph(GraphDsl.Create(FoldSink,
             (b, fold) =>
             {
-                var source = Source.From(Enumerable.Range(1, 10)).MapMaterializedValue(_ => Task.FromResult(0));
-                b.From(source).To(fold);
+                var source = Source.From(Enumerable.Range(1, 10));
+                var shape = b.Add(source);
+                b.From(shape).To(fold);
                 return new SourceShape<Task<int>>(b.MaterializedValue);
             }));
 
@@ -99,7 +100,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Graph_with_materialized_value_must_allow_exposing_the_materialized_values_as_port_even_if_wrappend_and_the_final_materialized_value_is_unit()
+        public void A_Graph_with_materialized_value_must_allow_exposing_the_materialized_values_as_port_even_if_wrapped_and_the_final_materialized_value_is_unit()
         {
             var noMatSource =
                 FoldFeedbackSource.MapAsync(4, x => x).Map(x => x + 100).MapMaterializedValue(_ => Unit.Instance);
@@ -117,7 +118,7 @@ namespace Akka.Streams.Tests.Dsl
                     var zip = b.Add(new ZipWith<int, int, int>((i, i1) => i + i1));
 
                     b.From(s1.Outlet).Via(Flow.Create<Task<int>>().MapAsync(4, x => x)).To(zip.In0);
-                    b.From(s1.Outlet).Via(Flow.Create<Task<int>>().MapAsync(4, x => x).Map(x => x*100)).To(zip.In1);
+                    b.From(s2.Outlet).Via(Flow.Create<Task<int>>().MapAsync(4, x => x).Map(x => x*100)).To(zip.In1);
                     
                     return new SourceShape<int>(zip.Out);
                 }));
@@ -128,7 +129,7 @@ namespace Akka.Streams.Tests.Dsl
                     var zip = b.Add(new ZipWith<int, int, int>((i, i1) => i + i1));
 
                     b.From(s1.Outlet).To(zip.In0);
-                    b.From(s2.Outlet).Via(Flow.Create<int>().Map(x => x*1000)).To(zip.In1);
+                    b.From(s2.Outlet).Via(Flow.Create<int>().Map(x => x*10000)).To(zip.In1);
 
                     return new SourceShape<int>(zip.Out);
                 }));
