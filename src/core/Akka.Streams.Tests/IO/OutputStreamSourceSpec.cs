@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Reactive.Streams;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
@@ -235,6 +236,8 @@ namespace Akka.Streams.Tests.IO
 
                 s.Cancel();
                 sourceProbe.ExpectMsg<GraphStageMessages.DownstreamFinish>();
+
+                Thread.Sleep(500);
                 outputStream.Invoking(os => os.Write(_bytesArray, 0, _bytesArray.Length)).ShouldThrow<IOException>();
             }, _materializer);
         }

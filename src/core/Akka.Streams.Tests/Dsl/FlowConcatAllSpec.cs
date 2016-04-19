@@ -1,10 +1,12 @@
-﻿using System.Reactive.Streams;
+﻿using System.Linq;
+using System.Reactive.Streams;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using Akka.Streams.Dsl.Internal;
 // ReSharper disable InvokeAsExtensionMethod
 
 namespace Akka.Streams.Tests.Dsl
@@ -46,26 +48,19 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip = "We need to implement SubFlow first")]
+        [Fact]
         public void ConcatAll_must_work_together_with_SplitWhen()
         {
-            /*
-             val subscriber = TestSubscriber.probe[Int]()
-              Source(1 to 10)
-                .splitWhen(_ % 2 == 0)
-                .prefixAndTail(0)
-                .map(_._2)
-                .concatSubstreams
-                .flatMapConcat(ConstantFun.scalaIdentityFunction)
-                .runWith(Sink.fromSubscriber(subscriber))
+            var subscriber = TestSubscriber.CreateProbe<int>(this);
+            var subflow = Source.From(Enumerable.Range(1, 10)).SplitWhen(x => x%2 == 0).PrefixAndTail(0).Map(x => x.Item2);
+            var source = ((SubFlow<Source<int, Unit>, Unit, IRunnableGraph<Unit>>) subflow).ConcatSubstream().FlatMapConcat(x => x);
+            ((Source<int, Unit>) source).RunWith(Sink.FromSubscriber(subscriber), Materializer);
 
-              for (i ← 1 to 10)
-                subscriber.requestNext() shouldBe i
+            for (var i = 1; i <= 10; i++)
+                subscriber.RequestNext(i);
 
-              subscriber.request(1)
-              subscriber.expectComplete()
-            */
-        }
+            subscriber.Request(1);
+            subscriber.ExpectComplete();}
 
         [Fact]
         public void ConcatAll_must_on_OnError_on_master_stream_cancel_the_current_open_substream_and_signal_error()
@@ -239,7 +234,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip = "FlatMapConcat has type conflict due to different materialize types")]
+        [Fact]
         public void ConcatAll_must_pass_along_early_cancellation()
         {
             this.AssertAllStagesStopped(() =>
@@ -247,16 +242,16 @@ namespace Akka.Streams.Tests.Dsl
                 var up = TestPublisher.CreateManualProbe<Source<int, Unit>>(this);
                 var down = TestSubscriber.CreateManualProbe<int>(this);
 
-                //var flowSubscriber = Source.AsSubscriber<Source<int, Unit>>()
-                //    .FlatMapConcat(x => x)
-                //    .To(Sink.FromSubscriber(down))
-                //    .Run(Materializer);
+                var flowSubscriber = Source.AsSubscriber<Source<int, Unit>>()
+                    .FlatMapConcat(x => x.MapMaterializedValue<ISubscriber<Source<int, Unit>>>(_ => null))
+                    .To(Sink.FromSubscriber(down))
+                    .Run(Materializer);
 
-                //var downstream = down.ExpectSubscription();
-                //downstream.Cancel();
-                //up.Subscribe(flowSubscriber);
-                //var upSub = up.ExpectSubscription();
-                //upSub.ExpectCancellation();
+                var downstream = down.ExpectSubscription();
+                downstream.Cancel();
+                up.Subscribe(flowSubscriber);
+                var upSub = up.ExpectSubscription();
+                upSub.ExpectCancellation();
             }, Materializer);
         }
     }

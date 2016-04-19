@@ -1723,9 +1723,6 @@ namespace Akka.Streams.Stage
         public static readonly EnumerableActorName Name = new EnumerableActorNameImpl("StageActorRef", new AtomicCounterLong(0L));
 
         public readonly ILoggingAdapter Log;
-        private readonly IActorRefProvider _provider;
-        private readonly Func<Receive, Action<Tuple<IActorRef, object>>> _getAsyncCallback;
-        private readonly ActorPath _path;
         private readonly Action<Tuple<IActorRef, object>> _callback;
         private readonly AtomicReference<IImmutableSet<IActorRef>> _watchedBy = new AtomicReference<IImmutableSet<IActorRef>>(ImmutableHashSet<IActorRef>.Empty);
 
@@ -1735,51 +1732,56 @@ namespace Akka.Streams.Stage
         public StageActorRef(IActorRefProvider provider, ILoggingAdapter log, Func<Receive, Action<Tuple<IActorRef, object>>> getAsyncCallback, Receive initialReceive, ActorPath path)
         {
             Log = log;
-            _provider = provider;
-            _getAsyncCallback = getAsyncCallback;
+            Provider = provider;
             _behavior = initialReceive;
-            _path = path;
+            Path = path;
 
-            _callback = getAsyncCallback(InternalReceive);
+            _callback = getAsyncCallback(args => _behavior(args));
         }
 
-        public override ActorPath Path { get { return _path; } }
-        public override IActorRefProvider Provider { get { return _provider; } }
-        public override bool IsTerminated { get { return _watchedBy.Value == StageTerminatedTombstone; } }
+        public override ActorPath Path { get; }
 
-        internal void InternalReceive(Tuple<IActorRef, object> pack)
-        {
-            Terminated t;
-            if ((t = pack.Item2 as Terminated) != null && _watching.Contains(t.ActorRef))
-            {
-                _watching.Remove(t.ActorRef);
-            }
+        public override IActorRefProvider Provider { get; }
 
-            _behavior(pack);
-        }
+        public override bool IsTerminated => _watchedBy.Value == StageTerminatedTombstone;
 
         protected override void TellInternal(object message, IActorRef sender)
         {
-            if (message is PoisonPill || message is Kill)
+            Action logIgnored = () =>Log.Warning($"{message} message sent to StageActorRef({Path}) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.");
+            var handled = message.Match()
+                .With<Watch>(w => AddWatcher(w.Watchee, w.Watcher))
+                .With<Unwatch>(u => RemoveWatcher(u.Watchee, u.Watcher))
+                .With<PoisonPill>(logIgnored)
+                .With<Kill>(logIgnored)
+                .WasHandled;
+
+            if (handled)
+                return;
+
+            var death = message as DeathWatchNotification;
+            if (death != null)
+                message = new Terminated(death.Actor, true, false);
+
+            var t = message as Terminated;
+            if (t != null)
             {
-                Log.Warning("{0} message sent to StageActorRef({1}) will be ignored, since it is not a real Actor. Use a custom message type to communicate with it instead.",
-                    message, Path);
+                if (_watching.Contains(t.ActorRef))
+                    _watching.Remove(t.ActorRef);
+                else
+                    return;
             }
-            else _callback(Tuple.Create(sender, message));
+
+            _callback(Tuple.Create(sender, message));
         }
 
         public override void SendSystemMessage(ISystemMessage message, IActorRef sender)
         {
-            message.Match()
-                .With<Watch>(w => AddWatcher(w.Watchee, w.Watcher))
-                .With<Unwatch>(u => RemoveWatcher(u.Watchee, u.Watcher))
-                .With<DeathWatchNotification>(n => Tell(new Terminated(n.Actor, true, false), this));
+            var death = message as DeathWatchNotification;
+            if (death != null)
+                Tell(new Terminated(death.Actor, true, false), sender);
         }
 
-        public void Become(Receive behavior)
-        {
-            _behavior = behavior;
-        }
+        public void Become(Receive behavior) => _behavior = behavior;
 
         private void SendTerminated()
         {
@@ -1803,30 +1805,25 @@ namespace Akka.Streams.Stage
         public void Watch(IActorRef actorRef)
         {
             _watching = _watching.Add(actorRef);
-            ((IInternalActorRef)actorRef).SendSystemMessage(new Watch(actorRef, this), this);
+            actorRef.Tell(new Watch(actorRef, this), this);
         }
 
         public void Unwatch(IActorRef actorRef)
         {
             _watching = _watching.Remove(actorRef);
-            ((IInternalActorRef)actorRef).SendSystemMessage(new Unwatch(actorRef, this), this);
+            actorRef.Tell(new Unwatch(actorRef, this), this);
         }
 
-        public override void Stop()
-        {
-            SendTerminated();
-        }
+        public override void Stop() => SendTerminated();
 
         private void SendTerminated(IActorRef actorRef)
         {
-            ((IInternalActorRef)actorRef).SendSystemMessage(new DeathWatchNotification(this, true, false), this);
+            actorRef.Tell(new DeathWatchNotification(this, true, false), this);
         }
 
         private void UnwatchWatched(IActorRef actorRef)
         {
-            var localRef = actorRef as IInternalActorRef;
-            if (localRef != null)
-                localRef.SendSystemMessage(new Unwatch(actorRef, this), this);
+            actorRef.Tell(new Unwatch(actorRef, this), this);
         }
 
         private void AddWatcher(IActorRef watchee, IActorRef watcher)
@@ -1834,7 +1831,7 @@ namespace Akka.Streams.Stage
             while (true)
             {
                 var watchedBy = _watchedBy.Value;
-                if (watchedBy == null)
+                if (watchedBy == StageTerminatedTombstone)
                     SendTerminated(watcher);
                 else
                 {
