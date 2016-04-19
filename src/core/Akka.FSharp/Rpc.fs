@@ -7,9 +7,12 @@
 
 namespace Akka.FSharp
 
+open System
+open Akka.Actor
+
+[<AutoOpen>]
 module Rpc =
-    open System
-    open Akka.Actor
+
 
     let [<Literal>] MAX_WAIT_TIME_SECS = 60.0
 
@@ -67,3 +70,33 @@ module Rpc =
                       | None   -> TimeSpan.FromSeconds MAX_WAIT_TIME_SECS)
 
             x.AsyncResult req
+
+[<AutoOpen>]
+module Spawn =
+    /// <summary>
+    /// Spawns an actor using specified actor computation expression, with custom spawn option settings.
+    /// The actor can only be used locally. 
+    /// </summary>
+    /// <param name="actorFactory">Either actor system or parent actor</param>
+    /// <param name="name">Name of spawned child actor</param>
+    /// <param name="f">Used by actor for handling response for incoming request</param>
+    /// <param name="options">List of options used to configure actor creation</param>
+    let spawnOpt (actorFactory : IActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<obj, 'Returned>) 
+        (options : SpawnOption list) : IActorRef = 
+        let nf (shadAct : Akka.FSharp.Actors.Actor<obj>) =
+            let act = Rpc.Actor<'Message>(shadAct)
+            f act
+
+        let e = Linq.Expression.ToExpression(fun () -> new FunActor<obj, 'Returned>(nf))
+        let props = applySpawnOptions (Props.Create e) options
+        actorFactory.ActorOf(props, name)
+
+    /// <summary>
+    /// Spawns an actor using specified actor computation expression.
+    /// The actor can only be used locally. 
+    /// </summary>
+    /// <param name="actorFactory">Either actor system or parent actor</param>
+    /// <param name="name">Name of spawned child actor</param>
+    /// <param name="f">Used by actor for handling response for incoming request</param>
+    let spawn (actorFactory : IActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<obj, 'Returned>) : IActorRef = 
+        spawnOpt actorFactory name f []
