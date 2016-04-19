@@ -192,12 +192,7 @@ module Actors =
     
         /// Binds the next message.
         member __.Bind(m : IO<'In>, f : 'In -> _) = Func(fun m -> f m)
-
-        // handle async operations directly as let! operations
-        member __.Bind(m: Async<'In>, f : 'In -> _) =
-            let res = m |> Async.RunSynchronously
-            f res
-   
+  
         /// Binds the result of another actor computation expression.
         member this.Bind(x : Cont<'In, 'Out1>, f : 'Out1 -> Cont<'In, 'Out2>) : Cont<'In, 'Out2> = 
             match x with
