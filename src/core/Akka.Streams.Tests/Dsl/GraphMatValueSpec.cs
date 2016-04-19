@@ -100,7 +100,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Graph_with_materialized_value_must_allow_exposing_the_materialized_values_as_port_even_if_wrappend_and_the_final_materialized_value_is_unit()
+        public void A_Graph_with_materialized_value_must_allow_exposing_the_materialized_values_as_port_even_if_wrapped_and_the_final_materialized_value_is_unit()
         {
             var noMatSource =
                 FoldFeedbackSource.MapAsync(4, x => x).Map(x => x + 100).MapMaterializedValue(_ => Unit.Instance);

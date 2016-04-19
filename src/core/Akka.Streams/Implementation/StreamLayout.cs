@@ -399,9 +399,11 @@ namespace Akka.Streams.Implementation
 
             StreamLayout.IMaterializedValueNode comp;
 
-            if (IsKeepLeft(matFunc) && IsIgnorable(matComputationRight)) comp = matComputationLeft;
-            else if (IsKeepRight(matFunc) && IsIgnorable(matComputationLeft)) comp = matComputationRight;
-            else comp = new StreamLayout.Combine((x, y) => matFunc((T1)x, (T2)y), matComputationLeft, matComputationRight);
+            // TODO this optimization makes to GraphMatValueSpec tests fail, investigate and un-comment
+            // if (IsKeepLeft(matFunc) && IsIgnorable(matComputationRight)) comp = matComputationLeft;
+            // else if (IsKeepRight(matFunc) && IsIgnorable(matComputationLeft)) comp = matComputationRight;
+            // else comp = new StreamLayout.Combine((x, y) => matFunc((T1)x, (T2)y), matComputationLeft, matComputationRight);
+            comp = new StreamLayout.Combine((x, y) => matFunc((T1)x, (T2)y), matComputationLeft, matComputationRight);
 
             return new CompositeModule(
                 subModules: modules1.Concat(modules2).ToImmutableArray(),
@@ -414,6 +416,8 @@ namespace Akka.Streams.Implementation
                 attributes: Attributes.None);
         }
         
+        /*
+        // Commented out, part of the optimization mentioned above
         private static readonly RuntimeMethodHandle KeepRightMethodhandle = typeof (Keep).GetMethod(nameof(Keep.Right)).MethodHandle;
         private bool IsKeepRight<T1, T2, T3>(Func<T1, T2, T3> fn)
         {
@@ -440,7 +444,7 @@ namespace Akka.Streams.Implementation
             if (module is FusedModule) return IsIgnorable(((FusedModule) module).MaterializedValueComputation);
 
             throw new NotSupportedException($"Module of type {module.GetType()} is not supported by this method");
-        }
+        }*/
 
         public IModule ComposeNoMaterialized(IModule that)
         {
