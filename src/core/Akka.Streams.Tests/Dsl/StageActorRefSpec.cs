@@ -191,6 +191,24 @@ namespace Akka.Streams.Tests.Dsl
             res.Result.Should().Be(42);
         }
 
+        [Fact]
+        public void A_Graph_stage_ActorRef_must_be_able_to_watch_other_actors()
+        {
+            var killMe = ActorOf(dsl => { }, "KilMe");
+            var t = Source.Maybe<int>().ToMaterialized(SumStage(TestActor), Keep.Both).Run(Materializer);
+            var source = t.Item1;
+            var res = t.Item2;
+
+            var stageRef = ExpectMsg<IActorRef>();
+            stageRef.Tell(new WatchMe(killMe));
+            stageRef.Tell(new Add(1));
+            killMe.Tell(PoisonPill.Instance);
+            ExpectMsg<WatcheeTerminated>().Watchee.Should().Be(killMe);
+
+            source.SetResult(0);
+            res.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            res.Result.Should().Be(1);
+        }
 
         private sealed class Add
         {
@@ -230,7 +248,24 @@ namespace Akka.Streams.Tests.Dsl
             public static readonly StopNow Instance = new StopNow();
             private StopNow() { }
         }
+        private sealed class WatchMe
+        {
+            public WatchMe(IActorRef watchee)
+            {
+                Watchee = watchee;
+            }
 
+            public IActorRef Watchee { get; }
+        }
+        private sealed class WatcheeTerminated
+        {
+            public WatcheeTerminated(IActorRef watchee)
+            {
+                Watchee = watchee;
+            }
+
+            public IActorRef Watchee { get; }
+        }
 
         private class SumTestStage : GraphStageWithMaterializedValue<SinkShape<int>, Task<int>>
         {
@@ -291,7 +326,9 @@ namespace Akka.Streams.Tests.Dsl
                         {
                             _sum += a.N;
                             sender.Tell(_sum, _self);
-                        });
+                        })
+                        .With<WatchMe>(w => _self.Watch(w.Watchee))
+                        .With<Terminated>(t => _stage._probe.Tell(new WatcheeTerminated(t.ActorRef)));
                 }
             }
 #endregion
