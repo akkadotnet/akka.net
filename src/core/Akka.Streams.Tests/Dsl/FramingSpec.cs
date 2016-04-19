@@ -200,7 +200,7 @@ namespace Akka.Streams.Tests.Dsl
             return ByteString.Create(new byte[fieldOffset]) + header + payload;
         }
 
-        [Fact(Skip = "We need more performance to run this test, it takes ~2 minutes and is passing")]
+        [Fact]
         public void Length_field_based_framing_must_work_with_various_byte_orders_frame_lengths_and_offsets()
         {
             var counter = 1;
@@ -282,14 +282,16 @@ namespace Akka.Streams.Tests.Dsl
                             var fullFrame = Encode(ReferenceChunk.Take(frameLength), fieldOffset, fieldLength, byteOrder);
                             var partialFrame = fullFrame.DropRight(1);
 
-                            var task =
-                                Source.From(new[] { fullFrame, partialFrame })
-                                    .Via(Rechunk)
-                                    .Via(Framing.LengthField(fieldLength, int.MaxValue, fieldOffset, byteOrder))
-                                    .Grouped(10000)
-                                    .RunWith(Sink.First<IEnumerable<ByteString>>(), Materializer);
-
-                            task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Framing.FramingException>();
+                            Action action = () =>
+                            {
+                                    Source.From(new[] {fullFrame, partialFrame})
+                                        .Via(Rechunk)
+                                        .Via(Framing.LengthField(fieldLength, int.MaxValue, fieldOffset, byteOrder))
+                                        .Grouped(10000)
+                                        .RunWith(Sink.First<IEnumerable<ByteString>>(), Materializer)
+                                        .Wait(TimeSpan.FromSeconds(5));
+                            };
+                            action.ShouldThrow<Framing.FramingException>();
                         }
                     }
                 }
