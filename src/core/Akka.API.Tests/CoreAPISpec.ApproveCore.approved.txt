@@ -2915,7 +2915,7 @@ namespace Akka.IO
         BigEndian = 0,
         LittleEndian = 1,
     }
-    public abstract class ByteString : System.Collections.Generic.IEnumerable<byte>, System.Collections.Generic.IReadOnlyCollection<byte>, System.Collections.Generic.IReadOnlyList<byte>, System.Collections.IEnumerable
+    public abstract class ByteString : System.Collections.Generic.IEnumerable<byte>, System.Collections.Generic.IReadOnlyCollection<byte>, System.Collections.Generic.IReadOnlyList<byte>, System.Collections.IEnumerable, System.IEquatable<Akka.IO.ByteString>
     {
         public static readonly Akka.IO.ByteString Empty;
         protected ByteString() { }
@@ -2925,6 +2925,7 @@ namespace Akka.IO
         public abstract byte this[int index] { get; }
         public byte Last { get; }
         public bool NonEmpty { get; }
+        public abstract Akka.IO.ByteBuffer AsByteBuffer();
         public abstract Akka.IO.CompactByteString Compact();
         public abstract Akka.IO.ByteString Concat(Akka.IO.ByteString that);
         public int CopyToBuffer(Akka.IO.ByteBuffer buffer) { }
@@ -2936,6 +2937,8 @@ namespace Akka.IO
         public Akka.IO.ByteString Drop(int n) { }
         public Akka.IO.ByteString DropRight(int n) { }
         public Akka.IO.ByteString DropWhile(System.Func<byte, bool> p) { }
+        public bool Equals(Akka.IO.ByteString other) { }
+        public override bool Equals(object obj) { }
         public Akka.IO.ByteString FromArray(byte[] array) { }
         public Akka.IO.ByteString FromArray(byte[] array, int offset, int length) { }
         public static Akka.IO.ByteString FromByteBuffer(Akka.IO.ByteBuffer buffer) { }
@@ -4853,7 +4856,10 @@ namespace Akka.Util.Internal
         public int Current { get; }
         public int AddAndGet(int amount) { }
         public bool CompareAndSet(int expected, int newValue) { }
+        public int Decrement() { }
+        public int DecrementAndGet() { }
         public int GetAndAdd(int amount) { }
+        public int GetAndDecrement() { }
         public int GetAndIncrement() { }
         public int GetAndSet(int value) { }
         public int IncrementAndGet() { }
