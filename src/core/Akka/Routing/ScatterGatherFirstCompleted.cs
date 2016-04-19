@@ -1,16 +1,19 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ScatterGatherFirstCompleted.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Dispatch.SysMsg;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Routing
 {
@@ -78,14 +81,38 @@ namespace Akka.Routing
         /// <param name="sender">The actor sending the message.</param>
         public override void Send(object message, IActorRef sender)
         {
-            var tasks = new List<Task>();
-            foreach(var routee in _routees)
+            var tcs = new TaskCompletionSource<object>();
+
+            if (_routees.IsNullOrEmpty())
             {
-                var ask = routee.Ask(message, _within);
-                tasks.Add(ask);
+                tcs.SetResult(new Status.Failure(new AskTimeoutException("Timeout due to no routess")));
             }
-            var any = Task.WhenAny(tasks);
-            any.PipeTo(sender);
+            else
+            {
+                var tasks = _routees
+                    .Select(routee => routee.Ask(message, _within))
+                    .ToList();
+
+                Task
+                    .WhenAny(tasks)
+                    .ContinueWith(task =>
+                    {
+                        if (task.Result.IsCanceled)
+                        {
+                            tcs.SetResult(new Status.Failure(new AskTimeoutException($"Timeout after {_within.TotalSeconds} seconds")));
+                        }
+                        else if (task.Result.IsFaulted)
+                        {
+                            tcs.SetResult(new Status.Failure(task.Result.Exception));
+                        }
+                        else
+                        {
+                            tcs.SetResult(task.Result.Result);
+                        }
+                    });
+            }
+
+            tcs.Task.PipeTo(sender);
         }
     }
 

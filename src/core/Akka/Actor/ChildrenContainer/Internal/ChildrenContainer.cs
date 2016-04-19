@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ChildrenContainer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,8 +15,8 @@ namespace Akka.Actor.Internal
         IChildrenContainer Remove(IActorRef child);
         bool TryGetByName(string name, out IChildStats stats);
         bool TryGetByRef(IActorRef actor, out ChildRestartStats stats);
-        IReadOnlyList<IInternalActorRef> Children { get; }
-        IReadOnlyList<ChildRestartStats> Stats { get; }
+        IReadOnlyCollection<IInternalActorRef> Children { get; }
+        IReadOnlyCollection<ChildRestartStats> Stats { get; }
         IChildrenContainer ShallDie(IActorRef actor);
         IChildrenContainer Reserve(string name);
         IChildrenContainer Unreserve(string name);

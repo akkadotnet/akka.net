@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InboxSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -151,6 +151,14 @@ namespace Akka.Tests.Actor
             updatedSelect.Client.ShouldBe(updatedActorRef);
         }
 
+        [Fact]
+        public void Inbox_Receive_will_timeout_gracefully_if_timeout_is_already_expired()
+        {
+            var task = _inbox.ReceiveAsync(TimeSpan.FromSeconds(-1));
+
+            Assert.True(task.Wait(1000), "Receive did not complete in time.");
+            Assert.IsType<Status.Failure>(task.Result);
+        }
     }
 }
 

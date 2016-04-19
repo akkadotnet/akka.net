@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorLifeCycleSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -107,7 +107,7 @@ namespace Akka.Tests
         }
 
         [Fact(DisplayName = "invoke preRestart, preStart, postRestart when using OneForOneStrategy")]
-        public void ActorLifecycleTest1()
+        public void Actor_lifecycle_test1()
         {
             var generationProvider = new AtomicCounter();
             string id = Guid.NewGuid().ToString();
@@ -138,7 +138,7 @@ namespace Akka.Tests
         }
 
         [Fact(DisplayName="default for preRestart and postRestart is to call postStop and preStart respectively")]
-        public void ActorLifecycleTest2()
+        public void Actor_lifecycle_test2()
         {
             var generationProvider = new AtomicCounter();
             string id = Guid.NewGuid().ToString();            
@@ -169,7 +169,7 @@ namespace Akka.Tests
         } 
 
         [Fact(DisplayName="not invoke preRestart and postRestart when never restarted using OneForOneStrategy")]
-        public void ActorLifecycleTest3()
+        public void Actor_lifecycle_test3()
         {
             var generationProvider = new AtomicCounter();
             string id = Guid.NewGuid().ToString();            
@@ -199,7 +199,7 @@ namespace Akka.Tests
         }
 
         [Fact(DisplayName="log failures in postStop")]
-        public void LogFailuresInPostStop()
+        public void Log_failures_in_PostStop()
         {
             var a = Sys.ActorOf<EmptyActor>();
             EventFilter.Exception<Exception>(message: "hurrah").ExpectOne(() =>
@@ -255,7 +255,7 @@ namespace Akka.Tests
         }
 
         [Fact]
-        public void ClearBehaviorStackUponRestart()
+        public void Clear_behavior_stack_upon_restart()
         {
             var a = Sys.ActorOf(Props.Create(() => new BecomeActor(TestActor)));
 
@@ -339,7 +339,7 @@ namespace Akka.Tests
         }
 
         [Fact(DisplayName="If a parent receives a Terminated event for a child actor, the parent should no longer supervise it")]
-        public void ClearChildUponTerminated()
+        public void Clear_child_upon_terminated()
         {
             var names = new[] {"Bob", "Jameson", "Natasha"};
             var supervisor = Sys.ActorOf(Props.Create(() => new SupervisorTestActor(TestActor)));
@@ -379,7 +379,7 @@ namespace Akka.Tests
         class MyCustomException : Exception {}
 
         [Fact(DisplayName="PreRestart should receive correct cause, message and sender")]
-        public void CallPreStartWithCorrectMessageAndSender()
+        public void Call_PreStart_with_correct_message_and_sender()
         {
             var broken = ActorOf(c =>
             {

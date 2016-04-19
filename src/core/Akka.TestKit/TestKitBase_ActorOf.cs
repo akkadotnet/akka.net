@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestKitBase_ActorOf.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -130,6 +130,11 @@ namespace Akka.TestKit
             return Sys.ActorSelection(actorPath);
         }
 
+
+        public ActorSelection ActorSelection(IActorRef anchorRef, string actorPath)
+        {
+            return Sys.ActorSelection(anchorRef, actorPath);
+        }
 
         /// <summary>
         /// Create a new actor as child of specified supervisor and returns it as <see cref="TestActorRef{TActor}"/>

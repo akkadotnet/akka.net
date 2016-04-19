@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ByteIterator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -197,7 +197,11 @@ namespace Akka.Util
 
             public override bool HasNext
             {
-                get { return Current.HasNext; }
+                get
+                {
+                    if (!_iterators.IsEmpty) return Current.HasNext;
+                    return false;
+                }
             }
 
             public override byte Head
@@ -418,15 +422,15 @@ namespace Akka.Util
         /// <summary>Get a single Int from this iterator.</summary>
         public int GetInt(ByteOrder byteOrder = ByteOrder.BigEndian)
         {
-          return byteOrder == ByteOrder.BigEndian
-              ? (short)(((Next() & 0xff) << 24) 
-                      | ((Next() & 0xff) << 16)
-                      | ((Next() & 0xff) <<  8)
-                      | ((Next() & 0xff) <<  0))
-              : (short)(((Next() & 0xff) <<  0)
-                      | ((Next() & 0xff) <<  8)
-                      | ((Next() & 0xff) << 16)
-                      | ((Next() & 0xff) << 24));
+            return byteOrder == ByteOrder.BigEndian
+                         ? (((Next() & 0xff) << 24)
+                          | ((Next() & 0xff) << 16)
+                          | ((Next() & 0xff) << 8)
+                          | ((Next() & 0xff) << 0))
+                         : (((Next() & 0xff) << 0)
+                          | ((Next() & 0xff) << 8)
+                          | ((Next() & 0xff) << 16)
+                          | ((Next() & 0xff) << 24));
         }
 
         /// <summary>Get a single Long from this iterator.</summary>

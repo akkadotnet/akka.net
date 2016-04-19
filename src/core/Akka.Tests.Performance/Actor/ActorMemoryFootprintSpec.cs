@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorMemoryFootprintSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Util.Internal;
 using NBench;
@@ -50,7 +57,7 @@ namespace Akka.Tests.Performance.Actor
         [PerfBenchmark(Description = "Measures the amount of memory used by 10,000 UntypedActors", RunMode = RunMode.Iterations, NumberOfIterations = 13, TestMode = TestMode.Measurement)]
         [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
         [CounterMeasurement(CreateThroughputCounter)]
-        public void UntypedActorMemoryFootprint(BenchmarkContext context)
+        public void UntypedActor_memory_footprint(BenchmarkContext context)
         {
             for (var i = 0; i < ActorCreateNumber; i++)
             {
@@ -62,7 +69,7 @@ namespace Akka.Tests.Performance.Actor
         [PerfBenchmark(Description = "Measures the amount of memory used by 10,000 ReceiveActors", RunMode = RunMode.Iterations, NumberOfIterations = 13, TestMode = TestMode.Measurement)]
         [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
         [CounterMeasurement(CreateThroughputCounter)]
-        public void ReceiveActorMemoryFootprint(BenchmarkContext context)
+        public void ReceiveActor_memory_footprint(BenchmarkContext context)
         {
             for (var i = 0; i < ActorCreateNumber; i++)
             {

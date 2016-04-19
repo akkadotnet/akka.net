@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystemImpl.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,6 +15,7 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
+using Akka.Serialization;
 using Akka.Util;
 
 
@@ -106,11 +107,27 @@ namespace Akka.Actor.Internal
                 _logDeadLetterListener = SystemActorOf<DeadLetterListener>("deadLetterListener");
 
             _eventStream.StartUnsubscriber(this);
-
+            
+            WarnIfJsonIsDefaultSerializer();
 
             if (_settings.LogConfigOnStart)
             {
                 _log.Warning(Settings.ToString());
+            }
+        }
+
+        private void WarnIfJsonIsDefaultSerializer()
+        {
+            const string configPath = "akka.suppress-json-serializer-warning";
+            var showSerializerWarning = Settings.Config.HasPath(configPath) && !Settings.Config.GetBoolean(configPath);
+
+            if (showSerializerWarning &&
+                Serialization.FindSerializerForType(typeof (object)) is NewtonSoftJsonSerializer)
+            {
+                Log.Warning($"NewtonSoftJsonSerializer has been detected as a default serializer. " +
+                            $"It will be obsoleted in Akka.NET starting from version 1.5 in the favor of Wire " +
+                            $"(for more info visit: http://getakka.net/docs/Serialization#how-to-setup-wire-as-default-serializer ). " +
+                            $"If you want to suppress this message set HOCON `{configPath}` config flag to on.");
             }
         }
 
@@ -177,10 +194,8 @@ namespace Akka.Actor.Internal
         public override object RegisterExtension(IExtensionId extension)
         {
             if(extension == null) return null;
-            if(!_extensions.ContainsKey(extension.ExtensionType))
-            {
-                _extensions.TryAdd(extension.ExtensionType, new Lazy<object>(() => extension.CreateExtension(this)));
-            }
+
+            _extensions.GetOrAdd(extension.ExtensionType, t => new Lazy<object>(() => extension.CreateExtension(this), LazyThreadSafetyMode.ExecutionAndPublication));
 
             return extension.Get(this);
         }
@@ -403,7 +418,7 @@ namespace Akka.Actor.Internal
     class TerminationCallbacks
     {
         private Task _terminationTask;
-        private AtomicReference<Task> _atomicRef;
+        private readonly AtomicReference<Task> _atomicRef;
 
         public TerminationCallbacks(Task upStreamTerminated)
         {
@@ -411,7 +426,7 @@ namespace Akka.Actor.Internal
 
             upStreamTerminated.ContinueWith(_ =>
             {
-                _terminationTask = Interlocked.Exchange(ref _atomicRef, new AtomicReference<Task>(null)).Value;
+                _terminationTask = _atomicRef.GetAndSet(null);
                 _terminationTask.Start();
             });
         }

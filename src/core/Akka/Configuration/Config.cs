@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Config.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -393,6 +393,32 @@ namespace Akka.Configuration
         }
 
         /// <summary>
+        /// Converts the current configuration to a string 
+        /// </summary>
+        /// <param name="includeFallback">if true returns string with current config combined with fallback key-values else only current config key-values</param>
+        /// <returns></returns>
+        public string ToString(bool includeFallback)
+        {
+            if (includeFallback == false)
+                return ToString();
+
+            Config current = this;
+
+            if (current.Fallback == null)
+                return current.ToString();
+
+            Config clone = Copy();
+
+            while (current.Fallback != null)
+            {
+                clone.Root.GetObject().Merge(current.Fallback.Root.GetObject());
+                current = current.Fallback;
+            }
+
+            return clone.ToString();
+        }
+
+        /// <summary>
         /// Configure the current configuration with a secondary source.
         /// </summary>
         /// <param name="fallback">The configuration to use as a secondary source.</param>
@@ -483,6 +509,11 @@ namespace Akka.Configuration
                 current = current.Fallback;
             }
         }
+
+        /// <summary>
+        /// A static "Empty" configuration we can use instead of <c>null</c> in some key areas.
+        /// </summary>
+        public static readonly Config Empty = ConfigurationFactory.Empty;
     }
 
     /// <summary>

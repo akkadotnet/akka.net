@@ -1,10 +1,11 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="IllegalStateException.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Runtime.Serialization;
 using Akka.Actor;
 
@@ -20,6 +21,15 @@ namespace Akka.Pattern
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
         public IllegalStateException(string message) : base(message)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="IllegalStateException"/> class.
+        /// </summary>
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="innerEx">The inner <see cref="Exception"/> that was thrown.</param>
+        public IllegalStateException(string message, Exception innerEx) : base(message, innerEx)
         {
         }
 

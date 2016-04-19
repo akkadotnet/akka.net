@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestTransport.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -421,7 +421,7 @@ namespace Akka.Remote.Transport
             _transportTable = new ConcurrentDictionary<Address, Tuple<TestTransport, Task<IAssociationEventListener>>>();
 
         /// <summary>
-        /// Retrieves the specified <see cref="AssociationRegistry"/> associated with the <see cref="key"/>.
+        /// Retrieves the specified <see cref="AssociationRegistry"/> associated with the <paramref name="key"/>.
         /// </summary>
         /// <param name="key">The registry key - see the HOCON example for details.</param>
         /// <returns>An existing or new <see cref="AssociationRegistry"/> instance.</returns>

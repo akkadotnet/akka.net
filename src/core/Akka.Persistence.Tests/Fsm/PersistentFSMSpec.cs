@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentFSMSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,7 +19,7 @@ namespace Akka.Persistence.Tests.Fsm
         private readonly Random _random = new Random();
 
         public PersistentFSMSpec()
-            : base(Configuration("inmem", "PersistentFSMSpec"))
+            : base(Configuration("PersistentFSMSpec"))
         {
         }
 

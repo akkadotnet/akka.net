@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorSelectionSpecs.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading;
 using Akka.Actor;
 using Akka.Util.Internal;
@@ -59,7 +66,7 @@ namespace Akka.Tests.Performance.Actor
         [PerfBenchmark(Description = "Tests the message delivery throughput of NEW ActorSelections to NEW actors", 
             NumberOfIterations = 13, RunMode = RunMode.Throughput, RunTimeMilliseconds = 1000, TestMode = TestMode.Measurement)]
         [CounterMeasurement(ActorSelectionCounterName)]
-        public void NewActorSelectionOnNewActorThroughput(BenchmarkContext context)
+        public void New_ActorSelection_on_new_actor_throughput(BenchmarkContext context)
         {
             var actorRef = System.ActorOf(_oneMessageBenchmarkProps); // create a new actor every time
             System.ActorSelection(actorRef.Path).Tell("foo"); // send that actor a message via selection
@@ -70,7 +77,7 @@ namespace Akka.Tests.Performance.Actor
         [PerfBenchmark(Description = "Tests the message delivery throughput of REUSABLE ActorSelections to PRE-EXISTING actors",
             NumberOfIterations = 13, RunMode = RunMode.Iterations, TestMode = TestMode.Measurement)]
         [CounterMeasurement(ActorSelectionCounterName)]
-        public void ReusedActorSelectionOnPreExistingActorThroughput(BenchmarkContext context)
+        public void Reused_ActorSelection_on_pre_existing_actor_throughput(BenchmarkContext context)
         {
             var actorSelection = System.ActorSelection(_receiverActorPath);
             for (var i = 0; i < NumberOfMessages;)
@@ -84,7 +91,7 @@ namespace Akka.Tests.Performance.Actor
         [PerfBenchmark(Description = "Tests the message delivery throughput of NEW ActorSelections to PRE-EXISTING actors. This is really a stress test.",
             NumberOfIterations = 13, RunMode = RunMode.Iterations, TestMode = TestMode.Measurement)]
         [CounterMeasurement(ActorSelectionCounterName)]
-        public void NewActorSelectionOnPreExistingActorThroughput(BenchmarkContext context)
+        public void New_ActorSelection_on_pre_existing_actor_throughput(BenchmarkContext context)
         {
             for (var i = 0; i < NumberOfMessages;)
             {
@@ -97,7 +104,7 @@ namespace Akka.Tests.Performance.Actor
         [PerfBenchmark(Description = "Tests the throughput of resolving an ActorSelection on a pre-existing actor via ResolveOne",
             NumberOfIterations = 13, RunMode = RunMode.Throughput, RunTimeMilliseconds = 1000, TestMode = TestMode.Measurement)]
         [CounterMeasurement(ActorSelectionCounterName)]
-        public void ActorSelectionResolveOneThroughput(BenchmarkContext context)
+        public void ActorSelection_ResolveOne_throughput(BenchmarkContext context)
         {
             var actorRef= System.ActorSelection(_receiverActorPath).ResolveOne(TimeSpan.FromSeconds(2)).Result; // send that actor a message via selection
             _selectionOpCounter.Increment();
@@ -106,7 +113,7 @@ namespace Akka.Tests.Performance.Actor
         [PerfBenchmark(Description = "Continuously creates actors and attempts to resolve them immediately. Used to surface race conditions.",
             NumberOfIterations = 13, RunMode = RunMode.Throughput, RunTimeMilliseconds = 1000, TestMode = TestMode.Measurement)]
         [CounterMeasurement(ActorSelectionCounterName)]
-        public void ActorSelectionResolveOneStressTest(BenchmarkContext context)
+        public void ActorSelection_ResolveOne_stress_test(BenchmarkContext context)
         {
             var actorRef = System.ActorOf(_oneMessageBenchmarkProps); // create a new actor every time
             var actorRef2 = System.ActorSelection(actorRef.Path).ResolveOne(TimeSpan.FromSeconds(2)).Result; // send that actor a message via selection

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorRefFactoryShared.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -66,6 +66,17 @@ namespace Akka.Actor
             }
             
             return new ActorSelection(lookupRoot, path);
+        }
+
+        /// <summary>
+        ///     Construct an <see cref="Akka.Actor.ActorSelection"/> from the given string representing a path
+        ///     relative to the given target. This operation has to create all the
+        ///     matching magic, so it is preferable to cache its result if the
+        ///     intention is to send messages frequently.
+        /// </summary>
+        public static ActorSelection ActorSelection(IActorRef anchorActorRef, string path)
+        {
+            return new ActorSelection(anchorActorRef, path);
         }
     }
 }

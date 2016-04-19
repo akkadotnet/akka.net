@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterMessageSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -456,7 +456,7 @@ namespace Akka.Cluster.Proto
                 return new Reachability(recordBuilder.ToImmutable(), versionsBuilder.ToImmutable());
             };
 
-            Func<Msg.Member, Member> memberFromProto = member => Member.Create(addressMapping[member.AddressIndex], MemberStatusFromProto[member.Status],
+            Func<Msg.Member, Member> memberFromProto = member => Member.Create(addressMapping[member.AddressIndex], member.HasUpNumber ? member.UpNumber : 0, MemberStatusFromProto[member.Status],
                 member.RolesIndexesList.Select(x => roleMapping[x]).ToImmutableHashSet());
 
             var members = gossip.MembersList.Select(memberFromProto).ToImmutableSortedSet(Member.Ordering);

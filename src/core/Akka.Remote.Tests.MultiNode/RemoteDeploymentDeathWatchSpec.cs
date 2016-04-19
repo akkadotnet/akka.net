@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="RemoteWatcherSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// <copyright file="RemoteDeploymentDeathWatchSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -50,7 +50,7 @@ namespace Akka.Remote.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void AnActorSystemThatDeploysActorsOnAnotherNodeMustBeAbleToShutdownWhenRemoteNodeCrash()
+        public void An_actor_system_that_deploys_actors_on_another_node_must_be_able_to_shutdown_when_remote_node_crash()
         {
             RunOn(() =>
             {

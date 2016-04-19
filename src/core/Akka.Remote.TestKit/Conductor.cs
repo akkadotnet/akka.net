@@ -1,15 +1,17 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Conductor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Transport;
@@ -64,17 +66,23 @@ namespace Akka.Remote.TestKit
         public async Task<INode> StartController(int participants, RoleName name, INode controllerPort)
         {
             if(_controller != null) throw new IllegalStateException("TestConductorServer was already started");
-            _controller = _system.ActorOf(new Props(typeof (Controller), new object[] {participants, controllerPort}),
-                "controller");
+            _controller = _system.ActorOf(Props.Create(() => new Controller(participants, controllerPort)),
+               "controller");
             //TODO: Need to review this async stuff
-            var node = await _controller.Ask<INode>(TestKit.Controller.GetSockAddr.Instance).ConfigureAwait(false);
+            var node = await _controller.Ask<INode>(TestKit.Controller.GetSockAddr.Instance, Settings.QueryTimeout).ConfigureAwait(false);
             await StartClient(name, node).ConfigureAwait(false);
             return node;
         }
 
+        /// <summary>
+        /// Obtain the port to which the controller’s socket is actually bound. This
+        /// will deviate from the configuration in `akka.testconductor.port` in case
+        /// that was given as zero.
+        /// </summary>
+        /// <returns>The address of the controller's socket endpoint</returns>
         public Task<INode> SockAddr()
         {
-            return _controller.Ask<INode>(TestKit.Controller.GetSockAddr.Instance);
+            return Controller.Ask<INode>(TestKit.Controller.GetSockAddr.Instance, Settings.QueryTimeout);
         }
 
         /// <summary>
@@ -103,7 +111,7 @@ namespace Akka.Remote.TestKit
             float rateMBit)
         {
             RequireTestConductorTransport();
-            return Controller.Ask<Done>(new Throttle(node, target, direction, rateMBit));
+            return Controller.Ask<Done>(new Throttle(node, target, direction, rateMBit), Settings.QueryTimeout);
         }
 
         /// <summary>
@@ -127,10 +135,10 @@ namespace Akka.Remote.TestKit
 
         private void RequireTestConductorTransport()
         {
-            //TODO: What is helios equivalent of this?
-            /*if(!Transport.DefaultAddress.Protocol.Contains(".trttl.gremlin."))
+            // Verifies that the Throttle and  FailureInjector TransportAdapters are active
+            if(!Transport.DefaultAddress.Protocol.Contains(".trttl.gremlin."))
                 throw new ConfigurationException("To use this feature you must activate the failure injector adapters " +
-                    "(trttl, gremlin) by specifying `testTransport(on = true)` in your MultiNodeConfig.");*/
+                    "(trttl, gremlin) by specifying `TestTransport(on = true)` in your MultiNodeConfig.");
         }
 
         /// <summary>
@@ -160,7 +168,7 @@ namespace Akka.Remote.TestKit
         /// <returns></returns>
         public Task<Done> Disconnect(RoleName node, RoleName target)
         {
-            return Controller.Ask<Done>(new Disconnect(node, target, false));
+            return Controller.Ask<Done>(new Disconnect(node, target, false), Settings.QueryTimeout);
         }
 
         /// <summary>
@@ -173,7 +181,7 @@ namespace Akka.Remote.TestKit
         /// <returns></returns>
         public Task<Done> Abort(RoleName node, RoleName target)
         {
-            return Controller.Ask<Done>(new Disconnect(node, target, true));
+            return Controller.Ask<Done>(new Disconnect(node, target, true), Settings.QueryTimeout);
         }
 
         /// <summary>
@@ -187,7 +195,7 @@ namespace Akka.Remote.TestKit
         {
             // the recover is needed to handle ClientDisconnectedException exception,
             // which is normal during shutdown
-            return Controller.Ask(new Terminate(node, new Right<bool, int>(exitValue))).ContinueWith(t =>
+            return Controller.Ask(new Terminate(node, new Right<bool, int>(exitValue)), Settings.QueryTimeout).ContinueWith(t =>
             {
                 if(t.Result is Done) return Done.Instance;
                 var failure = t.Result as FSMBase.Failure;
@@ -209,7 +217,7 @@ namespace Akka.Remote.TestKit
         {
             // the recover is needed to handle ClientDisconnectedException exception,
             // which is normal during shutdown
-            return Controller.Ask(new Terminate(node, new Left<bool, int>(abort))).ContinueWith(t =>
+            return Controller.Ask(new Terminate(node, new Left<bool, int>(abort)), Settings.QueryTimeout).ContinueWith(t =>
             {
                 if (t.Result is Done) return Done.Instance;
                 var failure = t.Result as FSMBase.Failure;
@@ -224,7 +232,7 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public Task<IEnumerable<RoleName>> GetNodes()
         {
-            return Controller.Ask<IEnumerable<RoleName>>(TestKit.Controller.GetNodes.Instance);
+            return Controller.Ask<IEnumerable<RoleName>>(TestKit.Controller.GetNodes.Instance, Settings.QueryTimeout);
         }
 
         /// <summary>
@@ -237,7 +245,7 @@ namespace Akka.Remote.TestKit
         /// <returns></returns>
         public Task<Done> RemoveNode(RoleName node)
         {
-            return Controller.Ask<Done>(new Remove(node));
+            return Controller.Ask<Done>(new Remove(node), Settings.QueryTimeout);
         }
     }
 
@@ -262,7 +270,8 @@ namespace Akka.Remote.TestKit
         public async void OnConnect(INode remoteAddress, IConnection responseChannel)
         {
             _log.Debug("connection from {0}", responseChannel.RemoteHost);
-            //TODO: Seems wrong to create new RemoteConnection here
+            
+            // Duration of this Ask operation needs to be infinite
             var fsm = await _controller.Ask<IActorRef>(new Controller.CreateServerFSM(new RemoteConnection(responseChannel, this)), TimeSpan.FromMilliseconds(Int32.MaxValue));
             _clients.AddOrUpdate(responseChannel, fsm, (connection, @ref) => fsm);
         }

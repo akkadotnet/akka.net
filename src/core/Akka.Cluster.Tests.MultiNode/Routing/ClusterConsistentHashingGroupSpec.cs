@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterConsistentHashingGroupSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -108,7 +108,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         }
 
         //[MultiNodeFact(Skip = "Race conditions - needs debugging")]
-        public void AClusterRouterWithConsistentHashingGroupMustSendToSameDestinationsFromDifferentNodes()
+        public void A_cluster_router_with_consistent_hashing_group_must_send_to_same_destinations_from_different_nodes()
         {
             Sys.ActorOf(Props.Create<ClusterConsistentHashingGroupSpecConfig.Destination>(), "dest");
             AwaitClusterUp(_config.First, _config.Second, _config.Third);

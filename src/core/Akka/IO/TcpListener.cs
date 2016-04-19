@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpListener.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -67,18 +67,29 @@ namespace Akka.IO
             _channel = SocketChannel.Open().ConfigureBlocking(false);
 
             acceptLimit = bind.PullMode ? 0 : _tcp.Settings.BatchAcceptLimit;
-
+            
             var localAddress = new Func<EndPoint>(() =>
             {
-                var socket = _channel.Socket;
-                bind.Options.ForEach(x => x.BeforeServerSocketBind(_channel.Socket));
+                try
+                {
+                    var socket = _channel.Socket;
+                    bind.Options.ForEach(x => x.BeforeServerSocketBind(socket));
 
-                socket.Bind(bind.LocalAddress);
-                socket.Listen(bind.Backlog);
+                    socket.Bind(bind.LocalAddress);
+                    socket.Listen(bind.Backlog);
 
-                channelRegistry.Register(_channel,
-                    bind.PullMode ? SocketAsyncOperation.None : SocketAsyncOperation.Accept, Self);
-                return socket.LocalEndPoint;
+                    channelRegistry.Register(_channel,
+                        bind.PullMode ? SocketAsyncOperation.None : SocketAsyncOperation.Accept, Self);
+                    return socket.LocalEndPoint;
+                }
+                catch (Exception e)
+                {
+                    _bindCommander.Tell(bind.FailureMessage);
+                    _log.Error(e, "Bind failed for TCP channel on endpoint [{0}]", bind.LocalAddress);
+                    Context.Stop(Self);
+                }
+
+                return bind.LocalAddress;
             })();
         }
 

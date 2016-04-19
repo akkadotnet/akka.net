@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GossipSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -29,13 +29,13 @@ namespace Akka.Cluster.Tests
         static readonly Member e3 = TestMember.Create(e1.Address, MemberStatus.Down);
 
         [Fact]
-        public void AGossipMustReachConvergenceWhenItsEmpty()
+        public void A_gossip_must_reach_convergence_when_its_empty()
         {
             Assert.True(Gossip.Empty.Convergence(a1.UniqueAddress));
         }
 
         [Fact]
-        public void AGossipMustMergeMembersByStatusPriority()
+        public void A_gossip_must_merge_members_by_status_priority()
         {
             var g1 = Gossip.Create(ImmutableSortedSet.Create(a1, c1, e1));
             var g2 = Gossip.Create(ImmutableSortedSet.Create(a2, c2, e2));
@@ -50,7 +50,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AGossipMustMergeUnreachable()
+        public void A_gossip_must_merge_unreachable()
         {
             var r1 = Reachability.Empty.Unreachable(b1.UniqueAddress, a1.UniqueAddress)
                 .Unreachable(b1.UniqueAddress, c1.UniqueAddress);
@@ -70,7 +70,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AGossipMustMergeMembersByRemovingRemovedMembers()
+        public void A_gossip_must_merge_members_by_removing_removed_members()
         {
             // c3 removed
             var r1 = Reachability.Empty.Unreachable(b1.UniqueAddress, a1.UniqueAddress);
@@ -89,7 +89,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AGossipMustHaveLeaderAsFirstMemberBasedOnOrderingExceptExitingStatus()
+        public void A_gossip_must_have_leader_as_first_member_based_on_ordering_except_exiting_status()
         {
             Assert.Equal(c2.UniqueAddress, new Gossip(ImmutableSortedSet.Create(c2, e2)).Leader(c2.UniqueAddress));
             Assert.Equal(e2.UniqueAddress, new Gossip(ImmutableSortedSet.Create(c3, e2)).Leader(e2.UniqueAddress));
@@ -97,7 +97,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AGossipMustMergeSeenTableCorrectly()
+        public void A_gossip_must_merge_seen_table_correctly()
         {
             var vclockNode = VectorClock.Node.Create("something");
             var g1 =
@@ -127,7 +127,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AGossipMustKnowWhoIsYoungest()
+        public void A_gossip_must_know_who_is_youngest()
         {
             // a2 and e1 is Joining
             var g1 = new Gossip(ImmutableSortedSet.Create(a2, b1.CopyUp(3), e1),

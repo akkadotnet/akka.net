@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorTaskScheduler.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,6 +17,7 @@ namespace Akka.Dispatch
     public class ActorTaskScheduler : TaskScheduler
     {
         private readonly ActorCell _actorCell;
+        public object CurrentMessage { get; private set; }
 
         internal ActorTaskScheduler(ActorCell actorCell)
         {
@@ -57,8 +58,9 @@ namespace Akka.Dispatch
         }
 
         private void ScheduleTask(Task task)
-        {
-            _actorCell.Self.Tell(new ActorTaskSchedulerMessage(this, task), ActorRefs.NoSender);
+        {            
+            //we are in a max concurrency level 1 scheduler. reading CurrentMessage should be OK
+            _actorCell.Self.Tell(new ActorTaskSchedulerMessage(this, task, CurrentMessage), ActorRefs.NoSender);
         }
 
         internal void ExecuteTask(Task task)
@@ -95,6 +97,7 @@ namespace Akka.Dispatch
             mailbox.Suspend(MailboxSuspendStatus.AwaitingTask);
 
             ActorTaskScheduler actorScheduler = context.TaskScheduler;
+            actorScheduler.CurrentMessage = context.CurrentMessage;
 
             Task<Task>.Factory.StartNew(() => asyncAction(), CancellationToken.None, TaskCreationOptions.None, actorScheduler)
                               .Unwrap()
@@ -109,9 +112,10 @@ namespace Akka.Dispatch
                                   }
                                   else
                                   {
-                                      context.Self.Tell(new ActorTaskSchedulerMessage(exception), ActorRefs.NoSender);
+                                      context.Self.Tell(new ActorTaskSchedulerMessage(exception, actorScheduler.CurrentMessage), ActorRefs.NoSender);
                                   }
-
+                                  //clear the current message field of the scheduler
+                                  actorScheduler.CurrentMessage = null;
                               }, actorScheduler);
         }
 

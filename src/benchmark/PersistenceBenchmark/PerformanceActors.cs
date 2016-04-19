@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PerformanceActors.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -34,7 +34,7 @@ namespace PersistenceBenchmark
         protected bool ControlBehavior(object message)
         {
             var sender = Sender;
-            if (message is StopMeasure) Defer(StopMeasure.Instance, _ => sender.Tell(StopMeasure.Instance));
+            if (message is StopMeasure) DeferAsync(StopMeasure.Instance, _ => sender.Tell(StopMeasure.Instance));
             else if (message is FailAt) FailAt = ((FailAt)message).SequenceNr;
             else return false;
             return true;
@@ -125,7 +125,7 @@ namespace PersistenceBenchmark
             {
                 var context = Context;
                 Persist("c", _ => context.UnbecomeStacked());
-                UnstashAll();
+                Stash.UnstashAll();
             }
             else Stash.Stash();
             return true;

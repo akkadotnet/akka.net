@@ -1,3 +1,10 @@
+//-----------------------------------------------------------------------
+// <copyright file="TestTransportRemoteMessagingThroughputSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using Akka.Configuration;
 using Akka.Remote.Transport;
@@ -12,22 +19,27 @@ namespace Akka.Remote.Tests.Performance.Transports
         {
             var baseConfig = ConfigurationFactory.ParseString(@"
                 akka {
-              actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
+                    loglevel = ""WARNING""
+                    stdout-loglevel = ""WARNING""
+                    actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
 
-              remote {
-                log-remote-lifecycle-events = off
+                  remote {
+                    log-received-messages = off
+                    log-sent-messages = off
+                    log-remote-lifecycle-events = off
 
-                enabled-transports = [
-                  ""akka.remote.test"",
-                ]
+                    enabled-transports = [
+                      ""akka.remote.test"",
+                    ]
 
-                test {
-                  transport-class = ""Akka.Remote.Transport.TestTransport,Akka.Remote""
-                  applied-adapters = []
-                  maximum-payload-bytes = 128000b
-                  scheme-identifier = test
+                    test {
+                      transport-class = ""Akka.Remote.Transport.TestTransport,Akka.Remote""
+                      applied-adapters = []
+                      maximum-payload-bytes = 128000b
+                      scheme-identifier = test
+                    }
+                  }
                 }
-              }
             ");
 
             port = 10; //BUG: setting the port to 0 causes the DefaultAddress to report the port as -1

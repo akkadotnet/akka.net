@@ -224,3 +224,6 @@ resetdev.bat
 
 # Akka.Persistence Test Output
 target/
+
+# API Approval received files
+**/Akka.API.Tests/*.received.txt

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSelection.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -111,13 +111,13 @@ namespace Akka.Actor
             {
                 var identity = await this.Ask<ActorIdentity>(new Identify(null), timeout);
                 if(identity.Subject == null)
-                    throw new ActorNotFoundException();
+                    throw new ActorNotFoundException("subject was null");
 
                 return identity.Subject;
             }
-            catch
+            catch(Exception ex)
             {
-                throw new ActorNotFoundException();
+                throw new ActorNotFoundException("Exception ocurred while resolving ActorSelection", ex);
             }
         }
         

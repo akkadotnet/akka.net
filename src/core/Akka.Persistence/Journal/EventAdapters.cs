@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventAdapters.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,20 +18,32 @@ using Akka.Pattern;
 namespace Akka.Persistence.Journal
 {
     /// <summary>
-    /// <para>Facility to convert from and to specialised data models, as may be required by specialized persistence Journals.</para>
+    /// <para>An <see cref="IEventAdapter"/> is both a <see cref="IWriteEventAdapter"/> and a <see cref="IReadEventAdapter"/>.
+    /// Facility to convert from and to specialised data models, as may be required by specialized persistence Journals.</para>
     ///
-    /// <para>Typical use cases include(but are not limited to):</para>
+    /// <para>Typical use cases include (but are not limited to):</para>
     /// <para>- adding metadata, a.k.a. "tagging" - by wrapping objects into tagged counterparts</para>
     /// <para>- manually converting to the Journals storage format, such as JSON, BSON or any specialised binary format</para>
     /// <para>- adapting incoming events in any way before persisting them by the journal</para>
     /// </summary>
-    public interface IEventAdapter
+    public interface IEventAdapter : IWriteEventAdapter, IReadEventAdapter
+    {
+    }
+
+    /// <summary>
+    /// <para>Facility to convert to specialised data models, as may be required by specialized persistence Journals.</para>
+    ///
+    /// <para>Typical use cases include (but are not limited to):</para>
+    /// <para>- adding metadata, a.k.a. "tagging" - by wrapping objects into tagged counterparts</para>
+    /// <para>- manually converting to the Journals storage format, such as JSON, BSON or any specialised binary format</para>
+    /// <para>- splitting up large events into sequences of smaller ones</para>
+    /// </summary>
+    public interface IWriteEventAdapter
     {
         /// <summary>
-        /// Return the manifest (type hint) that will be provided in the <see cref="FromJournal"/> method. Use empty string if not needed.
+        /// Return the manifest (type hint) that will be provided in the <see cref="FromJournal"/> method.
+        /// Use empty string if not needed.
         /// </summary>
-        /// <param name="evt"></param>
-        /// <returns></returns>
         string Manifest(object evt);
 
         /// <summary>
@@ -47,9 +59,20 @@ namespace Akka.Persistence.Journal
         /// <param name="evt">the application-side domain event to be adapted to the journal model</param>
         /// <returns>the adapted event object, possibly the same object if no adaptation was performed</returns>
         object ToJournal(object evt);
+    }
 
+    /// <summary>
+    /// <para>Facility to convert from specialised data models, as may be required by specialized persistence Journals.</para>
+    ///
+    /// <para>Typical use cases include (but are not limited to):</para>
+    /// <para>- extracting events from "envelopes"</para>
+    /// <para>- manually converting to the Journals storage format, such as JSON, BSON or any specialised binary format</para>
+    /// <para>- adapting incoming events from a "data model" to the "domain model"</para>
+    /// </summary>
+    public interface IReadEventAdapter
+    {
         /// <summary>
-        /// <para>Convert a event from its journal model to the applications domain model.</para>
+        /// <para>Convert an event from its journal model to the application's domain model.</para>
         ///
         /// <para>One event may be adapter into multiple(or none) events which should be delivered to the <see cref="PersistentActor"/>.
         /// Use the specialised <see cref="EventSequence.Single"/> method to emit exactly one event,
@@ -80,6 +103,62 @@ namespace Akka.Persistence.Journal
             return evt;
         }
 
+        public IEventSequence FromJournal(object evt, string manifest)
+        {
+            return EventSequence.Single(evt);
+        }
+    }
+
+    [Serializable]
+    internal class NoopWriteEventAdapter : IEventAdapter
+    {
+        private readonly IReadEventAdapter _readEventAdapter;
+
+        public NoopWriteEventAdapter(IReadEventAdapter readEventAdapter)
+        {
+            _readEventAdapter = readEventAdapter;
+        }
+
+        // no-op write
+        public string Manifest(object evt)
+        {
+            return string.Empty;
+        }
+
+        public object ToJournal(object evt)
+        {
+            return evt;
+        }
+
+        // pass-through read
+        public IEventSequence FromJournal(object evt, string manifest)
+        {
+            return _readEventAdapter.FromJournal(evt, manifest);
+        }
+    }
+
+    [Serializable]
+    internal class NoopReadEventAdapter : IEventAdapter
+    {
+        private readonly IWriteEventAdapter _writeEventAdapter;
+
+        public NoopReadEventAdapter(IWriteEventAdapter writeEventAdapter)
+        {
+            _writeEventAdapter = writeEventAdapter;
+        }
+
+        // pass-through write
+        public string Manifest(object evt)
+        {
+            return _writeEventAdapter.Manifest(evt);
+        }
+
+        public object ToJournal(object evt)
+        {
+            return _writeEventAdapter.ToJournal(evt);
+        }
+
+        // no-op read
         public IEventSequence FromJournal(object evt, string manifest)
         {
             return EventSequence.Single(evt);
@@ -160,7 +239,7 @@ namespace Akka.Persistence.Journal
 
             // A Map of handler from alias to implementation (i.e. class implementing Akka.Serialization.ISerializer)
             // For example this defines a handler named 'country': `"country" -> com.example.comain.CountryTagsAdapter`
-            var handlers = adapters.ToDictionary(kv => kv.Key, kv => Instantiate<IEventAdapter>(kv.Value, system));
+            var handlers = adapters.ToDictionary(kv => kv.Key, kv => InstantiateAdapter(kv.Value, system));
 
             // bindings is a enumerable of key-val representing the mapping from Type to handler.
             // It is primarily ordered by the most specific classes first, and secondly in the configured order.
@@ -233,20 +312,32 @@ namespace Akka.Persistence.Journal
             return adapter;
         }
 
+        private static IEventAdapter InstantiateAdapter(string qualifiedName, ExtendedActorSystem system)
+        {
+            var type = Type.GetType(qualifiedName);
+            if (typeof(IEventAdapter).IsAssignableFrom(type))
+                return Instantiate<IEventAdapter>(qualifiedName, system);
+            if (typeof (IWriteEventAdapter).IsAssignableFrom(type))
+                return new NoopReadEventAdapter(Instantiate<IWriteEventAdapter>(qualifiedName, system));
+            if (typeof (IReadEventAdapter).IsAssignableFrom(type))
+                return new NoopWriteEventAdapter(Instantiate<IReadEventAdapter>(qualifiedName, system));
+            throw new ArgumentException("Configured " + qualifiedName + " does not implement any EventAdapter interface!");
+        }
+
         private static T Instantiate<T>(string qualifiedName, ExtendedActorSystem system)
         {
-            var instanceType = Type.GetType(qualifiedName);
-            if (!typeof(T).IsAssignableFrom(instanceType))
+            var type = Type.GetType(qualifiedName);
+            if (!typeof(T).IsAssignableFrom(type))
                 throw new ArgumentException(string.Format("Couldn't create instance of [{0}] from provided qualified type name [{1}], because it's not assignable from it",
                     typeof(T), qualifiedName));
 
             try
             {
-                return (T)Activator.CreateInstance(instanceType, system);
+                return (T)Activator.CreateInstance(type, system);
             }
             catch (MissingMethodException)
             {
-                return (T)Activator.CreateInstance(instanceType);
+                return (T)Activator.CreateInstance(type);
             }
         }
 

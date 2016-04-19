@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Eventsourced.Recovery.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
-using Akka.Util.Internal;
 
 namespace Akka.Persistence
 {
@@ -37,25 +36,6 @@ namespace Akka.Persistence
     public abstract partial class Eventsourced
     {
         /// <summary>
-        /// Initial state, waits for <see cref="Recover"/> request, and then submits a <see cref="LoadSnapshot"/> request to the snapshot
-        /// store and changes to <see cref="RecoveryStarted"/> state. All incoming messages except <see cref="Recover"/> are stashed.
-        /// </summary>
-        /// <returns></returns>
-        private EventsourcedState RecoveryPending()
-        {
-            return new EventsourcedState("recovery pending", true, (receive, message) =>
-            {
-                if (message is Recover)
-                {
-                    var recover = (Recover)message;
-                    ChangeState(RecoveryStarted(recover.ReplayMax));
-                    LoadSnapshot(SnapshotterId, recover.FromSnapshot, recover.ToSequenceNr);
-                }
-                else _internalStash.Stash();
-            });
-        }
-
-        /// <summary>
         /// Processes a loaded snapshot, if any. A loaded snapshot is offered with a <see cref="SnapshotOffer"/> 
         /// message to the actor's <see cref="ReceiveRecover"/>. Then initiates a message replay, either starting 
         /// from the loaded snapshot or from scratch, and switches to <see cref="ReplayStarted"/> state. 
@@ -71,8 +51,6 @@ namespace Akka.Persistence
                     return receiveRecover((message as IPersistentRepresentation).Payload);
                 else if (message is SnapshotOffer)
                     return receiveRecover((SnapshotOffer)message);
-                else if (message is RecoveryFailure)
-                    return receiveRecover(message);
                 else if (message is RecoveryCompleted)
                     return receiveRecover(RecoveryCompleted.Instance);
                 else return false;
@@ -80,7 +58,6 @@ namespace Akka.Persistence
 
             return new EventsourcedState("recovery started - replay max: " + maxReplays, true, (receive, message) =>
             {
-                if (message is Recover) return;
                 if (message is LoadSnapshotResult)
                 {
                     var res = (LoadSnapshotResult)message;
@@ -88,33 +65,32 @@ namespace Akka.Persistence
                     {
                         var snapshot = res.Snapshot;
                         LastSequenceNr = snapshot.Metadata.SequenceNr;
+                        // Since we are recovering we can ignore the receive behavior from the stack
                         base.AroundReceive(recoveryBehavior, new SnapshotOffer(snapshot.Metadata, snapshot.Snapshot));
                     }
 
-                    ChangeState(ReplayStarted(recoveryBehavior));
+                    ChangeState(Recovering(recoveryBehavior));
                     Journal.Tell(new ReplayMessages(LastSequenceNr + 1L, res.ToSequenceNr, maxReplays, PersistenceId, Self));
                 }
-                else _internalStash.Stash();
+                else
+                    StashInternally(message);
             });
         }
 
         /// <summary>
         /// Processes replayed messages, if any. The actor's <see cref="ReceiveRecover"/> is invoked with the replayed events.
         /// 
-        /// If replay succeeds it switches to <see cref="Initializing"/> state and requests the highest stored sequence
-        /// number from the journal. Otherwise RecoveryFailure is emitted.
-        /// If replay succeeds the `onReplaySuccess` callback method is called, otherwise `onReplayFailure`.
-        /// 
-        /// If processing of a replayed event fails, the exception is caught and
-        /// stored for being thrown later and state is changed to <see cref="RecoveryFailed"/>.
+        /// If replay succeeds it got highest stored sequence number response from the journal and then switches
+        /// to <see cref="ProcessingCommands"/> state.
+        /// If replay succeeds the <see cref="OnReplaySuccess"/> callback method is called, otherwise
+        /// <see cref="OnRecoveryFailure"/>.
         /// 
         /// All incoming messages are stashed.
         /// </summary>
-        private EventsourcedState ReplayStarted(Receive recoveryBehavior)
+        private EventsourcedState Recovering(Receive recoveryBehavior)
         {
             return new EventsourcedState("replay started", true, (receive, message) =>
             {
-                if (message is Recover) return;
                 if (message is ReplayedMessage)
                 {
                     var m = (ReplayedMessage)message;
@@ -127,7 +103,7 @@ namespace Akka.Persistence
                     {
                         try
                         {
-                            OnReplayFailure(cause, m.Persistent.Payload);
+                            OnRecoveryFailure(cause, m.Persistent.Payload);
                         }
                         finally
                         {
@@ -135,45 +111,30 @@ namespace Akka.Persistence
                         }
                     }
                 }
-                else if (message is ReplayMessagesSuccess)
+                else if (message is RecoverySuccess)
                 {
+                    var m = (RecoverySuccess) message;
                     OnReplaySuccess();
-                    ChangeState(Initializing(recoveryBehavior));
-                    Journal.Tell(new ReadHighestSequenceNr(LastSequenceNr, PersistenceId, Self));
+                    ChangeState(ProcessingCommands());
+                    _sequenceNr = m.HighestSequenceNr;
+                    LastSequenceNr = m.HighestSequenceNr;
+                    _internalStash.UnstashAll();
+                    base.AroundReceive(recoveryBehavior, RecoveryCompleted.Instance);
                 }
                 else if (message is ReplayMessagesFailure)
                 {
                     var failure = (ReplayMessagesFailure)message;
-                    OnReplayFailure(failure.Cause, message: null);
-                    // FIXME what happens if RecoveryFailure is handled, i.e. actor is not stopped?
-                    base.AroundReceive(recoveryBehavior, new RecoveryFailure(failure.Cause));
+                    try
+                    {
+                        OnRecoveryFailure(failure.Cause, message: null);
+                    }
+                    finally
+                    {
+                        Context.Stop(Self);
+                    }
                 }
-                else _internalStash.Stash();
-            });
-        }
-
-        /// <summary>
-        /// Processes messages with the highest stored sequence number in the journal and then switches to
-        /// <see cref="ProcessingCommands"/> state. All other messages are stashed.
-        /// </summary>
-        private EventsourcedState Initializing(Receive recoveryBehavior)
-        {
-            return new EventsourcedState("initializing", true, (receive, message) =>
-            {
-                if (message is ReadHighestSequenceNrSuccess)
-                {
-                    var m = (ReadHighestSequenceNrSuccess)message;
-                    ChangeState(ProcessingCommands());
-                    _sequenceNr = m.HighestSequenceNr;
-                    _internalStash.UnstashAll();
-
-                    base.AroundReceive(recoveryBehavior, RecoveryCompleted.Instance);
-                }
-                else if (message is ReadHighestSequenceNrFailure)
-                {
-                    base.AroundReceive(recoveryBehavior, RecoveryCompleted.Instance);
-                }
-                else _internalStash.Stash();
+                else
+                    StashInternally(message);
             });
         }
 
@@ -185,46 +146,50 @@ namespace Akka.Persistence
         {
             return new EventsourcedState("processing commands", false, (receive, message) =>
             {
-                var handled = CommonProcessingStateBehavior(message, () => _pendingInvocations.Pop());
+                var handled = CommonProcessingStateBehavior(message, err =>
+                {
+                    _pendingInvocations.Pop();
+                    UnstashInternally(err);
+                });
                 if (!handled)
                 {
-                    base.AroundReceive(receive, message);
-                    if (_eventBatch.Count != 0) FlushBatch();
-
-                    if (_pendingStashingPersistInvocations > 0) ChangeState(PersistingEvents());
-                    else _internalStash.Unstash();
+                    try
+                    {
+                        base.AroundReceive(receive, message);
+                        OnProcessingCommandsAroundReceiveComplete(false);
+                    }
+                    catch (Exception)
+                    {
+                        OnProcessingCommandsAroundReceiveComplete(true);
+                        throw;
+                    }
                 }
             });
         }
 
+        private void OnProcessingCommandsAroundReceiveComplete(bool err)
+        {
+            if (_eventBatch.Count > 0) FlushBatch();
+
+            if (_pendingStashingPersistInvocations > 0)
+                ChangeState(PersistingEvents());
+            else
+                UnstashInternally(err);
+        }
+
         private void FlushBatch()
         {
-            // When using only `PersistAsync` and `Defer` max throughput is increased by using
-            // batching, but when using `Persist` we want to use one atomic WriteMessages
-            // for the emitted events.
-            // Flush previously collected events, if any, separately from the `Persist` batch
-            if (_pendingStashingPersistInvocations > 0 && _journalBatch.Count != 0)
-                FlushJournalBatch();
-
-            foreach (var p in _eventBatch.Reverse())
+            if (_eventBatch.Count > 0)
             {
-                var persistent = p as Persistent;
-                if (persistent != null)
+                foreach (var p in _eventBatch.Reverse())
                 {
-                    _journalBatch.Add(persistent.Update(
-                        persistenceId: PersistenceId,
-                        sequenceNr: NextSequenceNr(),
-                        isDeleted: persistent.IsDeleted,
-                        sender: Sender));
-                }
-                else
                     _journalBatch.Add(p);
-
-                if (!_isWriteInProgress || _journalBatch.Count >= _maxMessageBatchSize)
-                    FlushJournalBatch();
+                }
+                _eventBatch = new LinkedList<IPersistentEnvelope>();
             }
 
-            _eventBatch = new LinkedList<IPersistentEnvelope>();
+            if (_journalBatch.Count > 0)
+                FlushJournalBatch();
         }
 
         /// <summary>
@@ -235,7 +200,7 @@ namespace Akka.Persistence
         {
             return new EventsourcedState("persisting events", false, (receive, message) =>
             {
-                var handled = CommonProcessingStateBehavior(message, () =>
+                var handled = CommonProcessingStateBehavior(message, err =>
                 {
                     var invocation = _pendingInvocations.Pop();
 
@@ -248,15 +213,28 @@ namespace Akka.Persistence
                     if (_pendingStashingPersistInvocations == 0)
                     {
                         ChangeState(ProcessingCommands());
-                        _internalStash.Unstash();
+                        UnstashInternally(err);
                     }
                 });
 
-                if (!handled) _internalStash.Stash();
+                if (!handled)
+                    StashInternally(message);
             });
         }
 
-        private bool CommonProcessingStateBehavior(object message, Action onWriteMessageComplete)
+        private void PeekApplyHandler(object payload)
+        {
+            try
+            {
+                _pendingInvocations.First.Value.Handler(payload);
+            }
+            finally
+            {
+                FlushBatch();
+            }
+        }
+
+        private bool CommonProcessingStateBehavior(object message, Action<bool> onWriteMessageComplete)
         {
             // _instanceId mismatch can happen for persistAsync and defer in case of actor restart
             // while message is in flight, in that case we ignore the call to the handler
@@ -266,7 +244,27 @@ namespace Akka.Persistence
                 if (m.ActorInstanceId == _instanceId)
                 {
                     UpdateLastSequenceNr(m.Persistent);
-                    TryFirstInvocationHandler(m.Persistent.Payload, onWriteMessageComplete);
+                    try
+                    {
+                        PeekApplyHandler(m.Persistent.Payload);
+                        onWriteMessageComplete(false);
+                    }
+                    catch
+                    {
+                        onWriteMessageComplete(true);
+                        throw;
+                    }
+                }
+            }
+            else if (message is WriteMessageRejected)
+            {
+                var m = (WriteMessageRejected)message;
+                if (m.ActorInstanceId == _instanceId)
+                {
+                    var p = m.Persistent;
+                    UpdateLastSequenceNr(p);
+                    onWriteMessageComplete(false);
+                    OnPersistRejected(m.Cause, p.Payload, p.SequenceNr);
                 }
             }
             else if (message is WriteMessageFailure)
@@ -275,8 +273,15 @@ namespace Akka.Persistence
                 if (m.ActorInstanceId == _instanceId)
                 {
                     var p = m.Persistent;
-                    base.AroundReceive(Receive, new PersistenceFailure(p.Payload, p.SequenceNr, m.Cause));
-                    onWriteMessageComplete();
+                    onWriteMessageComplete(false);
+                    try
+                    {
+                        OnPersistFailure(m.Cause, p.Payload, p.SequenceNr);
+                    }
+                    finally
+                    {
+                        Context.Stop(Self);
+                    }
                 }
             }
             else if (message is LoopMessageSuccess)
@@ -284,28 +289,31 @@ namespace Akka.Persistence
                 var m = (LoopMessageSuccess)message;
                 if (m.ActorInstanceId == _instanceId)
                 {
-                    TryFirstInvocationHandler(m.Message, onWriteMessageComplete);
+                    try
+                    {
+                        PeekApplyHandler(m.Message);
+                        onWriteMessageComplete(false);
+                    }
+                    catch (Exception)
+                    {
+                        onWriteMessageComplete(true);
+                        throw;
+                    }
                 }
             }
-            else if (message is WriteMessagesSuccessful || message is WriteMessagesFailed)
+            else if (message is WriteMessagesSuccessful)
             {
-                if (_journalBatch.Count == 0) _isWriteInProgress = false;
-                else FlushJournalBatch();
+                _isWriteInProgress = false;
+                if (_journalBatch.Count > 0)
+                    FlushJournalBatch();
+            }
+            else if (message is WriteMessagesFailed)
+            {
+                _isWriteInProgress = false;
+                // it will be stopped by the first WriteMessageFailure message
             }
             else return false;
             return true;
-        }
-
-        private void TryFirstInvocationHandler(object payload, Action onWriteMessageComplete)
-        {
-            try
-            {
-                _pendingInvocations.First.Value.Handler(payload);
-            }
-            finally
-            {
-                onWriteMessageComplete();
-            }
         }
     }
 

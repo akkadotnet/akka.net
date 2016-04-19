@@ -59,6 +59,10 @@
       <HintPath>..\..\packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Collections.Immutable, Version=1.1.36.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\System.Collections.Immutable.1.1.36\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="Microsoft.CSharp" />
@@ -220,11 +224,13 @@
     <Compile Include="Event\EventBusUnsubscriber.cs" />
     <Compile Include="Event\EventStream.cs" />
     <Compile Include="Event\EventStreamExtensions.cs" />
+    <Compile Include="Event\ILoggerMessageQueueSemantics.cs" />
     <Compile Include="Event\ILogMessageFormatter.cs" />
     <Compile Include="Event\Info.cs" />
     <Compile Include="Event\InitializeLogger.cs" />
     <Compile Include="Event\LogEvent.cs" />
     <Compile Include="Event\LoggerInitialized.cs" />
+    <Compile Include="Event\LoggerMailbox.cs" />
     <Compile Include="Event\Logging.cs" />
     <Compile Include="Event\ILoggingAdapter.cs" />
     <Compile Include="Event\LoggingAdapterBase.cs" />
@@ -275,19 +281,13 @@
     <Compile Include="Util\Internal\Collections\Iterator.cs" />
     <Compile Include="Util\Internal\ImmutabilityUtils.cs" />
     <Compile Include="Util\Internal\InterlockedSpin.cs" />
-    <Compile Include="Util\Internal\Collections\EmptyReadOnlyCollections.cs" />
     <Compile Include="Util\Internal\Collections\IBinaryTreeNode.cs" />
-    <Compile Include="Util\Internal\Collections\IImmutableMap.cs" />
-    <Compile Include="Util\Internal\Collections\IImmutableSet.cs" />
     <Compile Include="Util\Internal\Collections\IKeyValuePair.cs" />
-    <Compile Include="Util\Internal\Collections\ImmutableAvlTree.cs" />
-    <Compile Include="Util\Internal\Collections\ImmutableAvlTreeBase.cs" />
-    <Compile Include="Util\Internal\Collections\ImmutableAvlTreeMap.cs" />
-    <Compile Include="Util\Internal\Collections\ImmutableTreeSet.cs" />
     <Compile Include="Util\Internal\StringBuilderExtensions.cs" />
     <Compile Include="Util\Internal\TaskExtensions.cs" />
     <Compile Include="Util\ISurrogate.cs" />
     <Compile Include="Util\MonotonicClock.cs" />
+    <Compile Include="Util\Reflection\TypeCache.cs" />
     <Compile Include="Util\StandardOutWriter.cs" />
     <Compile Include="Event\Subscription.cs" />
     <Compile Include="Event\TraceLogger.cs" />

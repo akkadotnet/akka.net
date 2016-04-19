@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Inbox.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -229,9 +229,9 @@ namespace Akka.Actor
         object ReceiveWhere(Predicate<object> predicate, TimeSpan timeout);
 
         /// <summary>
-        /// Makes an internal actor act as a proxy of given <paramref name="message"/>, 
-        /// which will be send to given <paramref cref="target"/> actor. It means, 
-        /// that all <paramref name="target"/>'s replies will be sent to current inbox instead.
+        /// Makes an internal actor act as a proxy of a given <paramref name="message"/>, 
+        /// which is sent to a given target actor. It means, that all <paramref name="target"/>'s
+        /// replies will be sent to current inbox instead.
         /// </summary>
         void Send(IActorRef target, object message);
     }

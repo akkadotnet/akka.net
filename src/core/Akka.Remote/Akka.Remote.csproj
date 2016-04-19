@@ -51,11 +51,13 @@
     <Optimize>false</Optimize>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Google.ProtocolBuffers">
-      <HintPath>..\..\packages\Google.ProtocolBuffers.2.4.1.521\lib\net40\Google.ProtocolBuffers.dll</HintPath>
+    <Reference Include="Google.ProtocolBuffers, Version=2.4.1.555, Culture=neutral, PublicKeyToken=55f7125234beb589, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Google.ProtocolBuffers.2.4.1.555\lib\net40\Google.ProtocolBuffers.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="Google.ProtocolBuffers.Serialization">
-      <HintPath>..\..\packages\Google.ProtocolBuffers.2.4.1.521\lib\net40\Google.ProtocolBuffers.Serialization.dll</HintPath>
+    <Reference Include="Google.ProtocolBuffers.Serialization, Version=2.4.1.555, Culture=neutral, PublicKeyToken=55f7125234beb589, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Google.ProtocolBuffers.2.4.1.555\lib\net40\Google.ProtocolBuffers.Serialization.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Helios, Version=1.4.1.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -63,6 +65,10 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Collections.Immutable, Version=1.1.36.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\System.Collections.Immutable.1.1.36\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.Web" />
   </ItemGroup>
@@ -89,6 +95,7 @@
     <Compile Include="Proto\Wireformats.cs" />
     <Compile Include="RemoteActorRef.cs" />
     <Compile Include="RemoteDeploymentWatcher.cs" />
+    <Compile Include="RemoteMetricsExtension.cs" />
     <Compile Include="RemoteSystemDaemon.cs" />
     <Compile Include="RemoteDeployer.cs" />
     <Compile Include="RemoteSettings.cs" />
@@ -102,6 +109,11 @@
     <Compile Include="Serialization\ProtobufSerializer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RemoteActorRefProvider.cs" />
+    <Compile Include="Transport\AkkaIO\AddressConverters.cs" />
+    <Compile Include="Transport\AkkaIO\AkkaIOTransport.cs" />
+    <Compile Include="Transport\AkkaIO\ConnectionAssociation.cs" />
+    <Compile Include="Transport\AkkaIO\TransportListener.cs" />
+    <Compile Include="Transport\AkkaIO\TransportManager.cs" />
     <Compile Include="Transport\AkkaPduCodec.cs" />
     <Compile Include="Transport\FailureInjectorTransportAdapter.cs" />
     <Compile Include="Transport\Helios\HeliosHelpers.cs" />

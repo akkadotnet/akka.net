@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystem.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
+using Akka.Util;
 
 namespace Akka.Actor
 {
@@ -72,6 +73,18 @@ namespace Akka.Actor
 
         /// <summary>Gets the log</summary>
         public abstract ILoggingAdapter Log { get; }
+
+        /// <summary>
+        /// Start-up time since the epoch.
+        /// </summary>
+        public TimeSpan StartTime { get; } = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        /// <summary>
+        /// Up-time of this actor system.
+        /// </summary>
+        public TimeSpan Uptime => MonotonicClock.ElapsedHighRes - _creationTime;
+
+        private readonly TimeSpan _creationTime = MonotonicClock.ElapsedHighRes;
 
         /// <summary>
         ///     Creates a new ActorSystem with the specified name, and the specified Config

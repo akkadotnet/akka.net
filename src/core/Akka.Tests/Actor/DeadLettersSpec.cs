@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeadLettersSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -16,7 +16,7 @@ namespace Akka.Tests
     public class DeadLettersSpec : AkkaSpec
     {
         [Fact]
-        public void CanSendMessagesToDeadLetters()
+        public void Can_send_messages_to_dead_letters()
         {
             Sys.EventStream.Subscribe(TestActor, typeof(DeadLetter));
             Sys.DeadLetters.Tell("foobar");

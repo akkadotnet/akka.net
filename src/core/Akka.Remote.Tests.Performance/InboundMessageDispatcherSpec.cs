@@ -1,4 +1,11 @@
-﻿using System.Threading;
+﻿//-----------------------------------------------------------------------
+// <copyright file="InboundMessageDispatcherSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Util.Internal;
@@ -32,9 +39,11 @@ namespace Akka.Remote.Tests.Performance
         {
             private readonly Counter _counter;
 
-            public BenchmarkActorRef(Counter counter)
+            public BenchmarkActorRef(Counter counter, RemoteActorRefProvider provider)
             {
                 _counter = counter;
+                Provider = provider;
+                Path = new RootActorPath(Provider.DefaultAddress) / "user" / "tempRef";
             }
 
             protected override void TellInternal(object message, IActorRef sender)
@@ -42,8 +51,9 @@ namespace Akka.Remote.Tests.Performance
                 _counter.Increment();
             }
 
-            public override ActorPath Path { get { return null; } }
-            public override IActorRefProvider Provider { get { return null; } }
+            public override ActorPath Path { get; }
+
+            public override IActorRefProvider Provider { get; }
         }
 
         private static readonly Config RemoteHocon = ConfigurationFactory.ParseString(@"
@@ -76,7 +86,7 @@ namespace Akka.Remote.Tests.Performance
             _inboundMessageDispatcherCounter = context.GetCounter(MessageDispatcherThroughputCounterName);
             _message = SerializedMessage.CreateBuilder().SetSerializerId(0).SetMessage(ByteString.CopyFromUtf8("foo")).Build();
             _dispatcher = new DefaultMessageDispatcher(_actorSystem, RARP.For(_actorSystem).Provider, _actorSystem.Log);
-            _targetActorRef = new BenchmarkActorRef(_inboundMessageDispatcherCounter);
+            _targetActorRef = new BenchmarkActorRef(_inboundMessageDispatcherCounter, RARP.For(_actorSystem).Provider);
         }
 
         [PerfBenchmark(Description = "Tests the performance of the Default", RunMode = RunMode.Throughput, NumberOfIterations = 13, TestMode = TestMode.Measurement)]

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteRandomSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -91,14 +91,14 @@ namespace Akka.Remote.Tests.MultiNode
             }
         }
 
-        [MultiNodeFact]
+        [MultiNodeFact()]
         public void RemoteRandomSpecs()
         {
-            ARemoteRandomPoolMustBeLocallyInstantiatedOnARemoteNodeAndBeAbleToCommunicateThroughItsRemoteActorRef();
+            A_remote_random_pool_must_be_locally_instantiated_on_a_remote_node_and_be_able_to_communicate_through_its_remote_actor_ref();
         }
 
         public void
-            ARemoteRandomPoolMustBeLocallyInstantiatedOnARemoteNodeAndBeAbleToCommunicateThroughItsRemoteActorRef()
+            A_remote_random_pool_must_be_locally_instantiated_on_a_remote_node_and_be_able_to_communicate_through_its_remote_actor_ref()
         {
             RunOn(() => { EnterBarrier("start", "broadcast-end", "end", "done"); },
                _config.First, _config.Second, _config.Third);

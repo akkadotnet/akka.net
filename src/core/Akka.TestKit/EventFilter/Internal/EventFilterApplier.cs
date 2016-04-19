@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventFilterApplier.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -21,76 +21,69 @@ namespace Akka.TestKit.Internal
     {
         private readonly IReadOnlyList<EventFilterBase> _filters;
         private readonly TestKitBase _testkit;
+        private readonly ActorSystem _actorSystem;
 
-        public InternalEventFilterApplier(TestKitBase testkit, IReadOnlyList<EventFilterBase> filters)
+        public InternalEventFilterApplier(TestKitBase testkit, ActorSystem system, IReadOnlyList<EventFilterBase> filters)
         {
             _filters = filters;
             _testkit = testkit;
+            _actorSystem = system;
         }
-
 
         public void ExpectOne(Action action)
         {
-            InternalExpect(action, 1);
+            InternalExpect(action, _actorSystem, 1);
         }
 
         public void ExpectOne(TimeSpan timeout, Action action)
         {
-            InternalExpect(action, 1, timeout);
+            InternalExpect(action, _actorSystem, 1, timeout);
         }
 
         public void Expect(int expectedCount, Action action)
         {
-            InternalExpect(action, expectedCount, null);
+            InternalExpect(action, _actorSystem, expectedCount, null);
         }
 
         public void Expect(int expectedCount, TimeSpan timeout, Action action)
         {
-            InternalExpect(action, expectedCount, timeout);
+            InternalExpect(action, _actorSystem, expectedCount, timeout);
         }
-
-        private void InternalExpect(Action action, int expectedCount, TimeSpan? timeout = null)
-        {
-            Intercept<object>(() => { action(); return null; }, _testkit.Sys, timeout, expectedCount);
-        }
-
 
         public T ExpectOne<T>(Func<T> func)
         {
-            return Intercept(func, _testkit.Sys, null, 1);
+            return Intercept(func, _actorSystem, null, 1);
         }
 
         public T ExpectOne<T>(TimeSpan timeout, Func<T> func)
         {
-            return Intercept(func, _testkit.Sys, timeout, 1);
+            return Intercept(func, _actorSystem, timeout, 1);
         }
 
         public T Expect<T>(int expectedCount, Func<T> func)
         {
-            return Intercept(func, _testkit.Sys, null, expectedCount);
+            return Intercept(func, _actorSystem, null, expectedCount);
         }
 
         public T Expect<T>(int expectedCount, TimeSpan timeout, Func<T> func)
         {
-            return Intercept(func, _testkit.Sys, timeout, expectedCount);
+            return Intercept(func, _actorSystem, timeout, expectedCount);
         }
-
-
 
         public T Mute<T>(Func<T> func)
         {
-            return Intercept(func, _testkit.Sys, null, null);
+            return Intercept(func, _actorSystem, null, null);
         }
 
         public void Mute(Action action)
         {
-            Intercept<object>(() => { action(); return null; }, _testkit.Sys, null, null);
+            Intercept<object>(() => { action(); return null; }, _actorSystem, null, null);
         }
 
         public IUnmutableFilter Mute()
         {
-            _testkit.Sys.EventStream.Publish(new Mute(_filters));
-            return new InternalUnmutableFilter(_filters, _testkit.Sys);
+            _actorSystem.EventStream.Publish(new Mute(_filters));
+            return new InternalUnmutableFilter(_filters, _actorSystem);
         }
 
 
@@ -98,13 +91,17 @@ namespace Akka.TestKit.Internal
         {
             get
             {
-                return new EventFilterFactory(_testkit,_filters);
+                return new EventFilterFactory(_testkit, _actorSystem, _filters);
             }
         }
 
         protected T Intercept<T>(Func<T> func, ActorSystem system, TimeSpan? timeout, int? expectedOccurrences, MatchedEventHandler matchedEventHandler = null)
         {
-            var timeoutValue = timeout.HasValue ? _testkit.Dilated(timeout.Value) : TestKitExtension.For(system).TestEventFilterLeeway;
+            var leeway = system.HasExtension<TestKitSettings>()
+                ? TestKitExtension.For(system).TestEventFilterLeeway
+                : _testkit.TestKitSettings.TestEventFilterLeeway;
+
+            var timeoutValue = timeout.HasValue ? _testkit.Dilated(timeout.Value) : leeway;
             matchedEventHandler = matchedEventHandler ?? new MatchedEventHandler();
             system.EventStream.Publish(new Mute(_filters));
             try
@@ -133,8 +130,10 @@ namespace Akka.TestKit.Internal
                     else
                         msg = string.Format("Timeout ({0}) while waiting for messages that matched filter [{1}]", timeoutValue, _filters);
 
-                    var testKitAssertionsProvider = TestKitAssertionsExtension.For(system);
-                    testKitAssertionsProvider.Assertions.Fail(msg);
+                    var assertionsProvider = system.HasExtension<TestKitAssertionsProvider>()
+                        ? TestKitAssertionsExtension.For(system)
+                        : TestKitAssertionsExtension.For(_testkit.Sys);
+                    assertionsProvider.Assertions.Fail(msg);
                 }
                 return result;
             }
@@ -162,6 +161,11 @@ namespace Akka.TestKit.Internal
         protected static string GetMessageString(int number)
         {
             return number == 1 ? "message" : "messages";
+        }
+
+        private void InternalExpect(Action action, ActorSystem actorSystem, int expectedCount, TimeSpan? timeout = null)
+        {
+            Intercept<object>(() => { action(); return null; }, actorSystem, timeout, expectedCount);
         }
 
         protected class MatchedEventHandler

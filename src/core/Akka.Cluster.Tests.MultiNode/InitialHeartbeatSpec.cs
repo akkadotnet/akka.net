@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InitialHeartbeatSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -84,7 +84,7 @@ namespace Akka.Cluster.Tests.MultiNode
             }
 
             //[MultiNodeFact] //currently bugged, due to issues with TestKit
-            public void AMemberMustDetectFailureEvenThoughNoHeartbeatsHaveBeenReceived()
+            public void A_member_must_detect_failure_even_though_no_heartbeats_have_been_received()
             {
                 var firstAddress = GetAddress(_config.First);
                 var secondAddress = GetAddress(_config.Second);

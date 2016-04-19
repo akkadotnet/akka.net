@@ -1,12 +1,14 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="RemoteDaemon.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// <copyright file="RemoteSystemDaemon.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internal;
@@ -14,7 +16,6 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Util;
 using Akka.Util.Internal;
-using Akka.Util.Internal.Collections;
 
 namespace Akka.Remote
 {
@@ -184,7 +185,7 @@ namespace Akka.Remote
                     {
                         _terminating.Locked(() =>
                         {
-                            IImmutableSet<IActorRef> children;
+                           IImmutableSet<IActorRef> children;
                             if (_parent2Children.TryRemove(parent,out children))
                             {
                                 foreach (var c in children)
@@ -269,41 +270,78 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        ///     Gets the child.
+        ///     Find the longest matching path which we know about and return that <see cref="IActorRef"/>
+        ///     (or ask that <see cref="IActorRef"/> to continue searching if elements are left).
         /// </summary>
         /// <param name="name">The name.</param>
         /// <returns>ActorRef.</returns>
         public override IActorRef GetChild(IEnumerable<string> name)
         {
             string[] parts = name.ToArray();
-            //TODO: I have no clue what the scala version does
-            if (!parts.Any())
-                return this;
 
-            string n = parts.First();
-            if (string.IsNullOrEmpty(n))
-                return this;
-
-            for (int i = parts.Length; i >= 0; i--)
+            if (string.IsNullOrEmpty(parts.FirstOrDefault()))
             {
-                string joined = string.Join("/", parts, 0, i);
-                IInternalActorRef child;
-                if (TryGetChild(joined, out child))
-                {
-                    //longest match found
-                    IEnumerable<string> rest = parts.Skip(i);
-                    return child.GetChild(rest);
-                }
+                return this;
             }
+
+
+            var joined = string.Join("/", parts);
+
+            var child = GetChild(joined);
+            if (child != null)
+            {
+                return child;
+            }
+            var last = joined.LastIndexOf("/", StringComparison.Ordinal);
+            var i = 1;
+            while (last != -1 || parts.Length <= i)
+            {
+                var s = joined.Substring(0, last);
+                child = GetChild(s);
+                if (child != null)
+                {
+                    return child.GetChild(parts.TakeRight(i));
+                }
+                last = s.LastIndexOf("/", StringComparison.Ordinal);
+                i++;
+            }
+
+
             return ActorRefs.Nobody;
         }
+
+
+        private IInternalActorRef GetChild(string name)
+        {
+            IInternalActorRef child;
+            if (TryGetChild(name, out child))
+            {
+                var uid = GetdUid(name);
+                if (uid != ActorCell.UndefinedUid && uid != child.Path.Uid)
+                {
+                    return ActorRefs.Nobody;
+                }
+            }
+            return child;
+        }
+
+        private int GetdUid(string name)
+        {
+            var i = name.IndexOf("#", StringComparison.Ordinal);
+            if (i < 0)
+            {
+                return ActorCell.UndefinedUid;
+            }
+            return int.Parse(name.Substring(i + 1));
+        }
+
 
         private bool AddChildParentNeedsWatch(IActorRef parent, IActorRef child)
         {
             const bool weDontHaveTailRecursion = true;
             while (weDontHaveTailRecursion)
             {
-                if (_parent2Children.TryAdd(parent, ImmutableTreeSet<IActorRef>.Create(child)))
+                if (_parent2Children.TryAdd(parent, ImmutableHashSet<IActorRef>.Empty.Add(child)))
                     return true; //child was successfully added
 
                 IImmutableSet<IActorRef> children;

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventFilterFactory_Generated.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,6 +15,7 @@
 //------------------------------------------------------------------------------
 using System;
 using System.Text.RegularExpressions;
+using Akka.Actor;
 using Akka.TestKit;
 using Akka.TestKit.Internal;
 using Akka.TestKit.Internal.StringMatcher;
@@ -55,9 +56,8 @@ namespace Akka.TestKit
             var messageMatcher = CreateMessageMatcher(message, start, contains);   //This file has been auto generated. Do NOT modify this file directly
             var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new ErrorFilter(messageMatcher, sourceMatcher);
-            return CreateApplier(filter);
+            return CreateApplier(filter, _system);
         }
-
 
         /// <summary>
         /// Create a filter for <see cref="Akka.Event.Error"/> events. Events must match the specified pattern to be filtered.
@@ -75,7 +75,7 @@ namespace Akka.TestKit
         {
             var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new ErrorFilter(new RegexMatcher(pattern), sourceMatcher);
-            return CreateApplier(filter);
+            return CreateApplier(filter, _system);
         }
 
 
@@ -112,7 +112,7 @@ namespace Akka.TestKit
             var messageMatcher = CreateMessageMatcher(message, start, contains);   //This file has been auto generated. Do NOT modify this file directly
             var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new WarningFilter(messageMatcher, sourceMatcher);
-            return CreateApplier(filter);
+            return CreateApplier(filter, _system);
         }
 
 
@@ -132,7 +132,7 @@ namespace Akka.TestKit
         {
             var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new WarningFilter(new RegexMatcher(pattern), sourceMatcher);
-            return CreateApplier(filter);
+            return CreateApplier(filter, _system);
         }
 
 
@@ -169,7 +169,7 @@ namespace Akka.TestKit
             var messageMatcher = CreateMessageMatcher(message, start, contains);   //This file has been auto generated. Do NOT modify this file directly
             var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new InfoFilter(messageMatcher, sourceMatcher);
-            return CreateApplier(filter);
+            return CreateApplier(filter, _system);
         }
 
 
@@ -189,7 +189,7 @@ namespace Akka.TestKit
         {
             var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new InfoFilter(new RegexMatcher(pattern), sourceMatcher);
-            return CreateApplier(filter);
+            return CreateApplier(filter, _system);
         }
 
 
@@ -226,7 +226,7 @@ namespace Akka.TestKit
             var messageMatcher = CreateMessageMatcher(message, start, contains);   //This file has been auto generated. Do NOT modify this file directly
             var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new DebugFilter(messageMatcher, sourceMatcher);
-            return CreateApplier(filter);
+            return CreateApplier(filter, _system);
         }
 
 
@@ -246,7 +246,7 @@ namespace Akka.TestKit
         {
             var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new DebugFilter(new RegexMatcher(pattern), sourceMatcher);
-            return CreateApplier(filter);
+            return CreateApplier(filter, _system);
         }
 
 

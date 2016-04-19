@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StructureMapDependencyResolver.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -75,7 +75,7 @@ namespace Akka.DI.StructureMap
         }
 
         /// <summary>
-        /// Used to register the configuration for an actor of the specified type <typeparam name="TActor"/>
+        /// Used to register the configuration for an actor of the specified type <typeparamref name="TActor"/>
         /// </summary>
         /// <typeparam name="TActor">The type of actor the configuration is based</typeparam>
         /// <returns>The configuration object for the given actor type</returns>

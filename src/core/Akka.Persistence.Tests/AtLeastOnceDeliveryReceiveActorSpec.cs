@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="AtLeastOnceDeliverySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// <copyright file="AtLeastOnceDeliveryReceiveActorSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -322,10 +322,39 @@ namespace Akka.Persistence.Tests
             }
         }
 
+        private class DeliverToStarSelection : AtLeastOnceDeliveryReceiveActor
+        {
+            private readonly string _name;
+
+            public DeliverToStarSelection(string name)
+            {
+                _name = name;
+                Command<object>(message =>
+                {
+                    // this is not supported currently, so expecting exception
+                    try
+                    {
+                        Deliver(Context.ActorSelection("*"), id => string.Format("{0}{1}", message, id));
+                    }
+                    catch (Exception ex)
+                    {
+                        Sender.Tell(ex.Message);
+                    }
+                });
+
+                Recover<object>(message => {});
+            }
+
+            public override string PersistenceId
+            {
+                get { return _name; }
+            }
+        }
+
         #endregion
 
         public AtLeastOnceDeliveryReceiveActorSpec()
-            : base(Configuration("inmem", "AtLeastOnceDeliveryReceiveActorSpec"))
+            : base(Configuration("AtLeastOnceDeliveryReceiveActorSpec"))
         {
         }
 
@@ -349,6 +378,14 @@ namespace Akka.Persistence.Tests
             probe.ExpectMsg<Action>(a => a.Id == 1 && a.Payload == "a");
             probe.ExpectNoMsg(TimeSpan.FromSeconds(1));
         }
+
+        [Fact]
+        public void PersistentReceive_must_not_allow_using_ActorSelection_with_wildcards()
+        {
+            Sys.ActorOf(Props.Create(() => new DeliverToStarSelection(Name))).Tell("anything, really.");
+            ExpectMsg<string>().Contains("not supported").ShouldBeTrue();
+        }
+
 
         [Fact]
         public void PersistentReceive_must_redeliver_lost_messages()
@@ -557,6 +594,99 @@ namespace Akka.Persistence.Tests
             resultMessages.ShouldOnlyContainInOrder(new Action(1, "a-1"), new Action(2, "b-1"), new Action(3, "b-2"));
 
             Sys.Stop(sender);
+        }
+
+        public void PersistentReceive_must_redeliver_many_lost_messages()
+        {
+            var probeA = CreateTestProbe();
+            var probeB = CreateTestProbe();
+            var probeC = CreateTestProbe();
+            var destA = Sys.ActorOf(Props.Create(() => new Destination(probeA.Ref)), "destination-a");
+            var destB = Sys.ActorOf(Props.Create(() => new Destination(probeB.Ref)), "destination-b");
+            var destC = Sys.ActorOf(Props.Create(() => new Destination(probeC.Ref)), "destination-c");
+            var destinations = new Dictionary<string, ActorPath>
+            {
+                { "A", Sys.ActorOf(Props.Create(() => new Unreliable(2, destA)), "unreliable-a").Path },
+                { "B", Sys.ActorOf(Props.Create(() => new Unreliable(5, destB)), "unreliable-b").Path },
+                { "C", Sys.ActorOf(Props.Create(() => new Unreliable(3, destC)), "unreliable-c").Path }
+            };
+            var sender = Sys.ActorOf(Props.Create(() => new Receiver(TestActor, Name, TimeSpan.FromMilliseconds(1000), 5, 1000, true, destinations)), Name);
+
+            const int n = 100;
+            var a = new string[n];
+            var b = new string[n];
+            var c = new string[n];
+            for (int i = 0; i < n; i++)
+            {
+                var x = "a-" + i;
+                a[i] = x;
+                sender.Tell(new Req(x));
+            }
+            for (int i = 0; i < n; i++)
+            {
+                var x = "b-" + i;
+                b[i] = x;
+                sender.Tell(new Req(x));
+            }
+            for (int i = 0; i < n; i++)
+            {
+                var x = "c-" + i;
+                c[i] = x;
+                sender.Tell(new Req(x));
+            }
+            var deliverWithin = TimeSpan.FromSeconds(20);
+
+            var resAarr = probeA.ReceiveN(n, deliverWithin).Cast<Action>().Select(x => x.Payload).ToArray();
+            var resBarr = probeB.ReceiveN(n, deliverWithin).Cast<Action>().Select(x => x.Payload).ToArray();
+            var resCarr = probeC.ReceiveN(n, deliverWithin).Cast<Action>().Select(x => x.Payload).ToArray();
+
+            resAarr.Except(a).Any().ShouldBeFalse();
+            resBarr.Except(b).Any().ShouldBeFalse();
+            resCarr.Except(c).Any().ShouldBeFalse();
+        }
+
+        [Fact]
+        public void PersistentReceive_must_limit_the_number_of_messages_redelivered_at_once()
+        {
+            var probe = CreateTestProbe();
+            var probeA = CreateTestProbe();
+            var dst = Sys.ActorOf(Props.Create(() => new Destination(probeA.Ref)));
+
+            var destinations = new Dictionary<string, ActorPath>
+            {
+                {"A", Sys.ActorOf(Props.Create(() => new Unreliable(2, dst))).Path}
+            };
+
+            var sender =
+                Sys.ActorOf(
+                    Props.Create(
+                        () =>
+                            new Receiver(probe.Ref, Name, TimeSpan.FromMilliseconds(1000), 5, 2, true, destinations)),
+                    Name);
+
+            const int N = 10;
+            for (int i = 1; i <= N; i++)
+            {
+                sender.Tell(new Req("a-" + i),  probe.Ref);
+            }
+
+            // initially all odd messages should go through
+            for (int i = 1; i <= N; i = i+2)
+            {
+                probeA.ExpectMsg<Action>(a => a.Id == i && a.Payload == "a-" + i);
+            }
+            probeA.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+
+            // at each redelivery round, 2 (even) messages are sent, the first goes through
+            // without throttiling, at each round half of the messages would go through
+            var toDeliver = Enumerable.Range(1, N).Where(i => i%2 == 0).Select(i => (long)i).ToList();
+            for (int i = 2; i <= N; i = i+2)
+            {
+                toDeliver.Remove(probeA.ExpectMsg<Action>().Id);
+                probeA.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+            }
+
+            toDeliver.Count.ShouldBe(0);
         }
     }
 }

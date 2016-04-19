@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReceiveActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -110,14 +110,96 @@ namespace Akka.Actor
             return newHandler;
         }
 
-        protected void Receive<T>(Func<T,Task> handler)
+        [Obsolete("Use ReceiveAsync instead. This method will be removed in future versions")]
+        protected void Receive<T>(Func<T, Task> handler)
         {
-            EnsureMayConfigureMessageHandlers();
-            _matchHandlerBuilders.Peek().Match<T>( m =>
+            ReceiveAsync(handler);
+        }
+
+        private Action<T> WrapAsyncHandler<T>(Func<T, Task> asyncHandler)
+        {
+            return m =>
             {
-                Func<Task> wrap = () => handler(m);
+                Func<Task> wrap = () => asyncHandler(m);
                 ActorTaskScheduler.RunTask(wrap);
-            });
+            };
+        }
+
+        /// <summary>
+        /// Registers an asynchronous handler for incoming messages of the specified type <typeparamref name="T"/>.
+        /// If <paramref name="shouldHandle"/>!=<c>null</c> then it must return true before a message is passed to <paramref name="handler"/>.
+        /// <remarks>The actor will be suspended until the task returned by <paramref name="handler"/> completes.</remarks>
+        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(System.Action)"/> or <see cref="BecomeStacked"/>.</remarks>
+        /// <remarks>Note that handlers registered prior to this may have handled the message already. 
+        /// In that case, this handler will not be invoked.</remarks>
+        /// </summary>
+        /// <typeparam name="T">The type of the message</typeparam>
+        /// <param name="handler">The message handler that is invoked for incoming messages of the specified type <typeparamref name="T"/></param>
+        /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
+        protected void ReceiveAsync<T>(Func<T,Task> handler, Predicate<T> shouldHandle = null)
+        {
+            Receive(WrapAsyncHandler(handler), shouldHandle);
+        }
+
+        /// <summary>
+        /// Registers an asynchronous handler for incoming messages of the specified type <typeparamref name="T"/>.
+        /// If <paramref name="shouldHandle"/>!=<c>null</c> then it must return true before a message is passed to <paramref name="handler"/>.
+        /// <remarks>The actor will be suspended until the task returned by <paramref name="handler"/> completes.</remarks>
+        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(System.Action)"/> or <see cref="BecomeStacked"/>.</remarks>
+        /// <remarks>Note that handlers registered prior to this may have handled the message already. 
+        /// In that case, this handler will not be invoked.</remarks>
+        /// </summary>
+        /// <typeparam name="T">The type of the message</typeparam>
+        /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
+        /// <param name="handler">The message handler that is invoked for incoming messages of the specified type <typeparamref name="T"/></param>
+        protected void ReceiveAsync<T>(Predicate<T> shouldHandle, Func<T, Task> handler)
+        {
+            Receive(WrapAsyncHandler(handler), shouldHandle);
+        }
+
+        /// <summary>
+        /// Registers an asynchronous handler for incoming messages of the specified <paramref name="messageType"/>.
+        /// If <paramref name="shouldHandle"/>!=<c>null</c> then it must return true before a message is passed to <paramref name="handler"/>.
+        /// <remarks>The actor will be suspended until the task returned by <paramref name="handler"/> completes.</remarks>
+        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(Action)"/> or <see cref="BecomeStacked"/>.</remarks>
+        /// <remarks>Note that handlers registered prior to this may have handled the message already. 
+        /// In that case, this handler will not be invoked.</remarks>
+        /// </summary>
+        /// <param name="messageType">The type of the message</param>
+        /// <param name="handler">The message handler that is invoked for incoming messages of the specified <paramref name="messageType"/></param>
+        /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
+        protected void ReceiveAsync(Type messageType, Func<object, Task> handler, Predicate<object> shouldHandle = null)
+        {
+            Receive(messageType, WrapAsyncHandler(handler), shouldHandle);
+        }
+
+        /// <summary>
+        /// Registers an asynchronous handler for incoming messages of the specified <paramref name="messageType"/>.
+        /// If <paramref name="shouldHandle"/>!=<c>null</c> then it must return true before a message is passed to <paramref name="handler"/>.
+        /// <remarks>The actor will be suspended until the task returned by <paramref name="handler"/> completes.</remarks>
+        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(Action)"/> or <see cref="BecomeStacked"/>.</remarks>
+        /// <remarks>Note that handlers registered prior to this may have handled the message already. 
+        /// In that case, this handler will not be invoked.</remarks>
+        /// </summary>
+        /// <param name="messageType">The type of the message</param>
+        /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
+        /// <param name="handler">The message handler that is invoked for incoming messages of the specified <paramref name="messageType"/></param>
+        protected void ReceiveAsync(Type messageType, Predicate<object> shouldHandle, Func<object, Task> handler)
+        {
+            Receive(messageType, WrapAsyncHandler(handler), shouldHandle);
+        }
+
+        /// <summary>
+        /// Registers an asynchronous handler for incoming messages of any type.
+        /// <remarks>The actor will be suspended until the task returned by <paramref name="handler"/> completes.</remarks>
+        /// <remarks>This method may only be called when constructing the actor or from <see cref="Become(Action)"/> or <see cref="BecomeStacked"/>.</remarks>
+        /// <remarks>Note that handlers registered prior to this may have handled the message already. 
+        /// In that case, this handler will not be invoked.</remarks>
+        /// </summary>
+        /// <param name="handler">The message handler that is invoked for all</param>
+        protected void ReceiveAnyAsync(Func<object, Task> handler)
+        {
+            ReceiveAny(WrapAsyncHandler(handler));
         }
 
         /// <summary>

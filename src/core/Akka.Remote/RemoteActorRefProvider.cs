@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteActorRefProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,7 +15,6 @@ using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Remote.Configuration;
-using Akka.Serialization;
 using Akka.Util.Internal;
 
 namespace Akka.Remote
@@ -45,13 +44,16 @@ namespace Akka.Remote
 
         private Internals RemoteInternals
         {
-            get
-            {
-                return _internals ??
-                       (_internals =
-                           new Internals(new Remoting(_system, this), _system.Serialization,
-                               new RemoteSystemDaemon(_system, RootPath / "remote", SystemGuardian, _remotingTerminator, _log)));
-            }
+            get { return _internals ?? (_internals = CreateInternals()); }
+        }
+
+        private Internals CreateInternals()
+        {
+            var internals =
+                new Internals(new Remoting(_system, this), _system.Serialization,
+                    new RemoteSystemDaemon(_system, RootPath/"remote", SystemGuardian, _remotingTerminator, _log));
+            _local.RegisterExtraName("remote", internals.RemoteDaemon);
+            return internals;
         }
 
         public IInternalActorRef RemoteDaemon { get { return RemoteInternals.RemoteDaemon; } }
@@ -529,30 +531,27 @@ namespace Akka.Remote
 
             protected override void TellInternal(object message, IActorRef sender)
             {
-                message
-                    .Match()
-                    .With<EndpointManager.Send>(
-                        send =>
-                        {
-                            // else ignore: it is a reliably delivered message that might be retried later, and it has not yet deserved
-                            // the dead letter status
-                            if (send.Seq == null)
-                            {
-                                base.TellInternal(send.Message, send.SenderOption ?? ActorRefs.NoSender);
-                            }
-                        })
-                    .With<DeadLetter>(
-                        deadLetter =>
-                        {
-                            // else ignore: it is a reliably delivered message that might be retried later, and it has not yet deserved
-                            // the dead letter status
-                            var deadSend = deadLetter.Message as EndpointManager.Send;
-                            if (deadSend != null && deadSend.Seq == null)
-                            {
-                                base.TellInternal(deadSend.Message, deadSend.SenderOption ?? ActorRefs.NoSender);
-                            }
-                        })
-                    .Default(_ => base.TellInternal(message, sender));
+                var send = message as EndpointManager.Send;
+                var deadLetter = message as DeadLetter;
+                if (send != null)
+                {
+                    if (send.Seq == null)
+                    {
+                        base.TellInternal(send.Message, send.SenderOption ?? ActorRefs.NoSender);
+                    }
+                }
+                else if (deadLetter?.Message is EndpointManager.Send)
+                {
+                    var deadSend = (EndpointManager.Send) deadLetter.Message;
+                    if (deadSend.Seq == null)
+                    {
+                        base.TellInternal(deadSend.Message, deadSend.SenderOption ?? ActorRefs.NoSender);
+                    }
+                }
+                else
+                {
+                    base.TellInternal(message, sender);
+                }               
             }
         }
     }

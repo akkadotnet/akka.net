@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ISystemMessage.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -251,22 +251,26 @@ namespace Akka.Dispatch.SysMsg
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorTaskSchedulerMessage" /> class.
         /// </summary>
-        public ActorTaskSchedulerMessage(ActorTaskScheduler scheduler, Task task)
+        public ActorTaskSchedulerMessage(ActorTaskScheduler scheduler, Task task, object message)
         {
             _scheduler = scheduler;
             _task = task;
+            Message = message;
         }
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorTaskSchedulerMessage" /> class.
         /// </summary>
         /// <param name="exception">The exception.</param>
-        public ActorTaskSchedulerMessage(Exception exception)
+        /// <param name="message">The message causing the exception</param>
+        public ActorTaskSchedulerMessage(Exception exception,object message)
         {
             Exception = exception;
+            Message = message;
         }
 
         public Exception Exception { get; private set; }
+        public object Message { get;private set; }
 
         public void ExecuteTask()
         {
@@ -447,7 +451,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class Terminate.
     /// </summary>
-    public sealed class Terminate : ISystemMessage
+    public sealed class Terminate : ISystemMessage, IPossiblyHarmful
     {
         private Terminate() { }
         private static readonly Terminate _instance = new Terminate();

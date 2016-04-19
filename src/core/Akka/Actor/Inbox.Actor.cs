@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Inbox.Actor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -168,10 +168,21 @@ namespace Akka.Actor
                     if (_currentDeadline != null)
                     {
                         _currentDeadline.Item2.Cancel();
+                        _currentDeadline = null;
                     }
-                    var cancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(next.Deadline - Context.System.Scheduler.MonotonicClock, Self, new Kick(), Self);
 
-                    _currentDeadline = Tuple.Create(next.Deadline, cancelable);
+                    TimeSpan delay = next.Deadline - Context.System.Scheduler.MonotonicClock;
+
+                    if (delay > TimeSpan.Zero)
+                    {
+                        var cancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(delay, Self, new Kick(), Self);
+                        _currentDeadline = Tuple.Create(next.Deadline, cancelable);
+                    }
+                    else
+                    {
+                        // The client already timed out, Kick immediately
+                        Self.Tell(new Kick(), ActorRefs.NoSender);
+                    }
                 }
             }
 

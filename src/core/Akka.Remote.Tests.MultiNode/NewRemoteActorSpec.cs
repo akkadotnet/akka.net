@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="NewRemoteActorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -100,12 +100,12 @@ namespace Akka.Remote.Tests.MultiNode
         [MultiNodeFact]
         public void NewRemoteActorSpecs()
         {
-            ANewRemoteActorMustBeLocallyInstantiatedOnARemoteNodeAndBeAbleToCommunicateThroughItsRemoteActorRef();
-            ANewRemoteActorMustBeLocallyInstantiatedOnARemoteNodeWithNullParameterAndBeAbleToCommunicateThroughItsRemoteActorRef();
-            ANewRemoteActorMustBeAbleToShutdownSystemWhenUsingRemoteDeployedActor();
+            A_new_remote_actor_must_be_locally_instantiated_on_a_remote_node_and_be_able_to_communicate_through_its_remote_actor_ref();
+            A_new_remote_actor_must_be_locally_instantiated_on_a_remote_node_with_null_parameter_and_be_able_to_communicate_through_its_remote_actor_ref();
+            A_new_remote_actor_must_be_able_to_shutdown_system_when_using_remote_deployed_actor();
         }
         
-        public void ANewRemoteActorMustBeLocallyInstantiatedOnARemoteNodeAndBeAbleToCommunicateThroughItsRemoteActorRef()
+        public void A_new_remote_actor_must_be_locally_instantiated_on_a_remote_node_and_be_able_to_communicate_through_its_remote_actor_ref()
         {
             RunOn(() =>
             {
@@ -122,7 +122,7 @@ namespace Akka.Remote.Tests.MultiNode
             EnterBarrier("done");
         }
 
-        public void ANewRemoteActorMustBeLocallyInstantiatedOnARemoteNodeWithNullParameterAndBeAbleToCommunicateThroughItsRemoteActorRef()
+        public void A_new_remote_actor_must_be_locally_instantiated_on_a_remote_node_with_null_parameter_and_be_able_to_communicate_through_its_remote_actor_ref()
         {
             RunOn(() =>
             {
@@ -139,7 +139,7 @@ namespace Akka.Remote.Tests.MultiNode
             EnterBarrier("done");
         }
 
-        public void ANewRemoteActorMustBeAbleToShutdownSystemWhenUsingRemoteDeployedActor()
+        public void A_new_remote_actor_must_be_able_to_shutdown_system_when_using_remote_deployed_actor()
         {
             Within(TimeSpan.FromSeconds(20), () =>
             {

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TypeExtensionsTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,7 +17,7 @@ namespace Akka.Tests.Util
     public class TypeExtensionsTests
     {
         [Fact]
-        public void TestGenericImplements()
+        public void Test_generic_implements()
         {
             typeof(object[]).Implements<IEnumerable>().ShouldBe(true);
             typeof(object[]).Implements<string>().ShouldBe(false);
@@ -26,7 +26,7 @@ namespace Akka.Tests.Util
         }
 
         [Fact]
-        public void TestNongenericImplements()
+        public void Test_nongeneric_implements()
         {
             typeof(object[]).Implements(typeof(IEnumerable)).ShouldBe(true);
             typeof(object[]).Implements(typeof(string)).ShouldBe(false);

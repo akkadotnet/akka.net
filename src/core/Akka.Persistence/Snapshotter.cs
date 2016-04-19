@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Snapshotter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -25,27 +25,33 @@ namespace Akka.Persistence
         long SnapshotSequenceNr { get; }
 
         /// <summary>
-        /// Orders to load a snapshots related to persistent actor identified by <paramref name="persistenceId"/>
-        /// that match specified <paramref name="criteria"/> up to provided <paramref name="toSequenceNr"/> upper, inclusive bound.
+        /// Instructs the snapshot store to load the specified snapshot and send it via an
+        /// <see cref="SnapshotOffer"/> to the running <see cref="PersistentActor"/>.
         /// </summary>
         void LoadSnapshot(string persistenceId, SnapshotSelectionCriteria criteria, long toSequenceNr);
 
         /// <summary>
         /// Saves <paramref name="snapshot"/> of current <see cref="ISnapshotter"/> state.
-        /// If saving succeeds, this snapshotter will receive a <see cref="SaveSnapshotSuccess"/> message,
-        /// otherwise <see cref="SaveSnapshotFailure"/> message.
+        /// 
+        /// The <see cref="PersistentActor"/> will be notified about the success or failure of this
+        /// via an <see cref="SaveSnapshotSuccess"/> or <see cref="SaveSnapshotFailure"/> message.
         /// </summary>
         void SaveSnapshot(object snapshot);
 
         /// <summary>
-        /// Deletes snapshot identified by <paramref name="sequenceNr"/> and <paramref name="timestamp"/>.
+        /// Deletes the snapshot identified by <paramref name="sequenceNr"/>.
+        /// 
+        /// The <see cref="PersistentActor"/> will be notified about the status of the deletion
+        /// via an <see cref="DeleteSnapshotSuccess"/> or <see cref="DeleteSnapshotFailure"/> message.
         /// </summary>
-        void DeleteSnapshot(long sequenceNr, DateTime timestamp);
+        void DeleteSnapshot(long sequenceNr);
 
         /// <summary>
-        /// Deletes all snapshots matching provided <paramref name="criteria"/>.
+        /// Deletes all snapshots matching <paramref name="criteria"/>.
+        /// 
+        /// The <see cref="PersistentActor"/> will be notified about the status of the deletion
+        /// via an <see cref="DeleteSnapshotsSuccess"/> or <see cref="DeleteSnapshotsFailure"/> message.
         /// </summary>
-        /// <param name="criteria"></param>
         void DeleteSnapshots(SnapshotSelectionCriteria criteria);
     }
 }

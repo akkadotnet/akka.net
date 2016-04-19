@@ -104,6 +104,7 @@
   </Choose>
   <ItemGroup>
     <Compile Include="Actor\ActorBecomeTests.cs" />
+    <Compile Include="Actor\ActorCellSpec.cs" />
     <Compile Include="Actor\ActorCellTests_SerializationOfUserMessages.cs" />
     <Compile Include="Actor\ActorDslSpec.cs" />
     <Compile Include="Actor\ActorLifeCycleSpec.cs" />
@@ -114,6 +115,7 @@
     <Compile Include="Actor\AskTimeoutSpec.cs" />
     <Compile Include="Actor\Cancellation\AlreadyCancelledCancelableTests.cs" />
     <Compile Include="Actor\Cancellation\CancelableTests.cs" />
+    <Compile Include="Actor\HotSwapSpec.cs" />
     <Compile Include="Actor\InboxSpec.cs" />
     <Compile Include="Actor\LocalActorRefProviderSpec.cs" />
     <Compile Include="Actor\PipeToSupportSpec.cs" />
@@ -153,6 +155,7 @@
     <Compile Include="Dispatch\XUnitAsyncTestsSanityCheck.cs" />
     <Compile Include="Event\EventBusSpec.cs" />
     <Compile Include="Event\EventStreamSpec.cs" />
+    <Compile Include="Event\LoggerMailboxSpec.cs" />
     <Compile Include="IO\SimpleDnsCacheSpec.cs" />
     <Compile Include="IO\TcpConnectionSpec.cs" />
     <Compile Include="IO\TcpIntegrationSpec.cs" />
@@ -187,8 +190,6 @@
     <Compile Include="Util\ContinuousEnumeratorSpec.cs" />
     <Compile Include="Util\Internal\Collections\IteratorTests.cs" />
     <Compile Include="Util\Internal\InterlockedSpinTests.cs" />
-    <Compile Include="Util\Internal\Collections\ImmutableAvlTreeMapTests.cs" />
-    <Compile Include="Util\Internal\Collections\ImmutableAvlTreeTests.cs" />
     <Compile Include="Util\PatternSpec.cs" />
     <Compile Include="Util\SwitchTests.cs" />
     <Compile Include="Util\TypeExtensionsTests.cs" />

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Shard.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -152,12 +152,12 @@ namespace Akka.Cluster.Sharding
         /// Persistent state of the Shard.
         /// </summary>
         [Serializable]
-        internal protected struct ShardState : IClusterShardingSerializable
+        internal protected class ShardState : IClusterShardingSerializable
         {
             public static readonly ShardState Empty = new ShardState(ImmutableHashSet<string>.Empty);
             public readonly IImmutableSet<EntityId> Entries;
 
-            public ShardState(IImmutableSet<EntityId> entries) : this()
+            public ShardState(IImmutableSet<EntityId> entries)
             {
                 Entries = entries;
             }

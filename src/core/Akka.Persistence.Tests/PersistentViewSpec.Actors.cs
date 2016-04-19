@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentViewSpec.Actors.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -67,11 +67,6 @@ namespace Akka.Persistence.Tests
             {
                 if (message.ToString() == "get") _probe.Tell(_last);
                 else if (message.ToString() == "boom") throw new TestException("boom");
-                else if (message is RecoveryFailure)
-                {
-                    var failure = message as RecoveryFailure;
-                    throw failure.Cause;
-                }
                 else if (IsPersistent && ShouldFail(message)) throw new TestException("boom");
                 else if (IsPersistent)
                 {
@@ -188,6 +183,39 @@ namespace Akka.Persistence.Tests
 
             protected override bool Receive(object message)
             {
+                return true;
+            }
+
+            public override string ViewId { get { return _name + "-view"; } }
+            public override string PersistenceId { get { return _name; } }
+        }
+
+        internal class StashingPersistentView : PersistentView
+        {
+            private readonly string _name;
+            private readonly IActorRef _probe;
+
+            public StashingPersistentView(string name, IActorRef probe)
+            {
+                _name = name;
+                _probe = probe;
+            }
+
+            protected override bool Receive(object message)
+            {
+                if (message.Equals("other"))
+                    Stash.Stash();
+                else if (message.Equals("unstash"))
+                {
+                    Stash.UnstashAll();
+                    Context.Become(m =>
+                    {
+                        _probe.Tell(string.Format("{0}-{1}", m, LastSequenceNr));
+                        return true;
+                    });
+                }
+                else
+                    Stash.Stash();
                 return true;
             }
 

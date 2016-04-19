@@ -1,13 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EndToEndEventAdapterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Journal;
@@ -19,8 +18,8 @@ namespace Akka.Persistence.Tests
 {
     public class MemoryEndToEndAdapterSpec : EndToEndEventAdapterSpec
     {
-        private static readonly Config Config = ConfigurationFactory.ParseString(@"akka.persistence.journal.inmem.shared = true");
-        public MemoryEndToEndAdapterSpec() : base("inmem", PersistenceSpec.Configuration("inmem", "MemoryEndToEndAdapterSpec").WithFallback(Config))
+        private static readonly Config Config = ConfigurationFactory.ParseString(@"akka.persistence.journal.inmem.class = ""Akka.Persistence.Journal.SharedMemoryJournal, Akka.Persistence""");
+        public MemoryEndToEndAdapterSpec() : base("inmem", Configuration("MemoryEndToEndAdapterSpec").WithFallback(Config))
         {
         }
     }
@@ -293,7 +292,7 @@ namespace Akka.Persistence.Tests
             }}";
 
         protected EndToEndEventAdapterSpec(string journalName, Config journalConfig)
-            : base(PersistenceSpec.Configuration("inmem", "EndToEndEventAdapterSpec"))
+            : base(Configuration("EndToEndEventAdapterSpec"))
         {
             _journalName = journalName;
             _journalConfig = journalConfig;
@@ -387,6 +386,17 @@ namespace Akka.Persistence.Tests
 
                 return true;
             });
+        }
+
+        [Fact]
+        public void EventAdapters_in_end_to_end_scenarios_should_give_nice_error_message_when_unable_to_play_back_as_adapter_does_not_exist()
+        {
+            // after some time we start the system a-new
+            // and the adapter originally used for adapting A is missing from the configuration!
+            var journalPath = string.Format("akka.persistence.journal.{0}", _journalName);
+
+            // TODO when WithoutPath is added
+            // var missingAdapterConfig = AdaptersConfig.WithoutPath(...)
         }
     }
 }
