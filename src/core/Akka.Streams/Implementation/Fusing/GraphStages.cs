@@ -347,6 +347,7 @@ namespace Akka.Streams.Implementation.Fusing
 
     public interface IMaterializedValueSource
     {
+        IModule Module { get; }
         IMaterializedValueSource CopySource();
         Outlet Outlet { get; }
         StreamLayout.IMaterializedValueNode Computation { get; }
@@ -392,7 +393,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         public MaterializedValueSource(StreamLayout.IMaterializedValueNode computation) : this(computation, new Outlet<T>("matValue")) { }
 
-        protected override Attributes InitialAttributes { get { return Name; } }
+        protected override Attributes InitialAttributes => Name;
         public override SourceShape<T> Shape { get; }
 
         public void SetValue(T value)
@@ -418,6 +419,11 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new MaterializedValueGraphStageLogic(Shape, this);
+        }
+
+        public override string ToString()
+        {
+            return $"MaterializedValueSource({Computation})";
         }
     }
 

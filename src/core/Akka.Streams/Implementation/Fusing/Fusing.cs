@@ -432,7 +432,9 @@ namespace Akka.Streams.Implementation.Fusing
                             ? subMat[((Atomic) ms.Computation).Module]
                             : matNodeMapping[ms.Computation];
 
-                        var newSrc = new MaterializedValueSource<T>(mapped, (Outlet<T>) ms.Outlet);
+                        var outputType = ms.Outlet.GetType().GetGenericArguments().First();
+                        var materializedValueSourceType = typeof(MaterializedValueSource<>).MakeGenericType(outputType);
+                        var newSrc = (IMaterializedValueSource) Activator.CreateInstance(materializedValueSourceType, mapped, ms.Outlet);
                         var replacement = new CopiedModule(c.Shape, c.Attributes, newSrc.Module);
                         structInfo.Replace(c, replacement, localGroup);
                     }
@@ -796,12 +798,12 @@ namespace Akka.Streams.Implementation.Fusing
         private bool IsCopiedModuleWithGraphStageAndMaterializedValue(IModule module)
         {
             var copiedModule = module as CopiedModule;
-            GraphStageModule graphStage;
-            Type mvcType;
+            GraphStageModule graphStageModule;
+            Type stageType;
             return copiedModule != null
-                && (graphStage = copiedModule.CopyOf as GraphStageModule) != null
-                && (mvcType = graphStage.MaterializedValueComputation.GetType()).IsGenericType
-                && mvcType.GetGenericTypeDefinition() == typeof(MaterializedValueSource<>);
+                && (graphStageModule = copiedModule.CopyOf as GraphStageModule) != null
+                && (stageType = graphStageModule.Stage.GetType()).IsGenericType
+                && stageType.GetGenericTypeDefinition() == typeof(MaterializedValueSource<>);
         }
 
         private void AddMapping<T>(T orig, T mapd, IDictionary<T, LinkedList<T>> map)

@@ -195,19 +195,15 @@ namespace Akka.Streams
                 return null;
 
             var sb = new StringBuilder();
-            foreach (var attribute in _attributes)
+            foreach (var nameAttribute in _attributes.OfType<Name>())
             {
-                var n = attribute as Name;
-                if (n != null)
-                {
-                    //FIXME this UrlEncode is a bug IMO, if that format is important then that is how it should be store in Name
-                    var encoded = Uri.EscapeDataString(n.Value);
+                // FIXME this UrlEncode is a bug IMO, if that format is important then that is how it should be store in Name
+                var encoded = Uri.EscapeDataString(nameAttribute.Value);
 
-                    if (sb.Length != 0)
-                        sb.Append('-');
+                if (sb.Length != 0)
+                    sb.Append('-');
 
-                    sb.Append(encoded);
-                }
+                sb.Append(encoded);
             }
 
             return sb.Length == 0 ? defaultIfNotFound : sb.ToString();
