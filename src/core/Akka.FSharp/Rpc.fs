@@ -10,7 +10,6 @@ namespace Akka.FSharp
 open System
 open Akka.Actor
 
-[<AutoOpen>]
 module Rpc =
 
 
@@ -71,8 +70,6 @@ module Rpc =
 
             x.AsyncResult req
 
-[<AutoOpen>]
-module Spawn =
     /// <summary>
     /// Spawns an actor using specified actor computation expression, with custom spawn option settings.
     /// The actor can only be used locally. 
@@ -84,7 +81,7 @@ module Spawn =
     let spawnOpt (actorFactory : IActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<obj, 'Returned>) 
         (options : SpawnOption list) : IActorRef = 
         let nf (shadAct : Akka.FSharp.Actors.Actor<obj>) =
-            let act = Rpc.Actor<'Message>(shadAct)
+            let act = Actor<'Message>(shadAct)
             f act
 
         let e = Linq.Expression.ToExpression(fun () -> new FunActor<obj, 'Returned>(nf))
