@@ -386,9 +386,8 @@ namespace Akka.Remote
                         });
 
                         if (ia.DisassociationInfo.HasValue && ia.DisassociationInfo == DisassociateInfo.Quarantined)
-                        {
-                            //TODO: add context.system.eventStream.publish(ThisActorSystemQuarantinedEvent(localAddress, remoteAddress))
-                        }
+                            Context.System.EventStream.Publish(new ThisActorSystemQuarantinedEvent(ia.LocalAddress, ia.RemoteAddress));
+
                         directive = Directive.Stop;
                     })
                     .With<ShutDownAssociation>(shutdown =>

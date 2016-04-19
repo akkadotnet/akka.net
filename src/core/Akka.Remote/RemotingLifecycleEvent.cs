@@ -194,6 +194,29 @@ namespace Akka.Remote
         }
     }
 
+    public sealed class ThisActorSystemQuarantinedEvent : RemotingLifecycleEvent
+    {
+        public ThisActorSystemQuarantinedEvent(Address localAddress, Address remoteAddress)
+        {
+            LocalAddress = localAddress;
+            RemoteAddress = remoteAddress;
+        }
+
+        public Address LocalAddress { get; private set; }
+
+        public Address RemoteAddress { get; private set; }
+
+        public override LogLevel LogLevel()
+        {
+            return Event.LogLevel.WarningLevel;
+        }
+
+        public override string ToString()
+        {
+            return string.Format("The remote system {0} has quarantined this system {1}.", RemoteAddress, LocalAddress);
+        }
+    }
+
     /// <summary>
     /// INTERNAL API.
     /// 
