@@ -184,7 +184,7 @@ let ``actor that wait for 3s`` () =
             return ()
         }
         loop ()
-    let arefTwo = Rpc.spawn system "UnitActor" agentTwo
+    let arefTwo = Rpc.spawn system "UnitActor2" agentTwo
 
     let ((dtPast, dtNow) : DateTime * DateTime) = arefTwo <? DateTime.Now |> Async.RunSynchronously
     
