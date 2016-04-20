@@ -26,7 +26,8 @@ module Rpc =
             let rec loop () = actor {
                 let! msg = orig.Receive()
                 match msg with
-                | :? 'Message as m -> return m
+                | :? 'Message as m ->
+                    return m
                 | _ ->
                     orig.Unhandled msg
                     return! loop()
@@ -44,9 +45,10 @@ module Rpc =
     
             let rec loop() = actor {
                 let! msg = orig.Receive()
+                let sender = orig.Sender()
                 match msg with
-                | :? 'Out as m when orig.Sender() = orig.Self ->
-                    let resp = m
+                | :? AsyncResult<'Out> as m when sender.Path = orig.Self.Path ->
+                    let (Result resp) = m
                     orig.UnstashAll()
                     return resp
 

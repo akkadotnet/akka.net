@@ -159,7 +159,7 @@ let ``actor that wait for 3s`` () =
 
     let system = System.create "my-system" timeoutConfig
 
-    let agentOne (mb: Rpc.Actor<unit>) =
+    let agentOne (mb: Rpc.Actor<int>) =
         let rec loop () = actor {
             let! msg = mb.Receive()
             mb.Sender().Tell DateTime.Now
@@ -172,21 +172,20 @@ let ``actor that wait for 3s`` () =
     let agentTwo (mb: Rpc.Actor<DateTime>) =
         let rec loop () = actor {
             let! msg = mb.Receive()
-            let sender = mb.Sender
+            let sender = mb.Sender()
             let dtPast  = DateTime.Now
             let! (dtNow : DateTime) =
                 async {
                     do! Async.Sleep 3000
-                    let! (retVal : DateTime) = arefOne.Ask ((), TimeSpan.FromSeconds 4.0)
+                    let! (retVal : DateTime) = arefOne.Ask (0, TimeSpan.FromSeconds 4.0)
                     return retVal
                 } |> mb.AsyncResult
-            sender().Tell ((dtPast, dtNow))
+            sender.Tell ((dtPast, dtNow))
             return ()
         }
         loop ()
-    let arefTwo = Rpc.spawn system "UnitActor2" agentTwo
+    let arefTwo = Rpc.spawn system "DateTimeActor" agentTwo
 
-    let ((dtPast, dtNow) : DateTime * DateTime) = arefTwo <? DateTime.Now |> Async.RunSynchronously
-    
+    let ((dtPast, dtNow) : DateTime * DateTime) = arefTwo.Ask (DateTime.Now, TimeSpan.FromSeconds 5.0) |> Async.RunSynchronously
     (dtNow - dtPast).TotalSeconds |> int
     |> equals 3
