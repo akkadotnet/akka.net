@@ -10,6 +10,7 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -127,6 +128,8 @@ namespace Akka.Streams.Tests.Dsl
                     latch.Ready(TimeSpan.FromSeconds(10));
                 }).WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.StoppingDecider)), Materializer);
                 
+                // make sure the stream is up and running, otherwise the latch is maybe ready before the third message arrives
+                Thread.Sleep(500);
                 latch.CountDown();
                 probe.ExpectMsgAllOf(1, 2);
 

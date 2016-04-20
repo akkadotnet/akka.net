@@ -1,57 +1,74 @@
 ﻿using System;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
+using Akka.Streams.Util;
 
 namespace Akka.Streams.Implementation
 {
     internal class Throttle<T> : SimpleLinearGraphStage<T>
     {
         #region stage logic
-        private sealed class ThrottleStageLogic : TimerGraphStageLogic
+
+        private sealed class Logic : TimerGraphStageLogic
         {
-            public const string TimerName = "ThrottleTimer";
+            private const string TimerName = "ThrottleTimer";
             private readonly Throttle<T> _stage;
             private readonly long _speed;
             private readonly long _scaledMaximumBurst;
 
-            private DateTime _previousTime;
-            private bool _willStop = false;
-            private long _lastTokens = 0L;
-            private object _currentElement = null;
+            private long _previousTime;
+            private bool _willStop;
+            private long _lastTokens;
+            private Option<T> _currentElement;
 
-            public ThrottleStageLogic(Shape shape, Throttle<T> stage) : base(shape)
+            public Logic(Throttle<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                _speed = (long)((_stage.Cost / _stage.Per.TotalMilliseconds) * 1024 * 1024);
-                _scaledMaximumBurst = Scale(_stage.MaximumBurst);
+                _lastTokens = stage._maximumBurst;
+                _previousTime = Now;
+                _speed = (long)(((double)stage._cost/stage._per.Ticks)*1073741824);
+                _scaledMaximumBurst = Scale(_stage._maximumBurst);
 
                 SetHandler(_stage.Inlet, onPush: () =>
                 {
-                    var timeElapsed = DateTime.UtcNow - _previousTime;
-                    var currentTokens = Math.Min(((long)timeElapsed.TotalMilliseconds) * _speed + _lastTokens, _scaledMaximumBurst);
                     var element = Grab(_stage.Inlet);
-                    var elementCost = Scale(_stage.CostCalculation(element));
-                    if (currentTokens < elementCost)
+                    var elementCost = Scale(_stage._costCalculation(element));
+
+                    if (_lastTokens >= elementCost)
                     {
-                        switch (_stage.Mode)
-                        {
-                            case ThrottleMode.Shaping:
-                                _currentElement = element;
-                                ScheduleOnce(TimerName, TimeSpan.FromMilliseconds((elementCost - currentTokens) / _speed));
-                                break;
-                            case ThrottleMode.Enforcing:
-                                FailStage(new OverflowException("Maximum throttle throughtput exceeded"));
-                                break;
-                        }
+                        _lastTokens -= elementCost;
+                        Push(_stage.Outlet, element);
                     }
                     else
                     {
-                        _lastTokens = currentTokens - elementCost;
-                        _previousTime = DateTime.UtcNow;
-                        Push(_stage.Outlet, element);
+                        var currentTime = Now;
+                        var currentTokens = Math.Min((currentTime - _previousTime)*_speed + _lastTokens,
+                            _scaledMaximumBurst);
+                        if (currentTokens < elementCost)
+                        {
+                            switch (_stage._mode)
+                            {
+                                case ThrottleMode.Shaping:
+                                    _currentElement = element;
+                                    var waitTime = (elementCost - currentTokens)/_speed;
+                                    _previousTime = currentTime + waitTime;
+                                    ScheduleOnce(TimerName, TimeSpan.FromTicks(waitTime));
+                                    break;
+                                case ThrottleMode.Enforcing:
+                                    FailStage(new OverflowException("Maximum throttle throughput exceeded"));
+                                    break;
+                                default:
+                                    throw new ArgumentOutOfRangeException();
+                            }
+                        }
+                        else
+                        {
+                            _lastTokens = currentTokens - elementCost;
+                            _previousTime = currentTime;
+                            Push(_stage.Outlet, element);
+                        }
                     }
-                },
-                onUpstreamFinish: () =>
+                }, onUpstreamFinish: () =>
                 {
                     if (IsAvailable(_stage.Outlet) && IsTimerActive(TimerName)) _willStop = true;
                     else CompleteStage();
@@ -62,43 +79,36 @@ namespace Akka.Streams.Implementation
 
             protected internal override void OnTimer(object timerKey)
             {
-                Push(_stage.Outlet, (T)_currentElement);
-                _currentElement = null;
-                _previousTime = DateTime.UtcNow;
+                Push(_stage.Outlet, _currentElement.Value);
+                _currentElement = Option<T>.None;
                 _lastTokens = 0;
                 if (_willStop) CompleteStage();
             }
 
-            public override void PreStart()
-            {
-                _previousTime = DateTime.UtcNow;
-            }
+            public override void PreStart() => _previousTime = Now;
 
-            private long Scale(int n)
-            {
-                return ((long)n) << 20;
-            }
+            private long Scale(int n) => ((long) n) << 30;
+
+            private long Now => DateTime.Now.Ticks;
         }
+
         #endregion
 
-        public readonly int Cost;
-        public readonly TimeSpan Per;
-        public readonly int MaximumBurst;
-        public readonly Func<T, int> CostCalculation;
-        public readonly ThrottleMode Mode;
+        private readonly int _cost;
+        private readonly TimeSpan _per;
+        private readonly int _maximumBurst;
+        private readonly Func<T, int> _costCalculation;
+        private readonly ThrottleMode _mode;
 
         public Throttle(int cost, TimeSpan per, int maximumBurst, Func<T, int> costCalculation, ThrottleMode mode)
         {
-            Cost = cost;
-            Per = per;
-            MaximumBurst = maximumBurst;
-            CostCalculation = costCalculation;
-            Mode = mode;
+            _cost = cost;
+            _per = per;
+            _maximumBurst = maximumBurst;
+            _costCalculation = costCalculation;
+            _mode = mode;
         }
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
-        {
-            return new ThrottleStageLogic(Shape, this);
-        }
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 }

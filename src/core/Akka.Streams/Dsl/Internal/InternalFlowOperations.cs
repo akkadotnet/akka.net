@@ -1279,6 +1279,7 @@ namespace Akka.Streams.Dsl.Internal
         public static IFlow<T, TMat> Throttle<T, TMat>(this IFlow<T, TMat> flow, int cost, TimeSpan per,
             int maximumBurst, Func<T, int> calculateCost, ThrottleMode mode)
         {
+            if(cost <= 0) throw new ArgumentException("cost must be > 0", nameof(cost));
             if (per == TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be zero", nameof(per));
             if (mode == ThrottleMode.Enforcing && maximumBurst < 0)
                 throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
