@@ -1098,7 +1098,7 @@ namespace Akka.Streams.Implementation.Fusing
             private readonly Action<Result<TOut>> _taskCallback;
             private int _inFlight;
 
-            public Logic(Shape shape, Attributes inheritedAttributes, MapAsyncUnordered<TIn, TOut> stage) : base(shape)
+            public Logic(Attributes inheritedAttributes, MapAsyncUnordered<TIn, TOut> stage) : base(stage.Shape)
             {
                 _stage = stage;
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
@@ -1124,7 +1124,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     try
                     {
-                        var task = _stage.MapFunc(Grab(_stage.In));
+                        var task = _stage._mapFunc(Grab(_stage.In));
                         _inFlight++;
                         task.ContinueWith(t => _taskCallback(Result.FromTask(t)), TaskContinuationOptions.ExecuteSynchronously);
                     }
@@ -1133,7 +1133,7 @@ namespace Akka.Streams.Implementation.Fusing
                         if (_decider(e) == Directive.Stop) FailStage(e);
                     }
 
-                    if (Todo < _stage.Parallelism) TryPull(_stage.In);
+                    if (Todo < _stage._parallelism) TryPull(_stage.In);
                 }, onUpstreamFinish: () => { if (Todo == 0) CompleteStage(); });
                 SetHandler(_stage.Out, onPull: () =>
                 {
@@ -1141,16 +1141,13 @@ namespace Akka.Streams.Implementation.Fusing
                     if (!_buffer.IsEmpty) Push(_stage.Out, _buffer.Dequeue());
                     else if (IsClosed(inlet) && Todo == 0) CompleteStage();
 
-                    if (Todo < _stage.Parallelism && !HasBeenPulled(inlet)) TryPull(inlet);
+                    if (Todo < _stage._parallelism && !HasBeenPulled(inlet)) TryPull(inlet);
                 });
             }
 
             private int Todo => _inFlight + _buffer.Used;
 
-            public override void PreStart()
-            {
-                _buffer = Buffer.Create<TOut>(_stage.Parallelism, Materializer);
-            }
+            public override void PreStart() => _buffer = Buffer.Create<TOut>(_stage._parallelism, Materializer);
 
             private void FailOrPull(Exception failure)
             {
@@ -1163,25 +1160,25 @@ namespace Akka.Streams.Implementation.Fusing
 
         #endregion
 
-        public readonly int Parallelism;
-        public readonly Func<TIn, Task<TOut>> MapFunc;
+        private readonly int _parallelism;
+        private readonly Func<TIn, Task<TOut>> _mapFunc;
         public readonly Inlet<TIn> In = new Inlet<TIn>("in");
         public readonly Outlet<TOut> Out = new Outlet<TOut>("out");
 
         public MapAsyncUnordered(int parallelism, Func<TIn, Task<TOut>> mapFunc)
         {
-            Parallelism = parallelism;
-            MapFunc = mapFunc;
+            _parallelism = parallelism;
+            _mapFunc = mapFunc;
             Shape = new FlowShape<TIn, TOut>(In, Out);
-            InitialAttributes = Attributes.CreateName("MapAsyncUnordered");
         }
 
-        protected override Attributes InitialAttributes { get; }
+        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("MapAsyncUnordered");
+
         public override FlowShape<TIn, TOut> Shape { get; }
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new Logic(Shape, inheritedAttributes, this);
+            return new Logic(inheritedAttributes, this);
         }
     }
 
@@ -1400,17 +1397,20 @@ namespace Akka.Streams.Implementation.Fusing
 
         private sealed class Logic : TimerGraphStageLogic
         {
-            private const long SchedulerSensitivity = TimeSpan.TicksPerSecond/100; // 10ms
             private const string TimerName = "DelayedTimer";
             private readonly Delay<T> _stage;
             private IBuffer<Tuple<long, T>> _buffer; // buffer has pairs timestamp with upstream element
             private bool _willStop;
             private readonly int _size;
 
-            public Logic(FlowShape<T, T> shape, Attributes inheritedAttributes, Delay<T> stage) : base(shape)
+            public Logic(Attributes inheritedAttributes, Delay<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                _size = inheritedAttributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;
+
+                var inputBuffer = inheritedAttributes.GetAttribute<Attributes.InputBuffer>(null);
+                if(inputBuffer == null)
+                    throw new IllegalStateException($"Couldn't find InputBuffer Attribute for {this}");
+                _size = inputBuffer.Max;
 
                 var overflowStrategy = OnPushStrategy(_stage._strategy);
 
@@ -1437,17 +1437,16 @@ namespace Akka.Streams.Implementation.Fusing
                     CompleteIfReady();
                 });
             }
+            
+            private long NextElementWaitTime
+                => (long)_stage._delay.TotalMilliseconds - (DateTime.UtcNow.Ticks - _buffer.Peek().Item1)*1000*10;
 
-            private long NextElementWaitTime => _stage._delay.Ticks - (DateTime.UtcNow.Ticks - _buffer.Peek().Item1);
-
-            public override void PreStart()
-            {
-                _buffer = Buffer.Create<Tuple<long, T>>(_size, Materializer);
-            }
+            public override void PreStart() => _buffer = Buffer.Create<Tuple<long, T>>(_size, Materializer);
 
             private void CompleteIfReady()
             {
-                if (_willStop && _buffer.IsEmpty) CompleteStage();
+                if (_willStop && _buffer.IsEmpty)
+                    CompleteStage();
             }
 
             protected internal override void OnTimer(object timerKey)
@@ -1456,7 +1455,7 @@ namespace Akka.Streams.Implementation.Fusing
                 if (!_buffer.IsEmpty)
                 {
                     var waitTime = NextElementWaitTime;
-                    if (waitTime > SchedulerSensitivity) ScheduleOnce(TimerName, new TimeSpan(waitTime));
+                    if (waitTime > 10) ScheduleOnce(TimerName, new TimeSpan(waitTime));
                 }
 
                 CompleteIfReady();
@@ -1526,15 +1525,14 @@ namespace Akka.Streams.Implementation.Fusing
             _strategy = strategy;
         }
 
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.Delay;
+
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            return new Logic(Shape, inheritedAttributes, this);
+            return new Logic(inheritedAttributes, this);
         }
 
-        public override string ToString()
-        {
-            return "Delay";
-        }
+        public override string ToString() => "Delay";
     }
 
     internal sealed class TakeWithin<T> : SimpleLinearGraphStage<T>

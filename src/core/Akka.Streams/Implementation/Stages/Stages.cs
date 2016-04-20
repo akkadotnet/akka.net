@@ -61,6 +61,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes UnfoldAsync = Attributes.CreateName("unfoldAsync");
         public static readonly Attributes UnfoldInf = Attributes.CreateName("unfoldInf");
         public static readonly Attributes TerminationWatcher = Attributes.CreateName("terminationWatcher");
+        public static readonly Attributes Delay = Attributes.CreateName("delay").And(new Attributes.InputBuffer(16, 16));
 
         public static readonly Attributes PublisherSource = Attributes.CreateName("publisherSource");
         public static readonly Attributes EnumerableSource = Attributes.CreateName("enumerableSource");
