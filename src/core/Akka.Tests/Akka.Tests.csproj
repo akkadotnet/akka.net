@@ -149,6 +149,7 @@
     <Compile Include="Actor\ReceiveActorTests_Become.cs" />
     <Compile Include="Actor\ReceiveActorTests_LifeCycle.cs" />
     <Compile Include="Configuration\HoconTests.cs" />
+    <Compile Include="Dispatch\ActorMailboxSpec.cs" />
     <Compile Include="Dispatch\AsyncAwaitSpec.cs" />
     <Compile Include="Dispatch\DispatchersSpec.cs" />
     <Compile Include="Dispatch\MailboxesSpec.cs" />
