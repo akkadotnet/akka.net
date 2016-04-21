@@ -1,5 +1,11 @@
 ﻿
-// --- auto generated: 2016-03-22 4:27:43 AM --- //
+// --- auto generated: 21.04.2016 07:48:48 --- //
+//-----------------------------------------------------------------------
+// <copyright file="FanInShape.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using Akka.Streams.Stage;
 
@@ -88,10 +94,9 @@ namespace Akka.Streams.Dsl
 		private sealed class Logic : GraphStageLogic
 		{
 			private readonly ZipWith<TIn0, TIn1, TOut> _stage;
-			private int _pending;
 			// Without this field the completion signalling would take one extra pull
 			private bool _willShutDown;
-
+			private int _pending;
 			public Logic(Shape shape, ZipWith<TIn0, TIn1, TOut> stage) : base(shape)
 			{
 				_stage = stage;
