@@ -36,13 +36,12 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\SharedAssemblyInfo.cs">
+      <Link>Properties\SharedAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="ActorMaterializer.cs" />
     <Compile Include="Actors\ActorPublisher.cs" />
     <Compile Include="Actors\ActorSubscriber.cs" />
@@ -186,6 +185,7 @@
     <Folder Include="Linq\" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Akka.Streams.nuspec" />
     <None Include="packages.config" />
     <EmbeddedResource Include="reference.conf" />
   </ItemGroup>
