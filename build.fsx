@@ -219,6 +219,9 @@ Target "CopyOutput" <| fun _ ->
       "core/Akka.Persistence"
       "core/Akka.Persistence.FSharp"
       "core/Akka.Persistence.TestKit"
+      "core/Akka.Persistence.Query"
+      "core/Akka.Streams"
+      "System.Reactive.Streams"
       "contrib/dependencyinjection/Akka.DI.Core"
       "contrib/dependencyinjection/Akka.DI.AutoFac"
       "contrib/dependencyinjection/Akka.DI.CastleWindsor"
@@ -366,11 +369,13 @@ module Nuget =
         | "Akka.Cluster.Sharding" -> ["Akka.Cluster.Tools", preReleaseVersion; "Akka.Persistence", preReleaseVersion]
         | "Akka.Cluster.Tools" -> ["Akka.Cluster", preReleaseVersion]
         | "Akka.Persistence.TestKit" -> ["Akka.Persistence", preReleaseVersion; "Akka.TestKit.Xunit2", release.NugetVersion]
+        | "Akka.Persistence.Query" -> ["Akka.Persistence", preReleaseVersion; "Akka.Streams", preReleaseVersion]
         | persistence when (persistence.Contains("Sql") && not (persistence.Equals("Akka.Persistence.Sql.Common"))) -> ["Akka.Persistence.Sql.Common", preReleaseVersion]
         | persistence when (persistence.StartsWith("Akka.Persistence.")) -> ["Akka.Persistence", preReleaseVersion]
         | "Akka.DI.TestKit" -> ["Akka.DI.Core", release.NugetVersion; "Akka.TestKit.Xunit2", release.NugetVersion]
         | di when (di.StartsWith("Akka.DI.") && not (di.EndsWith("Core"))) -> ["Akka.DI.Core", release.NugetVersion]
         | testkit when testkit.StartsWith("Akka.TestKit.") -> ["Akka.TestKit", release.NugetVersion]
+        | "Akka.Streams" -> ["Akka", release.NugetVersion; "System.Reactive.Streams", preReleaseVersion]
         | _ -> ["Akka", release.NugetVersion]
 
     // used to add -pre suffix to pre-release packages
@@ -380,6 +385,8 @@ module Nuget =
       | cluster when cluster.StartsWith("Akka.Cluster.") -> preReleaseVersion
       | persistence when persistence.StartsWith("Akka.Persistence") -> preReleaseVersion
       | "Akka.Serialization.Wire" -> preReleaseVersion
+      | "Akka.Streams" -> preReleaseVersion
+      | "System.Reactive.Streams" -> preReleaseVersion
       | _ -> release.NugetVersion
 
 open Nuget
