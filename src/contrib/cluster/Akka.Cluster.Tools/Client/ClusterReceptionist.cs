@@ -133,7 +133,7 @@ namespace Akka.Cluster.Tools.Client
         {
             _pubSubMediator = pubSubMediator;
             _settings = settings;
-
+            
             if (!(_settings.Role == null || _cluster.SelfRoles.Contains(_settings.Role)))
                 throw new ArgumentException(string.Format("This cluster member [{0}] does not have a role [{1}]", _cluster.SelfAddress, _settings.Role));
 
@@ -151,7 +151,10 @@ namespace Akka.Cluster.Tools.Client
             }
             else if (message is Heartbeat)
             {
-                Log.Debug("Heartbeat from client [{0}]", Sender.Path);
+                if (_cluster.Settings.VerboseHeartbeatLogging)
+                {
+                    Log.Debug("Heartbeat from client [{0}]", Sender.Path);
+                }
                 Sender.Tell(HeartbeatRsp.Instance);
             }
             else if (message is GetContacts)

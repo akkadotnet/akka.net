@@ -145,10 +145,17 @@ namespace Akka.Cluster
             foreach (var to in _state.ActiveReceivers)
             {
                 if (FailureDetector.IsMonitoring(to.Address))
-                    _log.Debug("Cluster Node [{0}] - Heartbeat to [{1}]", _cluster.SelfAddress, to.Address);
+                    if (_cluster.Settings.VerboseHeartbeatLogging)
+                    {
+                        _log.Debug("Cluster Node [{0}] - Heartbeat to [{1}]", _cluster.SelfAddress, to.Address);
+                    }
                 else
                 {
-                    _log.Debug("Cluster Node [{0}] - First Heartbeat to [{1}]", _cluster.SelfAddress, to.Address);
+                    if (_cluster.Settings.VerboseHeartbeatLogging)
+                    {
+                        _log.Debug("Cluster Node [{0}] - First Heartbeat to [{1}]", _cluster.SelfAddress, to.Address);
+                    }
+
                     // schedule the expected first heartbeat for later, which will give the
                     // other side a chance to reply, and also trigger some resends if needed
                     Context.System.Scheduler.ScheduleTellOnce(_cluster.Settings.HeartbeatExpectedResponseAfter, Self, 
@@ -160,7 +167,10 @@ namespace Akka.Cluster
 
         private void DoHeartbeatRsp(UniqueAddress from)
         {
-            _log.Debug("Cluster Node [{0}] - Heartbeat response from [{1}]", _cluster.SelfAddress, from.Address);
+            if (_cluster.Settings.VerboseHeartbeatLogging)
+            {
+                _log.Debug("Cluster Node [{0}] - Heartbeat response from [{1}]", _cluster.SelfAddress, from.Address);
+            }
             _state = _state.HeartbeatRsp(from);
         }
 
@@ -168,7 +178,10 @@ namespace Akka.Cluster
         {
             if (_state.ActiveReceivers.Contains(from) && !FailureDetector.IsMonitoring(from.Address))
             {
-                _log.Debug("Cluster Node [{0}] - Trigger extra expected heartbeat from [{1}]", _cluster.SelfAddress, from.Address);
+                if (_cluster.Settings.VerboseHeartbeatLogging)
+                {
+                    _log.Debug("Cluster Node [{0}] - Trigger extra expected heartbeat from [{1}]", _cluster.SelfAddress, from.Address);
+                }
                 FailureDetector.Heartbeat(from.Address);
             }
         }
