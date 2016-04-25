@@ -151,7 +151,10 @@ namespace Akka.Cluster.Tools.Client
             }
             else if (message is Heartbeat)
             {
-                Log.Debug("Heartbeat from client [{0}]", Sender.Path);
+                if (_cluster.Settings.VerboseHeartbeatLogging)
+                {
+                    Log.Debug("Heartbeat from client [{0}]", Sender.Path);
+                }
                 Sender.Tell(HeartbeatRsp.Instance);
             }
             else if (message is GetContacts)
