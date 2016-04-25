@@ -31,5 +31,13 @@ namespace Akka.Actor
             }
         }
     }
+
+    /// <summary>
+    /// Marker interface to indicate that a message should not reset the receive timeout.
+    /// </summary>
+    public interface INotInfluenceReceiveTimeout
+    {
+
+    }
 }
 

@@ -48,19 +48,29 @@ namespace Akka.Actor
         /// <param name="envelope">The envelope.</param>
         public void Invoke(Envelope envelope)
         {
-            var message = envelope.Message;
-            CurrentMessage = message;
-            _currentEnvelopeId ++;
+            var influenceReceiveTimeout = !(envelope.Message is INotInfluenceReceiveTimeout);
+            _currentEnvelopeId++;
             Sender = MatchSender(envelope);
 
             try
             {
-                var autoReceivedMessage = message as IAutoReceivedMessage;
+                CurrentMessage = envelope.Message;
+                if (influenceReceiveTimeout)
+                {
+                    CancelReceiveTimeout();
+                }
+
+                var autoReceivedMessage = envelope.Message as IAutoReceivedMessage;
                 if (autoReceivedMessage != null)
+                {
                     AutoReceiveMessage(envelope);
+                }
                 else
-                    ReceiveMessage(message);
-                CurrentMessage = null;
+                {
+                    ReceiveMessage(envelope.Message);
+                }
+
+                CurrentMessage = null; // reset current message after successful invocation
             }
             catch (Exception cause)
             {
@@ -68,7 +78,10 @@ namespace Akka.Actor
             }
             finally
             {
-                CheckReceiveTimeout(); // Reschedule receive timeout
+                if (influenceReceiveTimeout)
+                {
+                    CheckReceiveTimeout(); // Reschedule receive timeout
+                }
             }
         }
 
