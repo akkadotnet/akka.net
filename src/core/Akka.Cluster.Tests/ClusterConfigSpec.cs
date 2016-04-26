@@ -56,6 +56,7 @@ namespace Akka.Cluster.Tests
             //Assert.AreEqual(typeof(SigarMetricsCollector).FullName, settings.MetricsCollectorClass);
             Assert.Equal(TimeSpan.FromSeconds(3), settings.MetricsGossipInterval);
             Assert.Equal(TimeSpan.FromSeconds(12), settings.MetricsMovingAverageHalfLife);
+            Assert.Equal(false, settings.VerboseHeartbeatLogging);
         }
 
         [Fact]
