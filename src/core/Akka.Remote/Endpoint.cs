@@ -598,12 +598,15 @@ namespace Akka.Remote
 
         public sealed class GotUid
         {
-            public GotUid(int uid)
+            public GotUid(int uid, Address remoteAddress)
             {
                 Uid = uid;
+                RemoteAddress = remoteAddress;
             }
 
             public int Uid { get; private set; }
+
+            public Address RemoteAddress { get; private set; }
         }
 
         public static Props ReliableDeliverySupervisorProps(
@@ -904,7 +907,7 @@ namespace Akka.Remote
             {
                 // Assert handle == None?
                 Context.Parent.Tell(
-                    new ReliableDeliverySupervisor.GotUid((int)handle.ProtocolHandle.HandshakeInfo.Uid));
+                    new ReliableDeliverySupervisor.GotUid((int)handle.ProtocolHandle.HandshakeInfo.Uid, RemoteAddress));
                 _handle = handle.ProtocolHandle;
                 _reader = StartReadEndpoint(_handle);
                 EventPublisher.NotifyListeners(new AssociatedEvent(LocalAddress, RemoteAddress, Inbound));

@@ -19,7 +19,7 @@ namespace Akka.Persistence.Tests.Fsm
         private readonly Random _random = new Random();
 
         public PersistentFSMSpec()
-            : base(Configuration("inmem", "PersistentFSMSpec"))
+            : base(Configuration("PersistentFSMSpec"))
         {
         }
 

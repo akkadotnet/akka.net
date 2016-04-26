@@ -50,7 +50,7 @@ namespace Akka.Persistence.Tests
 
         FileInfo file = new FileInfo(InUseSnapshotPath);
 
-        public SnapshotDirectoryFailureSpec() : base(Configuration("inmem", "SnapshotDirectoryFailureSpec",
+        public SnapshotDirectoryFailureSpec() : base(Configuration("SnapshotDirectoryFailureSpec",
             extraConfig: "akka.persistence.snapshot-store.local.dir = \"" + InUseSnapshotPath + "\""))
         {
         }

@@ -19,7 +19,7 @@ namespace Akka.Persistence.Tests
     {
         private readonly Random _random = new Random();
         public PersistentActorSpec()
-            : base(Configuration("inmem", "PersistentActorSpec"))
+            : base(Configuration("PersistentActorSpec"))
         {
             var pref = ActorOf(Props.Create(() => new BehaviorOneActor(Name)));
             pref.Tell(new Cmd("a"));

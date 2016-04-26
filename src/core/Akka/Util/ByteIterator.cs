@@ -197,7 +197,11 @@ namespace Akka.Util
 
             public override bool HasNext
             {
-                get { return Current.HasNext; }
+                get
+                {
+                    if (!_iterators.IsEmpty) return Current.HasNext;
+                    return false;
+                }
             }
 
             public override byte Head

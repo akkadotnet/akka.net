@@ -117,7 +117,7 @@ namespace Akka.Persistence.Tests
         #endregion
 
         public AtLeastOnceDeliveryCrashSpec()
-            : base(PersistenceSpec.Configuration("inmem", "AtLeastOnceDeliveryCrashSpec", serialization: "off"))
+            : base(PersistenceSpec.Configuration("AtLeastOnceDeliveryCrashSpec", serialization: "off"))
         {
         }
 

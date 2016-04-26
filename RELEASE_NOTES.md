@@ -1,3 +1,26 @@
+#### 1.0.8 April 26 2016 ####
+**Maintenance release for Akka.NET v1.0.7**
+
+Fixes an issue with the 1.0.7 release where the default settings for Akka.Persistence changed and caused potential breaking changes for Akka.Persistence users. Those changes have been reverted back to the same values as previous versions.
+
+General fixes:
+* [Recovered default journal & snapshot store to default config](https://github.com/akkadotnet/akka.net/pull/1864)
+* [EndpointRegistry fixes](https://github.com/akkadotnet/akka.net/pull/1862)
+* [eliminated allocations with StandardOutWriter](https://github.com/akkadotnet/akka.net/pull/1881)
+* [ClusterSingletonManager - settings update](https://github.com/akkadotnet/akka.net/pull/1878)
+* [Implement spec for standard mailbox combinations in Akka.NET](https://github.com/akkadotnet/akka.net/pull/1897)
+
+**Commit Stats for v1.0.8**
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 4 | 240 | 59 | Aaron Stannard |
+| 3 | 268 | 1 | Danthar |
+| 3 | 189 | 2810 | Silv3rcircl3 |
+| 2 | 204 | 4 | Willem Meints |
+| 2 | 161 | 108 | Bartosz Sypytkowski |
+| 2 | 101 | 24 | Sean Gilliam |
+| 1 | 25 | 16 | zbynek001 |
+
 #### 1.0.7 April 4 2016 ####
 **Maintenance release for Akka.NET v1.0.6**
 The biggest changes in Akka.NET 1.0.7 have been made to Akka.Persistence, which is now designed to match the final stable release version in JVM Akka 2.4. Akka.Persistence is on-target to exit beta and become a fully mature module as of Akka.NET 1.5, due in May/June timeframe.

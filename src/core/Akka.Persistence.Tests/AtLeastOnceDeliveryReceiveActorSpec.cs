@@ -354,7 +354,7 @@ namespace Akka.Persistence.Tests
         #endregion
 
         public AtLeastOnceDeliveryReceiveActorSpec()
-            : base(Configuration("inmem", "AtLeastOnceDeliveryReceiveActorSpec"))
+            : base(Configuration("AtLeastOnceDeliveryReceiveActorSpec"))
         {
         }
 

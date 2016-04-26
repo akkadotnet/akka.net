@@ -133,7 +133,7 @@ namespace Akka.Persistence.Tests
             }
         }
 
-        public SnapshotSerializationSpec() : base(Configuration("inmem", "SnapshotSerializationSpec", serialization: "off", extraConfig:
+        public SnapshotSerializationSpec() : base(Configuration("SnapshotSerializationSpec", serialization: "off", extraConfig:
             @"
     akka.actor {
       serializers {
