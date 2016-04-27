@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HoconTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -16,7 +16,7 @@ namespace Akka.Tests.Configuration
 {
     public class HoconTests
     {
-        //Added tests to conform to the HOCON spec https://github.com/typesafehub/config/blob/master/HOCON.md
+        //Added tests to conform to the HOCON spec https://github.com/Lightbendhub/config/blob/master/HOCON.md
         [Fact]
         public void Can_use_paths_as_keys_3_14()
         {
