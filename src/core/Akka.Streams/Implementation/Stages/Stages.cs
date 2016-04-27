@@ -133,6 +133,7 @@ namespace Akka.Streams.Implementation.Stages
     internal interface ISymbolicStage<in TIn, out TOut> : IStage<TIn, TOut>
     {
         Attributes Attributes { get; }
+
         IStage<TIn, TOut> Create(Attributes effectiveAttributes);
     }
 
@@ -144,26 +145,24 @@ namespace Akka.Streams.Implementation.Stages
         }
 
         public Attributes Attributes { get; }
+
         public abstract IStage<TIn, TOut> Create(Attributes effectiveAttributes);
 
         protected Decider Supervision(Attributes attributes)
-        {
-            return attributes.GetAttribute(new ActorAttributes.SupervisionStrategy(Deciders.StoppingDecider)).Decider;
-        }
+            => attributes.GetAttribute(new ActorAttributes.SupervisionStrategy(Deciders.StoppingDecider)).Decider;
     }
 
     internal sealed class Map<TIn, TOut> : SymbolicStage<TIn, TOut>
     {
         private readonly Func<TIn, TOut> _mapper;
+
         public Map(Func<TIn, TOut> mapper, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Map)
         {
             _mapper = mapper;
         }
 
         public override IStage<TIn, TOut> Create(Attributes effectiveAttributes)
-        {
-            return new Fusing.Map<TIn, TOut>(_mapper, Supervision(effectiveAttributes));
-        }
+            => new Fusing.Map<TIn, TOut>(_mapper, Supervision(effectiveAttributes));
     }
 
     internal sealed class Log<T> : SymbolicStage<T, T>
@@ -180,9 +179,7 @@ namespace Akka.Streams.Implementation.Stages
         }
 
         public override IStage<T, T> Create(Attributes effectiveAttributes)
-        {
-            return new Fusing.Log<T>(_name, _extract, _loggingAdapter, Supervision(effectiveAttributes));
-        }
+            => new Fusing.Log<T>(_name, _extract, _loggingAdapter, Supervision(effectiveAttributes));
     }
 
     internal sealed class Filter<T> : SymbolicStage<T, T>
@@ -195,9 +192,7 @@ namespace Akka.Streams.Implementation.Stages
         }
 
         public override IStage<T, T> Create(Attributes effectiveAttributes)
-        {
-            return new Fusing.Filter<T>(_predicate, Supervision(effectiveAttributes));
-        }
+            => new Fusing.Filter<T>(_predicate, Supervision(effectiveAttributes));
     }
 
 
@@ -211,9 +206,7 @@ namespace Akka.Streams.Implementation.Stages
         }
 
         public override IStage<TIn, TOut> Create(Attributes effectiveAttributes)
-        {
-            return new Fusing.Collect<TIn, TOut>(_func, Supervision(effectiveAttributes));
-        }
+            => new Fusing.Collect<TIn, TOut>(_func, Supervision(effectiveAttributes));
     }
 
     internal sealed class Recover<T> : SymbolicStage<T, Option<T>>
@@ -225,10 +218,7 @@ namespace Akka.Streams.Implementation.Stages
             _func = func;
         }
 
-        public override IStage<T, Option<T>> Create(Attributes effectiveAttributes)
-        {
-            return new Fusing.Recover<T>(_func);
-        }
+        public override IStage<T, Option<T>> Create(Attributes effectiveAttributes) => new Fusing.Recover<T>(_func);
     }
 
     internal sealed class Grouped<T> : SymbolicStage<T, IEnumerable<T>>
@@ -241,10 +231,7 @@ namespace Akka.Streams.Implementation.Stages
             _count = count;
         }
 
-        public override IStage<T, IEnumerable<T>> Create(Attributes effectiveAttributes)
-        {
-            return new Fusing.Grouped<T>(_count);
-        }
+        public override IStage<T, IEnumerable<T>> Create(Attributes effectiveAttributes) => new Fusing.Grouped<T>(_count);
     }
 
     internal sealed class LimitWeighted<T> : SymbolicStage<T, T>
@@ -258,10 +245,7 @@ namespace Akka.Streams.Implementation.Stages
             _costFunc = costFunc;
         }
 
-        public override IStage<T, T> Create(Attributes effectiveAttributes)
-        {
-            return new Fusing.LimitWeighted<T>(_max, _costFunc);
-        }
+        public override IStage<T, T> Create(Attributes effectiveAttributes) => new Fusing.LimitWeighted<T>(_max, _costFunc);
     }
 
     internal sealed class Sliding<T> : SymbolicStage<T, IEnumerable<T>>
@@ -271,16 +255,13 @@ namespace Akka.Streams.Implementation.Stages
 
         public Sliding(int count, int step, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Sliding)
         {
-            if (count <= 0) throw new ArgumentException("Sliding count must be greater than 0", "count");
-            if (step <= 0) throw new ArgumentException("Sliding step must be greater than 0", "step");
+            if (count <= 0) throw new ArgumentException("Sliding count must be greater than 0", nameof(count));
+            if (step <= 0) throw new ArgumentException("Sliding step must be greater than 0", nameof(step));
             _count = count;
             _step = step;
         }
 
-        public override IStage<T, IEnumerable<T>> Create(Attributes effectiveAttributes)
-        {
-            return new Fusing.Sliding<T>(_count, _step);
-        }
+        public override IStage<T, IEnumerable<T>> Create(Attributes effectiveAttributes) => new Fusing.Sliding<T>(_count, _step);
     }
 
     internal sealed class Take<T> : SymbolicStage<T, T>
@@ -292,10 +273,7 @@ namespace Akka.Streams.Implementation.Stages
             _count = count;
         }
 
-        public override IStage<T, T> Create(Attributes effectiveAttributes)
-        {
-            return new Fusing.Take<T>(_count);
-        }
+        public override IStage<T, T> Create(Attributes effectiveAttributes) => new Fusing.Take<T>(_count);
     }
 
     internal sealed class Drop<T> : SymbolicStage<T, T>
@@ -307,10 +285,7 @@ namespace Akka.Streams.Implementation.Stages
             _count = count;
         }
 
-        public override IStage<T, T> Create(Attributes effectiveAttributes)
-        {
-            return new Fusing.Drop<T>(_count);
-        }
+        public override IStage<T, T> Create(Attributes effectiveAttributes) => new Fusing.Drop<T>(_count);
     }
 
     internal sealed class TakeWhile<T> : SymbolicStage<T, T>
@@ -323,9 +298,7 @@ namespace Akka.Streams.Implementation.Stages
         }
 
         public override IStage<T, T> Create(Attributes effectiveAttributes)
-        {
-            return new Fusing.TakeWhile<T>(_predicate, Supervision(effectiveAttributes));
-        }
+            => new Fusing.TakeWhile<T>(_predicate, Supervision(effectiveAttributes));
     }
 
     internal sealed class DropWhile<T> : SymbolicStage<T, T>
@@ -338,9 +311,7 @@ namespace Akka.Streams.Implementation.Stages
         }
 
         public override IStage<T, T> Create(Attributes effectiveAttributes)
-        {
-            return new Fusing.DropWhile<T>(_predicate, Supervision(effectiveAttributes));
-        }
+            => new Fusing.DropWhile<T>(_predicate, Supervision(effectiveAttributes));
     }
 
     internal sealed class Scan<TIn, TOut> : SymbolicStage<TIn, TOut>
@@ -355,9 +326,7 @@ namespace Akka.Streams.Implementation.Stages
         }
 
         public override IStage<TIn, TOut> Create(Attributes effectiveAttributes)
-        {
-            return new Fusing.Scan<TIn, TOut>(_zero, _aggregate, Supervision(effectiveAttributes));
-        }
+            => new Fusing.Scan<TIn, TOut>(_zero, _aggregate, Supervision(effectiveAttributes));
     }
 
     internal sealed class Fold<TIn, TOut> : SymbolicStage<TIn, TOut>
@@ -372,9 +341,7 @@ namespace Akka.Streams.Implementation.Stages
         }
 
         public override IStage<TIn, TOut> Create(Attributes effectiveAttributes)
-        {
-            return new Fusing.Fold<TIn, TOut>(_zero, _aggregate, Supervision(effectiveAttributes));
-        }
+            => new Fusing.Fold<TIn, TOut>(_zero, _aggregate, Supervision(effectiveAttributes));
     }
 
     internal sealed class Buffer<T> : SymbolicStage<T, T>
@@ -388,26 +355,23 @@ namespace Akka.Streams.Implementation.Stages
             _overflowStrategy = overflowStrategy;
         }
 
-        public override IStage<T, T> Create(Attributes effectiveAttributes)
-        {
-            return new Fusing.Buffer<T>(_size, _overflowStrategy);
-        }
+        public override IStage<T, T> Create(Attributes effectiveAttributes) => new Fusing.Buffer<T>(_size, _overflowStrategy);
     }
 
     internal sealed class FirstOrDefault<TIn> : GraphStageWithMaterializedValue<SinkShape<TIn>, Task<TIn>>
     {
         #region internal classes
         
-        private sealed class HeadOrDefaultGraphStateLogic<TIn> : GraphStageLogic
+        private sealed class Logic : GraphStageLogic
         {
             private readonly Inlet<TIn> _inlet;
             private readonly TaskCompletionSource<TIn> _promise = new TaskCompletionSource<TIn>();
 
             public Task<TIn> Task => _promise.Task;
 
-            public HeadOrDefaultGraphStateLogic(Shape shape, Inlet<TIn> inlet, bool throwOnDefault) : base(shape)
+            public Logic(FirstOrDefault<TIn> stage) : base(stage.Shape)
             {
-                _inlet = inlet;
+                _inlet = stage._in;
 
                 Action onPush = () =>
                 {
@@ -417,7 +381,7 @@ namespace Akka.Streams.Implementation.Stages
 
                 Action onUpstreamFinish = () =>
                 {
-                    if (throwOnDefault)
+                    if (stage._throwOnDefault)
                         _promise.TrySetException(new NoSuchElementException("First of empty stream"));
                     else
                         _promise.TrySetResult(default(TIn));
@@ -431,7 +395,7 @@ namespace Akka.Streams.Implementation.Stages
                     FailStage(e);
                 };
 
-                SetHandler(inlet, onPush, onUpstreamFinish, onUpstreamFailure);
+                SetHandler(stage._in, onPush, onUpstreamFinish, onUpstreamFailure);
             }
 
             public override void PreStart() => Pull(_inlet);
@@ -451,7 +415,7 @@ namespace Akka.Streams.Implementation.Stages
 
         public override ILogicAndMaterializedValue<Task<TIn>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var logic = new HeadOrDefaultGraphStateLogic<TIn>(Shape, _in, _throwOnDefault);
+            var logic = new Logic(this);
             return new LogicAndMaterializedValue<Task<TIn>>(logic, logic.Task);
         }
 
@@ -462,7 +426,7 @@ namespace Akka.Streams.Implementation.Stages
     {
         #region internal classes
 
-        private sealed class LastOrDefaultGraphStateLogic<TIn> : GraphStageLogic
+        private sealed class Logic : GraphStageLogic
         {
             private readonly Inlet<TIn> _inlet;
             private readonly TaskCompletionSource<TIn> _promise = new TaskCompletionSource<TIn>();
@@ -471,9 +435,9 @@ namespace Akka.Streams.Implementation.Stages
 
             public Task<TIn> Task => _promise.Task;
 
-            public LastOrDefaultGraphStateLogic(Shape shape, Inlet<TIn> inlet, bool throwOnDefault) : base(shape)
+            public Logic(LastOrDefault<TIn> stage) : base(stage.Shape)
             {
-                _inlet = inlet;
+                _inlet = stage._in;
 
                 Action onPush = () =>
                 {
@@ -484,7 +448,7 @@ namespace Akka.Streams.Implementation.Stages
 
                 Action onUpstreamFinish = () =>
                 {
-                    if (throwOnDefault && !_foundAtLeastOne)
+                    if (stage._throwOnDefault && !_foundAtLeastOne)
                         _promise.TrySetException(new NoSuchElementException("Last of empty stream"));
                     else
                         _promise.TrySetResult(_prev);
@@ -498,7 +462,7 @@ namespace Akka.Streams.Implementation.Stages
                     FailStage(e);
                 };
 
-                SetHandler(inlet, onPush, onUpstreamFinish, onUpstreamFailure);
+                SetHandler(stage._in, onPush, onUpstreamFinish, onUpstreamFailure);
             }
 
             public override void PreStart() => Pull(_inlet);
@@ -518,7 +482,7 @@ namespace Akka.Streams.Implementation.Stages
 
         public override ILogicAndMaterializedValue<Task<TIn>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var logic = new LastOrDefaultGraphStateLogic<TIn>(Shape, _in, _throwOnDefault);
+            var logic = new Logic(this);
             return new LogicAndMaterializedValue<Task<TIn>>(logic, logic.Task);
         }
 
@@ -552,16 +516,12 @@ namespace Akka.Streams.Implementation.Stages
 
         Func<object, object> IGroupBy.Extractor => _extractorWrapper;
 
-        public override IModule CarbonCopy()
-        {
-            return new GroupBy<TIn, TKey>(MaxSubstreams, Extractor, Attributes);
-        }
+        public override IModule CarbonCopy() => new GroupBy<TIn, TKey>(MaxSubstreams, Extractor, Attributes);
 
         public override Attributes Attributes { get; }
+
         public override IModule WithAttributes(Attributes attributes)
-        {
-            return new GroupBy<TIn, TKey>(MaxSubstreams, Extractor, attributes);
-        }
+            => new GroupBy<TIn, TKey>(MaxSubstreams, Extractor, attributes);
     }
 
     internal sealed class DirectProcessor<TIn, TOut> : StageModule<TIn, TOut>
@@ -574,15 +534,11 @@ namespace Akka.Streams.Implementation.Stages
             Attributes = attributes ?? DefaultAttributes.Processor;
         }
 
-        public override IModule CarbonCopy()
-        {
-            return new DirectProcessor<TIn, TOut>(ProcessorFactory, Attributes);
-        }
+        public override IModule CarbonCopy() => new DirectProcessor<TIn, TOut>(ProcessorFactory, Attributes);
 
         public override Attributes Attributes { get; }
+
         public override IModule WithAttributes(Attributes attributes)
-        {
-            return new DirectProcessor<TIn, TOut>(ProcessorFactory, attributes);
-        }
+            => new DirectProcessor<TIn, TOut>(ProcessorFactory, attributes);
     }
 }

@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 
 namespace Akka.Streams.Implementation
 {
-
     /// <summary>
     /// INTERNAL API
     /// </summary>
@@ -47,9 +46,6 @@ namespace Akka.Streams.Implementation
 
         public void OnNext(TIn element) => ReactiveStreamsCompliance.RequireNonNullElement(element);
 
-        void ISubscriber.OnNext(object element)
-        {
-            OnNext((TIn)element);
-        }
+        void ISubscriber.OnNext(object element) => OnNext((TIn)element);
     }
 }

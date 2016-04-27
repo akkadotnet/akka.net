@@ -22,14 +22,14 @@ namespace Akka.Streams.Dsl
             IGraph<BidiShape<TIn1, TOut1, TIn2, TOut2>, TMat> graph)
         {
             return graph is BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat>
-                ? graph as BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat>
+                ? (BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat>) graph
                 : new BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat>(graph.Module);
         }
 
         ///<summary>
         /// Wraps two Flows to create a <see cref="BidiFlow{TIn1,TOut1,TIn2,TOut2,TMat}"/>. The materialized value of the resulting BidiFlow is determined
         /// by the combiner function passed in the second argument list.
-        ///
+        ///<![CDATA[ 
         /// {{{
         ///     +----------------------------+
         ///     | Resulting BidiFlow         |
@@ -39,11 +39,11 @@ namespace Akka.Streams.Dsl
         ///     |  +----------------------+  |
         ///     |                            |
         ///     |  +----------------------+  |
-        /// O2 <~~ |        Flow2         | <~~ I2
+        /// O2 \<~~ |        Flow2         | <~~ I2
         ///     |  +----------------------+  |
         ///     +----------------------------+
         /// }}}
-        ///
+        /// ]]>
         ///</summary>
         public static BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat> FromFlowsMat
             <TIn1, TOut1, TIn2, TOut2, TMat1, TMat2, TMat>(IGraph<FlowShape<TIn1, TOut1>, TMat1> flow1,
@@ -55,7 +55,7 @@ namespace Akka.Streams.Dsl
 
         ///<summary>
         /// Wraps two Flows to create a <see cref="BidiFlow{TIn1,TOut1,TIn2,TOut2,TMat}"/>. The materialized value of the resulting BidiFlow is Unit.
-        ///
+        ///<![CDATA[ 
         /// {{{
         ///     +----------------------------+
         ///     | Resulting BidiFlow         |
@@ -69,7 +69,7 @@ namespace Akka.Streams.Dsl
         ///     |  +----------------------+  |
         ///     +----------------------------+
         /// }}}
-        ///
+        ///]]>
         ///</summary>
         public static BidiFlow<TIn1, TOut1, TIn2, TOut2, Unit> FromFlows<TIn1, TOut1, TIn2, TOut2, TMat1, TMat2>(
             IGraph<FlowShape<TIn1, TOut1>, TMat1> flow1, IGraph<FlowShape<TIn2, TOut2>, TMat2> flow2)
@@ -110,8 +110,9 @@ namespace Akka.Streams.Dsl
             _module = module;
         }
 
-        public BidiShape<TIn1, TOut1, TIn2, TOut2> Shape { get { return (BidiShape<TIn1, TOut1, TIn2, TOut2>)_module.Shape; } }
-        public IModule Module { get { return _module; } }
+        public BidiShape<TIn1, TOut1, TIn2, TOut2> Shape => (BidiShape<TIn1, TOut1, TIn2, TOut2>)_module.Shape;
+
+        public IModule Module => _module;
 
         public IGraph<BidiShape<TIn1, TOut1, TIn2, TOut2>, TMat> WithAttributes(Attributes attributes)
         {
@@ -145,6 +146,7 @@ namespace Akka.Streams.Dsl
         /// Add the given BidiFlow as the next step in a bidirectional transformation
         /// pipeline. By convention protocol stacks are growing to the left: the right most is the bottom
         /// layer, the closest to the metal.
+        /// <![CDATA[ 
         /// {{{
         ///     +----------------------------+
         ///     | Resulting BidiFlow         |
@@ -156,6 +158,7 @@ namespace Akka.Streams.Dsl
         ///     |  +------+        +------+  |
         ///     +----------------------------+
         /// }}}
+        /// ]]>
         /// The materialized value of the combined <see cref="BidiFlow{TIn1,TOut1,TIn2,TOut2,TMat}"/> will be the materialized
         /// value of the current flow (ignoring the other BidiFlow’s value), use
         /// <see cref="AtopMat{TOut12,TIn21,TMat2,TMat3}"/> if a different strategy is needed.
@@ -169,6 +172,7 @@ namespace Akka.Streams.Dsl
         /// Add the given BidiFlow as the next step in a bidirectional transformation
         /// pipeline. By convention protocol stacks are growing to the left: the right most is the bottom
         /// layer, the closest to the metal.
+        ///  <![CDATA[ 
         /// {{{
         ///     +----------------------------+
         ///     | Resulting BidiFlow         |
@@ -180,6 +184,7 @@ namespace Akka.Streams.Dsl
         ///     |  +------+        +------+  |
         ///     +----------------------------+
         /// }}}
+        ///  ]]>
         /// The <paramref name="combine"/> function is used to compose the materialized values of this flow and that
         /// flow into the materialized value of the resulting BidiFlow.
         ///</summary>
@@ -200,6 +205,7 @@ namespace Akka.Streams.Dsl
         /// Add the given Flow as the final step in a bidirectional transformation
         /// pipeline. By convention protocol stacks are growing to the left: the right most is the bottom
         /// layer, the closest to the metal.
+        /// <![CDATA[ 
         /// {{{
         ///     +---------------------------+
         ///     | Resulting Flow            |
@@ -211,6 +217,7 @@ namespace Akka.Streams.Dsl
         ///     |  +------+        +------+ |
         ///     +---------------------------+
         /// }}}
+        /// ]]>
         /// The materialized value of the combined <see cref="Flow{TIn,TOut,TMat}"/> will be the materialized
         /// value of the current flow (ignoring the other Flow’s value), use
         /// <see cref="JoinMat{TMat2,TMat3}"/> if a different strategy is needed.
@@ -224,6 +231,7 @@ namespace Akka.Streams.Dsl
         /// Add the given Flow as the final step in a bidirectional transformation
         /// pipeline. By convention protocol stacks are growing to the left: the right most is the bottom
         /// layer, the closest to the metal.
+        /// <![CDATA[ 
         /// {{{
         ///     +---------------------------+
         ///     | Resulting Flow            |
@@ -235,6 +243,7 @@ namespace Akka.Streams.Dsl
         ///     |  +------+        +------+ |
         ///     +---------------------------+
         /// }}}
+        /// ]]>
         /// The <paramref name="combine"/> function is used to compose the materialized values of this flow and that
         /// flow into the materialized value of the resulting <see cref="Flow{TIn,TOut,TMat}"/>.
         ///</summary>

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Streams;
@@ -17,6 +18,7 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Util;
+// ReSharper disable UnusedMember.Global
 
 namespace Akka.Streams.Dsl
 {
@@ -54,20 +56,20 @@ namespace Akka.Streams.Dsl
             var sinkCopy = sink.Module.CarbonCopy();
             return new RunnableGraph<TMat3>(Module.Fuse(sinkCopy, Shape.Outlet, sinkCopy.Shape.Inlets.First(), combine));
         }
-        
+
         /// <summary>
-        /// Concatenate the given <seealso cref="Source{TOut,TMat}"/> to this <seealso cref="Flow{TIn,TOut,TMat}"/>, meaning that once this
+        /// Concatenate the given <see cref="Source{TOut,TMat}"/> to this <see cref="Flow{TIn,TOut,TMat}"/>, meaning that once this
         /// Flow’s input is exhausted and all result elements have been generated,
         /// the Source’s elements will be produced.
         ///
-        /// Note that the <seealso cref="Source{TOut,TMat}"/> is materialized together with this Flow and just kept
+        /// Note that the <see cref="Source{TOut,TMat}"/> is materialized together with this Flow and just kept
         /// from producing elements by asserting back-pressure until its time comes.
         ///
-        /// If this <seealso cref="Flow{TIn,TOut,TMat}"/> gets upstream error - no elements from the given <seealso cref="Source{TOut,TMat}"/> will be pulled.
+        /// If this <see cref="Flow{TIn,TOut,TMat}"/> gets upstream error - no elements from the given <see cref="Source{TOut,TMat}"/> will be pulled.
         ///
-        /// @see <seealso cref="Concat{TIn,TOut}"/>.
+        /// @see <see cref="Concat{TIn,TOut}"/>.
         ///
-        /// It is recommended to use the internally optimized `Keep.left` and `Keep.right` combiners
+        /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
         /// </summary>
         public Source<TOut, TMat3> ConcatMaterialized<TMat2, TMat3>(IGraph<SourceShape<TOut>, TMat2> that,
@@ -150,8 +152,8 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Connect this `Source` to a `Sink` and run it. The returned value is the materialized value
-        /// of the `Sink`, e.g. the `Publisher` of a <see cref="Publisher"/>.
+        /// Connect this <see cref="Source{TOut,TMat}"/> to a <see cref="Sink{TIn,TMat}"/> and run it. The returned value is the materialized value
+        /// of the <see cref="Sink{TIn,TMat}"/> , e.g. the <see cref="IPublisher{TIn}"/> of a <see cref="Sink.Publisher{TIn}"/>.
         /// </summary>
         public TMat2 RunWith<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink, IMaterializer materializer)
         {
@@ -159,11 +161,11 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Shortcut for running this `Source` with a fold function.
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a fold function.
         /// The given function is invoked for every received element, giving it its previous
         /// output (or the given <paramref name="zero"/> value) and the element as input.
         /// The returned <see cref="Task{TOut2}"/> will be completed with value of the final
-        /// function evaluation when the input stream ends, or completed with `Failure`
+        /// function evaluation when the input stream ends, or completed with Failure
         /// if there is a failure signaled in the stream.
         /// </summary>
         public Task<TOut2> RunFold<TOut2>(TOut2 zero, Func<TOut2, TOut, TOut2> aggregate, IMaterializer materializer)
@@ -172,11 +174,11 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Shortcut for running this `Source` with a reduce function.
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a reduce function.
         /// The given function is invoked for every received element, giving it its previous
         /// output (from the second element) and the element as input.
         /// The returned <see cref="Task{TOut}"/> will be completed with value of the final
-        /// function evaluation when the input stream ends, or completed with `Failure`
+        /// function evaluation when the input stream ends, or completed with Failure
         /// if there is a failure signaled in the stream.
         /// </summary>
         public Task<TOut> RunReduce(Func<TOut, TOut, TOut> reduce, IMaterializer materializer)
@@ -185,10 +187,10 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Shortcut for running this `Source` with a foreach procedure. The given procedure is invoked
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a foreach procedure. The given procedure is invoked
         /// for each received element.
-        /// The returned <see cref="Task"/> will be completed with `Success` when reaching the
-        /// normal end of the stream, or completed with `Failure` if there is a failure signaled in
+        /// The returned <see cref="Task"/> will be completed with Success when reaching the
+        /// normal end of the stream, or completed with Failure if there is a failure signaled in
         /// the stream.
         /// </summary>
         public Task RunForeach(Action<TOut> action, IMaterializer materializer)
@@ -197,7 +199,7 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Combines several sources with fun-in strategy like `Merge` or `Concat` and returns `Source`.
+        /// Combines several sources with fun-in strategy like <see cref="Merge{TIn,TOut}"/> or <see cref="Concat{TIn,TOut}"/> and returns <see cref="Source{TOut,TMat}"/>.
         /// </summary>
         public Source<U, Unit> Combine<T, U>(Source<T, Unit> first, Source<T, Unit> second, Source<T, Unit>[] rest, Func<int, IGraph<UniformFanInShape<T,U>, Unit>> strategy)
         {
@@ -222,7 +224,7 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Helper to create <see cref="Source{TOut,TMat}"/> from `Publisher`.
+        /// Helper to create <see cref="Source{TOut,TMat}"/> from <see cref="IPublisher{T}"/>.
         /// 
         /// Construct a transformation starting with given publisher. The transformation steps
         /// are executed by a series of <see cref="IProcessor{TIn,TOut}"/> instances
@@ -236,12 +238,12 @@ namespace Akka.Streams.Dsl
 
         /// <summary>
         /// Helper to create <see cref="Source{TOut,TMat}"/> from <see cref="IEnumerator{T}"/>.
-        /// Example usage: `Source.fromIterator(() => Iterator.from(0))`
+        /// Example usage: Source.FromEnumerator(() => Enumerable.Range(1, 10))
         /// 
-        /// Start a new `Source` from the given function that produces anIterator.
-        /// The produced stream of elements will continue until the iterator runs empty
-        /// or fails during evaluation of the `next()` method.
-        /// Elements are pulled out of the iterator in accordance with the demand coming
+        /// Start a new <see cref="Source{TOut,TMat}"/> from the given function that produces an <see cref="IEnumerable{T}"/>.
+        /// The produced stream of elements will continue until the enumerator runs empty
+        /// or fails during evaluation of the <see cref="IEnumerator.MoveNext"/> method.
+        /// Elements are pulled out of the enumerator in accordance with the demand coming
         /// from the downstream transformation steps.
         /// </summary>
         public static Source<T, Unit> FromEnumerator<T>(Func<IEnumerator<T>> enumeratorFactory)
@@ -251,10 +253,10 @@ namespace Akka.Streams.Dsl
 
         /// <summary>
         /// Helper to create <see cref="Source{TOut,TMat}"/> from <see cref="IEnumerable{T}"/>.
-        /// Example usage: `Source(Seq(1,2,3))`
+        /// Example usage: Source.From(Enumerable.Range(1, 10))
         /// 
-        /// Starts a new `Source` from the given `Iterable`. This is like starting from an
-        /// Iterator, but every Subscriber directly attached to the Publisher of this
+        /// Starts a new <see cref="Source{TOut,TMat}"/> from the given <see cref="IEnumerable{T}"/>. This is like starting from an
+        /// Enumerator, but every Subscriber directly attached to the Publisher of this
         /// stream will see an individual flow of elements (always starting from the
         /// beginning) regardless of when they subscribed.
         /// </summary>
@@ -265,7 +267,7 @@ namespace Akka.Streams.Dsl
 
         /// <summary>
         /// Create a <see cref="Source{TOut,TMat}"/> with one element.
-        /// Every connected `Sink` of this stream will see an individual stream consisting of one element.
+        /// Every connected <see cref="Sink{TIn,TMat}"/> of this stream will see an individual stream consisting of one element.
         /// </summary>
         public static Source<T, Unit> Single<T>(T element)
         {
@@ -278,20 +280,16 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Source<T, TMat> FromGraph<T, TMat>(IGraph<SourceShape<T>, TMat> source)
         {
-            if (source is Source<T, TMat>) return source as Source<T, TMat>;
-            else return new Source<T, TMat>(source.Module);
+            return source as Source<T, TMat> ?? new Source<T, TMat>(source.Module);
         }
 
         /// <summary>
         /// Start a new <see cref="Source{TOut,TMat}"/> from the given <see cref="Task{T}"/>. The stream will consist of
-        /// one element when the `Future` is completed with a successful value, which
-        /// may happen before or after materializing the `Flow`.
-        /// The stream terminates with a failure if the `Future` is completed with a failure.
+        /// one element when the <see cref="Task{T}"/> is completed with a successful value, which
+        /// may happen before or after materializing the <see cref="IFlow{TOut,TMat}"/>.
+        /// The stream terminates with a failure if the task is completed with a failure.
         /// </summary>
-        public static Source<T, Unit> FromTask<T>(Task<T> task)
-        {
-            return FromGraph(new TaskSource<T>(task));
-        }
+        public static Source<T, Unit> FromTask<T>(Task<T> task) => FromGraph(new TaskSource<T>(task));
 
         /// <summary>
         /// Elements are emitted periodically with the specified interval.
@@ -381,7 +379,7 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Create a `Source` which materializes a [[scala.concurrent.Promise]] which controls what element
+        /// Create a <see cref="Source{TOut,TMat}"/> which materializes a <see cref="TaskCompletionSource{TResult}"/> which controls what element
         /// will be emitted by the Source.
         /// If the materialized promise is completed with a Some, that value will be produced downstream,
         /// followed by completion.
@@ -421,7 +419,7 @@ namespace Akka.Streams.Dsl
 
         /// <summary>
         /// Creates a <see cref="Source{TOut,TMat}"/> that is materialized to an <see cref="IActorRef"/> which points to an Actor
-        /// created according to the passed in <see cref="Props"/>. Actor created by the `props` must
+        /// created according to the passed in <see cref="Props"/>. Actor created by the <see cref="Props"/> must
         /// be <see cref="Actors.ActorPublisher{T}"/>.
         /// </summary>
         public static Source<T, IActorRef> ActorPublisher<T>(Props props)
@@ -469,7 +467,7 @@ namespace Akka.Streams.Dsl
 
 
         /// <summary>
-        /// Combines several sources with fun-in strategy like `Merge` or `Concat` and returns `Source`.
+        /// Combines several sources with fun-in strategy like <see cref="Merge{TIn,TOut}"/> or <see cref="Concat{TIn,TOut}"/> and returns <see cref="Source{TOut,TMat}"/>.
         /// </summary>
         public static Source<U, Unit> Combine<T, U>(Source<T, Unit> first, Source<T, Unit> second, Func<int, IGraph<UniformFanInShape<T, U>, Unit>> strategy, params Source<T, Unit>[] rest)
         {
@@ -499,7 +497,7 @@ namespace Akka.Streams.Dsl
         /// if element was added to buffer or sent downstream. It completes
         /// with false if element was dropped.
         /// 
-        /// The strategy <see cref="OverflowStrategy.Backpressure"/> will not complete `offer():Future` until buffer is full.
+        /// The strategy <see cref="OverflowStrategy.Backpressure"/> will not complete <see cref="ISourceQueue{T}.OfferAsync"/> until buffer is full.
         /// 
         /// The buffer can be disabled by using <paramref name="bufferSize"/> of 0 and then received messages are dropped
         /// if there is no demand from downstream. When <paramref name="bufferSize"/> is 0 the <paramref name="overflowStrategy"/> does
@@ -507,12 +505,11 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="bufferSize">The size of the buffer in element count</param>
         /// <param name="overflowStrategy">Strategy that is used when incoming elements cannot fit inside the buffer</param>
-        /// <param name="timeout">Timeout for ``SourceQueue.offer(T):Future[Boolean]``</param>
-        public static Source<T, ISourceQueue<T>> Queue<T>(int bufferSize, OverflowStrategy overflowStrategy, TimeSpan? timeout = null)
+        public static Source<T, ISourceQueue<T>> Queue<T>(int bufferSize, OverflowStrategy overflowStrategy)
         {
             if (bufferSize < 0) throw new ArgumentException("Buffer size must be greater than or equal 0", nameof(bufferSize));
 
-            return Source.FromGraph(new QueueSource<T>(bufferSize, overflowStrategy).WithAttributes(DefaultAttributes.QueueSource));
+            return FromGraph(new QueueSource<T>(bufferSize, overflowStrategy).WithAttributes(DefaultAttributes.QueueSource));
         }
     }
 }

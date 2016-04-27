@@ -39,13 +39,11 @@ namespace Akka.Streams.Implementation
         protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
 
         protected override bool Receive(object message)
-        {
-            return DefaultReceive(message) || RequestElement(message) || (message is T && ReceiveElement((T)message));
-        }
+            => DefaultReceive(message) || RequestElement(message) || (message is T && ReceiveElement((T) message));
 
         protected bool DefaultReceive(object message)
         {
-            if (message is Akka.Streams.Actors.Cancel)
+            if (message is Actors.Cancel)
                 Context.Stop(Self);
             else if (message is Status.Success)
             {
@@ -146,9 +144,9 @@ namespace Akka.Streams.Implementation
                     Context.Stop(Self); // will complete the stream successfully
             }
             else if (IsActive)
-            {
-                Log.Debug("Dropping element because Status.Success received already, only draining already buffered elements: [{0}] (pending: [{1}])", message, Buffer.Used);
-            }
+                Log.Debug(
+                    "Dropping element because Status.Success received already, only draining already buffered elements: [{0}] (pending: [{1}])",
+                    message, Buffer.Used);
             else
                 return false;
 

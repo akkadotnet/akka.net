@@ -17,29 +17,27 @@ namespace Akka.Streams.Implementation
     {
         public sealed class Logic : GraphStageLogicWithCallbackWrapper<Tuple<TOut, Offered>>
         {
-            private readonly SourceShape<TOut> _shape;
             private readonly QueueSource<TOut> _source;
             private IBuffer<TOut> _buffer;
             private Tuple<TOut, Offered> _pendingOffer;
             private bool _pulled;
 
-            public Logic(SourceShape<TOut> shape, QueueSource<TOut> source) : base(shape)
+            public Logic(QueueSource<TOut> source) : base(source.Shape)
             {
-                _shape = shape;
                 _source = source;
 
-                SetHandler(shape.Outlet,
+                SetHandler(source.Shape.Outlet,
                     onDownstreamFinish: () =>
-                {
-                    if (_pendingOffer != null)
                     {
-                        var promise = _pendingOffer.Item2;
-                        promise.SetResult(QueueOfferResult.QueueClosed.Instance);
-                        _pendingOffer = null;
-                    }
-                    _source._completion.SetResult(new object());
-                    CompleteStage();
-                },
+                        if (_pendingOffer != null)
+                        {
+                            var promise = _pendingOffer.Item2;
+                            promise.SetResult(QueueOfferResult.QueueClosed.Instance);
+                            _pendingOffer = null;
+                        }
+                        _source._completion.SetResult(new object());
+                        CompleteStage();
+                    },
                     onPull: () =>
                     {
                         if (_source._maxBuffer == 0)
@@ -48,7 +46,7 @@ namespace Akka.Streams.Implementation
                             {
                                 var element = _pendingOffer.Item1;
                                 var promise = _pendingOffer.Item2;
-                                Push(_shape.Outlet, element);
+                                Push(source.Shape.Outlet, element);
                                 promise.SetResult(QueueOfferResult.Enqueued.Instance);
                                 _pendingOffer = null;
                             }
@@ -57,7 +55,7 @@ namespace Akka.Streams.Implementation
                         }
                         else if (!_buffer.IsEmpty)
                         {
-                            Push(_shape.Outlet, _buffer.Dequeue());
+                            Push(source.Shape.Outlet, _buffer.Dequeue());
                             if (_pendingOffer != null)
                             {
                                 var element = _pendingOffer.Item1;
@@ -65,7 +63,8 @@ namespace Akka.Streams.Implementation
                                 EnqueueAndSuccess(element, promise);
                             }
                         }
-                        else _pulled = true;
+                        else
+                            _pulled = true;
                     });
             }
 
@@ -97,9 +96,7 @@ namespace Akka.Streams.Implementation
             private void BufferElement(TOut element, Offered promise)
             {
                 if (!_buffer.IsFull)
-                {
                     EnqueueAndSuccess(element, promise);
-                }
                 else
                 {
                     switch (_source._overflowStrategy)
@@ -150,27 +147,22 @@ namespace Akka.Streams.Implementation
                             BufferElement(element, promise);
                             if (_pulled)
                             {
-                                Push(_shape.Outlet, _buffer.Dequeue());
+                                Push(_source.Shape.Outlet, _buffer.Dequeue());
                                 _pulled = false;
                             }
                         }
                         else if (_pulled)
                         {
-                            Push(_shape.Outlet, element);
+                            Push(_source.Shape.Outlet, element);
                             _pulled = false;
                             promise.SetResult(QueueOfferResult.Enqueued.Instance);
                         }
                         else
-                        {
                             _pendingOffer = tuple;
-                        }
                     });
             }
 
-            internal void Invoke(Tuple<TOut, Offered> tuple)
-            {
-                InvokeCallbacks(tuple);
-            }
+            internal void Invoke(Tuple<TOut, Offered> tuple) => InvokeCallbacks(tuple);
         }
 
         public sealed class Materialized : ISourceQueue<TOut>
@@ -185,10 +177,7 @@ namespace Akka.Streams.Implementation
                 return promise.Task;
             }
 
-            public Task WatchCompletionAsync()
-            {
-                return _source._completion.Task;
-            }
+            public Task WatchCompletionAsync() => _source._completion.Task;
 
             public Materialized(QueueSource<TOut> source, Action<Tuple<TOut, Offered>> invokeLogic)
             {
@@ -212,7 +201,7 @@ namespace Akka.Streams.Implementation
 
         public override ILogicAndMaterializedValue<ISourceQueue<TOut>>  CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var logic = new Logic(Shape, this);
+            var logic = new Logic(this);
             return new LogicAndMaterializedValue<ISourceQueue<TOut>>(logic, new Materialized(this, t => logic.Invoke(t)));
         }
     }

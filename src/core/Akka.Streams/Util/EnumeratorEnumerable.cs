@@ -20,14 +20,8 @@ namespace Akka.Streams.Util
             _enumeratorFactory = enumeratorFactory;
         }
 
-        public IEnumerator<T> GetEnumerator()
-        {
-            return _enumeratorFactory();
-        }
+        public IEnumerator<T> GetEnumerator() => _enumeratorFactory();
 
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

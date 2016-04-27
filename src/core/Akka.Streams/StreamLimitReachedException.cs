@@ -12,7 +12,7 @@ namespace Akka.Streams
 {
     public class StreamLimitReachedException : Exception
     {
-        public StreamLimitReachedException(long max) : base(string.Format("Limit of {0} reached", max))
+        public StreamLimitReachedException(long max) : base($"Limit of {max} reached")
         {
         }
 

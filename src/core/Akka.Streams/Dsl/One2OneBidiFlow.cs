@@ -36,7 +36,7 @@ namespace Akka.Streams.Dsl
     {
         #region internal classes
 
-        private sealed class One2OneBidiGraphStateLogic<TIn, TOut> : GraphStageLogic
+        private sealed class Logic : GraphStageLogic
         {
             private readonly int _maxPending;
             private readonly Inlet<TIn> _inInlet;
@@ -46,14 +46,13 @@ namespace Akka.Streams.Dsl
             private int _pending;
             private bool _pullSuppressed;
 
-            public One2OneBidiGraphStateLogic(Shape shape, int maxPending, Inlet<TIn> inInlet, Outlet<TIn> inOutlet,
-                Inlet<TOut> outInlet, Outlet<TOut> outOutlet) : base(shape)
+            public Logic(One2OneBidi<TIn, TOut> stage) : base(stage.Shape)
             {
-                _maxPending = maxPending;
-                _inInlet = inInlet;
-                _inOutlet = inOutlet;
-                _outInlet = outInlet;
-                _outOutlet = outOutlet;
+                _maxPending = stage._maxPending;
+                _inInlet = stage._inInlet;
+                _inOutlet = stage._inOutlet;
+                _outInlet = stage._outInlet;
+                _outOutlet = stage._outOutlet;
 
                 SetInInletHandler();
                 SetInOutletHandler();
@@ -123,21 +122,18 @@ namespace Akka.Streams.Dsl
         private readonly Outlet<TIn> _inOutlet = new Outlet<TIn>("inOut");
         private readonly Inlet<TOut> _outInlet = new Inlet<TOut>("outIn");
         private readonly Outlet<TOut> _outOutlet = new Outlet<TOut>("outOut");
-        private readonly BidiShape<TIn, TIn, TOut, TOut> _shape;
-        private readonly Attributes _initialAttributes = Attributes.CreateName("One2OneBidi");
 
         public One2OneBidi(int maxPending)
         {
             _maxPending = maxPending;
-            _shape = new BidiShape<TIn, TIn, TOut, TOut>(_inInlet, _inOutlet, _outInlet, _outOutlet);
+            Shape = new BidiShape<TIn, TIn, TOut, TOut>(_inInlet, _inOutlet, _outInlet, _outOutlet);
         }
 
-        public override BidiShape<TIn, TIn, TOut, TOut> Shape => _shape;
+        public override BidiShape<TIn, TIn, TOut, TOut> Shape { get; }
 
-        protected override Attributes InitialAttributes => _initialAttributes;
+        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("One2OneBidi");
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
-            => new One2OneBidiGraphStateLogic<TIn, TOut>(Shape, _maxPending, _inInlet, _inOutlet, _outInlet, _outOutlet);
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
         
         public override string ToString() => "One2OneBidi";
     }

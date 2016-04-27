@@ -103,10 +103,7 @@ namespace Akka.Streams.Implementation
                     OnCancel(cancel.Id);
                     _outputs[cancel.Id].SubReceive.CurrentReceive(new Cancel(null));
                 })
-                .With<FanOut.SubstreamSubscribePending>(pending =>
-                {
-                    _outputs[pending.Id].SubReceive.CurrentReceive(SubscribePending.Instance);
-                })
+                .With<FanOut.SubstreamSubscribePending>(pending => _outputs[pending.Id].SubReceive.CurrentReceive(SubscribePending.Instance))
                 .WasHandled);
         }
 
@@ -160,7 +157,7 @@ namespace Akka.Streams.Implementation
             if (!_bunchCancelled)
             {
                 _bunchCancelled = true;
-                for (int i = 0; i < _outputs.Length; i++)
+                for (var i = 0; i < _outputs.Length; i++)
                     Error(i, e);
             }
         }
@@ -211,7 +208,7 @@ namespace Akka.Streams.Implementation
 
         public void UnmarkAllOutputs()
         {
-            for (int i = 0; i < _outputCount; i++)
+            for (var i = 0; i < _outputCount; i++)
                 UnmarkOutput(i);
         }
 
@@ -251,12 +248,8 @@ namespace Akka.Streams.Implementation
         public void EnqueueMarked(T element)
         {
             for (var id = 0; id < _outputCount; id++)
-            {
                 if (_marked[id])
-                {
                     Enqueue(id, element);
-                }
-            }
         }
 
         public int IdToEnqueueAndYield()
@@ -378,10 +371,7 @@ namespace Akka.Streams.Implementation
                 _pump = pump;
             }
 
-            protected override void OnError(Exception e)
-            {
-                _pump.Fail(e);
-            }
+            protected override void OnError(Exception e) => _pump.Fail(e);
         }
 
         #endregion
@@ -471,9 +461,7 @@ namespace Akka.Streams.Implementation
     internal static class Unzip
     {
         public static Props Props<T>(ActorMaterializerSettings settings)
-        {
-            return Akka.Actor.Props.Create(() => new Unzip<T>(settings, 2)).WithDeploy(Deploy.Local);
-        }
+            => Actor.Props.Create(() => new Unzip<T>(settings, 2)).WithDeploy(Deploy.Local);
     }
 
     /// <summary>

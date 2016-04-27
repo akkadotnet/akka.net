@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
+using Akka.Streams.Util;
 
 namespace Akka.Streams.Implementation
 {
@@ -37,31 +38,33 @@ namespace Akka.Streams.Implementation
         int Cursor { get; set; }
     }
 
-    /**
-     * INTERNAL API
-     * A mutable RingBuffer that can grow in size and supports multiple readers.
-     * Contrary to many other ring buffer implementations this one does not automatically overwrite the oldest
-     * elements, rather, if full, the buffer tries to grow and rejects further writes if max capacity is reached.
-     */
+    /// <summary>
+    /// INTERNAL API
+    /// A mutable RingBuffer that can grow in size and supports multiple readers.
+    /// Contrary to many other ring buffer implementations this one does not automatically overwrite the oldest
+    /// elements, rather, if full, the buffer tries to grow and rejects further writes if max capacity is reached.
+    /// </summary>
     public class ResizableMultiReaderRingBuffer<T>
     {
         private readonly int _maxSizeBit;
         private object[] _array;
+        
+        /// <summary>
+        /// Two counters counting the number of elements ever written and read; wrap-around is
+        /// handled by always looking at differences or masked values
+        /// </summary>
+        private int _writeIndex;
 
-        /*
-         * two counters counting the number of elements ever written and read; wrap-around is
-         * handled by always looking at differences or masked values
-         */
-        private int _writeIndex = 0;
-
-        private int _readIndex = 0; // the "oldest" of all read cursor indices, i.e. the one that is most behind
-
-        // current array.length log2, we don't keep it as an extra field because `Integer.numberOfTrailingZeros`
-        // is a JVM intrinsic compiling down to a `BSF` instruction on x86, which is very fast on modern CPUs
-        private int LengthBit => NumberOfTrailingZeros(_array.Length);
+        private int _readIndex; // the "oldest" of all read cursor indices, i.e. the one that is most behind
+        
+        /// <summary>
+        /// Current array.length log2, we don't keep it as an extra field because <see cref="Int32Extensions.NumberOfTrailingZeros"/>
+        /// is a JVM intrinsic compiling down to a `BSF` instruction on x86, which is very fast on modern CPUs
+        /// </summary>
+        private int LengthBit => _array.Length.NumberOfTrailingZeros();
 
         // bit mask for converting a cursor into an array index
-        private int Mask => Int32.MaxValue >> (31 - LengthBit);
+        private int Mask => int.MaxValue >> (31 - LengthBit);
 
         public ResizableMultiReaderRingBuffer(int initialSize, int maxSize, ICursors cursors)
         {
@@ -74,46 +77,46 @@ namespace Akka.Streams.Implementation
                 throw new ArgumentException("maxSize must be a power of 2 that is > 0 and < Int.MaxValue/2");
 
             _array = new object[initialSize];
-            _maxSizeBit = NumberOfTrailingZeros(maxSize);
+            _maxSizeBit = maxSize.NumberOfTrailingZeros();
         }
 
         protected readonly ICursors Cursors;
 
         protected object[] UnderlyingArray => _array;
 
-        /**
-         * The number of elements currently in the buffer.
-         */
+        /// <summary>
+        /// The number of elements currently in the buffer.
+        /// </summary>
         public int Length => _writeIndex - _readIndex;
 
         public bool IsEmpty => Length == 0;
 
         public bool NonEmpty => !IsEmpty;
 
-        /**
-         * The number of elements the buffer can still take without having to be resized.
-         */
+        /// <summary>
+        /// The number of elements the buffer can still take without having to be resized.
+        /// </summary>
         public int ImmediatellyAvailable => _array.Length - Length;
 
-        /**
-         * The maximum number of elements the buffer can still take.
-         */
+        /// <summary>
+        /// The maximum number of elements the buffer can still take.
+        /// </summary>
         public int CapacityLeft => (1 << _maxSizeBit) - Length;
 
-        /**
-         * Returns the number of elements that the buffer currently contains for the given cursor.
-         */
+        /// <summary>
+        /// Returns the number of elements that the buffer currently contains for the given cursor.
+        /// </summary>
         public int Count(ICursor cursor) => _writeIndex - cursor.Cursor;
 
-        /**
-         * Initializes the given Cursor to the oldest buffer entry that is still available.
-         */
+        /// <summary>
+        /// Initializes the given Cursor to the oldest buffer entry that is still available.
+        /// </summary>
         public void InitCursor(ICursor cursor) => cursor.Cursor = _readIndex;
 
-        /**
-         * Tries to write the given value into the buffer thereby potentially growing the backing array.
-         * Returns `true` if the write was successful and false if the buffer is full and cannot grow anymore.
-         */
+        /// <summary>
+        /// Tries to write the given value into the buffer thereby potentially growing the backing array.
+        /// Returns true if the write was successful and false if the buffer is full and cannot grow anymore.
+        /// </summary> 
         public bool Write(T value)
         {
             if (Length < _array.Length)
@@ -150,11 +153,11 @@ namespace Akka.Streams.Implementation
                 cursor.Cursor -= _readIndex;
         }
 
-        /**
-         * Tries to read from the buffer using the given Cursor.
-         * If there are no more data to be read (i.e. the cursor is already
-         * at writeIx) the method throws ResizableMultiReaderRingBuffer.NothingToReadException!
-         */
+        /// <summary>
+        /// Tries to read from the buffer using the given Cursor.
+        /// If there are no more data to be read (i.e. the cursor is already
+        /// at writeIx) the method throws <see cref="NothingToReadException"/>!
+        /// </summary>
         public T Read(ICursor cursor)
         {
             var c = cursor.Cursor;
@@ -195,19 +198,5 @@ namespace Akka.Streams.Implementation
         }
 
         public override string ToString() => $"ResizableMultiReaderRingBuffer(size={Length}, writeIx={_writeIndex}, readIx={_readIndex}, cursors={Cursors.Cursors.Count()})";
-
-        private static int NumberOfTrailingZeros(int i)
-        {
-            if (i == 0)
-                return 32;
-
-            var x = (i & -i) - 1;
-            x -= ((x >> 1) & 0x55555555);
-            x = (((x >> 2) & 0x33333333) + (x & 0x33333333));
-            x = (((x >> 4) + x) & 0x0f0f0f0f);
-            x += (x >> 8);
-            x += (x >> 16);
-            return (x & 0x0000003f);
-        }
     }
 }

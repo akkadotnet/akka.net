@@ -194,9 +194,6 @@ namespace Akka.Streams.Dsl
 
     public static class TcpStreamExtensions
     {
-        public static TcpExt TcpStream(this ActorSystem system)
-        {
-            return system.WithExtension<TcpExt, Tcp>();
-        }
+        public static TcpExt TcpStream(this ActorSystem system) => system.WithExtension<TcpExt, Tcp>();
     }
 }

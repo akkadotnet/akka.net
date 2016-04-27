@@ -5,13 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-//-----------------------------------------------------------------------
-// <copyright file="ActorSubscriber.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
-
 using System;
 using System.Collections.Concurrent;
 using System.Reactive.Streams;
@@ -235,12 +228,9 @@ namespace Akka.Streams.Actors
 
         /// <summary>
         /// Attach a <see cref="ActorSubscriber"/> actor as a <see cref="ISubscriber{T}"/>
-        /// to a <see cref="IPublisher"/> or <see cref="IFlow{T,TMat}"/>
+        /// to a <see cref="IPublisher"/> or <see cref="IFlow{TOut,TMat}"/>
         /// </summary>
-        public static ISubscriber<T> Create<T>(IActorRef @ref)
-        {
-            return new ActorSubscriberImpl<T>(@ref);
-        }
+        public static ISubscriber<T> Create<T>(IActorRef @ref) => new ActorSubscriberImpl<T>(@ref);
     }
 
     public sealed class ActorSubscriberImpl<T> : ISubscriber<T>
@@ -259,10 +249,7 @@ namespace Akka.Streams.Actors
             _impl.Tell(new OnSubscribe(subscription));
         }
 
-        public void OnNext(T element)
-        {
-            OnNext((object)element);
-        }
+        public void OnNext(T element) => OnNext((object)element);
 
         public void OnNext(object element)
         {
@@ -276,10 +263,7 @@ namespace Akka.Streams.Actors
             _impl.Tell(new OnError(cause));
         }
 
-        public void OnComplete()
-        {
-            _impl.Tell(Actors.OnComplete.Instance);
-        }
+        public void OnComplete() => _impl.Tell(Actors.OnComplete.Instance);
     }
 
     public sealed class ActorSubscriberState : ExtensionIdProvider<ActorSubscriberState>, IExtension
@@ -311,10 +295,7 @@ namespace Akka.Streams.Actors
             return _state.TryGetValue(actorRef, out state) ? state : null;
         }
 
-        public void Set(IActorRef actorRef, State s)
-        {
-            _state.AddOrUpdate(actorRef, s, (@ref, oldState) => s);
-        }
+        public void Set(IActorRef actorRef, State s) => _state.AddOrUpdate(actorRef, s, (@ref, oldState) => s);
 
         public State Remove(IActorRef actorRef)
         {
@@ -322,9 +303,6 @@ namespace Akka.Streams.Actors
             return _state.TryRemove(actorRef, out s) ? s : null;
         }
 
-        public override ActorSubscriberState CreateExtension(ExtendedActorSystem system)
-        {
-            return new ActorSubscriberState();
-        }
+        public override ActorSubscriberState CreateExtension(ExtendedActorSystem system) => new ActorSubscriberState();
     }
 }

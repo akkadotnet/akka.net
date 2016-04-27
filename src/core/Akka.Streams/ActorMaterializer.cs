@@ -6,11 +6,15 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Reactive.Streams;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
+using Akka.Pattern;
+using Akka.Streams.Dsl;
+using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
 using Akka.Util;
@@ -20,7 +24,7 @@ namespace Akka.Streams
 {
     /// <summary>
     /// A ActorMaterializer takes the list of transformations comprising a
-    /// <see cref="IFlow{T,TMat}"/> and materializes them in the form of
+    /// <see cref="IFlow{TOut,TMat}"/> and materializes them in the form of
     /// <see cref="IProcessor{T1,T2}"/> instances. How transformation
     /// steps are split up into asynchronous regions is implementation
     /// dependent.
@@ -28,9 +32,7 @@ namespace Akka.Streams
     public abstract class ActorMaterializer : IMaterializer, IDisposable
     {
         public static Config DefaultConfig()
-        {
-            return ConfigurationFactory.FromResource<ActorMaterializer>("Akka.Streams.reference.conf");
-        }
+            => ConfigurationFactory.FromResource<ActorMaterializer>("Akka.Streams.reference.conf");
 
         #region static
 
@@ -47,7 +49,7 @@ namespace Akka.Streams
         /// </para>
         /// <para>
         /// The <paramref name="namePrefix"/> is used as the first part of the names of the actors running
-        /// the processing steps. The default <paramref name="namePrefix"/> is `"flow"`. The actor names are built up of
+        /// the processing steps. The default <paramref name="namePrefix"/> is "flow". The actor names are built up of
         /// `namePrefix-flowNumber-flowStepNumber-stepName`.
         /// </para>
         /// </summary>
@@ -70,16 +72,22 @@ namespace Akka.Streams
         internal static ActorMaterializer Downcast(IMaterializer materializer)
         {
             //FIXME this method is going to cause trouble for other Materializer implementations
-            if (materializer is ActorMaterializer) return (ActorMaterializer)materializer;
-            else throw new ArgumentException(string.Format("Expected {0} but got {1}", typeof(ActorMaterializer), materializer.GetType()));
+            if (materializer is ActorMaterializer)
+                return (ActorMaterializer)materializer;
+
+            throw new ArgumentException($"Expected {typeof(ActorMaterializer)} but got {materializer.GetType()}");
         }
 
         private static ActorSystem ActorSystemOf(IActorRefFactory context)
         {
-            if (context is ExtendedActorSystem) return (ActorSystem)context;
-            if (context is IActorContext) return ((IActorContext)context).System;
-            if (context == null) throw new ArgumentNullException("IActorRefFactory must be defined");
-            else throw new ArgumentException(string.Format("ActorRefFactory context must be a ActorSystem or ActorContext, got [{0}]", context.GetType()));
+            if (context is ExtendedActorSystem)
+                return (ActorSystem)context;
+            if (context is IActorContext)
+                return ((IActorContext)context).System;
+            if (context == null)
+                throw new ArgumentNullException(nameof(context), "IActorRefFactory must be defined");
+
+            throw new ArgumentException($"ActorRefFactory context must be a ActorSystem or ActorContext, got [{context.GetType()}]");
         }
 
         #endregion
@@ -118,10 +126,7 @@ namespace Akka.Streams
 
         protected internal abstract IActorRef ActorOf(MaterializationContext context, Props props);
 
-        public void Dispose()
-        {
-            Shutdown();
-        }
+        public void Dispose() => Shutdown();
     }
 
     /// <summary>
@@ -158,7 +163,7 @@ namespace Akka.Streams
 
     /// <summary>
     /// This class describes the configurable properties of the <see cref="ActorMaterializer"/>. 
-    /// Please refer to the `withX` methods for descriptions of the individual settings.
+    /// Please refer to the withX methods for descriptions of the individual settings.
     /// </summary>
     public sealed class ActorMaterializerSettings
     {
@@ -288,6 +293,7 @@ namespace Akka.Streams
         }
 
         public readonly StreamSubscriptionTimeoutTerminationMode Mode;
+
         public readonly TimeSpan Timeout;
 
         public StreamSubscriptionTimeoutSettings(StreamSubscriptionTimeoutTerminationMode mode, TimeSpan timeout)
@@ -298,16 +304,18 @@ namespace Akka.Streams
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(obj, null)) return false;
-            if (ReferenceEquals(obj, this)) return true;
-            if (obj is StreamSubscriptionTimeoutSettings) return Equals((StreamSubscriptionTimeoutSettings) obj);
+            if (ReferenceEquals(obj, null))
+                return false;
+            if (ReferenceEquals(obj, this))
+                return true;
+            if (obj is StreamSubscriptionTimeoutSettings)
+                return Equals((StreamSubscriptionTimeoutSettings) obj);
+
             return false;
         }
 
         public bool Equals(StreamSubscriptionTimeoutSettings other)
-        {
-            return Mode == other.Mode && Timeout.Equals(other.Timeout);
-        }
+            => Mode == other.Mode && Timeout.Equals(other.Timeout);
 
         public override int GetHashCode()
         {
@@ -317,15 +325,12 @@ namespace Akka.Streams
             }
         }
 
-        public override string ToString()
-        {
-            return string.Format("StreamSubscriptionTimeoutSettings<{0}, {1}>", Mode, Timeout);
-        }
+        public override string ToString() => $"StreamSubscriptionTimeoutSettings<{Mode}, {Timeout}>";
     }
 
     /// <summary>
     /// This mode describes what shall happen when the subscription timeout expires 
-    /// for substream Publishers created by operations like `PrefixAndTail`.
+    /// for substream Publishers created by operations like <see cref="InternalFlowOperations.PrefixAndTail{T,TMat}"/>.
     /// </summary>
     public enum StreamSubscriptionTimeoutTerminationMode
     {
@@ -360,13 +365,11 @@ namespace Akka.Streams
         /// </para>
         /// <para>
         /// The <paramref name="namePrefix"/> is used as the first part of the names of the actors running
-        /// the processing steps. The default <paramref name="namePrefix"/> is `"flow"`. The actor names are built up of
-        /// `namePrefix-flowNumber-flowStepNumber-stepName`.
+        /// the processing steps. The default <paramref name="namePrefix"/> is "flow". The actor names are built up of
+        /// namePrefix-flowNumber-flowStepNumber-stepName.
         /// </para>
         /// </summary>
         public static ActorMaterializer Materializer(this IActorRefFactory context, ActorMaterializerSettings settings = null, string namePrefix = null)
-        {
-            return ActorMaterializer.Create(context, settings, namePrefix);
-        }
+            => ActorMaterializer.Create(context, settings, namePrefix);
     }
 }

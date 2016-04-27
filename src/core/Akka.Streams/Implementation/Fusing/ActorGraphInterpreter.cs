@@ -53,11 +53,7 @@ namespace Akka.Streams.Implementation.Fusing
             return this;
         }
 
-        public override string ToString()
-        {
-            return
-                $"GraphModule\n  {Assembly.ToString().Replace("\n", "\n  ")}\n  shape={Shape}, attributes={Attributes}";
-        }
+        public override string ToString() => $"GraphModule\n  {Assembly.ToString().Replace("\n", "\n  ")}\n  shape={Shape}, attributes={Attributes}";
     }
 
     internal sealed class GraphInterpreterShell
@@ -315,10 +311,7 @@ namespace Akka.Streams.Implementation.Fusing
             return new BusLogging(Materializer.System.EventStream, Self.ToString(), typeof(GraphInterpreterShell), new DefaultLogMessageFormatter());
         }
 
-        public override string ToString()
-        {
-            return $"GraphInterpreterShell\n  {_assembly.ToString().Replace("\n", "\n  ")}";
-        }
+        public override string ToString() => $"GraphInterpreterShell\n  {_assembly.ToString().Replace("\n", "\n  ")}";
     }
 
     internal class ActorGraphInterpreter : ActorBase
@@ -507,20 +500,11 @@ namespace Akka.Streams.Implementation.Fusing
                 _id = id;
             }
 
-            public void Request(long elements)
-            {
-                _parent.Tell(new RequestMore(_shell, _id, elements));
-            }
+            public void Request(long elements) => _parent.Tell(new RequestMore(_shell, _id, elements));
 
-            public void Cancel()
-            {
-                _parent.Tell(new Cancel(_shell, _id));
-            }
+            public void Cancel() => _parent.Tell(new Cancel(_shell, _id));
 
-            public override string ToString()
-            {
-                return $"BoundarySubscription[{_parent}, {_id}]";
-            }
+            public override string ToString() => $"BoundarySubscription[{_parent}, {_id}]";
         }
 
         public sealed class BoundarySubscriber<T> : ISubscriber<T>
@@ -548,15 +532,9 @@ namespace Akka.Streams.Implementation.Fusing
                 _parent.Tell(new OnError(_shell, _id, cause));
             }
 
-            public void OnComplete()
-            {
-                _parent.Tell(new OnComplete(_shell, _id));
-            }
+            public void OnComplete() => _parent.Tell(new OnComplete(_shell, _id));
 
-            void ISubscriber.OnNext(object element)
-            {
-                OnNext((T)element);
-            }
+            void ISubscriber.OnNext(object element) => OnNext((T)element);
 
             public void OnNext(T element)
             {
@@ -594,15 +572,9 @@ namespace Akka.Streams.Implementation.Fusing
                     else if (upstreamCompleted) _that.Complete(_that.Out);
                 }
 
-                public override void OnDownstreamFinish()
-                {
-                    _that.Cancel();
-                }
+                public override void OnDownstreamFinish() => _that.Cancel();
 
-                public override string ToString()
-                {
-                    return _that.ToString();
-                }
+                public override string ToString() => _that.ToString();
             }
             #endregion
 
@@ -644,11 +616,10 @@ namespace Akka.Streams.Implementation.Fusing
             public void OnInternalError(Exception reason)
             {
                 if (!(_upstreamCompleted || _downstreamCanceled) && !ReferenceEquals(_upstream, null))
-                {
                     _upstream.Cancel();
-                }
 
-                if (!IsClosed(Out)) OnError(reason);
+                if (!IsClosed(Out))
+                    OnError(reason);
             }
 
             public void OnError(Exception reason)
@@ -666,7 +637,8 @@ namespace Akka.Streams.Implementation.Fusing
                 if (!_upstreamCompleted)
                 {
                     _upstreamCompleted = true;
-                    if (_inputBufferElements == 0) Complete(Out);
+                    if (_inputBufferElements == 0)
+                        Complete(Out);
                 }
             }
 
@@ -691,10 +663,12 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 if (!_upstreamCompleted)
                 {
-                    if (_inputBufferElements == _size) throw new IllegalStateException("Input buffer overrun");
+                    if (_inputBufferElements == _size)
+                        throw new IllegalStateException("Input buffer overrun");
                     _inputBuffer[(_nextInputElementCursor + _inputBufferElements) & _indexMask] = element;
                     _inputBufferElements++;
-                    if (IsAvailable(Out)) Push(Out, Dequeue());
+                    if (IsAvailable(Out))
+                        Push(Out, Dequeue());
                 }
             }
 
@@ -704,7 +678,8 @@ namespace Akka.Streams.Implementation.Fusing
                 if (!_upstreamCompleted)
                 {
                     _upstreamCompleted = true;
-                    if (!ReferenceEquals(_upstream, null)) ReactiveStreamsCompliance.TryCancel(_upstream);
+                    if (!ReferenceEquals(_upstream, null))
+                        ReactiveStreamsCompliance.TryCancel(_upstream);
                     Clear();
                 }
             }
@@ -712,7 +687,8 @@ namespace Akka.Streams.Implementation.Fusing
             private object Dequeue()
             {
                 var element = _inputBuffer[_nextInputElementCursor];
-                if (element == null) throw new IllegalStateException("Internal queue must never contain a null");
+                if (element == null)
+                    throw new IllegalStateException("Internal queue must never contain a null");
                 _inputBuffer[_nextInputElementCursor] = null;
 
                 _batchRemaining--;
@@ -733,11 +709,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _inputBufferElements = 0;
             }
 
-            public override string ToString()
-            {
-                return
-                    $"BatchingActorInputBoundary(id={_id}, fill={_inputBufferElements}/{_size}, completed={_upstreamCompleted}, canceled={_downstreamCanceled})";
-            }
+            public override string ToString() => $"BatchingActorInputBoundary(id={_id}, fill={_inputBufferElements}/{_size}, completed={_upstreamCompleted}, canceled={_downstreamCanceled})";
         }
 
         public interface IActorOutputBoundary
@@ -764,24 +736,17 @@ namespace Akka.Streams.Implementation.Fusing
                 public override void OnPush()
                 {
                     _that.OnNext(_that.Grab<T>(_that.In));
-                    if (_that._downstreamCompleted) _that.Cancel(_that.In);
-                    else if (_that._downstreamDemand > 0) _that.Pull<T>(_that.In);
+                    if (_that._downstreamCompleted)
+                        _that.Cancel(_that.In);
+                    else if (_that._downstreamDemand > 0)
+                        _that.Pull<T>(_that.In);
                 }
 
-                public override void OnUpstreamFinish()
-                {
-                    _that.Complete();
-                }
+                public override void OnUpstreamFinish() => _that.Complete();
 
-                public override void OnUpstreamFailure(Exception e)
-                {
-                    _that.Fail(e);
-                }
+                public override void OnUpstreamFailure(Exception e) => _that.Fail(e);
 
-                public override string ToString()
-                {
-                    return _that.ToString();
-                }
+                public override string ToString() => _that.ToString();
             }
             #endregion
 
@@ -825,7 +790,8 @@ namespace Akka.Streams.Implementation.Fusing
                     _downstreamDemand += elements;
                     if (_downstreamDemand < 0)
                         _downstreamDemand = long.MaxValue; // Long overflow, Reactive Streams Spec 3:17: effectively unbounded
-                    if (!HasBeenPulled(In) && !IsClosed(In)) Pull<T>(In);
+                    if (!HasBeenPulled(In) && !IsClosed(In))
+                        Pull<T>(In);
                 }
             }
 
@@ -837,24 +803,24 @@ namespace Akka.Streams.Implementation.Fusing
                     {
                         _subscriber = subscriber;
                         ReactiveStreamsCompliance.TryOnSubscribe(_subscriber, new BoundarySubscription(_actor, _shell, _id));
-                        if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name} Subscribe subscriber={subscriber}");
+                        if (GraphInterpreter.IsDebug)
+                            Console.WriteLine($"{Interpreter.Name} Subscribe subscriber={subscriber}");
                     }
                     else ReactiveStreamsCompliance.RejectAdditionalSubscriber(subscriber, GetType().FullName);
                 }
             }
 
-            void IActorOutputBoundary.ExposedPublisher(IActorPublisher publisher)
-            {
-                ExposedPublisher((ActorPublisher<T>) publisher);
-            }
+            void IActorOutputBoundary.ExposedPublisher(IActorPublisher publisher) => ExposedPublisher((ActorPublisher<T>) publisher);
 
             public void ExposedPublisher(ActorPublisher<T> publisher)
             {
                 _exposedPublisher = publisher;
-                if (_upstreamFailed != null) publisher.Shutdown(_upstreamFailed);
+                if (_upstreamFailed != null)
+                    publisher.Shutdown(_upstreamFailed);
                 else
                 {
-                    if (_upstreamCompleted) publisher.Shutdown(null);
+                    if (_upstreamCompleted)
+                        publisher.Shutdown(null);
                 }
             }
 
@@ -874,8 +840,10 @@ namespace Akka.Streams.Implementation.Fusing
                     _upstreamCompleted = true;
                     _upstreamFailed = reason;
 
-                    if (!ReferenceEquals(_exposedPublisher, null)) _exposedPublisher.Shutdown(reason);
-                    if (!ReferenceEquals(_subscriber, null) && !(reason is ISpecViolation)) ReactiveStreamsCompliance.TryOnError(_subscriber, reason);
+                    if (!ReferenceEquals(_exposedPublisher, null))
+                        _exposedPublisher.Shutdown(reason);
+                    if (!ReferenceEquals(_subscriber, null) && !(reason is ISpecViolation))
+                        ReactiveStreamsCompliance.TryOnError(_subscriber, reason);
                 }
             }
 
@@ -891,8 +859,10 @@ namespace Akka.Streams.Implementation.Fusing
                 if (!(_upstreamCompleted || _downstreamCompleted))
                 {
                     _upstreamCompleted = true;
-                    if (!ReferenceEquals(_exposedPublisher, null)) _exposedPublisher.Shutdown(null);
-                    if (!ReferenceEquals(_subscriber, null)) ReactiveStreamsCompliance.TryOnComplete(_subscriber);
+                    if (!ReferenceEquals(_exposedPublisher, null))
+                        _exposedPublisher.Shutdown(null);
+                    if (!ReferenceEquals(_subscriber, null))
+                        ReactiveStreamsCompliance.TryOnComplete(_subscriber);
                 }
             }
         }
@@ -924,7 +894,8 @@ namespace Akka.Streams.Implementation.Fusing
             try
             {
                 shell.Init(Self, _subFusingMaterializerImpl);
-                if (GraphInterpreter.IsDebug) Console.WriteLine($"registering new shell in {_initial}\n  {shell.ToString().Replace("\n", "\n  ")}");
+                if (GraphInterpreter.IsDebug)
+                    Console.WriteLine($"registering new shell in {_initial}\n  {shell.ToString().Replace("\n", "\n  ")}");
                 if (shell.IsTerminated)
                     return false;
                 _activeInterpreters.Add(shell);
@@ -951,7 +922,8 @@ namespace Akka.Streams.Implementation.Fusing
         {
             if (_newShells.Count == 0)
             {
-                if (_activeInterpreters.Count == 0) Context.Stop(Self);
+                if (_activeInterpreters.Count == 0)
+                    Context.Stop(Self);
             }
             else
             {
@@ -963,7 +935,8 @@ namespace Akka.Streams.Implementation.Fusing
                 }
                 else if (!TryInit(shell))
                 {
-                    if (_activeInterpreters.Count == 0) FinishShellRegistration();
+                    if (_activeInterpreters.Count == 0)
+                        FinishShellRegistration();
                 }
             }
         }
@@ -971,7 +944,8 @@ namespace Akka.Streams.Implementation.Fusing
         protected override void PreStart()
         {
             TryInit(_initial);
-            if (_activeInterpreters.Count == 0) Context.Stop(Self);
+            if (_activeInterpreters.Count == 0)
+                Context.Stop(Self);
         }
 
         protected override bool Receive(object message)
@@ -986,14 +960,13 @@ namespace Akka.Streams.Implementation.Fusing
                     if (shell.IsTerminated)
                     {
                         _activeInterpreters.Remove(shell);
-                        if (_activeInterpreters.Count == 0 && _newShells.Count == 0) Context.Stop(Self);
+                        if (_activeInterpreters.Count == 0 && _newShells.Count == 0)
+                            Context.Stop(Self);
                     }
                 }
             }
             else if (message is ShellRegistered)
-            {
                 FinishShellRegistration();
-            }
             else if (message is StreamSupervisor.PrintDebugDump)
             {
                 Console.WriteLine("ActiveShells:");
@@ -1010,16 +983,16 @@ namespace Akka.Streams.Implementation.Fusing
                     shell.Interpreter.DumpWaits();
                 });
             }
-            else return false;
+            else
+                return false;
+
             return true;
         }
 
         protected override void PostStop()
         {
             foreach (var shell in _activeInterpreters)
-            {
                 shell.TryAbort(new AbruptTerminationException(Self));
-            }
             foreach (var shell in _newShells)
             {
                 if (TryInit(shell))

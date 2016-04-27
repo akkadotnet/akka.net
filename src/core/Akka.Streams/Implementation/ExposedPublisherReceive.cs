@@ -40,7 +40,8 @@ namespace Akka.Streams.Implementation
                         if (!ActiveReceive(msg)) Unhandled(msg);
                 }
             }
-            else _stash.AddLast(message);
+            else
+                _stash.AddLast(message);
 
             return true;
         }

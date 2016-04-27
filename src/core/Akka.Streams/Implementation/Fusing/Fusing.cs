@@ -32,7 +32,8 @@ namespace Akka.Streams.Implementation.Fusing
             where TShape : Shape
         {
             var fusedGraph = graph as Streams.Fusing.FusedGraph<TShape, TMat>;
-            if (fusedGraph != null) return fusedGraph;
+            if (fusedGraph != null)
+                return fusedGraph;
 
             var structInfo = new BuildStructuralInfo();
 
@@ -507,10 +508,7 @@ namespace Akka.Streams.Implementation.Fusing
             return module.Attributes.GetAttribute<ActorAttributes.Dispatcher>(null);
         }
 
-        internal static void Log(int indent, string msg)
-        {
-            Console.WriteLine("{0}{1}", string.Empty.PadLeft(indent*2), msg);
-        }
+        internal static void Log(int indent, string msg) => Console.WriteLine("{0}{1}", string.Empty.PadLeft(indent*2), msg);
     }
 
     /// <summary>
@@ -573,10 +571,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         private readonly LinkedList<LinkedList<CopiedModule>> _materializedSources = new LinkedList<LinkedList<CopiedModule>>();
 
-        public void EnterMaterializationContext()
-        {
-            _materializedSources.AddFirst(new LinkedList<CopiedModule>());
-        }
+        public void EnterMaterializationContext() => _materializedSources.AddFirst(new LinkedList<CopiedModule>());
 
         public IImmutableList<CopiedModule> ExitMaterializationContext()
         {
@@ -627,9 +622,7 @@ namespace Akka.Streams.Implementation.Fusing
                     {
                         group.Clear();
                         foreach (var subgroup in subgroups)
-                        {
                             newGroups.AddLast(new HashSet<IModule>(subgroup));
-                        }
                     }
                 }
             }
@@ -645,7 +638,8 @@ namespace Akka.Streams.Implementation.Fusing
         public void RegisterInternal(Shape shape, int indent)
         {
             if (Fusing.IsDebug) Fusing.Log(indent, $"registerInternals({string.Join(",", shape.Outlets.Select(Hash))}");
-            foreach (var outlet in shape.Outlets) InternalOuts.Add(outlet);
+            foreach (var outlet in shape.Outlets)
+                InternalOuts.Add(outlet);
         }
 
         /// <summary>
@@ -672,7 +666,7 @@ namespace Akka.Streams.Implementation.Fusing
         public ISet<IModule> CreateGroup(int indent)
         {
             var group = new HashSet<IModule>();
-            if (Fusing.IsDebug) Fusing.Log(indent, $"creating new group {Hash(@group)}");
+            if (Fusing.IsDebug) Fusing.Log(indent, $"creating new group {Hash(group)}");
             Groups.AddLast(group);
             return group;
         }
@@ -724,18 +718,14 @@ namespace Akka.Streams.Implementation.Fusing
                     InternalOuts.Remove(outlet);
 
             if (IsCopiedModuleWithGraphStageAndMaterializedValue(copy))
-            {
-                PushMaterializationSource((CopiedModule)copy);
-            }
+                PushMaterializationSource((CopiedModule) copy);
             else if (copy is GraphModule)
             {
-                var mvids = ((GraphModule)copy).MaterializedValueIds;
+                var mvids = ((GraphModule) copy).MaterializedValueIds;
                 foreach (IModule mvid in mvids)
                 {
                     if (IsCopiedModuleWithGraphStageAndMaterializedValue(mvid))
-                    {
-                        PushMaterializationSource((CopiedModule)mvid);
-                    }
+                        PushMaterializationSource((CopiedModule) mvid);
                 }
             }
 
@@ -789,18 +779,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Transform original into copied Inlets.
         /// </summary>
-        public ImmutableArray<Inlet> NewInlets(IEnumerable<Inlet> old)
-        {
-            return old.Select(i => (Inlet)NewInputs[i].First.Value).ToImmutableArray();
-        }
+        public ImmutableArray<Inlet> NewInlets(IEnumerable<Inlet> old) => old.Select(i => (Inlet)NewInputs[i].First.Value).ToImmutableArray();
 
         /// <summary>
         /// Transform original into copied Outlets.
         /// </summary>
-        public ImmutableArray<Outlet> NewOutlets(IEnumerable<Outlet> old)
-        {
-            return old.Select(o => (Outlet)NewOutputs[o].First.Value).ToImmutableArray();
-        }
+        public ImmutableArray<Outlet> NewOutlets(IEnumerable<Outlet> old) => old.Select(o => (Outlet)NewOutputs[o].First.Value).ToImmutableArray();
 
         private bool IsCopiedModuleWithGraphStageAndMaterializedValue(IModule module)
         {
@@ -816,8 +800,10 @@ namespace Akka.Streams.Implementation.Fusing
         private void AddMapping<T>(T orig, T mapd, IDictionary<T, LinkedList<T>> map)
         {
             LinkedList<T> values;
-            if (map.TryGetValue(orig, out values)) values.AddLast(mapd);
-            else map.Add(orig, new LinkedList<T>(new[] { mapd }));
+            if (map.TryGetValue(orig, out values))
+                values.AddLast(mapd);
+            else
+                map.Add(orig, new LinkedList<T>(new[] { mapd }));
         }
 
         private Option<T> RemoveMapping<T>(T orig, IDictionary<T, LinkedList<T>> map)
@@ -825,7 +811,8 @@ namespace Akka.Streams.Implementation.Fusing
             LinkedList<T> values;
             if (map.TryGetValue(orig, out values))
             {
-                if (values.Count == 0) map.Remove(orig);
+                if (values.Count == 0)
+                    map.Remove(orig);
                 else
                 {
                     var x = values.First.Value;
@@ -855,15 +842,9 @@ namespace Akka.Streams.Implementation.Fusing
             NewInputs.ForEach(kvp => Console.WriteLine($"    {kvp.Key} ({Hash(kvp.Key)}) -> {string.Join(",", kvp.Value.Select(Hash))}"));
         }
 
-        internal string Hash(object obj)
-        {
-            return obj.GetHashCode().ToString("x");
-        }
+        internal string Hash(object obj) => obj.GetHashCode().ToString("x");
 
-        private string PrintShape(Shape shape)
-        {
-            return
-                $"{shape.GetType().Name}(ins={string.Join(",", shape.Inlets.Select(Hash))} outs={string.Join(",", shape.Outlets.Select(Hash))}";
-        }
+        private string PrintShape(Shape shape) =>
+            $"{shape.GetType().Name}(ins={string.Join(",", shape.Inlets.Select(Hash))} outs={string.Join(",", shape.Outlets.Select(Hash))}";
     }
 }

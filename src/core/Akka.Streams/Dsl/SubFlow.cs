@@ -12,7 +12,7 @@ using Akka.Streams.Implementation.Stages;
 namespace Akka.Streams.Dsl
 {
     /// <summary>
-    /// A “stream of streams” sub-flow of data elements, e.g. produced by <see cref="GroupBy"/>.
+    /// A “stream of streams” sub-flow of data elements, e.g. produced by <see cref="GroupBy{TIn,TKey}"/>.
     /// SubFlows cannot contribute to the super-flow’s materialized value since they
     /// are materialized later, during the runtime of the flow graph processing.
     /// </summary>
@@ -23,8 +23,8 @@ namespace Akka.Streams.Dsl
         public abstract IFlow<T2, TMat3> ViaMaterialized<T2, TMat2, TMat3>(IGraph<FlowShape<TOut, T2>, TMat2> flow, Func<TMat, TMat2, TMat3> combine);
 
         /// <summary>
-        /// Connect this `Source` to a `Sink` and run it. The returned value is the materialized value
-        /// of the `Sink`, e.g. the `Publisher` of a <see cref="IPublisher"/>.
+        /// Connect this <see cref="Source{TOut,TMat}"/> to a <see cref="Sink{TIn,TMat}"/> and run it. The returned value is the materialized value
+        /// of the <see cref="Sink{TIn,TMat}"/>, e.g. the <see cref="IPublisher{TIn}"/> of a <see cref="Sink.Publisher{TIn}"/>.
         /// </summary>
         public abstract TMat2 RunWith<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink, IMaterializer materializer);
 
@@ -39,10 +39,7 @@ namespace Akka.Streams.Dsl
         /// without parallelism limit (i.e. having an unbounded number of sub-flows
         /// active concurrently).
         /// </summary>
-        public virtual IFlow<TOut, TMat> MergeSubstreams()
-        {
-            return MergeSubstreamsWithParallelism(int.MaxValue);
-        }
+        public virtual IFlow<TOut, TMat> MergeSubstreams() => MergeSubstreamsWithParallelism(int.MaxValue);
 
         /// <summary>
         /// Flatten the sub-flows back into the super-flow by performing a merge
@@ -56,14 +53,11 @@ namespace Akka.Streams.Dsl
 
         /// <summary>
         /// Flatten the sub-flows back into the super-flow by concatenating them.
-        /// This is usually a bad idea when combined with <see cref="GroupBy"/> since it can
+        /// This is usually a bad idea when combined with <see cref="GroupBy{TIn,TKey}"/> since it can
         /// easily lead to deadlock—the concatenation does not consume from the second
-        /// substream until the first has finished and the <see cref="GroupBy"/> stage will get
+        /// substream until the first has finished and the <see cref="GroupBy{TIn,TKey}"/> stage will get
         /// back-pressure from the second stream.
         /// </summary>
-        public virtual IFlow<TOut, TMat> ConcatSubstream()
-        {
-            return MergeSubstreamsWithParallelism(1);
-        }
+        public virtual IFlow<TOut, TMat> ConcatSubstream() => MergeSubstreamsWithParallelism(1);
     }
 }

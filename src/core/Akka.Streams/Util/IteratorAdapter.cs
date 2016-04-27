@@ -15,7 +15,6 @@ namespace Akka.Streams.Util
     /// Should only be needed in rare circumstances, where knowing whether there are
     /// more elements without consuming them makes the code easier to write.
     /// </summary>
-    /// <typeparam name="T"></typeparam>
     internal interface IIterator<out T>
     {
         bool HasNext();

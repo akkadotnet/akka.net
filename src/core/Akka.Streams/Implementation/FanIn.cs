@@ -31,10 +31,7 @@ namespace Akka.Streams.Implementation
                 _inputBunch = inputBunch;
             }
 
-            protected override void OnError(Exception e)
-            {
-                _inputBunch.OnError(_id, e);
-            }
+            protected override void OnError(Exception e) => _inputBunch.OnError(_id, e);
         }
 
         #endregion
@@ -47,15 +44,15 @@ namespace Akka.Streams.Implementation
         private readonly BatchingInputBuffer[] _inputs;
         private readonly State[] _states;
 
-        private bool _allCancelled = false;
-        private int _markCount = 0;
-        private int _markedPending = 0;
-        private int _markedDepleted = 0;
-        private bool _receivedInput = false;
-        private int _completedCounter = 0;
+        private bool _allCancelled;
+        private int _markCount;
+        private int _markedPending;
+        private int _markedDepleted;
+        private bool _receivedInput;
+        private int _completedCounter;
 
-        private int _preferredId = 0;
-        private int _lastDequeuedId = 0;
+        private int _preferredId;
+        private int _lastDequeuedId;
 
         protected InputBunch(int inputCount, int bufferSize, IPump pump)
         {
@@ -63,7 +60,7 @@ namespace Akka.Streams.Implementation
 
             _states = new State[inputCount];
             _inputs = new BatchingInputBuffer[inputCount];
-            for (int i = 0; i < inputCount; i++)
+            for (var i = 0; i < inputCount; i++)
                 _inputs[i] = new AnonymousBatchingInputBuffer(bufferSize, pump, i, this);
 
             AllOfMarkedInputs = new LambdaTransferState(
@@ -76,36 +73,40 @@ namespace Akka.Streams.Implementation
 
             // FIXME: Eliminate re-wraps
             SubReceive = new SubReceive(msg => msg.Match()
-                .With<FanIn.OnSubscribe>(subscribe => _inputs[subscribe.Id].SubReceive.CurrentReceive(new Akka.Streams.Actors.OnSubscribe(subscribe.Subscription)))
+                .With<FanIn.OnSubscribe>(subscribe => _inputs[subscribe.Id].SubReceive.CurrentReceive(new Actors.OnSubscribe(subscribe.Subscription)))
                 .With<FanIn.OnNext>(next =>
                 {
                     var id = next.Id;
-                    if (IsMarked(id) && !IsPending(id)) _markedPending++;
+                    if (IsMarked(id) && !IsPending(id))
+                        _markedPending++;
                     Pending(id, on: true);
                     _receivedInput = true;
-                    _inputs[id].SubReceive.CurrentReceive(new Akka.Streams.Actors.OnNext(next.Element));
+                    _inputs[id].SubReceive.CurrentReceive(new Actors.OnNext(next.Element));
                 })
                 .With<FanIn.OnComplete>(complete =>
                 {
                     var id = complete.Id;
                     if (!IsPending(id))
                     {
-                        if (IsMarked(id) && !IsDepleted(id)) _markedDepleted++;
+                        if (IsMarked(id) && !IsDepleted(id))
+                            _markedDepleted++;
                         Depleted(id, on: true);
                         OnDepleted(id);
                     }
 
                     RegisterCompleted(id);
-                    _inputs[id].SubReceive.CurrentReceive(Akka.Streams.Actors.OnComplete.Instance);
+                    _inputs[id].SubReceive.CurrentReceive(Actors.OnComplete.Instance);
 
-                    if (!_receivedInput && IsAllCompleted) OnCompleteWhenNoInput();
+                    if (!_receivedInput && IsAllCompleted)
+                        OnCompleteWhenNoInput();
                 })
                 .With<FanIn.OnError>(error => OnError(error.Id, error.Cause))
                 .WasHandled);
         }
 
-        protected int LastDequeuedId { get { return _lastDequeuedId; } }
-        public bool IsAllCompleted { get { return _inputCount == _completedCounter; } }
+        protected int LastDequeuedId => _lastDequeuedId;
+
+        public bool IsAllCompleted => _inputCount == _completedCounter;
 
         public TransferState InputsAvailableFor(int id)
         {
@@ -126,7 +127,8 @@ namespace Akka.Streams.Implementation
             if (!_allCancelled)
             {
                 _allCancelled = true;
-                for (int i = 0; i < _inputs.Length; i++) Cancel(i);
+                for (var i = 0; i < _inputs.Length; i++)
+                    Cancel(i);
             }
         }
 
@@ -143,14 +145,17 @@ namespace Akka.Streams.Implementation
         public abstract void OnError(int id, Exception cause);
 
         public virtual void OnDepleted(int input) { }
+
         public virtual void OnCompleteWhenNoInput() { }
 
         public void MarkInput(int input)
         {
             if (!IsMarked(input))
             {
-                if (IsDepleted(input)) _markedDepleted++;
-                if (IsPending(input)) _markedPending++;
+                if (IsDepleted(input))
+                    _markedDepleted++;
+                if (IsPending(input))
+                    _markedPending++;
 
                 Marked(input, on: true);
                 _markCount++;
@@ -161,8 +166,10 @@ namespace Akka.Streams.Implementation
         {
             if (IsMarked(input))
             {
-                if (IsDepleted(input)) _markedDepleted--;
-                if (IsPending(input)) _markedPending--;
+                if (IsDepleted(input))
+                    _markedDepleted--;
+                if (IsPending(input))
+                    _markedPending--;
 
                 Marked(input, on: false);
                 _markCount--;
@@ -171,12 +178,14 @@ namespace Akka.Streams.Implementation
 
         public void MarkAllInputs()
         {
-            for (int i = 0; i < _inputCount; i++) MarkInput(i);
+            for (var i = 0; i < _inputCount; i++)
+                MarkInput(i);
         }
 
         public void UnmarkAllInputs()
         {
-            for (int i = 0; i < _inputCount; i++) UnmarkInput(i);
+            for (var i = 0; i < _inputCount; i++)
+                UnmarkInput(i);
         }
 
         public int IdToDequeue()
@@ -185,7 +194,8 @@ namespace Akka.Streams.Implementation
             while (!(IsMarked(id) && IsPending(id)))
             {
                 id++;
-                if (id == _inputCount) id = 0;
+                if (id == _inputCount)
+                    id = 0;
                 if (id == _preferredId)
                     throw new IllegalStateException("Tried to dequeue without waiting for any input");
             }
@@ -195,8 +205,10 @@ namespace Akka.Streams.Implementation
 
         public object Dequeue(int id)
         {
-            if (IsDepleted(id)) throw new ArgumentException("Can't dequeue from depleted " + id, "id");
-            if (!IsPending(id)) throw new ArgumentException("No pending input at " + id, "id");
+            if (IsDepleted(id))
+                throw new ArgumentException("Can't dequeue from depleted " + id, nameof(id));
+            if (!IsPending(id))
+                throw new ArgumentException("No pending input at " + id, nameof(id));
 
             _lastDequeuedId = id;
             var input = _inputs[id];
@@ -204,13 +216,15 @@ namespace Akka.Streams.Implementation
 
             if (!input.AreInputsAvailable)
             {
-                if (IsMarked(id)) _markedPending--;
+                if (IsMarked(id))
+                    _markedPending--;
                 Pending(id, on: false);
             }
 
             if (input.AreInputsDepleted)
             {
-                if (IsMarked(id)) _markedDepleted++;
+                if (IsMarked(id))
+                    _markedDepleted++;
                 Depleted(id, on: true);
                 OnDepleted(id);
             }
@@ -218,10 +232,7 @@ namespace Akka.Streams.Implementation
             return element;
         }
 
-        public object DequeueAndYield()
-        {
-            return DequeueAndYield(IdToDequeue());
-        }
+        public object DequeueAndYield() => DequeueAndYield(IdToDequeue());
 
         public object DequeueAndYield(int id)
         {
@@ -248,20 +259,11 @@ namespace Akka.Streams.Implementation
             _states[index] = (State)(on ? (_states[index] | flag) : (_states[index] & ~flag));
         }
 
-        public bool IsCancelled(int index)
-        {
-            return HasState(index, FanIn.Cancelled);
-        }
+        public bool IsCancelled(int index) => HasState(index, FanIn.Cancelled);
 
-        private void Cancelled(int index, bool on)
-        {
-            SetState(index, FanIn.Cancelled, on);
-        }
+        private void Cancelled(int index, bool on) => SetState(index, FanIn.Cancelled, @on);
 
-        public bool IsCompleted(int index)
-        {
-            return HasState(index, FanIn.Completed);
-        }
+        public bool IsCompleted(int index) => HasState(index, FanIn.Completed);
 
         private void RegisterCompleted(int index)
         {
@@ -269,35 +271,17 @@ namespace Akka.Streams.Implementation
             SetState(index, FanIn.Completed, true);
         }
 
-        public bool IsDepleted(int index)
-        {
-            return HasState(index, FanIn.Depleted);
-        }
+        public bool IsDepleted(int index) => HasState(index, FanIn.Depleted);
 
-        private void Depleted(int index, bool on)
-        {
-            SetState(index, FanIn.Depleted, on);
-        }
+        private void Depleted(int index, bool on) => SetState(index, FanIn.Depleted, @on);
 
-        public bool IsPending(int index)
-        {
-            return HasState(index, FanIn.Pending);
-        }
+        public bool IsPending(int index) => HasState(index, FanIn.Pending);
 
-        private void Pending(int index, bool on)
-        {
-            SetState(index, FanIn.Pending, on);
-        }
+        private void Pending(int index, bool on) => SetState(index, FanIn.Pending, @on);
 
-        private bool IsMarked(int index)
-        {
-            return HasState(index, FanIn.Marked);
-        }
+        private bool IsMarked(int index) => HasState(index, FanIn.Marked);
 
-        private void Marked(int index, bool on)
-        {
-            SetState(index, FanIn.Marked, on);
-        }
+        private void Marked(int index, bool on) => SetState(index, FanIn.Marked, @on);
     }
 
     internal static class FanIn
@@ -386,10 +370,7 @@ namespace Akka.Streams.Implementation
                 _impl.Tell(new FanIn.OnError(_id, cause));
             }
 
-            public void OnComplete()
-            {
-                _impl.Tell(new FanIn.OnComplete(_id));
-            }
+            public void OnComplete() => _impl.Tell(new FanIn.OnComplete(_id));
 
             public void OnNext(T element)
             {
@@ -397,10 +378,7 @@ namespace Akka.Streams.Implementation
                 _impl.Tell(new FanIn.OnNext(_id, element));
             }
 
-            void ISubscriber.OnNext(object element)
-            {
-                OnNext((T)element);
-            }
+            void ISubscriber.OnNext(object element) => OnNext((T)element);
         }
 
         private sealed class AnonymousInputBunch : InputBunch
@@ -412,15 +390,9 @@ namespace Akka.Streams.Implementation
                 _that = that;
             }
 
-            public override void OnError(int id, Exception cause)
-            {
-                _that.Fail(cause);
-            }
+            public override void OnError(int id, Exception cause) => _that.Fail(cause);
 
-            public override void OnCompleteWhenNoInput()
-            {
-                _that.PumpFinished();
-            }
+            public override void OnCompleteWhenNoInput() => _that.PumpFinished();
         }
 
         #endregion
@@ -444,7 +416,7 @@ namespace Akka.Streams.Implementation
         #region Actor impl
 
         private ILoggingAdapter _log;
-        protected ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+        protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
 
         protected void Fail(Exception cause)
         {
@@ -470,47 +442,30 @@ namespace Akka.Streams.Implementation
         }
 
         protected override bool Receive(object message)
-        {
-            return InputBunch.SubReceive.CurrentReceive(message) || PrimaryOutputs.SubReceive.CurrentReceive(message);
-        }
+            => InputBunch.SubReceive.CurrentReceive(message) || PrimaryOutputs.SubReceive.CurrentReceive(message);
 
         #endregion
 
         #region Pump implementation
 
         public TransferState TransferState { get; set; }
+
         public Action CurrentAction { get; set; }
-        public bool IsPumpFinished { get { return TransferState.IsCompleted; } }
+
+        public bool IsPumpFinished => TransferState.IsCompleted;
 
         public void InitialPhase(int waitForUpstream, TransferPhase andThen)
-        {
-            Pumps.InitialPhase(this, waitForUpstream, andThen);
-        }
+            => Pumps.InitialPhase(this, waitForUpstream, andThen);
 
-        public void WaitForUpstream(int waitForUpstream)
-        {
-            Pumps.WaitForUpstream(this, waitForUpstream);
-        }
+        public void WaitForUpstream(int waitForUpstream) => Pumps.WaitForUpstream(this, waitForUpstream);
 
-        public void GotUpstreamSubscription()
-        {
-            Pumps.GotUpstreamSubscription(this);
-        }
+        public void GotUpstreamSubscription() => Pumps.GotUpstreamSubscription(this);
 
-        public void NextPhase(TransferPhase phase)
-        {
-            Pumps.NextPhase(this, phase);
-        }
+        public void NextPhase(TransferPhase phase) => Pumps.NextPhase(this, phase);
 
-        public void Pump()
-        {
-            Pumps.Pump(this);
-        }
+        public void Pump() => Pumps.Pump(this);
 
-        public void PumpFailed(Exception e)
-        {
-            Fail(e);
-        }
+        public void PumpFailed(Exception e) => Fail(e);
 
         public void PumpFinished()
         {

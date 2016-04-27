@@ -42,20 +42,11 @@ namespace Akka.Streams.Implementation
             subscription.Cancel();
         }
 
-        public void OnNext(T element)
-        {
-            ReactiveStreamsCompliance.RequireNonNullElement(element);
-        }
+        public void OnNext(T element) => ReactiveStreamsCompliance.RequireNonNullElement(element);
 
-        void ISubscriber.OnNext(object element)
-        {
-            OnNext((T)element);
-        }
+        void ISubscriber.OnNext(object element) => OnNext((T)element);
 
-        public void OnError(Exception cause)
-        {
-            ReactiveStreamsCompliance.RequireNonNullException(cause);
-        }
+        public void OnError(Exception cause) => ReactiveStreamsCompliance.RequireNonNullException(cause);
 
         public void OnComplete() { }
     }
@@ -87,9 +78,9 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// Provides support methods to create Publishers and Subscribers which time-out gracefully,
-    /// and are cancelled subscribing an <see cref="CancellingSubscriber{T}"/> to the publisher, or by calling `onError` on the timed-out subscriber.
+    /// and are cancelled subscribing an <see cref="CancellingSubscriber{T}"/> to the publisher, or by calling onError on the timed-out subscriber.
     /// 
-    /// See `akka.stream.materializer.subscription-timeout` for configuration options.
+    /// See "akka.stream.materializer.subscription-timeout" for configuration options.
     /// </summary>
     public interface IStreamSubscriptionTimeoutSupport
     {

@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 
 namespace Akka.Streams.Implementation
 {
@@ -56,18 +55,19 @@ namespace Akka.Streams.Implementation
 
     internal static class FixedSizeBuffer 
     {
-        /**
-         * INTERNAL API
-         *
-         * Returns a fixed size buffer backed by an array. The buffer implementation DOES NOT check agains overflow or
-         * underflow, it is the responsibility of the user to track or check the capacity of the buffer before enqueueing
-         * dequeueing or dropping.
-         *
-         * Returns a specialized instance for power-of-two sized buffers.
-         */
+        /// <summary>
+        /// INTERNAL API
+        /// 
+        /// Returns a fixed size buffer backed by an array. The buffer implementation DOES NOT check agains overflow or
+        /// underflow, it is the responsibility of the user to track or check the capacity of the buffer before enqueueing
+        /// dequeueing or dropping.
+        /// 
+        /// Returns a specialized instance for power-of-two sized buffers.
+        /// </summary>
         public static FixedSizeBuffer<T> Create<T>(int size)
         {
-            if (size < 1) throw new ArgumentException("buffer size must be positive");
+            if (size < 1)
+                throw new ArgumentException("buffer size must be positive");
             if (((size - 1) & size) == 0)
                 return new PowerOfTwoFixedSizeBuffer<T>(size);
             return new ModuloFixedSizeBuffer<T>(size);
@@ -76,8 +76,8 @@ namespace Akka.Streams.Implementation
 
     internal abstract class FixedSizeBuffer<T> : IBuffer<T>
     {
-        protected long ReadIndex = 0L;
-        protected long WriteIndex = 0L;
+        protected long ReadIndex;
+        protected long WriteIndex;
 
         private readonly T[] _buffer;
 
@@ -102,20 +102,11 @@ namespace Akka.Streams.Implementation
             WriteIndex++;
         }
 
-        public void Put(long index, T element, bool maintenance)
-        {
-            _buffer[ToOffset(index, maintenance)] = element;
-        }
+        public void Put(long index, T element, bool maintenance) => _buffer[ToOffset(index, maintenance)] = element;
 
-        public T Get(long index)
-        {
-            return _buffer[ToOffset(index, false)];
-        }
+        public T Get(long index) => _buffer[ToOffset(index, false)];
 
-        public T Peek()
-        {
-            return Get(ReadIndex);
-        }
+        public T Peek() => Get(ReadIndex);
 
         public T Dequeue()
         {
@@ -154,12 +145,12 @@ namespace Akka.Streams.Implementation
 
         protected override int ToOffset(long index, bool maintenance)
         {
-            if (maintenance && ReadIndex > Int32.MaxValue)
+            if (maintenance && ReadIndex > int.MaxValue)
             {
                 // In order to be able to run perpetually we must ensure that the counters
                 // don’t overrun into negative territory, so set them back by as many multiples
                 // of the capacity as possible when both are above Int.MaxValue.
-                var shift = Int32.MaxValue - (Int32.MaxValue % Capacity);
+                var shift = int.MaxValue - (int.MaxValue % Capacity);
                 ReadIndex -= shift;
                 WriteIndex -= shift;
             }
@@ -171,15 +162,13 @@ namespace Akka.Streams.Implementation
     internal class PowerOfTwoFixedSizeBuffer<T> : FixedSizeBuffer<T> 
     {
         private readonly int _mask;
+
         public PowerOfTwoFixedSizeBuffer(int size) : base(size)
         {
             _mask = Capacity - 1;
         }
 
-        protected override int ToOffset(long index, bool maintenance)
-        {
-            return (int)index & _mask;
-        }
+        protected override int ToOffset(long index, bool maintenance) => (int)index & _mask;
     }
 
     /// <summary>

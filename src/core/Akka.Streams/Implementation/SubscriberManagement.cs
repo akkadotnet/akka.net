@@ -53,10 +53,7 @@ namespace Akka.Streams.Implementation
             public static readonly Completed Instance = new Completed();
             private Completed() { }
 
-            public void Apply<T>(ISubscriber<T> subscriber)
-            {
-                ReactiveStreamsCompliance.TryOnComplete(subscriber);
-            }
+            public void Apply<T>(ISubscriber<T> subscriber) => ReactiveStreamsCompliance.TryOnComplete(subscriber);
         }
 
         public sealed class ErrorCompleted : IEndOfStream
@@ -68,10 +65,7 @@ namespace Akka.Streams.Implementation
                 Cause = cause;
             }
 
-            public void Apply<T>(ISubscriber<T> subscriber)
-            {
-                ReactiveStreamsCompliance.TryOnError(subscriber, Cause);
-            }
+            public void Apply<T>(ISubscriber<T> subscriber) => ReactiveStreamsCompliance.TryOnError(subscriber, Cause);
         }
 
         public static readonly IEndOfStream ShutDown = new ErrorCompleted(ActorPublisher.NormalShutdownReason);
@@ -99,7 +93,9 @@ namespace Akka.Streams.Implementation
         }
 
         public abstract int InitialBufferSize { get; }
+
         public abstract int MaxBufferSize { get; }
+
         public IEnumerable<ICursor> Cursors => _subscriptions;
 
         /// <summary>
@@ -187,20 +183,23 @@ namespace Akka.Streams.Implementation
                             UnregisterSubscriptionInternal(subscription);
                             goOn = false;
                         }
-                        else throw;
+                        else
+                            throw;
                     }
 
-                    if (!goOn) return long.MinValue;
+                    if (!goOn)
+                        return long.MinValue;
 
                     requested--;
                 }
                 else if (!(endOfStream is SubscriberManagement.NotReached))
                     return long.MinValue;
-                else return requested;
+                else
+                    return requested;
             }
 
             // if request == 0
-            // if we are at end-of-stream and have nothing more to read we complete now rather than after the next `requestMore`
+            // if we are at end-of-stream and have nothing more to read we complete now rather than after the next requestMore
             return !(endOfStream is SubscriberManagement.NotReached) && _buffer.Value.Count(subscription) == 0 ? long.MinValue : 0;
         }
 
@@ -224,8 +223,10 @@ namespace Akka.Streams.Implementation
             if (_endOfStream is SubscriberManagement.NotReached)
             {
                 _pendingFromUpstream--;
-                if (!_buffer.Value.Write(value)) throw new IllegalStateException("Output buffer overflow");
-                if (Dispatch(_subscriptions)) RequestFromUpstreamIfRequired();
+                if (!_buffer.Value.Write(value))
+                    throw new IllegalStateException("Output buffer overflow");
+                if (Dispatch(_subscriptions))
+                    RequestFromUpstreamIfRequired();
             }
             else throw new IllegalStateException("PushToDownStream(...) after CompleteDownstream() or AbortDownstream(...)");
         }
@@ -258,7 +259,8 @@ namespace Akka.Streams.Implementation
             {
                 _endOfStream = SubscriberManagement.Completed.Instance;
                 _subscriptions = CompleteDoneSubscriptions(_subscriptions);
-                if (_subscriptions.Count == 0) Shutdown(true);
+                if (_subscriptions.Count == 0)
+                    Shutdown(true);
             }
             // else ignore, we need to be idempotent
         }
@@ -273,7 +275,8 @@ namespace Akka.Streams.Implementation
                     subscription.IsActive = false;
                     SubscriberManagement.Completed.Instance.Apply(subscription.Subscriber);
                 }
-                else result.Add(subscription);
+                else
+                    result.Add(subscription);
             }
             return result;
         }
@@ -298,7 +301,8 @@ namespace Akka.Streams.Implementation
             if (_endOfStream is SubscriberManagement.NotReached)
                 if (_subscriptions.Any(s => s.Subscriber.Equals(subscriber)))
                     ReactiveStreamsCompliance.RejectAdditionalSubscriber(subscriber, "SubscriberManagement");
-                else AddSubscription(sub);
+                else
+                    AddSubscription(sub);
             else if (_endOfStream is SubscriberManagement.Completed && !_buffer.Value.IsEmpty)
                 AddSubscription(sub);
             else _endOfStream.Apply(sub);
@@ -315,7 +319,8 @@ namespace Akka.Streams.Implementation
             }
             catch (Exception e)
             {
-                if (e is ISpecViolation) UnregisterSubscriptionInternal(newSubscription);
+                if (e is ISpecViolation)
+                    UnregisterSubscriptionInternal(newSubscription);
                 else throw;
             }
         }
@@ -325,9 +330,7 @@ namespace Akka.Streams.Implementation
         /// override to add synchronization with itself, <see cref="Subscribe{T}"/> and <see cref="MoreRequested"/>
         /// </summary>
         protected void UnregisterSubscription(ISubscriptionWithCursor<T> subscription)
-        {
-            UnregisterSubscriptionInternal(subscription);
-        }
+            => UnregisterSubscriptionInternal(subscription);
 
         // must be idempotent
         private void UnregisterSubscriptionInternal(ISubscriptionWithCursor<T> subscription)

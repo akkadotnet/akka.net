@@ -18,9 +18,8 @@ namespace Akka.Streams.Implementation
     internal sealed class GroupByProcessorImpl<T> : MultiStreamOutputProcessor<T>
     {
         public static Props Props(ActorMaterializerSettings settings, int maxSubstreams, Func<object, object> keyFor)
-        {
-            return Actor.Props.Create(() => new GroupByProcessorImpl<T>(settings, maxSubstreams, keyFor)).WithDeploy(Deploy.Local);
-        }
+            => Actor.Props.Create(() => new GroupByProcessorImpl<T>(settings, maxSubstreams, keyFor))
+                .WithDeploy(Deploy.Local);
 
         private readonly int _maxSubstreams;
         private readonly Func<object, object> _keyFor;
@@ -53,9 +52,11 @@ namespace Akka.Streams.Implementation
                     SubstreamOutput substream;
                     if (_keyToSubstreamOutput.TryGetValue(key, out substream))
                     {
-                        if (substream.IsOpen) NextPhase(DispatchToSubstream(element, substream));
+                        if (substream.IsOpen)
+                            NextPhase(DispatchToSubstream(element, substream));
                     }
-                    else if (PrimaryOutputs.IsOpen) NextPhase(OpenSubstream(element, key));
+                    else if (PrimaryOutputs.IsOpen)
+                        NextPhase(OpenSubstream(element, key));
                 }
             });
 
@@ -110,8 +111,10 @@ namespace Akka.Streams.Implementation
                     var substreamFlow = Source.FromPublisher(substreamOutput);
                     PrimaryOutputs.EnqueueOutputElement(substreamFlow);
 
-                    if (_keyToSubstreamOutput.ContainsKey(key)) _keyToSubstreamOutput[key] = substreamOutput;
-                    else _keyToSubstreamOutput.Add(key, substreamOutput);
+                    if (_keyToSubstreamOutput.ContainsKey(key))
+                        _keyToSubstreamOutput[key] = substreamOutput;
+                    else
+                        _keyToSubstreamOutput.Add(key, substreamOutput);
 
                     NextPhase(DispatchToSubstream(element, substreamOutput));
                 }

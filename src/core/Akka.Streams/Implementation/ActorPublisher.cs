@@ -77,13 +77,13 @@ namespace Akka.Streams.Implementation
         public const string NormalShutdownReasonMessage = "Cannot subscribe to shut-down Publisher";
         public static readonly NormalShutdownException NormalShutdownReason = new NormalShutdownException(NormalShutdownReasonMessage);
     }
-
-    /**
-     * INTERNAL API
-     *
-     * When you instantiate this class, or its subclasses, you MUST send an ExposedPublisher message to the wrapped
-     * ActorRef! If you don't need to subclass, prefer the apply() method on the companion object which takes care of this.
-     */
+    
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// When you instantiate this class, or its subclasses, you MUST send an ExposedPublisher message to the wrapped
+    /// ActorRef! If you don't need to subclass, prefer the apply() method on the companion object which takes care of this.
+    /// </summary>
     public class ActorPublisher<TOut> : IActorPublisher, IPublisher<TOut>
     {
         protected readonly IActorRef Impl;
@@ -125,10 +125,7 @@ namespace Akka.Streams.Implementation
             }
         }
 
-        void IPublisher.Subscribe(ISubscriber subscriber)
-        {
-            Subscribe((ISubscriber<TOut>)subscriber);
-        }
+        void IPublisher.Subscribe(ISubscriber subscriber) => Subscribe((ISubscriber<TOut>)subscriber);
 
         public IEnumerable<ISubscriber<TOut>> TakePendingSubscribers()
         {
@@ -136,10 +133,7 @@ namespace Akka.Streams.Implementation
             return pending ?? ImmutableList<ISubscriber<TOut>>.Empty;
         }
 
-        IEnumerable<ISubscriber> IActorPublisher.TakePendingSubscribers()
-        {
-            return TakePendingSubscribers();
-        }
+        IEnumerable<ISubscriber> IActorPublisher.TakePendingSubscribers() => TakePendingSubscribers();
 
         public void Shutdown(Exception reason)
         {
@@ -148,9 +142,7 @@ namespace Akka.Streams.Implementation
             if (pending != null)
             {
                 foreach (var subscriber in pending.Reverse())
-                {
                     ReportSubscribeFailure(subscriber);
-                }
             }
         }
 
@@ -175,7 +167,8 @@ namespace Akka.Streams.Implementation
             }
             catch (Exception exception)
             {
-                if (!(exception is ISpecViolation)) throw;
+                if (!(exception is ISpecViolation))
+                    throw;
             }
         }
     }
@@ -194,9 +187,7 @@ namespace Akka.Streams.Implementation
         }
 
         public static IActorSubscription Create<T>(IActorRef implementor, ISubscriber<T> subscriber)
-        {
-            return new ActorSubscription<T>(implementor, subscriber);
-        }
+            => new ActorSubscription<T>(implementor, subscriber);
     }
 
     public class ActorSubscription<T> : IActorSubscription
@@ -210,15 +201,9 @@ namespace Akka.Streams.Implementation
             Subscriber = subscriber;
         }
 
-        public void Request(long n)
-        {
-            Implementor.Tell(new RequestMore(this, n));
-        }
+        public void Request(long n) => Implementor.Tell(new RequestMore(this, n));
 
-        public void Cancel()
-        {
-            Implementor.Tell(new Cancel(this));
-        }
+        public void Cancel() => Implementor.Tell(new Cancel(this));
     }
 
     public class ActorSubscriptionWithCursor<TIn> : ActorSubscription<TIn>, ISubscriptionWithCursor<TIn>
@@ -232,10 +217,7 @@ namespace Akka.Streams.Implementation
 
         ISubscriber<TIn> ISubscriptionWithCursor<TIn>.Subscriber => Subscriber;
 
-        public void Dispatch(object element)
-        {
-            ReactiveStreamsCompliance.TryOnNext(Subscriber, (TIn)element);
-        }
+        public void Dispatch(object element) => ReactiveStreamsCompliance.TryOnNext(Subscriber, (TIn)element);
 
         bool ISubscriptionWithCursor<TIn>.IsActive
         {
@@ -244,7 +226,9 @@ namespace Akka.Streams.Implementation
         }
 
         public bool IsActive { get; private set; }
+
         public int Cursor { get; private set; }
+
         long ISubscriptionWithCursor<TIn>.TotalDemand
         {
             get { return TotalDemand; }
@@ -252,10 +236,8 @@ namespace Akka.Streams.Implementation
         }
 
         public long TotalDemand { get; private set; }
-        public void Dispatch(TIn element)
-        {
-            ReactiveStreamsCompliance.TryOnNext(Subscriber, element);
-        }
+
+        public void Dispatch(TIn element) => ReactiveStreamsCompliance.TryOnNext(Subscriber, element);
 
         int ICursor.Cursor
         {

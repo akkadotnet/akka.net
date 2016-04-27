@@ -37,9 +37,7 @@ namespace Akka.Streams
         /// via <see cref="Attributes.AsyncBoundary"/>
         /// </summary>
         public static FusedGraph<TShape, TMat> Aggressive<TShape, TMat>(IGraph<TShape, TMat> graph) where TShape : Shape
-        {
-            return Implementation.Fusing.Fusing.Aggressive(graph);
-        }
+            => Implementation.Fusing.Fusing.Aggressive(graph);
 
         /// <summary>
         /// A fused graph of the right shape, containing a <see cref="FusedModule"/> which holds more information 
@@ -57,26 +55,16 @@ namespace Akka.Streams
             }
 
             public TShape Shape { get; }
+
             public IModule Module { get; }
-            public IGraph<TShape, TMat> WithAttributes(Attributes attributes)
-            {
-                return new FusedGraph<TShape, TMat>(Module.WithAttributes(attributes) as FusedModule, Shape);
-            }
 
-            public IGraph<TShape, TMat> AddAttributes(Attributes attributes)
-            {
-                return WithAttributes(Module.Attributes.And(attributes));
-            }
+            public IGraph<TShape, TMat> WithAttributes(Attributes attributes) => new FusedGraph<TShape, TMat>(Module.WithAttributes(attributes) as FusedModule, Shape);
 
-            public IGraph<TShape, TMat> Named(string name)
-            {
-                return AddAttributes(Attributes.CreateName(name));
-            }
+            public IGraph<TShape, TMat> AddAttributes(Attributes attributes) => WithAttributes(Module.Attributes.And(attributes));
 
-            public IGraph<TShape, TMat> Async()
-            {
-                return AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
-            }
+            public IGraph<TShape, TMat> Named(string name) => AddAttributes(Attributes.CreateName(name));
+
+            public IGraph<TShape, TMat> Async() => AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
         }
 
         /// <summary>
@@ -89,11 +77,14 @@ namespace Akka.Streams
         public struct StructuralInfo
         {
             public readonly IImmutableDictionary<InPort, OutPort> Upstreams;
-            public readonly IImmutableDictionary<OutPort, InPort> Downstreams;
-            public readonly IImmutableDictionary<InPort, IModule> InOwners;
-            public readonly IImmutableDictionary<OutPort, IModule> OutOwners;
-            public readonly IImmutableSet<IModule> AllModules;
 
+            public readonly IImmutableDictionary<OutPort, InPort> Downstreams;
+
+            public readonly IImmutableDictionary<InPort, IModule> InOwners;
+
+            public readonly IImmutableDictionary<OutPort, IModule> OutOwners;
+
+            public readonly IImmutableSet<IModule> AllModules;
 
             public StructuralInfo(IImmutableDictionary<InPort, OutPort> upstreams, IImmutableDictionary<OutPort, InPort> downstreams, IImmutableDictionary<InPort, IModule> inOwners, IImmutableDictionary<OutPort, IModule> outOwners, IImmutableSet<IModule> allModules)
             {

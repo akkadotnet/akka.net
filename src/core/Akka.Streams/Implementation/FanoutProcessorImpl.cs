@@ -28,6 +28,7 @@ namespace Akka.Streams.Implementation
         public TransferState NeedsDemand { get; }
 
         public TransferState NeedsDemandOrCancel { get; }
+
         public bool IsDemandAvailable => _downstreamBufferSpace > 0;
 
         public long DemandCount => _downstreamBufferSpace;
@@ -63,9 +64,7 @@ namespace Akka.Streams.Implementation
         protected bool DownstreamRunning(object message)
         {
             if (message is SubscribePending)
-            {
                 SubscribePending();
-            }
             else if (message is RequestMore)
             {
                 var requestMore = (RequestMore) message;
@@ -78,17 +77,15 @@ namespace Akka.Streams.Implementation
                 UnregisterSubscription((ActorSubscriptionWithCursor<T>) cancel.Subscription);
                 _pump.Pump();
             }
-            else return false;
+            else
+                return false;
 
             return true;
         }
 
         protected override void RequestFromUpstream(long elements) => _downstreamBufferSpace += elements;
 
-        private void SubscribePending()
-        {
-            ExposedPublisher.TakePendingSubscribers().ForEach(RegisterSubscriber);
-        }
+        private void SubscribePending() => ExposedPublisher.TakePendingSubscribers().ForEach(RegisterSubscriber);
 
         protected override void Shutdown(bool isCompleted)
         {
@@ -136,9 +133,7 @@ namespace Akka.Streams.Implementation
     internal sealed class FanoutProcessorImpl<T> : ActorProcessorImpl
     {
         public static Props Props(ActorMaterializerSettings settings)
-        {
-            return Actor.Props.Create(() => new FanoutProcessorImpl<T>(settings)).WithDeploy(Deploy.Local);
-        }
+            => Actor.Props.Create(() => new FanoutProcessorImpl<T>(settings)).WithDeploy(Deploy.Local);
 
         protected override IOutputs PrimaryOutputs { get; }
 

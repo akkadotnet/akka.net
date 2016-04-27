@@ -23,7 +23,8 @@ namespace Akka.Streams.Implementation
 
         public override IModule ReplaceShape(Shape shape)
         {
-            if (Shape.Equals(shape)) return this;
+            if (Shape.Equals(shape))
+                return this;
             throw new NotSupportedException("cannot replace the shape of a FlowModule");
         }
     }

@@ -9,7 +9,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reactive.Streams;
 using Akka.Event;
 using Akka.Streams.Stage;
 
@@ -46,10 +45,10 @@ namespace Akka.Streams.Implementation.Fusing
 
         public sealed class EnumeratorDownstream<TOut> : GraphInterpreter.DownstreamBoundaryStageLogic, IEnumerator<TOut>
         {
-            internal bool IsDone = false;
+            internal bool IsDone;
             internal TOut NextElement;
             internal bool NeedsPull = true;
-            internal Exception LastFailure = null;
+            internal Exception LastFailure;
 
             public EnumeratorDownstream()
             {
@@ -84,12 +83,11 @@ namespace Akka.Streams.Implementation.Fusing
                     LastFailure = null;
                     throw e;
                 }
-                else if (!HasNext()) return false;
-                else
-                {
-                    NeedsPull = true;
-                    return true;
-                }
+                if (!HasNext())
+                    return false;
+
+                NeedsPull = true;
+                return true;
             }
 
             public void Reset()
@@ -102,16 +100,15 @@ namespace Akka.Streams.Implementation.Fusing
 
             public bool HasNext()
             {
-                if(!IsDone) PullIfNeeded();
+                if(!IsDone)
+                    PullIfNeeded();
+
                 return !(IsDone && NeedsPull) || LastFailure != null;
             }
 
-            public TOut Current { get { return NextElement; } }
+            public TOut Current => NextElement;
 
-            object IEnumerator.Current
-            {
-                get { return Current; }
-            }
+            object IEnumerator.Current => Current;
 
             private void PullIfNeeded()
             {
@@ -145,7 +142,7 @@ namespace Akka.Streams.Implementation.Fusing
             var i = 0;
             var length = _ops.Count();
             var attributes = new Attributes[length];
-            for (int j = 0; j < length; j++) attributes[j] = Attributes.None;
+            for (var j = 0; j < length; j++) attributes[j] = Attributes.None;
             var ins = new Inlet[length + 1];
             var inOwners = new int[length + 1];
             var outs = new Outlet[length + 1];
@@ -191,14 +188,8 @@ namespace Akka.Streams.Implementation.Fusing
             interpreter.Init(null);
         }
 
-        public IEnumerator<TOut> GetEnumerator()
-        {
-            return _downstream;
-        }
+        public IEnumerator<TOut> GetEnumerator() => _downstream;
 
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

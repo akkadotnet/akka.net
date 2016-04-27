@@ -54,7 +54,7 @@ namespace Akka.Streams.Dsl
             int fieldOffset = 0, ByteOrder byteOrder = ByteOrder.LittleEndian)
         {
             if (fieldLength < 1 || fieldLength > 4)
-                throw new ArgumentException($"Length field length must be 1,2,3 or 4");
+                throw new ArgumentException("Length field length must be 1,2,3 or 4");
 
             var graph = Flow.Create<ByteString>()
                 .Transform(() => new LengthFieldFramingStage(fieldLength, maximumFramelength, fieldOffset, byteOrder))
@@ -301,20 +301,21 @@ namespace Akka.Streams.Dsl
                 var bufferSize = _buffer.Count;
                 if (bufferSize >= _frameSize)
                     return emitFrame(context);
-                else if (bufferSize >= _minimumChunkSize)
+
+                if (bufferSize >= _minimumChunkSize)
                 {
                     var parsedLength = _intDecoder(_buffer.Iterator().Drop(_lengthFieldOffset), _lengthFieldLength);
-                    _frameSize = (int)(parsedLength + _minimumChunkSize);
+                    _frameSize = parsedLength + _minimumChunkSize;
 
                     if (_frameSize > _maximumFramelength)
                         return context.Fail(new FramingException($"Maximum allowed frame size is {_maximumFramelength} but decoded frame header reported size {_frameSize}"));
-                    else if (bufferSize >= _frameSize)
+                    if (bufferSize >= _frameSize)
                         return emitFrame(context);
-                    else
-                        return TryPull(context);
+
+                    return TryPull(context);
                 }
-                else
-                 return TryPull(context);
+
+                return TryPull(context);
             }
         }
     }

@@ -30,30 +30,15 @@ namespace Akka.Streams.Implementation
                 Id = id;
             }
 
-            public bool Equals(SubstreamKey other)
-            {
-                return Id == other.Id;
-            }
+            public bool Equals(SubstreamKey other) => Id == other.Id;
 
-            public override bool Equals(object obj)
-            {
-                return obj is SubstreamKey && Equals((SubstreamKey)obj);
-            }
+            public override bool Equals(object obj) => obj is SubstreamKey && Equals((SubstreamKey)obj);
 
-            public override int GetHashCode()
-            {
-                return Id.GetHashCode();
-            }
+            public override int GetHashCode() => Id.GetHashCode();
 
-            public static bool operator ==(SubstreamKey x, SubstreamKey y)
-            {
-                return Equals(x, y);
-            }
+            public static bool operator ==(SubstreamKey x, SubstreamKey y) => Equals(x, y);
 
-            public static bool operator !=(SubstreamKey x, SubstreamKey y)
-            {
-                return !(x == y);
-            }
+            public static bool operator !=(SubstreamKey x, SubstreamKey y) => !(x == y);
         }
 
         [Serializable]
@@ -116,25 +101,13 @@ namespace Akka.Streams.Implementation
                 Substream = substream;
             }
 
-            public void Request(long n)
-            {
-                Parent.Tell(new SubstreamRequestMore(Substream, n));
-            }
+            public void Request(long n) => Parent.Tell(new SubstreamRequestMore(Substream, n));
 
-            public void Cancel()
-            {
-                Parent.Tell(new SubstreamCancel(Substream));
-            }
+            public void Cancel() => Parent.Tell(new SubstreamCancel(Substream));
 
-            public bool Equals(SubstreamSubscription other)
-            {
-                return Substream == other.Substream && Equals(Parent, other.Parent);
-            }
+            public bool Equals(SubstreamSubscription other) => Substream == other.Substream && Equals(Parent, other.Parent);
 
-            public override bool Equals(object obj)
-            {
-                return obj is SubstreamSubscription && Equals((SubstreamSubscription)obj);
-            }
+            public override bool Equals(object obj) => obj is SubstreamSubscription && Equals((SubstreamSubscription)obj);
 
             public override int GetHashCode()
             {
@@ -144,10 +117,7 @@ namespace Akka.Streams.Implementation
                 }
             }
 
-            public override string ToString()
-            {
-                return "SubstreamSubscription" + GetHashCode();
-            }
+            public override string ToString() => "SubstreamSubscription" + GetHashCode();
         }
 
         internal class SubstreamOutput : SimpleOutputs, IPublisher<T>
@@ -251,10 +221,7 @@ namespace Akka.Streams.Implementation
                 }
             }
 
-            void IPublisher.Subscribe(ISubscriber subscriber)
-            {
-                Subscribe((ISubscriber<T>)subscriber);    
-            }
+            void IPublisher.Subscribe(ISubscriber subscriber) => Subscribe((ISubscriber<T>)subscriber);
 
             public void Subscribe(ISubscriber<T> subscriber)
             {
@@ -266,7 +233,8 @@ namespace Akka.Streams.Implementation
                 else
                 {
                     var value = _state.Value;
-                    if (value is Attached || value is Cancelled) ReactiveStreamsCompliance.RejectAdditionalSubscriber(subscriber, "Substream publisher");
+                    if (value is Attached || value is Cancelled)
+                        ReactiveStreamsCompliance.RejectAdditionalSubscriber(subscriber, "Substream publisher");
                     else if (value is ICompletedState)
                     {
                         ReactiveStreamsCompliance.TryOnSubscribe(subscriber, CancelledSubscription.Instance);
@@ -284,7 +252,8 @@ namespace Akka.Streams.Implementation
                     Subscriber = subscriber;
                     ReactiveStreamsCompliance.TryOnSubscribe(subscriber, _subscription);
                 }
-                else ReactiveStreamsCompliance.RejectAdditionalSubscriber(subscriber, "Substream publisher");
+                else
+                    ReactiveStreamsCompliance.RejectAdditionalSubscriber(subscriber, "Substream publisher");
             }
 
             private void ClosePublisher(ICompletedState withState)
@@ -293,11 +262,14 @@ namespace Akka.Streams.Implementation
                 var prev = _state.Value;
                 _state.Value = withState;
 
-                if (prev is ICompletedState) throw new IllegalStateException("Attempted to double shutdown publisher");
-                else if (prev is Attached)
+                if (prev is ICompletedState)
+                    throw new IllegalStateException("Attempted to double shutdown publisher");
+
+                if (prev is Attached)
                 {
                     var sub = ((Attached)prev).Subscriber;
-                    if (Subscriber == null) ReactiveStreamsCompliance.TryOnSubscribe(sub, CancelledSubscription.Instance);
+                    if (Subscriber == null)
+                        ReactiveStreamsCompliance.TryOnSubscribe(sub, CancelledSubscription.Instance);
                     CloseSubscriber(sub, withState);
                 }
             }
@@ -305,8 +277,10 @@ namespace Akka.Streams.Implementation
             private void CloseSubscriber(ISubscriber subscriber, ICompletedState withState)
             {
                 var f = withState as Failed;
-                if (withState is Completed) ReactiveStreamsCompliance.TryOnComplete(subscriber);
-                else if (f != null && !(f.Reason is ISpecViolation)) ReactiveStreamsCompliance.TryOnError(subscriber, f.Reason);
+                if (withState is Completed)
+                    ReactiveStreamsCompliance.TryOnComplete(subscriber);
+                else if (f != null && !(f.Reason is ISpecViolation))
+                    ReactiveStreamsCompliance.TryOnError(subscriber, f.Reason);
             }
         }
 
@@ -344,10 +318,7 @@ namespace Akka.Streams.Implementation
 
         #region MultiStreamOutputProcessorLike
 
-        protected long NextId()
-        {
-            return (++_nextId);
-        }
+        protected long NextId() => (++_nextId);
 
         protected SubstreamOutput CreateSubstreamOutput()
         {
@@ -414,17 +385,13 @@ namespace Akka.Streams.Implementation
                 {
                     SubstreamOutput output;
                     if (_substreamOutputs.TryGetValue(subscribe.Substream, out output))
-                    {
                         output.AttachSubscriber(subscribe.Subscriber);
-                    }
                 })
                 .With<SubstreamSubscriptionTimeout>(timeout =>
                 {
                     SubstreamOutput output;
                     if (_substreamOutputs.TryGetValue(timeout.Substream, out output) && !output.IsAttached)
-                    {
                         SubscriptionTimedOut(output);
-                    }
                 })
                 .With<SubstreamCancel>(cancel => InvalidateSubstreamOutput(cancel.Substream))
                 .WasHandled;
@@ -485,10 +452,9 @@ namespace Akka.Streams.Implementation
                     $"Publisher {target} you are trying to subscribe to has been shut-down because exceeing its subscription timeout"));
         }
 
-        private void Warn(IPublisher target, TimeSpan timeout)
-        {
-            Log.Warning("Timed out {0} detected (after {1})! You should investigate if you either cancel or consume all {2} instances", target, timeout, target.GetType().Name);
-        }
+        private void Warn(IPublisher target, TimeSpan timeout) => Log.Warning(
+                    "Timed out {0} detected (after {1})! You should investigate if you either cancel or consume all {2} instances",
+                    target, timeout, target.GetType().Name);
 
         #endregion
     }

@@ -20,81 +20,81 @@ namespace Akka.Streams.Dsl
     /// </summary>
     public static class StreamConverters
     {
-        /**
-   * Creates a Source from an [[InputStream]] created by the given function.
-   * Emitted elements are `chunkSize` sized [[akka.util.ByteString]] elements,
-   * except the final element, which will be up to `chunkSize` in size.
-   *
-   * You can configure the default dispatcher for this Source by changing the `akka.stream.blocking-io-dispatcher` or
-   * set it for a given Source by using [[ActorAttributes]].
-   *
-   * It materializes a [[Future]] of [[IOResult]] containing the number of bytes read from the source file upon completion,
-   * and a possible exception if IO operation was not completed successfully.
-   *
-   * The created [[InputStream]] will be closed when the [[Source]] is cancelled.
-   *
-   * @param in a function which creates the InputStream to read from
-   * @param chunkSize the size of each read operation, defaults to 8192
-   */
+        /// <summary>
+        /// Creates a <see cref="Source{TOut,TMat}"/> from an <see cref="Stream"/> created by the given function.
+        /// Emitted elements are <paramref name="chunkSize"/> sized <see cref="ByteString"/> elements,
+        /// except the final element, which will be up to <paramref name="chunkSize"/> in size.
+        /// 
+        /// You can configure the default dispatcher for this Source by changing the "akka.stream.blocking-io-dispatcher" or
+        /// set it for a given Source by using <see cref="ActorAttributes.CreateDispatcher"/>.
+        /// 
+        /// It materializes a <see cref="Task{TResult}"/> of <see cref="IOResult"/> containing the number of bytes read from the source file upon completion,
+        /// and a possible exception if IO operation was not completed successfully.
+        /// 
+        /// The created <see cref="Stream"/> will be closed when the <see cref="Source{TOut,TMat}"/> is cancelled.
+        /// </summary>
+        /// <param name="createInputStream">A function which creates the <see cref="Stream"/> to read from</param>
+        /// <param name="chunkSize">The size of each read operation, defaults to 8192</param>
+        public static Source<ByteString, Task<IOResult>> FromInputStream(Func<Stream> createInputStream, int chunkSize = 8192)
+        {
+            var shape = new SourceShape<ByteString>(new Outlet<ByteString>("InputStreamSource"));
+            var streamSource = new InputStreamSource(createInputStream, chunkSize, DefaultAttributes.InputStreamSource,
+                shape);
+            return new Source<ByteString, Task<IOResult>>(streamSource);
+        }
 
-        public static Source<ByteString, Task<IOResult>> FromInputStream(Func<Stream> createInputStream, int chunkSize = 8192) =>
-                new Source<ByteString, Task<IOResult>>(new InputStreamSource(createInputStream, chunkSize,
-                    DefaultAttributes.InputStreamSource,
-                    new SourceShape<ByteString>(new Outlet<ByteString>("InputStreamSource"))));
-
-        /**
- * Creates a Source which when materialized will return an [[OutputStream]] which it is possible
- * to write the ByteStrings to the stream this Source is attached to.
- *
- * This Source is intended for inter-operation with legacy APIs since it is inherently blocking.
- *
- * You can configure the default dispatcher for this Source by changing the `akka.stream.blocking-io-dispatcher` or
- * set it for a given Source by using [[ActorAttributes]].
- *
- * The created [[OutputStream]] will be closed when the [[Source]] is cancelled, and closing the [[OutputStream]]
- * will complete this [[Source]].
- *
- * @param writeTimeout the max time the write operation on the materialized OutputStream should block, defaults to 5 seconds
- */
-
+        /// <summary>
+        /// Creates a <see cref="Source{TOut,TMat}"/> which when materialized will return an <see cref="Stream"/> which it is possible
+        /// to write the ByteStrings to the stream this Source is attached to.
+        /// 
+        /// This Source is intended for inter-operation with legacy APIs since it is inherently blocking.
+        /// 
+        /// You can configure the default dispatcher for this Source by changing the "akka.stream.blocking-io-dispatcher" or
+        /// set it for a given Source by using <see cref="ActorAttributes.CreateDispatcher"/>.
+        /// 
+        /// The created <see cref="Stream"/> will be closed when the <see cref="Source{TOut,TMat}"/> is cancelled, and closing the <see cref="Stream"/>
+        /// will complete this <see cref="Source{TOut,TMat}"/>.
+        /// </summary>
+        /// <param name="writeTimeout">The max time the write operation on the materialized OutputStream should block, defaults to 5 seconds</param>
         public static Source<ByteString, Stream> AsOutputStream(TimeSpan? writeTimeout = null)
             => Source.FromGraph(new OutputStreamSourceStage(writeTimeout ?? TimeSpan.FromSeconds(5)));
 
+        /// <summary>
+        /// Creates a Sink which writes incoming <see cref="ByteString"/>s to an <see cref="Stream"/> created by the given function.
+        /// 
+        /// Materializes a <see cref="Task{TResult}"/> of <see cref="IOResult"/> that will be completed with the size of the file (in bytes) at the streams completion,
+        /// and a possible exception if IO operation was not completed successfully.
+        /// 
+        /// You can configure the default dispatcher for this Source by changing the "akka.stream.blocking-io-dispatcher" or
+        /// set it for a given Source by using <see cref="ActorAttributes.CreateDispatcher"/>. 
+        /// If <paramref name="autoFlush"/> is true the OutputStream will be flushed whenever a byte array is written, defaults to false.
+        /// 
+        /// The <see cref="Stream"/> will be closed when the stream flowing into this <see cref="Sink{TIn,TMat}"/> is completed. The <see cref="Sink{TIn,TMat}"/>
+        /// will cancel the stream when the <see cref="Stream"/> is no longer writable.
+        /// </summary>
+        /// <param name="createOutputStream">A function which creates the <see cref="Stream"/> to write to</param>
+        /// <param name="autoFlush">If set to true the <see cref="Stream"/> will be flushed whenever a byte array is written, default is false</param>
+        public static Sink<ByteString, Task<IOResult>> FromOutputStream(Func<Stream> createOutputStream, bool autoFlush = false)
+        {
+            var shape = new SinkShape<ByteString>(new Inlet<ByteString>("OutputStreamSink"));
+            var streamSink = new OutputStreamSink(createOutputStream, DefaultAttributes.OutputStreamSink, shape,
+                autoFlush);
+            return new Sink<ByteString, Task<IOResult>>(streamSink);
+        }
 
-        /**
-   * Creates a Sink which writes incoming [[ByteString]]s to an [[OutputStream]] created by the given function.
-   *
-   * Materializes a [[Future]] of [[IOResult]] that will be completed with the size of the file (in bytes) at the streams completion,
-   * and a possible exception if IO operation was not completed successfully.
-   *
-   * You can configure the default dispatcher for this Source by changing the `akka.stream.blocking-io-dispatcher` or
-   * set it for a given Source by using [[ActorAttributes]].
-   * If `autoFlush` is true the OutputStream will be flushed whenever a byte array is written, defaults to false.
-   *
-   * The [[OutputStream]] will be closed when the stream flowing into this [[Sink]] is completed. The [[Sink]]
-   * will cancel the stream when the [[OutputStream]] is no longer writable.
-   */
-
-        public static Sink<ByteString, Task<IOResult>> FromOutputStream(Func<Stream> createOutputStream, bool autoFlush = false) =>
-                new Sink<ByteString, Task<IOResult>>(new OutputStreamSink(createOutputStream,
-                    DefaultAttributes.OutputStreamSink,
-                    new SinkShape<ByteString>(new Inlet<ByteString>("OutputStreamSink")), autoFlush));
-
-        /**
- * Creates a Sink which when materialized will return an [[InputStream]] which it is possible
- * to read the values produced by the stream this Sink is attached to.
- *
- * This Sink is intended for inter-operation with legacy APIs since it is inherently blocking.
- *
- * You can configure the default dispatcher for this Source by changing the `akka.stream.blocking-io-dispatcher` or
- * set it for a given Source by using [[ActorAttributes]].
- *
- * The [[InputStream]] will be closed when the stream flowing into this [[Sink]] completes, and
- * closing the [[InputStream]] will cancel this [[Sink]].
- *
- * @param readTimeout the max time the read operation on the materialized InputStream should block
- */
-
+        /// <summary>
+        /// Creates a Sink which when materialized will return an <see cref="Stream"/> which it is possible
+        /// to read the values produced by the stream this Sink is attached to.
+        /// 
+        /// This Sink is intended for inter-operation with legacy APIs since it is inherently blocking.
+        /// 
+        /// You can configure the default dispatcher for this Source by changing the "akka.stream.blocking-io-dispatcher" or
+        /// set it for a given Source by using <see cref="ActorAttributes.CreateDispatcher"/>.
+        /// 
+        /// The <see cref="Stream"/> will be closed when the stream flowing into this <see cref="Sink{TIn,TMat}"/> completes, and
+        /// closing the <see cref="Stream"/> will cancel this <see cref="Sink{TIn,TMat}"/>.
+        /// </summary>
+        /// <param name="readTimeout">The max time the read operation on the materialized stream should block</param>
         public static Sink<ByteString, Stream> AsInputStream(TimeSpan? readTimeout = null)
         {
             readTimeout = readTimeout ?? TimeSpan.FromSeconds(5);

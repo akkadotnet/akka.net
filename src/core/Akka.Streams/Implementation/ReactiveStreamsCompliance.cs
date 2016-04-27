@@ -89,19 +89,15 @@ namespace Akka.Streams.Implementation
         public static void TryOnError(ISubscriber subscriber, Exception cause)
         {
             if (cause is ISpecViolation)
-            {
                 throw new IllegalStateException("It's illegal to try to signal OnError with a spec violation", cause);
-            }
-            else
+
+            try
             {
-                try
-                {
-                    subscriber.OnError(cause);
-                }
-                catch (Exception e)
-                {
-                    throw new SignalThrewException($"{subscriber}.OnError", e);
-                }
+                subscriber.OnError(cause);
+            }
+            catch (Exception e)
+            {
+                throw new SignalThrewException($"{subscriber}.OnError", e);
             }
         }
 
@@ -137,22 +133,26 @@ namespace Akka.Streams.Implementation
 
         public static void RequireNonNullSubscriber(ISubscriber subscriber)
         {
-            if (ReferenceEquals(subscriber, null)) throw SubscriberMustNotBeNullException;
+            if (ReferenceEquals(subscriber, null))
+                throw SubscriberMustNotBeNullException;
         }
 
         public static void RequireNonNullSubscription(ISubscription subscription)
         {
-            if (ReferenceEquals(subscription, null)) throw SubscriptionMustNotBeNullException;
+            if (ReferenceEquals(subscription, null))
+                throw SubscriptionMustNotBeNullException;
         }
 
         public static void RequireNonNullException(Exception e)
         {
-            if (ReferenceEquals(e, null)) throw ExceptionMustNotBeNullException;
+            if (ReferenceEquals(e, null))
+                throw ExceptionMustNotBeNullException;
         }
 
         public static void RequireNonNullElement(object element)
         {
-            if (ReferenceEquals(element, null)) throw ElementMustNotBeNullException;
+            if (ReferenceEquals(element, null))
+                throw ElementMustNotBeNullException;
         }
 
         public static void TryCancel(ISubscription subscription)

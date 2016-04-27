@@ -31,15 +31,15 @@ namespace Akka.Streams
 
             public InitName(string name)
             {
-                if (string.IsNullOrEmpty(name)) throw new ArgumentNullException("name");
+                if (string.IsNullOrEmpty(name)) throw new ArgumentNullException(nameof(name));
 
                 _name = name;
                 _outlet = new Outlet<TOut>(name + ".out");
             }
 
-            public Outlet<TOut> Outlet { get { return _outlet; } }
-            public IEnumerable<Inlet> Inlets { get { return Enumerable.Empty<Inlet>(); } }
-            public string Name { get { return _name; } }
+            public Outlet<TOut> Outlet => _outlet;
+            public IEnumerable<Inlet> Inlets => Enumerable.Empty<Inlet>();
+            public string Name => _name;
         }
 
         [Serializable]
@@ -50,16 +50,16 @@ namespace Akka.Streams
 
             public InitPorts(Outlet<TOut> outlet, IEnumerable<Inlet> inlets)
             {
-                if (outlet == null) throw new ArgumentNullException("outlet");
-                if (inlets == null) throw new ArgumentNullException("inlets");
+                if (outlet == null) throw new ArgumentNullException(nameof(outlet));
+                if (inlets == null) throw new ArgumentNullException(nameof(inlets));
 
                 _outlet = outlet;
                 _inlets = inlets;
             }
 
-            public Outlet<TOut> Outlet { get { return _outlet; } }
-            public IEnumerable<Inlet> Inlets { get { return _inlets; } }
-            public string Name { get { return "FanIn"; } }
+            public Outlet<TOut> Outlet => _outlet;
+            public IEnumerable<Inlet> Inlets => _inlets;
+            public string Name => "FanIn";
         }
 
         #endregion
@@ -90,17 +90,18 @@ namespace Akka.Streams
         }
 
         public override ImmutableArray<Inlet> Inlets => _inlets;
+
         public override ImmutableArray<Outlet> Outlets { get; }
+
         public Outlet<TOut> Out { get; }
+
         public override Shape DeepCopy()
-        {
-            return Construct(new InitPorts((Outlet<TOut>)Out.CarbonCopy(), _inlets.Select(i => i.CarbonCopy())));
-        }
+            => Construct(new InitPorts((Outlet<TOut>) Out.CarbonCopy(), _inlets.Select(i => i.CarbonCopy())));
 
         public sealed override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
         {
-            if (outlets.Length != 1) throw new ArgumentException(string.Format("Proposed outlets [{0}] do not fit FanInShape", string.Join(", ", outlets)));
-            if (inlets.Length != Inlets.Length) throw new ArgumentException(string.Format("Proposed inlets [{0}] do not fit FanInShape", string.Join(", ", inlets)));
+            if (outlets.Length != 1) throw new ArgumentException($"Proposed outlets [{string.Join(", ", outlets)}] do not fit FanInShape");
+            if (inlets.Length != Inlets.Length) throw new ArgumentException($"Proposed inlets [{string.Join(", ", inlets)}] do not fit FanInShape");
 
             return Construct(new InitPorts((Outlet<TOut>)outlets[0], inlets));
         }
@@ -116,20 +117,26 @@ namespace Akka.Streams
             Ins = Enumerable.Range(0, n).Select(i => NewInlet<TIn>($"in{i}")).ToImmutableList();
         }
 
-        public UniformFanInShape(int n) : this(n, new InitName("UniformFanIn")) { }
-        public UniformFanInShape(int n, string name) : this(n, new InitName(name)) { }
-        public UniformFanInShape(Outlet<TOut> outlet, params Inlet<TIn>[] inlets) : this(inlets.Length, new InitPorts(outlet, inlets)) { }
+        public UniformFanInShape(int n) : this(n, new InitName("UniformFanIn"))
+        {
+            
+        }
+
+        public UniformFanInShape(int n, string name) : this(n, new InitName(name))
+        {
+            
+        }
+
+        public UniformFanInShape(Outlet<TOut> outlet, params Inlet<TIn>[] inlets)
+            : this(inlets.Length, new InitPorts(outlet, inlets))
+        {
+            
+        }
 
         public IImmutableList<Inlet<TIn>> Ins { get; }
 
-        public Inlet<TIn> In(int n)
-        {
-            return Ins[n];
-        }
+        public Inlet<TIn> In(int n) => Ins[n];
 
-        protected override FanInShape<TOut> Construct(IInit init)
-        {
-            return new UniformFanInShape<TIn, TOut>(N, init);
-        }
+        protected override FanInShape<TOut> Construct(IInit init) => new UniformFanInShape<TIn, TOut>(N, init);
     }
 }

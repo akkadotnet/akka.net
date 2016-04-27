@@ -29,19 +29,15 @@ namespace Akka.Streams.Util
 
         public T Value { get; }
 
-        public static implicit operator Option<T>(T value)
-        {
-            return new Option<T>(value);
-        }
+        public static implicit operator Option<T>(T value) => new Option<T>(value);
 
         public bool Equals(Option<T> other)
-        {
-            return HasValue == other.HasValue && EqualityComparer<T>.Default.Equals(Value, other.Value);
-        }
+            => HasValue == other.HasValue && EqualityComparer<T>.Default.Equals(Value, other.Value);
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(null, obj))
+                return false;
             return obj is Option<T> && Equals((Option<T>) obj);
         }
 
@@ -53,9 +49,6 @@ namespace Akka.Streams.Util
             }
         }
 
-        public override string ToString()
-        {
-            return HasValue ? $"Some<{Value}>" : "None";
-        }
+        public override string ToString() => HasValue ? $"Some<{Value}>" : "None";
     }
 }

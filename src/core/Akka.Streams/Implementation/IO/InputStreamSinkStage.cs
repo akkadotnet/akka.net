@@ -9,7 +9,6 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Reactive.Streams;
-using System.Threading;
 using Akka.IO;
 using Akka.Pattern;
 using Akka.Streams.Implementation.Stages;
@@ -238,7 +237,7 @@ namespace Akka.Streams.Implementation.IO
         private readonly TimeSpan _readTimeout;
         private bool _isActive = true;
         private bool _isStageAlive = true;
-        private bool _isInitialized = false;
+        private bool _isInitialized;
         private ByteString _detachedChunk;
 
         public InputStreamAdapter(BlockingCollection<IStreamToAdapterMessage> sharedBuffer, IStageWithCallback sendToStage, TimeSpan readTimeout)

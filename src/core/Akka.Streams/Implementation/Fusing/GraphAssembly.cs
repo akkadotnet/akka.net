@@ -13,41 +13,41 @@ using Akka.Streams.Stage;
 
 namespace Akka.Streams.Implementation.Fusing
 {
-    /**
-     * INTERNAL API
-     *
-     * A GraphAssembly represents a small stream processing graph to be executed by the interpreter. Instances of this
-     * class **must not** be mutated after construction.
-     *
-     * The array ``originalAttributes`` may contain the attribute information of the original atomic module, otherwise
-     * it must contain a none (otherwise the enclosing module could not overwrite attributes defined in this array).
-     *
-     * The arrays [[ins]] and [[outs]] correspond to the notion of a *connection* in the [[GraphInterpreter]]. Each slot
-     * *i* contains the input and output port corresponding to connection *i*. Slots where the graph is not closed (i.e.
-     * ports are exposed to the external world) are marked with *null* values. For example if an input port *p* is
-     * exposed, then outs(p) will contain a *null*.
-     *
-     * The arrays [[inOwners]] and [[outOwners]] are lookup tables from a connection id (the index of the slot)
-     * to a slot in the [[stages]] array, indicating which stage is the owner of the given input or output port.
-     * Slots which would correspond to non-existent stages (where the corresponding port is null since it represents
-     * the currently unknown external context) contain the value [[GraphInterpreter#Boundary]].
-     *
-     * The current assumption by the infrastructure is that the layout of these arrays looks like this:
-     *
-     *            +---------------------------------------+-----------------+
-     * inOwners:  | index to stages array                 | Boundary (-1)   |
-     *            +----------------+----------------------+-----------------+
-     * ins:       | exposed inputs | internal connections | nulls           |
-     *            +----------------+----------------------+-----------------+
-     * outs:      | nulls          | internal connections | exposed outputs |
-     *            +----------------+----------------------+-----------------+
-     * outOwners: | Boundary (-1)  | index to stages array                  |
-     *            +----------------+----------------------------------------+
-     *
-     * In addition, it is also assumed by the infrastructure that the order of exposed inputs and outputs in the
-     * corresponding segments of these arrays matches the exact same order of the ports in the [[Shape]].
-     *
-     */
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// A GraphAssembly represents a small stream processing graph to be executed by the interpreter. Instances of this
+    /// class **must not** be mutated after construction.
+    /// 
+    /// The array <see cref="OriginalAttributes"/> may contain the attribute information of the original atomic module, otherwise
+    /// it must contain a none (otherwise the enclosing module could not overwrite attributes defined in this array).
+    /// 
+    /// The arrays <see cref="Inlets"/> and <see cref="Outlets"/> correspond to the notion of a *connection* in the <see cref="GraphInterpreter"/>. Each slot
+    /// *i* contains the input and output port corresponding to connection *i*. Slots where the graph is not closed (i.e.
+    /// ports are exposed to the external world) are marked with null values. For example if an input port p is
+    /// exposed, then Outlets[p] will contain a null.
+    ///
+    /// The arrays <see cref="InletOwners"/> and <see cref="OutletOwners"/> are lookup tables from a connection id(the index of the slot)
+    /// to a slot in the <see cref="Stages"/> array, indicating which stage is the owner of the given input or output port.
+    ///
+    /// Slots which would correspond to non-existent stages(where the corresponding port is null since it represents
+    /// the currently unknown external context) contain the value <see cref="GraphInterpreter.Boundary"/>.
+    ///
+    ///The current assumption by the infrastructure is that the layout of these arrays looks like this:
+    ///
+    ///            +---------------------------------------+-----------------+
+    /// inOwners:  | index to stages array | Boundary(-1)                    |
+    ///            +----------------+----------------------+-----------------+
+    /// ins:       | exposed inputs | internal connections | nulls           |
+    ///            +----------------+----------------------+-----------------+
+    /// outs:      | nulls          | internal connections | exposed outputs |
+    ///            +----------------+----------------------+-----------------+
+    /// outOwners: | Boundary(-1)   | index to stages array                  |
+    ///            +----------------+----------------------------------------+
+    ///
+    /// In addition, it is also assumed by the infrastructure that the order of exposed inputs and outputs in the
+    /// corresponding segments of these arrays matches the exact same order of the ports in the <see cref="Shape"/>.
+    /// </summary>
     public sealed class GraphAssembly
     {
         public static GraphAssembly Create(IList<Inlet> inlets, IList<Outlet> outlets, IList<IGraphStageWithMaterializedValue<Shape, object>> stages)
@@ -70,7 +70,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         private static int[] MarkBoundary(int[] owners, int from, int to)
         {
-            for (int i = from; i < to; i++)
+            for (var i = from; i < to; i++)
                 owners[i] = GraphInterpreter.Boundary;
             return owners;
         }
@@ -78,9 +78,7 @@ namespace Akka.Streams.Implementation.Fusing
         private static T[] Add<T>(IList<T> seq, T[] array, int idx)
         {
             foreach (var t in seq)
-            {
                 array[idx++] = t;
-            }
             return array;
         }
 
@@ -110,16 +108,16 @@ namespace Akka.Streams.Implementation.Fusing
 
         public int ConnectionCount => Inlets.Length;
 
-        /**
-         * Takes an interpreter and returns three arrays required by the interpreter containing the input, output port
-         * handlers and the stage logic instances.
-         *
-         * Returns a tuple of
-         *  - lookup table for InHandlers
-         *  - lookup table for OutHandlers
-         *  - array of the logics
-         *  - materialized value
-         */
+        /// <summary>
+        /// Takes an interpreter and returns three arrays required by the interpreter containing the input, output port
+        /// handlers and the stage logic instances.
+        /// 
+        /// <para>Returns a tuple of</para>
+        /// <para/> - lookup table for InHandlers
+        /// <para/> - lookup table for OutHandlers
+        /// <para/> - array of the logics
+        /// <para/> - materialized value
+        /// </summary>
         public Tuple<IInHandler[], IOutHandler[], GraphStageLogic[]> Materialize(
             Attributes inheritedAttributes,
             IModule[] copiedModules,
@@ -170,7 +168,7 @@ namespace Akka.Streams.Implementation.Fusing
             var inHandlers = new IInHandler[ConnectionCount];
             var outHandlers = new IOutHandler[ConnectionCount];
 
-            for (int i = 0; i < ConnectionCount; i++)
+            for (var i = 0; i < ConnectionCount; i++)
             {
                 var inlet = Inlets[i];
                 if (inlet != null)

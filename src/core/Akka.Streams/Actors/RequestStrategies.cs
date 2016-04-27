@@ -5,13 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-//-----------------------------------------------------------------------
-// <copyright file="RequestStrategies.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
-
 using System;
 
 namespace Akka.Streams.Actors
@@ -34,7 +27,7 @@ namespace Akka.Streams.Actors
     }
 
     /// <summary>
-    /// Requests one more element when `remainingRequested` is 0, i.e.
+    /// Requests one more element when remainingRequested is 0, i.e.
     /// * max one element in flight.
     /// </summary>
     public sealed class OneByOneRequestStrategy : IRequestStrategy
@@ -42,10 +35,7 @@ namespace Akka.Streams.Actors
         public static readonly OneByOneRequestStrategy Instance = new OneByOneRequestStrategy();
         private OneByOneRequestStrategy() { }
 
-        public int RequestDemand(int remainingRequested)
-        {
-            return remainingRequested == 0 ? 1 : 0;
-        }
+        public int RequestDemand(int remainingRequested) => remainingRequested == 0 ? 1 : 0;
     }
 
     /// <summary>
@@ -56,15 +46,12 @@ namespace Akka.Streams.Actors
         public static readonly ZeroRequestStrategy Instance = new ZeroRequestStrategy();
         private ZeroRequestStrategy() { }
 
-        public int RequestDemand(int remainingRequested)
-        {
-            return 0;
-        }
+        public int RequestDemand(int remainingRequested) => 0;
     }
 
     /// <summary>
-    /// Requests up to the `highWatermark` when the `remainingRequested` is
-    /// below the `lowWatermark`. This a good strategy when the actor performs work itself.
+    /// Requests up to the highWatermark when the remainingRequested is
+    /// below the lowWatermark. This a good strategy when the actor performs work itself.
     /// </summary>
     public sealed class WatermarkRequestStrategy : IRequestStrategy
     {
@@ -90,7 +77,7 @@ namespace Akka.Streams.Actors
     }
 
     /// <summary>
-    /// Requests up to the `max` and also takes the number of messages
+    /// Requests up to the max and also takes the number of messages
     /// that have been queued internally or delegated to other actors into account.
     /// Concrete subclass must implement <see cref="InFlight"/>.
     /// It will request elements in minimum batches of the defined <see cref="BatchSize"/>.

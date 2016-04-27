@@ -44,15 +44,15 @@ namespace Akka.Streams.Implementation
 
         public override IModule ReplaceShape(Shape shape)
         {
-            if (Equals(shape, Shape)) return this;
-            else throw new NotSupportedException("cannot replace the shape of a Source, you need to wrap it in a Graph for that");
+            if (Equals(shape, Shape))
+                return this;
+
+            throw new NotSupportedException("cannot replace the shape of a Source, you need to wrap it in a Graph for that");
         }
 
         public override IModule CarbonCopy()
-        {
-            return NewInstance(new SourceShape<TOut>(Outlet.Create<TOut>(_shape.Outlet.CarbonCopy())));
-        }
-        
+            => NewInstance(new SourceShape<TOut>(Outlet.Create<TOut>(_shape.Outlet.CarbonCopy())));
+
         protected SourceShape<TOut> AmendShape(Attributes attributes)
         {
             var thisN = Attributes.GetNameOrDefault(null);
@@ -78,14 +78,10 @@ namespace Akka.Streams.Implementation
         public override Attributes Attributes { get; }
 
         public override IModule WithAttributes(Attributes attributes)
-        {
-            return new SubscriberSource<TOut>(attributes, AmendShape(attributes));
-        }
+            => new SubscriberSource<TOut>(attributes, AmendShape(attributes));
 
         protected override SourceModule<TOut, ISubscriber<TOut>> NewInstance(SourceShape<TOut> shape)
-        {
-            return new SubscriberSource<TOut>(Attributes, shape);
-        }
+            => new SubscriberSource<TOut>(Attributes, shape);
 
         public override IPublisher<TOut> Create(MaterializationContext context, out ISubscriber<TOut> materializer)
         {
@@ -112,16 +108,12 @@ namespace Akka.Streams.Implementation
         }
 
         public override Attributes Attributes { get; }
-    
+
         public override IModule WithAttributes(Attributes attributes)
-        {
-            return new PublisherSource<TOut>(_publisher, attributes, AmendShape(attributes));
-        }
+            => new PublisherSource<TOut>(_publisher, attributes, AmendShape(attributes));
 
         protected override SourceModule<TOut, Unit> NewInstance(SourceShape<TOut> shape)
-        {
-            return new PublisherSource<TOut>(_publisher, Attributes, shape);
-        }
+            => new PublisherSource<TOut>(_publisher, Attributes, shape);
 
         public override IPublisher<TOut> Create(MaterializationContext context, out Unit materializer)
         {
@@ -140,14 +132,10 @@ namespace Akka.Streams.Implementation
         public override Attributes Attributes { get; }
 
         public override IModule WithAttributes(Attributes attributes)
-        {
-            return new MaybeSource<TOut>(attributes, AmendShape(attributes));
-        }
+            => new MaybeSource<TOut>(attributes, AmendShape(attributes));
 
         protected override SourceModule<TOut, TaskCompletionSource<TOut>> NewInstance(SourceShape<TOut> shape)
-        {
-            return new MaybeSource<TOut>(Attributes, shape);
-        }
+            => new MaybeSource<TOut>(Attributes, shape);
 
         public override IPublisher<TOut> Create(MaterializationContext context, out TaskCompletionSource<TOut> materializer)
         {
@@ -171,15 +159,12 @@ namespace Akka.Streams.Implementation
         }
 
         public override Attributes Attributes { get; }
+
         public override IModule WithAttributes(Attributes attributes)
-        {
-            return new ActorPublisherSource<TOut>(_props, attributes, AmendShape(attributes));
-        }
+            => new ActorPublisherSource<TOut>(_props, attributes, AmendShape(attributes));
 
         protected override SourceModule<TOut, IActorRef> NewInstance(SourceShape<TOut> shape)
-        {
-            return new ActorPublisherSource<TOut>(_props, Attributes, shape);
-        }
+            => new ActorPublisherSource<TOut>(_props, Attributes, shape);
 
         public override IPublisher<TOut> Create(MaterializationContext context, out IActorRef materializer)
         {
@@ -203,15 +188,11 @@ namespace Akka.Streams.Implementation
 
         public override Attributes Attributes { get; }
 
-        public override IModule WithAttributes(Attributes attributes)
-        {
-            return new ActorRefSource<TOut>(_bufferSize, _overflowStrategy, attributes, AmendShape(attributes));
-        }
+        public override IModule WithAttributes(Attributes attributes) 
+            => new ActorRefSource<TOut>(_bufferSize, _overflowStrategy, attributes, AmendShape(attributes));
 
-        protected override SourceModule<TOut, IActorRef> NewInstance(SourceShape<TOut> shape)
-        {
-            return new ActorRefSource<TOut>(_bufferSize, _overflowStrategy, Attributes, shape);
-        }
+        protected override SourceModule<TOut, IActorRef> NewInstance(SourceShape<TOut> shape) 
+            => new ActorRefSource<TOut>(_bufferSize, _overflowStrategy, Attributes, shape);
 
         public override IPublisher<TOut> Create(MaterializationContext context, out IActorRef materializer)
         {

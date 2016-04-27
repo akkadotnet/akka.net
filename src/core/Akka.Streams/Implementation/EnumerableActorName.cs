@@ -19,11 +19,8 @@ namespace Akka.Streams.Implementation
             return new EnumerableActorNameImpl(prefix, new AtomicCounterLong(0L));
         }
 
-        protected EnumerableActorName()
-        {
-        }
-
         public abstract string Next();
+
         public abstract EnumerableActorName Copy(string newPrefix);
     }
 
@@ -38,14 +35,8 @@ namespace Akka.Streams.Implementation
             _counter = counter;
         }
 
-        public override string Next()
-        {
-            return Prefix + "-" + _counter.GetAndIncrement();
-        }
+        public override string Next() => Prefix + "-" + _counter.GetAndIncrement();
 
-        public override EnumerableActorName Copy(string newPrefix)
-        {
-            return new EnumerableActorNameImpl(newPrefix, _counter);
-        }
+        public override EnumerableActorName Copy(string newPrefix) => new EnumerableActorNameImpl(newPrefix, _counter);
     }
 }
