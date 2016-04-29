@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Pattern;
@@ -201,6 +202,7 @@ namespace Akka.Cluster.Sharding
         {
             _system = system;
             _system.Settings.InjectTopLevelFallback(DefaultConfig());
+            _system.Settings.InjectTopLevelFallback(ClusterSingletonManager.DefaultConfig());
             _cluster = Cluster.Get(_system);
             Settings = ClusterShardingSettings.Create(system);
 
