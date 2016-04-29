@@ -121,7 +121,7 @@ namespace Akka.Persistence.Query
         /// is completed immediately when it reaches the end of the "result set". Persistent
         /// actors that are created after the query is completed are not included in the stream.
         /// </summary>
-        Source<string, Unit> CurrentPersistenceIds { get; }
+        Source<string, Unit> CurrentPersistenceIds();
     }
 
     public interface IAllPersistenceIdsQuery : IReadJournal
@@ -135,6 +135,6 @@ namespace Akka.Persistence.Query
         /// Corresponding query that is completed when it reaches the end of the currently
         /// currently used `persistenceIds` is provided by <see cref="ICurrentPersistenceIdsQuery.CurrentPersistenceIds"/>.
         /// </summary>
-        Source<string, Unit> AllPersistenceIds { get; }
+        Source<string, Unit> AllPersistenceIds();
     }
 }
