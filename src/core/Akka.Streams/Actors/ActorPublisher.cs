@@ -1,5 +1,6 @@
-﻿// <copyright file="ActorPublisher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//-----------------------------------------------------------------------
+// <copyright file="ActorPublisher.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -151,7 +152,7 @@ namespace Akka.Streams.Actors
         /// <summary>
         /// Subscription timeout after which this actor will become Canceled and reject any incoming "late" subscriber.
         ///
-        /// The actor will receive an [[SubscriptionTimeoutExceeded]] message upon which it
+        /// The actor will receive an <see cref="SubscriptionTimeoutExceeded"/> message upon which it
         /// MUST react by performing all necessary cleanup and stopping itself.
         ///
         /// Use this feature in order to avoid leaking actors when you suspect that this Publisher may never get subscribed to by some Subscriber.
@@ -496,9 +497,7 @@ namespace Akka.Streams.Actors
             try
             {
                 if (_lifecycleState == LifecycleState.Active)
-                {
                     ReactiveStreamsCompliance.TryOnComplete(_subscriber);
-                }
             }
             finally
             {
@@ -511,10 +510,7 @@ namespace Akka.Streams.Actors
 
     public static class ActorPublisher
     {
-        public static IPublisher<T> Create<T>(IActorRef @ref)
-        {
-            return new ActorPublisherImpl<T>(@ref);
-        }
+        public static IPublisher<T> Create<T>(IActorRef @ref) => new ActorPublisherImpl<T>(@ref);
     }
 
     public sealed class ActorPublisherImpl<T> : IPublisher<T>
@@ -533,10 +529,7 @@ namespace Akka.Streams.Actors
             _ref.Tell(new Subscribe<T>(subscriber));
         }
 
-        void IPublisher.Subscribe(ISubscriber subscriber)
-        {
-            Subscribe((ISubscriber<T>) subscriber);
-        }
+        void IPublisher.Subscribe(ISubscriber subscriber) => Subscribe((ISubscriber<T>) subscriber);
     }
 
     public sealed class ActorPublisherSubscription : ISubscription
@@ -549,15 +542,9 @@ namespace Akka.Streams.Actors
             _ref = @ref;
         }
 
-        public void Request(long n)
-        {
-            _ref.Tell(new Request(n));
-        }
+        public void Request(long n) => _ref.Tell(new Request(n));
 
-        public void Cancel()
-        {
-            _ref.Tell(Actors.Cancel.Instance);
-        }
+        public void Cancel() => _ref.Tell(Actors.Cancel.Instance);
     }
 
     public sealed class OnErrorBlock
@@ -600,10 +587,7 @@ namespace Akka.Streams.Actors
             return _state.TryGetValue(actorRef, out state) ? state : null;
         }
 
-        public void Set(IActorRef actorRef, State s)
-        {
-            _state.AddOrUpdate(actorRef, s, (@ref, oldState) => s);
-        }
+        public void Set(IActorRef actorRef, State s) => _state.AddOrUpdate(actorRef, s, (@ref, oldState) => s);
 
         public State Remove(IActorRef actorRef)
         {
@@ -611,9 +595,6 @@ namespace Akka.Streams.Actors
             return _state.TryRemove(actorRef, out s) ? s : null;
         }
 
-        public override ActorPublisherState CreateExtension(ExtendedActorSystem system)
-        {
-            return new ActorPublisherState();
-        }
+        public override ActorPublisherState CreateExtension(ExtendedActorSystem system) => new ActorPublisherState();
     }
 }

@@ -1,4 +1,11 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="IteratorAdapter.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 
 namespace Akka.Streams.Util
@@ -8,7 +15,6 @@ namespace Akka.Streams.Util
     /// Should only be needed in rare circumstances, where knowing whether there are
     /// more elements without consuming them makes the code easier to write.
     /// </summary>
-    /// <typeparam name="T"></typeparam>
     internal interface IIterator<out T>
     {
         bool HasNext();

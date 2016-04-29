@@ -1,4 +1,11 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="GraphInterpreter.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Linq;
 using System.Threading;
 using Akka.Event;
@@ -8,82 +15,82 @@ using Akka.Util;
 
 namespace Akka.Streams.Implementation.Fusing
 {
-    /**
-     * INTERNAL API
-     *
-     * From an external viewpoint, the GraphInterpreter takes an assembly of graph processing stages encoded as a
-     * [[GraphInterpreter#GraphAssembly]] object and provides facilities to execute and interact with this assembly.
-     * The lifecycle of the Interpreter is roughly the following:
-     *  - Boundary logics are attached via [[attachDownstreamBoundary()]] and [[attachUpstreamBoundary()]]
-     *  - [[init()]] is called
-     *  - [[execute()]] is called whenever there is need for execution, providing an upper limit on the processed events
-     *  - [[finish()]] is called before the interpreter is disposed, preferably after [[isCompleted]] returned true, although
-     *    in abort cases this is not strictly necessary
-     *
-     * The [[execute()]] method of the interpreter accepts an upper bound on the events it will process. After this limit
-     * is reached or there are no more pending events to be processed, the call returns. It is possible to inspect
-     * if there are unprocessed events left via the [[isSuspended]] method. [[isCompleted]] returns true once all stages
-     * reported completion inside the interpreter.
-     *
-     * The internal architecture of the interpreter is based on the usage of arrays and optimized for reducing allocations
-     * on the hot paths.
-     *
-     * One of the basic abstractions inside the interpreter is the notion of *connection*. In the abstract sense a
-     * connection represents an output-input port pair (an analogue for a connected RS Publisher-Subscriber pair),
-     * while in the practical sense a connection is a number which represents slots in certain arrays.
-     * In particular
-     *  - portStates contains a bitfield that tracks the states of the ports (output-input) corresponding to this
-     *    connection. This bitfield is used to decode the event that is in-flight.
-     *  - connectionSlots is a mapping from a connection id to a potential element or exception that accompanies the
-     *    event encoded in the portStates bitfield
-     *  - inHandlers is a mapping from a connection id to the [[InHandler]] instance that handles the events corresponding
-     *    to the input port of the connection
-     *  - outHandlers is a mapping from a connection id to the [[OutHandler]] instance that handles the events corresponding
-     *    to the output port of the connection
-     *
-     * On top of these lookup tables there is an eventQueue, represented as a circular buffer of integers. The integers
-     * it contains represents connections that have pending events to be processed. The pending event itself is encoded
-     * in the portStates bitfield. This implies that there can be only one event in flight for a given connection, which
-     * is true in almost all cases, except a complete-after-push or fail-after-push.
-     *
-     * The layout of the portStates bitfield is the following:
-     *
-     *             |- state machn.-| Only one bit is hot among these bits
-     *  64  32  16 | 8   4   2   1 |
-     * +---+---+---|---+---+---+---|
-     *   |   |   |   |   |   |   |
-     *   |   |   |   |   |   |   |  From the following flags only one is active in any given time. These bits encode
-     *   |   |   |   |   |   |   |  state machine states, and they are "moved" around using XOR masks to keep other bits
-     *   |   |   |   |   |   |   |  intact.
-     *   |   |   |   |   |   |   |
-     *   |   |   |   |   |   |   +- InReady:  The input port is ready to be pulled
-     *   |   |   |   |   |   +----- Pulling:  A pull is active, but have not arrived yet (queued)
-     *   |   |   |   |   +--------- Pushing:  A push is active, but have not arrived yet (queued)
-     *   |   |   |   +------------- OutReady: The output port is ready to be pushed
-     *   |   |   |
-     *   |   |   +----------------- InClosed:  The input port is closed and will not receive any events.
-     *   |   |                                 A push might be still in flight which will be then processed first.
-     *   |   +--------------------- OutClosed: The output port is closed and will not receive any events.
-     *   +------------------------- InFailed:  Always set in conjunction with InClosed. Indicates that the close event
-     *                                         is a failure
-     *
-     * Sending an event is usually the following sequence:
-     *  - An action is requested by a stage logic (push, pull, complete, etc.)
-     *  - the state machine in portStates is transitioned from a ready state to a pending event
-     *  - the id of the affected connection is enqueued
-     *
-     * Receiving an event is usually the following sequence:
-     *  - id of connection to be processed is dequeued
-     *  - the type of the event is determined from the bits set on portStates
-     *  - the state machine in portStates is transitioned to a ready state
-     *  - using the inHandlers/outHandlers table the corresponding callback is called on the stage logic.
-     *
-     * Because of the FIFO construction of the queue the interpreter is fair, i.e. a pending event is always executed
-     * after a bounded number of other events. This property, together with suspendability means that even infinite cycles can
-     * be modeled, or even dissolved (if preempted and a "stealing" external event is injected; for example the non-cycle
-     * edge of a balance is pulled, dissolving the original cycle).
-     */
-
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// From an external viewpoint, the GraphInterpreter takes an assembly of graph processing stages encoded as a
+    /// <see cref="Assembly"/> object and provides facilities to execute and interact with this assembly.
+    /// <para/> The lifecycle of the Interpreter is roughly the following:
+    /// <para/> - Boundary logics are attached via <see cref="AttachDownstreamBoundary"/> and <see cref="AttachUpstreamBoundary"/>
+    /// <para/> - <see cref="Init"/> is called
+    /// <para/> - <see cref="Execute"/> is called whenever there is need for execution, providing an upper limit on the processed events
+    /// <para/> - <see cref="Finish"/> is called before the interpreter is disposed, preferably after <see cref="IsCompleted"/> returned true, although
+    ///    in abort cases this is not strictly necessary
+    ///
+    /// The <see cref="Execute"/> method of the interpreter accepts an upper bound on the events it will process. After this limit
+    /// is reached or there are no more pending events to be processed, the call returns. It is possible to inspect
+    /// if there are unprocessed events left via the <see cref="IsSuspended"/> method. <see cref="IsCompleted"/> returns true once all stages
+    /// reported completion inside the interpreter.
+    ///
+    /// The internal architecture of the interpreter is based on the usage of arrays and optimized for reducing allocations
+    /// on the hot paths.
+    ///
+    /// One of the basic abstractions inside the interpreter is the notion of connection. In the abstract sense a
+    /// connection represents an output-input port pair (an analogue for a connected RS Publisher-Subscriber pair),
+    /// while in the practical sense a connection is a number which represents slots in certain arrays.
+    /// <para/> In particular
+    /// <para/> - portStates contains a bitfield that tracks the states of the ports (output-input) corresponding to this
+    ///    connection. This bitfield is used to decode the event that is in-flight.
+    /// <para/> - connectionSlots is a mapping from a connection id to a potential element or exception that accompanies the
+    ///    event encoded in the portStates bitfield
+    /// <para/> - inHandlers is a mapping from a connection id to the <see cref="InHandlers"/> instance that handles the events corresponding
+    ///    to the input port of the connection
+    /// <para/> - outHandlers is a mapping from a connection id to the <see cref="OutHandlers"/> instance that handles the events corresponding
+    ///    to the output port of the connection
+    ///
+    /// On top of these lookup tables there is an eventQueue, represented as a circular buffer of integers. The integers
+    /// it contains represents connections that have pending events to be processed. The pending event itself is encoded
+    /// in the portStates bitfield. This implies that there can be only one event in flight for a given connection, which
+    /// is true in almost all cases, except a complete-after-push or fail-after-push.
+    ///
+    /// The layout of the portStates bitfield is the following:
+    ///
+    ///             |- state machn.-| Only one bit is hot among these bits
+    ///  64  32  16 | 8   4   2   1 |
+    /// +---+---+---|---+---+---+---|
+    ///   |   |   |   |   |   |   |
+    ///   |   |   |   |   |   |   |  From the following flags only one is active in any given time. These bits encode
+    ///   |   |   |   |   |   |   |  state machine states, and they are "moved" around using XOR masks to keep other bits
+    ///   |   |   |   |   |   |   |  intact.
+    ///   |   |   |   |   |   |   |
+    ///   |   |   |   |   |   |   +- InReady:  The input port is ready to be pulled
+    ///   |   |   |   |   |   +----- Pulling:  A pull is active, but have not arrived yet (queued)
+    ///   |   |   |   |   +--------- Pushing:  A push is active, but have not arrived yet (queued)
+    ///   |   |   |   +------------- OutReady: The output port is ready to be pushed
+    ///   |   |   |
+    ///   |   |   +----------------- InClosed:  The input port is closed and will not receive any events.
+    ///   |   |                                 A push might be still in flight which will be then processed first.
+    ///   |   +--------------------- OutClosed: The output port is closed and will not receive any events.
+    ///   +------------------------- InFailed:  Always set in conjunction with InClosed. Indicates that the close event
+    ///                                         is a failure
+    ///
+    /// Sending an event is usually the following sequence:
+    ///  - An action is requested by a stage logic (push, pull, complete, etc.)
+    ///  - the state machine in portStates is transitioned from a ready state to a pending event
+    ///  - the id of the affected connection is enqueued
+    ///
+    /// Receiving an event is usually the following sequence:
+    ///  - id of connection to be processed is dequeued
+    ///  - the type of the event is determined from the bits set on portStates
+    ///  - the state machine in portStates is transitioned to a ready state
+    ///  - using the inHandlers/outHandlers table the corresponding callback is called on the stage logic.
+    ///
+    /// Because of the FIFO construction of the queue the interpreter is fair, i.e. a pending event is always executed
+    /// after a bounded number of other events. This property, together with suspendability means that even infinite cycles can
+    /// be modeled, or even dissolved (if preempted and a "stealing" external event is injected; for example the non-cycle
+    /// edge of a balance is pulled, dissolving the original cycle).
+    ///
+    /// </summary>
     public sealed class GraphInterpreter
     {
         #region internal classes
@@ -96,10 +103,7 @@ namespace Akka.Streams.Implementation.Fusing
             public static readonly Empty Instance = new Empty();
             private Empty() { }
 
-            public override string ToString()
-            {
-                return "Empty";
-            }
+            public override string ToString() => "Empty";
         }
 
 
@@ -219,10 +223,12 @@ namespace Akka.Streams.Implementation.Fusing
             FuzzingMode = fuzzingMode;
 
             ConnectionSlots = new object[assembly.ConnectionCount];
-            for (int i = 0; i < ConnectionSlots.Length; i++) ConnectionSlots[i] = Empty.Instance;
+            for (var i = 0; i < ConnectionSlots.Length; i++)
+                ConnectionSlots[i] = Empty.Instance;
 
             PortStates = new int[assembly.ConnectionCount];
-            for (int i = 0; i < PortStates.Length; i++) PortStates[i] = InReady;
+            for (var i = 0; i < PortStates.Length; i++)
+                PortStates[i] = InReady;
 
             RunningStagesCount = Assembly.Stages.Length;
 
@@ -233,7 +239,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _shutdownCounter[i] = shape.Inlets.Count() + shape.Outlets.Count();
             }
 
-            _eventQueue = new int[1 << (32 - Int32Extensions.NumberOfLeadingZeros(assembly.ConnectionCount - 1))];
+            _eventQueue = new int[1 << (32 - (assembly.ConnectionCount - 1).NumberOfLeadingZeros())];
             _mask = _eventQueue.Length - 1;
         }
 
@@ -313,7 +319,7 @@ namespace Akka.Streams.Implementation.Fusing
         public void Init(IMaterializer subMaterializer)
         {
             SubFusingMaterializer = subMaterializer ?? Materializer;
-            for (int i = 0; i < Logics.Length; i++)
+            for (var i = 0; i < Logics.Length; i++)
             {
                 var logic = Logics[i];
                 logic.StageId = i;
@@ -339,9 +345,7 @@ namespace Akka.Streams.Implementation.Fusing
         public void Finish()
         {
             foreach (var logic in Logics)
-            {
                 if (!IsStageCompleted(logic)) FinalizeStage(logic);
-            }
         }
 
         // Debug name for a connections input part
@@ -372,11 +376,8 @@ namespace Akka.Streams.Implementation.Fusing
             return owner == Boundary ? "UpstreamBoundary" : Logics[owner].ToString();
         }
 
-        private string ShutdownCounters()
-        {
-            return string.Join(",",
-                _shutdownCounter.Select(x => x >= KeepGoingFlag ? $"{x & KeepGoingMask}(KeepGoing)" : x.ToString()));
-        }
+        private string ShutdownCounters() => string.Join(",",
+                    _shutdownCounter.Select(x => x >= KeepGoingFlag ? $"{x & KeepGoingMask}(KeepGoing)" : x.ToString()));
 
         /// <summary>
         /// Executes pending events until the given limit is met. If there were remaining events, <see cref="IsSuspended"/> will return true.
@@ -399,15 +400,14 @@ namespace Akka.Streams.Implementation.Fusing
                     }
                     catch (Exception e)
                     {
-                        if (ActiveStage == null) throw;
-                        else
-                        {
-                            var stage = Assembly.Stages[ActiveStage.StageId];
-                            if (Log.IsErrorEnabled)
-                                Log.Error(e, $"Error in stage [{stage}]: {e.Message}");
+                        if (ActiveStage == null)
+                            throw;
 
-                            ActiveStage.FailStage(e);
-                        }
+                        var stage = Assembly.Stages[ActiveStage.StageId];
+                        if (Log.IsErrorEnabled)
+                            Log.Error(e, $"Error in stage [{stage}]: {e.Message}");
+
+                        ActiveStage.FailStage(e);
                     }
                     AfterStageHasRun(ActiveStage);
                     eventsRemaining--;
@@ -509,10 +509,7 @@ namespace Akka.Streams.Implementation.Fusing
             }
         }
 
-        private GraphStageLogic SafeLogics(int id)
-        {
-            return id == Boundary ? null : Logics[id];
-        }
+        private GraphStageLogic SafeLogics(int id) => id == Boundary ? null : Logics[id];
 
         public void ProcessElement(int connection)
         {
@@ -557,10 +554,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Returns true if the given stage is alredy completed
         /// </summary>
-        internal bool IsStageCompleted(GraphStageLogic stage)
-        {
-            return stage != null && _shutdownCounter[stage.StageId] == 0;
-        }
+        internal bool IsStageCompleted(GraphStageLogic stage) => stage != null && _shutdownCounter[stage.StageId] == 0;
 
         /// <summary>
         ///  Register that a connection in which the given stage participated has been completed and therefore the stage itself might stop, too.
@@ -570,14 +564,17 @@ namespace Akka.Streams.Implementation.Fusing
             if (stageId != Boundary)
             {
                 var activeConnections = _shutdownCounter[stageId];
-                if (activeConnections > 0) _shutdownCounter[stageId] = activeConnections - 1;
+                if (activeConnections > 0)
+                    _shutdownCounter[stageId] = activeConnections - 1;
             }
         }
 
         internal void SetKeepGoing(GraphStageLogic logic, bool enabled)
         {
-            if (enabled) _shutdownCounter[logic.StageId] |= KeepGoingFlag;
-            else _shutdownCounter[logic.StageId] &= KeepGoingMask;
+            if (enabled)
+                _shutdownCounter[logic.StageId] |= KeepGoingFlag;
+            else
+                _shutdownCounter[logic.StageId] &= KeepGoingMask;
         }
 
         private void FinalizeStage(GraphStageLogic logic)
@@ -610,9 +607,7 @@ namespace Akka.Streams.Implementation.Fusing
             var currentState = PortStates[connection];
             PortStates[connection] = currentState ^ PullStartFlip;
             if ((currentState & OutClosed) == 0)
-            {
                 Enqueue(connection);
-            }
         }
 
         internal void Complete(int connection)
@@ -620,8 +615,10 @@ namespace Akka.Streams.Implementation.Fusing
             var currentState = PortStates[connection];
             if (IsDebug) Console.WriteLine($"{Name}   Complete({connection}) [{currentState}]");
             PortStates[connection] = currentState | OutClosed;
-            if ((currentState & (InClosed | Pushing | Pulling | OutClosed)) == 0) Enqueue(connection);
-            if ((currentState & OutClosed) == 0) CompleteConnection(Assembly.OutletOwners[connection]);
+            if ((currentState & (InClosed | Pushing | Pulling | OutClosed)) == 0)
+                Enqueue(connection);
+            if ((currentState & OutClosed) == 0)
+                CompleteConnection(Assembly.OutletOwners[connection]);
         }
 
         internal void Fail(int connection, Exception reason)
@@ -633,10 +630,12 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 PortStates[connection] = currentState | (OutClosed | InFailed);
                 ConnectionSlots[connection] = new Failed(reason, ConnectionSlots[connection]);
-                if ((currentState & (Pulling | Pushing)) == 0) Enqueue(connection);
+                if ((currentState & (Pulling | Pushing)) == 0)
+                    Enqueue(connection);
             }
 
-            if ((currentState & OutClosed) == 0) CompleteConnection(Assembly.OutletOwners[connection]);
+            if ((currentState & OutClosed) == 0)
+                CompleteConnection(Assembly.OutletOwners[connection]);
         }
 
         internal void Cancel(int connection)
@@ -647,10 +646,12 @@ namespace Akka.Streams.Implementation.Fusing
             if ((currentState & OutClosed) == 0)
             {
                 ConnectionSlots[connection] = Empty.Instance;
-                if ((currentState & (Pulling | Pushing | InClosed)) == 0) Enqueue(connection);
+                if ((currentState & (Pulling | Pushing | InClosed)) == 0)
+                    Enqueue(connection);
             }
 
-            if ((currentState & InClosed) == 0) CompleteConnection(Assembly.InletOwners[connection]);
+            if ((currentState & InClosed) == 0)
+                CompleteConnection(Assembly.InletOwners[connection]);
         }
 
         /// <summary>

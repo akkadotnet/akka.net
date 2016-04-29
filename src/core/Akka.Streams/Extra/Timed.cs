@@ -1,4 +1,11 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="Timed.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Diagnostics;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
@@ -9,14 +16,14 @@ namespace Akka.Streams.Extra
     /// <summary>
     /// INTERNAL API
     /// 
-    /// Provides operations needed to implement the `timed` DSL
+    /// Provides operations needed to implement the <see cref="TimedFlowDsl"/> and <see cref="TimedSourceDsl"/>
     /// </summary>
     internal static class TimedOps
     {
         /// <summary>
         /// INTERNAL API
         /// 
-        /// Measures time from receiving the first element and completion events - one for each subscriber of this `Flow`.
+        /// Measures time from receiving the first element and completion events - one for each subscriber of this <see cref="IFlow{TOut,TMat}"/>.
         /// </summary>
         public static Source<TOut, TMat2> Timed<TIn, TOut, TMat, TMat2>(Source<TIn, TMat> source, Func<Source<TIn, TMat>, Source<TOut, TMat2>> measuredOps, Action<TimeSpan> onComplete)
         {
@@ -31,7 +38,7 @@ namespace Akka.Streams.Extra
         /// <summary>
         /// INTERNAL API
         /// 
-        /// Measures time from receiving the first element and completion events - one for each subscriber of this `Flow`.
+        /// Measures time from receiving the first element and completion events - one for each subscriber of this <see cref="IFlow{TOut,TMat}"/>.
         /// </summary>
         public static Flow<TIn, TOut2, TMat2> Timed<TIn, TOut, TOut2, TMat, TMat2>(Flow<TIn, TOut, TMat> flow, Func<Flow<TIn, TOut, TMat>, Flow<TIn, TOut2, TMat2>> measuredOps, Action<TimeSpan> onComplete)
         {
@@ -49,7 +56,7 @@ namespace Akka.Streams.Extra
     /// <summary>
     /// INTERNAL API
     /// 
-    /// Provides operations needed to implement the `timedIntervalBetween` DSL
+    /// Provides operations needed to implement the <see cref="TimedFlowDsl"/> and <see cref="TimedSourceDsl"/>
     /// </summary>
     internal static class TimedIntervalBetweenOps
     {

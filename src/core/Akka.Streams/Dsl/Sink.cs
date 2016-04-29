@@ -1,15 +1,21 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="Sink.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Dispatch;
 using Akka.Dispatch.MessageQueues;
 using Akka.Pattern;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
+// ReSharper disable UnusedMember.Global
 
 namespace Akka.Streams.Dsl
 {
@@ -31,9 +37,9 @@ namespace Akka.Streams.Dsl
         /// Transform this <see cref="Sink"/> by applying a function to each *incoming* upstream element before
         /// it is passed to the <see cref="Sink"/>
         /// 
-        /// '''Backpressures when''' original <see cref="Sink"/> backpressures
+        /// Backpressures when original <see cref="Sink"/> backpressures
         /// 
-        /// '''Cancels when''' original <see cref="Sink"/> backpressures
+        /// Cancels when original <see cref="Sink"/> backpressures
         /// </summary>
         public Sink<TIn2, TMat> ContraMap<TIn2>(Func<TIn2, TIn> function)
         {
@@ -77,10 +83,7 @@ namespace Akka.Streams.Dsl
 
     public static class Sink
     {
-        private static SinkShape<T> Shape<T>(string name)
-        {
-            return new SinkShape<T>(new Inlet<T>(name + ".in"));
-        }
+        private static SinkShape<T> Shape<T>(string name) => new SinkShape<T>(new Inlet<T>(name + ".in"));
 
         /// <summary>
         /// A graph with the shape of a sink logically is a sink, this method makes
@@ -167,7 +170,7 @@ namespace Akka.Streams.Dsl
         /// A <see cref="Sink{TIn,TMat}"/> that materializes into <see cref="IPublisher{TIn}"/>
         /// that can handle more than one <see cref="ISubscriber{TIn}"/>.
         /// </summary>
-        public static Sink<TIn, IPublisher<TIn>> FanoutPublisher<TIn>(int initBufferSize, int maxBufferSize)
+        public static Sink<TIn, IPublisher<TIn>> FanoutPublisher<TIn>()
         {
             return new Sink<TIn, IPublisher<TIn>>(new FanoutPublisherSink<TIn>(DefaultAttributes.FanoutPublisherSink, Shape<TIn>("FanoutPublisherSink")));
         }
@@ -231,7 +234,7 @@ namespace Akka.Streams.Dsl
         ///  <para/>
         /// See also <seealso cref="MapAsyncUnordered{TIn,TOut}"/> 
         /// </summary>
-        public static Sink<TIn, Task> ForEachParallel<TIn>(int parallelism, Action<TIn> action, MessageDispatcher dispatcher = null)
+        public static Sink<TIn, Task> ForEachParallel<TIn>(int parallelism, Action<TIn> action)
         {
             return Flow.Create<TIn>()
                 .MapAsyncUnordered(parallelism, input => Task.Run(() =>

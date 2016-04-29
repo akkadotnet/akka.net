@@ -1,4 +1,11 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="Attributes.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -90,15 +97,15 @@ namespace Akka.Streams
 
             public bool Equals(LogLevels other)
             {
-                if (ReferenceEquals(other, null)) return false;
-                if (ReferenceEquals(other, this)) return true;
+                if (ReferenceEquals(other, null))
+                    return false;
+                if (ReferenceEquals(other, this))
+                    return true;
+
                 return OnElement == other.OnElement && OnFinish == other.OnFinish && OnFailure == other.OnFailure;
             }
 
-            public override bool Equals(object obj)
-            {
-                return obj is LogLevels && Equals((LogLevels) obj);
-            }
+            public override bool Equals(object obj) => obj is LogLevels && Equals((LogLevels) obj);
 
             public override int GetHashCode()
             {
@@ -174,8 +181,10 @@ namespace Akka.Streams
         /// </summary>
         public Attributes And(Attributes other)
         {
-            if (_attributes.Length == 0) return other;
-            if (!other.AttributeList.Any()) return this;
+            if (_attributes.Length == 0)
+                return other;
+            if (!other.AttributeList.Any())
+                return this;
             return new Attributes(_attributes.Concat(other.AttributeList).ToArray());
         }
 
@@ -224,18 +233,12 @@ namespace Akka.Streams
         /// <summary>
         /// Specifies the initial and maximum size of the input buffer.
         /// </summary>
-        public static Attributes CreateInputBuffer(int initial, int max)
-        {
-            return new Attributes(new InputBuffer(initial, max));
-        }
+        public static Attributes CreateInputBuffer(int initial, int max) => new Attributes(new InputBuffer(initial, max));
 
-        public static Attributes CreateAsyncBoundary()
-        {
-            return new Attributes(AsyncBoundary.Instance);
-        }
+        public static Attributes CreateAsyncBoundary() => new Attributes(AsyncBoundary.Instance);
 
         ///<summary>
-        /// Configures `log()` stage log-levels to be used when logging.
+        /// Configures <see cref="FlowOperations.Log{TIn,TOut,TMat}"/> stage log-levels to be used when logging.
         /// Logging a certain operation can be completely disabled by using <see cref="LogLevels.Off"/>
         ///
         /// Passing in null as any of the arguments sets the level to its default value, which is:
@@ -277,15 +280,14 @@ namespace Akka.Streams
 
             public bool Equals(Dispatcher other)
             {
-                if (ReferenceEquals(other, null)) return false;
-                if (ReferenceEquals(other, this)) return true;
+                if (ReferenceEquals(other, null))
+                    return false;
+                if (ReferenceEquals(other, this))
+                    return true;
                 return Equals(Name, other.Name);
             }
 
-            public override bool Equals(object obj)
-            {
-                return obj is Dispatcher && Equals((Dispatcher) obj);
-            }
+            public override bool Equals(object obj) => obj is Dispatcher && Equals((Dispatcher) obj);
 
             public override int GetHashCode() => (Name != null ? Name.GetHashCode() : 0);
 

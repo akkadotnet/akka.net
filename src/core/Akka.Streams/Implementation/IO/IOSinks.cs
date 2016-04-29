@@ -1,4 +1,11 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="IOSinks.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.IO;
 using System.Linq;
 using System.Reactive.Streams;
@@ -19,16 +26,15 @@ namespace Akka.Streams.Implementation.IO
     {
         private readonly FileInfo _f;
         private readonly FileMode _fileMode;
-        private readonly Attributes _attributes;
 
         public FileSink(FileInfo f, FileMode fileMode, Attributes attributes, SinkShape<ByteString> shape) : base(shape)
         {
             _f = f;
             _fileMode = fileMode;
-            _attributes = attributes;
+            Attributes = attributes;
         }
 
-        public override Attributes Attributes => _attributes;
+        public override Attributes Attributes { get; }
 
         public override IModule WithAttributes(Attributes attributes)
             => new FileSink(_f, _fileMode, attributes, AmendShape(attributes));
@@ -60,23 +66,22 @@ namespace Akka.Streams.Implementation.IO
     internal sealed class OutputStreamSink : SinkModule<ByteString, Task<IOResult>>
     {
         private readonly Func<Stream> _createOutput;
-        private readonly Attributes _attributes;
         private readonly bool _autoFlush;
 
         public OutputStreamSink(Func<Stream> createOutput, Attributes attributes, SinkShape<ByteString> shape, bool autoFlush) : base(shape)
         {
             _createOutput = createOutput;
-            _attributes = attributes;
+            Attributes = attributes;
             _autoFlush = autoFlush;
         }
 
-        public override Attributes Attributes => _attributes;
+        public override Attributes Attributes { get; }
 
         public override IModule WithAttributes(Attributes attributes)
             => new OutputStreamSink(_createOutput, attributes, AmendShape(attributes), _autoFlush);
         
         protected override SinkModule<ByteString, Task<IOResult>> NewInstance(SinkShape<ByteString> shape)
-            => new OutputStreamSink(_createOutput, _attributes, shape, _autoFlush);
+            => new OutputStreamSink(_createOutput, Attributes, shape, _autoFlush);
 
         public override ISubscriber<ByteString> Create(MaterializationContext context, out Task<IOResult> materializer)
         {

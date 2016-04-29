@@ -1,4 +1,11 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="StreamOfStreams.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Reactive.Streams;
@@ -58,16 +65,12 @@ namespace Akka.Streams.Implementation.Fusing
             private int ActiveSources => _sources.Count;
 
             public override void PreStart()
-            {
-                _q = Buffer.Create<SubSinkInlet<T>>(_stage._breadth, Interpreter.Materializer);
-            }
+                => _q = Buffer.Create<SubSinkInlet<T>>(_stage._breadth, Interpreter.Materializer);
 
             public override void PostStop()
             {
                 foreach (var source in _sources)
-                {
                     source.Cancel();
-                }
             }
 
             private void PushOut()
@@ -140,10 +143,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
-        public override string ToString()
-        {
-            return $"FlattenMerge({_breadth})";
-        }
+        public override string ToString() => $"FlattenMerge({_breadth})";
     }
 
     /// <summary>
@@ -317,7 +317,6 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T"></typeparam>
     internal sealed class Split<T> : GraphStage<FlowShape<T, Source<T, Unit>>>
     {
         #region internal classes
@@ -478,7 +477,11 @@ namespace Akka.Streams.Implementation.Fusing
                 }, onUpstreamFinish: CompleteStage);
             }
 
-            public override void PreStart() => _timeout = ActorMaterializer.Downcast(Interpreter.Materializer).Settings.SubscriptionTimeoutSettings.Timeout;
+            public override void PreStart()
+            {
+                var settings = ActorMaterializer.Downcast(Interpreter.Materializer).Settings;
+                _timeout = settings.SubscriptionTimeoutSettings.Timeout;
+            }
 
             private void HandOver(SubstreamHandler handler)
             {
@@ -591,9 +594,7 @@ namespace Akka.Streams.Implementation.Fusing
                         SetCallback(cb);
                 }
                 else if (status is Action)
-                {
                     FailStage(new IllegalStateException("Substream Source cannot be materialized more than once"));
-                }
             }
 
             public override void PreStart()
@@ -601,17 +602,11 @@ namespace Akka.Streams.Implementation.Fusing
                 var ourOwnCallback = GetAsyncCallback<SubSink.ICommand>(cmd =>
                 {
                     if (cmd is SubSink.RequestOne)
-                    {
-                            TryPull(_stage._in);
-                    }
+                        TryPull(_stage._in);
                     else if (cmd is SubSink.Cancel)
-                    {
                         CompleteStage();
-                    }
                     else
-                    {
                         throw new IllegalStateException("Bug");
-                    }
                 });
                 SetCallback(ourOwnCallback);
             }
@@ -643,9 +638,7 @@ namespace Akka.Streams.Implementation.Fusing
             var f = s as Action<SubSink.ICommand>;
 
             if (f != null)
-            {
                 f(SubSink.RequestOne.Instance);
-            }
             else
             {
                 if (!_status.CompareAndSet(null, SubSink.RequestOne.Instance))

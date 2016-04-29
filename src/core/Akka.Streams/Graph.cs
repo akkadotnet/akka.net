@@ -1,4 +1,11 @@
-﻿using Akka.Streams.Implementation;
+//-----------------------------------------------------------------------
+// <copyright file="Graph.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using Akka.Streams.Implementation;
 
 namespace Akka.Streams
 {
@@ -43,7 +50,7 @@ namespace Akka.Streams
         IGraph<TShape, TMaterialized> AddAttributes(Attributes attributes);
 
         /// <summary>
-        /// Add a 'name' attribute to this Flow.
+        /// Add a name attribute to this Flow.
         /// </summary>
         IGraph<TShape, TMaterialized> Named(string name);
 

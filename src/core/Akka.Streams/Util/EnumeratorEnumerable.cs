@@ -1,4 +1,11 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="EnumeratorEnumerable.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -13,14 +20,8 @@ namespace Akka.Streams.Util
             _enumeratorFactory = enumeratorFactory;
         }
 
-        public IEnumerator<T> GetEnumerator()
-        {
-            return _enumeratorFactory();
-        }
+        public IEnumerator<T> GetEnumerator() => _enumeratorFactory();
 
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

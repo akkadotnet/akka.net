@@ -1,4 +1,10 @@
-﻿// --- auto generated: 2016-03-22 1:06:14 AM --- //
+﻿// --- auto generated: 21.04.2016 07:48:23 --- //
+//-----------------------------------------------------------------------
+// <copyright file="FanInShape.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Linq;
 using System.Collections.Immutable;

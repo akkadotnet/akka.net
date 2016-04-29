@@ -1,4 +1,11 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="Tcp.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Immutable;
 using System.Net;
 using System.Reactive.Streams;
@@ -187,9 +194,6 @@ namespace Akka.Streams.Dsl
 
     public static class TcpStreamExtensions
     {
-        public static TcpExt TcpStream(this ActorSystem system)
-        {
-            return system.WithExtension<TcpExt, Tcp>();
-        }
+        public static TcpExt TcpStream(this ActorSystem system) => system.WithExtension<TcpExt, Tcp>();
     }
 }

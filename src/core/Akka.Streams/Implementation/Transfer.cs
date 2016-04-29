@@ -1,4 +1,11 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="Transfer.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Pattern;
 
@@ -15,10 +22,7 @@ namespace Akka.Streams.Implementation
 
         public Receive CurrentReceive => _currentReceive;
 
-        public void Become(Receive receive)
-        {
-            _currentReceive = receive;
-        }
+        public void Become(Receive receive) => _currentReceive = receive;
     }
 
     internal interface IInputs
@@ -38,17 +42,13 @@ namespace Akka.Streams.Implementation
         bool AreInputsAvailable { get; }
     }
 
-    internal static class DefaultInputTransferStates 
+    internal static class DefaultInputTransferStates
     {
         public static TransferState NeedsInput(IInputs inputs)
-        {
-            return new LambdaTransferState(() => inputs.AreInputsAvailable, () => inputs.AreInputsDepleted); 
-        }
+            => new LambdaTransferState(() => inputs.AreInputsAvailable, () => inputs.AreInputsDepleted);
 
         public static TransferState NeedsInputOrComplete(IInputs inputs)
-        {
-            return new LambdaTransferState(() => inputs.AreInputsAvailable || inputs.AreInputsDepleted, () => false);
-        }
+            => new LambdaTransferState(() => inputs.AreInputsAvailable || inputs.AreInputsDepleted, () => false);
     }
 
     internal interface IOutputs
@@ -71,15 +71,11 @@ namespace Akka.Streams.Implementation
 
     internal static class DefaultOutputTransferStates 
     {
-        public static TransferState NeedsDemand(IOutputs outputs)
-        {
-            return new LambdaTransferState(() => outputs.IsDemandAvailable, () => outputs.IsClosed);
-        }
+        public static TransferState NeedsDemand(IOutputs outputs) => new LambdaTransferState(() 
+            => outputs.IsDemandAvailable, () => outputs.IsClosed);
 
         public static TransferState NeedsDemandOrCancel(IOutputs outputs)
-        {
-            return new LambdaTransferState(() => outputs.IsDemandAvailable || outputs.IsClosed, () => false);
-        }
+            => new LambdaTransferState(() => outputs.IsDemandAvailable || outputs.IsClosed, () => false);
     }
 
     internal abstract class TransferState
@@ -89,14 +85,10 @@ namespace Akka.Streams.Implementation
         public bool IsExecutable => IsReady && !IsCompleted;
 
         public TransferState Or(TransferState other)
-        {
-            return new LambdaTransferState(() => IsReady || other.IsReady, () => IsCompleted && other.IsCompleted);
-        }
+            => new LambdaTransferState(() => IsReady || other.IsReady, () => IsCompleted && other.IsCompleted);
 
         public TransferState And(TransferState other)
-        {
-            return new LambdaTransferState(() => IsReady && other.IsReady, () => IsCompleted || other.IsCompleted);
-        }
+            => new LambdaTransferState(() => IsReady && other.IsReady, () => IsCompleted || other.IsCompleted);
     }
 
     internal sealed class LambdaTransferState : TransferState
@@ -205,35 +197,24 @@ namespace Akka.Streams.Implementation
         }
 
         public TransferState TransferState { get; set; }
+
         public Action CurrentAction { get; set; }
+
         public bool IsPumpFinished => TransferState.IsCompleted;
 
         public void InitialPhase(int waitForUpstream, TransferPhase andThen)
-        {
-            Pumps.InitialPhase(this, waitForUpstream, andThen);
-        }
+            => Pumps.InitialPhase(this, waitForUpstream, andThen);
 
-        public void WaitForUpstream(int waitForUpstream)
-        {
-            Pumps.WaitForUpstream(this, waitForUpstream);
-        }
+        public void WaitForUpstream(int waitForUpstream) => Pumps.WaitForUpstream(this, waitForUpstream);
 
-        public void GotUpstreamSubscription()
-        {
-            Pumps.GotUpstreamSubscription(this);
-        }
+        public void GotUpstreamSubscription() => Pumps.GotUpstreamSubscription(this);
 
-        public void NextPhase(TransferPhase phase)
-        {
-            Pumps.NextPhase(this, phase);
-        }
+        public void NextPhase(TransferPhase phase) => Pumps.NextPhase(this, phase);
 
-        public void Pump()
-        {
-            Pumps.Pump(this);
-        }
+        public void Pump() => Pumps.Pump(this);
 
         public abstract void PumpFailed(Exception e);
+
         public abstract void PumpFinished();
     }
 
@@ -280,9 +261,7 @@ namespace Akka.Streams.Implementation
                     self.CurrentAction = t.AndThen.Action;
                 }
                 else
-                {
-                    self.TransferState = new WaitingForUpstreamSubscription(t.Remaining-1, t.AndThen);
-                }
+                    self.TransferState = new WaitingForUpstreamSubscription(t.Remaining - 1, t.AndThen);
             }
 
             self.Pump();
@@ -302,26 +281,22 @@ namespace Akka.Streams.Implementation
             }
         }
 
-        public static bool IsPumpFinished(this IPump self)
-        {
-            return self.TransferState.IsCompleted;
-        }
+        public static bool IsPumpFinished(this IPump self) => self.TransferState.IsCompleted;
 
         public static void Pump(this IPump self)
         {
             try
             {
                 while (self.TransferState.IsExecutable)
-                {
                     self.CurrentAction();
-                }
             }
             catch (Exception e)
             {
                 self.PumpFailed(e);
             }
 
-            if(self.IsPumpFinished) self.PumpFinished();
+            if(self.IsPumpFinished)
+                self.PumpFinished();
         }
     }
 }

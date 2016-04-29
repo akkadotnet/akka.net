@@ -1,4 +1,11 @@
-﻿namespace Akka.Streams
+//-----------------------------------------------------------------------
+// <copyright file="ThrottleMode.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+namespace Akka.Streams
 {
     /// <summary>
     /// Represents a mode that decides how to deal exceed rate for Throttle combinator.

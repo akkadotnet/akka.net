@@ -1,4 +1,11 @@
-﻿namespace System.Reactive.Streams
+//-----------------------------------------------------------------------
+// <copyright file="Subscription.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+namespace System.Reactive.Streams
 {
     /// <summary>
     /// A subscription represents a one-to-one lifecycle of a <see cref="ISubscriber{T}"/> subscribing to a <see cref="IPublisher{T}"/>.

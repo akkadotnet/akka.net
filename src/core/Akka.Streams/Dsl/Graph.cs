@@ -1,4 +1,11 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="Graph.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -7,6 +14,7 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Util.Internal;
+// ReSharper disable MemberCanBePrivate.Global
 
 namespace Akka.Streams.Dsl
 {
@@ -14,13 +22,13 @@ namespace Akka.Streams.Dsl
     /// Merge several streams, taking elements as they arrive from input streams
     /// (picking randomly when several have elements ready).
     /// <para>
-    /// '''Emits when''' one of the inputs has an element available
+    /// Emits when one of the inputs has an element available
     /// </para>
-    /// '''Backpressures when''' downstream backpressures
+    /// Backpressures when downstream backpressures
     /// <para>
-    /// '''Completes when''' all upstreams complete
+    /// Completes when all upstreams complete
     /// </para>
-    /// '''Cancels when''' downstream cancels
+    /// Cancels when downstream cancels
     /// </summary>
     public class Merge<TIn, TOut> : GraphStage<UniformFanInShape<TIn, TOut>> where TIn : TOut
     {
@@ -129,13 +137,13 @@ namespace Akka.Streams.Dsl
     /// Merge several streams, taking elements as they arrive from input streams
     /// (picking randomly when several have elements ready).
     /// <para>
-    /// '''Emits when''' one of the inputs has an element available
+    /// Emits when one of the inputs has an element available
     /// </para>
-    /// '''Backpressures when''' downstream backpressures
+    /// Backpressures when downstream backpressures
     /// <para>
-    /// '''Completes when''' all upstreams complete
+    /// Completes when all upstreams complete
     /// </para>
-    /// '''Cancels when''' downstream cancels
+    /// Cancels when downstream cancels
     /// </summary>
     public sealed class Merge<T> : Merge<T, T>
     {
@@ -148,19 +156,16 @@ namespace Akka.Streams.Dsl
     /// Merge several streams, taking elements as they arrive from input streams
     /// (picking from preferred when several have elements ready).
     /// 
-    /// A <see cref="MergePreferred{T}"/> has one `out` port, one `preferred` input port and 0 or more secondary `in` ports.
+    /// A <see cref="MergePreferred{T}"/> has one <see cref="Out"/> port, one <see cref="Preferred"/> input port and 0 or more secondary <see cref="In"/> ports.
     /// <para>
-    /// '''Emits when''' one of the inputs has an element available, preferring
+    /// Emits when one of the inputs has an element available, preferring
     /// a specified input if multiple have elements available
     /// </para>
-    /// '''Backpressures when''' downstream backpressures
+    /// Backpressures when downstream backpressures
     /// <para>
-    /// '''Completes when''' all upstreams complete (eagerComplete=false) or one upstream completes (eagerComplete=true)
+    /// Completes when all upstreams complete (eagerComplete=false) or one upstream completes (eagerComplete=true)
     /// </para>
-    /// '''Cancels when''' downstream cancels
-    /// <para>
-    /// A `Broadcast` has one `in` port and 2 or more `out` ports.
-    /// </para>
+    /// Cancels when downstream cancels
     /// </summary>
     public sealed class MergePreferred<T> : GraphStage<MergePreferred<T>.MergePreferredShape>
     {
@@ -312,13 +317,13 @@ namespace Akka.Streams.Dsl
     /// Interleave represents deterministic merge which takes N elements per input stream,
     /// in-order of inputs, emits them downstream and then cycles/"wraps-around" the inputs.
     /// <para>
-    /// '''Emits when''' element is available from current input (depending on phase)
+    /// Emits when element is available from current input (depending on phase)
     /// </para>
-    /// '''Backpressures when''' downstream backpressures
+    /// Backpressures when downstream backpressures
     /// <para>
-    /// '''Completes when''' all upstreams complete (eagerComplete=false) or one upstream completes (eagerComplete=true)
+    /// Completes when all upstreams complete (eagerComplete=false) or one upstream completes (eagerComplete=true)
     /// </para>
-    /// '''Cancels when''' downstream cancels
+    /// Cancels when downstream cancels
     /// </summary> 
     public sealed class Interleave<TIn, TOut> : GraphStage<UniformFanInShape<TIn, TOut>> where TIn : TOut
     {
@@ -441,13 +446,13 @@ namespace Akka.Streams.Dsl
     /// <summary>
     /// Merge two pre-sorted streams such that the resulting stream is sorted.
     /// <para>
-    /// '''Emits when''' both inputs have an element available
+    /// Emits when both inputs have an element available
     /// </para>
-    /// '''Backpressures when''' downstream backpressures
+    /// Backpressures when downstream backpressures
     /// <para>
-    /// '''Completes when''' all upstreams complete
+    /// Completes when all upstreams complete
     /// </para>
-    /// '''Cancels when''' downstream cancels
+    /// Cancels when downstream cancels
     /// </summary>
     public sealed class MergeSorted<T> : GraphStage<FanInShape<T, T, T>>
     {
@@ -545,13 +550,13 @@ namespace Akka.Streams.Dsl
     /// Fan-out the stream to several streams emitting each incoming upstream element to all downstream consumers.
     /// It will not shut down until the subscriptions for at least two downstream subscribers have been established.
     /// <para>
-    /// '''Emits when''' all of the outputs stops backpressuring and there is an input element available
+    /// Emits when all of the outputs stops backpressuring and there is an input element available
     /// </para>
-    /// '''Backpressures when''' any of the outputs backpressure
+    /// Backpressures when any of the outputs backpressure
     /// <para>
-    /// '''Completes when''' upstream completes
+    /// Completes when upstream completes
     /// </para>
-    /// '''Cancels when''' If eagerCancel is enabled: when any downstream cancels; otherwise: when all downstreams cancel
+    /// Cancels when If eagerCancel is enabled: when any downstream cancels; otherwise: when all downstreams cancel
     /// </summary>
     public sealed class Broadcast<T> : GraphStage<UniformFanOutShape<T, T>>
     {
@@ -660,13 +665,13 @@ namespace Akka.Streams.Dsl
     /// Fan-out the stream to several streams. emitting an incoming upstream element to one downstream consumer according
     /// to the partitioner function applied to the element
     /// <para>
-    /// '''Emits when''' an element is available from the input and the chosen output has demand
+    /// Emits when an element is available from the input and the chosen output has demand
     /// </para>
-    /// '''Backpressures when''' the currently chosen output back-pressures
+    /// Backpressures when the currently chosen output back-pressures
     /// <para>
-    /// '''Completes when''' upstream completes and no output is pending
+    /// Completes when upstream completes and no output is pending
     /// </para>
-    /// '''Cancels when''' when all downstreams cancel
+    /// Cancels when when all downstreams cancel
     /// </summary>
     public sealed class Partition<T> : GraphStage<UniformFanOutShape<T, T>>
     {
@@ -796,13 +801,13 @@ namespace Akka.Streams.Dsl
     /// 
     /// A <see cref="Balance{T}"/> has one <see cref="In"/> port and 2 or more <see cref="Out"/> ports.
     /// <para>
-    /// '''Emits when''' any of the outputs stops backpressuring; emits the element to the first available output
+    /// Emits when any of the outputs stops backpressuring; emits the element to the first available output
     /// </para>
-    /// '''Backpressures when''' all of the outputs backpressure
+    /// Backpressures when all of the outputs backpressure
     /// <para>
-    /// '''Completes when''' upstream completes
+    /// Completes when upstream completes
     /// </para>
-    /// '''Cancels when''' all downstreams cancel
+    /// Cancels when all downstreams cancel
     /// </summary>
     public sealed class Balance<T> : GraphStage<UniformFanOutShape<T, T>>
     {
@@ -904,15 +909,15 @@ namespace Akka.Streams.Dsl
     /// <summary>
     /// Combine the elements of 2 streams into a stream of tuples.
     /// 
-    /// A <see cref="Zip{T1,T2}"/> has a `left` and a `right` input port and one `out` port
+    /// A <see cref="Zip{T1,T2}"/> has a left and a right input port and one out port
     /// <para>
-    /// '''Emits when''' all of the inputs has an element available
+    /// Emits when all of the inputs has an element available
     /// </para>
-    /// '''Backpressures when''' downstream backpressures
+    /// Backpressures when downstream backpressures
     /// <para>
-    /// '''Completes when''' any upstream completes
+    /// Completes when any upstream completes
     /// </para>
-    /// '''Cancels when''' downstream cancels
+    /// Cancels when downstream cancels
     /// </summary>
     public sealed class Zip<T1, T2> : ZipWith<T1, T2, Tuple<T1, T2>>
     {
@@ -924,13 +929,13 @@ namespace Akka.Streams.Dsl
     /// <summary>
     /// Combine the elements of multiple streams into a stream of combined elements using a combiner function.
     /// <para>
-    /// '''Emits when''' all of the inputs has an element available
+    /// Emits when all of the inputs has an element available
     /// </para>
-    /// '''Backpressures when''' downstream backpressures
+    /// Backpressures when downstream backpressures
     /// <para>
-    /// '''Completes when''' any upstream completes
+    /// Completes when any upstream completes
     /// </para>
-    /// '''Cancels when''' downstream cancels
+    /// Cancels when downstream cancels
     /// </summary>
     public sealed partial class ZipWith
     {
@@ -941,15 +946,15 @@ namespace Akka.Streams.Dsl
     /// <summary>
     /// Takes a stream of pair elements and splits each pair to two output streams.
     /// 
-    /// An <see cref="UnZip{T1,T2}"/> has one `in` port and one `left` and one `right` output port.
+    /// An <see cref="UnZip{T1,T2}"/> has one in port and one left and one right output port.
     /// <para>
-    /// '''Emits when''' all of the outputs stops backpressuring and there is an input element available
+    /// Emits when all of the outputs stops backpressuring and there is an input element available
     /// </para>
-    /// '''Backpressures when''' any of the outputs backpressures
+    /// Backpressures when any of the outputs backpressures
     /// <para>
-    /// '''Completes when''' upstream completes
+    /// Completes when upstream completes
     /// </para>
-    /// '''Cancels when''' any downstream cancels
+    /// Cancels when any downstream cancels
     /// </summary>
     public sealed class UnZip<T1, T2> : UnzipWith<KeyValuePair<T1, T2>, T1, T2>
     {
@@ -961,13 +966,13 @@ namespace Akka.Streams.Dsl
     /// <summary>
     /// Transforms each element of input stream into multiple streams using a splitter function.
     /// <para>
-    /// '''Emits when''' all of the outputs stops backpressuring and there is an input element available
+    /// Emits when all of the outputs stops backpressuring and there is an input element available
     /// </para>
-    /// '''Backpressures when''' any of the outputs backpressures
+    /// Backpressures when any of the outputs backpressures
     /// <para>
-    /// '''Completes when''' upstream completes
+    /// Completes when upstream completes
     /// </para>
-    /// '''Cancels when''' any downstream cancels
+    /// Cancels when any downstream cancels
     /// </summary>
     public partial class UnzipWith
     {
@@ -988,15 +993,15 @@ namespace Akka.Streams.Dsl
     /// by first emitting all of the elements from the first stream and then emitting
     /// all of the elements from the second stream.
     /// 
-    /// A <see cref="Concat{T,TMat}"/> has one `first` port, one `second` port and one `out` port.
+    /// A <see cref="Concat{T,TMat}"/> has one multiple <see cref="In"/> ports and one <see cref="Out"/> port.
     /// <para>
-    /// '''Emits when''' the current stream has an element available; if the current input completes, it tries the next one
+    /// Emits when the current stream has an element available; if the current input completes, it tries the next one
     /// </para>
-    /// '''Backpressures when''' downstream backpressures
+    /// Backpressures when downstream backpressures
     /// <para>
-    /// '''Completes when''' all upstreams complete
+    /// Completes when all upstreams complete
     /// </para>
-    /// '''Cancels when''' downstream cancels
+    /// Cancels when downstream cancels
     /// </summary>
     public class Concat<TIn, TOut> : GraphStage<UniformFanInShape<TIn, TOut>> where TIn : TOut
     {

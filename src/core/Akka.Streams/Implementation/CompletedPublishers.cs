@@ -1,4 +1,11 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="CompletedPublishers.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Streams.Util;
@@ -8,6 +15,7 @@ namespace Akka.Streams.Implementation
     internal sealed class EmptyPublisher<T> : IPublisher<T>
     {
         public static readonly IPublisher<T> Instance = new EmptyPublisher<T>();
+
         private EmptyPublisher() { }
 
         public void Subscribe(ISubscriber<T> subscriber)
@@ -25,15 +33,9 @@ namespace Akka.Streams.Implementation
             }
         }
 
-        public override string ToString()
-        {
-            return "already-completed-publisher";
-        }
+        public override string ToString() => "already-completed-publisher";
 
-        void IPublisher.Subscribe(ISubscriber subscriber)
-        {
-            Subscribe((ISubscriber<T>)subscriber);
-        }
+        void IPublisher.Subscribe(ISubscriber subscriber) => Subscribe((ISubscriber<T>)subscriber);
     }
 
     internal sealed class ErrorPublisher<T> : IPublisher<T>
@@ -63,15 +65,9 @@ namespace Akka.Streams.Implementation
             }
         }
 
-        public override string ToString()
-        {
-            return Name;
-        }
+        public override string ToString() => Name;
 
-        void IPublisher.Subscribe(ISubscriber subscriber)
-        {
-            Subscribe((ISubscriber<T>)subscriber);
-        }
+        void IPublisher.Subscribe(ISubscriber subscriber) => Subscribe((ISubscriber<T>)subscriber);
     }
 
     internal sealed class MaybePublisher<T> : IPublisher<T>
@@ -80,7 +76,7 @@ namespace Akka.Streams.Implementation
         {
             private readonly ISubscriber<T> _subscriber;
             private readonly TaskCompletionSource<T> _promise;
-            private bool _done = false;
+            private bool _done;
 
             public MaybeSubscription(ISubscriber<T> subscriber, TaskCompletionSource<T> promise)
             {
@@ -90,7 +86,8 @@ namespace Akka.Streams.Implementation
 
             public void Request(long n)
             {
-                if (n < 1) ReactiveStreamsCompliance.RejectDueToNonPositiveDemand(_subscriber);
+                if (n < 1)
+                    ReactiveStreamsCompliance.RejectDueToNonPositiveDemand(_subscriber);
                 if (!_done)
                 {
                     _done = true;
@@ -102,9 +99,7 @@ namespace Akka.Streams.Implementation
                             ReactiveStreamsCompliance.TryOnComplete(_subscriber);
                         }
                         else
-                        {
                             ReactiveStreamsCompliance.TryOnComplete(_subscriber);
-                        }
                     }, TaskContinuationOptions.OnlyOnRanToCompletion);
                 }
             }
@@ -143,20 +138,15 @@ namespace Akka.Streams.Implementation
             }
         }
 
-        void IPublisher.Subscribe(ISubscriber subscriber)
-        {
-            Subscribe((ISubscriber<T>)subscriber);
-        }
+        void IPublisher.Subscribe(ISubscriber subscriber) => Subscribe((ISubscriber<T>)subscriber);
 
-        public override string ToString()
-        {
-            return Name;
-        }
+        public override string ToString() => Name;
     }
 
     internal sealed class CancelledSubscription : ISubscription
     {
         public static readonly CancelledSubscription Instance = new CancelledSubscription();
+
         private CancelledSubscription() { }
 
         public void Request(long n) { }
@@ -166,10 +156,7 @@ namespace Akka.Streams.Implementation
 
     internal sealed class CancellingSubscriber<T> : ISubscriber<T>
     {
-        public void OnSubscribe(ISubscription subscription)
-        {
-            subscription.Cancel();
-        }
+        public void OnSubscribe(ISubscription subscription) => subscription.Cancel();
         public void OnNext(T element) { }
         public void OnNext(object element) { }
         public void OnError(Exception cause) { }
@@ -179,6 +166,7 @@ namespace Akka.Streams.Implementation
     internal sealed class RejectAdditionalSubscribers<T> : IPublisher<T>
     {
         public static readonly IPublisher<T> Instance = new RejectAdditionalSubscribers<T>();
+
         private RejectAdditionalSubscribers() { }
 
         public void Subscribe(ISubscriber<T> subscriber)
@@ -194,14 +182,8 @@ namespace Akka.Streams.Implementation
             }
         }
 
-        void IPublisher.Subscribe(ISubscriber subscriber)
-        {
-            Subscribe((ISubscriber<T>)subscriber);
-        }
+        void IPublisher.Subscribe(ISubscriber subscriber) => Subscribe((ISubscriber<T>)subscriber);
 
-        public override string ToString()
-        {
-            return "already-subscribed-publisher";
-        }
+        public override string ToString() => "already-subscribed-publisher";
     }
 }

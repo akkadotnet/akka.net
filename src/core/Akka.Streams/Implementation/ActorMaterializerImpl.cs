@@ -1,4 +1,11 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="ActorMaterializerImpl.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -91,15 +98,10 @@ namespace Akka.Streams.Implementation
                 return Unit.Instance;
             }
 
-            private string StageName(Attributes attr)
-            {
-                return $"{_flowName}-{_nextId++}-{attr.GetNameOrDefault()}";
-            }
+            private string StageName(Attributes attr) => $"{_flowName}-{_nextId++}-{attr.GetNameOrDefault()}";
 
             private MaterializationContext CreateMaterializationContext(Attributes effectiveAttributes)
-            {
-                return new MaterializationContext(_materializer, effectiveAttributes, StageName(effectiveAttributes));
-            }
+                => new MaterializationContext(_materializer, effectiveAttributes, StageName(effectiveAttributes));
 
             private void MaterializeGraph(GraphModule graph, Attributes effectiveAttributes, IDictionary<IModule, object> materializedValues)
             {
@@ -149,11 +151,9 @@ namespace Akka.Streams.Implementation
                     materialized = t.Item2;
                     return t.Item1;
                 }
-                else
-                {
-                    var props = ActorProcessorFactory.Props(_materializer, op, effectiveAttributes, out materialized);
-                    return ActorProcessorFactory.Create<TIn, TOut>(_materializer.ActorOf(props, StageName(effectiveAttributes), settings.Dispatcher));
-                }
+
+                var props = ActorProcessorFactory.Props(_materializer, op, effectiveAttributes, out materialized);
+                return ActorProcessorFactory.Create<TIn, TOut>(_materializer.ActorOf(props, StageName(effectiveAttributes), settings.Dispatcher));
             }
         }
 
@@ -191,14 +191,9 @@ namespace Akka.Streams.Implementation
         public override ILoggingAdapter Logger => _logger ?? (_logger = GetLogger());
 
         public override IMaterializer WithNamePrefix(string name)
-        {
-            return new ActorMaterializerImpl(_system, _settings, _dispatchers, _supervisor, _haveShutDown, _flowNames.Copy(name));
-        }
+            => new ActorMaterializerImpl(_system, _settings, _dispatchers, _supervisor, _haveShutDown, _flowNames.Copy(name));
 
-        private string CreateFlowName()
-        {
-            return _flowNames.Next();
-        }
+        private string CreateFlowName() => _flowNames.Next();
 
         private Attributes InitialAttributes =>
             Attributes.CreateInputBuffer(_settings.InitialInputBufferSize, _settings.MaxInputBufferSize)
@@ -214,26 +209,21 @@ namespace Akka.Streams.Implementation
                     var inputBuffer = (Attributes.InputBuffer)attribute;
                     return settings.WithInputBuffer(inputBuffer.Initial, inputBuffer.Max);
                 }
-                if (attribute is ActorAttributes.Dispatcher) return settings.WithDispatcher(((ActorAttributes.Dispatcher)attribute).Name);
-                if (attribute is ActorAttributes.SupervisionStrategy) return settings.WithSupervisionStrategy(((ActorAttributes.SupervisionStrategy)attribute).Decider);
+                if (attribute is ActorAttributes.Dispatcher)
+                    return settings.WithDispatcher(((ActorAttributes.Dispatcher)attribute).Name);
+                if (attribute is ActorAttributes.SupervisionStrategy)
+                    return settings.WithSupervisionStrategy(((ActorAttributes.SupervisionStrategy)attribute).Decider);
                 return settings;
             });
         }
 
         public override ICancelable ScheduleOnce(TimeSpan delay, Action action)
-        {
-            return _system.Scheduler.Advanced.ScheduleOnceCancelable(delay, action);
-        }
+            => _system.Scheduler.Advanced.ScheduleOnceCancelable(delay, action);
 
         public override ICancelable ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action)
-        {
-            return _system.Scheduler.Advanced.ScheduleRepeatedlyCancelable(initialDelay, interval, action);
-        }
+            => _system.Scheduler.Advanced.ScheduleRepeatedlyCancelable(initialDelay, interval, action);
 
-        public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable)
-        {
-            return Materialize(runnable, null);
-        }
+        public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable) => Materialize(runnable, null);
 
         internal TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser)
         {
@@ -244,7 +234,8 @@ namespace Akka.Streams.Implementation
             if (_haveShutDown.Value)
                 throw new IllegalStateException("Attempted to call Materialize() after the ActorMaterializer has been shut down.");
 
-            if (StreamLayout.IsDebug) StreamLayout.Validate(runnableGraph.Module);
+            if (StreamLayout.IsDebug)
+                StreamLayout.Validate(runnableGraph.Module);
 
             var session = new ActorMaterializerSession(this, runnableGraph.Module, InitialAttributes, subFlowFuser);
 
@@ -257,7 +248,8 @@ namespace Akka.Streams.Implementation
 
         public override void Shutdown()
         {
-            if (_haveShutDown.CompareAndSet(false, true)) Supervisor.Tell(PoisonPill.Instance);
+            if (_haveShutDown.CompareAndSet(false, true))
+                Supervisor.Tell(PoisonPill.Instance);
         }
 
         protected internal override IActorRef ActorOf(MaterializationContext context, Props props)
@@ -289,10 +281,7 @@ namespace Akka.Streams.Implementation
             throw new IllegalStateException($"Stream supervisor must be a local actor, was [{Supervisor.GetType()}]");
         }
 
-        private ILoggingAdapter GetLogger()
-        {
-            return _system.Log;
-        }
+        private ILoggingAdapter GetLogger() => _system.Log;
     }
 
     internal class SubFusingActorMaterializerImpl : IMaterializer
@@ -307,24 +296,16 @@ namespace Akka.Streams.Implementation
         }
 
         public IMaterializer WithNamePrefix(string namePrefix)
-        {
-            return new SubFusingActorMaterializerImpl((ActorMaterializerImpl)_delegateMaterializer.WithNamePrefix(namePrefix), _registerShell);
-        }
+            => new SubFusingActorMaterializerImpl((ActorMaterializerImpl) _delegateMaterializer.WithNamePrefix(namePrefix), _registerShell);
 
         public TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable)
-        {
-            return _delegateMaterializer.Materialize(runnable, _registerShell);
-        }
+            => _delegateMaterializer.Materialize(runnable, _registerShell);
 
         public ICancelable ScheduleOnce(TimeSpan delay, Action action)
-        {
-            return _delegateMaterializer.ScheduleOnce(delay, action);
-        }
+            => _delegateMaterializer.ScheduleOnce(delay, action);
 
         public ICancelable ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action)
-        {
-            return _delegateMaterializer.ScheduleRepeatedly(initialDelay, interval, action);
-        }
+            => _delegateMaterializer.ScheduleRepeatedly(initialDelay, interval, action);
 
         public MessageDispatcher ExecutionContext => _delegateMaterializer.ExecutionContext;
     }
@@ -332,16 +313,11 @@ namespace Akka.Streams.Implementation
     internal class FlowNameCounter : ExtensionIdProvider<FlowNameCounter>, IExtension
     {
         public static FlowNameCounter Instance(ActorSystem system)
-        {
-            return system.WithExtension<FlowNameCounter, FlowNameCounter>();
-        }
+            => system.WithExtension<FlowNameCounter, FlowNameCounter>();
 
         public readonly AtomicCounterLong Counter = new AtomicCounterLong(0);
 
-        public override FlowNameCounter CreateExtension(ExtendedActorSystem system)
-        {
-            return new FlowNameCounter();
-        }
+        public override FlowNameCounter CreateExtension(ExtendedActorSystem system) => new FlowNameCounter();
     }
     
     public class StreamSupervisor : ActorBase
@@ -391,14 +367,9 @@ namespace Akka.Streams.Implementation
         #endregion
 
         public static Props Props(ActorMaterializerSettings settings, AtomicBoolean haveShutdown)
-        {
-            return Actor.Props.Create(() => new StreamSupervisor(settings, haveShutdown)).WithDeploy(Deploy.Local);
-        }
+            => Actor.Props.Create(() => new StreamSupervisor(settings, haveShutdown)).WithDeploy(Deploy.Local);
 
-        public static string NextName()
-        {
-            return ActorName.Next();
-        }
+        public static string NextName() => ActorName.Next();
 
         private static readonly EnumerableActorName ActorName = new EnumerableActorNameImpl("StreamSupervisor", new AtomicCounterLong(0L));
 
@@ -411,10 +382,7 @@ namespace Akka.Streams.Implementation
             HaveShutdown = haveShutdown;
         }
 
-        protected override SupervisorStrategy SupervisorStrategy()
-        {
-            return Actor.SupervisorStrategy.StoppingStrategy;
-        }
+        protected override SupervisorStrategy SupervisorStrategy() => Actor.SupervisorStrategy.StoppingStrategy;
 
         protected override bool Receive(object message)
         {
@@ -424,9 +392,7 @@ namespace Akka.Streams.Implementation
                 Sender.Tell(Context.ActorOf(materialize.Props, materialize.Name));
             }
             else if (message is GetChildren)
-            {
                 Sender.Tell(new Children(Context.GetChildren().ToImmutableHashSet()));
-            }
             else if (message is StopChildren)
             {
                 foreach (var child in Context.GetChildren())
@@ -434,14 +400,12 @@ namespace Akka.Streams.Implementation
 
                 Sender.Tell(StoppedChildren.Instance);
             }
-            else return false;
+            else
+                return false;
             return true;
         }
 
-        protected override void PostStop()
-        {
-            HaveShutdown.Value = true;
-        }
+        protected override void PostStop() => HaveShutdown.Value = true;
     }
 
     internal static class ActorProcessorFactory
@@ -452,7 +416,7 @@ namespace Akka.Streams.Implementation
             // USE THIS TO AVOID CLOSING OVER THE MATERIALIZER BELOW
             // Also, otherwise the attributes will not affect the settings properly!
             var settings = materializer.EffectiveSettings(attr);    
-            Props result = null;
+            Props result;
             materialized = null;
 
             if (op is IGroupBy)

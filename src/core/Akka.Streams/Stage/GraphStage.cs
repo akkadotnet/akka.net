@@ -1,4 +1,11 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="GraphStage.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -57,25 +64,13 @@ namespace Akka.Streams.Stage
 
             public IModule Module { get; }
 
-            public IGraph<TShape, TMaterialized> WithAttributes(Attributes attributes)
-            {
-                return new Graph(Shape, Module, attributes);
-            }
+            public IGraph<TShape, TMaterialized> WithAttributes(Attributes attributes) => new Graph(Shape, Module, attributes);
 
-            public IGraph<TShape, TMaterialized> AddAttributes(Attributes attributes)
-            {
-                return WithAttributes(Module.Attributes.And(attributes));
-            }
+            public IGraph<TShape, TMaterialized> AddAttributes(Attributes attributes) => WithAttributes(Module.Attributes.And(attributes));
 
-            public IGraph<TShape, TMaterialized> Named(string name)
-            {
-                return AddAttributes(Attributes.CreateName(name));
-            }
+            public IGraph<TShape, TMaterialized> Named(string name) => AddAttributes(Attributes.CreateName(name));
 
-            public IGraph<TShape, TMaterialized> Async()
-            {
-                return AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
-            }
+            public IGraph<TShape, TMaterialized> Async() => AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
         }
 
         #endregion
@@ -94,42 +89,28 @@ namespace Akka.Streams.Stage
         protected virtual Attributes InitialAttributes => Attributes.None;
         public abstract TShape Shape { get; }
 
-        public IGraph<TShape, TMaterialized> WithAttributes(Attributes attributes)
-        {
-            return new Graph(Shape, Module, attributes);
-        }
+        public IGraph<TShape, TMaterialized> WithAttributes(Attributes attributes) => new Graph(Shape, Module, attributes);
 
         public abstract ILogicAndMaterializedValue<TMaterialized> CreateLogicAndMaterializedValue(Attributes inheritedAttributes);
 
         public IModule Module => _module.Value;
 
-        public IGraph<TShape, TMaterialized> AddAttributes(Attributes attributes)
-        {
-            return WithAttributes(Module.Attributes.And(attributes));
-        }
+        public IGraph<TShape, TMaterialized> AddAttributes(Attributes attributes) => WithAttributes(Module.Attributes.And(attributes));
 
-        public IGraph<TShape, TMaterialized> Named(string name)
-        {
-            return AddAttributes(Attributes.CreateName(name));
-        }
+        public IGraph<TShape, TMaterialized> Named(string name) => AddAttributes(Attributes.CreateName(name));
 
-        public IGraph<TShape, TMaterialized> Async()
-        {
-            return AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
-        }
+        public IGraph<TShape, TMaterialized> Async() => AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
     }
 
     /// <summary>
-    /// A GraphStage represents a reusable graph stream processing stage. A GraphStage consists of a [[Shape]] which describes
-    /// its input and output ports and a factory function that creates a [[GraphStageLogic]] which implements the processing
+    /// A GraphStage represents a reusable graph stream processing stage. A GraphStage consists of a <see cref="Shape"/> which describes
+    /// its input and output ports and a factory function that creates a <see cref="GraphStageLogic"/> which implements the processing
     /// logic that ties the ports together.
     /// </summary>
     public abstract class GraphStage<TShape> : GraphStageWithMaterializedValue<TShape, Unit> where TShape : Shape
     {
         public sealed override ILogicAndMaterializedValue<Unit> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
-        {
-            return new LogicAndMaterializedValue<Unit>(CreateLogic(inheritedAttributes), Unit.Instance);
-        }
+            => new LogicAndMaterializedValue<Unit>(CreateLogic(inheritedAttributes), Unit.Instance);
 
         protected abstract GraphStageLogic CreateLogic(Attributes inheritedAttributes);
     }
@@ -196,12 +177,10 @@ namespace Akka.Streams.Stage
         /// adding the new timer.
         /// </summary>
         protected internal void ScheduleRepeatedly(object timerKey, TimeSpan interval)
-        {
-            ScheduleRepeatedly(timerKey, interval, interval);
-        }
+            => ScheduleRepeatedly(timerKey, interval, interval);
 
         /// <summary>
-        /// Schedule timer to call [[#onTimer]] after given delay.
+        /// Schedule timer to call <see cref="OnTimer"/> after given delay.
         /// Any existing timer with the same key will automatically be canceled before
         /// adding the new timer.
         /// </summary>
@@ -262,7 +241,7 @@ namespace Akka.Streams.Stage
             public Scheduled(object timerKey, int timerId, bool isRepeating)
             {
                 if (timerKey == null)
-                    throw new ArgumentNullException("timerKey", "Timer key cannot be null");
+                    throw new ArgumentNullException(nameof(timerKey), "Timer key cannot be null");
 
                 TimerKey = timerKey;
                 TimerId = timerId;
@@ -321,7 +300,8 @@ namespace Akka.Streams.Stage
             public override void OnPush()
             {
                 var element = _logic.Grab<T>(_inlet);
-                if (_n == 1) _logic.SetHandler(_inlet, Previous);
+                if (_n == 1)
+                    _logic.SetHandler(_inlet, Previous);
                 else
                 {
                     _n--;
@@ -374,8 +354,10 @@ namespace Akka.Streams.Stage
                     else
                     {
                         var next = Dequeue();
-                        if (next is EmittingCompletion) Logic.Complete(Out);
-                        else Logic.SetHandler(Out, next);
+                        if (next is EmittingCompletion)
+                            Logic.Complete(Out);
+                        else
+                            Logic.SetHandler(Out, next);
                     }
                 }
             }
@@ -409,7 +391,7 @@ namespace Akka.Streams.Stage
             }
 
             /// <summary>
-            /// Dequeue `this` from the head of the queue, meaning that this object will
+            /// Dequeue this from the head of the queue, meaning that this object will
             /// not be retained (setHandler will install the followUp). For this reason
             /// the followUpsTail knowledge needs to be passed on to the next runner.
             /// </summary>
@@ -420,10 +402,7 @@ namespace Akka.Streams.Stage
                 return result;
             }
 
-            public override void OnDownstreamFinish()
-            {
-                Previous.OnDownstreamFinish();
-            }
+            public override void OnDownstreamFinish() => Previous.OnDownstreamFinish();
         }
 
         private sealed class EmittingSingle<T> : Emitting
@@ -453,7 +432,8 @@ namespace Akka.Streams.Stage
             public override void OnPull()
             {
                 Logic.Push((Outlet<T>)Out, _enumerator.Current);
-                if (!_enumerator.MoveNext()) FollowUp();
+                if (!_enumerator.MoveNext())
+                    FollowUp();
             }
         }
 
@@ -461,10 +441,7 @@ namespace Akka.Streams.Stage
         {
             public EmittingCompletion(Outlet @out, IOutHandler previous, GraphStageLogic logic) : base(@out, previous, DoNothing, logic) { }
 
-            public override void OnPull()
-            {
-                Logic.Complete(Out);
-            }
+            public override void OnPull() => Logic.Complete(Out);
         }
 
         private sealed class PassAlongHandler<TOut, TIn> : InHandler where TIn : TOut
@@ -485,24 +462,20 @@ namespace Akka.Streams.Stage
                 _doFail = doFail;
             }
 
-            public void Apply()
-            {
-                _logic.TryPull(From);
-            }
+            public void Apply() => _logic.TryPull(From);
 
-            public override void OnPush()
-            {
-                _logic.Emit(To, _logic.Grab<TOut>(From), Apply);
-            }
+            public override void OnPush() => _logic.Emit(To, _logic.Grab<TOut>(From), Apply);
 
             public override void OnUpstreamFinish()
             {
-                if (_doFinish) _logic.CompleteStage();
+                if (_doFinish)
+                    _logic.CompleteStage();
             }
 
             public override void OnUpstreamFailure(Exception e)
             {
-                if (_doFail) _logic.FailStage(e);
+                if (_doFail)
+                    _logic.FailStage(e);
             }
         }
 
@@ -519,21 +492,22 @@ namespace Akka.Streams.Stage
                 _onUpstreamFailure = onUpstreamFailure;
             }
 
-            public override void OnPush()
-            {
-                _onPush();
-            }
+            public override void OnPush() => _onPush();
 
             public override void OnUpstreamFinish()
             {
-                if (_onUpstreamFinish != null) _onUpstreamFinish();
-                else base.OnUpstreamFinish();
+                if (_onUpstreamFinish != null)
+                    _onUpstreamFinish();
+                else
+                    base.OnUpstreamFinish();
             }
 
             public override void OnUpstreamFailure(Exception e)
             {
-                if (_onUpstreamFailure != null) _onUpstreamFailure(e);
-                else base.OnUpstreamFailure(e);
+                if (_onUpstreamFailure != null)
+                    _onUpstreamFailure(e);
+                else
+                    base.OnUpstreamFailure(e);
             }
         }
 
@@ -548,15 +522,14 @@ namespace Akka.Streams.Stage
                 _onDownstreamFinish = onDownstreamFinish;
             }
 
-            public override void OnPull()
-            {
-                _onPull();
-            }
+            public override void OnPull() => _onPull();
 
             public override void OnDownstreamFinish()
             {
-                if (_onDownstreamFinish != null) _onDownstreamFinish();
-                else base.OnDownstreamFinish();
+                if (_onDownstreamFinish != null)
+                    _onDownstreamFinish();
+                else
+                    base.OnDownstreamFinish();
             }
         }
 
@@ -578,10 +551,7 @@ namespace Akka.Streams.Stage
         /// Input handler that terminates the state upon receiving completion if the
         /// given condition holds at that time. The stage fails upon receiving a failure.
         /// </summary>
-        public static InHandler ConditionalTerminateInput(Func<bool> predicate)
-        {
-            return new ConditionalTerminateInput(predicate);
-        }
+        public static InHandler ConditionalTerminateInput(Func<bool> predicate) => new ConditionalTerminateInput(predicate);
 
         /// <summary>
         /// Input handler that does not terminate the stage upon receiving completion
@@ -605,10 +575,7 @@ namespace Akka.Streams.Stage
         /// Output handler that terminates the state upon receiving completion if the
         /// given condition holds at that time. The stage fails upon receiving a failure.
         /// </summary>
-        public static OutHandler ConditionalTerminateOutput(Func<bool> predicate)
-        {
-            return new ConditionalTerminateOutput(predicate);
-        }
+        public static OutHandler ConditionalTerminateOutput(Func<bool> predicate) => new ConditionalTerminateOutput(predicate);
 
         public readonly int InCount;
         public readonly int OutCount;
@@ -651,20 +618,21 @@ namespace Akka.Streams.Stage
         /// within the same actor as the current GraphStage(if fusing is available). This materializer 
         /// must not be shared outside of the GraphStage.
         /// </summary>
-        protected IMaterializer SubFusingMaterializer { get { return Interpreter.SubFusingMaterializer; } }
+        protected IMaterializer SubFusingMaterializer => Interpreter.SubFusingMaterializer;
 
         /// <summary>
         /// If this method returns true when all ports had been closed then the stage is not stopped 
         /// until <see cref="CompleteStage"/> or <see cref="FailStage"/> are explicitly called
         /// </summary>
-        public virtual bool KeepGoingAfterAllPortsClosed { get { return false; } }
+        public virtual bool KeepGoingAfterAllPortsClosed => false;
 
         private StageActorRef _stageActorRef;
         public StageActorRef StageActorRef
         {
             get
             {
-                if (_stageActorRef == null) throw StageActorRefNotInitializedException.Instance;
+                if (_stageActorRef == null)
+                    throw StageActorRefNotInitializedException.Instance;
                 return _stageActorRef;
             }
         }
@@ -683,17 +651,16 @@ namespace Akka.Streams.Stage
         /// </summary>
         protected internal void SetHandler(Inlet inlet, Action onPush, Action onUpstreamFinish = null, Action<Exception> onUpstreamFailure = null)
         {
-            if (onPush == null) throw new ArgumentNullException("onPush", "GraphStageLogic onPush handler must be provided");
+            if (onPush == null)
+                throw new ArgumentNullException(nameof(onPush), "GraphStageLogic onPush handler must be provided");
+
             SetHandler(inlet, new LambdaInHandler(onPush, onUpstreamFinish, onUpstreamFailure));
         }
 
         /// <summary>
         /// Retrieves the current callback for the events on the given <see cref="Inlet{T}"/>
         /// </summary>
-        protected IInHandler GetHandler(Inlet inlet)
-        {
-            return (IInHandler)Handlers[inlet.Id];
-        }
+        protected IInHandler GetHandler(Inlet inlet) => (IInHandler)Handlers[inlet.Id];
 
         /// <summary>
         /// Assigns callbacks for the events for an <see cref="Outlet{T}"/>.
@@ -709,27 +676,19 @@ namespace Akka.Streams.Stage
         /// </summary>
         protected internal void SetHandler(Outlet outlet, Action onPull, Action onDownstreamFinish = null)
         {
-            if (onPull == null) throw new ArgumentNullException("onPull", "GraphStageLogic onPull handler must be provided");
+            if (onPull == null)
+                throw new ArgumentNullException(nameof(onPull), "GraphStageLogic onPull handler must be provided");
             SetHandler(outlet, new LambdaOutHandler(onPull, onDownstreamFinish));
         }
 
         /// <summary>
         /// Retrieves the current callback for the events on the given <see cref="Outlet{T}"/>
         /// </summary>
-        protected IOutHandler GetHandler(Outlet outlet)
-        {
-            return (IOutHandler)Handlers[outlet.Id + InCount];
-        }
+        protected IOutHandler GetHandler(Outlet outlet) => (IOutHandler)Handlers[outlet.Id + InCount];
 
-        private int GetConnection(Inlet inlet)
-        {
-            return PortToConn[inlet.Id];
-        }
+        private int GetConnection(Inlet inlet) => PortToConn[inlet.Id];
 
-        private int GetConnection(Outlet outlet)
-        {
-            return PortToConn[outlet.Id + InCount];
-        }
+        private int GetConnection(Outlet outlet) => PortToConn[outlet.Id + InCount];
 
         private IOutHandler GetNonEmittingHandler(Outlet outlet)
         {
@@ -740,70 +699,62 @@ namespace Akka.Streams.Stage
 
         /// <summary>
         /// Requests an element on the given port. Calling this method twice before an element arrived will fail.
-        /// There can only be one outstanding request at any given time.The method <see cref="HasBeenPulled{T}"/> can be used
+        /// There can only be one outstanding request at any given time.The method <see cref="HasBeenPulled"/> can be used
         /// query whether pull is allowed to be called or not.This method will also fail if the port is already closed.
         /// </summary>
         protected internal void Pull<T>(Inlet inlet)
         {
             var conn = GetConnection(inlet);
             if ((Interpreter.PortStates[conn] & (GraphInterpreter.InReady | GraphInterpreter.InClosed)) == GraphInterpreter.InReady)
-            {
                 Interpreter.Pull(conn);
-            }
             else
             {
                 // Detailed error information should not add overhead to the hot path
-                if (IsClosed(inlet)) throw new ArgumentException("Cannot pull a closed port");
-                if (HasBeenPulled(inlet)) throw new ArgumentException("Cannot pull port twice");
+                if (IsClosed(inlet))
+                    throw new ArgumentException("Cannot pull a closed port");
+                if (HasBeenPulled(inlet))
+                    throw new ArgumentException("Cannot pull port twice");
             }
         }
 
         /// <summary>
         /// Requests an element on the given port. Calling this method twice before an element arrived will fail.
-        /// There can only be one outstanding request at any given time.The method <see cref="HasBeenPulled{T}"/> can be used
+        /// There can only be one outstanding request at any given time.The method <see cref="HasBeenPulled"/> can be used
         /// query whether pull is allowed to be called or not.This method will also fail if the port is already closed.
         /// </summary>
-        protected internal void Pull<T>(Inlet<T> inlet)
-        {
-            Pull<T>((Inlet)inlet);
-        }
+        protected internal void Pull<T>(Inlet<T> inlet) => Pull<T>((Inlet)inlet);
 
         /// <summary>
         /// Requests an element on the given port unless the port is already closed.
         /// Calling this method twice before an element arrived will fail.
-        /// There can only be one outstanding request at any given time.The method <see cref="HasBeenPulled{T}"/> can be used
+        /// There can only be one outstanding request at any given time.The method <see cref="HasBeenPulled"/> can be used
         /// query whether pull is allowed to be called or not.
         /// </summary>
         protected internal void TryPull<T>(Inlet inlet)
         {
-            if (!IsClosed(inlet)) Pull<T>(inlet);
+            if (!IsClosed(inlet))
+                Pull<T>(inlet);
         }
 
         /// <summary>
         /// Requests an element on the given port unless the port is already closed.
         /// Calling this method twice before an element arrived will fail.
-        /// There can only be one outstanding request at any given time.The method <see cref="HasBeenPulled{T}"/> can be used
+        /// There can only be one outstanding request at any given time.The method <see cref="HasBeenPulled"/> can be used
         /// query whether pull is allowed to be called or not.
         /// </summary>
-        protected internal void TryPull<T>(Inlet<T> inlet)
-        {
-            TryPull<T>((Inlet)inlet);
-        }
+        protected internal void TryPull<T>(Inlet<T> inlet) => TryPull<T>((Inlet)inlet);
 
         /// <summary>
         /// Requests to stop receiving events from a given input port. Cancelling clears any ungrabbed elements from the port.
         /// </summary>
-        protected void Cancel(Inlet inlet)
-        {
-            Interpreter.Cancel(GetConnection(inlet));
-        }
+        protected void Cancel(Inlet inlet) => Interpreter.Cancel(GetConnection(inlet));
 
         /// <summary>
         /// Once the callback <see cref="InHandler.OnPush"/> for an input port has been invoked, the element that has been pushed
-        /// can be retrieved via this method. After <see cref="Grab{T}"/> has been called the port is considered to be empty, and further
-        /// calls to <see cref="Grab{T}"/> will fail until the port is pulled again and a new element is pushed as a response.
+        /// can be retrieved via this method. After <see cref="Grab{T}(Inlet)"/> has been called the port is considered to be empty, and further
+        /// calls to <see cref="Grab{T}(Inlet)"/> will fail until the port is pulled again and a new element is pushed as a response.
         /// 
-        /// The method <see cref="IsAvailable{T}"/> can be used to query if the port has an element that can be grabbed or not.
+        /// The method <see cref="IsAvailable(Inlet)"/> can be used to query if the port has an element that can be grabbed or not.
         /// </summary>
         protected internal T Grab<T>(Inlet inlet)
         {
@@ -818,7 +769,8 @@ namespace Akka.Streams.Stage
             else
             {
                 // slow path
-                if (!IsAvailable(inlet)) throw new ArgumentException("Cannot get element from already empty input port");
+                if (!IsAvailable(inlet))
+                    throw new ArgumentException("Cannot get element from already empty input port");
                 var failed = (GraphInterpreter.Failed)element;
                 element = failed.PreviousElement;
                 Interpreter.ConnectionSlots[connection] = new GraphInterpreter.Failed(failed.Reason, GraphInterpreter.Empty.Instance);
@@ -829,30 +781,25 @@ namespace Akka.Streams.Stage
 
         /// <summary>
         /// Once the callback <see cref="InHandler.OnPush"/> for an input port has been invoked, the element that has been pushed
-        /// can be retrieved via this method. After <see cref="Grab{T}"/> has been called the port is considered to be empty, and further
-        /// calls to <see cref="Grab{T}"/> will fail until the port is pulled again and a new element is pushed as a response.
+        /// can be retrieved via this method. After <see cref="Grab{T}(Inlet{T})"/> has been called the port is considered to be empty, and further
+        /// calls to <see cref="Grab{T}(Inlet{T})"/> will fail until the port is pulled again and a new element is pushed as a response.
         /// 
-        /// The method <see cref="IsAvailable{T}"/> can be used to query if the port has an element that can be grabbed or not.
+        /// The method <see cref="IsAvailable(Inlet)"/> can be used to query if the port has an element that can be grabbed or not.
         /// </summary>
-        protected internal T Grab<T>(Inlet<T> inlet)
-        {
-            return Grab<T>((Inlet)inlet);
-        }
+        protected internal T Grab<T>(Inlet<T> inlet) => Grab<T>((Inlet)inlet);
 
         /// <summary>
         /// Indicates whether there is already a pending pull for the given input port. If this method returns true 
-        /// then <see cref="IsAvailable{T}"/> must return false for that same port.
+        /// then <see cref="IsAvailable(Inlet)"/> must return false for that same port.
         /// </summary>
-        protected bool HasBeenPulled(Inlet inlet)
-        {
-            return (Interpreter.PortStates[GetConnection(inlet)] & (GraphInterpreter.InReady | GraphInterpreter.InClosed)) == 0;
-        }
+        protected bool HasBeenPulled(Inlet inlet) 
+            => (Interpreter.PortStates[GetConnection(inlet)] & (GraphInterpreter.InReady | GraphInterpreter.InClosed)) == 0;
 
         /// <summary>
-        /// Indicates whether there is an element waiting at the given input port. <see cref="Grab{T}"/> can be used to retrieve the
-        /// element. After calling <see cref="Grab{T}"/> this method will return false.
+        /// Indicates whether there is an element waiting at the given input port. <see cref="Grab{T}(Inlet{T})"/> can be used to retrieve the
+        /// element. After calling <see cref="Grab{T}(Inlet{T})"/> this method will return false.
         /// 
-        /// If this method returns true then <see cref="HasBeenPulled{T}"/> will return false for that same port.
+        /// If this method returns true then <see cref="HasBeenPulled"/> will return false for that same port.
         /// </summary>
         protected internal bool IsAvailable(Inlet inlet)
         {
@@ -864,40 +811,34 @@ namespace Akka.Streams.Stage
                 // fast path
                 return !ReferenceEquals(Interpreter.ConnectionSlots[connection], GraphInterpreter.Empty.Instance);
             }
-            else
+            
+            // slow path on failure
+            if ((Interpreter.PortStates[connection] & (GraphInterpreter.InReady | GraphInterpreter.InFailed)) ==
+                (GraphInterpreter.InReady | GraphInterpreter.InFailed))
             {
-                // slow path on failure
-                if ((Interpreter.PortStates[connection] & (GraphInterpreter.InReady | GraphInterpreter.InFailed)) ==
-                    (GraphInterpreter.InReady | GraphInterpreter.InFailed))
-                {
-                    var failed = Interpreter.ConnectionSlots[connection] as GraphInterpreter.Failed;
-                    // This can only be Empty actually (if a cancel was concurrent with a failure)
-                    return failed != null && !ReferenceEquals(failed.PreviousElement, GraphInterpreter.Empty.Instance);
-                }
-                else return false;
+                var failed = Interpreter.ConnectionSlots[connection] as GraphInterpreter.Failed;
+                // This can only be Empty actually (if a cancel was concurrent with a failure)
+                return failed != null && !ReferenceEquals(failed.PreviousElement, GraphInterpreter.Empty.Instance);
             }
+
+            return false;
         }
 
         /// <summary>
         /// Indicates whether the port has been closed. A closed port cannot be pulled.
         /// </summary>
-        protected bool IsClosed(Inlet inlet)
-        {
-            return (Interpreter.PortStates[GetConnection(inlet)] & GraphInterpreter.InClosed) != 0;
-        }
+        protected bool IsClosed(Inlet inlet) => (Interpreter.PortStates[GetConnection(inlet)] & GraphInterpreter.InClosed) != 0;
 
         /// <summary>
-        /// Emits an element through the given output port. Calling this method twice before a <see cref="Pull{T}"/> has been arrived
-        /// will fail. There can be only one outstanding push request at any given time. The method <see cref="IsAvailable{T}"/> can be
+        /// Emits an element through the given output port. Calling this method twice before a <see cref="Pull{T}(Inlet{T})"/> has been arrived
+        /// will fail. There can be only one outstanding push request at any given time. The method <see cref="IsAvailable(Inlet)"/> can be
         /// used to check if the port is ready to be pushed or not.
         /// </summary>
         protected internal void Push<T>(Outlet outlet, T element)
         {
             var connection = GetConnection(outlet);
             if ((Interpreter.PortStates[connection] & (GraphInterpreter.OutReady | GraphInterpreter.OutClosed)) == GraphInterpreter.OutReady && (element != null))
-            {
                 Interpreter.Push(connection, element);
-            }
             else
             {
                 // Detailed error information should not add overhead to the hot path
@@ -910,14 +851,11 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Controls whether this stage shall shut down when all its ports are closed, which
         /// is the default. In order to have it keep going past that point this method needs
-        /// to be called with a `true` argument before all ports are closed, and afterwards
-        /// it will not be closed until this method is called with a `false` argument or the
-        /// stage is terminated via `completeStage()` or `failStage()`.
+        /// to be called with a true argument before all ports are closed, and afterwards
+        /// it will not be closed until this method is called with a false argument or the
+        /// stage is terminated via <see cref="CompleteStage"/> or <see cref="FailStage"/>.
         /// </summary>
-        protected void SetKeepGoing(bool enabled)
-        {
-            Interpreter.SetKeepGoing(this, enabled);
-        }
+        protected void SetKeepGoing(bool enabled) => Interpreter.SetKeepGoing(this, enabled);
 
         /// <summary>
         /// Signals that there will be no more elements emitted on the given port.
@@ -935,20 +873,18 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Signals failure through the given port.
         /// </summary>
-        protected void Fail(Outlet outlet, Exception reason)
-        {
-            Interpreter.Fail(GetConnection(outlet), reason);
-        }
+        protected void Fail(Outlet outlet, Exception reason) => Interpreter.Fail(GetConnection(outlet), reason);
 
         /// <summary>
-        /// Automatically invokes <see cref="Cancel{T}"/> or <see cref="Complete{T}"/> on all the input or output ports that have been called,
+        /// Automatically invokes <see cref="Cancel"/> or <see cref="Complete"/> on all the input or output ports that have been called,
         /// then stops the stage, then <see cref="PostStop"/> is called.
         /// </summary>
         public void CompleteStage()
         {
-            for (int i = 0; i < PortToConn.Length; i++)
+            for (var i = 0; i < PortToConn.Length; i++)
             {
-                if (i < InCount) Interpreter.Cancel(PortToConn[i]);
+                if (i < InCount)
+                    Interpreter.Cancel(PortToConn[i]);
                 else
                 {
                     var handler = Handlers[i];
@@ -964,15 +900,17 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
-        /// Automatically invokes [[cancel()]] or [[fail()]] on all the input or output ports that have been called,
-        /// then stops the stage, then [[postStop()]] is called.
+        /// Automatically invokes <see cref="Cancel"/> or <see cref="Fail"/> on all the input or output ports that have been called,
+        /// then stops the stage, then <see cref="PostStop"/> is called.
         /// </summary>
         public void FailStage(Exception reason)
         {
-            for (int i = 0; i < PortToConn.Length; i++)
+            for (var i = 0; i < PortToConn.Length; i++)
             {
-                if (i < InCount) Interpreter.Cancel(PortToConn[i]);
-                else Interpreter.Fail(PortToConn[i], reason);
+                if (i < InCount)
+                    Interpreter.Cancel(PortToConn[i]);
+                else
+                    Interpreter.Fail(PortToConn[i], reason);
             }
 
             SetKeepGoing(false);
@@ -981,18 +919,14 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Return true if the given output port is ready to be pushed.
         /// </summary>
-        protected internal bool IsAvailable(Outlet outlet)
-        {
-            return (Interpreter.PortStates[GetConnection(outlet)] & (GraphInterpreter.OutReady | GraphInterpreter.OutClosed)) == GraphInterpreter.OutReady;
-        }
+        protected internal bool IsAvailable(Outlet outlet) 
+            => (Interpreter.PortStates[GetConnection(outlet)] & (GraphInterpreter.OutReady | GraphInterpreter.OutClosed)) == GraphInterpreter.OutReady;
 
         /// <summary>
         /// Indicates whether the port has been closed. A closed port cannot be pushed.
         /// </summary>
-        protected bool IsClosed(Outlet outlet)
-        {
-            return (Interpreter.PortStates[GetConnection(outlet)] & GraphInterpreter.OutClosed) != 0;
-        }
+        protected bool IsClosed(Outlet outlet) 
+            => (Interpreter.PortStates[GetConnection(outlet)] & GraphInterpreter.OutClosed) != 0;
 
         /// <summary>
         /// Read a number of elements from the given inlet and continue with the given function,
@@ -1002,8 +936,10 @@ namespace Akka.Streams.Stage
         /// </summary>
         protected void ReadMany<T>(Inlet<T> inlet, int n, Action<IEnumerable<T>> andThen, Action<IEnumerable<T>> onClose)
         {
-            if (n < 0) throw new ArgumentException("Cannot read negative number of elements");
-            if (n == 0) andThen(null);
+            if (n < 0)
+                throw new ArgumentException("Cannot read negative number of elements");
+            if (n == 0)
+                andThen(null);
             else
             {
                 var result = new T[n];
@@ -1013,7 +949,8 @@ namespace Akka.Streams.Stage
                 {
                     result[pos] = elem;
                     pos++;
-                    if (pos == n) andThen(result);
+                    if (pos == n)
+                        andThen(result);
                 };
                 Action realOnClose = () => onClose(result.Take(pos));
 
@@ -1021,7 +958,8 @@ namespace Akka.Streams.Stage
                 {
                     var element = Grab<T>(inlet);
                     result[0] = element;
-                    if (n == 1) andThen(result);
+                    if (n == 1)
+                        andThen(result);
                     else
                     {
                         pos = 1;
@@ -1033,7 +971,8 @@ namespace Akka.Streams.Stage
                 else
                 {
                     RequireNotReading(inlet);
-                    if (!HasBeenPulled(inlet)) Pull(inlet);
+                    if (!HasBeenPulled(inlet))
+                        Pull(inlet);
                     SetHandler(inlet, new Reading<T>(inlet, n, GetHandler(inlet), realAndThen, realOnClose, this));
                 }
             }
@@ -1055,14 +994,15 @@ namespace Akka.Streams.Stage
             else
             {
                 RequireNotReading(inlet);
-                if (!HasBeenPulled(inlet)) Pull(inlet);
+                if (!HasBeenPulled(inlet))
+                    Pull(inlet);
                 SetHandler(inlet, new Reading<T>(inlet, 1, GetHandler(inlet), andThen, onClose, this));
             }
         }
 
         /// <summary>
         /// Abort outstanding (suspended) reading for the given inlet, if there is any.
-        /// This will reinstall the replaced handler that was in effect before the `read`
+        /// This will reinstall the replaced handler that was in effect before the read
         /// call.
         /// </summary>
         protected void AbortReading<T>(Inlet<T> inlet)
@@ -1074,7 +1014,8 @@ namespace Akka.Streams.Stage
 
         private void RequireNotReading<T>(Inlet<T> inlet)
         {
-            if (GetHandler(inlet) is Reading<T>) throw new IllegalStateException("Already reading on inlet " + inlet);
+            if (GetHandler(inlet) is Reading<T>)
+                throw new IllegalStateException("Already reading on inlet " + inlet);
         }
 
         /// <summary>
@@ -1084,10 +1025,8 @@ namespace Akka.Streams.Stage
         /// is needed and reinstalls the current handler upon receiving an <see cref="OutHandler.OnPull"/>
         /// signal (before invoking the <paramref name="andThen"/> function).
         /// </summary>
-        internal protected void EmitMultiple<T>(Outlet<T> outlet, IEnumerable<T> elements, Action andThen)
-        {
-            EmitMultiple<T>(outlet, elements.GetEnumerator(), andThen);
-        }
+        protected internal void EmitMultiple<T>(Outlet<T> outlet, IEnumerable<T> elements, Action andThen)
+            => EmitMultiple<T>(outlet, elements.GetEnumerator(), andThen);
 
         /// <summary>
         /// Emit a sequence of elements through the given outlet, suspending execution if necessary.
@@ -1095,10 +1034,8 @@ namespace Akka.Streams.Stage
         /// is needed and reinstalls the current handler upon receiving an <see cref="OutHandler.OnPull"/>
         /// signal.
         /// </summary>
-        internal protected void EmitMultiple<T>(Outlet<T> outlet, IEnumerable<T> elements)
-        {
-            EmitMultiple<T>(outlet, elements, DoNothing);
-        }
+        protected internal void EmitMultiple<T>(Outlet<T> outlet, IEnumerable<T> elements)
+            => EmitMultiple<T>(outlet, elements, DoNothing);
 
         /// <summary>
         /// Emit a sequence of elements through the given outlet and continue with the given thunk
@@ -1107,7 +1044,7 @@ namespace Akka.Streams.Stage
         /// is needed and reinstalls the current handler upon receiving an <see cref="OutHandler.OnPull"/>
         /// signal (before invoking the <paramref name="andThen"/> function).
         /// </summary>
-        internal protected void EmitMultiple<T>(Outlet<T> outlet, IEnumerator<T> enumerator, Action andThen)
+        protected internal void EmitMultiple<T>(Outlet<T> outlet, IEnumerator<T> enumerator, Action andThen)
         {
             if (enumerator.MoveNext())
             {
@@ -1135,7 +1072,7 @@ namespace Akka.Streams.Stage
         /// is needed and reinstalls the current handler upon receiving an <see cref="OutHandler.OnPull"/>
         /// signal.
         /// </summary>
-        internal protected void EmitMultiple<T>(Outlet<T> outlet, IEnumerator<T> enumerator)
+        protected internal void EmitMultiple<T>(Outlet<T> outlet, IEnumerator<T> enumerator)
         {
             EmitMultiple<T>(outlet, enumerator, DoNothing);
         }
@@ -1147,14 +1084,15 @@ namespace Akka.Streams.Stage
         /// is needed and reinstalls the current handler upon receiving an <see cref="OutHandler.OnPull"/>
         /// signal (before invoking the <paramref name="andThen"/> function).
         /// </summary>
-        internal protected void Emit<T>(Outlet<T> outlet, T element, Action andThen)
+        protected internal void Emit<T>(Outlet<T> outlet, T element, Action andThen)
         {
             if (IsAvailable(outlet))
             {
                 Push(outlet, element);
                 andThen();
             }
-            else SetOrAddEmitting(outlet, new EmittingSingle<T>(outlet, element, GetNonEmittingHandler(outlet), andThen, this));
+            else
+                SetOrAddEmitting(outlet, new EmittingSingle<T>(outlet, element, GetNonEmittingHandler(outlet), andThen, this));
         }
 
         /// <summary>
@@ -1163,27 +1101,27 @@ namespace Akka.Streams.Stage
         /// This action replaces the <see cref="OutHandler"/> for the given outlet if suspension
         /// is needed and reinstalls the current handler upon receiving an <see cref="OutHandler.OnPull"/>.
         /// </summary>
-        internal protected void Emit<T>(Outlet<T> outlet, T element)
-        {
-            Emit(outlet, element, DoNothing);
-        }
+        protected internal void Emit<T>(Outlet<T> outlet, T element) => Emit(outlet, element, DoNothing);
 
         /// <summary>
         /// Abort outstanding (suspended) emissions for the given outlet, if there are any.
-        /// This will reinstall the replaced handler that was in effect before the <see cref="Emit{T}"/>
+        /// This will reinstall the replaced handler that was in effect before the <see cref="Emit{T}(Outlet{T},T,Action)"/>
         /// call.
         /// </summary>
-        internal protected void AbortEmitting<T>(Outlet<T> outlet)
+        protected internal void AbortEmitting<T>(Outlet<T> outlet)
         {
             Emitting e;
-            if ((e = GetHandler(outlet) as Emitting) != null) SetHandler(outlet, e.Previous);
+            if ((e = GetHandler(outlet) as Emitting) != null)
+                SetHandler(outlet, e.Previous);
         }
 
         private void SetOrAddEmitting<T>(Outlet<T> outlet, Emitting next)
         {
             Emitting e;
-            if ((e = GetHandler(outlet) as Emitting) != null) e.AddFollowUp(next);
-            else SetHandler(outlet, next);
+            if ((e = GetHandler(outlet) as Emitting) != null)
+                e.AddFollowUp(next);
+            else
+                SetHandler(outlet, next);
         }
 
         /// <summary>
@@ -1198,12 +1136,15 @@ namespace Akka.Streams.Stage
             var passHandler = new PassAlongHandler<TOut, TIn>(from, to, this, doFinish, doFail);
             if (_interpreter != null)
             {
-                if (IsAvailable(from)) Emit(to, Grab(from), passHandler.Apply);
-                if (doFinish && IsClosed(from)) CompleteStage();
+                if (IsAvailable(from))
+                    Emit(to, Grab(from), passHandler.Apply);
+                if (doFinish && IsClosed(from))
+                    CompleteStage();
             }
 
             SetHandler(@from, passHandler);
-            if (doPull) TryPull(from);
+            if (doPull)
+                TryPull(from);
         }
 
         /// <summary>
@@ -1216,12 +1157,7 @@ namespace Akka.Streams.Stage
         /// This object can be cached and reused within the same <see cref="GraphStageLogic"/>.
         /// </summary>
         protected Action<T> GetAsyncCallback<T>(Action<T> handler)
-        {
-            return @event =>
-            {
-                Interpreter.OnAsyncInput(this, @event, x => handler((T)x));
-            };
-        }
+            => @event => Interpreter.OnAsyncInput(this, @event, x => handler((T) x));
 
         /// <summary>
         /// Obtain a callback object that can be used asynchronously to re-enter the
@@ -1233,12 +1169,7 @@ namespace Akka.Streams.Stage
         /// This object can be cached and reused within the same <see cref="GraphStageLogic"/>.
         /// </summary>
         protected Action GetAsyncCallback(Action handler)
-        {
-            return () =>
-            {
-                Interpreter.OnAsyncInput(this, Unit.Instance, _ => handler());
-            };
-        }
+            => () => Interpreter.OnAsyncInput(this, Unit.Instance, _ => handler());
 
         /// <summary>
         /// Initialize a <see cref="StageActorRef"/> which can be used to interact with from the outside world "as-if" an actor.
@@ -1265,14 +1196,15 @@ namespace Akka.Streams.Stage
                 var path = actorMaterializer.Supervisor.Path / Stage.StageActorRef.Name.Next();
                 _stageActorRef = new StageActorRef(provider, actorMaterializer.Logger, r => GetAsyncCallback<Tuple<IActorRef, object>>(tuple => r(tuple)), receive, path);
             }
-            else _stageActorRef.Become(receive);
+            else
+                _stageActorRef.Become(receive);
 
             return _stageActorRef;
         }
 
-        internal protected virtual void BeforePreStart() { }
+        protected internal virtual void BeforePreStart() { }
 
-        internal protected virtual void AfterPostStop()
+        protected internal virtual void AfterPostStop()
         {
             if (_stageActorRef != null)
             {
@@ -1296,7 +1228,7 @@ namespace Akka.Streams.Stage
         /// 
         /// This allows the dynamic creation of an Inlet for a GraphStage which is
         /// connected to a Sink that is available for materialization (e.g. using
-        /// the `subFusingMaterializer`). Care needs to be taken to cancel this Inlet
+        /// the <see cref="GraphStageLogic.SubFusingMaterializer"/>). Care needs to be taken to cancel this Inlet
         /// when the stage shuts down lest the corresponding Sink be left hanging.
         /// </summary>
         protected class SubSinkInlet<T>
@@ -1333,7 +1265,6 @@ namespace Akka.Streams.Stage
                             _closed = true;
                             _handler.OnUpstreamFailure(((OnError) msg).Cause);
                         }
-                        ;
                     }));
             }
 
@@ -1377,19 +1308,16 @@ namespace Akka.Streams.Stage
             public override string ToString() => $"SubSinkInlet{_name}";
         }
 
-        protected SubSinkInlet<T> CreateSubSinkInlet<T>(string name)
-        {
-            return new SubSinkInlet<T>(this, name);
-        }
+        protected SubSinkInlet<T> CreateSubSinkInlet<T>(string name) => new SubSinkInlet<T>(this, name);
 
         /// <summary>
         /// INTERNAL API
         /// 
         /// This allows the dynamic creation of an Outlet for a GraphStage which is
         /// connected to a Source that is available for materialization (e.g. using
-        /// the `subFusingMaterializer`). Care needs to be taken to complete this
+        /// the <see cref="GraphStageLogic.SubFusingMaterializer"/>). Care needs to be taken to complete this
         /// Outlet when the stage shuts down lest the corresponding Sink be left
-        /// hanging. It is good practice to use the `timeout` method to cancel this
+        /// hanging. It is good practice to use the <see cref="Timeout"/> method to cancel this
         /// Outlet in case the corresponding Source is not materialized within a
         /// given time limit, see e.g. ActorMaterializerSettings.
         /// </summary>
@@ -1441,7 +1369,7 @@ namespace Akka.Streams.Stage
             /// Returns true if this output port is closed, but caution
             /// THIS WORKS DIFFERENTLY THAN THE NORMAL isClosed(out).
             /// Due to possibly asynchronous shutdown it may not return
-            /// `true` immediately after `complete()` or `fail()` have returned.
+            /// true immediately after <see cref="Complete"/> or <see cref="Fail"/> have returned.
             /// </summary>
             public bool IsClosed => _closed;
 
@@ -1489,10 +1417,7 @@ namespace Akka.Streams.Stage
                 _source.FailSubstream(ex);
             }
 
-            public override string ToString()
-            {
-                return $"SubSourceOutlet({_name})";
-            }
+            public override string ToString() => $"SubSourceOutlet({_name})";
         }
     }
 
@@ -1502,7 +1427,7 @@ namespace Akka.Streams.Stage
     public interface IInHandler
     {
         /// <summary>
-        /// Called when the input port has a new element available. The actual element can be retrieved via the <see cref="GraphStageLogic.Grab{T}"/> method.
+        /// Called when the input port has a new element available. The actual element can be retrieved via the <see cref="GraphStageLogic.Grab{T}(Inlet{T})"/> method.
         /// </summary>
         void OnPush();
 
@@ -1523,7 +1448,7 @@ namespace Akka.Streams.Stage
     public abstract class InHandler : IInHandler
     {
         /// <summary>
-        /// Called when the input port has a new element available. The actual element can be retrieved via the <see cref="GraphStageLogic.Grab{T}"/> method.
+        /// Called when the input port has a new element available. The actual element can be retrieved via the <see cref="GraphStageLogic.Grab{T}(Inlet{T})"/> method.
         /// </summary>
         public abstract void OnPush();
 
@@ -1580,7 +1505,7 @@ namespace Akka.Streams.Stage
     {
 
         /// <summary>
-        /// Called when the input port has a new element available. The actual element can be retrieved via the <see cref="GraphStageLogic.Grab{T}"/> method.
+        /// Called when the input port has a new element available. The actual element can be retrieved via the <see cref="GraphStageLogic.Grab{T}(Inlet{T})"/> method.
         /// </summary>
         public abstract void OnPush();
 
@@ -1652,7 +1577,8 @@ namespace Akka.Streams.Stage
         public override void OnPush() { }
         public override void OnUpstreamFinish()
         {
-            if (_predicate()) GraphInterpreter.Current.ActiveStage.CompleteStage();
+            if (_predicate())
+                GraphInterpreter.Current.ActiveStage.CompleteStage();
         }
     }
 
@@ -1705,7 +1631,8 @@ namespace Akka.Streams.Stage
         public override void OnPull() { }
         public override void OnDownstreamFinish()
         {
-            if (_predicate()) GraphInterpreter.Current.ActiveStage.CompleteStage();
+            if (_predicate())
+                GraphInterpreter.Current.ActiveStage.CompleteStage();
         }
     }
 
@@ -1789,14 +1716,10 @@ namespace Akka.Streams.Stage
             if (watchedBy != StageTerminatedTombstone)
             {
                 foreach (var actorRef in watchedBy)
-                {
                     SendTerminated(actorRef);
-                }
 
                 foreach (var actorRef in _watching)
-                {
                     UnwatchWatched(actorRef);
-                }
 
                 _watching = ImmutableHashSet<IActorRef>.Empty;
             }
@@ -1817,14 +1740,9 @@ namespace Akka.Streams.Stage
         public override void Stop() => SendTerminated();
 
         private void SendTerminated(IActorRef actorRef)
-        {
-            actorRef.Tell(new DeathWatchNotification(this, true, false), this);
-        }
+            => actorRef.Tell(new DeathWatchNotification(this, true, false), this);
 
-        private void UnwatchWatched(IActorRef actorRef)
-        {
-            actorRef.Tell(new Unwatch(actorRef, this), this);
-        }
+        private void UnwatchWatched(IActorRef actorRef) => actorRef.Tell(new Unwatch(actorRef, this), this);
 
         private void AddWatcher(IActorRef watchee, IActorRef watcher)
         {
@@ -1945,43 +1863,27 @@ namespace Akka.Streams.Stage
         {
         }
 
-        protected void StopCallback(Action<T> callback)
-        {
-            Locked(() =>
-            {
-                _callbackState.Value = new Stopped(callback);
-            });
-        }
+        protected void StopCallback(Action<T> callback) => Locked(() => _callbackState.Value = new Stopped(callback));
 
-        protected void InitCallback(Action<T> callback)
+        protected void InitCallback(Action<T> callback) => Locked(() =>
         {
-            Locked(() =>
-            {
-                var state = _callbackState.GetAndSet(new Initialized(callback));
-                (state as NotInitialized)?.Args.ForEach(callback);
-            });
-        }
+            var state = _callbackState.GetAndSet(new Initialized(callback));
+            (state as NotInitialized)?.Args.ForEach(callback);
+        });
 
-        protected void InvokeCallbacks(T arg)
+        protected void InvokeCallbacks(T arg) => Locked(() =>
         {
-            Locked(() =>
+            var state = _callbackState.Value;
+            if (state is Initialized)
+                ((Initialized) state).Callback(arg);
+            else if (state is NotInitialized)
+                ((NotInitialized) state).Args.Add(arg);
+            else if (state is Stopped)
             {
-                var state = _callbackState.Value;
-                if (state is Initialized)
-                {
-                    ((Initialized) state).Callback(arg);
-                }
-                else if (state is NotInitialized)
-                {
-                    ((NotInitialized) state).Args.Add(arg);
-                }
-                else if (state is Stopped)
-                {
-                    Monitor.Exit(this);
-                    ((Stopped) state).Callback(arg);
-                }
-            });
-        }
+                Monitor.Exit(this);
+                ((Stopped) state).Callback(arg);
+            }
+        });
 
         private void Locked(Action body)
         {

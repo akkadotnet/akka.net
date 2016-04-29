@@ -1,6 +1,14 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="Stage.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using Akka.Pattern;
+using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
 
 namespace Akka.Streams.Stage
@@ -9,8 +17,7 @@ namespace Akka.Streams.Stage
     /// General interface for stream transformation.
     /// 
     /// Custom <see cref="IStage{TIn, TOut}"/> implementations are intended to be used with
-    /// [[akka.stream.scaladsl.FlowOps#transform]] or
-    /// [[akka.stream.javadsl.Flow#transform]] to extend the `Flow` API when there
+    /// <see cref="FlowOperations.Transform{TIn,TOut1,TOut2,TMat}"/> to extend the <see cref="FlowOperations"/> API when there
     /// is no specialized operator that performs the transformation.
     /// 
     /// Custom implementations are subclasses of <see cref="PushPullStage{TIn, TOut}"/> or
@@ -24,26 +31,26 @@ namespace Akka.Streams.Stage
     /// </summary>
     [Obsolete("Please use GraphStage instead.")]
     public interface IStage<in TIn, out TOut> { }
-    
+
     /// <summary>
     /// <para>
     /// <see cref="PushPullStage{TIn,TOut}"/> implementations participate in 1-bounded regions. For every external non-completion signal these
     /// stages produce *exactly one* push or pull signal.
     /// </para>
     /// <para>
-    /// <see cref="OnPush"/> is called when an element from upstream is available and there is demand from downstream, i.e.
-    /// in <see cref="OnPush"/> you are allowed to call <see cref="IContext.Push"/> to emit one element downstreams, or you can absorb the
-    /// element by calling <see cref="IContext.Pull"/>. Note that you can only emit zero or one element downstream from <see cref="OnPull"/>.
-    /// To emit more than one element you have to push the remaining elements from <see cref="OnPush"/>, one-by-one.
-    /// <see cref="OnPush"/> is not called again until <see cref="OnPull"/> has requested more elements with <see cref="IContext.Pull"/>.
+    /// <see cref="AbstractStage{TIn,TOut}.OnPush"/> is called when an element from upstream is available and there is demand from downstream, i.e.
+    /// in <see cref="AbstractStage{TIn,TOut}.OnPush"/> you are allowed to call <see cref="IContext.Push"/> to emit one element downstreams, or you can absorb the
+    /// element by calling <see cref="IContext.Pull"/>. Note that you can only emit zero or one element downstream from <see cref="AbstractStage{TIn,TOut}.OnPull"/>.
+    /// To emit more than one element you have to push the remaining elements from <see cref="AbstractStage{TIn,TOut}.OnPush"/>, one-by-one.
+    /// <see cref="AbstractStage{TIn,TOut}.OnPush"/> is not called again until <see cref="AbstractStage{TIn,TOut}.OnPull"/> has requested more elements with <see cref="IContext.Pull"/>.
     /// </para>
     /// <para>
-    /// <see cref="StatefulStage{TIn,TOut}"/> has support for making it easy to emit more than one element from <see cref="OnPush"/>.
+    /// <see cref="StatefulStage{TIn,TOut}"/> has support for making it easy to emit more than one element from <see cref="AbstractStage{TIn,TOut}.OnPush"/>.
     /// </para>
     /// <para>
-    /// <see cref="OnPull"/> is called when there is demand from downstream, i.e. you are allowed to push one element
+    /// <see cref="AbstractStage{TIn,TOut}.OnPull"/>> is called when there is demand from downstream, i.e. you are allowed to push one element
     /// downstreams with <see cref="IContext.Push"/>, or request elements from upstreams with <see cref="IContext.Pull"/>. If you
-    /// always perform transitive pull by calling <see cref="IContext.Pull"/> from <see cref="OnPull"/> you can use 
+    /// always perform transitive pull by calling <see cref="IContext.Pull"/> from <see cref="AbstractStage{TIn,TOut}.OnPull"/> you can use 
     /// <see cref="PushStage{TIn,TOut}"/> instead of <see cref="PushPullStage{TIn,TOut}"/>.
     /// </para>
     /// <para>
@@ -58,12 +65,12 @@ namespace Akka.Streams.Stage
     /// <para>
     /// Another peculiarity is how to convert termination events (complete/failure) into elements. The problem
     /// here is that the termination events are not backpressured while elements are. This means that simply calling
-    /// <see cref="IContext.Push"/> as a response to <see cref="OnUpstreamFinish"/> or <see cref="OnUpstreamFailure"/> will very likely break boundedness
+    /// <see cref="IContext.Push"/> as a response to <see cref="AbstractStage{TIn,TOut}.OnUpstreamFinish(IContext)"/> or <see cref="AbstractStage{TIn,TOut}.OnUpstreamFailure(Exception,IContext)"/> will very likely break boundedness
     /// and result in a buffer overflow somewhere. Therefore the only allowed command in this case is
     /// <see cref="IContext.AbsorbTermination"/> which stops the propagation of the termination signal, and puts the stage in a
     /// <see cref="IContext.IsFinishing"/> state. Depending on whether the stage has a pending pull signal it
-    /// has not yet "consumed" by a push its <see cref="OnPull"/> handler might be called immediately or later. From
-    /// <see cref="OnPull"/> final elements can be pushed before completing downstream with <see cref="IContext.Finish"/> or
+    /// has not yet "consumed" by a push its <see cref="AbstractStage{TIn,TOut}.OnPull"/> handler might be called immediately or later. From
+    /// <see cref="AbstractStage{TIn,TOut}.OnPull"/> final elements can be pushed before completing downstream with <see cref="IContext.Finish"/> or
     /// <see cref="IContext.PushAndFinish"/>.
     /// </para>
     /// <para>
@@ -89,53 +96,35 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Always pulls from upstream.
         /// </summary>
-        public sealed override ISyncDirective OnPull(IContext<TOut> context)
-        {
-            return context.Pull();
-        }
+        public sealed override ISyncDirective OnPull(IContext<TOut> context) => context.Pull();
     }
 
     /// <summary>
-    /// `DetachedStage` can be used to implement operations similar to [[akka.stream.scaladsl.FlowOps#buffer buffer]],
-    /// [[akka.stream.scaladsl.FlowOps#expand expand]] and [[akka.stream.scaladsl.FlowOps#conflate conflate]].
+    /// DetachedStage can be used to implement operations similar to <see cref="FlowOperations.Buffer{TIn,TOut,TMat}"/>,
+    /// <see cref="FlowOperations.Expand{TIn,TOut1,TOut2,TMat}"/> and <see cref="FlowOperations.Conflate{TIn,TOut,TMat}"/>.
     /// 
-    /// `DetachedStage` implementations are boundaries between 1-bounded regions. This means that they need to enforce the
-    /// "exactly one" property both on their upstream and downstream regions. As a consequence a `DetachedStage` can never
-    /// answer an [[#onPull]] with a [[Context#pull]] or answer an [[#onPush]] with a [[Context#push]] since such an action
+    /// DetachedStage implementations are boundaries between 1-bounded regions. This means that they need to enforce the
+    /// "exactly one" property both on their upstream and downstream regions. As a consequence a DetachedStage can never
+    /// answer an <see cref="AbstractStage{TIn,TOut}.OnPull"/> with a <see cref="IContext.Pull"/> or answer an <see cref="AbstractStage{TIn,TOut}.OnPush"/> with a <see cref="IContext.Push"/> since such an action
     /// would "steal" the event from one region (resulting in zero signals) and would inject it to the other region
     /// (resulting in two signals).
     /// 
-    /// However, DetachedStages have the ability to call [[akka.stream.stage.DetachedContext#hold]] as a response to
-    /// [[#onPush]] and [[#onPull]] which temporarily takes the signal off and
-    /// stops execution, at the same time putting the stage in an [[akka.stream.stage.DetachedContext#isHolding]] state.
+    /// However, DetachedStages have the ability to call <see cref="IDetachedContext.HoldUpstream"/> and <see cref="IDetachedContext.HoldDownstream"/> as a response to
+    /// <see cref="AbstractStage{TIn,TOut}.OnPush"/> and <see cref="AbstractStage{TIn,TOut}.OnPull"/> which temporarily takes the signal off and
+    /// stops execution, at the same time putting the stage in an <see cref="IDetachedContext.IsHoldingBoth"/> state.
     /// If the stage is in a holding state it contains one absorbed signal, therefore in this state the only possible
-    /// command to call is [[akka.stream.stage.DetachedContext#pushAndPull]] which results in two events making the
+    /// command to call is <see cref="IDetachedContext.PushAndPull"/> which results in two events making the
     /// balance right again: 1 hold + 1 external event = 2 external event
     /// 
     /// This mechanism allows synchronization between the upstream and downstream regions which otherwise can progress
     /// independently.
     /// 
-    /// @see [[PushPullStage]]
+    /// @see <see cref="PushPullStage{TIn,TOut}"/>
     /// </summary>
     [Obsolete("Please use GraphStage instead.")]
     public abstract class DetachedStage<TIn, TOut> : AbstractStage<TIn, TOut, IUpstreamDirective, IDownstreamDirective, IDetachedContext<TOut>, ILifecycleContext>
     {
         protected internal override bool IsDetached => true;
-
-        /**
-         * If an exception is thrown from [[#onPush]] this method is invoked to decide how
-         * to handle the exception. By default this method returns [[Supervision.Stop]].
-         *
-         * If an exception is thrown from [[#onPull]] or if the stage is holding state the stream
-         * will always be completed with failure, because it is not always possible to recover from
-         * that state.
-         * In concrete stages it is of course possible to use ordinary try-catch-recover inside
-         * `onPull` when it is know how to recover from such exceptions.
-         */
-        public override Supervision.Directive Decide(Exception cause)
-        {
-            return base.Decide(cause);
-        }
     }
 
     /// <summary>
@@ -146,10 +135,7 @@ namespace Akka.Streams.Stage
     {
         public abstract ISyncDirective OnPush(TIn element, IContext<TOut> context);
 
-        public virtual ISyncDirective OnPull(IContext<TOut> context)
-        {
-            return context.Pull();
-        }
+        public virtual ISyncDirective OnPull(IContext<TOut> context) => context.Pull();
     }
 
     public static class StatefulStage
@@ -192,15 +178,15 @@ namespace Akka.Streams.Stage
     /// The behavior is defined in <see cref="StageState{TIn,TOut}"/> instances. The initial behavior is specified
     /// by subclass implementing the <see cref="Initial"/> method. The behavior can be changed by using <see cref="Become"/>.
     /// 
-    /// Use <see cref="Emit"/> or <see cref="EmitAndFinish"/> to push more than one element from <see cref="StageState{TIn,TOut}.OnPush"/> or
+    /// Use <see cref="Emit(IEnumerator{TOut},IContext{TOut},StageState{TIn,TOut})"/> or <see cref="EmitAndFinish"/> to push more than one element from <see cref="StageState{TIn,TOut}.OnPush"/> or
     /// <see cref="StageState{TIn,TOut}.OnPull"/>.
     /// 
-    /// Use <see cref="TerminationEmit"/> to push final elements from <see cref="OnUpstreamFinish"/> or <see cref="OnUpstreamFailure"/>.
+    /// Use <see cref="TerminationEmit"/> to push final elements from <see cref="OnUpstreamFinish"/> or <see cref="AbstractStage{TIn,TOut}.OnUpstreamFailure"/>.
     /// </summary>
     [Obsolete("Please use GraphStage instead.")]
     public abstract class StatefulStage<TIn, TOut> : PushPullStage<TIn, TOut>
     {
-        private bool _isEmitting = false;
+        private bool _isEmitting;
         private StageState<TIn, TOut> _current;
 
         protected StatefulStage(StageState<TIn, TOut> current)
@@ -209,42 +195,36 @@ namespace Akka.Streams.Stage
             Become(Initial);
         }
 
-        /**
-         * Concrete subclass must return the initial behavior from this method.
-         *
-         * **Warning:** This method must not be implemented as `val`.
-         */
+        /// <summary>
+        /// Concrete subclass must return the initial behavior from this method.
+        /// **Warning:** This method must not be implemented as `val`.
+        /// </summary>
         public abstract StageState<TIn, TOut> Initial { get; }
 
         /// <summary>
         /// Current state.
         /// </summary>
-        public StageState<TIn, TOut> Current { get { return _current; } }
+        public StageState<TIn, TOut> Current => _current;
 
         /// <summary>
         /// Change the behavior to another <see cref="StageState{TIn,TOut}"/>.
         /// </summary>
         public void Become(StageState<TIn, TOut> state)
         {
-            if (state == null) throw new ArgumentNullException("state");
+            if (state == null)
+                throw new ArgumentNullException(nameof(state));
             _current = state;
         }
 
         /// <summary>
         /// Invokes current state.
         /// </summary>
-        public sealed override ISyncDirective OnPush(TIn element, IContext<TOut> context)
-        {
-            return _current.OnPush(element, context);
-        }
+        public sealed override ISyncDirective OnPush(TIn element, IContext<TOut> context) => _current.OnPush(element, context);
 
         /// <summary>
         /// Invokes current state.
         /// </summary>
-        public sealed override ISyncDirective OnPull(IContext<TOut> context)
-        {
-            return _current.OnPull(context);
-        }
+        public sealed override ISyncDirective OnPull(IContext<TOut> context) => _current.OnPull(context);
 
         public override ITerminationDirective OnUpstreamFinish(IContext<TOut> context)
         {
@@ -257,10 +237,7 @@ namespace Akka.Streams.Stage
         /// Can be used from <see cref="StageState{TIn,TOut}.OnPush"/> or <see cref="StageState{TIn,TOut}.OnPull"/> to push more than one
         /// element downstreams.
         /// </summary>
-        public ISyncDirective Emit(IEnumerator<TOut> enumerator, IContext<TOut> context)
-        {
-            return Emit(enumerator, context, _current);
-        }
+        public ISyncDirective Emit(IEnumerator<TOut> enumerator, IContext<TOut> context) => Emit(enumerator, context, _current);
 
         /// <summary>
         /// Can be used from <see cref="StageState{TIn,TOut}.OnPush"/> or <see cref="StageState{TIn,TOut}.OnPull"/> to push more than one
@@ -274,44 +251,36 @@ namespace Akka.Streams.Stage
                 Become(nextState);
                 return context.Pull();
             }
-            else
-            {
-                var element = enumerator.Current;
-                if (enumerator.MoveNext())
-                {
-                    _isEmitting = true;
-                    Become(EmittingState(enumerator, new StatefulStage.Become<TIn, TOut>(nextState)));
-                }
-                else
-                {
-                    Become(nextState);
-                }
 
-                return context.Push(element);
+            var element = enumerator.Current;
+            if (enumerator.MoveNext())
+            {
+                _isEmitting = true;
+                Become(EmittingState(enumerator, new StatefulStage.Become<TIn, TOut>(nextState)));
             }
+            else
+                Become(nextState);
+
+            return context.Push(element);
         }
 
         /// <summary>
         /// Can be used from <see cref="OnUpstreamFinish"/> to push final elements downstreams
         /// before completing the stream successfully. Note that if this is used from
-        /// <see cref="OnUpstreamFailure"/> the failure will be absorbed and the stream will be completed
+        /// <see cref="AbstractStage{TIn,TOut}.OnUpstreamFailure"/> the failure will be absorbed and the stream will be completed
         /// successfully.
         /// </summary>
         public ISyncDirective TerminationEmit(IEnumerator<TOut> enumerator, IContext<TOut> context)
         {
             if (!enumerator.MoveNext())
-            {
                 return _isEmitting ? context.AbsorbTermination() : context.Finish();
-            }
-            else
-            {
-                var es = Current as EmittingState<TIn, TOut>;
-                var nextState = es != null && _isEmitting
-                    ? es.Copy(enumerator)
-                    : EmittingState(enumerator, StatefulStage.Finish.Instance);
-                Become(nextState);
-                return context.AbsorbTermination();
-            }
+
+            var es = Current as EmittingState<TIn, TOut>;
+            var nextState = es != null && _isEmitting
+                ? es.Copy(enumerator)
+                : EmittingState(enumerator, StatefulStage.Finish.Instance);
+            Become(nextState);
+            return context.AbsorbTermination();
         }
 
         /// <summary>
@@ -320,25 +289,20 @@ namespace Akka.Streams.Stage
         /// </summary>
         public ISyncDirective EmitAndFinish(IEnumerator<TOut> enumerator, IContext<TOut> context)
         {
-            if(_isEmitting) throw new IllegalStateException("Already emitting a state");
+            if(_isEmitting)
+                throw new IllegalStateException("Already emitting a state");
             if (!enumerator.MoveNext())
-            {
                 return context.Finish();
-            }
-            else
+
+            var elem = enumerator.Current;
+            if (enumerator.MoveNext())
             {
-                var elem = enumerator.Current;
-                if (enumerator.MoveNext())
-                {
-                    _isEmitting = true;
-                    Become(EmittingState(enumerator, StatefulStage.Finish.Instance));
-                    return context.Push(elem);
-                }
-                else
-                {
-                    return context.PushAndFinish(elem);
-                }
+                _isEmitting = true;
+                Become(EmittingState(enumerator, StatefulStage.Finish.Instance));
+                return context.Push(elem);
             }
+
+            return context.PushAndFinish(elem);
         }
 
         private StageState<TIn, TOut> EmittingState(IEnumerator<TOut> enumerator, StatefulStage.IAndThen andThen)
@@ -349,10 +313,9 @@ namespace Akka.Streams.Stage
                 {
                     var element = enumerator.Current;
                     if (enumerator.MoveNext())
-                    {
                         return context.Push(element);
-                    }
-                    else if (!context.IsFinishing)
+
+                    if (!context.IsFinishing)
                     {
                         _isEmitting = false;
 
@@ -363,18 +326,15 @@ namespace Akka.Streams.Stage
                             Become(become.State);
                         }
                         else if (andThen is StatefulStage.Finish)
-                        {
                             context.PushAndFinish(element);
-                        }
 
                         return context.Push(element);
                     }
-                    else return context.PushAndFinish(element);
+
+                    return context.PushAndFinish(element);
                 }
-                else
-                {
-                    throw new IllegalStateException("OnPull with empty enumerator is not expected in emitting state");
-                }
+
+                throw new IllegalStateException("OnPull with empty enumerator is not expected in emitting state");
             });
         }
     }

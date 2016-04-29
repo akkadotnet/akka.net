@@ -1,4 +1,11 @@
-﻿using Akka.Streams.Implementation;
+//-----------------------------------------------------------------------
+// <copyright file="GraphImpl.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using Akka.Streams.Implementation;
 
 namespace Akka.Streams.Dsl.Internal
 {
@@ -12,24 +19,13 @@ namespace Akka.Streams.Dsl.Internal
 
         public TShape Shape { get; }
         public IModule Module { get; }
-        public IGraph<TShape, TMat> WithAttributes(Attributes attributes)
-        {
-            return new GraphImpl<TShape, TMat>(Shape, Module.WithAttributes(attributes));
-        }
 
-        public IGraph<TShape, TMat> AddAttributes(Attributes attributes)
-        {
-            return WithAttributes(Module.Attributes.And(attributes));
-        }
+        public IGraph<TShape, TMat> WithAttributes(Attributes attributes) => new GraphImpl<TShape, TMat>(Shape, Module.WithAttributes(attributes));
 
-        public IGraph<TShape, TMat> Named(string name)
-        {
-            return AddAttributes(Attributes.CreateName(name));
-        }
+        public IGraph<TShape, TMat> AddAttributes(Attributes attributes) => WithAttributes(Module.Attributes.And(attributes));
 
-        public IGraph<TShape, TMat> Async()
-        {
-            return AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
-        }
+        public IGraph<TShape, TMat> Named(string name) => AddAttributes(Attributes.CreateName(name));
+
+        public IGraph<TShape, TMat> Async() => AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
     }
 }

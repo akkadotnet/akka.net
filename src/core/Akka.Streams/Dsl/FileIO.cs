@@ -1,4 +1,11 @@
-﻿using System.IO;
+//-----------------------------------------------------------------------
+// <copyright file="FileIO.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.IO;
 using System.Threading.Tasks;
 using Akka.IO;
 using Akka.Streams.Implementation.IO;

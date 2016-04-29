@@ -1,4 +1,12 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="Context.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
+using Akka.Streams.Implementation.Fusing;
 
 namespace Akka.Streams.Stage
 {
@@ -25,88 +33,89 @@ namespace Akka.Streams.Stage
     
     public interface ILifecycleContext
     {
-        /**
-         * Returns the Materializer that was used to materialize this [[Stage]].
-         * It can be used to materialize sub-flows.
-         */
+        /// <summary>
+        /// Returns the Materializer that was used to materialize this Stage/>.
+        /// It can be used to materialize sub-flows.
+        /// </summary>
         IMaterializer Materializer { get; }
 
-        /** Returns operation attributes associated with the this Stage */
+        /// <summary>
+        /// Returns operation attributes associated with the this Stage
+        /// </summary>
         Attributes Attributes { get; }
     }
 
-    /**
-     * Passed to the callback methods of [[PushPullStage]] and [[StatefulStage]].
-     */
+    /// <summary>
+    /// Passed to the callback methods of <see cref="PushPullStage{TIn,TOut}"/> and <see cref="StatefulStage{TIn,TOut}"/>.
+    /// </summary>
     public interface IContext : ILifecycleContext
     {
-        /**
-         * This returns `true` after [[#absorbTermination]] has been used.
-         */
+        /// <summary>
+        /// This returns true after <see cref="AbsorbTermination"/> has been used.
+        /// </summary>
         bool IsFinishing { get; }
-        
-        /**
-         * Push one element to downstream immediately followed by
-         * cancel of upstreams and complete of downstreams.
-         */
+
+        /// <summary>
+        /// Push one element to downstream immediately followed by
+        /// cancel of upstreams and complete of downstreams.
+        /// </summary>
         IDownstreamDirective PushAndFinish(object element);
 
-        /**
-         * Push one element to downstreams.
-         */
+        /// <summary>
+        /// Push one element to downstreams.
+        /// </summary>
         IDownstreamDirective Push(object element);
-
-        /**
-         * Request for more elements from upstreams.
-         */
+        
+        /// <summary>
+        /// Request for more elements from upstreams.
+        /// </summary>
         IUpstreamDirective Pull();
-
-        /**
-         * Cancel upstreams and complete downstreams successfully.
-         */
+        
+        /// <summary>
+        /// Cancel upstreams and complete downstreams successfully.
+        /// </summary>
         FreeDirective Finish();
         
-        /**
-         * Cancel upstreams and complete downstreams with failure.
-         */
+        /// <summary>
+        /// Cancel upstreams and complete downstreams with failure.
+        /// </summary>
         FreeDirective Fail(Exception cause);
-
-        /**
-         * Puts the stage in a finishing state so that
-         * final elements can be pushed from `onPull`.
-         */
+        
+        /// <summary>
+        /// Puts the stage in a finishing state so that
+        /// final elements can be pushed from onPull.
+        /// </summary>
         ITerminationDirective AbsorbTermination();
     }
 
     public interface IContext<in TOut> : IContext
     {
-        /**
-         * Push one element to downstream immediately followed by
-         * cancel of upstreams and complete of downstreams.
-         */
+        /// <summary>
+        /// Push one element to downstream immediately followed by
+        /// cancel of upstreams and complete of downstreams.
+        /// </summary>
         IDownstreamDirective PushAndFinish(TOut element);
-
-        /**
-         * Push one element to downstreams.
-         */
+        
+        /// <summary>
+        /// Push one element to downstreams.
+        /// </summary>
         IDownstreamDirective Push(TOut element);
     }
 
-    /**
-     * Passed to the callback methods of [[DetachedStage]].
-     *
-     * [[#hold]] stops execution and at the same time putting the stage in a holding state.
-     * If the stage is in a holding state it contains one absorbed signal, therefore in
-     * this state the only possible command to call is [[#pushAndPull]] which results in two
-     * events making the balance right again: 1 hold + 1 external event = 2 external event
-     */
-
+    /// <summary>
+    /// Passed to the callback methods of <see cref="DetachedStage{TIn,TOut}"/>.
+    /// 
+    /// <see cref="HoldDownstream"/> and <see cref="HoldUpstream"/> stops execution and at the same time putting the stage in a holding state.
+    /// If the stage is in a holding state it contains one absorbed signal, therefore in
+    /// this state the only possible command to call is <see cref="PushAndPull"/> which results in two
+    /// events making the balance right again: 1 hold + 1 external event = 2 external event
+    /// </summary>
     public interface IDetachedContext : IContext
     {
-        /**
-         * This returns `true` when [[#hold]] has been used
-         * and it is reset to `false` after [[#pushAndPull]].
-         */
+        /// <summary>
+        /// This returns true when <see cref="HoldDownstream"/> and <see cref="HoldUpstream"/> has been used
+        /// and it is reset to false after <see cref="PushAndPull"/>.
+        /// </summary>
         bool IsHoldingBoth { get; }
         bool IsHoldingUpstream { get; }
         bool IsHoldingDownstream { get; }
@@ -128,53 +137,53 @@ namespace Akka.Streams.Stage
 
     public delegate void AsyncCallback(object element);
 
-    /**
-     * An asynchronous callback holder that is attached to an [[AsyncContext]].
-     * Invoking [[AsyncCallback#invoke]] will eventually lead to [[AsyncStage#onAsyncInput]]
-     * being called.
-     * 
-     * Dispatch an asynchronous notification. This method is thread-safe and
-     * may be invoked from external execution contexts.
-     */
+    /// <summary>
+    /// An asynchronous callback holder that is attached to an <see cref="IAsyncContext{TOut,TExt}"/>.
+    /// 
+    /// Invoking <see cref="Invoke"/> will eventually lead to <see cref="GraphInterpreter.OnAsyncInput"/>
+    /// being called.
+    /// 
+    /// Dispatch an asynchronous notification. This method is thread-safe and
+    /// may be invoked from external execution contexts.
+    /// </summary>
     public delegate void AsyncCallback<in T>(T element);
-
-    /**
-     * This kind of context is available to [[AsyncStage]]. It implements the same
-     * interface as for [[DetachedStage]] with the addition of being able to obtain
-     * [[AsyncCallback]] objects that allow the registration of asynchronous
-     * notifications.
-     */
+    
+    /// <summary>
+    /// This kind of context is available to <see cref="IAsyncContext{TOut,TExt}"/>. It implements the same
+    /// interface as for <see cref="IDetachedContext"/> with the addition of being able to obtain
+    /// <see cref="AsyncCallback"/> objects that allow the registration of asynchronous notifications.
+    /// </summary>
     public interface IAsyncContext : IDetachedContext
     {
-        /**
-         * Obtain a callback object that can be used asynchronously to re-enter the
-         * current [[AsyncStage]] with an asynchronous notification. After the
-         * notification has been invoked, eventually [[AsyncStage#onAsyncInput]]
-         * will be called with the given data item.
-         *
-         * This object can be cached and reused within the same [[AsyncStage]].
-         */
+        /// <summary>
+        /// Obtain a callback object that can be used asynchronously to re-enter the
+        /// current <see cref="IAsyncContext{TOut,TExt}"/> with an asynchronous notification. After the
+        /// notification has been invoked, eventually <see cref="GraphInterpreter.OnAsyncInput"/>
+        /// will be called with the given data item.
+        /// 
+        /// This object can be cached and reused within the same <see cref="IAsyncContext{TOut,TExt}"/>.
+        /// </summary>
         AsyncCallback GetAsyncCallback();
 
-        /**
-         * In response to an asynchronous notification an [[AsyncStage]] may choose
-         * to neither push nor pull nor terminate, which is represented as this
-         * directive.
-         */
+        /// <summary>
+        /// In response to an asynchronous notification an <see cref="IAsyncContext{TOut,TExt}"/> may choose
+        /// to neither push nor pull nor terminate, which is represented as this directive.
+        /// </summary>
+        /// <returns></returns>
         IAsyncDirective Ignore();
         
     }
 
     public interface IAsyncContext<in TOut, in TExt> : IAsyncContext, IDetachedContext<TOut>
     {
-        /**
-         * Obtain a callback object that can be used asynchronously to re-enter the
-         * current [[AsyncStage]] with an asynchronous notification. After the
-         * notification has been invoked, eventually [[AsyncStage#onAsyncInput]]
-         * will be called with the given data item.
-         *
-         * This object can be cached and reused within the same [[AsyncStage]].
-         */
+        /// <summary>
+        /// Obtain a callback object that can be used asynchronously to re-enter the
+        /// current <see cref="IAsyncContext{TOut,TExt}"/> with an asynchronous notification. After the
+        /// notification has been invoked, eventually <see cref="GraphInterpreter.OnAsyncInput"/>
+        /// will be called with the given data item.
+        /// 
+        /// This object can be cached and reused within the same <see cref="IAsyncContext{TOut,TExt}"/>.
+        /// </summary>
         new AsyncCallback<TExt> GetAsyncCallback();
     }
 

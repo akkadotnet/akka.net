@@ -1,4 +1,11 @@
-﻿using Akka.Actor;
+//-----------------------------------------------------------------------
+// <copyright file="ActorRefSinkActor.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using Akka.Actor;
 using Akka.Event;
 using Akka.Streams.Actors;
 
@@ -7,9 +14,7 @@ namespace Akka.Streams.Implementation
     public class ActorRefSinkActor : ActorSubscriber
     {
         public static Props Props(IActorRef @ref, int highWatermark, object onCompleteMessage)
-        {
-            return Actor.Props.Create(() => new ActorRefSinkActor(@ref, highWatermark, onCompleteMessage));
-        }
+            => Actor.Props.Create(() => new ActorRefSinkActor(@ref, highWatermark, onCompleteMessage));
 
         private ILoggingAdapter _log;
 
@@ -49,10 +54,10 @@ namespace Akka.Streams.Implementation
                 Context.Stop(Self);
             }
             else if ((terminated = message as Terminated) != null && terminated.ActorRef.Equals(Ref))
-            {
                 Context.Stop(Self); // will cancel upstream
-            }
-            else return false;
+            else
+                return false;
+
             return true;
         }
 

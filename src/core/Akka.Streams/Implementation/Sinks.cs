@@ -1,4 +1,11 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="Sinks.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Immutable;
 using System.Reactive.Streams;
 using System.Threading.Tasks;
@@ -43,14 +50,14 @@ namespace Akka.Streams.Implementation
 
         public override IModule ReplaceShape(Shape shape)
         {
-            if (Equals(_shape, shape)) return this;
-            else throw new NotSupportedException("cannot replace the shape of a Sink, you need to wrap it in a Graph for that");
+            if (Equals(_shape, shape))
+                return this;
+
+            throw new NotSupportedException("cannot replace the shape of a Sink, you need to wrap it in a Graph for that");
         }
 
         public override IModule CarbonCopy()
-        {
-            return NewInstance(new SinkShape<TIn>(Inlet.Create<TIn>(_shape.Inlet.CarbonCopy())));
-        }
+            => NewInstance(new SinkShape<TIn>(Inlet.Create<TIn>(_shape.Inlet.CarbonCopy())));
 
         protected SinkShape<TIn> AmendShape(Attributes attrs)
         {
@@ -65,6 +72,7 @@ namespace Akka.Streams.Implementation
 
     /// <summary>
     /// INTERNAL API
+    /// 
     /// Holds the downstream-most <see cref="IPublisher{T}"/> interface of the materialized flow.
     /// The stream will not have any subscribers attached at this point, which means that after prefetching
     /// elements to fill the internal buffers it will assert back-pressure until
@@ -80,15 +88,11 @@ namespace Akka.Streams.Implementation
 
         public override Attributes Attributes { get; }
 
-        public override IModule WithAttributes(Attributes attributes)
-        {
-            return new PublisherSink<TIn>(attributes, AmendShape(attributes));
-        }
+        public override IModule WithAttributes(Attributes attributes) 
+            => new PublisherSink<TIn>(attributes, AmendShape(attributes));
 
-        protected override SinkModule<TIn, IPublisher<TIn>> NewInstance(SinkShape<TIn> shape)
-        {
-            return new PublisherSink<TIn>(Attributes, shape);
-        }
+        protected override SinkModule<TIn, IPublisher<TIn>> NewInstance(SinkShape<TIn> shape) 
+            => new PublisherSink<TIn>(Attributes, shape);
 
         public override ISubscriber<TIn> Create(MaterializationContext context, out IPublisher<TIn> materializer)
         {
@@ -97,10 +101,7 @@ namespace Akka.Streams.Implementation
             return processor;
         }
 
-        public override string ToString()
-        {
-            return "PublisherSink";
-        }
+        public override string ToString() => "PublisherSink";
     }
 
     /// <summary>
@@ -134,6 +135,7 @@ namespace Akka.Streams.Implementation
 
     /// <summary>
     /// INTERNAL API
+    /// 
     /// Attaches a subscriber to this stream which will just discard all received elements.
     /// </summary>
     internal sealed class SinkholeSink<TIn> : SinkModule<TIn, Task>
@@ -163,6 +165,7 @@ namespace Akka.Streams.Implementation
 
     /// <summary>
     /// INTERNAL API
+    /// 
     /// Attaches a subscriber to this stream.
     /// </summary>
     internal sealed class SubscriberSink<TIn> : SinkModule<TIn, Unit>
@@ -194,6 +197,7 @@ namespace Akka.Streams.Implementation
 
     /// <summary>
     /// INTERNAL API
+    /// 
     /// A sink that immediately cancels its upstream upon materialization.
     /// </summary>
     internal sealed class CancelSink<T> : SinkModule<T, Unit>
@@ -222,8 +226,9 @@ namespace Akka.Streams.Implementation
 
     /// <summary>
     /// INTERNAL API
-    /// Creates and wraps an actor into <see cref="ISubscriber{T}"/> from the given <see cref="Actor.Props"/>,
-    /// which should be <see cref="Actor.Props"/> for an <see cref="ActorSubscriber"/>.
+    /// 
+    /// Creates and wraps an actor into <see cref="ISubscriber{T}"/> from the given <see cref="Props"/>,
+    /// which should be <see cref="Props"/> for an <see cref="ActorSubscriber"/>.
     /// </summary>
     internal sealed class ActorSubscriberSink<TIn> : SinkModule<TIn, IActorRef>
     {
@@ -297,14 +302,15 @@ namespace Akka.Streams.Implementation
     internal sealed class LastOrDefaultStage<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<T>>
     {
         #region stage logic
-        private sealed class LastOrDefaultLogic : GraphStageLogic
+        private sealed class Logic : GraphStageLogic
         {
             private readonly LastOrDefaultStage<T> _stage;
 
-            public LastOrDefaultLogic(Shape shape, TaskCompletionSource<T> promise, LastOrDefaultStage<T> stage) : base(shape)
+            public Logic(TaskCompletionSource<T> promise, LastOrDefaultStage<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
                 var prev = default(T);
+
                 SetHandler(stage.In, onPush: () =>
                 {
                     prev = Grab(stage.In);
@@ -325,10 +331,7 @@ namespace Akka.Streams.Implementation
                 });
             }
 
-            public override void PreStart()
-            {
-                Pull(_stage.In);
-            }
+            public override void PreStart() => Pull(_stage.In);
         }
         #endregion
 
@@ -340,23 +343,25 @@ namespace Akka.Streams.Implementation
         }
 
         public override SinkShape<T> Shape { get; }
+
         public override ILogicAndMaterializedValue<Task<T>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var promise = new TaskCompletionSource<T>();
-            return new LogicAndMaterializedValue<Task<T>>(new LastOrDefaultLogic(Shape, promise, this), promise.Task);
+            return new LogicAndMaterializedValue<Task<T>>(new Logic(promise, this), promise.Task);
         }
     }
 
     internal sealed class FirstOrDefaultStage<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<T>>
     {
         #region stage logic
-        private sealed class FirstOrDefaultLogic : GraphStageLogic
+        private sealed class Logic : GraphStageLogic
         {
             private readonly FirstOrDefaultStage<T> _stage;
 
-            public FirstOrDefaultLogic(Shape shape, TaskCompletionSource<T> promise, FirstOrDefaultStage<T> stage) : base(shape)
+            public Logic(TaskCompletionSource<T> promise, FirstOrDefaultStage<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
+
                 SetHandler(stage.In, onPush: () =>
                 {
                     promise.TrySetResult(Grab(stage.In));
@@ -374,10 +379,7 @@ namespace Akka.Streams.Implementation
                 });
             }
 
-            public override void PreStart()
-            {
-                Pull(_stage.In);
-            }
+            public override void PreStart() => Pull(_stage.In);
         }
         #endregion
 
@@ -389,10 +391,11 @@ namespace Akka.Streams.Implementation
         }
 
         public override SinkShape<T> Shape { get; }
+
         public override ILogicAndMaterializedValue<Task<T>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var promise = new TaskCompletionSource<T>();
-            return new LogicAndMaterializedValue<Task<T>>(new FirstOrDefaultLogic(Shape, promise, this), promise.Task);
+            return new LogicAndMaterializedValue<Task<T>>(new Logic(promise, this), promise.Task);
         }
     }
 
@@ -400,12 +403,12 @@ namespace Akka.Streams.Implementation
     {
         #region stage logic
 
-        private sealed class SeqStageLogic : GraphStageLogic
+        private sealed class Logic : GraphStageLogic
         {
             private readonly SeqStage<T> _stage;
             private IImmutableList<T> _buf = ImmutableList<T>.Empty; 
 
-            public SeqStageLogic(SeqStage<T> stage, TaskCompletionSource<IImmutableList<T>> promise) : base(stage.Shape)
+            public Logic(SeqStage<T> stage, TaskCompletionSource<IImmutableList<T>> promise) : base(stage.Shape)
             {
                 _stage = stage;
 
@@ -443,7 +446,7 @@ namespace Akka.Streams.Implementation
         public override ILogicAndMaterializedValue<Task<IImmutableList<T>>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var promise = new TaskCompletionSource<IImmutableList<T>>();
-            return new LogicAndMaterializedValue<Task<IImmutableList<T>>>(new SeqStageLogic(this, promise), promise.Task);
+            return new LogicAndMaterializedValue<Task<IImmutableList<T>>>(new Logic(this, promise), promise.Task);
         }
 
         public override string ToString() => "SeqStage";
@@ -459,7 +462,7 @@ namespace Akka.Streams.Implementation
             private IBuffer<Result<Option<T>>> _buffer;
             private Option<TaskCompletionSource<Option<T>>>_currentRequest;
 
-            public Logic(Shape shape, QueueSink<T> stage, int maxBuffer) : base(shape)
+            public Logic(QueueSink<T> stage, int maxBuffer) : base(stage.Shape)
             {
                 _stage = stage;
                 _maxBuffer = maxBuffer;
@@ -504,7 +507,8 @@ namespace Akka.Streams.Implementation
                                 _currentRequest = promise;
                             else
                             {
-                                if (_buffer.Used == _maxBuffer) TryPull(_stage.In);
+                                if (_buffer.Used == _maxBuffer)
+                                    TryPull(_stage.In);
                                 SendDownstream(promise);
                             }
                         }
@@ -537,10 +541,7 @@ namespace Akka.Streams.Implementation
                 }
             }
 
-            internal void Invoke(TaskCompletionSource<Option<T>> tuple)
-            {
-                InvokeCallbacks(tuple);
-            }
+            internal void Invoke(TaskCompletionSource<Option<T>> tuple) => InvokeCallbacks(tuple);
         }
 
         private sealed class Materialized : ISinkQueue<T>
@@ -575,9 +576,10 @@ namespace Akka.Streams.Implementation
         public override ILogicAndMaterializedValue<ISinkQueue<T>>  CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var maxBuffer = inheritedAttributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;
-            if (maxBuffer <= 0) throw new ArgumentException("Buffer must be greater than zero", nameof(inheritedAttributes));
+            if (maxBuffer <= 0)
+                throw new ArgumentException("Buffer must be greater than zero", nameof(inheritedAttributes));
 
-            var logic = new Logic(Shape, this, maxBuffer);
+            var logic = new Logic(this, maxBuffer);
             return new LogicAndMaterializedValue<ISinkQueue<T>>(logic, new Materialized(t => logic.Invoke(t)));
         }
     }

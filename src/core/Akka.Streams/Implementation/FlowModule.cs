@@ -1,4 +1,11 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="FlowModule.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 
 namespace Akka.Streams.Implementation
 {
@@ -16,7 +23,8 @@ namespace Akka.Streams.Implementation
 
         public override IModule ReplaceShape(Shape shape)
         {
-            if (Shape.Equals(shape)) return this;
+            if (Shape.Equals(shape))
+                return this;
             throw new NotSupportedException("cannot replace the shape of a FlowModule");
         }
     }

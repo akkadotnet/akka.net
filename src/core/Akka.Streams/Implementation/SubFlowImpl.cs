@@ -1,4 +1,11 @@
-﻿using System;
+//-----------------------------------------------------------------------
+// <copyright file="SubFlowImpl.cs" company="Akka.NET Project">
+//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Streams.Dsl;
 
 namespace Akka.Streams.Implementation
@@ -22,10 +29,9 @@ namespace Akka.Streams.Implementation
 
         public Flow<TIn, TOut, TMat> Flow { get; }
 
-        public override IFlow<T2, TMat> Via<T2, TMat2>(IGraph<FlowShape<TOut, T2>, TMat2> flow)
-        {
-            return new SubFlowImpl<TIn, T2, TMat, TClosed>(Flow.Via(flow), _mergeBackFunction, sink => _finishFunction(sink));
-        }
+        public override IFlow<T2, TMat> Via<T2, TMat2>(IGraph<FlowShape<TOut, T2>, TMat2> flow) =>
+                new SubFlowImpl<TIn, T2, TMat, TClosed>(Flow.Via(flow), _mergeBackFunction,
+                    sink => _finishFunction(sink));
 
         public override IFlow<T2, TMat3> ViaMaterialized<T2, TMat2, TMat3>(IGraph<FlowShape<TOut, T2>, TMat2> flow, Func<TMat, TMat2, TMat3> combine)
         {
@@ -37,15 +43,9 @@ namespace Akka.Streams.Implementation
             throw new NotImplementedException();
         }
 
-        public override TClosed To<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink)
-        {
-            return _finishFunction(Flow.To(sink));
-        }
+        public override TClosed To<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink) => _finishFunction(Flow.To(sink));
 
-        public override IFlow<TOut, TMat> MergeSubstreamsWithParallelism(int parallelism)
-        {
-            return _mergeBackFunction.Apply(Flow, parallelism);
-        }
+        public override IFlow<TOut, TMat> MergeSubstreamsWithParallelism(int parallelism) => _mergeBackFunction.Apply(Flow, parallelism);
 
         /// <summary>
         /// Change the attributes of this <see cref="Flow{TIn,TOut,TMat}"/> to the given ones. Note that this
