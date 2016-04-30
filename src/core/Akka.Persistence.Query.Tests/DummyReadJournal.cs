@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+﻿﻿//-----------------------------------------------------------------------
 // <copyright file="DummyReadJournal.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
@@ -20,7 +20,7 @@ namespace Akka.Persistence.Query.Tests
     {
         public static readonly string Identifier = "akka.persistence.query.journal.dummy";
 
-        public Source<string, Unit> AllPersistenceIds => Source.From(Iterate(0)).Map(i => i.ToString());
+        public Source<string, Unit> AllPersistenceIds() => Source.From(Iterate(0)).Map(i => i.ToString());
 
         private IEnumerable<int> Iterate(int start)
         {
