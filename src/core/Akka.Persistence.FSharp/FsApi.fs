@@ -149,18 +149,22 @@ type FunPersistentActor<'Command, 'Event, 'State>(aggregate: Aggregate<'Command,
         match msg with
         | :? 'Command as cmd -> aggregate.exec mailbox state cmd
         | _ -> 
-            let serializer = UntypedActor.Context.System.Serialization.FindSerializerForType typeof<obj> :?> Akka.Serialization.NewtonSoftJsonSerializer
-            match Serialization.tryDeserializeJObject serializer.Serializer msg with
-            | Some(cmd) -> aggregate.exec mailbox state cmd
-            | None -> x.Unhandled msg
+            let serializer = UntypedActor.Context.System.Serialization.FindSerializerForType typeof<'Command>
+            match msg with
+            | :? (byte[]) as bytes -> 
+                let cmd = serializer.FromBinary(bytes, typeof<'Command>) :?> 'Command
+                aggregate.exec mailbox state cmd
+            | _ -> x.Unhandled msg
     override x.OnRecover (msg: obj) = 
         match msg with
         | :? 'Event as e -> state <- aggregate.apply mailbox state e
         | _ -> 
-            let serializer = UntypedActor.Context.System.Serialization.FindSerializerForType typeof<obj> :?> Akka.Serialization.NewtonSoftJsonSerializer
-            match Serialization.tryDeserializeJObject serializer.Serializer msg with
-            | Some(e) -> state <- aggregate.apply mailbox state e
-            | None -> x.Unhandled msg
+            let serializer = UntypedActor.Context.System.Serialization.FindSerializerForType typeof<'Event>
+            match msg with
+            | :? (byte[]) as bytes -> 
+                let e = serializer.FromBinary(bytes, typeof<'Event>) :?> 'Event
+                state <- aggregate.apply mailbox state e
+            | _ -> x.Unhandled msg
     override x.PostStop () =
         base.PostStop ()
         List.iter (fun fn -> fn()) deferables
@@ -275,12 +279,13 @@ type FunPersistentView<'Event, 'State>(perspective: Perspective<'Event, 'State>,
             state <- perspective.apply mailbox state e
             true            
         | _ -> 
-            let serializer = UntypedActor.Context.System.Serialization.FindSerializerForType typeof<obj> :?> Akka.Serialization.NewtonSoftJsonSerializer
-            match Serialization.tryDeserializeJObject serializer.Serializer msg with
-            | Some(e) -> 
+            let serializer = UntypedActor.Context.System.Serialization.FindSerializerForType typeof<'Event>
+            match msg with
+            | :? (byte[]) as bytes -> 
+                let e = serializer.FromBinary(bytes, typeof<'Event>) :?> 'Event
                 state <- perspective.apply mailbox state e
                 true
-            | None -> false     
+            | _ -> false
     override x.PostStop () =
         base.PostStop ()
         List.iter (fun fn -> fn()) deferables
@@ -350,19 +355,23 @@ type Deliverer<'Command, 'Event, 'State>(aggregate: DeliveryAggregate<'Command, 
         match msg with
         | :? 'Command as cmd -> aggregate.exec mailbox state cmd
         | _ -> 
-            let serializer = UntypedActor.Context.System.Serialization.FindSerializerForType typeof<obj> :?> Akka.Serialization.NewtonSoftJsonSerializer
-            match Serialization.tryDeserializeJObject serializer.Serializer msg with
-            | Some(cmd) -> aggregate.exec mailbox state cmd
-            | None -> x.Unhandled msg
+            match msg with
+            | :? (byte[]) as bytes -> 
+                let serializer = UntypedActor.Context.System.Serialization.FindSerializerForType typeof<'Command>
+                let cmd = serializer.FromBinary(bytes, typeof<'Command>) :?> 'Command
+                aggregate.exec mailbox state cmd
+            | _ -> x.Unhandled msg
         true
     override x.ReceiveRecover (msg: obj) = 
         match msg with
         | :? 'Event as e -> state <- aggregate.apply mailbox state e
         | _ -> 
-            let serializer = UntypedActor.Context.System.Serialization.FindSerializerForType typeof<obj> :?> Akka.Serialization.NewtonSoftJsonSerializer
-            match Serialization.tryDeserializeJObject serializer.Serializer msg with
-            | Some(e) -> state <- aggregate.apply mailbox state e
-            | None -> x.Unhandled msg
+            let serializer = UntypedActor.Context.System.Serialization.FindSerializerForType typeof<'Event>
+            match msg with
+            | :? (byte[]) as bytes -> 
+                let e = serializer.FromBinary(bytes, typeof<'Event>) :?> 'Event
+                state <- aggregate.apply mailbox state e
+            | _ -> x.Unhandled msg
         true
     override x.PostStop () =
         base.PostStop ()
