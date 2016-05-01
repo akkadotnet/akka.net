@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MultiNodeClusterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -110,6 +110,11 @@ namespace Akka.Cluster.Tests.MultiNode
             readonly IActorRef _testActor;
             readonly Address _target;
 
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="testActor">A reference to a <see cref="TestActor"/> or <see cref="TestProbe"/>.</param>
+            /// <param name="target">CAN BE NULL</param>
             public EndActor(IActorRef testActor, Address target)
             {
                 _testActor = testActor;

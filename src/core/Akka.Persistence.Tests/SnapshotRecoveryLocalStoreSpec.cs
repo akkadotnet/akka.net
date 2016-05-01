@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotRecoveryLocalStoreSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -74,7 +74,7 @@ namespace Akka.Persistence.Tests
             }
         }
 
-        public SnapshotRecoveryLocalStoreSpec() : base(Configuration("inmem", "SnapshotRecoveryLocalStoreSpec")) { }
+        public SnapshotRecoveryLocalStoreSpec() : base(Configuration("SnapshotRecoveryLocalStoreSpec")) { }
 
         [Fact]
         public void PersistentActor_which_is_persisted_at_the_same_time_as_another_actor_whose_PersistenceId_is_an_extension_of_the_first_should_recover_state_only_from_its_own_correct_snapshot_file()

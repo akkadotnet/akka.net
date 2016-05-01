@@ -287,6 +287,7 @@
     <Compile Include="Util\Internal\TaskExtensions.cs" />
     <Compile Include="Util\ISurrogate.cs" />
     <Compile Include="Util\MonotonicClock.cs" />
+    <Compile Include="Util\Reflection\TypeCache.cs" />
     <Compile Include="Util\StandardOutWriter.cs" />
     <Compile Include="Event\Subscription.cs" />
     <Compile Include="Event\TraceLogger.cs" />

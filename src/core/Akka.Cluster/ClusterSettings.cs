@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -46,6 +46,7 @@ namespace Akka.Cluster
         readonly int _minNrOfMembers;
         readonly ImmutableDictionary<string, int> _minNrOfMembersOfRole;
         readonly TimeSpan _downRemovalMargin;
+        readonly bool _verboseHeartbeatLogging;
 
         public ClusterSettings(Config config, string systemName)
         {
@@ -90,6 +91,8 @@ namespace Akka.Cluster
 
             _minNrOfMembersOfRole = cc.GetConfig("role").Root.GetObject().Items
                 .ToImmutableDictionary(kv => kv.Key, kv => kv.Value.GetObject().GetKey("min-nr-of-members").GetInt());
+
+            _verboseHeartbeatLogging = cc.GetBoolean("debug.verbose-heartbeat-logging");
         }
 
         public bool LogInfo
@@ -240,6 +243,11 @@ namespace Akka.Cluster
         public TimeSpan DownRemovalMargin
         {
             get { return _downRemovalMargin; }
+        }
+
+        public bool VerboseHeartbeatLogging
+        {
+            get { return _verboseHeartbeatLogging; }
         }
     }
 }

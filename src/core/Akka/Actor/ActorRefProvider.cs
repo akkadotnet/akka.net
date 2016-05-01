@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorRefProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -381,7 +381,6 @@ namespace Akka.Actor
                 {
                     // for consistency we check configuration of dispatcher and mailbox locally
                     var dispatcher = _system.Dispatchers.Lookup(props2.Dispatcher);
-                    var mailboxType = _system.Mailboxes.GetMailboxType(props2, dispatcher.Configurator.Config);
 
                     if (async)
                         return
@@ -423,7 +422,6 @@ namespace Akka.Actor
                     // routers use context.actorOf() to create the routees, which does not allow us to pass
                     // these through, but obtain them here for early verification
                     var routeeDispatcher = system.Dispatchers.Lookup(p.Dispatcher);
-                    var routeeMailbox = system.Mailboxes.GetMailboxType(routeeProps, routeeDispatcher.Configurator.Config);
 
                     var routedActorRef = new RoutedActorRef(system, routerProps, routerDispatcher, () => routerMailbox, routeeProps,
                         supervisor, path);

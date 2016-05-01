@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemotingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -247,6 +247,13 @@ namespace Akka.Remote.Tests
             });
         }
 
+        [Fact]
+        public void Nobody_should_be_converted_back_to_its_singleton()
+        {
+            here.Tell(ActorRefs.Nobody, TestActor);
+            ExpectMsg(ActorRefs.Nobody, TimeSpan.FromSeconds(1.5));
+        }
+
         #endregion
 
         #region Internal Methods
@@ -449,7 +456,8 @@ namespace Akka.Remote.Tests
                         {
                             actorTuple.Item2.Tell(Tuple.Create("pong", Sender.Path.ToSerializationFormat()));
                         }
-                    });
+                    })
+                    .Default(msg => Sender.Tell(msg));
             }
         }
 

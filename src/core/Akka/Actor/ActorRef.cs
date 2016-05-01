@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorRef.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -222,7 +222,7 @@ namespace Akka.Actor
             return Path.Uid == other.Path.Uid ? 0 : 1;
         }
 
-        public ISurrogate ToSurrogate(ActorSystem system)
+        public virtual ISurrogate ToSurrogate(ActorSystem system)
         {
             return new Surrogate(Serialization.Serialization.SerializedActorPath(this));
         }
@@ -338,7 +338,15 @@ namespace Akka.Actor
     /// <summary> This is an internal look-up failure token, not useful for anything else.</summary>
     public sealed class Nobody : MinimalActorRef
     {
+        public class NobodySurrogate : ISurrogate
+        {
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return Nobody.Instance;
+            }
+        }
         public static Nobody Instance = new Nobody();
+        private static readonly NobodySurrogate SurrogateInstance = new NobodySurrogate();
         private readonly ActorPath _path = new RootActorPath(Address.AllSystems, "/Nobody");
 
         private Nobody() { }
@@ -350,6 +358,10 @@ namespace Akka.Actor
             get { throw new NotSupportedException("Nobody does not provide"); }
         }
 
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return SurrogateInstance;
+        }
     }
 
     public abstract class ActorRefWithCell : InternalActorRefBase
