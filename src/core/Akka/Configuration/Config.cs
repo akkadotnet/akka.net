@@ -358,7 +358,14 @@ namespace Akka.Configuration
             return value;
         }
 
-        [Obsolete("Use GetTimeSpan instead")]
+        /// <summary>
+        /// Obsolete. Use <see cref="GetTimeSpan"/> to retrieve <see cref="TimeSpan"/> information. This method will be removed in future versions.
+        /// </summary>
+        /// <param name="path">N/A</param>
+        /// <param name="default">N/A</param>
+        /// <param name="allowInfinite">N/A</param>
+        /// <returns>N/A</returns>
+        [Obsolete("Use GetTimeSpan to retrieve TimeSpan information. This method will be removed in future versions.")]
         public TimeSpan GetMillisDuration(string path, TimeSpan? @default = null, bool allowInfinite = true)
         {
             return GetTimeSpan(path, @default, allowInfinite);
