@@ -376,5 +376,29 @@ namespace Akka.Streams.Tests.Dsl
 
             ValidateProbe(probe, 4, new[] {0, 1, 2, 3});
         }
+        
+        [Fact]
+        public void FlowGraphs_should_allow_to_create_feedback_loop()
+        {
+            // Sample source: http://doc.akka.io/docs/akka/2.4.4/java/stream/stream-graphs.html (bottom of the page)
+            var probe = TestSubscriber.CreateManualProbe<int>(this);
+
+            RunnableGraph.FromGraph(GraphDsl.Create(Flow.Create<int>().Map(x => x), (b, partial) =>
+            {
+                var zip = b.Add(ZipWith.Apply((int left, int right) => left));
+                var bcast = b.Add(new Broadcast<int>(2));
+                var concat = b.Add(new Concat<int, int>());
+                var sink = b.Add(Sink.FromSubscriber(probe));
+
+                b.From(b.Add(Source1)).To(zip.In0);
+                b.From(zip.Out).Via(partial).Via(bcast).To(sink);
+                b.From(b.Add(Source.Single(1))).Via(concat).To(zip.In1);
+                b.From(bcast).To(concat);
+                
+                return ClosedShape.Instance;
+            })).Run(Materializer);
+
+            ValidateProbe(probe, 4, new[] { 0, 1, 2, 3 });
+        }
     }
 }
