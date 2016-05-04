@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BarrierCoordinator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -244,7 +244,7 @@ namespace Akka.Remote.TestKit
         public sealed class WrongBarrierException : Exception
         {
             public WrongBarrierException(string barrier, IActorRef client, Data barrierData)
-                : base(string.Format("tried"))
+                : base($"tried to enter '{barrier}' while we were waiting for '{barrierData.Barrier}'")
             {
                 BarrierData = barrierData;
                 Client = client;

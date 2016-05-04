@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EndToEndEventAdapterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -19,7 +19,7 @@ namespace Akka.Persistence.Tests
     public class MemoryEndToEndAdapterSpec : EndToEndEventAdapterSpec
     {
         private static readonly Config Config = ConfigurationFactory.ParseString(@"akka.persistence.journal.inmem.class = ""Akka.Persistence.Journal.SharedMemoryJournal, Akka.Persistence""");
-        public MemoryEndToEndAdapterSpec() : base("inmem", Configuration("inmem", "MemoryEndToEndAdapterSpec").WithFallback(Config))
+        public MemoryEndToEndAdapterSpec() : base("inmem", Configuration("MemoryEndToEndAdapterSpec").WithFallback(Config))
         {
         }
     }
@@ -292,7 +292,7 @@ namespace Akka.Persistence.Tests
             }}";
 
         protected EndToEndEventAdapterSpec(string journalName, Config journalConfig)
-            : base(PersistenceSpec.Configuration("inmem", "EndToEndEventAdapterSpec"))
+            : base(Configuration("EndToEndEventAdapterSpec"))
         {
             _journalName = journalName;
             _journalConfig = journalConfig;

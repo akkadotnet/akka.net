@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentActorStashingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -268,7 +268,7 @@ namespace Akka.Persistence.Tests
         }
 
         public PersistentActorStashingSpec()
-            : base(Configuration("inmem", "PersistentActorStashingSpec"))
+            : base(Configuration("PersistentActorStashingSpec"))
         {
         }
 
@@ -438,7 +438,7 @@ namespace Akka.Persistence.Tests
         }
 
         public SteppingMemoryPersistentActorStashingSpec()
-            : base(SteppingMemoryJournal.Config("persistence-stash").WithFallback(Configuration("stepping-inmem", "SteppingMemoryPersistentActorStashingSpec")))
+            : base(SteppingMemoryJournal.Config("persistence-stash").WithFallback(Configuration("SteppingMemoryPersistentActorStashingSpec")))
         {
         }
 

@@ -70,9 +70,11 @@
     <Compile Include="RemoteNodeRestartDeathWatchSpec.cs" />
     <Compile Include="RemoteDeploymentDeathWatchSpec.cs" />
     <Compile Include="RemoteNodeShutdownAndComesBackSpec.cs" />
+    <Compile Include="RemoteRestartedQuarantinedSpec.cs" />
     <Compile Include="RemoteRoundRobinSpec.cs" />
     <Compile Include="RemoteRandomSpec.cs" />
     <Compile Include="TestConductor\TestConductorSpec.cs" />
+    <Compile Include="RemoteScatterGatherSpec.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj">

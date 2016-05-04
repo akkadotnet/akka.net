@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Player.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -328,7 +328,7 @@ namespace Akka.Remote.TestKit
                 }
                 if (@event.FsmEvent is StateTimeout)
                 {
-                    _log.Error("connect timeout to TestConductor");
+                    _log.Error($"Failed to connect to test conductor within {_settings.ConnectTimeout.TotalMilliseconds} ms.");
                     return GoTo(State.Failed);
                 }
 
