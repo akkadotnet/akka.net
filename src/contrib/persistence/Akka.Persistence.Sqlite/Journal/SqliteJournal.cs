@@ -17,7 +17,7 @@ namespace Akka.Persistence.Sqlite.Journal
         public SqliteJournalEngine(ActorSystem system)
             : base(system)
         {
-            QueryBuilder = new SqliteQueryBuilder(Settings.TableName);
+            QueryBuilder = new SqliteQueryBuilder(Settings.TableName, Settings.MetadataTableName);
         }
 
         protected override string JournalConfigPath { get { return SqliteJournalSettings.ConfigPath; } }

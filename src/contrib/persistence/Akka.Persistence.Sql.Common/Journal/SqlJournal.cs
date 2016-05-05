@@ -76,9 +76,16 @@ namespace Akka.Persistence.Sql.Common.Journal
             return DbEngine.WriteMessagesAsync(messages);
         }
 
-        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
+        protected override async Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
         {
-            return DbEngine.DeleteMessagesToAsync(persistenceId, toSequenceNr);
+            long highestSequenceNr = await DbEngine.ReadHighestSequenceNrAsync(persistenceId, 0);
+
+            await DbEngine.DeleteMessagesToAsync(persistenceId, toSequenceNr);
+
+            if (highestSequenceNr <= toSequenceNr)
+            {
+                await DbEngine.UpdateSequenceNr(persistenceId, highestSequenceNr);
+            }
         }
     }
 }

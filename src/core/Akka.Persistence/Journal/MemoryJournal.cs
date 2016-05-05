@@ -34,6 +34,8 @@ namespace Akka.Persistence.Journal
     {
         private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _messages = new ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>>();
 
+        private readonly ConcurrentDictionary<string, long> _metadata = new ConcurrentDictionary<string, long>();
+
         protected virtual ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> Messages { get { return _messages; } }
 
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
@@ -65,6 +67,9 @@ namespace Akka.Persistence.Journal
         protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
         {
             var toSeqNr = Math.Min(toSequenceNr, HighestSequenceNr(persistenceId));
+
+            _metadata.GetOrAdd(persistenceId, seqNr => toSeqNr);
+
             for (var snr = 1L; snr <= toSeqNr; snr++)
                 Delete(persistenceId, snr);
             return Task.FromResult(new object());
@@ -131,10 +136,16 @@ namespace Akka.Persistence.Journal
         public long HighestSequenceNr(string pid)
         {
             LinkedList<IPersistentRepresentation> persistents;
-            if (Messages.TryGetValue(pid, out persistents))
+            if (Messages.TryGetValue(pid, out persistents) && persistents.Count > 0)
             {
                 var last = persistents.LastOrDefault();
                 return last != null ? last.SequenceNr : 0L;
+            }
+
+            long sequenceNr;
+            if (_metadata.TryGetValue(pid, out sequenceNr))
+            {
+                return sequenceNr;
             }
 
             return 0L;

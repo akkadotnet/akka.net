@@ -32,6 +32,11 @@ namespace Akka.Persistence.Sql.Common.Journal
         DbCommand SelectHighestSequenceNr(string persistenceId);
 
         /// <summary>
+        /// Saves the highest sequence number when messages was deleted from journal.
+        /// </summary>
+        DbCommand UpdateHighestSequenceNr(string persistenceId, long highestSequenceNr);
+
+        /// <summary>
         /// Returns a non-query command used to insert collection of <paramref name="messages"/> in journal table.
         /// </summary>
         DbCommand InsertBatchMessages(IPersistentRepresentation[] messages);

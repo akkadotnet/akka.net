@@ -23,13 +23,22 @@ namespace Akka.Persistence.Sqlite.Journal
 
         private readonly string _selectHighestSequenceNrSql;
         private readonly string _insertMessagesSql;
+        private readonly string _updateHighestSequenceNrSql;
 
-        public SqliteQueryBuilder(string tableName)
+        public SqliteQueryBuilder(string tableName, string metadataTableName)
         {
             _tableName = tableName;
             _insertMessagesSql = string.Format(
                 "INSERT INTO {0} (persistence_id, sequence_nr, is_deleted, manifest, timestamp, payload) VALUES (@PersistenceId, @SequenceNr, @IsDeleted, @Manifest, @Timestamp, @Payload)", _tableName);
-            _selectHighestSequenceNrSql = string.Format(@"SELECT MAX(sequence_nr) FROM {0} WHERE persistence_id = ? ", _tableName);
+
+            _selectHighestSequenceNrSql = string.Format(@"SELECT sequence_nr FROM ( 
+                SELECT sequence_nr FROM {0} WHERE persistence_id = @PersistenceId UNION 
+                SELECT sequence_nr FROM {1} WHERE persistence_id = @PersistenceId
+                ) as tbl ORDER BY sequence_nr DESC LIMIT 1", tableName, metadataTableName);
+
+            _updateHighestSequenceNrSql = string.Format(@"
+                UPDATE {0} SET sequence_nr = @SequenceNr WHERE persistence_id = @PersistenceId;
+                INSERT OR IGNORE INTO {0} (persistence_id, sequence_nr) VALUES (@PersistenceId, @SequenceNr)", metadataTableName);
         }
 
         public DbCommand SelectEvents(IEnumerable<IHint> hints)
@@ -133,7 +142,22 @@ namespace Akka.Persistence.Sqlite.Journal
         {
             return new SQLiteCommand(_selectHighestSequenceNrSql)
             {
-                Parameters = { new SQLiteParameter { Value = persistenceId } }
+                Parameters =
+                {
+                    new SQLiteParameter("@PersistenceId", DbType.String, persistenceId.Length) { Value = persistenceId },
+                }
+            };
+        }
+
+        public DbCommand UpdateHighestSequenceNr(string persistenceId, long highestSequenceNr)
+        {
+            return new SQLiteCommand(_updateHighestSequenceNrSql)
+            {
+                Parameters =
+                {
+                    new SQLiteParameter("@PersistenceId", DbType.String, persistenceId.Length) { Value = persistenceId },
+                    new SQLiteParameter("@SequenceNr", DbType.Int64) { Value = highestSequenceNr },
+                }
             };
         }
 

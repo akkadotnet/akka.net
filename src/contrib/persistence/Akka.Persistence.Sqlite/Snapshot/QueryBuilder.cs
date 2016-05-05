@@ -23,9 +23,13 @@ namespace Akka.Persistence.Sqlite.Snapshot
         public QueryBuilder(SqliteSnapshotSettings settings)
         {
             _deleteSql = string.Format(@"DELETE FROM {0} WHERE persistence_id = ? ", settings.TableName);
-            _insertSql = string.Format(@"INSERT INTO {0} (persistence_id, sequence_nr, created_at, manifest, snapshot) VALUES (@PersistenceId, @SequenceNr, @Timestamp, @Manifest, @Snapshot)", settings.TableName);
+
+            _insertSql = string.Format(@"
+            UPDATE {0} SET created_at = @Timestamp, manifest = @Manifest, snapshot = @Snapshot WHERE persistence_id = @PersistenceId AND sequence_nr = @SequenceNr;
+            INSERT OR IGNORE INTO {0} (persistence_id, sequence_nr, created_at, manifest, snapshot) VALUES (@PersistenceId, @SequenceNr, @Timestamp, @Manifest, @Snapshot)", settings.TableName);
+
             _selectSql = string.Format(@"SELECT persistence_id, sequence_nr, created_at, manifest, snapshot FROM {0} WHERE persistence_id = ? ", settings.TableName);
-        }
+       }
 
         public DbCommand DeleteOne(string persistenceId, long sequenceNr, DateTime timestamp)
         {

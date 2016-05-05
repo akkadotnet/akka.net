@@ -23,6 +23,13 @@ namespace Akka.Persistence.Sqlite
                     PRIMARY KEY (persistence_id, sequence_nr)
                 );";
 
+        private const string MetadataFormat = @"
+                CREATE TABLE IF NOT EXISTS {0} (
+	                persistence_id VARCHAR(255) NOT NULL,
+                    sequence_nr INTEGER(8) NOT NULL,
+                    PRIMARY KEY (persistence_id, sequence_nr)
+                );";
+
         private const string SnapshotStoreFormat = @"
                 CREATE TABLE IF NOT EXISTS {0} (
                     persistence_id VARCHAR(255) NOT NULL,
@@ -40,6 +47,19 @@ namespace Akka.Persistence.Sqlite
 
             using (var connection = new SQLiteConnection(connectionString))
             using (var command = new SQLiteCommand(string.Format(JournalFormat, tableName), connection))
+            {
+                connection.Open();
+                command.ExecuteNonQuery();
+            }
+        }
+
+        public static void CreateMetadataTable(string connectionString, string metadataTableName)
+        {
+            if (string.IsNullOrEmpty(connectionString)) throw new ArgumentNullException("connectionString", "SqlitePersistence requires connection string to be provided");
+            if (string.IsNullOrEmpty(metadataTableName)) throw new ArgumentNullException("metadataTableName", "SqlitePersistence requires metadata table name to be provided");
+
+            using (var connection = new SQLiteConnection(connectionString))
+            using (var command = new SQLiteCommand(string.Format(MetadataFormat, metadataTableName), connection))
             {
                 connection.Open();
                 command.ExecuteNonQuery();

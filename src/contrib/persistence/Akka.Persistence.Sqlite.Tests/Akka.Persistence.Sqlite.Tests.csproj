@@ -60,6 +60,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SqliteConfigSpec.cs" />
     <Compile Include="SqliteJournalQuerySpec.cs" />
     <Compile Include="SqliteJournalSpec.cs" />
     <Compile Include="SqliteSnapshotStoreSpec.cs" />
