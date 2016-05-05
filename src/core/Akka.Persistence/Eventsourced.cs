@@ -422,7 +422,7 @@ namespace Akka.Persistence
         /// </summary>
         protected virtual void OnPersistFailure(Exception cause, object @event, long sequenceNr)
         {
-            _log.Error(cause, "Failed to persist event type [{}] with sequence number [{}] for persistenceId [{}].",
+            _log.Error(cause, "Failed to persist event type [{0}] with sequence number [{1}] for persistenceId [{2}].",
                 @event.GetType(), sequenceNr, PersistenceId);
         }
 
