@@ -12,7 +12,9 @@ namespace RemoteBenchmark
     {
         static void Main(string[] args)
         {
-            var actorSystemProvider = new NetworkStreamActorSystemProvider();
+            var actorSystemProvider = new HeliosActorSystemProvider();
+            var heliosSystemProvider = new HeliosActorSystemProvider();
+
             var system1 = actorSystemProvider.CreateSystem(8080);
             var system2 = actorSystemProvider.CreateSystem(8081);
 
@@ -143,6 +145,7 @@ akka {
 akka {
     remote {
         helios.tcp {
+            transport-class = ""Akka.Remote.Transport.Helios.HeliosTcpTransport_v1_0, Akka.Remote""
             hostname = ""localhost""
             port = " + port + @"
         }
