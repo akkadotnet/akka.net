@@ -44,10 +44,6 @@ namespace Akka.Routing
         /// <returns>A <see cref="ScatterGatherFirstCompletedRoutees" /> that receives the <paramref name="message" />.</returns>
         public override Routee Select(object message, Routee[] routees)
         {
-            if (routees == null || routees.Length == 0)
-            {
-                return Routee.NoRoutee;
-            }
             return new ScatterGatherFirstCompletedRoutees(routees,_within);
         }
     }

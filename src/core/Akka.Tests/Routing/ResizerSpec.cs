@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Routing;
 using Akka.TestKit;
 using Xunit;
@@ -16,11 +17,6 @@ using FluentAssertions;
 
 namespace Akka.Tests.Routing
 {
-    /// <summary>
-    /// Used to test resizers for <see cref="Pool"/> routers.
-    /// 
-    /// Based upon https://github.com/akka/akka/blob/master/akka-actor-tests/src/test/scala/akka/routing/ResizerSpec.scala
-    /// </summary>
     public class ResizerSpec : AkkaSpec
     {
         public ResizerSpec() : base(GetConfig())
@@ -43,19 +39,85 @@ namespace Akka.Tests.Routing
             }";
         }
 
-        class ResizerTestActor : UntypedActor
+        private class ResizerTestActor : ReceiveActor
         {
-            protected override void OnReceive(object message)
+            public ResizerTestActor()
             {
-                message.Match().With<TestLatch>(latch => latch.CountDown());
+                Receive<TestLatch>(latch => latch.CountDown());
             }
+        }
+
+        private class PressureActor : ReceiveActor
+        {
+            public PressureActor()
+            {
+                Receive<TimeSpan>(d =>
+                {
+                    Thread.Sleep(d);
+                    Sender.Tell("done");
+                });
+
+                Receive<string>(s =>
+                {
+                    if (s.Equals("echo"))
+                        Sender.Tell("reply");
+                });
+            }
+        }
+
+        private class BackoffActor : ReceiveActor
+        {
+            public BackoffActor()
+            {
+                Receive<int>(i =>
+                {
+                    if (i <= 0) return; //done
+                    Thread.Sleep(i);
+                });
+            }
+        }
+
+        [Fact(Skip = "DefaultOptimalSizeExploringResizer has not implemented yet")]
+        public void Resizer_fromConfig_must_load_DefaultResizer_from_config_when_resizer_is_enabled()
+        {
+            var config = ConfigurationFactory.ParseString(@"
+                optimal-size-exploring-resizer {
+                  enabled = on
+                }
+            ");
+
+            // Resizer.FromConfig(config).GetType().ShouldBe(typeof(DefaultOptimalSizeExploringResizer));
+        }
+
+        [Fact(Skip = "DefaultOptimalSizeExploringResizer has not implemented yet")]
+        public void Resizer_fromConfig_must_load_MetricsBasedResizer_fromConfig_when_optimalsizeexploringresizer_is_enabled()
+        {
+            var config = ConfigurationFactory.ParseString(@"
+                optimal-size-exploring-resizer {
+                  enabled = on
+                }
+                resizer {
+                  enabled = on
+                }
+            ");
+
+            //Assert.Throws<ResizerInitializationException>(() =>
+            //{
+            //    Resizer.FromConfig(config);
+            //});
+        }
+
+        [Fact]
+        public void Resizer_fromConfig_must_return_None_if_neither_resizer_is_enabled_which_is_default()
+        {
+            Resizer.FromConfig(Config.Empty).ShouldBe(null);
         }
 
         [Fact]
         public void DefaultResizer_must_use_settings_to_evaluate_capacity()
         {
             var resizer = new DefaultResizer(2, 3);
-            var c1 = resizer.Capacity(new Routee[] { });
+            var c1 = resizer.Capacity(Enumerable.Empty<Routee>());
             c1.ShouldBe(2);
 
             var current = new Routee[]
@@ -63,7 +125,10 @@ namespace Akka.Tests.Routing
                 new ActorRefRoutee(Sys.ActorOf<ResizerTestActor>()),
                 new ActorRefRoutee(Sys.ActorOf<ResizerTestActor>())
             };
+
+            // TODO: do we really need this sleep?
             Thread.Sleep(100);
+
             var c2 = resizer.Capacity(current);
             c2.ShouldBe(0);
         }
@@ -71,7 +136,6 @@ namespace Akka.Tests.Routing
         [Fact]
         public void DefaultResizer_must_use_settings_to_evaluate_rampup()
         {
-            // ReSharper disable once RedundantArgumentDefaultValue (exposing the values we're testing makes this test understandable.)
             var resizer = new DefaultResizer(2, 10, rampupRate: 0.2d);
 
             resizer.Rampup(9, 10).ShouldBe(0);
@@ -82,9 +146,7 @@ namespace Akka.Tests.Routing
         [Fact]
         public void DefaultResizer_must_use_settings_to_evaluate_backoff()
         {
-            // ReSharper disable RedundantArgumentDefaultValue (exposing the values we're testing makes this test understandable.)
             var resizer = new DefaultResizer(2, 10, backoffThreshold: 0.3d, backoffRate: 0.1d);
-            // ReSharper restore RedundantArgumentDefaultValue
 
             resizer.Backoff(10, 10).ShouldBe(0);
             resizer.Backoff(4, 10).ShouldBe(0);
@@ -106,10 +168,10 @@ namespace Akka.Tests.Routing
             router.Tell(latch);
             router.Tell(latch);
 
-            latch.Ready(TestKitSettings.DefaultTimeout);
+            latch.Ready(RemainingOrDefault);
 
-            //messagesPerResize is 10 so there is no risk of additional resize
-            (RouteeSize(router)).ShouldBe(2);
+            // MessagesPerResize is 10 so there is no risk of additional resize
+            RouteeSize(router).ShouldBe(2);
         }
 
         [Fact]
@@ -122,120 +184,101 @@ namespace Akka.Tests.Routing
             router.Tell(latch);
             router.Tell(latch);
 
-            latch.Ready(TestKitSettings.DefaultTimeout);
+            latch.Ready(RemainingOrDefault);
 
-            //messagesPerResize is 10 so there is no risk of additional resize
-            (RouteeSize(router)).ShouldBe(2);
-        }
-
-        class PressureActor : UntypedActor
-        {
-            protected override void OnReceive(object message)
-            {
-                message.Match().With<TimeSpan>(
-                    d =>
-                    {
-                        Thread.Sleep(d);
-                        Sender.Tell("done");
-                    })
-                    .With<string>(s =>
-                    {
-                        if (s.Equals("echo"))
-                            Sender.Tell("reply");
-                    });
-            }
+            RouteeSize(router).ShouldBe(2);
         }
 
         [Fact]
         public void DefaultResizer_must_grow_as_needed_under_pressure()
         {
-            var resizer = new DefaultResizer(3, 5, pressureThreshold: 1, rampupRate: 0.1d, backoffRate: 0.0d,
-                messagesPerResize: 1, backoffThreshold: 0.0d);
+            var resizer = new DefaultResizer(
+                lower: 3,
+                upper: 5,
+                rampupRate: 0.1,
+                backoffRate: 0.0,
+                pressureThreshold: 1,
+                messagesPerResize: 1,
+                backoffThreshold: 0.0);
 
             var router = Sys.ActorOf(Props.Create<PressureActor>().WithRouter(new RoundRobinPool(0, resizer)));
 
-            //first message should create the minimum number of routees
+            // first message should create the minimum number of routees
             router.Tell("echo", TestActor);
             ExpectMsg("reply");
 
-            (RouteeSize(router)).ShouldBe(resizer.LowerBound);
+            RouteeSize(router).ShouldBe(resizer.LowerBound);
 
-            Action<int, TimeSpan, int?> loopTillAppropriateSize = (loops, span, expectedBound) =>
+            Action<int, TimeSpan> loop = (loops, span) =>
             {
                 for (var i = 0; i < loops; i++)
                 {
                     router.Tell(span, TestActor);
-                    if (expectedBound.HasValue && RouteeSize(router) >= expectedBound.Value)
-                    {
-                        return;
-                    }
 
-                    //sending too quickly will result in skipped resize due to many resizeInProgress conflicts
+                    //sending too quickly will result in skipped resize due to many ResizeInProgress conflicts
                     Thread.Sleep(TimeSpan.FromMilliseconds(20));
                 }
+
+                double max = (loops * span.Milliseconds / resizer.LowerBound) + 2000;
+                Within(TimeSpan.FromMilliseconds(max), () =>
+                {
+                    for (var i = 0; i < loops; i++)
+                    {
+                        ExpectMsg("done");
+                    }
+                });
             };
 
             // 2 more should go through without triggering more
-            loopTillAppropriateSize(2, TimeSpan.FromMilliseconds(200), null);
+            loop(2, TimeSpan.FromMilliseconds(200));
             RouteeSize(router).ShouldBe(resizer.LowerBound);
 
             // a whole bunch should max it out
-            loopTillAppropriateSize(200, TimeSpan.FromMilliseconds(500), resizer.UpperBound);
+            // TODO: why it is not works on 20 loops, as Akka Jvm does?
+            loop(200, TimeSpan.FromMilliseconds(500));
             RouteeSize(router).ShouldBe(resizer.UpperBound);
-        }
-
-        class BackoffActor : UntypedActor
-        {
-            protected override void OnReceive(object message)
-            {
-                if (message is int)
-                {
-                    var i = (int) message;
-                    if (i <= 0) return; //done
-                    Thread.Sleep(i);
-                }
-            }
         }
 
         [Fact]
         public void DefaultResizer_must_backoff()
         {
-            Within(TimeSpan.FromSeconds(10), () =>
-            {   
-               var resizer = new DefaultResizer(2, 5, pressureThreshold: 1, rampupRate: 1.0d, backoffRate: 1.0d,
-               messagesPerResize: 2, backoffThreshold: 0.4d);
+            var resizer = new DefaultResizer(
+                lower: 2,
+                upper: 5,
+                rampupRate: 1.0,
+                backoffRate: 1.0,
+                backoffThreshold: 0.40,
+                pressureThreshold: 1,
+                messagesPerResize: 2);
 
-                var router = Sys.ActorOf(Props.Create<BackoffActor>().WithRouter(new RoundRobinPool(0, resizer)));
+            var router = Sys.ActorOf(Props.Create<BackoffActor>().WithRouter(new RoundRobinPool(0, resizer)));
 
-                // put some pressure on the router
-                for (var i = 0; i < 200; i++)
-                {
-                    router.Tell(150);
-                    if (RouteeSize(router) > 2) 
-                        break;
+            // put some pressure on the router
+            for (var i = 0; i < 15; i++)
+            {
+                router.Tell(150);
+                Thread.Sleep(20);
+            }
 
-                    Thread.Sleep(20);
-                }
+            var z = RouteeSize(router);
+            z.ShouldBeGreaterThan(2);
 
-                var z = RouteeSize(router);
-                Assert.True(z > 2);
-                Thread.Sleep(300);
+            Thread.Sleep(300);
 
-                // let it cool down
-                AwaitAssert(() =>
-                {
-                    router.Tell(0); //trigger resize
-                    Thread.Sleep(20);
-                    RouteeSize(router).Should().BeLessThan(z);
-                }, null, TimeSpan.FromSeconds(1));
-            });
+            // let it cool down
+            AwaitAssert(() =>
+            {
+                router.Tell(0); //trigger resize
+                Thread.Sleep(20);
+                RouteeSize(router).Should().BeLessThan(z);
+            }, null, TimeSpan.FromMilliseconds(500));
         }
 
         #region Internal methods
 
         private static int RouteeSize(IActorRef router)
         {
-            return ((RoutedActorRef) router).Children.Count();
+            return ((RoutedActorRef)router).Children.Count();
         }
 
         #endregion
