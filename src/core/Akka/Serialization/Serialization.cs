@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="Serialization.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
@@ -8,8 +8,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using Akka.Actor;
-using Akka.Actor.Internal;
 using Akka.Util.Internal;
 
 namespace Akka.Serialization
@@ -103,16 +103,37 @@ namespace Akka.Serialization
 
         public object Deserialize(byte[] bytes, int serializerId, Type type)
         {
-            return _serializers[serializerId].FromBinary(bytes, type);
+            Serializer serializer;
+            if (!_serializers.TryGetValue(serializerId, out serializer))
+                throw new SerializationException(
+                    $"Cannot find serializer with id [{serializerId}]. The most probable reason" +
+                    " is that the configuration entry akka.actor.serializers is not in sync between the two systems.");
+            
+            return serializer.FromBinary(bytes, type);
         }
 
         public object Deserialize(byte[] bytes, int serializerId, string manifest)
         {
-            var serializer = _serializers[serializerId];
-
+            Serializer serializer;
+            if (!_serializers.TryGetValue(serializerId, out serializer))
+                throw new SerializationException(
+                    $"Cannot find serializer with id [{serializerId}]. The most probable reason" +
+                    " is that the configuration entry akka.actor.serializers is not in sync between the two systems.");
+ 
             if (serializer is SerializerWithStringManifest)
                 return ((SerializerWithStringManifest)serializer).FromBinary(bytes, manifest);
-            return serializer.FromBinary(bytes, Type.GetType(manifest));
+            if (string.IsNullOrEmpty(manifest))
+                return serializer.FromBinary(bytes, null);
+            Type type;
+            try
+            {
+                type = Type.GetType(manifest);
+            }
+            catch
+            {
+                throw new SerializationException($"Cannot find manifest class [{manifest}] for serializer with id [{serializerId}].");
+            }
+            return serializer.FromBinary(bytes, type);
         }
 
         public Serializer FindSerializerFor(object obj)
@@ -194,4 +215,3 @@ namespace Akka.Serialization
         }
     }
 }
-
