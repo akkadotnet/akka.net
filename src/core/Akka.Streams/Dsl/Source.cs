@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Source.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
@@ -262,7 +262,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Source<T, Unit> From<T>(IEnumerable<T> enumerable)
         {
-            return Single(enumerable).MapConcat(x => x).WithAttributes(DefaultAttributes.EnumerableSource);
+            return Single(enumerable).SelectMany(x => x).WithAttributes(DefaultAttributes.EnumerableSource);
         }
 
         /// <summary>

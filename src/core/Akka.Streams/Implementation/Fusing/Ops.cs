@@ -1677,18 +1677,18 @@ namespace Akka.Streams.Implementation.Fusing
         public override string ToString() => "RecoverWith";
     }
 
-    internal sealed class StatefulMapConcat<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
+    internal sealed class StatefulSelectMany<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region internal classes
 
         private sealed class Logic : GraphStageLogic
         {
-            private readonly StatefulMapConcat<TIn, TOut> _stage;
+            private readonly StatefulSelectMany<TIn, TOut> _stage;
             private IteratorAdapter<TOut> _currentIterator;
             private readonly Decider _decider;
             private Func<TIn, IEnumerable<TOut>> _plainConcat;
 
-            public Logic(StatefulMapConcat<TIn, TOut> stage, Attributes inheritedAttributes) : base(stage.Shape)
+            public Logic(StatefulSelectMany<TIn, TOut> stage, Attributes inheritedAttributes) : base(stage.Shape)
             {
                 _stage = stage;
                 _decider = inheritedAttributes.GetAttribute(new ActorAttributes.SupervisionStrategy(Deciders.StoppingDecider)).Decider;
@@ -1758,22 +1758,22 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly Func<Func<TIn, IEnumerable<TOut>>> _concatFactory;
 
-        private readonly Inlet<TIn> _in = new Inlet<TIn>("StatefulMapConcat.in");
-        private readonly Outlet<TOut> _out = new Outlet<TOut>("StatefulMapConcat.out");
+        private readonly Inlet<TIn> _in = new Inlet<TIn>("StatefulSelectMany.in");
+        private readonly Outlet<TOut> _out = new Outlet<TOut>("StatefulSelectMany.out");
 
-        public StatefulMapConcat(Func<Func<TIn, IEnumerable<TOut>>> concatFactory)
+        public StatefulSelectMany(Func<Func<TIn, IEnumerable<TOut>>> concatFactory)
         {
             _concatFactory = concatFactory;
 
             Shape = new FlowShape<TIn, TOut>(_in, _out);
         }
 
-        protected override Attributes InitialAttributes { get; } = DefaultAttributes.StatefulMapConcat;
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.StatefulSelectMany;
 
         public override FlowShape<TIn, TOut> Shape { get; }
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
 
-        public override string ToString() => "StatefulMapConcat";
+        public override string ToString() => "StatefulSelectMany";
     }
 }

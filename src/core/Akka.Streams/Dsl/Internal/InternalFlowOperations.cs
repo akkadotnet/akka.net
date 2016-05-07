@@ -118,10 +118,10 @@ namespace Akka.Streams.Dsl.Internal
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        public static IFlow<TOut, TMat> MapConcat<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
+        public static IFlow<TOut, TMat> SelectMany<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
             Func<TIn, IEnumerable<TOut>> mapConcater)
         {
-            return StatefulMapConcat(flow, () => mapConcater);
+            return StatefulSelectMany(flow, () => mapConcater);
         }
 
         /// <summary>
@@ -129,7 +129,7 @@ namespace Akka.Streams.Dsl.Internal
         /// then flattened into the output stream. The transformation is meant to be stateful,
         /// which is enabled by creating the transformation function <paramref name="mapConcaterFactory"/> a new for every materialization —
         /// the returned function will typically close over mutable objects to store state between
-        /// invocations. For the stateless variant see <see cref="MapConcat{TIn,TOut,TMat}"/>.
+        /// invocations. For the stateless variant see <see cref="SelectMany{TIn,TOut,TMat}"/>.
         /// 
         /// The returned Enumerable MUST NOT contain null values,
         /// as they are illegal as stream elements - according to the Reactive Streams specification.
@@ -148,12 +148,12 @@ namespace Akka.Streams.Dsl.Internal
         /// <para>
         /// Cancels when downstream cancels
         /// </para>
-        /// See also <see cref="MapConcat{TIn,TOut,TMat}"/>
+        /// See also <see cref="SelectMany{TIn,TOut,TMat}"/>
         /// </summary>
-        public static IFlow<TOut, TMat> StatefulMapConcat<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
+        public static IFlow<TOut, TMat> StatefulSelectMany<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
             Func<Func<TIn, IEnumerable<TOut>>> mapConcaterFactory)
         {
-            return flow.Via(new Fusing.StatefulMapConcat<TIn, TOut>(mapConcaterFactory));
+            return flow.Via(new Fusing.StatefulSelectMany<TIn, TOut>(mapConcaterFactory));
         }
 
         /// <summary>

@@ -110,7 +110,7 @@
     <Compile Include="Dsl\FlowSpec.cs" />
     <Compile Include="Dsl\FlowSplitAfterSpec.cs" />
     <Compile Include="Dsl\FlowSplitWhenSpec.cs" />
-    <Compile Include="Dsl\FlowStatefulMapConcatSpec.cs" />
+    <Compile Include="Dsl\FlowStatefulSelectManySpec.cs" />
     <Compile Include="Dsl\FramingSpec.cs" />
     <Compile Include="Dsl\GraphBackedFlowSpec.cs" />
     <Compile Include="Dsl\GraphBalanceSpec.cs" />
@@ -139,7 +139,7 @@
     <Compile Include="Dsl\FlowSkipWhithinSpec.cs" />
     <Compile Include="Dsl\FlowSkipWhileSpec.cs" />
     <Compile Include="Dsl\FlowSkipSpec.cs" />
-    <Compile Include="Dsl\FlowMapConcatSpec.cs" />
+    <Compile Include="Dsl\FlowSelectManySpec.cs" />
     <Compile Include="Dsl\FlowSelectSpec.cs" />
     <Compile Include="Dsl\FlowSupervisionSpec.cs" />
     <Compile Include="Dsl\FlowTakeSpec.cs" />

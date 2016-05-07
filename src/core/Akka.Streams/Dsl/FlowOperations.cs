@@ -108,9 +108,9 @@ namespace Akka.Streams.Dsl
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        public static Flow<T, TOut, TMat> MapConcat<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow, Func<TIn, IEnumerable<TOut>> mapConcater)
+        public static Flow<T, TOut, TMat> SelectMany<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow, Func<TIn, IEnumerable<TOut>> mapConcater)
         {
-            return (Flow<T, TOut, TMat>)InternalFlowOperations.MapConcat(flow, mapConcater);
+            return (Flow<T, TOut, TMat>)InternalFlowOperations.SelectMany(flow, mapConcater);
         }
 
         /// <summary>
@@ -118,7 +118,7 @@ namespace Akka.Streams.Dsl
         /// then flattened into the output stream. The transformation is meant to be stateful,
         /// which is enabled by creating the transformation function <paramref name="mapConcaterFactory"/> a new for every materialization —
         /// the returned function will typically close over mutable objects to store state between
-        /// invocations. For the stateless variant see <see cref="FlowOperations.MapConcat{T,TIn,TOut,TMat}"/>.
+        /// invocations. For the stateless variant see <see cref="SelectMany{T,TIn,TOut,TMat}"/>.
         /// 
         /// The returned Enumerable MUST NOT contain null values,
         /// as they are illegal as stream elements - according to the Reactive Streams specification.
@@ -137,12 +137,12 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Cancels when downstream cancels
         /// </para>
-        /// See also <see cref="FlowOperations.MapConcat{T,TIn,TOut,TMat}"/>
+        /// See also <see cref="SelectMany{T,TIn,TOut,TMat}"/>
         /// </summary>
-        public static Flow<T, TOut, TMat> StatefulMapConcat<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow,
+        public static Flow<T, TOut, TMat> StatefulSelectMany<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow,
             Func<Func<TIn, IEnumerable<TOut>>> mapConcaterFactory)
         {
-            return (Flow<T, TOut, TMat>) InternalFlowOperations.StatefulMapConcat(flow, mapConcaterFactory);
+            return (Flow<T, TOut, TMat>) InternalFlowOperations.StatefulSelectMany(flow, mapConcaterFactory);
         }
 
         /// <summary>

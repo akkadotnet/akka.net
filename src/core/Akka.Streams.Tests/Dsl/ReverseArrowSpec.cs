@@ -275,7 +275,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 b.Invoking(builder => builder.To(s).Via(f).From(src))
                     .ShouldThrow<ArgumentException>()
-                    .WithMessage("The output port [StatefulMapConcat.out] is already connected");
+                    .WithMessage("The output port [StatefulSelectMany.out] is already connected");
 
                 return ClosedShape.Instance;
             })).Run(Materializer);

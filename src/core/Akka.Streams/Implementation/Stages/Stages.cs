@@ -46,7 +46,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes BatchWeighted = Attributes.CreateName("batchWeighted");
         public static readonly Attributes Conflate = Attributes.CreateName("conflate");
         public static readonly Attributes Expand = Attributes.CreateName("expand");
-        public static readonly Attributes StatefulMapConcat = Attributes.CreateName("statefulMapConcat");
+        public static readonly Attributes StatefulSelectMany = Attributes.CreateName("statefulSelectMany");
         public static readonly Attributes GroupBy = Attributes.CreateName("groupBy");
         public static readonly Attributes PrefixAndTail = Attributes.CreateName("prefixAndTail");
         public static readonly Attributes Split = Attributes.CreateName("split");
