@@ -4878,6 +4878,10 @@ namespace Akka.Util.Internal
     public class static TaskExtensions
     {
         public static System.Threading.Tasks.Task<TResult> CastTask<TTask, TResult>(this System.Threading.Tasks.Task<TTask> task) { }
+        public static void IgnoreResult(this System.Threading.Tasks.Task task) { }
+        public static void IgnoreResult<T>(this System.Threading.Tasks.Task<T> task) { }
+        public static System.Threading.Tasks.Task WithCancellation(this System.Threading.Tasks.Task task, System.Threading.CancellationToken ct) { }
+        public static System.Threading.Tasks.Task<T> WithCancellation<T>(this System.Threading.Tasks.Task<T> task, System.Threading.CancellationToken ct) { }
     }
 }
 namespace Akka.Util.Internal.Collections

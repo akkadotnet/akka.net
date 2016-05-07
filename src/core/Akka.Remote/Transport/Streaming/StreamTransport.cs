@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Dispatch;
+using Akka.Event;
 using Akka.Remote.Transport.Helios;
 
 namespace Akka.Remote.Transport.Streaming
@@ -19,11 +22,15 @@ namespace Akka.Remote.Transport.Streaming
 
         public int MaximumFrameSize { get; }
 
-        public TimeSpan FlushWaitTimeout { get; }
-
         public int ChunkedReadThreshold { get; }
 
         public int FrameSizeHardLimit { get; }
+
+        public MessageDispatcher RemoteDispatcher { get; internal set; }
+
+        public TimeSpan FlushWaitTimeout { get; internal set; }
+
+        public ILoggingAdapter Log { get; internal set; }
 
         public StreamTransportSettings(Config config)
         {
@@ -32,7 +39,6 @@ namespace Akka.Remote.Transport.Streaming
             StreamWriteBufferSize = GetByteSize(config, "stream-write-buffer-size");
             StreamReadBufferSize = GetByteSize(config, "stream-read-buffer-size");
             MaximumFrameSize = GetByteSize(config, "maximum-frame-size", 32000);
-            FlushWaitTimeout = config.GetTimeSpan("flush-wait-on-shutdown");
             ChunkedReadThreshold = GetByteSize(config, "chunked-read-threshold");
             FrameSizeHardLimit = GetByteSize(config, "frame-size-hard-limit", 32000);
         }
@@ -44,9 +50,26 @@ namespace Akka.Remote.Transport.Streaming
             StreamWriteBufferSize = 4096;
             StreamReadBufferSize = 65536;
             MaximumFrameSize = heliosSettings.MaxFrameSize;
-            FlushWaitTimeout = TimeSpan.FromSeconds(2);
             ChunkedReadThreshold = 4096;
             FrameSizeHardLimit = 67108864;
+        }
+
+        public virtual bool ShutdownOutput(Stream stream, object state)
+        {
+            return false;
+        }
+
+        public virtual void CloseStream(Stream stream, object state)
+        {
+            try
+            {
+                stream.Close();
+            }
+            catch (Exception ex)
+            {
+                //TODO Log
+                // Weird but not fatal
+            }
         }
 
         protected static int GetByteSize(Config config, string path, int minValue = 0, int maxValue = int.MaxValue)
@@ -72,7 +95,7 @@ namespace Akka.Remote.Transport.Streaming
         private readonly CancellationTokenSource _cancellation;
         private readonly HashSet<StreamAssociationHandle> _associations = new HashSet<StreamAssociationHandle>();
 
-        protected StreamTransportSettings Settings { get; }
+        public StreamTransportSettings Settings { get; }
 
         protected Address InboundAddress { get; private set; }
 
@@ -87,6 +110,18 @@ namespace Akka.Remote.Transport.Streaming
             System = system;
             Config = settings.Config;
             Settings = settings;
+            Settings.Log = Logging.GetLogger(System, this);
+
+            var dispatcherId = System.Settings.Config.GetString("akka.remote.use-dispatcher");
+
+            if (dispatcherId == null)
+                throw new InvalidOperationException("The setting 'akka.remote.use-dispatcher' is missing from config.");
+
+            if (!System.Dispatchers.HasDispatcher(dispatcherId))
+                throw  new InvalidOperationException($"Dispatcher '{dispatcherId}' is missing from config.");
+
+            Settings.RemoteDispatcher = System.Dispatchers.Lookup(dispatcherId);
+            Settings.FlushWaitTimeout = System.Settings.Config.GetTimeSpan("akka.remote.flush-wait-on-shutdown");
         }
 
         public sealed override Task<Tuple<Address, TaskCompletionSource<IAssociationEventListener>>> Listen()
@@ -145,12 +180,31 @@ namespace Akka.Remote.Transport.Streaming
                 _associations.Clear();
             }
 
-            var tasks = associations.Select(item => item.Stopped).ToArray();
-            var results = await Task.WhenAll(tasks);
+            var tasks = associations.Select(a =>
+            {
+                // The above layer is supposed to have already disassociated all association,
+                // but let's play safe and call it here in case it wasn't called.
+                a.Disassociate();
+
+                return a.Stopped;
+            }).ToArray();
+
+            
+            bool[] results;
+
+            using (var cancellation = new CancellationTokenSource((int)Settings.FlushWaitTimeout.TotalMilliseconds * 2))
+            {
+                results = await Task.WhenAll(tasks).ContinueWith(task => task.Result, cancellation.Token);
+            }
 
             return results.All(flushSucceeded => flushSucceeded);
         }
 
         protected abstract void Cleanup();
+
+        public override string ToString()
+        {
+            return GetType().Name;
+        }
     }
 }

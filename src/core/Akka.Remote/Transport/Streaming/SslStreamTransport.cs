@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Security;
+using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
@@ -124,7 +125,7 @@ certificate {
 
     public class SslStreamTransport : NetworkStreamTransport
     {
-        protected new SslStreamTransportSettings Settings { get; }
+        public new SslStreamTransportSettings Settings { get; }
 
         public override string SchemeIdentifier
         {
@@ -141,22 +142,22 @@ certificate {
             Settings = settings;
         }
 
-        protected override async Task<AssociationHandle> CreateInboundAssociation(Stream stream, Address remoteAddress)
+        protected override async Task<AssociationHandle> CreateInboundAssociation(Stream stream, Address remoteAddress, Socket socket)
         {
             SslStream sslStream = new SslStream(stream, true);
 
             await sslStream.AuthenticateAsServerAsync(Settings.Certificate, false, Settings.EnabledSslProtocols, false);
 
-            return await base.CreateInboundAssociation(sslStream, remoteAddress);
+            return await base.CreateInboundAssociation(sslStream, remoteAddress, socket);
         }
 
-        protected override async Task<AssociationHandle> CreateOutboundAssociation(Stream stream, Address localAddress, Address remoteAddress)
+        protected override async Task<AssociationHandle> CreateOutboundAssociation(Stream stream, Address localAddress, Address remoteAddress, Socket socket)
         {
             SslStream sslStream = new SslStream(stream, true, Settings.CertificateValidationCallback);
 
             await sslStream.AuthenticateAsClientAsync(remoteAddress.Host, null, Settings.EnabledSslProtocols, Settings.CheckServerCertificateRevocation);
 
-            return await base.CreateOutboundAssociation(stream, localAddress, remoteAddress);
+            return await base.CreateOutboundAssociation(stream, localAddress, remoteAddress, socket);
         }
     }
 }

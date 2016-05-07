@@ -88,7 +88,7 @@ namespace Akka.Remote.Transport.Streaming
         public AssociationHandle CreateInboundAssociation(NamedPipeServerStream stream, Address remoteAddress)
         {
             //TODO Add unique id in InboundAddress?
-            var association = new StreamAssociationHandle(Settings, stream, InboundAddress, remoteAddress);
+            var association = new StreamAssociationHandle(Settings, stream, InboundAddress, remoteAddress, null);
             RegisterAssociation(association);
 
             association.ReadHandlerSource.Task.ContinueWith(task => association.Initialize(task.Result),
@@ -110,7 +110,7 @@ namespace Akka.Remote.Transport.Streaming
             string uniqueId = Guid.NewGuid().ToString("N");
             var localAddress = new Address(ProtocolName, System.Name, Settings.PipeName + "_" + uniqueId, 1);
 
-            var association = new StreamAssociationHandle(Settings, stream, localAddress, remoteAddress.WithPort(1));
+            var association = new StreamAssociationHandle(Settings, stream, localAddress, remoteAddress.WithPort(1), null);
             RegisterAssociation(association);
 
             association.ReadHandlerSource.Task.ContinueWith(task => association.Initialize(task.Result),

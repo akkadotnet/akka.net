@@ -1,19 +1,16 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Tasks;
+using Akka.Dispatch;
 
 namespace Akka.Remote.Transport.Streaming
 {
     /// <summary>
     /// Asynchronous multi-producer/single-consumer queue.
     /// <remarks>
-    /// This classed is optimized for usage in StreamAssociationHandle, review carefully before reuse.
+    /// This classed is optimized for usage in StreamAssociationHandle, not intended for reuse.
     /// </remarks>
     /// </summary>
-    /// <typeparam name="T"></typeparam>
     internal sealed class AsyncQueue<T> : IDisposable
     {
         internal interface IFutureItem : INotifyCompletion
@@ -57,37 +54,52 @@ namespace Akka.Remote.Transport.Streaming
                 }
             }
 
-            public void SetItem(T item)
+            public void SetItem(T item, MessageDispatcher dispatcher = null)
             {
+                Action continuation;
                 lock (this)
                 {
                     if (_isCompleted)
                         return;
 
                     _value = item;
-                    InternalSetCompleted();
+                    _isCompleted = true;
+                    continuation = _continuation;
+                    _continuation = null;
                 }
+
+                TryInvoke(continuation, dispatcher);
             }
 
-            public void SetCanceled()
+            public void SetCanceled(MessageDispatcher dispatcher = null)
             {
+                Action continuation;
                 lock (this)
                 {
                     if (_isCompleted)
                         return;
 
                     _isCanceled = true;
-                    InternalSetCompleted();
+                    _isCompleted = true;
+                    continuation = _continuation;
+                    _continuation = null;
                 }
+
+                TryInvoke(continuation, dispatcher);
             }
 
-            private void InternalSetCompleted()
+            private static void TryInvoke(Action continuation, MessageDispatcher dispatcher = null)
             {
-                _isCompleted = true;
+                if (continuation == null)
+                    return;
 
-                //TODO Queue on IO ThreadPool or Remote's DedicatedThreadPool
-                if (_continuation != null)
-                    ThreadPool.QueueUserWorkItem(state => ((Action)state).Invoke(), _continuation);
+                if (dispatcher != null)
+                {
+                    dispatcher.Schedule(continuation);
+                    return;
+                }
+
+                continuation();
             }
 
             public IFutureItem GetAwaiter()
@@ -115,11 +127,14 @@ namespace Akka.Remote.Transport.Streaming
                         alreadyCompleted = true;
                 }
 
-                //TODO Queue on IO ThreadPool or Remote's DedicatedThreadPool
                 if (alreadyCompleted)
-                    ThreadPool.QueueUserWorkItem(state => ((Action)state).Invoke(), continuation);
+                    continuation();
             }
         }
+
+        // We use this scheduler when completing the FutureItem to prevent executing arbitrary code synchronously on the 
+        // calling thread.
+        private readonly MessageDispatcher _dispatcher;
 
         private readonly Queue<T> _queue;
         private FutureItem _pendingDequeue;
@@ -127,8 +142,9 @@ namespace Akka.Remote.Transport.Streaming
         private bool _addingCompleted;
         private bool _isDisposed;
 
-        public AsyncQueue()
+        public AsyncQueue(MessageDispatcher dispatcher)
         {
+            _dispatcher = dispatcher;
             _queue = new Queue<T>();
         }
 
@@ -156,13 +172,14 @@ namespace Akka.Remote.Transport.Streaming
                 }
             }
 
-            completedWaiter?.SetItem(item);
+            completedWaiter?.SetItem(item, _dispatcher);
 
             return true;
         }
 
         /// <summary>
         /// Dequeue an item from the queue. The queue is single consumer, DequeueAsync must not be called again until the previous dequeue operation have completed.
+        /// Warning: The returned IFutureItem must not be awaited more than once.
         /// </summary>
         /// <returns>A future of the dequeued item.</returns>
         public IFutureItem DequeueAsync()
@@ -206,7 +223,7 @@ namespace Akka.Remote.Transport.Streaming
                 pendingDequeue = _pendingDequeue;
             }
 
-            pendingDequeue?.SetCanceled();
+            pendingDequeue?.SetCanceled(_dispatcher);
         }
 
         public void Dispose()
@@ -223,7 +240,7 @@ namespace Akka.Remote.Transport.Streaming
                 pendingDequeue = _pendingDequeue;
             }
 
-            pendingDequeue?.SetCanceled();
+            pendingDequeue?.SetCanceled(_dispatcher);
         }
     }
 }
