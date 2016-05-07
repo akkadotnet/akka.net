@@ -44,7 +44,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var task = InputSource.RunFold(0, (sum, i) => sum + i, Materializer);
+                var task = InputSource.RunAggregate(0, (sum, i) => sum + i, Materializer);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 task.Result.Should().Be(Expected);
             }, Materializer);
@@ -108,7 +108,7 @@ namespace Akka.Streams.Tests.Dsl
                     if (x > 50)
                         throw error;
                     return x;
-                }).RunFold(Unit.Instance, Keep.None, Materializer);
+                }).RunAggregate(Unit.Instance, Keep.None, Materializer);
 
                 future.Invoking(f => f.Wait(TimeSpan.FromSeconds(3)))
                     .ShouldThrow<TestException>()
@@ -124,7 +124,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var error = new TestException("buh");
-                var future = InputSource.RunFold(0, (x,y) =>
+                var future = InputSource.RunAggregate(0, (x,y) =>
                 {
                     if (x > 50)
                         throw error;

@@ -477,9 +477,9 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static IFlow<TIn, TMat> Reduce<TIn, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TIn, TIn> reduce)
+        public static IFlow<TIn, TMat> Sum<TIn, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TIn, TIn> reduce)
         {
-            return flow.Via(new Fusing.Reduce<TIn>(reduce));
+            return flow.Via(new Fusing.Sum<TIn>(reduce));
         }
 
         /// <summary>

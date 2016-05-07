@@ -35,7 +35,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             duration = duration ?? TimeSpan.FromSeconds(5);
 
-            var t = source.Scan(0, (i, i1) => i + i1).RunFold(new List<int>(), (list, i) =>
+            var t = source.Scan(0, (i, i1) => i + i1).RunAggregate(new List<int>(), (list, i) =>
             {
                 list.Add(i);
                 return list;

@@ -129,7 +129,7 @@ namespace Akka.Streams.Tests.Dsl
                 if (ThreadLocalRandom.Current.Next(1, 3) == 2)
                     Thread.Sleep(10);
                 return i;
-            }).RunFold(0, (sum, i) => sum + i, Materializer);
+            }).RunAggregate(0, (sum, i) => sum + i, Materializer);
             future.Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
             future.Result.Should().Be(500500);
         }
@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.Dsl
                 if (ThreadLocalRandom.Current.Next(1, 3) == 2)
                     Thread.Sleep(10);
                 return i;
-            }).RunFold(0, (sum, i) => sum + i, Materializer);
+            }).RunAggregate(0, (sum, i) => sum + i, Materializer);
             future.Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
             future.Result.Should().Be(500500);
         }
@@ -187,7 +187,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.From(Enumerable.Range(1, 50))
                     .ConflateWithSeed(i => i, (sum, i) => sum + i)
                     .Buffer(50, OverflowStrategy.Backpressure)
-                    .RunFold(0, (sum, i) => sum + i, Materializer);
+                    .RunAggregate(0, (sum, i) => sum + i, Materializer);
             future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             future.Result.Should().Be(Enumerable.Range(1, 50).Sum());
         }

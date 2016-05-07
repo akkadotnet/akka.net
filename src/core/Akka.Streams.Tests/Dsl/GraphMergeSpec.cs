@@ -94,7 +94,7 @@ namespace Akka.Streams.Tests.Dsl
                 b.From(source).To(merge.In(0));
 
                 return new SourceShape<int>(merge.Out);
-            })).RunFold(new List<int>(), (list, i) =>
+            })).RunAggregate(new List<int>(), (list, i) =>
             {
                 list.Add(i);
                 return list;

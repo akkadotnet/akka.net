@@ -151,7 +151,7 @@ namespace Akka.Streams.Tests.Dsl
 
                     b.From(source).To(balance.In);
                     return new SourceShape<int>(balance.Out(0));
-                })).RunFold(new List<int>(), (list, i) =>
+                })).RunAggregate(new List<int>(), (list, i) =>
                 {
                     list.Add(i);
                     return list;

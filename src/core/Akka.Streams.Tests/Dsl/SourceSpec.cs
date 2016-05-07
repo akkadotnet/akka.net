@@ -292,7 +292,7 @@ namespace Akka.Streams.Tests.Dsl
                 if (a > 10000000)
                     return null;
                 return Tuple.Create(Tuple.Create(b, a + b), a);
-            }).RunFold(new LinkedList<int>(), (ints, i) =>
+            }).RunAggregate(new LinkedList<int>(), (ints, i) =>
             {
                 ints.AddFirst(i);
                 return ints;
@@ -311,7 +311,7 @@ namespace Akka.Streams.Tests.Dsl
                     if (a > 10000000)
                         throw new SystemException("expected");
                     return Tuple.Create(Tuple.Create(b, a + b), a);
-                }).RunFold(new LinkedList<int>(), (ints, i) =>
+                }).RunAggregate(new LinkedList<int>(), (ints, i) =>
                 {
                     ints.AddFirst(i);
                     return ints;
@@ -332,7 +332,7 @@ namespace Akka.Streams.Tests.Dsl
                 if (a > 10000000)
                     return Task.FromResult<Tuple<Tuple<int, int>, int>>(null);
                 return Task.FromResult(Tuple.Create(Tuple.Create(b, a + b), a));
-            }).RunFold(new LinkedList<int>(), (ints, i) =>
+            }).RunAggregate(new LinkedList<int>(), (ints, i) =>
             {
                 ints.AddFirst(i);
                 return ints;
@@ -349,7 +349,7 @@ namespace Akka.Streams.Tests.Dsl
                 return Tuple.Create(Tuple.Create(b, a + b), a);
             })
             .Take(36)
-            .RunFold(new LinkedList<int>(), (ints, i) =>
+            .RunAggregate(new LinkedList<int>(), (ints, i) =>
             {
                 ints.AddFirst(i);
                 return ints;

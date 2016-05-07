@@ -128,7 +128,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Delimiter_bytes_based_framing_must_work_with_empty_streams()
         {
-            var task = Source.Empty<ByteString>().Via(SimpleLines("\n", 256)).RunFold(new List<string>(), (list, s) =>
+            var task = Source.Empty<ByteString>().Via(SimpleLines("\n", 256)).RunAggregate(new List<string>(), (list, s) =>
             {
                 list.Add(s);
                 return list;
@@ -243,7 +243,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var task = Source.Empty<ByteString>()
                 .Via(Framing.LengthField(4, int.MaxValue, 0, ByteOrder.BigEndian))
-                .RunFold(new List<ByteString>(), (list, s) =>
+                .RunAggregate(new List<ByteString>(), (list, s) =>
                 {
                     list.Add(s);
                     return list;
@@ -258,7 +258,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var task1 = Source.Single(Encode(ReferenceChunk.Take(100), 0, 1, ByteOrder.BigEndian))
                 .Via(Framing.LengthField(1, 99, 0, ByteOrder.BigEndian))
-                .RunFold(new List<ByteString>(), (list, s) =>
+                .RunAggregate(new List<ByteString>(), (list, s) =>
                 {
                     list.Add(s);
                     return list;
@@ -267,7 +267,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var task2 = Source.Single(Encode(ReferenceChunk.Take(100), 49, 1, ByteOrder.BigEndian))
                 .Via(Framing.LengthField(1, 100, 0, ByteOrder.BigEndian))
-                .RunFold(new List<ByteString>(), (list, s) =>
+                .RunAggregate(new List<ByteString>(), (list, s) =>
                 {
                     list.Add(s);
                     return list;

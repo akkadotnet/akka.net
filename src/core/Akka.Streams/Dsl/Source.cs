@@ -168,7 +168,7 @@ namespace Akka.Streams.Dsl
         /// function evaluation when the input stream ends, or completed with Failure
         /// if there is a failure signaled in the stream.
         /// </summary>
-        public Task<TOut2> RunFold<TOut2>(TOut2 zero, Func<TOut2, TOut, TOut2> aggregate, IMaterializer materializer)
+        public Task<TOut2> RunAggregate<TOut2>(TOut2 zero, Func<TOut2, TOut, TOut2> aggregate, IMaterializer materializer)
         {
             return RunWith(Sink.Aggregate(zero, aggregate), materializer);
         }
@@ -181,9 +181,9 @@ namespace Akka.Streams.Dsl
         /// function evaluation when the input stream ends, or completed with Failure
         /// if there is a failure signaled in the stream.
         /// </summary>
-        public Task<TOut> RunReduce(Func<TOut, TOut, TOut> reduce, IMaterializer materializer)
+        public Task<TOut> RunSum(Func<TOut, TOut, TOut> reduce, IMaterializer materializer)
         {
-            return RunWith(Sink.Reduce(reduce), materializer);
+            return RunWith(Sink.Sum(reduce), materializer);
         }
 
         /// <summary>

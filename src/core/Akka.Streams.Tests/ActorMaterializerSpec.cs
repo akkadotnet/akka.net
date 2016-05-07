@@ -39,7 +39,7 @@ namespace Akka.Streams.Tests
         public void ActorMaterializer_should_properly_shut_down_actors_associated_with_it()
         {
             var m = Sys.Materializer();
-            var f = Source.Maybe<int>().RunFold(0, (x, y) => x + y, m);
+            var f = Source.Maybe<int>().RunAggregate(0, (x, y) => x + y, m);
 
             m.Shutdown();
 

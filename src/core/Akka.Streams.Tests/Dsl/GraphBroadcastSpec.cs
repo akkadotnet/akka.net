@@ -79,7 +79,7 @@ namespace Akka.Streams.Tests.Dsl
                     b.From(source).To(broadcast.In);
 
                     return new SourceShape<int>(broadcast.Out(0));
-                })).RunFold(new List<int>(), (list, i) =>
+                })).RunAggregate(new List<int>(), (list, i) =>
                 {
                     list.Add(i);
                     return list;

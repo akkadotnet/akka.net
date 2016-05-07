@@ -26,7 +26,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes Log = Attributes.CreateName("log");
         public static readonly Attributes Where = Attributes.CreateName("where");
         public static readonly Attributes Collect = Attributes.CreateName("collect");
-        public static readonly Attributes Reduce = Attributes.CreateName("reduce");
+        public static readonly Attributes Sum = Attributes.CreateName("sum");
         public static readonly Attributes Recover = Attributes.CreateName("recover");
         public static readonly Attributes RecoverWith = Attributes.CreateName("recoverWith");
         public static readonly Attributes MapAsync = Attributes.CreateName("mapAsync");

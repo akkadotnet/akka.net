@@ -50,8 +50,8 @@ namespace Akka.Streams.Tests.Dsl
                 var pub1 = t.Item1;
                 var pub2 = t.Item2;
 
-                var f1 = Source.FromPublisher(pub1).Select(x => x).RunFold(0, (sum, i) => sum + i, Materializer);
-                var f2 = Source.FromPublisher(pub2).Select(x => x).RunFold(0, (sum, i) => sum + i, Materializer);
+                var f1 = Source.FromPublisher(pub1).Select(x => x).RunAggregate(0, (sum, i) => sum + i, Materializer);
+                var f2 = Source.FromPublisher(pub2).Select(x => x).RunAggregate(0, (sum, i) => sum + i, Materializer);
 
                 f1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 f2.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -83,7 +83,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(
                     Sink.AsPublisher<int>(false)
                         .MapMaterializedValue(
-                            p => Source.FromPublisher(p).RunFold(0, (sum, i) => sum + i, Materializer)),
+                            p => Source.FromPublisher(p).RunAggregate(0, (sum, i) => sum + i, Materializer)),
                     Materializer);
             f.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             f.Result.Should().Be(6);

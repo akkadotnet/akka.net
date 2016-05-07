@@ -119,7 +119,7 @@ namespace Akka.Streams.Tests.Dsl
                     return x;
                 })
                 .Expand(i => Enumerable.Repeat(i, 200).GetEnumerator())
-                .RunFold(new HashSet<int>(), (agg, elem) =>
+                .RunAggregate(new HashSet<int>(), (agg, elem) =>
                 {
                     agg.Add(elem);
                     return agg;

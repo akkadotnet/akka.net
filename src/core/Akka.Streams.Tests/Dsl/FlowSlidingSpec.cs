@@ -37,7 +37,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 var af = Source.FromEnumerator(() => Enumerable.Range(0, int.MaxValue).Take(len).GetEnumerator())
                     .Sliding(win, step)
-                    .RunFold(new List<IEnumerable<int>>(), (ints, e) =>
+                    .RunAggregate(new List<IEnumerable<int>>(), (ints, e) =>
                     {
                         ints.Add(e);
                         return ints;
@@ -45,7 +45,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 var input = Enumerable.Range(0, int.MaxValue).Take(len).ToList();
                 var cf = Source.FromEnumerator(() => Sliding(input, win, step).GetEnumerator())
-                    .RunFold(new List<IEnumerable<int>>(), (ints, e) =>
+                    .RunAggregate(new List<IEnumerable<int>>(), (ints, e) =>
                     {
                         ints.Add(e);
                         return ints;

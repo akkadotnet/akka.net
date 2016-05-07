@@ -461,9 +461,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static Source<TOut, TMat> Reduce<TOut, TMat>(this Source<TOut, TMat> flow, Func<TOut, TOut, TOut> reduce)
+        public static Source<TOut, TMat> Sum<TOut, TMat>(this Source<TOut, TMat> flow, Func<TOut, TOut, TOut> reduce)
         {
-            return (Source<TOut, TMat>)InternalFlowOperations.Reduce(flow, reduce);
+            return (Source<TOut, TMat>)InternalFlowOperations.Sum(flow, reduce);
         }
 
         /// <summary>

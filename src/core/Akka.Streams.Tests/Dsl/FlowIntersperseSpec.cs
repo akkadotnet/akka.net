@@ -46,7 +46,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.From(new[] { 1, 2, 3 })
                     .Select(x => x.ToString())
                     .Intersperse(",")
-                    .RunFold("", (s, s1) => s + s1, Materializer);
+                    .RunAggregate("", (s, s1) => s + s1, Materializer);
 
             concated.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             concated.Result.Should().Be("1,2,3");

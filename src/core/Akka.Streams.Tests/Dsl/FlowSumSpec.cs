@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="FlowReduceSpec.cs" company="Akka.NET Project">
+// <copyright file="FlowSumSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -18,11 +18,11 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class FlowReduceSpec : AkkaSpec
+    public class FlowSumSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
 
-        public FlowReduceSpec(ITestOutputHelper helper):base(helper)
+        public FlowSumSpec(ITestOutputHelper helper):base(helper)
         {
             Materializer = ActorMaterializer.Create(Sys);
         }
@@ -32,26 +32,26 @@ namespace Akka.Streams.Tests.Dsl
         private static Source<int, Unit> InputSource => Source.From(Input).Where(_ => true).Select(x => x);
 
         private static Source<int, Unit> ReduceSource
-            => InputSource.Reduce((i, i1) => i + i1).Where(_ => true).Select(x => x);
+            => InputSource.Sum((i, i1) => i + i1).Where(_ => true).Select(x => x);
 
         private static Flow<int, int, Unit> ReduceFlow
-            => Flow.Create<int>().Where(_ => true).Select(x => x).Reduce((i, i1) => i + i1).Where(_ => true).Select(x => x);
+            => Flow.Create<int>().Where(_ => true).Select(x => x).Sum((i, i1) => i + i1).Where(_ => true).Select(x => x);
 
-        private static Sink<int, Task<int>> ReduceSink => Sink.Reduce<int>((i, i1) => i + i1);
+        private static Sink<int, Task<int>> ReduceSink => Sink.Sum<int>((i, i1) => i + i1);
 
         [Fact]
-        public void A_Reduce_must_work_when_using_Source_RunReduce()
+        public void A_Sum_must_work_when_using_Source_RunReduce()
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = InputSource.RunReduce((i, i1) => i + i1, Materializer);
+                var t = InputSource.RunSum((i, i1) => i + i1, Materializer);
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 t.Result.Should().Be(Expected);
             }, Materializer);
         }
 
         [Fact]
-        public void A_Reduce_must_work_when_using_Source_Reduce()
+        public void A_Sum_must_work_when_using_Source_Reduce()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -61,7 +61,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
         [Fact]
-        public void A_Reduce_must_work_when_using_Sink_Reduce()
+        public void A_Sum_must_work_when_using_Sink_Reduce()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -73,7 +73,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Reduce_must_work_when_using_Flow_Reduce()
+        public void A_Sum_must_work_when_using_Flow_Reduce()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -84,7 +84,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Reduce_must_work_when_using_Source_Reduce_and_Flow_Reduce_and_Sink_Reduce()
+        public void A_Sum_must_work_when_using_Source_Sum_and_Flow_Sum_and_Sink_Reduce()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -96,7 +96,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Reduce_must_propagate_an_error()
+        public void A_Sum_must_propagate_an_error()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -106,19 +106,19 @@ namespace Akka.Streams.Tests.Dsl
                     if (x > 50)
                         throw error;
                     return x;
-                }).RunReduce((i, i1) => 0, Materializer);
+                }).RunSum((i, i1) => 0, Materializer);
 
                 task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<TestException>().WithMessage("test");
             }, Materializer);
         }
 
         [Fact]
-        public void A_Reduce_must_complete_future_with_failure_when_reducing_function_throws()
+        public void A_Sum_must_complete_future_with_failure_when_reducing_function_throws()
         {
             this.AssertAllStagesStopped(() =>
             {
                 var error = new TestException("test");
-                var task = InputSource.RunReduce((x, y) =>
+                var task = InputSource.RunSum((x, y) =>
                 {
                     if (x > 50)
                         throw error;

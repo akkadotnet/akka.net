@@ -256,7 +256,7 @@ namespace Akka.Streams.Dsl
             var fold = Flow.Create<TIn>()
                 .Aggregate(zero, aggregate)
                 .ToMaterialized(First<TOut>(), Keep.Right)
-                .Named("FoldSink");
+                .Named("AggregateSink");
 
             return FromGraph(fold);
         }
@@ -268,12 +268,12 @@ namespace Akka.Streams.Dsl
         /// function evaluation when the input stream ends, or completed with `Failure`
         /// if there is a failure signaled in the stream.
         /// </summary>
-        public static Sink<TIn, Task<TIn>> Reduce<TIn>(Func<TIn, TIn, TIn> reduce)
+        public static Sink<TIn, Task<TIn>> Sum<TIn>(Func<TIn, TIn, TIn> reduce)
         {
             var graph = Flow.Create<TIn>()
-                .Reduce(reduce)
+                .Sum(reduce)
                 .ToMaterialized(First<TIn>(), Keep.Right)
-                .Named("ReduceSink");
+                .Named("SumSink");
 
             return FromGraph(graph);
         }

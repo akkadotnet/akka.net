@@ -349,7 +349,7 @@ namespace Akka.Streams.Tests.Dsl
                     const int n = 10000;
                     var task = Source.From(Enumerable.Range(1, n))
                         .SelectAsync(parallelism, _ => deferred())
-                        .RunFold(0, (c, _) => c + 1, Materializer);
+                        .RunAggregate(0, (c, _) => c + 1, Materializer);
 
                     task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                     task.Result.Should().Be(n);

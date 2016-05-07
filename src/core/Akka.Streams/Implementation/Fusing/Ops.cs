@@ -1550,7 +1550,7 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
-    internal sealed class Reduce<T> : SimpleLinearGraphStage<T>
+    internal sealed class Sum<T> : SimpleLinearGraphStage<T>
     {
         #region internal classes
 
@@ -1558,7 +1558,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             private T _aggregator;
 
-            public Logic(Reduce<T> stage) : base(stage.Shape)
+            public Logic(Sum<T> stage) : base(stage.Shape)
             {
                 var rest = new LambdaInHandler(onPush: () =>
                 {
@@ -1587,16 +1587,16 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly Func<T, T, T> _reduce;
 
-        public Reduce(Func<T,T,T> reduce)
+        public Sum(Func<T,T,T> reduce)
         {
             _reduce = reduce;
         }
 
-        protected override Attributes InitialAttributes { get; } = DefaultAttributes.Reduce;
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.Sum;
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
-        public override string ToString() => "Reduce";
+        public override string ToString() => "Sum";
     }
 
     internal sealed class RecoverWith<TOut, TMat> : SimpleLinearGraphStage<TOut>
