@@ -82,7 +82,7 @@
     <Compile Include="Dsl\FlowFlattenMergeSpec.cs" />
     <Compile Include="Dsl\FlowAggregateSpec.cs" />
     <Compile Include="Dsl\FlowForeachSpec.cs" />
-    <Compile Include="Dsl\FlowFromFutureSpec.cs" />
+    <Compile Include="Dsl\FlowFromTaskSpec.cs" />
     <Compile Include="Dsl\FlowGraphCompileSpec.cs" />
     <Compile Include="Dsl\FlowGroupBySpec.cs" />
     <Compile Include="Dsl\FlowGroupedSpec.cs" />

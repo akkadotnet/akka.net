@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="FlowFromFutureSpec.cs" company="Akka.NET Project">
+// <copyright file="FlowFromTaskSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -17,18 +17,18 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class FlowFromFutureSpec : AkkaSpec
+    public class FlowFromTaskSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
 
-        public FlowFromFutureSpec(ITestOutputHelper helper) : base(helper)
+        public FlowFromTaskSpec(ITestOutputHelper helper) : base(helper)
         {
             var settings = ActorMaterializerSettings.Create(Sys);
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
         [Fact]
-        public void A_Flow_based_on_a_Future_must_produce_one_element_from_already_successful_Future()
+        public void A_Flow_based_on_a_Task_must_produce_one_element_from_already_successful_Future()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -44,7 +44,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_based_on_a_Future_must_produce_error_from_already_failed_Future()
+        public void A_Flow_based_on_a_Task_must_produce_error_from_already_failed_Future()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -59,7 +59,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_based_on_a_Future_must_produce_one_element_when_Future_is_completed()
+        public void A_Flow_based_on_a_Task_must_produce_one_element_when_Task_is_completed()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -78,7 +78,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_based_on_a_Future_must_produce_one_element_when_Future_is_completed_but_not_before_request()
+        public void A_Flow_based_on_a_Task_must_produce_one_element_when_Task_is_completed_but_not_before_request()
         {
             var promise = new TaskCompletionSource<int>();
             var c = TestSubscriber.CreateManualProbe<int>(this);
@@ -93,7 +93,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_based_on_a_Future_must_produce_elements_with_multiple_subscribers()
+        public void A_Flow_based_on_a_Task_must_produce_elements_with_multiple_subscribers()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -116,7 +116,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_based_on_a_Future_must_allow_cancel_before_receiving_element()
+        public void A_Flow_based_on_a_Task_must_allow_cancel_before_receiving_element()
         {
             var promise = new TaskCompletionSource<int>();
             var c = TestSubscriber.CreateManualProbe<int>(this);
