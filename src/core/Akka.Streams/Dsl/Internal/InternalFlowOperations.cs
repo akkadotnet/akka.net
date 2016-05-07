@@ -606,9 +606,9 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static IFlow<T, TMat> Drop<T, TMat>(this IFlow<T, TMat> flow, long n)
+        public static IFlow<T, TMat> Skip<T, TMat>(this IFlow<T, TMat> flow, long n)
         {
-            return flow.AndThen(new Drop<T>(n));
+            return flow.AndThen(new Skip<T>(n));
         }
 
         /// <summary>

@@ -580,9 +580,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static Flow<TIn, TOut, TMat> Drop<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, long n)
+        public static Flow<TIn, TOut, TMat> Skip<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, long n)
         {
-            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.Drop(flow, n);
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.Skip(flow, n);
         }
 
         /// <summary>

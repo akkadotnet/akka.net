@@ -138,7 +138,7 @@
     <Compile Include="Dsl\FlowBufferSpec.cs" />
     <Compile Include="Dsl\FlowDropWhithinSpec.cs" />
     <Compile Include="Dsl\FlowSkipWhileSpec.cs" />
-    <Compile Include="Dsl\FlowDropSpec.cs" />
+    <Compile Include="Dsl\FlowSkipSpec.cs" />
     <Compile Include="Dsl\FlowMapConcatSpec.cs" />
     <Compile Include="Dsl\FlowSelectSpec.cs" />
     <Compile Include="Dsl\FlowSupervisionSpec.cs" />

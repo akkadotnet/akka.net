@@ -36,7 +36,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes LimitWeighted = Attributes.CreateName("limitWeighted");
         public static readonly Attributes Sliding = Attributes.CreateName("sliding");
         public static readonly Attributes Take = Attributes.CreateName("take");
-        public static readonly Attributes Drop = Attributes.CreateName("drop");
+        public static readonly Attributes Skip = Attributes.CreateName("skip");
         public static readonly Attributes TakeWhile = Attributes.CreateName("takeWhile");
         public static readonly Attributes SkipWhile = Attributes.CreateName("skipWhile");
         public static readonly Attributes Scan = Attributes.CreateName("scan");
@@ -276,11 +276,11 @@ namespace Akka.Streams.Implementation.Stages
         public override IStage<T, T> Create(Attributes effectiveAttributes) => new Fusing.Take<T>(_count);
     }
 
-    internal sealed class Drop<T> : SymbolicStage<T, T>
+    internal sealed class Skip<T> : SymbolicStage<T, T>
     {
         private readonly long _count;
 
-        public Drop(long count, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Drop)
+        public Skip(long count, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Skip)
         {
             _count = count;
         }
