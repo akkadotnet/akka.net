@@ -373,7 +373,7 @@ namespace Akka.Streams.Tests.Dsl
                     var task =
                         testSource.Lift()
                             .Delay(TimeSpan.FromSeconds(1))
-                            .FlatMapConcat(s => s.MapMaterializedValue<TaskCompletionSource<int>>(_ => null))
+                            .ConcatMany(s => s.MapMaterializedValue<TaskCompletionSource<int>>(_ => null))
                             .RunWith(Sink.Ignore<int>(), tightTimeoutMaterializer);
                     task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 };

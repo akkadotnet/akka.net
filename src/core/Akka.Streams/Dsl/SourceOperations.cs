@@ -1008,9 +1008,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static Source<TOut2, TMat> FlatMapConcat<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, Func<TOut1, IGraph<SourceShape<TOut2>, TMat>> flatten)
+        public static Source<TOut2, TMat> ConcatMany<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, Func<TOut1, IGraph<SourceShape<TOut2>, TMat>> flatten)
         {
-            return (Source<TOut2, TMat>)InternalFlowOperations.FlatMapConcat(flow, flatten);
+            return (Source<TOut2, TMat>)InternalFlowOperations.ConcatMany(flow, flatten);
         }
 
         /// <summary>
@@ -1026,9 +1026,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static Source<TOut2, TMat> FlatMapMerge<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, int breadth, Func<TOut1, IGraph<SourceShape<TOut2>, TMat>> flatten)
+        public static Source<TOut2, TMat> MergeMany<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, int breadth, Func<TOut1, IGraph<SourceShape<TOut2>, TMat>> flatten)
         {
-            return (Source<TOut2, TMat>)InternalFlowOperations.FlatMapMerge(flow, breadth, flatten);
+            return (Source<TOut2, TMat>)InternalFlowOperations.MergeMany(flow, breadth, flatten);
         }
 
         /// <summary>

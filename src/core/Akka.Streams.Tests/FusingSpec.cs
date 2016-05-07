@@ -135,7 +135,7 @@ namespace Akka.Streams.Tests
             var async = Flow.Create<int>().Select(x => x*2).Async();
             var t = Source.From(Enumerable.Range(0, 10))
                 .Select(x => x*10)
-                .FlatMapMerge(5, i => Source.From(Enumerable.Range(i, 10)).Via(async))
+                .MergeMany(5, i => Source.From(Enumerable.Range(i, 10)).Via(async))
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
@@ -163,7 +163,7 @@ namespace Akka.Streams.Tests
                     TestActor.Tell(refFunc());
                     return x;
                 })
-                .FlatMapMerge(5, i => Source.Single(i).Via(async))
+                .MergeMany(5, i => Source.Single(i).Via(async))
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
@@ -195,7 +195,7 @@ namespace Akka.Streams.Tests
                     TestActor.Tell(refFunc());
                     return x;
                 })
-                .FlatMapMerge(5, i => Source.Single(i).Via(flow.Async()))
+                .MergeMany(5, i => Source.Single(i).Via(flow.Async()))
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 

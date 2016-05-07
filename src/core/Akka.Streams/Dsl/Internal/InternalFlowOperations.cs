@@ -1118,7 +1118,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static IFlow<TOut, TMat> FlatMapConcat<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
+        public static IFlow<TOut, TMat> ConcatMany<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
             Func<TIn, IGraph<SourceShape<TOut>, TMat>> flatten)
         {
             return flow.Select(flatten).Via(new Fusing.FlattenMerge<IGraph<SourceShape<TOut>, TMat>, TOut, TMat>(1));
@@ -1137,7 +1137,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static IFlow<TOut, TMat> FlatMapMerge<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int breadth,
+        public static IFlow<TOut, TMat> MergeMany<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int breadth,
             Func<TIn, IGraph<SourceShape<TOut>, TMat>> flatten)
         {
             return flow.Select(flatten).Via(new Fusing.FlattenMerge<IGraph<SourceShape<TOut>, TMat>, TOut, TMat>(breadth));
