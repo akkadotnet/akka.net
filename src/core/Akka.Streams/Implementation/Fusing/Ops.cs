@@ -1511,7 +1511,7 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
-    internal sealed class DropWithin<T> : SimpleLinearGraphStage<T>
+    internal sealed class SkipWithin<T> : SimpleLinearGraphStage<T>
     {
         private readonly TimeSpan _timeout;
 
@@ -1519,10 +1519,10 @@ namespace Akka.Streams.Implementation.Fusing
 
         private sealed class Logic : TimerGraphStageLogic
         {
-            private readonly DropWithin<T> _stage;
+            private readonly SkipWithin<T> _stage;
             private bool _allow;
 
-            public Logic(DropWithin<T> stage) : base(stage.Shape)
+            public Logic(SkipWithin<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
                 SetHandler(_stage.Inlet, onPush: () =>
@@ -1542,7 +1542,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         #endregion
 
-        public DropWithin(TimeSpan timeout)
+        public SkipWithin(TimeSpan timeout)
         {
             _timeout = timeout;
         }

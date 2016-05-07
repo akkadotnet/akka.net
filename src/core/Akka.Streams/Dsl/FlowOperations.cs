@@ -596,9 +596,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static Flow<TIn, TOut, TMat> DropWithin<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, TimeSpan duration)
+        public static Flow<TIn, TOut, TMat> SkipWithin<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, TimeSpan duration)
         {
-            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.DropWithin(flow, duration);
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.SkipWithin(flow, duration);
         }
 
         /// <summary>

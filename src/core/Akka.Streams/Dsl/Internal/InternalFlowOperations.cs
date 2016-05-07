@@ -622,9 +622,9 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static IFlow<T, TMat> DropWithin<T, TMat>(this IFlow<T, TMat> flow, TimeSpan duration)
+        public static IFlow<T, TMat> SkipWithin<T, TMat>(this IFlow<T, TMat> flow, TimeSpan duration)
         {
-            return flow.Via(new Fusing.DropWithin<T>(duration).WithAttributes(Attributes.CreateName("dropWithin")));
+            return flow.Via(new Fusing.SkipWithin<T>(duration).WithAttributes(Attributes.CreateName("skipWithin")));
         }
 
         /// <summary>
