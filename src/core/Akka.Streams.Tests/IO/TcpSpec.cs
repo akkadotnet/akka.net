@@ -404,7 +404,7 @@ namespace Akka.Streams.Tests.IO
 
                 var t = Source.Maybe<ByteString>()
                     .Via(Sys.TcpStream().OutgoingConnection(serverAddress.Address.ToString(), serverAddress.Port))
-                    .ToMaterialized(Sink.Fold<ByteString, ByteString>(ByteString.Empty, (s, s1) => s + s1), Keep.Both)
+                    .ToMaterialized(Sink.Aggregate<ByteString, ByteString>(ByteString.Empty, (s, s1) => s + s1), Keep.Both)
                     .Run(Materializer);
                 var promise = t.Item1;
                 var result = t.Item2;
@@ -624,7 +624,7 @@ namespace Akka.Streams.Tests.IO
 
                 var folder = Source.From(Enumerable.Range(0, 100).Select(_ => ByteString.Create(new byte[] {0})))
                     .Via(Sys.TcpStream().OutgoingConnection(serverAddress))
-                    .Fold(0, (i, s) => i + s.Count)
+                    .Aggregate(0, (i, s) => i + s.Count)
                     .ToMaterialized(Sink.First<int>(), Keep.Right);
 
                 var total = folder.Run(Materializer);

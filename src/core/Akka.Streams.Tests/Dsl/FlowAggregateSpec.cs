@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="FlowFoldSpec.cs" company="Akka.NET Project">
+// <copyright file="FlowAggregateSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -18,11 +18,11 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class FlowFoldSpec : AkkaSpec
+    public class FlowAggregateSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
 
-        public FlowFoldSpec(ITestOutputHelper helper) : base(helper)
+        public FlowAggregateSpec(ITestOutputHelper helper) : base(helper)
         {
             Materializer = ActorMaterializer.Create(Sys);
         }
@@ -32,15 +32,15 @@ namespace Akka.Streams.Tests.Dsl
         private static Source<int, Unit> InputSource => Source.From(Input).Where(_ => true).Select(x => x);
 
         private static Source<int, Unit> FoldSource =>
-            InputSource.Fold(0, (sum, i) => sum + i).Where(_ => true).Select(x => x);
+            InputSource.Aggregate(0, (sum, i) => sum + i).Where(_ => true).Select(x => x);
 
         private static Flow<int, int, Unit> FoldFlow =>
-            FlowOperations.Select(Flow.Create<int>().Where(_ => true).Select(x => x).Fold(0, (sum, i) => sum + i).Where(_ => true), x => x);
+            FlowOperations.Select(Flow.Create<int>().Where(_ => true).Select(x => x).Aggregate(0, (sum, i) => sum + i).Where(_ => true), x => x);
 
-        private static Sink<int, Task<int>> FoldSink => Sink.Fold<int, int>(0, (sum, i) => sum + i);
+        private static Sink<int, Task<int>> FoldSink => Sink.Aggregate<int, int>(0, (sum, i) => sum + i);
 
         [Fact]
-        public void A_Fold_must_work_when_using_Source_RunFold()
+        public void A_Aggregate_must_work_when_using_Source_RunFold()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -51,7 +51,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Fold_must_work_when_using_Source_Fold()
+        public void A_Aggregate_must_work_when_using_Source_Fold()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -62,7 +62,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Fold_must_work_when_using_Sink_Fold()
+        public void A_Aggregate_must_work_when_using_Sink_Fold()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -74,7 +74,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Fold_must_work_when_using_Flow_Fold()
+        public void A_Aggregate_must_work_when_using_Flow_Fold()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -86,7 +86,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Fold_must_work_when_using__Source_Fold_and_Flow_Fold_and_Sink_Fold()
+        public void A_Aggregate_must_work_when_using__Source_Aggregate_and_Flow_Aggregate_and_Sink_Fold()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -98,7 +98,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Fold_must_propagate_an_error()
+        public void A_Aggregate_must_propagate_an_error()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -119,7 +119,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Fold_must_complete_future_with_failure_when_folding_functions_throws()
+        public void A_Aggregate_must_complete_future_with_failure_when_folding_functions_throws()
         {
             this.AssertAllStagesStopped(() =>
             {

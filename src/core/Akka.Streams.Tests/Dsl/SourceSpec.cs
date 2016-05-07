@@ -117,7 +117,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var neverSource = Source.Maybe<int>().Where(_ => false);
-                var counterSink = Sink.Fold<int, int>(0, (acc, _) => acc + 1);
+                var counterSink = Sink.Aggregate<int, int>(0, (acc, _) => acc + 1);
 
                 var t = neverSource.ToMaterialized(counterSink, Keep.Both).Run(Materializer);
                 var neverPromise = t.Item1;

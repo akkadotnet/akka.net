@@ -194,7 +194,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 const int numElementsForSink = 10000;
-                var outputs = Sink.Fold<int, int>(0, (sum, i) => sum + i);
+                var outputs = Sink.Aggregate<int, int>(0, (sum, i) => sum + i);
                 var t = RunnableGraph.FromGraph(GraphDsl.Create(outputs, outputs, outputs, Tuple.Create,
                     (b, o1, o2, o3) =>
                     {

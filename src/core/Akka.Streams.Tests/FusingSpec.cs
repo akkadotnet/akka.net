@@ -39,10 +39,10 @@ namespace Akka.Streams.Tests
                     .Where(x => x%2 == 1)
                     .AlsoTo(
                         Flow.Create<int>()
-                            .Fold(0, (sum, i) => sum + i)
+                            .Aggregate(0, (sum, i) => sum + i)
                             .To(Sink.First<int>().Named("otherSink"))
                             .AddAttributes(async ? Attributes.CreateAsyncBoundary() : Attributes.None))
-                    .Via(Flow.Create<int>().Fold(1, (sum, i) => sum + i).Named("mainSink"));
+                    .Via(Flow.Create<int>().Aggregate(1, (sum, i) => sum + i).Named("mainSink"));
         }
 
         private static void SinglePath<TShape, TMat>(Fusing.FusedGraph<TShape, TMat> fusedGraph,

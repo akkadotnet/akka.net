@@ -234,7 +234,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             WithOneBoundedSetup(new IStage<int, int>[]
             {
-                new Fold<int, int>(0, (agg, x) => agg + x, Deciders.StoppingDecider)
+                new Aggregate<int, int>(0, (agg, x) => agg + x, Deciders.StoppingDecider)
             },
                 (lastEvents, upstream, downstream) =>
                 {
@@ -262,7 +262,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             WithOneBoundedSetup(new IStage<int, int>[]
             {
-                new Fold<int, int>(0, (agg, x) => agg + x, Deciders.StoppingDecider)
+                new Aggregate<int, int>(0, (agg, x) => agg + x, Deciders.StoppingDecider)
             },
                 (lastEvents, upstream, downstream) =>
                 {
@@ -290,7 +290,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             WithOneBoundedSetup(new IStage<int, int>[]
             {
-                new Fold<int, int>(0, (agg, x) => agg + x, Deciders.StoppingDecider)
+                new Aggregate<int, int>(0, (agg, x) => agg + x, Deciders.StoppingDecider)
             },
                 (lastEvents, upstream, downstream) =>
                 {
@@ -623,7 +623,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             WithOneBoundedSetup(new IStage<int, int>[]
             {
                 new PushFinishStage<int>(),
-                new Fold<int, int>(0, (x, y) => x + y, Deciders.StoppingDecider)
+                new Aggregate<int, int>(0, (x, y) => x + y, Deciders.StoppingDecider)
             },
                 (lastEvents, upstream, downstream) =>
                 {

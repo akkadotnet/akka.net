@@ -232,14 +232,14 @@ namespace Akka.Streams.Implementation.Fusing
         public override IStage<TIn, TOut> Restart() => new Scan<TIn, TOut>(_zero, _aggregate, _decider);
     }
 
-    internal sealed class Fold<TIn, TOut> : PushPullStage<TIn, TOut>
+    internal sealed class Aggregate<TIn, TOut> : PushPullStage<TIn, TOut>
     {
         private readonly TOut _zero;
         private readonly Func<TOut, TIn, TOut> _aggregate;
         private readonly Decider _decider;
         private TOut _aggregator;
 
-        public Fold(TOut zero, Func<TOut, TIn, TOut> aggregate, Decider decider)
+        public Aggregate(TOut zero, Func<TOut, TIn, TOut> aggregate, Decider decider)
         {
             _zero = _aggregator = zero;
             _aggregate = aggregate;
@@ -259,7 +259,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         public override Directive Decide(Exception cause) => _decider(cause);
 
-        public override IStage<TIn, TOut> Restart() => new Fold<TIn, TOut>(_zero, _aggregate, _decider);
+        public override IStage<TIn, TOut> Restart() => new Aggregate<TIn, TOut>(_zero, _aggregate, _decider);
     }
 
     internal sealed class Intersperse<T> : GraphStage<FlowShape<T, T>>

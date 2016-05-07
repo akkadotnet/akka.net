@@ -324,7 +324,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             var ops = new IStage<string, string>[]
             {
                 new PushFinishStage<string>(() => TestActor.Tell("stop")),
-                new Fold<string, string>("", (x, y) => x+y, Deciders.StoppingDecider) 
+                new Aggregate<string, string>("", (x, y) => x+y, Deciders.StoppingDecider) 
             };
 
             WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>

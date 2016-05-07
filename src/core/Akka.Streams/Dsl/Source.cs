@@ -170,7 +170,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public Task<TOut2> RunFold<TOut2>(TOut2 zero, Func<TOut2, TOut, TOut2> aggregate, IMaterializer materializer)
         {
-            return RunWith(Sink.Fold(zero, aggregate), materializer);
+            return RunWith(Sink.Aggregate(zero, aggregate), materializer);
         }
 
         /// <summary>

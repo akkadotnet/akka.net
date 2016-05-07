@@ -155,7 +155,7 @@ namespace Akka.Streams.Tests.Dsl
             var future = Source.From(Enumerable.Range(1, 5))
                 .Log("hi", n => { throw ex; })
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
-                .RunWith(Sink.Fold<int, int>(0, (i, i1) => i + i1), Materializer);
+                .RunWith(Sink.Aggregate<int, int>(0, (i, i1) => i + i1), Materializer);
 
             future.Wait(TimeSpan.FromMilliseconds(500)).Should().BeTrue();
             future.Result.Should().Be(0);

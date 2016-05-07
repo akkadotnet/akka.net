@@ -40,7 +40,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes TakeWhile = Attributes.CreateName("takeWhile");
         public static readonly Attributes SkipWhile = Attributes.CreateName("skipWhile");
         public static readonly Attributes Scan = Attributes.CreateName("scan");
-        public static readonly Attributes Fold = Attributes.CreateName("fold");
+        public static readonly Attributes Aggregate = Attributes.CreateName("aggregate");
         public static readonly Attributes Buffer = Attributes.CreateName("buffer");
         public static readonly Attributes Batch = Attributes.CreateName("batch");
         public static readonly Attributes BatchWeighted = Attributes.CreateName("batchWeighted");
@@ -329,19 +329,19 @@ namespace Akka.Streams.Implementation.Stages
             => new Fusing.Scan<TIn, TOut>(_zero, _aggregate, Supervision(effectiveAttributes));
     }
 
-    internal sealed class Fold<TIn, TOut> : SymbolicStage<TIn, TOut>
+    internal sealed class Aggregate<TIn, TOut> : SymbolicStage<TIn, TOut>
     {
         private readonly TOut _zero;
         private readonly Func<TOut, TIn, TOut> _aggregate;
 
-        public Fold(TOut zero, Func<TOut, TIn, TOut> aggregate, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Fold)
+        public Aggregate(TOut zero, Func<TOut, TIn, TOut> aggregate, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Aggregate)
         {
             _zero = zero;
             _aggregate = aggregate;
         }
 
         public override IStage<TIn, TOut> Create(Attributes effectiveAttributes)
-            => new Fusing.Fold<TIn, TOut>(_zero, _aggregate, Supervision(effectiveAttributes));
+            => new Fusing.Aggregate<TIn, TOut>(_zero, _aggregate, Supervision(effectiveAttributes));
     }
 
     internal sealed class Buffer<T> : SymbolicStage<T, T>

@@ -418,7 +418,7 @@ namespace Akka.Streams.Dsl.Internal
         }
 
         /// <summary>
-        /// Similar to <see cref="Fold{TIn,TOut}"/> but is not a terminal operation,
+        /// Similar to <see cref="Aggregate{TIn,TOut,TMat}"/> but is not a terminal operation,
         /// emits its current value which starts at <paramref name="zero"/> and then
         /// applies the current and next value to the given function <paramref name="scan"/>,
         /// emitting the next current value.
@@ -458,14 +458,14 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static IFlow<TOut, TMat> Fold<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, TOut zero,
+        public static IFlow<TOut, TMat> Aggregate<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, TOut zero,
             Func<TOut, TIn, TOut> fold)
         {
-            return flow.AndThen(new Fold<TIn, TOut>(zero, fold));
+            return flow.AndThen(new Aggregate<TIn, TOut>(zero, fold));
         }
 
         /// <summary>
-        /// Similar to <see cref="Fold{TIn,TOut,TMat}"/> but uses first element as zero element.
+        /// Similar to <see cref="Aggregate{TIn,TOut,TMat}"/> but uses first element as zero element.
         /// Applies the given function <paramref name="reduce"/> towards its current and next value,
         /// yielding the next current value. 
         /// <para>

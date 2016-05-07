@@ -102,7 +102,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void FlowFlowGraph_Partial_must_be_able_to_build_and_reuse_complex_materializing_partial_graphs()
         {
-            var summer = Sink.Fold<int, int>(0, (i, i1) => i + i1);
+            var summer = Sink.Aggregate<int, int>(0, (i, i1) => i + i1);
 
             var doubler = GraphDsl.Create(summer, summer, Tuple.Create, (b, s1,s2) =>
             {

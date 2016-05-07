@@ -29,7 +29,7 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        private static Sink<int, Task<int>> FoldSink => Sink.Fold<int,int>(0, (sum, i) => sum + i);
+        private static Sink<int, Task<int>> FoldSink => Sink.Aggregate<int,int>(0, (sum, i) => sum + i);
 
         [Fact]
         public void A_Graph_with_materialized_value_must_expose_the_materialized_value_as_source()
@@ -154,7 +154,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Graph_with_materialized_value_must_work_also_when_the_sources_module_is_copied()
         {
-            var foldFlow = Flow.FromGraph(GraphDsl.Create(Sink.Fold<int, int>(0, (sum, i) => sum + i), (b, fold) =>
+            var foldFlow = Flow.FromGraph(GraphDsl.Create(Sink.Aggregate<int, int>(0, (sum, i) => sum + i), (b, fold) =>
             {
                 var o = b.From(b.MaterializedValue).Via(Flow.Create<Task<int>>().SelectAsync(4, x => x));
                 return new FlowShape<int,int>(fold.Inlet, o.Out);

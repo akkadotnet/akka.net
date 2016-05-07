@@ -251,10 +251,10 @@ namespace Akka.Streams.Dsl
         /// function evaluation when the input stream ends, or completed with the streams exception
         /// if there is a failure signaled in the stream.
         /// </summary>
-        public static Sink<TIn, Task<TOut>> Fold<TIn, TOut>(TOut zero, Func<TOut, TIn, TOut> aggregate)
+        public static Sink<TIn, Task<TOut>> Aggregate<TIn, TOut>(TOut zero, Func<TOut, TIn, TOut> aggregate)
         {
             var fold = Flow.Create<TIn>()
-                .Fold(zero, aggregate)
+                .Aggregate(zero, aggregate)
                 .ToMaterialized(First<TOut>(), Keep.Right)
                 .Named("FoldSink");
 
