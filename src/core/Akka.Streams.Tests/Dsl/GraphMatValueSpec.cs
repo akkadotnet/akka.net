@@ -40,7 +40,7 @@ namespace Akka.Streams.Tests.Dsl
                 var source = Source.From(Enumerable.Range(1, 10)).MapMaterializedValue(_ => Task.FromResult(0));
                 b.From(source).To(fold);
                 b.From(b.MaterializedValue)
-                    .Via(Flow.Create<Task<int>>().MapAsync(4, x => x))
+                    .Via(Flow.Create<Task<int>>().SelectAsync(4, x => x))
                     .To(Sink.FromSubscriber(sub).MapMaterializedValue(_ => Task.FromResult(0)));
                 return ClosedShape.Instance;
             })).Run(Materializer);
@@ -62,10 +62,10 @@ namespace Akka.Streams.Tests.Dsl
                 var source = Source.From(Enumerable.Range(1, 10)).MapMaterializedValue(_ => Task.FromResult(0));
                 b.From(source).To(fold);
                 b.From(b.MaterializedValue)
-                    .Via(Flow.Create<Task<int>>().MapAsync(4, x => x))
+                    .Via(Flow.Create<Task<int>>().SelectAsync(4, x => x))
                     .To(zip.In0);
                 b.From(b.MaterializedValue)
-                    .Via(Flow.Create<Task<int>>().MapAsync(4, x => x))
+                    .Via(Flow.Create<Task<int>>().SelectAsync(4, x => x))
                     .To(zip.In1);
 
                 b.From(zip.Out).To(Sink.FromSubscriber(sub).MapMaterializedValue(_ => Task.FromResult(0)));
@@ -93,7 +93,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Graph_with_materialized_value_must_allow_exposing_the_materialized_value_as_port()
         {
             var t =
-                FoldFeedbackSource.MapAsync(4, x => x)
+                FoldFeedbackSource.SelectAsync(4, x => x)
                     .Select(x => x + 100)
                     .ToMaterialized(Sink.First<int>(), Keep.Both)
                     .Run(Materializer);
@@ -110,7 +110,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Graph_with_materialized_value_must_allow_exposing_the_materialized_values_as_port_even_if_wrapped_and_the_final_materialized_value_is_unit()
         {
             var noMatSource =
-                FoldFeedbackSource.MapAsync(4, x => x).Select(x => x + 100).MapMaterializedValue(_ => Unit.Instance);
+                FoldFeedbackSource.SelectAsync(4, x => x).Select(x => x + 100).MapMaterializedValue(_ => Unit.Instance);
             var t = noMatSource.RunWith(Sink.First<int>(), Materializer);
             t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             t.Result.Should().Be(155);
@@ -124,8 +124,8 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     var zip = b.Add(new ZipWith<int, int, int>((i, i1) => i + i1));
 
-                    b.From(s1.Outlet).Via(Flow.Create<Task<int>>().MapAsync(4, x => x)).To(zip.In0);
-                    b.From(s2.Outlet).Via(Flow.Create<Task<int>>().MapAsync(4, x => x).Select(x => x*100)).To(zip.In1);
+                    b.From(s1.Outlet).Via(Flow.Create<Task<int>>().SelectAsync(4, x => x)).To(zip.In0);
+                    b.From(s2.Outlet).Via(Flow.Create<Task<int>>().SelectAsync(4, x => x).Select(x => x*100)).To(zip.In1);
                     
                     return new SourceShape<int>(zip.Out);
                 }));
@@ -156,7 +156,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var foldFlow = Flow.FromGraph(GraphDsl.Create(Sink.Fold<int, int>(0, (sum, i) => sum + i), (b, fold) =>
             {
-                var o = b.From(b.MaterializedValue).Via(Flow.Create<Task<int>>().MapAsync(4, x => x));
+                var o = b.From(b.MaterializedValue).Via(Flow.Create<Task<int>>().SelectAsync(4, x => x));
                 return new FlowShape<int,int>(fold.Inlet, o.Out);
             }));
 

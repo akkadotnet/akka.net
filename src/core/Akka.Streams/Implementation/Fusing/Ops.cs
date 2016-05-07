@@ -882,7 +882,7 @@ namespace Akka.Streams.Implementation.Fusing
         public override string ToString() => "Expand";
     }
 
-    internal sealed class MapAsync<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
+    internal sealed class SelectAsync<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region internal classes
 
@@ -895,12 +895,12 @@ namespace Akka.Streams.Implementation.Fusing
 
             private static readonly Result<TOut> NotYetThere = Result.Failure<TOut>(new Exception());
 
-            private readonly MapAsync<TIn, TOut> _stage;
+            private readonly SelectAsync<TIn, TOut> _stage;
             private readonly Decider _decider;
             private IBuffer<Holder<TOut>> _buffer;
             private readonly Action<Tuple<Holder<TOut>, Result<TOut>>> _taskCallback;
 
-            public Logic(Attributes inheritedAttributes, MapAsync<TIn, TOut> stage) : base(stage.Shape)
+            public Logic(Attributes inheritedAttributes, SelectAsync<TIn, TOut> stage) : base(stage.Shape)
             {
                 _stage = stage;
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
@@ -1004,14 +1004,14 @@ namespace Akka.Streams.Implementation.Fusing
         public readonly Inlet<TIn> In = new Inlet<TIn>("in");
         public readonly Outlet<TOut> Out = new Outlet<TOut>("out");
 
-        public MapAsync(int parallelism, Func<TIn, Task<TOut>> mapFunc)
+        public SelectAsync(int parallelism, Func<TIn, Task<TOut>> mapFunc)
         {
             _parallelism = parallelism;
             _mapFunc = mapFunc;
             Shape = new FlowShape<TIn, TOut>(In, Out);
         }
 
-        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("MapAsync");
+        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("selectAsync");
 
         public override FlowShape<TIn, TOut> Shape { get; }
 

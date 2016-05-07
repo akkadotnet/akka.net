@@ -97,7 +97,7 @@
     <Compile Include="Dsl\FlowLimitWeightedSpec.cs" />
     <Compile Include="Dsl\FlowLogSpec.cs" />
     <Compile Include="Dsl\FlowMapAsyncUnorderedSpec .cs" />
-    <Compile Include="Dsl\FlowMapAsyncSpec.cs" />
+    <Compile Include="Dsl\FlowSelectAsyncSpec.cs" />
     <Compile Include="Dsl\FlowMergeSpec.cs" />
     <Compile Include="Dsl\FlowOnCompleteSpec.cs" />
     <Compile Include="Dsl\FlowPrefixAndTailSpec.cs" />

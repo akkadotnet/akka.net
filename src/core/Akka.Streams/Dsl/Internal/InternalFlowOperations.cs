@@ -160,7 +160,7 @@ namespace Akka.Streams.Dsl.Internal
         /// Transform this stream by applying the given function <paramref name="asyncMapper"/> to each of the elements
         /// as they pass through this processing step. The function returns a <see cref="Task{TOut}"/> and the
         /// value of that task will be emitted downstream. The number of tasks
-        /// that shall run in parallel is given as the first argument to <see cref="MapAsync{TIn,TOut,TMat}"/>.
+        /// that shall run in parallel is given as the first argument to <see cref="SelectAsync{TIn,TOut,TMat}"/>.
         /// These tasks may complete in any order, but the elements that
         /// are emitted downstream are in the same order as received from upstream.
         /// 
@@ -186,10 +186,10 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// </summary>
         /// <seealso cref="MapAsyncUnordered{TIn,TOut,TMat}"/>
-        public static IFlow<TOut, TMat> MapAsync<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int parallelism,
+        public static IFlow<TOut, TMat> SelectAsync<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int parallelism,
             Func<TIn, Task<TOut>> asyncMapper)
         {
-            return flow.Via(new Fusing.MapAsync<TIn, TOut>(parallelism, asyncMapper));
+            return flow.Via(new Fusing.SelectAsync<TIn, TOut>(parallelism, asyncMapper));
         }
 
         /// <summary>
@@ -220,7 +220,7 @@ namespace Akka.Streams.Dsl.Internal
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        /// <seealso cref="MapAsync{TIn,TOut,TMat}"/>
+        /// <seealso cref="SelectAsync{TIn,TOut,TMat}"/>
         public static IFlow<TOut, TMat> MapAsyncUnordered<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int parallelism,
             Func<TIn, Task<TOut>> asyncMapper)
         {
