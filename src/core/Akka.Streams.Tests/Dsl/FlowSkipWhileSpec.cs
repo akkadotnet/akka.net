@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="FlowDropWhileSpec.cs" company="Akka.NET Project">
+// <copyright file="FlowSkipWhileSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -16,23 +16,23 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class FlowDropWhileSpec : AkkaSpec
+    public class FlowSkipWhileSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
 
-        public FlowDropWhileSpec(ITestOutputHelper helper) : base(helper)
+        public FlowSkipWhileSpec(ITestOutputHelper helper) : base(helper)
         {
             var settings = ActorMaterializerSettings.Create(Sys);
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
         [Fact]
-        public void A_DropWhile_must_drop_while_predicate_is_true()
+        public void A_SkipWhile_must_drop_while_predicate_is_true()
         {
             this.AssertAllStagesStopped(() =>
             {
                 Source.From(Enumerable.Range(1, 4))
-                    .DropWhile(x => x < 3)
+                    .SkipWhile(x => x < 3)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(2)
                     .ExpectNext(3, 4)
@@ -41,12 +41,12 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_DropWhile_must_complete_the_future_for_an_empty_stream()
+        public void A_SkipWhile_must_complete_the_future_for_an_empty_stream()
         {
             this.AssertAllStagesStopped(() =>
             {
                 Source.Empty<int>()
-                    .DropWhile(x => x < 2)
+                    .SkipWhile(x => x < 2)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(1)
                     .ExpectComplete();
@@ -54,12 +54,12 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_DropWhile_must_continue_if_error()
+        public void A_SkipWhile_must_continue_if_error()
         {
             this.AssertAllStagesStopped(() =>
             {
                 var testException = new Exception("test");
-                Source.From(Enumerable.Range(1, 4)).DropWhile(x =>
+                Source.From(Enumerable.Range(1, 4)).SkipWhile(x =>
                 {
                     if (x < 3)
                         return true;

@@ -71,13 +71,13 @@ namespace Akka.Streams.Implementation.Fusing
         public override Directive Decide(Exception cause) => _decider(cause);
     }
 
-    internal sealed class DropWhile<T> : PushStage<T, T>
+    internal sealed class SkipWhile<T> : PushStage<T, T>
     {
         private readonly Predicate<T> _predicate;
         private readonly Decider _decider;
         private bool _taking;
 
-        public DropWhile(Predicate<T> predicate, Decider decider)
+        public SkipWhile(Predicate<T> predicate, Decider decider)
         {
             _predicate = predicate;
             _decider = decider;

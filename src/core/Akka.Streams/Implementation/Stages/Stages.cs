@@ -38,7 +38,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes Take = Attributes.CreateName("take");
         public static readonly Attributes Drop = Attributes.CreateName("drop");
         public static readonly Attributes TakeWhile = Attributes.CreateName("takeWhile");
-        public static readonly Attributes DropWhile = Attributes.CreateName("dropWhile");
+        public static readonly Attributes SkipWhile = Attributes.CreateName("skipWhile");
         public static readonly Attributes Scan = Attributes.CreateName("scan");
         public static readonly Attributes Fold = Attributes.CreateName("fold");
         public static readonly Attributes Buffer = Attributes.CreateName("buffer");
@@ -301,17 +301,17 @@ namespace Akka.Streams.Implementation.Stages
             => new Fusing.TakeWhile<T>(_predicate, Supervision(effectiveAttributes));
     }
 
-    internal sealed class DropWhile<T> : SymbolicStage<T, T>
+    internal sealed class SkipWhile<T> : SymbolicStage<T, T>
     {
         private readonly Predicate<T> _predicate;
 
-        public DropWhile(Predicate<T> predicate, Attributes attributes = null) : base(attributes ?? DefaultAttributes.DropWhile)
+        public SkipWhile(Predicate<T> predicate, Attributes attributes = null) : base(attributes ?? DefaultAttributes.SkipWhile)
         {
             _predicate = predicate;
         }
 
         public override IStage<T, T> Create(Attributes effectiveAttributes)
-            => new Fusing.DropWhile<T>(_predicate, Supervision(effectiveAttributes));
+            => new Fusing.SkipWhile<T>(_predicate, Supervision(effectiveAttributes));
     }
 
     internal sealed class Scan<TIn, TOut> : SymbolicStage<TIn, TOut>

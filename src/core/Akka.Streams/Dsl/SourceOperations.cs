@@ -283,9 +283,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static Source<TOut, TMat> DropWhile<TOut, TMat>(this Source<TOut, TMat> flow, Predicate<TOut> predicate)
+        public static Source<TOut, TMat> SkipWhile<TOut, TMat>(this Source<TOut, TMat> flow, Predicate<TOut> predicate)
         {
-            return (Source<TOut, TMat>)InternalFlowOperations.DropWhile(flow, predicate);
+            return (Source<TOut, TMat>)InternalFlowOperations.SkipWhile(flow, predicate);
         }
 
         /// <summary>
