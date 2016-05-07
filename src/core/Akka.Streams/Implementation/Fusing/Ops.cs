@@ -1018,19 +1018,19 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(inheritedAttributes, this);
     }
 
-    internal sealed class MapAsyncUnordered<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
+    internal sealed class SelectAsyncUnordered<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region internal classes
 
         private sealed class Logic : GraphStageLogic
         {
-            private readonly MapAsyncUnordered<TIn, TOut> _stage;
+            private readonly SelectAsyncUnordered<TIn, TOut> _stage;
             private readonly Decider _decider;
             private IBuffer<TOut> _buffer;
             private readonly Action<Result<TOut>> _taskCallback;
             private int _inFlight;
 
-            public Logic(Attributes inheritedAttributes, MapAsyncUnordered<TIn, TOut> stage) : base(stage.Shape)
+            public Logic(Attributes inheritedAttributes, SelectAsyncUnordered<TIn, TOut> stage) : base(stage.Shape)
             {
                 _stage = stage;
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
@@ -1113,14 +1113,14 @@ namespace Akka.Streams.Implementation.Fusing
         public readonly Inlet<TIn> In = new Inlet<TIn>("in");
         public readonly Outlet<TOut> Out = new Outlet<TOut>("out");
 
-        public MapAsyncUnordered(int parallelism, Func<TIn, Task<TOut>> mapFunc)
+        public SelectAsyncUnordered(int parallelism, Func<TIn, Task<TOut>> mapFunc)
         {
             _parallelism = parallelism;
             _mapFunc = mapFunc;
             Shape = new FlowShape<TIn, TOut>(In, Out);
         }
 
-        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("MapAsyncUnordered");
+        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("selectAsyncUnordered");
 
         public override FlowShape<TIn, TOut> Shape { get; }
 

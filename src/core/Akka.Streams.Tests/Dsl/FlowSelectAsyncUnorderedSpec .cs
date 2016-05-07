@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="FlowMapAsyncUnorderedSpec .cs" company="Akka.NET Project">
+// <copyright file="FlowSelectAsyncUnorderedSpec .cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -29,24 +29,24 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class FlowMapAsyncUnorderedSpec : AkkaSpec
+    public class FlowSelectAsyncUnorderedSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
 
-        public FlowMapAsyncUnorderedSpec(ITestOutputHelper helper) : base(helper)
+        public FlowSelectAsyncUnorderedSpec(ITestOutputHelper helper) : base(helper)
         {
             Materializer = ActorMaterializer.Create(Sys);
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_produce_future_elements_in_the_order_they_are_ready()
+        public void A_Flow_with_SelectAsyncUnordered_must_produce_future_elements_in_the_order_they_are_ready()
         {
             this.AssertAllStagesStopped(() =>
             {
                 var c = TestSubscriber.CreateManualProbe<int>(this);
                 var latch = Enumerable.Range(0, 4).Select(_ => new TestLatch(1)).ToArray();
 
-                Source.From(Enumerable.Range(0, 4)).MapAsyncUnordered(4, n => Task.Run(() =>
+                Source.From(Enumerable.Range(0, 4)).SelectAsyncUnordered(4, n => Task.Run(() =>
                 {
                     latch[n].Ready(TimeSpan.FromSeconds(5));
                     return n;
@@ -72,12 +72,12 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_not_run_more_futures_than_requested_elements()
+        public void A_Flow_with_SelectAsyncUnordered_must_not_run_more_futures_than_requested_elements()
         {
             var probe = CreateTestProbe();
             var c = TestSubscriber.CreateManualProbe<int>(this);
             Source.From(Enumerable.Range(1, 20))
-                .MapAsyncUnordered(4, n => Task.Run(() =>
+                .SelectAsyncUnordered(4, n => Task.Run(() =>
                 {
                     probe.Ref.Tell(n);
                     return n;
@@ -102,14 +102,14 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_signal_future_failure()
+        public void A_Flow_with_SelectAsyncUnordered_must_signal_future_failure()
         {
             this.AssertAllStagesStopped(() =>
             {
                 var latch = new TestLatch(1);
                 var c = TestSubscriber.CreateManualProbe<int>(this);
                 Source.From(Enumerable.Range(1, 5))
-                    .MapAsyncUnordered(4, n => Task.Run(() =>
+                    .SelectAsyncUnordered(4, n => Task.Run(() =>
                     {
                         if (n == 3)
                             throw new TestException("err1");
@@ -126,14 +126,14 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_signal_error_from_MapAsyncUnordered()
+        public void A_Flow_with_SelectAsyncUnordered_must_signal_error_from_MapAsyncUnordered()
         {
             this.AssertAllStagesStopped(() =>
             {
                 var latch = new TestLatch(1);
                 var c = TestSubscriber.CreateManualProbe<int>(this);
                 Source.From(Enumerable.Range(1, 5))
-                    .MapAsyncUnordered(4, n =>
+                    .SelectAsyncUnordered(4, n =>
                     {
                         if (n == 3)
                             throw new TestException("err2");
@@ -153,14 +153,14 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_resume_after_future_failure()
+        public void A_Flow_with_SelectAsyncUnordered_must_resume_after_future_failure()
         {
             this.AssertAllStagesStopped(() =>
             {
                 this.AssertAllStagesStopped(() =>
                 {
                     Source.From(Enumerable.Range(1, 5))
-                        .MapAsyncUnordered(4, n => Task.Run(() =>
+                        .SelectAsyncUnordered(4, n => Task.Run(() =>
                         {
                             if (n == 3)
                                 throw new TestException("err3");
@@ -176,7 +176,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_resume_after_multiple_failures()
+        public void A_Flow_with_SelectAsyncUnordered_must_resume_after_multiple_failures()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -191,7 +191,7 @@ namespace Akka.Streams.Tests.Dsl
                 };
 
                 var t = Source.From(futures)
-                    .MapAsyncUnordered(2, x => x)
+                    .SelectAsyncUnordered(2, x => x)
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                     .RunWith(Sink.First<string>(), Materializer);
 
@@ -201,12 +201,12 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_finish_after_future_failure()
+        public void A_Flow_with_SelectAsyncUnordered_must_finish_after_future_failure()
         {
             this.AssertAllStagesStopped(() =>
             {
                 var t = Source.From(Enumerable.Range(1, 3))
-                    .MapAsyncUnordered(1, n => Task.Run(() =>
+                    .SelectAsyncUnordered(1, n => Task.Run(() =>
                     {
                         if (n == 3)
                             throw new TestException("err3b");
@@ -222,10 +222,10 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_resume_when_MapAsyncUnordered_throws()
+        public void A_Flow_with_SelectAsyncUnordered_must_resume_when_SelectAsyncUnordered_throws()
         {
             Source.From(Enumerable.Range(1, 5))
-                .MapAsyncUnordered(4, n =>
+                .SelectAsyncUnordered(4, n =>
                 {
                     if (n == 3)
                         throw new TestException("err4");
@@ -239,12 +239,12 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_signal_NPE_when_future_is_completed_with_null()
+        public void A_Flow_with_SelectAsyncUnordered_must_signal_NPE_when_future_is_completed_with_null()
         {
             var c = TestSubscriber.CreateManualProbe<string>(this);
 
             Source.From(new[] {"a", "b"})
-                .MapAsyncUnordered(4, _ => Task.FromResult(null as string))
+                .SelectAsyncUnordered(4, _ => Task.FromResult(null as string))
                 .To(Sink.FromSubscriber(c)).Run(Materializer);
 
             var sub = c.ExpectSubscription();
@@ -253,11 +253,11 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_resume_when_future_is_completed_with_null()
+        public void A_Flow_with_SelectAsyncUnordered_must_resume_when_future_is_completed_with_null()
         {
             var c = TestSubscriber.CreateManualProbe<string>(this);
             Source.From(new[] { "a", "b", "c" })
-                .MapAsyncUnordered(4, s => s.Equals("b") ? Task.FromResult(null as string) : Task.FromResult(s))
+                .SelectAsyncUnordered(4, s => s.Equals("b") ? Task.FromResult(null as string) : Task.FromResult(s))
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                 .To(Sink.FromSubscriber(c)).Run(Materializer);
             var sub = c.ExpectSubscription();
@@ -267,7 +267,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_handle_cancel_properly()
+        public void A_Flow_with_SelectAsyncUnordered_must_handle_cancel_properly()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -275,7 +275,7 @@ namespace Akka.Streams.Tests.Dsl
                 var sub = TestSubscriber.CreateManualProbe<int>(this);
 
                 Source.FromPublisher(pub)
-                    .MapAsyncUnordered(4, _ => Task.FromResult(0))
+                    .SelectAsyncUnordered(4, _ => Task.FromResult(0))
                     .RunWith(Sink.FromSubscriber(sub), Materializer);
 
                 var upstream = pub.ExpectSubscription();
@@ -288,7 +288,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_not_run_more_futures_than_configured()
+        public void A_Flow_with_SelectAsyncUnordered_must_not_run_more_futures_than_configured()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -337,7 +337,7 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     const int n = 10000;
                     var task = Source.From(Enumerable.Range(1, n))
-                        .MapAsyncUnordered(parallelism, _ => deferred())
+                        .SelectAsyncUnordered(parallelism, _ => deferred())
                         .RunFold(0, (c, _) => c + 1, Materializer);
 
                     task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();

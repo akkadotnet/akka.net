@@ -232,12 +232,12 @@ namespace Akka.Streams.Dsl
         /// element is dropped and the stream continues. 
         /// 
         ///  <para/>
-        /// See also <seealso cref="MapAsyncUnordered{TIn,TOut}"/> 
+        /// See also <seealso cref="SelectAsyncUnordered{TIn,TOut}"/> 
         /// </summary>
         public static Sink<TIn, Task> ForEachParallel<TIn>(int parallelism, Action<TIn> action)
         {
             return Flow.Create<TIn>()
-                .MapAsyncUnordered(parallelism, input => Task.Run(() =>
+                .SelectAsyncUnordered(parallelism, input => Task.Run(() =>
                 {
                     action(input);
                     return Unit.Instance;

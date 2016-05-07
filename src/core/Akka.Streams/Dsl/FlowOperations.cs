@@ -174,7 +174,7 @@ namespace Akka.Streams.Dsl
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        /// <seealso cref="MapAsyncUnordered{T,TIn,TOut,TMat}"/>
+        /// <seealso cref="SelectAsyncUnordered{T,TIn,TOut,TMat}"/>
         public static Flow<T, TOut, TMat> SelectAsync<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow, int parallelism, Func<TIn, Task<TOut>> asyncMapper)
         {
             return (Flow<T, TOut, TMat>)InternalFlowOperations.SelectAsync(flow, parallelism, asyncMapper);
@@ -209,9 +209,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// </summary>
         /// <seealso cref="SelectAsync{T,TIn,TOut,TMat}"/>
-        public static Flow<T, TOut, TMat> MapAsyncUnordered<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow, int parallelism, Func<TIn, Task<TOut>> asyncMapper)
+        public static Flow<T, TOut, TMat> SelectAsyncUnordered<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow, int parallelism, Func<TIn, Task<TOut>> asyncMapper)
         {
-            return (Flow<T, TOut, TMat>)InternalFlowOperations.MapAsyncUnordered(flow, parallelism, asyncMapper);
+            return (Flow<T, TOut, TMat>)InternalFlowOperations.SelectAsyncUnordered(flow, parallelism, asyncMapper);
         }
 
         /// <summary>
