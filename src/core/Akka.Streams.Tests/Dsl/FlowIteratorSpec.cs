@@ -264,7 +264,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var p = CreateSource(4)
-                    .Filter(x => x%2 == 0)
+                    .Where(x => x%2 == 0)
                     .Select(x => x*2)
                     .RunWith(Sink.AsPublisher<int>(false), Materializer);
                 var c = TestSubscriber.CreateManualProbe<int>(this);

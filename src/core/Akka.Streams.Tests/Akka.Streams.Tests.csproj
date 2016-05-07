@@ -78,7 +78,7 @@
     <Compile Include="Dsl\FlowDetacherSpec.cs" />
     <Compile Include="Dsl\FlowDispatcherSpec.cs" />
     <Compile Include="Dsl\FlowExpandSpec.cs" />
-    <Compile Include="Dsl\FlowFilterSpec.cs" />
+    <Compile Include="Dsl\FlowWhereSpec.cs" />
     <Compile Include="Dsl\FlowFlattenMergeSpec.cs" />
     <Compile Include="Dsl\FlowFoldSpec.cs" />
     <Compile Include="Dsl\FlowForeachSpec.cs" />

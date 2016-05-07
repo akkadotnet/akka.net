@@ -37,12 +37,12 @@ namespace Akka.Streams.Implementation.Fusing
         public override Directive Decide(Exception cause) => _decider(cause);
     }
 
-    internal sealed class Filter<T> : PushStage<T, T>
+    internal sealed class Where<T> : PushStage<T, T>
     {
         private readonly Predicate<T> _predicate;
         private readonly Decider _decider;
 
-        public Filter(Predicate<T> predicate, Decider decider)
+        public Where(Predicate<T> predicate, Decider decider)
         {
             _predicate = predicate;
             _decider = decider;

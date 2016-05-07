@@ -57,7 +57,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 var flow2 =
                     Flow.Create<int>()
-                        .Filter(x => x%2 == 1)
+                        .Where(x => x%2 == 1)
                         .Select(x => x*10)
                         .Buffer((end + 1)/2, OverflowStrategy.Backpressure)
                         .Take((end + 1)/2);

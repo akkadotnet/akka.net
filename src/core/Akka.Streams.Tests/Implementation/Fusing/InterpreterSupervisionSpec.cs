@@ -263,7 +263,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_error_handling_should_resume_when_Filter_throws()
         {
-            WithOneBoundedSetup(new Filter<int>(x => { if (x == 0) throw TE(); return true; }, resumingDecider),
+            WithOneBoundedSetup(new Where<int>(x => { if (x == 0) throw TE(); return true; }, resumingDecider),
                 (lastEvents, upstream, downstream) =>
                 {
                     downstream.RequestOne();

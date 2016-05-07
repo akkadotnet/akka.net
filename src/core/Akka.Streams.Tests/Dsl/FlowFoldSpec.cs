@@ -29,13 +29,13 @@ namespace Akka.Streams.Tests.Dsl
 
         private static IEnumerable<int> Input => Enumerable.Range(1, 100);
         private static int Expected => Input.Sum();
-        private static Source<int, Unit> InputSource => Source.From(Input).Filter(_ => true).Select(x => x);
+        private static Source<int, Unit> InputSource => Source.From(Input).Where(_ => true).Select(x => x);
 
         private static Source<int, Unit> FoldSource =>
-            InputSource.Fold(0, (sum, i) => sum + i).Filter(_ => true).Select(x => x);
+            InputSource.Fold(0, (sum, i) => sum + i).Where(_ => true).Select(x => x);
 
         private static Flow<int, int, Unit> FoldFlow =>
-            FlowOperations.Select(Flow.Create<int>().Filter(_ => true).Select(x => x).Fold(0, (sum, i) => sum + i).Filter(_ => true), x => x);
+            FlowOperations.Select(Flow.Create<int>().Where(_ => true).Select(x => x).Fold(0, (sum, i) => sum + i).Where(_ => true), x => x);
 
         private static Sink<int, Task<int>> FoldSink => Sink.Fold<int, int>(0, (sum, i) => sum + i);
 

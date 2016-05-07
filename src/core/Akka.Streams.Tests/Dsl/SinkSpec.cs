@@ -46,7 +46,7 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     var closure = i;
                     b.From(broadcast.Out(i))
-                        .Via(Flow.Create<int>().Filter(x => x == closure))
+                        .Via(Flow.Create<int>().Where(x => x == closure))
                         .To(Sink.FromSubscriber(probes[i]));
                 }
                 return new SinkShape<int>(broadcast.In);
@@ -67,12 +67,12 @@ namespace Akka.Streams.Tests.Dsl
             var sink = Sink.FromGraph(GraphDsl.Create(Sink.FromSubscriber(probes[0]), (b, shape) =>
             {
                 var broadcast = b.Add(new Broadcast<int>(3));
-                b.From(broadcast.Out(0)).Via(Flow.Create<int>().Filter(x => x == 0)).To(shape.Inlet);
+                b.From(broadcast.Out(0)).Via(Flow.Create<int>().Where(x => x == 0)).To(shape.Inlet);
                 b.From(broadcast.Out(1))
-                    .Via(Flow.Create<int>().Filter(x => x == 1))
+                    .Via(Flow.Create<int>().Where(x => x == 1))
                     .To(Sink.FromSubscriber(probes[1]));
                 b.From(broadcast.Out(2))
-                    .Via(Flow.Create<int>().Filter(x => x == 2))
+                    .Via(Flow.Create<int>().Where(x => x == 2))
                     .To(Sink.FromSubscriber(probes[2]));
                 return new SinkShape<int>(broadcast.In);
             }));
@@ -94,10 +94,10 @@ namespace Akka.Streams.Tests.Dsl
                     Sink.FromSubscriber(probes[1]), (_, __) => Unit.Instance, (b, shape0, shape1) =>
                     {
                         var broadcast = b.Add(new Broadcast<int>(3));
-                        b.From(broadcast.Out(0)).Via(Flow.Create<int>().Filter(x => x == 0)).To(shape0.Inlet);
-                        b.From(broadcast.Out(1)).Via(Flow.Create<int>().Filter(x => x == 1)).To(shape1.Inlet);
+                        b.From(broadcast.Out(0)).Via(Flow.Create<int>().Where(x => x == 0)).To(shape0.Inlet);
+                        b.From(broadcast.Out(1)).Via(Flow.Create<int>().Where(x => x == 1)).To(shape1.Inlet);
                         b.From(broadcast.Out(2))
-                            .Via(Flow.Create<int>().Filter(x => x == 2))
+                            .Via(Flow.Create<int>().Where(x => x == 2))
                             .To(Sink.FromSubscriber(probes[2]));
                         return new SinkShape<int>(broadcast.In);
                     }));
@@ -120,9 +120,9 @@ namespace Akka.Streams.Tests.Dsl
                     (_, __, ___) => Unit.Instance, (b, shape0, shape1, shape2) =>
                     {
                         var broadcast = b.Add(new Broadcast<int>(3));
-                        b.From(broadcast.Out(0)).Via(Flow.Create<int>().Filter(x => x == 0)).To(shape0.Inlet);
-                        b.From(broadcast.Out(1)).Via(Flow.Create<int>().Filter(x => x == 1)).To(shape1.Inlet);
-                        b.From(broadcast.Out(2)).Via(Flow.Create<int>().Filter(x => x == 2)).To(shape2.Inlet);
+                        b.From(broadcast.Out(0)).Via(Flow.Create<int>().Where(x => x == 0)).To(shape0.Inlet);
+                        b.From(broadcast.Out(1)).Via(Flow.Create<int>().Where(x => x == 1)).To(shape1.Inlet);
+                        b.From(broadcast.Out(2)).Via(Flow.Create<int>().Where(x => x == 2)).To(shape2.Inlet);
                         return new SinkShape<int>(broadcast.In);
                     }));
             Source.From(new[] { 0, 1, 2 }).RunWith(sink, Materializer);

@@ -116,7 +116,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             WithOneBoundedSetup(new IStage<int, int>[]
             {
                 new Doubler<int>(),
-                new Filter<int>(x => x != 0, Deciders.StoppingDecider)
+                new Where<int>(x => x != 0, Deciders.StoppingDecider)
             },
                 (lastEvents, upstream, downstream) =>
                 {
@@ -147,7 +147,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             WithOneBoundedSetup(new IStage<int, int>[]
             {
-                new Filter<int>(x => x != 0, Deciders.StoppingDecider),
+                new Where<int>(x => x != 0, Deciders.StoppingDecider),
                 new Doubler<int>()
             },
                 (lastEvents, upstream, downstream) =>
@@ -204,7 +204,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             WithOneBoundedSetup(new IStage<int, int>[]
             {
-                new Filter<int>(x => x != 0, Deciders.StoppingDecider),
+                new Where<int>(x => x != 0, Deciders.StoppingDecider),
                 new Take<int>(2),
                 new Select<int, int>(x => x + 1, Deciders.StoppingDecider)
             },

@@ -226,9 +226,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static Source<TOut, TMat> Filter<TOut, TMat>(this Source<TOut, TMat> flow, Predicate<TOut> predicate)
+        public static Source<TOut, TMat> Where<TOut, TMat>(this Source<TOut, TMat> flow, Predicate<TOut> predicate)
         {
-            return (Source<TOut, TMat>)InternalFlowOperations.Filter(flow, predicate);
+            return (Source<TOut, TMat>)InternalFlowOperations.Where(flow, predicate);
         }
 
         /// <summary>

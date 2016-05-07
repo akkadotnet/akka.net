@@ -240,9 +240,9 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static IFlow<T, TMat> Filter<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate)
+        public static IFlow<T, TMat> Where<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate)
         {
-            return flow.AndThen(new Filter<T>(predicate));
+            return flow.AndThen(new Where<T>(predicate));
         }
 
         /// <summary>
@@ -260,7 +260,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<T, TMat> FilterNot<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate)
         {
-            return flow.AndThen(new Filter<T>(e => !predicate(e)));
+            return flow.AndThen(new Where<T>(e => !predicate(e)));
         }
 
         /// <summary>

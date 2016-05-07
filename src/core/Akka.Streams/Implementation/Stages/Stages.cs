@@ -24,7 +24,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes Fused = Attributes.CreateName("fused");
         public static readonly Attributes Select = Attributes.CreateName("select");
         public static readonly Attributes Log = Attributes.CreateName("log");
-        public static readonly Attributes Filter = Attributes.CreateName("filter");
+        public static readonly Attributes Where = Attributes.CreateName("where");
         public static readonly Attributes Collect = Attributes.CreateName("collect");
         public static readonly Attributes Reduce = Attributes.CreateName("reduce");
         public static readonly Attributes Recover = Attributes.CreateName("recover");
@@ -182,17 +182,17 @@ namespace Akka.Streams.Implementation.Stages
             => new Fusing.Log<T>(_name, _extract, _loggingAdapter, Supervision(effectiveAttributes));
     }
 
-    internal sealed class Filter<T> : SymbolicStage<T, T>
+    internal sealed class Where<T> : SymbolicStage<T, T>
     {
         private readonly Predicate<T> _predicate;
 
-        public Filter(Predicate<T> predicate, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Filter)
+        public Where(Predicate<T> predicate, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Where)
         {
             _predicate = predicate;
         }
 
         public override IStage<T, T> Create(Attributes effectiveAttributes)
-            => new Fusing.Filter<T>(_predicate, Supervision(effectiveAttributes));
+            => new Fusing.Where<T>(_predicate, Supervision(effectiveAttributes));
     }
 
 

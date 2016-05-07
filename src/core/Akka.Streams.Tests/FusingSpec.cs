@@ -36,7 +36,7 @@ namespace Akka.Streams.Tests
         {
             return
                 Source.Unfold(1, x => Tuple.Create(x, x))
-                    .Filter(x => x%2 == 1)
+                    .Where(x => x%2 == 1)
                     .AlsoTo(
                         Flow.Create<int>()
                             .Fold(0, (sum, i) => sum + i)
