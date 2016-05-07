@@ -124,7 +124,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Conflate_must_work_on_a_variable_rate_chain()
         {
-            var future = Source.From(Enumerable.Range(1, 1000)).ConflateWithSeed(i => i, (sum, i) => sum + i).Map(i =>
+            var future = Source.From(Enumerable.Range(1, 1000)).ConflateWithSeed(i => i, (sum, i) => sum + i).Select(i =>
             {
                 if (ThreadLocalRandom.Current.Next(1, 3) == 2)
                     Thread.Sleep(10);
@@ -137,7 +137,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Conflate_must_work_on_a_variable_rate_chain_simple_conflate()
         {
-            var future = Source.From(Enumerable.Range(1, 1000)).Conflate((sum, i) => sum + i).Map(i =>
+            var future = Source.From(Enumerable.Range(1, 1000)).Conflate((sum, i) => sum + i).Select(i =>
             {
                 if (ThreadLocalRandom.Current.Next(1, 3) == 2)
                     Thread.Sleep(10);

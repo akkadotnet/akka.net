@@ -21,12 +21,12 @@ using Akka.Util;
 
 namespace Akka.Streams.Implementation.Fusing
 {
-    internal sealed class Map<TIn, TOut> : PushStage<TIn, TOut>
+    internal sealed class Select<TIn, TOut> : PushStage<TIn, TOut>
     {
         private readonly Func<TIn, TOut> _func;
         private readonly Decider _decider;
 
-        public Map(Func<TIn, TOut> func, Decider decider)
+        public Select(Func<TIn, TOut> func, Decider decider)
         {
             _func = func;
             _decider = decider;

@@ -112,7 +112,7 @@ namespace Akka.Streams.Tests.Dsl
         public void Expand_must_work_on_a_variable_rate_chain()
         {
             var future = Source.From(Enumerable.Range(1, 100))
-                .Map(x =>
+                .Select(x =>
                 {
                     if (ThreadLocalRandom.Current.Next(1, 3) == 2)
                         Thread.Sleep(10);

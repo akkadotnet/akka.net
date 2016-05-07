@@ -62,7 +62,7 @@ namespace Akka.Streams.Tests.Dsl
             Source
                 .From(input)
                 .MapConcat(x => x)
-                .Map(x =>
+                .Select(x =>
                 {
                     Thread.Sleep(10);
                     return x;

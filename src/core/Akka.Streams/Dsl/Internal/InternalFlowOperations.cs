@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="InternalFlowOperations.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
@@ -92,9 +92,9 @@ namespace Akka.Streams.Dsl.Internal
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        public static IFlow<TOut, TMat> Map<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> mapper)
+        public static IFlow<TOut, TMat> Select<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> mapper)
         {
-            return flow.AndThen(new Map<TIn, TOut>(mapper));
+            return flow.AndThen(new Select<TIn, TOut>(mapper));
         }
 
         /// <summary>
@@ -932,7 +932,7 @@ namespace Akka.Streams.Dsl.Internal
             public IFlow<T, TMat> Apply<T>(Flow<TOut, T, TMat> flow, int breadth)
             {
                 return _deprecatedAndThenFunc(_self, new GroupBy<TOut, TKey>(_maxSubstreams, o => _groupingFunc(o)))
-                    .Map(f => f.Via(flow))
+                    .Select(f => f.Via(flow))
                     .Via(new Fusing.FlattenMerge<Source<T, Unit>, T, Unit>(breadth));
             }
         }
@@ -1021,7 +1021,7 @@ namespace Akka.Streams.Dsl.Internal
             public IFlow<T, TMat> Apply<T>(Flow<TOut, T, TMat> flow, int breadth)
             {
                 return _self.Via(Fusing.Split.When(_predicate, _substreamCancelStrategy))
-                    .Map(f => f.Via(flow))
+                    .Select(f => f.Via(flow))
                     .Via(new Fusing.FlattenMerge<Source<T, Unit>, T, Unit>(breadth));
             }
         }
@@ -1100,7 +1100,7 @@ namespace Akka.Streams.Dsl.Internal
             public IFlow<T, TMat> Apply<T>(Flow<TOut, T, TMat> flow, int breadth)
             {
                 return _self.Via(Fusing.Split.After(_predicate, _substreamCancelStrategy))
-                    .Map(f => f.Via(flow))
+                    .Select(f => f.Via(flow))
                     .Via(new Fusing.FlattenMerge<Source<T, Unit>, T, Unit>(breadth));
             }
         }
@@ -1121,7 +1121,7 @@ namespace Akka.Streams.Dsl.Internal
         public static IFlow<TOut, TMat> FlatMapConcat<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
             Func<TIn, IGraph<SourceShape<TOut>, TMat>> flatten)
         {
-            return flow.Map(flatten).Via(new Fusing.FlattenMerge<IGraph<SourceShape<TOut>, TMat>, TOut, TMat>(1));
+            return flow.Select(flatten).Via(new Fusing.FlattenMerge<IGraph<SourceShape<TOut>, TMat>, TOut, TMat>(1));
         }
 
         /// <summary>
@@ -1140,7 +1140,7 @@ namespace Akka.Streams.Dsl.Internal
         public static IFlow<TOut, TMat> FlatMapMerge<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int breadth,
             Func<TIn, IGraph<SourceShape<TOut>, TMat>> flatten)
         {
-            return flow.Map(flatten).Via(new Fusing.FlattenMerge<IGraph<SourceShape<TOut>, TMat>, TOut, TMat>(breadth));
+            return flow.Select(flatten).Via(new Fusing.FlattenMerge<IGraph<SourceShape<TOut>, TMat>, TOut, TMat>(breadth));
         }
 
         /// <summary>

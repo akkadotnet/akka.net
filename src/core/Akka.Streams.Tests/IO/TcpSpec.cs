@@ -611,11 +611,11 @@ namespace Akka.Streams.Tests.IO
             {
                 var serverAddress = TestUtils.TemporaryServerAddress();
                 var firstClientConnected = new TaskCompletionSource<Unit>();
-                var takeTwoAndDropSecond = Flow.Create<Tcp.IncomingConnection>().Map(c =>
+                var takeTwoAndDropSecond = Flow.Create<Tcp.IncomingConnection>().Select(c =>
                 {
                     firstClientConnected.TrySetResult(Unit.Instance);
                     return c;
-                }).Grouped(2).Take(1).Map(e => e.First());
+                }).Grouped(2).Take(1).Select(e => e.First());
 
                 Sys.TcpStream()
                     .Bind(serverAddress.Address.ToString(), serverAddress.Port)

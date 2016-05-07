@@ -38,7 +38,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_error_handling_should_handle_external_failure()
         {
-            WithOneBoundedSetup(new Map<int, int>(x => x + 1, stoppingDecider),
+            WithOneBoundedSetup(new Select<int, int>(x => x + 1, stoppingDecider),
                 (lastEvents, upstream, downstream) =>
                 {
                     lastEvents().Should().BeEmpty();
@@ -51,7 +51,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_error_handling_should_emit_failure_when_op_throws()
         {
-            WithOneBoundedSetup(new Map<int, int>(x => { if (x == 0) throw TE(); return x; }, stoppingDecider),
+            WithOneBoundedSetup(new Select<int, int>(x => { if (x == 0) throw TE(); return x; }, stoppingDecider),
                 (lastEvents, upstream, downstream) =>
                 {
                     downstream.RequestOne();
@@ -70,9 +70,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         public void Interpreter_error_handling_should_emit_failure_when_op_throws_in_middle_of_chain()
         {
             WithOneBoundedSetup(new IStage<int, int>[] {
-                new Map<int, int>(x => x + 1, stoppingDecider),
-                new Map<int, int>(x => { if (x == 0) throw TE(); return x + 10; }, stoppingDecider),
-                new Map<int, int>(x => x + 100, stoppingDecider)
+                new Select<int, int>(x => x + 1, stoppingDecider),
+                new Select<int, int>(x => { if (x == 0) throw TE(); return x + 10; }, stoppingDecider),
+                new Select<int, int>(x => x + 100, stoppingDecider)
             },
                 (lastEvents, upstream, downstream) =>
                 {
@@ -92,9 +92,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         public void Interpreter_error_handling_should_resume_when_Map_throws_in_middle_of_chain()
         {
             WithOneBoundedSetup(new IStage<int, int>[] {
-                new Map<int, int>(x => x + 1, resumingDecider),
-                new Map<int, int>(x => { if (x == 0) throw TE(); return x + 10; }, resumingDecider),
-                new Map<int, int>(x => x + 100, resumingDecider)
+                new Select<int, int>(x => x + 1, resumingDecider),
+                new Select<int, int>(x => { if (x == 0) throw TE(); return x + 10; }, resumingDecider),
+                new Select<int, int>(x => x + 100, resumingDecider)
             },
                 (lastEvents, upstream, downstream) =>
                 {
@@ -117,8 +117,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         public void Interpreter_error_handling_should_resume_when_Map_throws_before_Grouped()
         {
             WithOneBoundedSetup<int>(new IGraphStageWithMaterializedValue<Shape, object>[] {
-                ToGraphStage(new Map<int, int>(x => x + 1, resumingDecider)),
-                ToGraphStage(new Map<int, int>(x => { if (x == 0) throw TE(); return x + 10; }, resumingDecider)),
+                ToGraphStage(new Select<int, int>(x => x + 1, resumingDecider)),
+                ToGraphStage(new Select<int, int>(x => { if (x == 0) throw TE(); return x + 10; }, resumingDecider)),
                 ToGraphStage(new Grouped<int>(3))
             },
                 (lastEvents, upstream, downstream) =>
@@ -143,8 +143,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         public void Interpreter_error_handling_should_complete_after_resume_when_Map_throws_before_Grouped()
         {
             WithOneBoundedSetup<int>(new IGraphStageWithMaterializedValue<Shape, object>[] {
-                ToGraphStage(new Map<int, int>(x => x + 1, resumingDecider)),
-                ToGraphStage(new Map<int, int>(x => { if (x == 0) throw TE(); return x + 10; }, resumingDecider)),
+                ToGraphStage(new Select<int, int>(x => x + 1, resumingDecider)),
+                ToGraphStage(new Select<int, int>(x => { if (x == 0) throw TE(); return x + 10; }, resumingDecider)),
                 ToGraphStage(new Grouped<int>(1000))
             },
                 (lastEvents, upstream, downstream) =>
@@ -174,9 +174,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 return null;
             });
             WithOneBoundedSetup(new IStage<int, int>[] {
-                new Map<int, int>(x => x + 1, resumingDecider),
+                new Select<int, int>(x => x + 1, resumingDecider),
                 stage,
-                new Map<int, int>(x => x + 100, resumingDecider)
+                new Select<int, int>(x => x + 100, resumingDecider)
             },
                 (lastEvents, upstream, downstream) =>
                 {
@@ -205,9 +205,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 return result;
             });
             WithOneBoundedSetup(new IStage<int, int>[] {
-                new Map<int, int>(x => x + 1, resumingDecider),
+                new Select<int, int>(x => x + 1, resumingDecider),
                 stage,
-                new Map<int, int>(x => x + 100, resumingDecider)
+                new Select<int, int>(x => x + 100, resumingDecider)
             },
                 (lastEvents, upstream, downstream) =>
                 {
@@ -239,9 +239,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 return null;
             });
             WithOneBoundedSetup(new IStage<int, int>[] {
-                new Map<int, int>(x => x + 1, resumingDecider),
+                new Select<int, int>(x => x + 1, resumingDecider),
                 stage,
-                new Map<int, int>(x => x + 100, resumingDecider)
+                new Select<int, int>(x => x + 100, resumingDecider)
             },
                 (lastEvents, upstream, downstream) =>
                 {

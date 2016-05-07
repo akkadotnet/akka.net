@@ -42,7 +42,7 @@ namespace Akka.Streams.Tests.Dsl
                                     Source.From(Enumerable.Range(0, 6))
                                         .MapMaterializedValue<Tuple<IPublisher<int>, IPublisher<int>>>(_ => null);
                                 b.From(source).To(broadcast.In);
-                                b.From(broadcast.Out(0)).Via(Flow.Create<int>().Map(i => i * 2)).To(p1.Inlet);
+                                b.From(broadcast.Out(0)).Via(Flow.Create<int>().Select(i => i * 2)).To(p1.Inlet);
                                 b.From(broadcast.Out(1)).To(p2.Inlet);
                                 return ClosedShape.Instance;
                             })).Run(Materializer);
@@ -50,8 +50,8 @@ namespace Akka.Streams.Tests.Dsl
                 var pub1 = t.Item1;
                 var pub2 = t.Item2;
 
-                var f1 = Source.FromPublisher(pub1).Map(x => x).RunFold(0, (sum, i) => sum + i, Materializer);
-                var f2 = Source.FromPublisher(pub2).Map(x => x).RunFold(0, (sum, i) => sum + i, Materializer);
+                var f1 = Source.FromPublisher(pub1).Select(x => x).RunFold(0, (sum, i) => sum + i, Materializer);
+                var f2 = Source.FromPublisher(pub2).Select(x => x).RunFold(0, (sum, i) => sum + i, Materializer);
 
                 f1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 f2.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();

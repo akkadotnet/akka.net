@@ -48,7 +48,7 @@ namespace Akka.Streams.Tests.Dsl
                     
                     b.From(source).To(unzip.In);
                     b.From(unzip.Out0)
-                        .Via(Flow.Create<int>().Buffer(16, OverflowStrategy.Backpressure).Map(x => x*2))
+                        .Via(Flow.Create<int>().Buffer(16, OverflowStrategy.Backpressure).Select(x => x*2))
                         .To(Sink.FromSubscriber(c1));
                     b.From(unzip.Out1)
                         .Via(Flow.Create<string>().Buffer(16, OverflowStrategy.Backpressure))

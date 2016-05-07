@@ -76,7 +76,7 @@ namespace Akka.Streams.Tests.Dsl
         private static Flow<ByteString, string, Unit> SimpleLines(string delimiter, int maximumBytes, bool allowTruncation = true)
         {
             return  Flow.FromGraph(Framing.Delimiter(ByteString.FromString(delimiter), maximumBytes, allowTruncation)
-                .Map(x => x.DecodeString(Encoding.UTF8)).Named("LineFraming"));
+                .Select(x => x.DecodeString(Encoding.UTF8)).Named("LineFraming"));
         }
 
         private static IEnumerable<ByteString> CompleteTestSequence(ByteString delimiter)
@@ -94,7 +94,7 @@ namespace Akka.Streams.Tests.Dsl
                 foreach (var delimiter in DelimiterBytes)
                 {
                     var task = Source.From(CompleteTestSequence(delimiter))
-                        .Map(x => x + delimiter)
+                        .Select(x => x + delimiter)
                         .Via(Rechunk)
                         .Via(Framing.Delimiter(delimiter, 256))
                         .Grouped(1000)

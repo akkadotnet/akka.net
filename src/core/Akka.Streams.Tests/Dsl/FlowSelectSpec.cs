@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="FlowMapSpec.cs" company="Akka.NET Project">
+// <copyright file="FlowSelectSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -17,12 +17,12 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class FlowMapSpec : ScriptedTest
+    public class FlowSelectSpec : ScriptedTest
     {
         private readonly ActorMaterializerSettings _settings;
         private readonly ActorMaterializer _materializer;
 
-        public FlowMapSpec(ITestOutputHelper output) : base(output)
+        public FlowSelectSpec(ITestOutputHelper output) : base(output)
         {
             Sys.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
             _settings = ActorMaterializerSettings.Create(Sys)
@@ -32,7 +32,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Map_should_map()
+        public void Select_should_map()
         {
 
             var script = Script.Create(Enumerable.Range(1, ThreadLocalRandom.Current.Next(1, 10)).Select(_ =>
@@ -44,21 +44,21 @@ namespace Akka.Streams.Tests.Dsl
             var n = ThreadLocalRandom.Current.Next(10);
             for (int i = 0; i < n; i++)
             {
-                RunScript(script, _settings, x => x.Map(y => y.ToString()));
+                RunScript(script, _settings, x => x.Select(y => y.ToString()));
             }
         }
 
         [Fact]
-        public void Map_should_not_blow_up_with_high_request_counts()
+        public void Select_should_not_blow_up_with_high_request_counts()
         {
             var probe = this.CreateManualProbe<int>();
 
             Source.From(new [] {1})
-                .Map(x => x + 1)
-                .Map(x => x + 1)
-                .Map(x => x + 1)
-                .Map(x => x + 1)
-                .Map(x => x + 1)
+                .Select(x => x + 1)
+                .Select(x => x + 1)
+                .Select(x => x + 1)
+                .Select(x => x + 1)
+                .Select(x => x + 1)
                 .RunWith(Sink.AsPublisher<int>(false), _materializer)
                 .Subscribe(probe);
 

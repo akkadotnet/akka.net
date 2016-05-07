@@ -266,7 +266,7 @@ namespace Akka.Streams.Tests.Implementation
             {
                 var error = new ArgumentException("Don't argue like that!");
                 Source.From(Enumerable.Range(1, 5))
-                    .Map(x =>
+                    .Select(x =>
                     {
                         if (x > 3)
                             throw error;

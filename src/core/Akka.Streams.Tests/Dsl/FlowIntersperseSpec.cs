@@ -31,7 +31,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var probe =
                 Source.From(new[] { 1, 2, 3 })
-                    .Map(x => x.ToString())
+                    .Select(x => x.ToString())
                     .Intersperse(",")
                     .RunWith(this.SinkProbe<string>(), Materializer);
 
@@ -44,7 +44,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var concated =
                 Source.From(new[] { 1, 2, 3 })
-                    .Map(x => x.ToString())
+                    .Select(x => x.ToString())
                     .Intersperse(",")
                     .RunFold("", (s, s1) => s + s1, Materializer);
 
@@ -57,7 +57,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var probe =
                 Source.From(new[] { 1, 2, 3 })
-                    .Map(x => x.ToString())
+                    .Select(x => x.ToString())
                     .Intersperse("[", ",", "]")
                     .RunWith(this.SinkProbe<string>(), Materializer);
 
@@ -81,7 +81,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var probe =
        Source.Empty<string>()
-           .Map(x => x.ToString())
+           .Select(x => x.ToString())
            .Intersperse("[", ",", "]")
            .RunWith(this.SinkProbe<string>(), Materializer);
 
@@ -94,7 +94,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var probe =
                 Source.From(new[] {1})
-                    .Map(x => x.ToString())
+                    .Select(x => x.ToString())
                     .Intersperse("[", ",", "]")
                     .RunWith(this.SinkProbe<string>(), Materializer);
 

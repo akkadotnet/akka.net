@@ -132,9 +132,9 @@ namespace Akka.Streams.Tests
         [Fact]
         public void A_SubFusingActorMaterializer_must_work_with_asynchronous_boundaries_in_the_subflows()
         {
-            var async = Flow.Create<int>().Map(x => x*2).Async();
+            var async = Flow.Create<int>().Select(x => x*2).Async();
             var t = Source.From(Enumerable.Range(0, 10))
-                .Map(x => x*10)
+                .Select(x => x*10)
                 .FlatMapMerge(5, i => Source.From(Enumerable.Range(i, 10)).Via(async))
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
@@ -152,13 +152,13 @@ namespace Akka.Streams.Tests
                 return GetInstanceField(typeof(BusLogging), bus, "_logSource") as string;
             };
 
-            var async = Flow.Create<int>().Map(x =>
+            var async = Flow.Create<int>().Select(x =>
             {
                 TestActor.Tell(refFunc());
                 return x;
             }).Async();
             var t = Source.From(Enumerable.Range(0, 10))
-                .Map(x =>
+                .Select(x =>
                 {
                     TestActor.Tell(refFunc());
                     return x;
@@ -184,13 +184,13 @@ namespace Akka.Streams.Tests
                 return GetInstanceField(typeof(BusLogging), bus, "_logSource") as string;
             };
 
-            var flow = Flow.Create<int>().Map(x =>
+            var flow = Flow.Create<int>().Select(x =>
             {
                 TestActor.Tell(refFunc());
                 return x;
             });
             var t = Source.From(Enumerable.Range(0, 10))
-                .Map(x =>
+                .Select(x =>
                 {
                     TestActor.Tell(refFunc());
                     return x;

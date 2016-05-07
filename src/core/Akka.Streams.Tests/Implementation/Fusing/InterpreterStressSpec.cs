@@ -29,7 +29,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         private readonly ITestOutputHelper _helper;
 
-        private readonly Map<int,int> _map = new Map<int, int>(x=>x+1, Deciders.StoppingDecider);
+        private readonly Select<int,int> _select = new Select<int, int>(x=>x+1, Deciders.StoppingDecider);
 
         public InterpreterStressSpec(ITestOutputHelper helper = null) : base(helper)
         {
@@ -40,7 +40,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_must_work_with_a_massive_chain_of_maps()
         {
-            var ops = Enumerable.Range(1, ChainLength).Select(_ => _map)
+            var ops = Enumerable.Range(1, ChainLength).Select(_ => _select)
                 .Cast<IStage<int, int>>().ToArray();
             WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>
                 {
@@ -72,9 +72,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_must_work_with_a_massive_chain_of_maps_with_early_complete()
         {
-            var ops = Enumerable.Range(1, HalfLength).Select(_ => _map).ToList<IStage<int, int>>();
+            var ops = Enumerable.Range(1, HalfLength).Select(_ => _select).ToList<IStage<int, int>>();
             ops.Add(new Take<int>(Repetition/2));
-            ops.AddRange(Enumerable.Range(1, HalfLength).Select(_ => _map));
+            ops.AddRange(Enumerable.Range(1, HalfLength).Select(_ => _select));
 
             WithOneBoundedSetup(ops.ToArray(), (lastEvents, upstream, downstream) =>
             {

@@ -43,7 +43,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var ex = new TestException("buh");
-                var result = Source.From(Enumerable.Range(1, 100)).Map(x =>
+                var result = Source.From(Enumerable.Range(1, 100)).Select(x =>
                 {
                     if (x == 50)
                         throw ex;

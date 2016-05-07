@@ -14,7 +14,7 @@ namespace StreamsExamples
             {
                 var flow = Source
                     .From(new[] {1, 2, 3})
-                    .Map(x => x + 1);
+                    .Select(x => x + 1);
 
                 var result = flow
                     .RunForeach(x =>

@@ -195,7 +195,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.FromPublisher(inputs)
                     .SplitWhen(x => x == 2)
                     .Lift()
-                    .Map(x => x.RunWith(Sink.FromSubscriber(substream), Materializer))
+                    .Select(x => x.RunWith(Sink.FromSubscriber(substream), Materializer))
                     .RunWith(Sink.FromSubscriber(masterStream), Materializer);
 
                 masterStream.Request(1);
@@ -212,7 +212,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.FromPublisher(inputs2)
                     .SplitWhen(x => x == 2)
                     .Lift()
-                    .Map(x => x.RunWith(Sink.Cancelled<int>(), Materializer))
+                    .Select(x => x.RunWith(Sink.Cancelled<int>(), Materializer))
                     .RunWith(Sink.Cancelled<Unit>(), Materializer);
                 inputs2.ExpectCancellation();
 

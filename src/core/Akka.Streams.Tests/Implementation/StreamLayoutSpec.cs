@@ -244,7 +244,7 @@ namespace Akka.Streams.Tests.Implementation
         public void StreamLayout_should_not_fail_materialization_when_building_a_large_graph_with_simple_computation_when_starting_from_a_Source()
         {
             var g = Enumerable.Range(1, TooDeepForStack)
-                .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Map(x => x));
+                .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x));
 
             var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(materializer);
             var materialized = t.Item1;
@@ -259,7 +259,7 @@ namespace Akka.Streams.Tests.Implementation
         public void StreamLayout_should_not_fail_materialization_when_building_a_large_graph_with_simple_computation_when_starting_from_a_Flow()
         {
             var g = Enumerable.Range(1, TooDeepForStack)
-                .Aggregate(Flow.Create<int>().MapMaterializedValue(_ => 1), (source, i) => source.Map(x => x));
+                .Aggregate(Flow.Create<int>().MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x));
 
             var t = g.RunWith(Source.Single(42).MapMaterializedValue(_ => 1), Sink.Seq<int>(), materializer);
             var materialized = t.Item1;
@@ -274,7 +274,7 @@ namespace Akka.Streams.Tests.Implementation
         public void StreamLayout_should_not_fail_materialization_when_building_a_large_graph_with_simple_computation_when_using_Via()
         {
             var g = Enumerable.Range(1, TooDeepForStack)
-                .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Map(x => x));
+                .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x));
 
             var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(materializer);
             var materialized = t.Item1;
@@ -289,7 +289,7 @@ namespace Akka.Streams.Tests.Implementation
         public void StreamLayout_should_not_fail_fusing_and_materialization_when_building_a_large_graph_with_simple_computation_when_starting_from_a_Source()
         {
             var g = Source.FromGraph(Fuse.Aggressive(Enumerable.Range(1, TooDeepForStack)
-                .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Map(x => x))));
+                .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x))));
 
             var m = g.ToMaterialized(Sink.Seq<int>(), Keep.Both);
             var t = m.Run(materializer);
@@ -305,7 +305,7 @@ namespace Akka.Streams.Tests.Implementation
         public void StreamLayout_should_not_fail_fusing_and_materialization_when_building_a_large_graph_with_simple_computation_when_starting_from_a_Flow()
         {
             var g = Flow.FromGraph(Fuse.Aggressive(Enumerable.Range(1, TooDeepForStack)
-                .Aggregate(Flow.Create<int>().MapMaterializedValue(_ => 1), (source, i) => source.Map(x => x))));
+                .Aggregate(Flow.Create<int>().MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x))));
 
             var t = g.RunWith(Source.Single(42).MapMaterializedValue(_ => 1), Sink.Seq<int>(), materializer);
             var materialized = t.Item1;
@@ -320,7 +320,7 @@ namespace Akka.Streams.Tests.Implementation
         public void StreamLayout_should_not_fail_fusing_and_materialization_when_building_a_large_graph_with_simple_computation_when_using_Via()
         {
             var g = Source.FromGraph(Fuse.Aggressive(Enumerable.Range(1, TooDeepForStack)
-                .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Map(x => x))));
+                .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x))));
 
             var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(materializer);
             var materialized = t.Item1;

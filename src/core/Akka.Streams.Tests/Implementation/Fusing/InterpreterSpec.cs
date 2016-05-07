@@ -39,7 +39,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_implement_map_correctly()
         {
-            WithOneBoundedSetup(new Map<int, int>(x => x + 1, Deciders.StoppingDecider),
+            WithOneBoundedSetup(new Select<int, int>(x => x + 1, Deciders.StoppingDecider),
                 (lastEvents, upstream, downstream) =>
                 {
                     lastEvents().Should().BeEmpty();
@@ -66,9 +66,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             WithOneBoundedSetup(new IStage<int, int>[]
             {
-                new Map<int, int>(x => x + 1, Deciders.StoppingDecider),
-                new Map<int, int>(x => x * 2, Deciders.StoppingDecider),
-                new Map<int, int>(x => x + 1, Deciders.StoppingDecider)
+                new Select<int, int>(x => x + 1, Deciders.StoppingDecider),
+                new Select<int, int>(x => x * 2, Deciders.StoppingDecider),
+                new Select<int, int>(x => x + 1, Deciders.StoppingDecider)
             },
                 (lastEvents, upstream, downstream) =>
                 {
@@ -206,7 +206,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             {
                 new Filter<int>(x => x != 0, Deciders.StoppingDecider),
                 new Take<int>(2),
-                new Map<int, int>(x => x + 1, Deciders.StoppingDecider)
+                new Select<int, int>(x => x + 1, Deciders.StoppingDecider)
             },
                 (lastEvents, upstream, downstream) =>
                 {
@@ -547,11 +547,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             WithOneBoundedSetup(new IStage<int, int>[]
             {
-                new Map<int, int>(x => x, Deciders.StoppingDecider),
-                new Map<int, int>(x => x, Deciders.StoppingDecider),
+                new Select<int, int>(x => x, Deciders.StoppingDecider),
+                new Select<int, int>(x => x, Deciders.StoppingDecider),
                 new KeepGoing<int>(),
-                new Map<int, int>(x => x, Deciders.StoppingDecider),
-                new Map<int, int>(x => x, Deciders.StoppingDecider)
+                new Select<int, int>(x => x, Deciders.StoppingDecider),
+                new Select<int, int>(x => x, Deciders.StoppingDecider)
             },
                 (lastEvents, upstream, downstream) =>
                 {
@@ -601,9 +601,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             WithOneBoundedSetup(new IStage<int, int>[]
             {
-                new Map<int, int>(x => x, Deciders.StoppingDecider),
+                new Select<int, int>(x => x, Deciders.StoppingDecider),
                 new PushFinishStage<int>(),
-                new Map<int, int>(x => x, Deciders.StoppingDecider)
+                new Select<int, int>(x => x, Deciders.StoppingDecider)
             },
                 (lastEvents, upstream, downstream) =>
                 {

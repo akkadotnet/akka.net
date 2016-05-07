@@ -22,7 +22,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes IODispatcher = ActorAttributes.CreateDispatcher("akka.stream.default-blocking-io-dispatcher");
 
         public static readonly Attributes Fused = Attributes.CreateName("fused");
-        public static readonly Attributes Map = Attributes.CreateName("map");
+        public static readonly Attributes Select = Attributes.CreateName("select");
         public static readonly Attributes Log = Attributes.CreateName("log");
         public static readonly Attributes Filter = Attributes.CreateName("filter");
         public static readonly Attributes Collect = Attributes.CreateName("collect");
@@ -152,17 +152,17 @@ namespace Akka.Streams.Implementation.Stages
             => attributes.GetAttribute(new ActorAttributes.SupervisionStrategy(Deciders.StoppingDecider)).Decider;
     }
 
-    internal sealed class Map<TIn, TOut> : SymbolicStage<TIn, TOut>
+    internal sealed class Select<TIn, TOut> : SymbolicStage<TIn, TOut>
     {
         private readonly Func<TIn, TOut> _mapper;
 
-        public Map(Func<TIn, TOut> mapper, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Map)
+        public Select(Func<TIn, TOut> mapper, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Select)
         {
             _mapper = mapper;
         }
 
         public override IStage<TIn, TOut> Create(Attributes effectiveAttributes)
-            => new Fusing.Map<TIn, TOut>(_mapper, Supervision(effectiveAttributes));
+            => new Fusing.Select<TIn, TOut>(_mapper, Supervision(effectiveAttributes));
     }
 
     internal sealed class Log<T> : SymbolicStage<T, T>

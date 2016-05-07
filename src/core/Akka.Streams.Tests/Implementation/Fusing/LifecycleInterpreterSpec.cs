@@ -242,12 +242,12 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             var ops = new IStage<string, string>[]
             {
-                new Map<string, string>(x => x, Deciders.StoppingDecider),
+                new Select<string, string>(x => x, Deciders.StoppingDecider),
                 new PreStartFailer<string>(() =>
                 {
                     throw new TestException("Boom!");
                 }),
-                new Map<string, string>(x => x, Deciders.StoppingDecider),
+                new Select<string, string>(x => x, Deciders.StoppingDecider),
             };
 
             WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>
@@ -300,9 +300,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             var ops = new IStage<string, string>[]
             {
-                new Map<string, string>(x => x, Deciders.StoppingDecider),
+                new Select<string, string>(x => x, Deciders.StoppingDecider),
                 new PushFinishStage<string>(() => TestActor.Tell("stop")), 
-                new Map<string, string>(x => x, Deciders.StoppingDecider)
+                new Select<string, string>(x => x, Deciders.StoppingDecider)
             };
 
             WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>

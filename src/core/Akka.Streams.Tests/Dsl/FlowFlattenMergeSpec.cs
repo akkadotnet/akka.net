@@ -41,7 +41,7 @@ namespace Akka.Streams.Tests.Dsl
         private Sink<int, Task<ImmutableHashSet<int>>> ToSet =>
                 Flow.Create<int>()
                     .Grouped(1000)
-                    .Map(x => x.ToImmutableHashSet())
+                    .Select(x => x.ToImmutableHashSet())
                     .ToMaterialized(Sink.First<ImmutableHashSet<int>>(), Keep.Right);
 
         [Fact]

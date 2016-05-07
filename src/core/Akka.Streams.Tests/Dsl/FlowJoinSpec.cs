@@ -58,7 +58,7 @@ namespace Akka.Streams.Tests.Dsl
                 var flow2 =
                     Flow.Create<int>()
                         .Filter(x => x%2 == 1)
-                        .Map(x => x*10)
+                        .Select(x => x*10)
                         .Buffer((end + 1)/2, OverflowStrategy.Backpressure)
                         .Take((end + 1)/2);
 
@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 var feedback = Flow.FromGraph(GraphDsl.Create(Source.Single("ignition"), (b, ignition) =>
                 {
-                    var f = b.Add(Flow.Create<Tuple<string, string>>().Map(t => t.Item1));
+                    var f = b.Add(Flow.Create<Tuple<string, string>>().Select(t => t.Item1));
                     var merge = b.Add(new Merge<string>(2));
 
                     b.From(ignition).To(merge.In(0));

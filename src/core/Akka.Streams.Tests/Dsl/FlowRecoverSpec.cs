@@ -33,14 +33,14 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                Source.From(Enumerable.Range(1, 4)).Map(x =>
+                Source.From(Enumerable.Range(1, 4)).Select(x =>
                 {
                     if (x == 3)
                         throw Ex;
                     return x;
                 })
                     .Recover(_ => new Option<int>(0))
-                    .Map(x => x.Value)
+                    .Select(x => x.Value)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .RequestNext(1)
                     .RequestNext(2)
@@ -56,14 +56,14 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                Source.From(Enumerable.Range(1, 3)).Map(x =>
+                Source.From(Enumerable.Range(1, 3)).Select(x =>
                 {
                     if (x == 2)
                         throw Ex;
                     return x;
                 })
                     .Recover(_ => Option<int>.None)
-                    .Map(x=>x.Value)
+                    .Select(x=>x.Value)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .RequestNext(1)
                     .Request(1)
@@ -77,9 +77,9 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 Source.From(Enumerable.Range(1, 3))
-                    .Map(x => x)
+                    .Select(x => x)
                     .Recover(_ => new Option<int>(0))
-                    .Map(x => x.Value)
+                    .Select(x => x.Value)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(3)
                     .ExpectNext(1, 2, 3)
@@ -93,9 +93,9 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 Source.Empty<int>()
-                    .Map(x => x)
+                    .Select(x => x)
                     .Recover(_ => new Option<int>(0))
-                    .Map(x=>x.Value)
+                    .Select(x=>x.Value)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(1)
                     .ExpectComplete();

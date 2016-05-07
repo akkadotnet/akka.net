@@ -33,7 +33,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var probe = Source.From(Enumerable.Range(1, 4)).Map(x =>
+                var probe = Source.From(Enumerable.Range(1, 4)).Select(x =>
                 {
                     if (x == 3)
                         throw Ex;
@@ -61,7 +61,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var probe = Source.From(Enumerable.Range(1, 4)).Map(x =>
+                var probe = Source.From(Enumerable.Range(1, 4)).Select(x =>
                 {
                     if (x == 3)
                         throw Ex;
@@ -85,7 +85,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var probe = Source.From(Enumerable.Range(1, 3)).Map(x =>
+                var probe = Source.From(Enumerable.Range(1, 3)).Select(x =>
                 {
                     if (x == 2)
                         throw Ex;
@@ -107,7 +107,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var src = Source.From(Enumerable.Range(1, 3)).Map(x =>
+                var src = Source.From(Enumerable.Range(1, 3)).Select(x =>
                 {
                     if (x == 3)
                         throw Ex;
@@ -137,7 +137,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 Source.From(Enumerable.Range(1, 3))
-                    .Map(x => x)
+                    .Select(x => x)
                     .RecoverWith(_ => Source.Single(0))
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(3)
@@ -152,7 +152,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 Source.Empty<int>()
-                    .Map(x => x)
+                    .Select(x => x)
                     .RecoverWith(_ => Source.Single(0))
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(3)
@@ -165,7 +165,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var probe = Source.From(Enumerable.Range(1, 3)).Map(x =>
+                var probe = Source.From(Enumerable.Range(1, 3)).Select(x =>
                 {
                     if (x == 3)
                         throw new IndexOutOfRangeException();
@@ -173,7 +173,7 @@ namespace Akka.Streams.Tests.Dsl
                 }).RecoverWith(ex =>
                 {
                     if (ex is IndexOutOfRangeException)
-                        return Source.From(new [] {11,22}).Map(x =>
+                        return Source.From(new [] {11,22}).Select(x =>
                         {
                             if (x == 22)
                                 throw new ArgumentException();
@@ -205,7 +205,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var probe = Source.From(Enumerable.Range(1, 3))
-                    .Map(x =>
+                    .Select(x =>
                     {
                         if(x==3)
                             throw new IndexOutOfRangeException();
@@ -214,7 +214,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RecoverWith(ex =>
                     {
                         if (ex is IndexOutOfRangeException)
-                            return Source.From(new[] {11, 22}).Map(x =>
+                            return Source.From(new[] {11, 22}).Select(x =>
                             {
                                 if (x == 22)
                                     throw Ex;

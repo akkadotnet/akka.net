@@ -69,7 +69,7 @@ namespace Akka.Streams.Tests.Dsl
 
         internal static class River
         {
-            private static readonly Flow<int, string, Unit> OtherFlow = Flow.Create<int>().Map(i => i.ToString());
+            private static readonly Flow<int, string, Unit> OtherFlow = Flow.Create<int>().Select(i => i.ToString());
             
             public static void RiverOf<T>(Action<ISubscriber<T>, Flow<int, string, Unit>, IEnumerable<int>> flowConstructor, TestKitBase kit)
             {

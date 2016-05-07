@@ -59,7 +59,7 @@ namespace Akka.Streams.Tests.Dsl
         public void ConcatAll_must_work_together_with_SplitWhen()
         {
             var subscriber = TestSubscriber.CreateProbe<int>(this);
-            var subflow = Source.From(Enumerable.Range(1, 10)).SplitWhen(x => x%2 == 0).PrefixAndTail(0).Map(x => x.Item2);
+            var subflow = Source.From(Enumerable.Range(1, 10)).SplitWhen(x => x%2 == 0).PrefixAndTail(0).Select(x => x.Item2);
             var source = ((SubFlow<Source<int, Unit>, Unit, IRunnableGraph<Unit>>) subflow).ConcatSubstream().FlatMapConcat(x => x);
             ((Source<int, Unit>) source).RunWith(Sink.FromSubscriber(subscriber), Materializer);
 

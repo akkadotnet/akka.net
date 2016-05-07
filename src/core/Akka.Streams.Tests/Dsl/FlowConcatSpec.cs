@@ -39,9 +39,9 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Concat_for_Flow_must_be_able_to_concat_Flow_with_Source()
         {
-            var f1 = Flow.Create<int>().Map(x => x + "-s");
+            var f1 = Flow.Create<int>().Select(x => x + "-s");
             var s1 = Source.From(new[] {1, 2, 3});
-            var s2 = Source.From(new[] { 4,5,6 }).Map(x=> x + "-s");
+            var s2 = Source.From(new[] { 4,5,6 }).Select(x=> x + "-s");
 
             var subs = TestSubscriber.CreateManualProbe<string>(this);
             var subSink = Sink.AsPublisher<string>(false);
@@ -58,9 +58,9 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Concat_for_Flow_must_be_able_to_prepend_a_Source_to_a_Flow()
         {
-            var s1 = Source.From(new[] { 1, 2, 3 }).Map(x => x + "-s");
+            var s1 = Source.From(new[] { 1, 2, 3 }).Select(x => x + "-s");
             var s2 = Source.From(new[] { 4, 5, 6 });
-            var f2 = Flow.Create<int>().Map(x => x + "-s");
+            var f2 = Flow.Create<int>().Select(x => x + "-s");
 
             var subs = TestSubscriber.CreateManualProbe<string>(this);
             var subSink = Sink.AsPublisher<string>(false);

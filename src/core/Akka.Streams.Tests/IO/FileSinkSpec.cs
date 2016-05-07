@@ -91,7 +91,7 @@ namespace Akka.Streams.Tests.IO
                 TargetFile(f =>
                 {
                     Func<IEnumerable<string>, Task<IOResult>> write = lines => Source.From(lines)
-                        .Map(ByteString.FromString)
+                        .Select(ByteString.FromString)
                         .RunWith(FileIO.ToFile(f), _materializer);
 
                     var completion1 = write(_testLines);
@@ -121,7 +121,7 @@ namespace Akka.Streams.Tests.IO
                 TargetFile(f =>
                 {
                     Func<List<string>, Task<IOResult>> write = lines => Source.From(lines)
-                        .Map(ByteString.FromString)
+                        .Select(ByteString.FromString)
                         .RunWith(FileIO.ToFile(f, fileMode: FileMode.Append), _materializer);
 
                     var completion1 = write(_testLines);

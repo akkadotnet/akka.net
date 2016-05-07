@@ -50,7 +50,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Flow_can_have_an_op_with_a_different_dispatcher()
         {
             var flow = Flow.Create<int>()
-                .Map(x => SentThreadNameTo(TestActor, x))
+                .Select(x => SentThreadNameTo(TestActor, x))
                 .WithAttributes(ActorAttributes.CreateDispatcher("my-dispatcher1"));
 
             Source.Single(1).Via(flow).To(Sink.Ignore<int>()).Run(Materializer);
@@ -64,7 +64,7 @@ namespace Akka.Streams.Tests.Dsl
             Source.Single(1)
                 .Via(
                     Flow.Create<int>()
-                        .Map(x => SentThreadNameTo(TestActor, x))
+                        .Select(x => SentThreadNameTo(TestActor, x))
                         .WithAttributes(ActorAttributes.CreateDispatcher("my-dispatcher")))
                 .To(Sink.Ignore<int>())
                 .Run(Materializer);
@@ -80,12 +80,12 @@ namespace Akka.Streams.Tests.Dsl
 
             var flow1 =
                 Flow.Create<int>()
-                    .Map(x => SentThreadNameTo(probe1.Ref, x))
+                    .Select(x => SentThreadNameTo(probe1.Ref, x))
                     .WithAttributes(ActorAttributes.CreateDispatcher("my-dispatcher1"));
 
             var flow2 =
                 Flow.FromGraph(flow1)
-                    .Via(Flow.Create<int>().Map(x => SentThreadNameTo(probe2.Ref, x)))
+                    .Via(Flow.Create<int>().Select(x => SentThreadNameTo(probe2.Ref, x)))
                     .WithAttributes(ActorAttributes.CreateDispatcher("my-dispatcher2"));
 
             Source.Single(1).Via(flow2).To(Sink.Ignore<int>()).Run(Materializer);
@@ -98,13 +98,13 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Flow_can_include_name_in_ToString()
         {
             var n = "Uppercase reverser";
-            var f1 = Flow.Create<string>().Map(c => c.ToLower());
+            var f1 = Flow.Create<string>().Select(c => c.ToLower());
             var graph =
                 Flow.Create<string>()
-                    .Map(c => c.ToUpper())
-                    .Map(s => s.Reverse().Aggregate("", (agg, c) => agg + c))
+                    .Select(c => c.ToUpper())
+                    .Select(s => s.Reverse().Aggregate("", (agg, c) => agg + c))
                     .Named(n);
-            var f2 = Flow.FromGraph(graph).Map(c => c.ToLower());
+            var f2 = Flow.FromGraph(graph).Select(c => c.ToLower());
 
             f1.Via(f2).ToString().Should().Contain(n);
         }
@@ -115,11 +115,11 @@ namespace Akka.Streams.Tests.Dsl
             var defaultDispatcher = CreateTestProbe();
             var customDispatcher = CreateTestProbe();
 
-            var f1 = Flow.Create<int>().Map(x => SentThreadNameTo(defaultDispatcher.Ref, x));
+            var f1 = Flow.Create<int>().Select(x => SentThreadNameTo(defaultDispatcher.Ref, x));
             var f2 =
                 Flow.Create<int>()
-                    .Map(x => SentThreadNameTo(defaultDispatcher.Ref, x))
-                    .Map(x => x)
+                    .Select(x => SentThreadNameTo(defaultDispatcher.Ref, x))
+                    .Select(x => x)
                     .WithAttributes(
                         ActorAttributes.CreateDispatcher("my-dispatcher")
                             .And(Attributes.CreateName("seperate-dispatcher")));

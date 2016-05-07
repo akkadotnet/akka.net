@@ -20,7 +20,7 @@ namespace Akka.Persistence.Query.Tests
     {
         public static readonly string Identifier = "akka.persistence.query.journal.dummy";
 
-        public Source<string, Unit> AllPersistenceIds() => Source.From(Iterate(0)).Map(i => i.ToString());
+        public Source<string, Unit> AllPersistenceIds() => Source.From(Iterate(0)).Select(i => i.ToString());
 
         private IEnumerable<int> Iterate(int start)
         {

@@ -22,7 +22,7 @@ namespace Akka.Streams.Tests.Dsl
     public class FlowSupervisionSpec : AkkaSpec
     {
         private static readonly SystemException Exception = new SystemException("simulated exception");
-        private static Flow<int, int, Unit> FailingMap => Flow.Create<int>().Map(n =>
+        private static Flow<int, int, Unit> FailingMap => Flow.Create<int>().Select(n =>
         {
             if (n == 3)
                 throw Exception;
@@ -76,7 +76,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Stream_supervision_must_complete_stream_with_ArgumentNullException_when_null_is_emitted()
         {
-            var task = Source.From(new[] {"a", "b"}).Map(x => null as string).Limit(1000).RunWith(Sink.Seq<string>(), Materializer);
+            var task = Source.From(new[] {"a", "b"}).Select(x => null as string).Limit(1000).RunWith(Sink.Seq<string>(), Materializer);
 
             task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
                 .ShouldThrow<ArgumentNullException>()
@@ -86,7 +86,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Stream_supervision_must_resume_stream_when_null_is_emitted()
         {
-            var nullMap = Flow.Create<string>().Map(element =>
+            var nullMap = Flow.Create<string>().Select(element =>
             {
                 if (element == "b")
                     return null;

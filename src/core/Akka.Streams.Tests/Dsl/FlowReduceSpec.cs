@@ -29,13 +29,13 @@ namespace Akka.Streams.Tests.Dsl
 
         private static IEnumerable<int> Input => Enumerable.Range(1, 100);
         private static int Expected => Input.Sum();
-        private static Source<int, Unit> InputSource => Source.From(Input).Filter(_ => true).Map(x => x);
+        private static Source<int, Unit> InputSource => Source.From(Input).Filter(_ => true).Select(x => x);
 
         private static Source<int, Unit> ReduceSource
-            => InputSource.Reduce((i, i1) => i + i1).Filter(_ => true).Map(x => x);
+            => InputSource.Reduce((i, i1) => i + i1).Filter(_ => true).Select(x => x);
 
         private static Flow<int, int, Unit> ReduceFlow
-            => Flow.Create<int>().Filter(_ => true).Map(x => x).Reduce((i, i1) => i + i1).Filter(_ => true).Map(x => x);
+            => Flow.Create<int>().Filter(_ => true).Select(x => x).Reduce((i, i1) => i + i1).Filter(_ => true).Select(x => x);
 
         private static Sink<int, Task<int>> ReduceSink => Sink.Reduce<int>((i, i1) => i + i1);
 
@@ -101,7 +101,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var error = new TestException("test");
-                var task = InputSource.Map(x =>
+                var task = InputSource.Select(x =>
                 {
                     if (x > 50)
                         throw error;

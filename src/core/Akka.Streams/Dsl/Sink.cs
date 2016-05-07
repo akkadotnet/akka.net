@@ -191,7 +191,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Sink<TIn, Task> ForEach<TIn>(Action<TIn> action)
         {
-            var forEach = Flow.Create<TIn>().Map(input =>
+            var forEach = Flow.Create<TIn>().Select(input =>
             {
                 action(input);
                 return Unit.Instance;

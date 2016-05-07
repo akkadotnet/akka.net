@@ -81,9 +81,9 @@ namespace Akka.Streams.Dsl
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        public static Source<TOut, TMat> Map<TIn, TOut, TMat>(this Source<TIn, TMat> flow, Func<TIn, TOut> mapper)
+        public static Source<TOut, TMat> Select<TIn, TOut, TMat>(this Source<TIn, TMat> flow, Func<TIn, TOut> mapper)
         {
-            return (Source<TOut, TMat>)InternalFlowOperations.Map(flow, mapper);
+            return (Source<TOut, TMat>)InternalFlowOperations.Select(flow, mapper);
         }
 
         /// <summary>

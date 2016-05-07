@@ -32,7 +32,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var p = TestPublisher.CreateManualProbe<int>(this);
-                var task = Source.FromPublisher(p).Map(x=>x).RunWith(Sink.First<int>(), Materializer);
+                var task = Source.FromPublisher(p).Select(x=>x).RunWith(Sink.First<int>(), Materializer);
                 var proc = p.ExpectSubscription();
                 proc.ExpectRequest();
                 proc.SendNext(42);
@@ -95,7 +95,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var p = TestPublisher.CreateManualProbe<int>(this);
-                var task = Source.FromPublisher(p).Map(x => x).RunWith(Sink.FirstOrDefault<int>(), Materializer);
+                var task = Source.FromPublisher(p).Select(x => x).RunWith(Sink.FirstOrDefault<int>(), Materializer);
                 var proc = p.ExpectSubscription();
                 proc.ExpectRequest();
                 proc.SendNext(42);
