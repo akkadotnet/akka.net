@@ -71,7 +71,7 @@ namespace Akka.Streams.Tests.Dsl
                 return new Tuple<ICollection<int>, ICollection<int>>(new[] { x }, (x & 1) == 1 ? new[] { x } : new int[] { });
             }).ToArray());
 
-            RandomTestRange(Sys).ForEach(_ => RunScript(script, Settings, flow => flow.FilterNot(x => x % 2 == 0)));
+            RandomTestRange(Sys).ForEach(_ => RunScript(script, Settings, flow => flow.WhereNot(x => x % 2 == 0)));
         }
     }
 }
