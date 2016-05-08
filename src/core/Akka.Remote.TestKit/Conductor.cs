@@ -8,7 +8,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Threading;
+using System.Net;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -16,8 +16,7 @@ using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Transport;
 using Akka.Util;
-using Helios.Exceptions;
-using Helios.Net;
+using Helios.Channels;
 using Helios.Topology;
 
 namespace Akka.Remote.TestKit
@@ -63,13 +62,13 @@ namespace Akka.Remote.TestKit
         /// <param name="name"></param>
         /// <param name="controllerPort"></param>
         /// <returns></returns>
-        public async Task<INode> StartController(int participants, RoleName name, INode controllerPort)
+        public async Task<IPEndPoint> StartController(int participants, RoleName name, IPEndPoint controllerPort)
         {
             if(_controller != null) throw new IllegalStateException("TestConductorServer was already started");
             _controller = _system.ActorOf(Props.Create(() => new Controller(participants, controllerPort)),
                "controller");
             //TODO: Need to review this async stuff
-            var node = await _controller.Ask<INode>(TestKit.Controller.GetSockAddr.Instance, Settings.QueryTimeout).ConfigureAwait(false);
+            var node = await _controller.Ask<IPEndPoint>(TestKit.Controller.GetSockAddr.Instance, Settings.QueryTimeout).ConfigureAwait(false);
             await StartClient(name, node).ConfigureAwait(false);
             return node;
         }
@@ -249,17 +248,11 @@ namespace Akka.Remote.TestKit
         }
     }
 
-    /// <summary>
-    /// This handler is what's used to process events which occur on <see cref="RemoteConnection"/>.
-    /// 
-    /// It's only purpose is to dispatch incoming messages to the right <see cref="ServerFSM"/> actor. There is
-    /// one shared instance fo this class for all <see cref="IConnection"/>s accepted by one <see cref="Controller"/>.
-    /// </summary>
-    internal class ConductorHandler : IHeliosConnectionHandler
+    internal class ConductorHandler : ChannelHandlerAdapter
     {
         private readonly ILoggingAdapter _log;
         private readonly IActorRef _controller;
-        private readonly ConcurrentDictionary<IConnection, IActorRef> _clients = new ConcurrentDictionary<IConnection, IActorRef>();
+        private readonly ConcurrentDictionary<IChannel, IActorRef> _clients = new ConcurrentDictionary<IChannel, IActorRef>();
 
         public ConductorHandler(IActorRef controller, ILoggingAdapter log)
         {
@@ -267,48 +260,69 @@ namespace Akka.Remote.TestKit
             _log = log;
         }
 
-        public async void OnConnect(INode remoteAddress, IConnection responseChannel)
+        public override void ChannelActive(IChannelHandlerContext context)
         {
-            _log.Debug("connection from {0}", responseChannel.RemoteHost);
-            
+            _log.Debug("connection from {0}", context.Channel.RemoteAddress);
+
             // Duration of this Ask operation needs to be infinite
-            var fsm = await _controller.Ask<IActorRef>(new Controller.CreateServerFSM(new RemoteConnection(responseChannel, this)), TimeSpan.FromMilliseconds(Int32.MaxValue));
-            _clients.AddOrUpdate(responseChannel, fsm, (connection, @ref) => fsm);
+            var channel = context.Channel;
+            channel.Configuration.AutoRead = false;
+            _controller.Ask<IActorRef>(new Controller.CreateServerFSM(channel),
+                TimeSpan.FromMilliseconds(Int32.MaxValue)).ContinueWith(tr =>
+                {
+                    var fsm = tr.Result;
+                    _log.Debug("created server FSM {0}", fsm);
+                    _clients.AddOrUpdate(channel, fsm, (connection, @ref) => fsm);
+                    channel.Configuration.AutoRead = true;
+                });
         }
 
-        public void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
+        public override void ChannelInactive(IChannelHandlerContext context)
         {
-            _log.Debug("disconnect from {0}", closedChannel.RemoteHost);
+            var channel = context.Channel;
+            _log.Debug("disconnect from {0}", channel.RemoteAddress);
             IActorRef fsm;
-            if (_clients.TryGetValue(closedChannel, out fsm))
+            if (_clients.TryGetValue(channel, out fsm))
             {
                 fsm.Tell(new Controller.ClientDisconnected(new RoleName(null)));
                 IActorRef removedActor;
-                _clients.TryRemove(closedChannel, out removedActor);
+                _clients.TryRemove(channel, out removedActor);
             }
         }
 
-        public void OnMessage(object message, IConnection responseChannel)
+        public override void ChannelRead(IChannelHandlerContext context, object message)
         {
-            _log.Debug("message from {0}: {1}", responseChannel.RemoteHost, message);
+            var channel = context.Channel;
+            _log.Debug("message from {0}: {1}", channel.RemoteAddress, message);
             if (message is INetworkOp)
             {
                 IActorRef fsm;
-                if (_clients.TryGetValue(responseChannel, out fsm))
+                if (_clients.TryGetValue(channel, out fsm))
                 {
                     fsm.Tell(message);
+                }
+                else
+                {
+                    _log.Warning("Failed to get client for {0}", channel);
                 }
             }
             else
             {
-                _log.Debug("client {0} sent garbage `{1}`, disconnecting", responseChannel.RemoteHost, message);
-                responseChannel.Close();
+                _log.Debug("client {0} sent garbage `{1}`, disconnecting", channel.RemoteAddress, message);
+                channel.CloseAsync();
             }
         }
 
-        public void OnException(Exception ex, IConnection erroredChannel)
+        public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
         {
-            _log.Warning("handled network error from {0}: {1}", erroredChannel.RemoteHost, ex.Message);
+            var channel = context.Channel;
+            _log.Warning("handled network error from {0}: {1} {2}", channel.RemoteAddress, exception.Message, exception.StackTrace);
+        }
+
+        public override Task CloseAsync(IChannelHandlerContext context)
+        {
+            _log.Info("Server: disconnecting {0} from {1}", context.Channel.LocalAddress, context.Channel.RemoteAddress);
+            return base.CloseAsync(context);
         }
     }
 
@@ -330,7 +344,7 @@ namespace Akka.Remote.TestKit
     class ServerFSM : FSM<ServerFSM.State, IActorRef>, ILoggingFSM
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
-        readonly RemoteConnection _channel;
+        readonly IChannel _channel;
         readonly IActorRef _controller;        
         RoleName _roleName;
 
@@ -340,7 +354,7 @@ namespace Akka.Remote.TestKit
             Ready
         }
 
-        public ServerFSM(IActorRef controller, RemoteConnection channel)
+        public ServerFSM(IActorRef controller, IChannel channel)
         {
             _controller = controller;
             _channel = channel;
@@ -367,7 +381,7 @@ namespace Akka.Remote.TestKit
             OnTermination(@event =>
             {
                 _controller.Tell(new Controller.ClientDisconnected(_roleName));
-                _channel.Close();
+                _channel.CloseAsync();
             });
 
             When(State.Initial, @event =>
@@ -381,8 +395,8 @@ namespace Akka.Remote.TestKit
                 }
                 if (@event.FsmEvent is INetworkOp)
                 {
-                    _log.Warning("client {0}, sent not Hello in first message (instead {1}), disconnecting", _channel.RemoteHost.ToEndPoint(), @event.FsmEvent);
-                    _channel.Close();
+                    _log.Warning("client {0}, sent not Hello in first message (instead {1}), disconnecting", _channel.RemoteAddress, @event.FsmEvent);
+                    _channel.CloseAsync();
                     return Stop();
                 }
                 if (@event.FsmEvent is IToClient)
@@ -392,8 +406,8 @@ namespace Akka.Remote.TestKit
                 }
                 if (@event.FsmEvent is StateTimeout)
                 {
-                    _log.Info("closing channel to {0} because of Hello timeout", _channel.RemoteHost.ToEndPoint());
-                    _channel.Close();
+                    _log.Info("closing channel to {0} because of Hello timeout", _channel.RemoteAddress);
+                    _channel.CloseAsync();
                     return Stop();
                 }
                 return null;
@@ -413,7 +427,7 @@ namespace Akka.Remote.TestKit
                 }
                 if (@event.FsmEvent is INetworkOp)
                 {
-                    _log.Warning("client {0} sent unsupported message {1}", _channel.RemoteHost.ToEndPoint(), @event.FsmEvent);
+                    _log.Warning("client {0} sent unsupported message {1}", _channel.RemoteAddress, @event.FsmEvent);
                     return Stop();
                 }
                 var toClient = @event.FsmEvent as IToClient;
@@ -421,12 +435,12 @@ namespace Akka.Remote.TestKit
                 {
                     if (toClient.Msg is IUnconfirmedClientOp)
                     {
-                        _channel.Write(toClient.Msg);
+                        _channel.WriteAndFlushAsync(toClient.Msg);
                         return Stay();                        
                     }
                     if (@event.StateData == null)
                     {
-                        _channel.Write(toClient.Msg);
+                        _channel.WriteAndFlushAsync(toClient.Msg);
                         return Stay().Using(Sender);
                     }
 

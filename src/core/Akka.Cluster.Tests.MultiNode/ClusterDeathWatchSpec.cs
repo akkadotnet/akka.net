@@ -117,7 +117,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         public void An_actor_watching_a_remote_actor_in_the_cluster_must_receive_terminated_when_watched_node_becomes_down_removed()
         {
-            Within(TimeSpan.FromSeconds(20), () =>
+            Within(TimeSpan.FromSeconds(30), () =>
             {
                 AwaitClusterUp(_config.First, _config.Second, _config.Third, _config.Fourth);
                 EnterBarrier("cluster-up");

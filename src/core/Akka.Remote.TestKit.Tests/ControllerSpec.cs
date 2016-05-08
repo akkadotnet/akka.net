@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.Net;
 using Akka.Actor;
 using Akka.TestKit;
 using Helios.Topology;
@@ -33,7 +34,7 @@ namespace Akka.Remote.TestKit.Tests
         [Fact]
         public void Controller_must_publish_its_nodes()
         {
-            var c = Sys.ActorOf(Props.Create(() => new Controller(1, Node.Loopback(0))));
+            var c = Sys.ActorOf(Props.Create(() => new Controller(1, new IPEndPoint(IPAddress.Loopback, 0))));
             c.Tell(new Controller.NodeInfo(A, Address.Parse("akka://sys"), TestActor));
             ExpectMsg<ToClient<Done>>();
             c.Tell(new Controller.NodeInfo(B, Address.Parse("akka://sys"), TestActor));
