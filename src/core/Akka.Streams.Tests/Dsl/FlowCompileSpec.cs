@@ -47,8 +47,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Flow_should_append_Flow()
         {
-            var open1 = Flow.Create<int>().Map(x => x.ToString());
-            var open2 = Flow.Create<string>().Map(x => x.GetHashCode());
+            var open1 = Flow.Create<int>().Select(x => x.ToString());
+            var open2 = Flow.Create<string>().Select(x => x.GetHashCode());
             dynamic open3 = open1.Via(open2);
             Action compiler = () => open3.Run(Materializer);
             compiler.ShouldThrow<RuntimeBinderException>();
@@ -68,8 +68,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Flow_should_append_Sink()
         {
-            var open = Flow.Create<int>().Map(x => x.ToString());
-            var closedSink = Flow.Create<string>().Map(x => x.GetHashCode()).To(Sink.AsPublisher<int>(false));
+            var open = Flow.Create<int>().Select(x => x.ToString());
+            var closedSink = Flow.Create<string>().Select(x => x.GetHashCode()).To(Sink.AsPublisher<int>(false));
             dynamic appended = open.To(closedSink);
             Action compiler = () => appended.Run(Materializer);
             compiler.ShouldThrow<RuntimeBinderException>();
@@ -81,8 +81,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Flow_should_append_Source()
         {
-            var open = Flow.Create<int>().Map(x => x.ToString());
-            var closedSource = StringSeq.Via(Flow.Create<string>().Map(x => x.GetHashCode()));
+            var open = Flow.Create<int>().Select(x => x.ToString());
+            var closedSource = StringSeq.Via(Flow.Create<string>().Select(x => x.GetHashCode()));
             dynamic closedSource2 = closedSource.Via(open);
             Action compiler = () => closedSource2.Run(Materializer);
             compiler.ShouldThrow<RuntimeBinderException>();
@@ -93,7 +93,7 @@ namespace Akka.Streams.Tests.Dsl
 
 
         private Sink<int, Unit> OpenSink
-            => Flow.Create<int>().Map(x => x.ToString()).To(Sink.AsPublisher<string>(false));
+            => Flow.Create<int>().Select(x => x.ToString()).To(Sink.AsPublisher<string>(false));
 
         [Fact]
         public void Sink_should_accept_Source() => IntSeq.To(OpenSink);
@@ -115,7 +115,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
 
-        private Source<string, Unit> OpenSource => Source.From(new[] {1, 2, 3}).Map(x => x.ToString());
+        private Source<string, Unit> OpenSource => Source.From(new[] {1, 2, 3}).Select(x => x.ToString());
 
         [Fact]
         public void Source_should_accept_Sink() => OpenSource.To(Sink.AsPublisher<string>(false));
@@ -140,7 +140,7 @@ namespace Akka.Streams.Tests.Dsl
         private IRunnableGraph<IPublisher<string>> Closed
             =>
                 Source.From(new[] {1, 2, 3})
-                    .Map(x => x.ToString())
+                    .Select(x => x.ToString())
                     .ToMaterialized(Sink.AsPublisher<string>(false), Keep.Right);
 
         [Fact]

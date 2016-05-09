@@ -127,7 +127,7 @@ namespace Akka.Streams.Tests.Dsl
                     Source.Empty<int>()
                         .SplitWhen(_ => true)
                         .Lift()
-                        .MapAsync(1, s => s.RunWith(Sink.FirstOrDefault<int>(), Materializer))
+                        .SelectAsync(1, s => s.RunWith(Sink.FirstOrDefault<int>(), Materializer))
                         .Grouped(10)
                         .RunWith(Sink.FirstOrDefault<IEnumerable<int>>(),
                     Materializer);
@@ -195,7 +195,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.FromPublisher(inputs)
                     .SplitWhen(x => x == 2)
                     .Lift()
-                    .Map(x => x.RunWith(Sink.FromSubscriber(substream), Materializer))
+                    .Select(x => x.RunWith(Sink.FromSubscriber(substream), Materializer))
                     .RunWith(Sink.FromSubscriber(masterStream), Materializer);
 
                 masterStream.Request(1);
@@ -212,7 +212,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.FromPublisher(inputs2)
                     .SplitWhen(x => x == 2)
                     .Lift()
-                    .Map(x => x.RunWith(Sink.Cancelled<int>(), Materializer))
+                    .Select(x => x.RunWith(Sink.Cancelled<int>(), Materializer))
                     .RunWith(Sink.Cancelled<Unit>(), Materializer);
                 inputs2.ExpectCancellation();
 
@@ -321,7 +321,7 @@ namespace Akka.Streams.Tests.Dsl
                 var task = Source.From(Enumerable.Range(1, 100))
                     .SplitWhen(_ => true)
                     .Lift()
-                    .MapAsync(1, s => s.RunWith(Sink.First<int>(), Materializer)) // Please note that this line *also* implicitly asserts nonempty substreams
+                    .SelectAsync(1, s => s.RunWith(Sink.First<int>(), Materializer)) // Please note that this line *also* implicitly asserts nonempty substreams
                     .Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -335,7 +335,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var task = Source.Single(1).SplitWhen(_ => true).Lift()
-                    .MapAsync(1, source =>
+                    .SelectAsync(1, source =>
                     {
                         source.RunWith(Sink.Ignore<int>(), Materializer);
                         // Sink.ignore+mapAsync pipes error back
@@ -373,7 +373,7 @@ namespace Akka.Streams.Tests.Dsl
                     var task =
                         testSource.Lift()
                             .Delay(TimeSpan.FromSeconds(1))
-                            .FlatMapConcat(s => s.MapMaterializedValue<TaskCompletionSource<int>>(_ => null))
+                            .ConcatMany(s => s.MapMaterializedValue<TaskCompletionSource<int>>(_ => null))
                             .RunWith(Sink.Ignore<int>(), tightTimeoutMaterializer);
                     task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 };

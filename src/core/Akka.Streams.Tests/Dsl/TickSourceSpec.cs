@@ -104,7 +104,7 @@ namespace Akka.Streams.Tests.Dsl
                     b.From(Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), "tick")
                         .MapMaterializedValue(_ => Unit.Instance)).To(zip.In1);
                     b.From(zip.Out)
-                        .Via(Flow.Create<Tuple<int, string>>().Map(t => t.Item1))
+                        .Via(Flow.Create<Tuple<int, string>>().Select(t => t.Item1))
                         .To(Sink.FromSubscriber(c));
                     return ClosedShape.Instance;
                 })).Run(Materializer);

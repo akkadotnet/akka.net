@@ -322,9 +322,9 @@ my-dispatcher1 {
                     builder.From(source1).To(merge.In(0));
                     builder.From(source2.Outlet).To(merge.In(1));
                     
-                    builder.From(merge.Out).Via(Flow.Create<int>().Map(i => i.ToString())).To(bcast.In);
+                    builder.From(merge.Out).Via(Flow.Create<int>().Select(i => i.ToString())).To(bcast.In);
                     
-                    builder.From(bcast.Out(0)).Via(Flow.Create<string>().Map(s => s + "mark")).To(sink1);
+                    builder.From(bcast.Out(0)).Via(Flow.Create<string>().Select(s => s + "mark")).To(sink1);
                     builder.From(bcast.Out(1)).To(sink2);
 
                     return ClosedShape.Instance;

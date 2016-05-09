@@ -165,7 +165,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_must_materialize_into_Publisher_Subscriber_and_transformation_processor()
         {
-            var flow = Flow.Create<int>().Map(i=>i.ToString());
+            var flow = Flow.Create<int>().Select(i=>i.ToString());
             var t = MaterializeIntoSubscriberAndPublisher(flow, Materializer);
             var flowIn = t.Item1;
             var flowOut = t.Item2;
@@ -189,7 +189,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_must_materialize_into_Publisher_Subscriber_and_multiple_transformation_processor()
         {
-            var flow = Flow.Create<int>().Map(i => i.ToString()).Map(s => "elem-" + s);
+            var flow = Flow.Create<int>().Select(i => i.ToString()).Select(s => "elem-" + s);
             var t = MaterializeIntoSubscriberAndPublisher(flow, Materializer);
             var flowIn = t.Item1;
             var flowOut = t.Item2;
@@ -230,7 +230,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_must_perform_transformation_operation()
         {
-            var flow = Flow.Create<int>().Map(i =>
+            var flow = Flow.Create<int>().Select(i =>
             {
                 TestActor.Tell(i.ToString());
                 return i.ToString();
@@ -246,7 +246,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_must_perform_transformation_operation_and_subscribe_Subscriber()
         {
-            var flow = Flow.Create<int>().Map(i => i.ToString());
+            var flow = Flow.Create<int>().Select(i => i.ToString());
             var c1 = TestSubscriber.CreateManualProbe<string>(this);
             var sink = flow.To(Sink.FromSubscriber(c1));
             var publisher = Source.From(new[] { 1, 2, 3 }).RunWith(Sink.AsPublisher<int>(false), Materializer);
@@ -265,7 +265,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var flow = Source.From(new[] {1, 2, 3}).Map(i => i.ToString());
+                var flow = Source.From(new[] {1, 2, 3}).Select(i => i.ToString());
                 var p1 = flow.RunWith(Sink.AsPublisher<string>(true), Materializer);
                 var p2 = flow.RunWith(Sink.AsPublisher<string>(true), Materializer);
                 var s1 = TestSubscriber.CreateManualProbe<string>(this);
@@ -311,14 +311,14 @@ namespace Akka.Streams.Tests.Dsl
                 Source.From<IFruit>(Apples()).PrefixAndTail(1);
             SubFlow<IFruit, Unit, Sink<string, Unit>> d1 =
                 Flow.Create<string>()
-                    .Map<string, string, IFruit, Unit>(_ => new Apple())
+                    .Select<string, string, IFruit, Unit>(_ => new Apple())
                     .SplitWhen(_ => true);
             SubFlow<IFruit, Unit, Sink<string, Unit>> d2 =
                 Flow.Create<string>()
-                    .Map<string, string, IFruit, Unit>(_ => new Apple())
+                    .Select<string, string, IFruit, Unit>(_ => new Apple())
                     .GroupBy(-1,_ => 2);
             Flow<string, Tuple<IImmutableList<IFruit>, Source<IFruit, Unit>>, Unit> d3 =
-                Flow.Create<string>().Map<string, string, IFruit, Unit>(_ => new Apple()).PrefixAndTail(1);
+                Flow.Create<string>().Select<string, string, IFruit, Unit>(_ => new Apple()).PrefixAndTail(1);
         }
 
         [Fact]
@@ -541,7 +541,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_with_multiple_subscribers_FanOutBox_must_call_future_subscribers_OnError_should_be_called_instead_of_OnSubscribed_after_initial_upstream_reported_an_error()
         {
-            var setup = new ChainSetup<int, string, Unit>(flow => flow.Map<int,int,string,Unit>(_ =>
+            var setup = new ChainSetup<int, string, Unit>(flow => flow.Select<int,int,string,Unit>(_ =>
             {
                 throw new TestException("test");
             }), Settings.WithInputBuffer(1, 1),
@@ -655,7 +655,7 @@ namespace Akka.Streams.Tests.Dsl
             Flow.Create<int>().AddAttributes(Attributes.None).Named("");
         }
 
-        private static Flow<TIn, TOut, TMat> Identity<TIn, TOut, TMat>(Flow<TIn, TOut, TMat> flow) => flow.Map(e => e);
+        private static Flow<TIn, TOut, TMat> Identity<TIn, TOut, TMat>(Flow<TIn, TOut, TMat> flow) => flow.Select(e => e);
         private static Flow<TIn, TOut, TMat> Identity2<TIn, TOut, TMat>(Flow<TIn, TOut, TMat> flow) => Identity(flow);
 
         private sealed class BrokenActorInterpreter : ActorGraphInterpreter
@@ -715,7 +715,7 @@ namespace Akka.Streams.Tests.Dsl
 
         private sealed class FaultyFlowStage<TIn, TOut> : PushPullGraphStage<TIn, TOut> where TIn:TOut
         {
-            public FaultyFlowStage()  : base(_ => new Map<TIn,TOut>(x => x, Deciders.StoppingDecider), Attributes.None)
+            public FaultyFlowStage()  : base(_ => new Select<TIn,TOut>(x => x, Deciders.StoppingDecider), Attributes.None)
             {
             }
         }

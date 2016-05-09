@@ -33,9 +33,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             return
                 BidiFlow.FromFlows(
-                    Flow.Create<int>().Map(x => ((long) x) + 2).WithAttributes(Attributes.CreateName("top")),
+                    Flow.Create<int>().Select(x => ((long) x) + 2).WithAttributes(Attributes.CreateName("top")),
                     Flow.Create<ByteString>()
-                        .Map(x => x.DecodeString(Encoding.UTF8))
+                        .Select(x => x.DecodeString(Encoding.UTF8))
                         .WithAttributes(Attributes.CreateName("bottom")));
         }
 
@@ -43,9 +43,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             return
                 BidiFlow.FromFlows(
-                    Flow.Create<long>().Map(x => ((int)x) + 2).WithAttributes(Attributes.CreateName("top")),
+                    Flow.Create<long>().Select(x => ((int)x) + 2).WithAttributes(Attributes.CreateName("top")),
                     Flow.Create<string>()
-                        .Map(ByteString.FromString)
+                        .Select(ByteString.FromString)
                         .WithAttributes(Attributes.CreateName("bottom")));
         }
 
@@ -55,8 +55,8 @@ namespace Akka.Streams.Tests.Dsl
             {
                 b.From(Source.Single(42).MapMaterializedValue(_=>Task.FromResult(0))).To(s);
 
-                var top = b.Add(Flow.Create<int>().Map(x => ((long) x) + 2));
-                var bottom = b.Add(Flow.Create<ByteString>().Map(x => x.DecodeString(Encoding.UTF8)));
+                var top = b.Add(Flow.Create<int>().Select(x => ((long) x) + 2));
+                var bottom = b.Add(Flow.Create<ByteString>().Select(x => x.DecodeString(Encoding.UTF8)));
                 return new BidiShape<int,long,ByteString, string>(top.Inlet, top.Outlet, bottom.Inlet, bottom.Outlet);
             }));
         }
@@ -98,7 +98,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_BidiFlow_must_work_as_a_Flow_that_is_open_to_the_left()
         {
-            var f = Bidi().Join(Flow.Create<long>().Map(x => ByteString.FromString($"Hello {x}")));
+            var f = Bidi().Join(Flow.Create<long>().Select(x => ByteString.FromString($"Hello {x}")));
             var result = Source.From(Enumerable.Range(1, 3)).Via(f).Limit(10).RunWith(Sink.Seq<string>(), Materializer);
             result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             result.Result.ShouldAllBeEquivalentTo(new[] {"Hello 3", "Hello 4", "Hello 5"});
@@ -107,7 +107,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_BidiFlow_must_work_as_a_Flow_that_is_open_on_the_right()
         {
-            var f = Flow.Create<string>().Map(int.Parse).Join(Bidi());
+            var f = Flow.Create<string>().Select(int.Parse).Join(Bidi());
             var result =
                 Source.From(new[] {ByteString.FromString("1"), ByteString.FromString("2")})
                     .Via(f)
@@ -120,7 +120,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_BidiFlow_must_work_when_atop_its_iverse()
         {
-            var f = Bidi().Atop(Inverse()).Join(Flow.Create<int>().Map(x => x.ToString()));
+            var f = Bidi().Atop(Inverse()).Join(Flow.Create<int>().Select(x => x.ToString()));
             var result = Source.From(Enumerable.Range(1, 3)).Via(f).Limit(10).RunWith(Sink.Seq<string>(), Materializer);
             result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             result.Result.ShouldAllBeEquivalentTo(new[] { "5", "6", "7" });
@@ -130,7 +130,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_BidiFlow_must_work_when_reversed()
         {
             // just reversed from the case above; observe that Flow inverts itself automatically by being on the left side
-            var f = Flow.Create<int>().Map(x => x.ToString()).Join(Inverse().Reversed()).Join(Bidi().Reversed());
+            var f = Flow.Create<int>().Select(x => x.ToString()).Join(Inverse().Reversed()).Join(Bidi().Reversed());
             var result = Source.From(Enumerable.Range(1, 3)).Via(f).Limit(10).RunWith(Sink.Seq<string>(), Materializer);
             result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             result.Result.ShouldAllBeEquivalentTo(new[] { "5", "6", "7" });
@@ -141,11 +141,11 @@ namespace Akka.Streams.Tests.Dsl
         {
             var f = RunnableGraph.FromGraph(GraphDsl.Create(BidiMaterialized(), (b, bidi) =>
             {
-                var flow1 = b.Add(Flow.Create<string>().Map(int.Parse).MapMaterializedValue(_ => Task.FromResult(0)));
+                var flow1 = b.Add(Flow.Create<string>().Select(int.Parse).MapMaterializedValue(_ => Task.FromResult(0)));
                 var flow2 =
                     b.Add(
                         Flow.Create<long>()
-                            .Map(x => ByteString.FromString($"Hello {x}"))
+                            .Select(x => ByteString.FromString($"Hello {x}"))
                             .MapMaterializedValue(_ => Task.FromResult(0)));
                 
                 b.AddEdge(flow1.Outlet, bidi.Inlet1);
@@ -170,7 +170,7 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     var broadcast = b.Add(new Broadcast<int>(2));
                     var merge = b.Add(new Merge<int>(2));
-                    var flow = b.Add(Flow.Create<string>().Map(int.Parse));
+                    var flow = b.Add(Flow.Create<string>().Select(int.Parse));
                     b.From(broadcast).To(sink);
                     b.From(Source.Single(1).MapMaterializedValue(_ => Task.FromResult(0))).Via(broadcast).To(merge);
                     b.From(flow).To(merge);

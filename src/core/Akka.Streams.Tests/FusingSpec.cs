@@ -36,13 +36,13 @@ namespace Akka.Streams.Tests
         {
             return
                 Source.Unfold(1, x => Tuple.Create(x, x))
-                    .Filter(x => x%2 == 1)
+                    .Where(x => x%2 == 1)
                     .AlsoTo(
                         Flow.Create<int>()
-                            .Fold(0, (sum, i) => sum + i)
+                            .Aggregate(0, (sum, i) => sum + i)
                             .To(Sink.First<int>().Named("otherSink"))
                             .AddAttributes(async ? Attributes.CreateAsyncBoundary() : Attributes.None))
-                    .Via(Flow.Create<int>().Fold(1, (sum, i) => sum + i).Named("mainSink"));
+                    .Via(Flow.Create<int>().Aggregate(1, (sum, i) => sum + i).Named("mainSink"));
         }
 
         private static void SinglePath<TShape, TMat>(Fusing.FusedGraph<TShape, TMat> fusedGraph,
@@ -132,10 +132,10 @@ namespace Akka.Streams.Tests
         [Fact]
         public void A_SubFusingActorMaterializer_must_work_with_asynchronous_boundaries_in_the_subflows()
         {
-            var async = Flow.Create<int>().Map(x => x*2).Async();
+            var async = Flow.Create<int>().Select(x => x*2).Async();
             var t = Source.From(Enumerable.Range(0, 10))
-                .Map(x => x*10)
-                .FlatMapMerge(5, i => Source.From(Enumerable.Range(i, 10)).Via(async))
+                .Select(x => x*10)
+                .MergeMany(5, i => Source.From(Enumerable.Range(i, 10)).Via(async))
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
@@ -152,18 +152,18 @@ namespace Akka.Streams.Tests
                 return GetInstanceField(typeof(BusLogging), bus, "_logSource") as string;
             };
 
-            var async = Flow.Create<int>().Map(x =>
+            var async = Flow.Create<int>().Select(x =>
             {
                 TestActor.Tell(refFunc());
                 return x;
             }).Async();
             var t = Source.From(Enumerable.Range(0, 10))
-                .Map(x =>
+                .Select(x =>
                 {
                     TestActor.Tell(refFunc());
                     return x;
                 })
-                .FlatMapMerge(5, i => Source.Single(i).Via(async))
+                .MergeMany(5, i => Source.Single(i).Via(async))
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
@@ -184,18 +184,18 @@ namespace Akka.Streams.Tests
                 return GetInstanceField(typeof(BusLogging), bus, "_logSource") as string;
             };
 
-            var flow = Flow.Create<int>().Map(x =>
+            var flow = Flow.Create<int>().Select(x =>
             {
                 TestActor.Tell(refFunc());
                 return x;
             });
             var t = Source.From(Enumerable.Range(0, 10))
-                .Map(x =>
+                .Select(x =>
                 {
                     TestActor.Tell(refFunc());
                     return x;
                 })
-                .FlatMapMerge(5, i => Source.Single(i).Via(flow.Async()))
+                .MergeMany(5, i => Source.Single(i).Via(flow.Async()))
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 

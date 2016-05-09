@@ -243,7 +243,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var p = CreateSource(3)
-                    .Map(x => x*2)
+                    .Select(x => x*2)
                     .RunWith(Sink.AsPublisher<int>(false), Materializer);
                 var c = TestSubscriber.CreateManualProbe<int>(this);
 
@@ -264,8 +264,8 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var p = CreateSource(4)
-                    .Filter(x => x%2 == 0)
-                    .Map(x => x*2)
+                    .Where(x => x%2 == 0)
+                    .Select(x => x*2)
                     .RunWith(Sink.AsPublisher<int>(false), Materializer);
                 var c = TestSubscriber.CreateManualProbe<int>(this);
 

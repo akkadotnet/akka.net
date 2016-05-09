@@ -100,7 +100,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 b.From(source).To(broadcast.In);
                 b.From(broadcast.Out(0)).To(merge.In(0));
-                b.From(broadcast.Out(1)).Via(Flow.Create<int>().Map(x => x + 3)).To(merge.In(1));
+                b.From(broadcast.Out(1)).Via(Flow.Create<int>().Select(x => x + 3)).To(merge.In(1));
                 b.From(merge.Out).Via(Flow.Create<int>().Grouped(10)).To(sink.Inlet);
 
                 return ClosedShape.Instance;
@@ -202,9 +202,9 @@ namespace Akka.Streams.Tests.Dsl
                 var merge = b.Add(new Merge<int>(2));
                 var source = Source.From(Enumerable.Range(1,3)).MapMaterializedValue<Task<IEnumerable<int>>>(_ => null);
 
-                b.From(source.Map(x => x*2)).To(broadcast.In);
+                b.From(source.Select(x => x*2)).To(broadcast.In);
                 b.From(broadcast.Out(0)).To(merge.In(0));
-                b.From(broadcast.Out(1)).Via(Flow.Create<int>().Map(x => x + 3)).To(merge.In(1));
+                b.From(broadcast.Out(1)).Via(Flow.Create<int>().Select(x => x + 3)).To(merge.In(1));
                 b.From(merge.Out).Via(Flow.Create<int>().Grouped(10)).To(sink.Inlet);
                 
                 return ClosedShape.Instance;
@@ -219,7 +219,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var p = Source.From(Enumerable.Range(1, 3)).RunWith(Sink.AsPublisher<int>(false), Materializer);
             var s = TestSubscriber.CreateManualProbe<int>(this);
-            var flow = Flow.Create<int>().Map(x => x*2);
+            var flow = Flow.Create<int>().Select(x => x*2);
 
             RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
             {
@@ -239,7 +239,7 @@ namespace Akka.Streams.Tests.Dsl
                 i =>
                     Source.From(Enumerable.Range(i, 3))
                         .MapMaterializedValue<Tuple<Unit, Unit, Unit, Task<IEnumerable<int>>>>(_ => null);
-            var shuffler = Shuffle.Create(Flow.Create<int>().Map(x => x + 1));
+            var shuffler = Shuffle.Create(Flow.Create<int>().Select(x => x + 1));
 
             var task =
                 RunnableGraph.FromGraph(GraphDsl.Create(shuffler, shuffler, shuffler, Sink.First<IEnumerable<int>>(),

@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="InternalFlowOperations.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
@@ -92,9 +92,9 @@ namespace Akka.Streams.Dsl.Internal
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        public static IFlow<TOut, TMat> Map<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> mapper)
+        public static IFlow<TOut, TMat> Select<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> mapper)
         {
-            return flow.AndThen(new Map<TIn, TOut>(mapper));
+            return flow.AndThen(new Select<TIn, TOut>(mapper));
         }
 
         /// <summary>
@@ -118,10 +118,10 @@ namespace Akka.Streams.Dsl.Internal
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        public static IFlow<TOut, TMat> MapConcat<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
+        public static IFlow<TOut, TMat> SelectMany<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
             Func<TIn, IEnumerable<TOut>> mapConcater)
         {
-            return StatefulMapConcat(flow, () => mapConcater);
+            return StatefulSelectMany(flow, () => mapConcater);
         }
 
         /// <summary>
@@ -129,7 +129,7 @@ namespace Akka.Streams.Dsl.Internal
         /// then flattened into the output stream. The transformation is meant to be stateful,
         /// which is enabled by creating the transformation function <paramref name="mapConcaterFactory"/> a new for every materialization —
         /// the returned function will typically close over mutable objects to store state between
-        /// invocations. For the stateless variant see <see cref="MapConcat{TIn,TOut,TMat}"/>.
+        /// invocations. For the stateless variant see <see cref="SelectMany{TIn,TOut,TMat}"/>.
         /// 
         /// The returned Enumerable MUST NOT contain null values,
         /// as they are illegal as stream elements - according to the Reactive Streams specification.
@@ -148,19 +148,19 @@ namespace Akka.Streams.Dsl.Internal
         /// <para>
         /// Cancels when downstream cancels
         /// </para>
-        /// See also <see cref="MapConcat{TIn,TOut,TMat}"/>
+        /// See also <see cref="SelectMany{TIn,TOut,TMat}"/>
         /// </summary>
-        public static IFlow<TOut, TMat> StatefulMapConcat<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
+        public static IFlow<TOut, TMat> StatefulSelectMany<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
             Func<Func<TIn, IEnumerable<TOut>>> mapConcaterFactory)
         {
-            return flow.Via(new Fusing.StatefulMapConcat<TIn, TOut>(mapConcaterFactory));
+            return flow.Via(new Fusing.StatefulSelectMany<TIn, TOut>(mapConcaterFactory));
         }
 
         /// <summary>
         /// Transform this stream by applying the given function <paramref name="asyncMapper"/> to each of the elements
         /// as they pass through this processing step. The function returns a <see cref="Task{TOut}"/> and the
         /// value of that task will be emitted downstream. The number of tasks
-        /// that shall run in parallel is given as the first argument to <see cref="MapAsync{TIn,TOut,TMat}"/>.
+        /// that shall run in parallel is given as the first argument to <see cref="SelectAsync{TIn,TOut,TMat}"/>.
         /// These tasks may complete in any order, but the elements that
         /// are emitted downstream are in the same order as received from upstream.
         /// 
@@ -185,11 +185,11 @@ namespace Akka.Streams.Dsl.Internal
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        /// <seealso cref="MapAsyncUnordered{TIn,TOut,TMat}"/>
-        public static IFlow<TOut, TMat> MapAsync<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int parallelism,
+        /// <seealso cref="SelectAsyncUnordered{TIn,TOut,TMat}"/>
+        public static IFlow<TOut, TMat> SelectAsync<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int parallelism,
             Func<TIn, Task<TOut>> asyncMapper)
         {
-            return flow.Via(new Fusing.MapAsync<TIn, TOut>(parallelism, asyncMapper));
+            return flow.Via(new Fusing.SelectAsync<TIn, TOut>(parallelism, asyncMapper));
         }
 
         /// <summary>
@@ -220,11 +220,11 @@ namespace Akka.Streams.Dsl.Internal
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        /// <seealso cref="MapAsync{TIn,TOut,TMat}"/>
-        public static IFlow<TOut, TMat> MapAsyncUnordered<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int parallelism,
+        /// <seealso cref="SelectAsync{TIn,TOut,TMat}"/>
+        public static IFlow<TOut, TMat> SelectAsyncUnordered<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int parallelism,
             Func<TIn, Task<TOut>> asyncMapper)
         {
-            return flow.Via(new Fusing.MapAsyncUnordered<TIn, TOut>(parallelism, asyncMapper));
+            return flow.Via(new Fusing.SelectAsyncUnordered<TIn, TOut>(parallelism, asyncMapper));
         }
 
         /// <summary>
@@ -240,9 +240,9 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static IFlow<T, TMat> Filter<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate)
+        public static IFlow<T, TMat> Where<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate)
         {
-            return flow.AndThen(new Filter<T>(predicate));
+            return flow.AndThen(new Where<T>(predicate));
         }
 
         /// <summary>
@@ -258,9 +258,9 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static IFlow<T, TMat> FilterNot<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate)
+        public static IFlow<T, TMat> WhereNot<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate)
         {
-            return flow.AndThen(new Filter<T>(e => !predicate(e)));
+            return flow.AndThen(new Where<T>(e => !predicate(e)));
         }
 
         /// <summary>
@@ -297,9 +297,9 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static IFlow<T, TMat> DropWhile<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate)
+        public static IFlow<T, TMat> SkipWhile<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate)
         {
-            return flow.AndThen(new DropWhile<T>(predicate));
+            return flow.AndThen(new SkipWhile<T>(predicate));
         }
 
         /// <summary>
@@ -418,7 +418,7 @@ namespace Akka.Streams.Dsl.Internal
         }
 
         /// <summary>
-        /// Similar to <see cref="Fold{TIn,TOut}"/> but is not a terminal operation,
+        /// Similar to <see cref="Aggregate{TIn,TOut,TMat}"/> but is not a terminal operation,
         /// emits its current value which starts at <paramref name="zero"/> and then
         /// applies the current and next value to the given function <paramref name="scan"/>,
         /// emitting the next current value.
@@ -458,14 +458,14 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static IFlow<TOut, TMat> Fold<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, TOut zero,
+        public static IFlow<TOut, TMat> Aggregate<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, TOut zero,
             Func<TOut, TIn, TOut> fold)
         {
-            return flow.AndThen(new Fold<TIn, TOut>(zero, fold));
+            return flow.AndThen(new Aggregate<TIn, TOut>(zero, fold));
         }
 
         /// <summary>
-        /// Similar to <see cref="Fold{TIn,TOut,TMat}"/> but uses first element as zero element.
+        /// Similar to <see cref="Aggregate{TIn,TOut,TMat}"/> but uses first element as zero element.
         /// Applies the given function <paramref name="reduce"/> towards its current and next value,
         /// yielding the next current value. 
         /// <para>
@@ -477,9 +477,9 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static IFlow<TIn, TMat> Reduce<TIn, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TIn, TIn> reduce)
+        public static IFlow<TIn, TMat> Sum<TIn, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TIn, TIn> reduce)
         {
-            return flow.Via(new Fusing.Reduce<TIn>(reduce));
+            return flow.Via(new Fusing.Sum<TIn>(reduce));
         }
 
         /// <summary>
@@ -606,9 +606,9 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static IFlow<T, TMat> Drop<T, TMat>(this IFlow<T, TMat> flow, long n)
+        public static IFlow<T, TMat> Skip<T, TMat>(this IFlow<T, TMat> flow, long n)
         {
-            return flow.AndThen(new Drop<T>(n));
+            return flow.AndThen(new Skip<T>(n));
         }
 
         /// <summary>
@@ -622,9 +622,9 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static IFlow<T, TMat> DropWithin<T, TMat>(this IFlow<T, TMat> flow, TimeSpan duration)
+        public static IFlow<T, TMat> SkipWithin<T, TMat>(this IFlow<T, TMat> flow, TimeSpan duration)
         {
-            return flow.Via(new Fusing.DropWithin<T>(duration).WithAttributes(Attributes.CreateName("dropWithin")));
+            return flow.Via(new Fusing.SkipWithin<T>(duration).WithAttributes(Attributes.CreateName("skipWithin")));
         }
 
         /// <summary>
@@ -932,7 +932,7 @@ namespace Akka.Streams.Dsl.Internal
             public IFlow<T, TMat> Apply<T>(Flow<TOut, T, TMat> flow, int breadth)
             {
                 return _deprecatedAndThenFunc(_self, new GroupBy<TOut, TKey>(_maxSubstreams, o => _groupingFunc(o)))
-                    .Map(f => f.Via(flow))
+                    .Select(f => f.Via(flow))
                     .Via(new Fusing.FlattenMerge<Source<T, Unit>, T, Unit>(breadth));
             }
         }
@@ -1021,7 +1021,7 @@ namespace Akka.Streams.Dsl.Internal
             public IFlow<T, TMat> Apply<T>(Flow<TOut, T, TMat> flow, int breadth)
             {
                 return _self.Via(Fusing.Split.When(_predicate, _substreamCancelStrategy))
-                    .Map(f => f.Via(flow))
+                    .Select(f => f.Via(flow))
                     .Via(new Fusing.FlattenMerge<Source<T, Unit>, T, Unit>(breadth));
             }
         }
@@ -1100,7 +1100,7 @@ namespace Akka.Streams.Dsl.Internal
             public IFlow<T, TMat> Apply<T>(Flow<TOut, T, TMat> flow, int breadth)
             {
                 return _self.Via(Fusing.Split.After(_predicate, _substreamCancelStrategy))
-                    .Map(f => f.Via(flow))
+                    .Select(f => f.Via(flow))
                     .Via(new Fusing.FlattenMerge<Source<T, Unit>, T, Unit>(breadth));
             }
         }
@@ -1118,10 +1118,10 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static IFlow<TOut, TMat> FlatMapConcat<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
+        public static IFlow<TOut, TMat> ConcatMany<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
             Func<TIn, IGraph<SourceShape<TOut>, TMat>> flatten)
         {
-            return flow.Map(flatten).Via(new Fusing.FlattenMerge<IGraph<SourceShape<TOut>, TMat>, TOut, TMat>(1));
+            return flow.Select(flatten).Via(new Fusing.FlattenMerge<IGraph<SourceShape<TOut>, TMat>, TOut, TMat>(1));
         }
 
         /// <summary>
@@ -1137,10 +1137,10 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static IFlow<TOut, TMat> FlatMapMerge<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int breadth,
+        public static IFlow<TOut, TMat> MergeMany<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int breadth,
             Func<TIn, IGraph<SourceShape<TOut>, TMat>> flatten)
         {
-            return flow.Map(flatten).Via(new Fusing.FlattenMerge<IGraph<SourceShape<TOut>, TMat>, TOut, TMat>(breadth));
+            return flow.Select(flatten).Via(new Fusing.FlattenMerge<IGraph<SourceShape<TOut>, TMat>, TOut, TMat>(breadth));
         }
 
         /// <summary>

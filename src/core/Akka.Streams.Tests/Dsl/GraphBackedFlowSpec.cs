@@ -43,8 +43,8 @@ namespace Akka.Streams.Tests.Dsl
                 var outMerge = b.Add(new Merge<string>(2));
                 var m2 = b.Add(new Merge<int>(2));
 
-                b.From(inMerge.Out).Via(Flow.Create<int>().Map(x => x * 2)).To(m2.In(0));
-                b.From(m2.Out).Via(Flow.Create<int>().Map(x => x / 2).Map(i => (i + 1).ToString())).To(outMerge.In(0));
+                b.From(inMerge.Out).Via(Flow.Create<int>().Select(x => x * 2)).To(m2.In(0));
+                b.From(m2.Out).Via(Flow.Create<int>().Select(x => x / 2).Select(i => (i + 1).ToString())).To(outMerge.In(0));
 
                 b.From(source2).To(inMerge.In(0));
                 b.From(source3).To(m2.In(1));
@@ -77,7 +77,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var flow = Flow.FromGraph(GraphDsl.Create(PartialGraph(), (b, partial) =>
             {
-                var o = b.From(partial.Outlet).Via(Flow.Create<string>().Map(int.Parse));
+                var o = b.From(partial.Outlet).Via(Flow.Create<string>().Select(int.Parse));
                 return new FlowShape<int, int>(partial.Inlet, o.Out);
             }));
 
@@ -95,7 +95,7 @@ namespace Akka.Streams.Tests.Dsl
                 Flow.FromGraph(GraphDsl.Create(PartialGraph(),
                     (b, partial) => new FlowShape<int, string>(partial.Inlet, partial.Outlet)));
 
-            Source1.Via(flow).Map(int.Parse).To(Sink.FromSubscriber(probe)).Run(Materializer);
+            Source1.Via(flow).Select(int.Parse).To(Sink.FromSubscriber(probe)).Run(Materializer);
 
             ValidateProbe(probe, StandardRequests, StandardResult);
         }
@@ -110,7 +110,7 @@ namespace Akka.Streams.Tests.Dsl
                     (b, partial) => new FlowShape<int, string>(partial.Inlet, partial.Outlet)));
 
             var flow2 =
-                Flow.FromGraph(GraphDsl.Create(Flow.Create<string>().Map(int.Parse),
+                Flow.FromGraph(GraphDsl.Create(Flow.Create<string>().Select(int.Parse),
                     (b, importFlow) => new FlowShape<string, int>(importFlow.Inlet, importFlow.Outlet)));
 
             Source1.Via(flow1).Via(flow2).To(Sink.FromSubscriber(probe)).Run(Materializer);
@@ -124,7 +124,7 @@ namespace Akka.Streams.Tests.Dsl
             var probe = TestSubscriber.CreateManualProbe<int>(this);
 
             var flow =
-                Flow.FromGraph(GraphDsl.Create(Flow.Create<int>().Map(x=>x*2),
+                Flow.FromGraph(GraphDsl.Create(Flow.Create<int>().Select(x=>x*2),
                     (b, importFlow) => new FlowShape<int, int>(importFlow.Inlet, importFlow.Outlet)));
 
             RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape,Unit>(b =>
@@ -147,7 +147,7 @@ namespace Akka.Streams.Tests.Dsl
             var source = Source.FromGraph(GraphDsl.Create(PartialGraph(), (b, partial) =>
             {
                 b.From(Source1).To(partial.Inlet);
-                var o = b.From(partial.Outlet).Via(Flow.Create<string>().Map(int.Parse));
+                var o = b.From(partial.Outlet).Via(Flow.Create<string>().Select(int.Parse));
                 return new SourceShape<int>(o.Out);
             }));
 
@@ -180,7 +180,7 @@ namespace Akka.Streams.Tests.Dsl
                         return new SourceShape<string>(partial.Outlet);
                     }));
 
-            source.Map(int.Parse).To(Sink.FromSubscriber(probe)).Run(Materializer);
+            source.Select(int.Parse).To(Sink.FromSubscriber(probe)).Run(Materializer);
 
             ValidateProbe(probe, StandardRequests, StandardResult);
         }
@@ -199,7 +199,7 @@ namespace Akka.Streams.Tests.Dsl
                     }));
 
             var flow =
-                Flow.FromGraph(GraphDsl.Create(Flow.Create<string>().Map(int.Parse),
+                Flow.FromGraph(GraphDsl.Create(Flow.Create<string>().Select(int.Parse),
                     (b, importFlow) => new FlowShape<string, int>(importFlow.Inlet, importFlow.Outlet)));
 
             source.Via(flow).To(Sink.FromSubscriber(probe)).Run(Materializer);
@@ -216,7 +216,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.FromGraph(GraphDsl.Create(Source.From(Enumerable.Range(1, 5)),
                     (b, s) =>
                     {
-                        var o = b.From(s.Outlet).Via(Flow.Create<int>().Map(x => x*2));
+                        var o = b.From(s.Outlet).Via(Flow.Create<int>().Select(x => x*2));
                         return new SourceShape<int>(o.Out);
                     }));
 
@@ -226,7 +226,7 @@ namespace Akka.Streams.Tests.Dsl
                 b.From(s1.Outlet).To(merge.In(0));
                 b.From(merge.Out)
                     .To(Sink.FromSubscriber(probe).MapMaterializedValue(_ => Tuple.Create(Unit.Instance, Unit.Instance)));
-                b.From(s2.Outlet).Via(Flow.Create<int>().Map(x => x*10)).To(merge.In(1));
+                b.From(s2.Outlet).Via(Flow.Create<int>().Select(x => x*10)).To(merge.In(1));
                 return ClosedShape.Instance;
             })).Run(Materializer);
 
@@ -242,7 +242,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var sink = Sink.FromGraph(GraphDsl.Create(PartialGraph(), (b, partial) =>
             {
-                b.From(partial.Outlet).Via(Flow.Create<string>().Map(int.Parse)).To(Sink.FromSubscriber(probe));
+                b.From(partial.Outlet).Via(Flow.Create<string>().Select(int.Parse)).To(Sink.FromSubscriber(probe));
                 return new SinkShape<int>(partial.Inlet);
             }));
 
@@ -270,18 +270,18 @@ namespace Akka.Streams.Tests.Dsl
             var probe = TestSubscriber.CreateManualProbe<int>(this);
 
             var sink =
-                Sink.FromGraph(GraphDsl.Create(PartialGraph(), Flow.Create<string>().Map(int.Parse), Keep.Both,
+                Sink.FromGraph(GraphDsl.Create(PartialGraph(), Flow.Create<string>().Select(int.Parse), Keep.Both,
                     (b, partial, flow) =>
                     {
                         var s = Sink.FromSubscriber(probe)
                             .MapMaterializedValue(_ => Tuple.Create(Unit.Instance, Unit.Instance));
 
                         b.From(flow.Outlet).To(partial.Inlet);
-                        b.From(partial.Outlet).Via(Flow.Create<string>().Map(int.Parse)).To(s);
+                        b.From(partial.Outlet).Via(Flow.Create<string>().Select(int.Parse)).To(s);
                         return new SinkShape<string>(flow.Inlet);
                     }));
 
-            var iSink = Flow.Create<int>().Map(i => i.ToString()).To(sink);
+            var iSink = Flow.Create<int>().Select(i => i.ToString()).To(sink);
             Source1.To(iSink).Run(Materializer);
 
             ValidateProbe(probe, StandardRequests, StandardResult);
@@ -296,7 +296,7 @@ namespace Akka.Streams.Tests.Dsl
                 Flow.FromGraph(GraphDsl.Create(PartialGraph(),
                     (b, partial) => new FlowShape<int, string>(partial.Inlet, partial.Outlet)));
 
-            var sink = Sink.FromGraph(GraphDsl.Create(Flow.Create<string>().Map(int.Parse), (b, f) =>
+            var sink = Sink.FromGraph(GraphDsl.Create(Flow.Create<string>().Select(int.Parse), (b, f) =>
             {
                 b.From(f.Outlet).To(Sink.FromSubscriber(probe));
                 return new SinkShape<string>(f.Inlet);
@@ -316,19 +316,19 @@ namespace Akka.Streams.Tests.Dsl
 
             var flow = Flow.FromGraph(GraphDsl.Create(PartialGraph(), (b, partial) =>
             {
-                var o = b.From(partial.Outlet).Via(Flow.Create<string>().Map(int.Parse));
+                var o = b.From(partial.Outlet).Via(Flow.Create<string>().Select(int.Parse));
                 return new FlowShape<int, int>(partial.Inlet, o.Out);
             }));
 
             var source =
-                Source.FromGraph(GraphDsl.Create(Flow.Create<int>().Map(x => x.ToString()), inSource, Keep.Right,
+                Source.FromGraph(GraphDsl.Create(Flow.Create<int>().Select(x => x.ToString()), inSource, Keep.Right,
                     (b, f, src) =>
                     {
                         b.From(src.Outlet).To(f.Inlet);
                         return new SourceShape<string>(f.Outlet);
                     }));
 
-            var sink = Sink.FromGraph(GraphDsl.Create(Flow.Create<string>().Map(int.Parse), outSink, Keep.Right,
+            var sink = Sink.FromGraph(GraphDsl.Create(Flow.Create<string>().Select(int.Parse), outSink, Keep.Right,
                 (b, f, s) =>
                 {
                     b.From(f.Outlet).To(s.Inlet);
@@ -338,8 +338,8 @@ namespace Akka.Streams.Tests.Dsl
             var t = RunnableGraph.FromGraph(GraphDsl.Create(source, flow, sink, (src, _, snk) => Tuple.Create(src, snk),
                 (b, src, f, snk) =>
                 {
-                    b.From(src.Outlet).Via(Flow.Create<string>().Map(int.Parse)).To(f.Inlet);
-                    b.From(f.Outlet).Via(Flow.Create<int>().Map(x => x.ToString())).To(snk.Inlet);
+                    b.From(src.Outlet).Via(Flow.Create<string>().Select(int.Parse)).To(f.Inlet);
+                    b.From(f.Outlet).Via(Flow.Create<int>().Select(x => x.ToString())).To(snk.Inlet);
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 

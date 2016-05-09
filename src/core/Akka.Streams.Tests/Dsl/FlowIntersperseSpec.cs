@@ -31,7 +31,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var probe =
                 Source.From(new[] { 1, 2, 3 })
-                    .Map(x => x.ToString())
+                    .Select(x => x.ToString())
                     .Intersperse(",")
                     .RunWith(this.SinkProbe<string>(), Materializer);
 
@@ -40,13 +40,13 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Intersperse_must_inject_element_between_existing_elements_when_downstream_is_fold()
+        public void A_Intersperse_must_inject_element_between_existing_elements_when_downstream_is_aggregate()
         {
             var concated =
                 Source.From(new[] { 1, 2, 3 })
-                    .Map(x => x.ToString())
+                    .Select(x => x.ToString())
                     .Intersperse(",")
-                    .RunFold("", (s, s1) => s + s1, Materializer);
+                    .RunAggregate("", (s, s1) => s + s1, Materializer);
 
             concated.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             concated.Result.Should().Be("1,2,3");
@@ -57,7 +57,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var probe =
                 Source.From(new[] { 1, 2, 3 })
-                    .Map(x => x.ToString())
+                    .Select(x => x.ToString())
                     .Intersperse("[", ",", "]")
                     .RunWith(this.SinkProbe<string>(), Materializer);
 
@@ -81,7 +81,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var probe =
        Source.Empty<string>()
-           .Map(x => x.ToString())
+           .Select(x => x.ToString())
            .Intersperse("[", ",", "]")
            .RunWith(this.SinkProbe<string>(), Materializer);
 
@@ -94,7 +94,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var probe =
                 Source.From(new[] {1})
-                    .Map(x => x.ToString())
+                    .Select(x => x.ToString())
                     .Intersperse("[", ",", "]")
                     .RunWith(this.SinkProbe<string>(), Materializer);
 

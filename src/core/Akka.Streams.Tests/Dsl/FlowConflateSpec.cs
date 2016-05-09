@@ -124,12 +124,12 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Conflate_must_work_on_a_variable_rate_chain()
         {
-            var future = Source.From(Enumerable.Range(1, 1000)).ConflateWithSeed(i => i, (sum, i) => sum + i).Map(i =>
+            var future = Source.From(Enumerable.Range(1, 1000)).ConflateWithSeed(i => i, (sum, i) => sum + i).Select(i =>
             {
                 if (ThreadLocalRandom.Current.Next(1, 3) == 2)
                     Thread.Sleep(10);
                 return i;
-            }).RunFold(0, (sum, i) => sum + i, Materializer);
+            }).RunAggregate(0, (sum, i) => sum + i, Materializer);
             future.Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
             future.Result.Should().Be(500500);
         }
@@ -137,12 +137,12 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Conflate_must_work_on_a_variable_rate_chain_simple_conflate()
         {
-            var future = Source.From(Enumerable.Range(1, 1000)).Conflate((sum, i) => sum + i).Map(i =>
+            var future = Source.From(Enumerable.Range(1, 1000)).Conflate((sum, i) => sum + i).Select(i =>
             {
                 if (ThreadLocalRandom.Current.Next(1, 3) == 2)
                     Thread.Sleep(10);
                 return i;
-            }).RunFold(0, (sum, i) => sum + i, Materializer);
+            }).RunAggregate(0, (sum, i) => sum + i, Materializer);
             future.Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
             future.Result.Should().Be(500500);
         }
@@ -181,13 +181,13 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Conflate_must_work_with_a_buffer_and_fold()
+        public void Conflate_must_work_with_a_buffer_and_aggregate()
         {
             var future =
                 Source.From(Enumerable.Range(1, 50))
                     .ConflateWithSeed(i => i, (sum, i) => sum + i)
                     .Buffer(50, OverflowStrategy.Backpressure)
-                    .RunFold(0, (sum, i) => sum + i, Materializer);
+                    .RunAggregate(0, (sum, i) => sum + i, Materializer);
             future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             future.Result.Should().Be(Enumerable.Range(1, 50).Sum());
         }

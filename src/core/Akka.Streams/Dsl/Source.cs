@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Source.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
@@ -168,9 +168,9 @@ namespace Akka.Streams.Dsl
         /// function evaluation when the input stream ends, or completed with Failure
         /// if there is a failure signaled in the stream.
         /// </summary>
-        public Task<TOut2> RunFold<TOut2>(TOut2 zero, Func<TOut2, TOut, TOut2> aggregate, IMaterializer materializer)
+        public Task<TOut2> RunAggregate<TOut2>(TOut2 zero, Func<TOut2, TOut, TOut2> aggregate, IMaterializer materializer)
         {
-            return RunWith(Sink.Fold(zero, aggregate), materializer);
+            return RunWith(Sink.Aggregate(zero, aggregate), materializer);
         }
 
         /// <summary>
@@ -181,9 +181,9 @@ namespace Akka.Streams.Dsl
         /// function evaluation when the input stream ends, or completed with Failure
         /// if there is a failure signaled in the stream.
         /// </summary>
-        public Task<TOut> RunReduce(Func<TOut, TOut, TOut> reduce, IMaterializer materializer)
+        public Task<TOut> RunSum(Func<TOut, TOut, TOut> reduce, IMaterializer materializer)
         {
-            return RunWith(Sink.Reduce(reduce), materializer);
+            return RunWith(Sink.Sum(reduce), materializer);
         }
 
         /// <summary>
@@ -262,7 +262,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Source<T, Unit> From<T>(IEnumerable<T> enumerable)
         {
-            return Single(enumerable).MapConcat(x => x).WithAttributes(DefaultAttributes.EnumerableSource);
+            return Single(enumerable).SelectMany(x => x).WithAttributes(DefaultAttributes.EnumerableSource);
         }
 
         /// <summary>

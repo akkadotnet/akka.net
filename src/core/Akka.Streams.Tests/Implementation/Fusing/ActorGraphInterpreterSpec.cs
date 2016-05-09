@@ -74,7 +74,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             this.AssertAllStagesStopped(() =>
             {
                 var identityBidi = new IdentityBidiGraphStage();
-                var identity = BidiFlow.FromGraph(identityBidi).Join(Flow.Identity<int>().Map(x => x));
+                var identity = BidiFlow.FromGraph(identityBidi).Join(Flow.Identity<int>().Select(x => x));
 
                 var task = Source.From(Enumerable.Range(1, 10))
                     .Via(identity)
@@ -93,7 +93,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             {
                 var identityBidi = new IdentityBidiGraphStage();
                 var identityBidiFlow = BidiFlow.FromGraph(identityBidi);
-                var identity = identityBidiFlow.Atop(identityBidiFlow).Atop(identityBidiFlow).Join(Flow.Identity<int>().Map(x => x));
+                var identity = identityBidiFlow.Atop(identityBidiFlow).Atop(identityBidiFlow).Join(Flow.Identity<int>().Select(x => x));
 
                 var task = Source.From(Enumerable.Range(1, 10))
                     .Via(identity)

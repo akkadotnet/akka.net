@@ -22,11 +22,11 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes IODispatcher = ActorAttributes.CreateDispatcher("akka.stream.default-blocking-io-dispatcher");
 
         public static readonly Attributes Fused = Attributes.CreateName("fused");
-        public static readonly Attributes Map = Attributes.CreateName("map");
+        public static readonly Attributes Select = Attributes.CreateName("select");
         public static readonly Attributes Log = Attributes.CreateName("log");
-        public static readonly Attributes Filter = Attributes.CreateName("filter");
+        public static readonly Attributes Where = Attributes.CreateName("where");
         public static readonly Attributes Collect = Attributes.CreateName("collect");
-        public static readonly Attributes Reduce = Attributes.CreateName("reduce");
+        public static readonly Attributes Sum = Attributes.CreateName("sum");
         public static readonly Attributes Recover = Attributes.CreateName("recover");
         public static readonly Attributes RecoverWith = Attributes.CreateName("recoverWith");
         public static readonly Attributes MapAsync = Attributes.CreateName("mapAsync");
@@ -36,17 +36,17 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes LimitWeighted = Attributes.CreateName("limitWeighted");
         public static readonly Attributes Sliding = Attributes.CreateName("sliding");
         public static readonly Attributes Take = Attributes.CreateName("take");
-        public static readonly Attributes Drop = Attributes.CreateName("drop");
+        public static readonly Attributes Skip = Attributes.CreateName("skip");
         public static readonly Attributes TakeWhile = Attributes.CreateName("takeWhile");
-        public static readonly Attributes DropWhile = Attributes.CreateName("dropWhile");
+        public static readonly Attributes SkipWhile = Attributes.CreateName("skipWhile");
         public static readonly Attributes Scan = Attributes.CreateName("scan");
-        public static readonly Attributes Fold = Attributes.CreateName("fold");
+        public static readonly Attributes Aggregate = Attributes.CreateName("aggregate");
         public static readonly Attributes Buffer = Attributes.CreateName("buffer");
         public static readonly Attributes Batch = Attributes.CreateName("batch");
         public static readonly Attributes BatchWeighted = Attributes.CreateName("batchWeighted");
         public static readonly Attributes Conflate = Attributes.CreateName("conflate");
         public static readonly Attributes Expand = Attributes.CreateName("expand");
-        public static readonly Attributes StatefulMapConcat = Attributes.CreateName("statefulMapConcat");
+        public static readonly Attributes StatefulSelectMany = Attributes.CreateName("statefulSelectMany");
         public static readonly Attributes GroupBy = Attributes.CreateName("groupBy");
         public static readonly Attributes PrefixAndTail = Attributes.CreateName("prefixAndTail");
         public static readonly Attributes Split = Attributes.CreateName("split");
@@ -152,17 +152,17 @@ namespace Akka.Streams.Implementation.Stages
             => attributes.GetAttribute(new ActorAttributes.SupervisionStrategy(Deciders.StoppingDecider)).Decider;
     }
 
-    internal sealed class Map<TIn, TOut> : SymbolicStage<TIn, TOut>
+    internal sealed class Select<TIn, TOut> : SymbolicStage<TIn, TOut>
     {
         private readonly Func<TIn, TOut> _mapper;
 
-        public Map(Func<TIn, TOut> mapper, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Map)
+        public Select(Func<TIn, TOut> mapper, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Select)
         {
             _mapper = mapper;
         }
 
         public override IStage<TIn, TOut> Create(Attributes effectiveAttributes)
-            => new Fusing.Map<TIn, TOut>(_mapper, Supervision(effectiveAttributes));
+            => new Fusing.Select<TIn, TOut>(_mapper, Supervision(effectiveAttributes));
     }
 
     internal sealed class Log<T> : SymbolicStage<T, T>
@@ -182,17 +182,17 @@ namespace Akka.Streams.Implementation.Stages
             => new Fusing.Log<T>(_name, _extract, _loggingAdapter, Supervision(effectiveAttributes));
     }
 
-    internal sealed class Filter<T> : SymbolicStage<T, T>
+    internal sealed class Where<T> : SymbolicStage<T, T>
     {
         private readonly Predicate<T> _predicate;
 
-        public Filter(Predicate<T> predicate, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Filter)
+        public Where(Predicate<T> predicate, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Where)
         {
             _predicate = predicate;
         }
 
         public override IStage<T, T> Create(Attributes effectiveAttributes)
-            => new Fusing.Filter<T>(_predicate, Supervision(effectiveAttributes));
+            => new Fusing.Where<T>(_predicate, Supervision(effectiveAttributes));
     }
 
 
@@ -276,11 +276,11 @@ namespace Akka.Streams.Implementation.Stages
         public override IStage<T, T> Create(Attributes effectiveAttributes) => new Fusing.Take<T>(_count);
     }
 
-    internal sealed class Drop<T> : SymbolicStage<T, T>
+    internal sealed class Skip<T> : SymbolicStage<T, T>
     {
         private readonly long _count;
 
-        public Drop(long count, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Drop)
+        public Skip(long count, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Skip)
         {
             _count = count;
         }
@@ -301,17 +301,17 @@ namespace Akka.Streams.Implementation.Stages
             => new Fusing.TakeWhile<T>(_predicate, Supervision(effectiveAttributes));
     }
 
-    internal sealed class DropWhile<T> : SymbolicStage<T, T>
+    internal sealed class SkipWhile<T> : SymbolicStage<T, T>
     {
         private readonly Predicate<T> _predicate;
 
-        public DropWhile(Predicate<T> predicate, Attributes attributes = null) : base(attributes ?? DefaultAttributes.DropWhile)
+        public SkipWhile(Predicate<T> predicate, Attributes attributes = null) : base(attributes ?? DefaultAttributes.SkipWhile)
         {
             _predicate = predicate;
         }
 
         public override IStage<T, T> Create(Attributes effectiveAttributes)
-            => new Fusing.DropWhile<T>(_predicate, Supervision(effectiveAttributes));
+            => new Fusing.SkipWhile<T>(_predicate, Supervision(effectiveAttributes));
     }
 
     internal sealed class Scan<TIn, TOut> : SymbolicStage<TIn, TOut>
@@ -329,19 +329,19 @@ namespace Akka.Streams.Implementation.Stages
             => new Fusing.Scan<TIn, TOut>(_zero, _aggregate, Supervision(effectiveAttributes));
     }
 
-    internal sealed class Fold<TIn, TOut> : SymbolicStage<TIn, TOut>
+    internal sealed class Aggregate<TIn, TOut> : SymbolicStage<TIn, TOut>
     {
         private readonly TOut _zero;
         private readonly Func<TOut, TIn, TOut> _aggregate;
 
-        public Fold(TOut zero, Func<TOut, TIn, TOut> aggregate, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Fold)
+        public Aggregate(TOut zero, Func<TOut, TIn, TOut> aggregate, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Aggregate)
         {
             _zero = zero;
             _aggregate = aggregate;
         }
 
         public override IStage<TIn, TOut> Create(Attributes effectiveAttributes)
-            => new Fusing.Fold<TIn, TOut>(_zero, _aggregate, Supervision(effectiveAttributes));
+            => new Fusing.Aggregate<TIn, TOut>(_zero, _aggregate, Supervision(effectiveAttributes));
     }
 
     internal sealed class Buffer<T> : SymbolicStage<T, T>

@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FLow.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
@@ -282,7 +282,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Flow<TIn, TOut, Unit> FromFunction<TIn, TOut>(Func<TIn, TOut> function)
         {
-            return Create<TIn>().Map(function);
+            return Create<TIn>().Select(function);
         } 
 
         /// <summary>

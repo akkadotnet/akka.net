@@ -30,7 +30,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var task = Source.From(Enumerable.Range(1,42)).Map(x=>x).RunWith(Sink.Last<int>(), Materializer);
+                var task = Source.From(Enumerable.Range(1,42)).Select(x=>x).RunWith(Sink.Last<int>(), Materializer);
                 task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
                 task.Result.Should().Be(42);
             }, Materializer);
@@ -68,7 +68,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var task = Source.From(Enumerable.Range(1, 42)).Map(x => x).RunWith(Sink.LastOrDefault<int>(), Materializer);
+                var task = Source.From(Enumerable.Range(1, 42)).Select(x => x).RunWith(Sink.LastOrDefault<int>(), Materializer);
                 task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
                 task.Result.Should().Be(42);
             }, Materializer);

@@ -191,7 +191,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Sink<TIn, Task> ForEach<TIn>(Action<TIn> action)
         {
-            var forEach = Flow.Create<TIn>().Map(input =>
+            var forEach = Flow.Create<TIn>().Select(input =>
             {
                 action(input);
                 return Unit.Instance;
@@ -232,12 +232,12 @@ namespace Akka.Streams.Dsl
         /// element is dropped and the stream continues. 
         /// 
         ///  <para/>
-        /// See also <seealso cref="MapAsyncUnordered{TIn,TOut}"/> 
+        /// See also <seealso cref="SelectAsyncUnordered{TIn,TOut}"/> 
         /// </summary>
         public static Sink<TIn, Task> ForEachParallel<TIn>(int parallelism, Action<TIn> action)
         {
             return Flow.Create<TIn>()
-                .MapAsyncUnordered(parallelism, input => Task.Run(() =>
+                .SelectAsyncUnordered(parallelism, input => Task.Run(() =>
                 {
                     action(input);
                     return Unit.Instance;
@@ -251,12 +251,12 @@ namespace Akka.Streams.Dsl
         /// function evaluation when the input stream ends, or completed with the streams exception
         /// if there is a failure signaled in the stream.
         /// </summary>
-        public static Sink<TIn, Task<TOut>> Fold<TIn, TOut>(TOut zero, Func<TOut, TIn, TOut> aggregate)
+        public static Sink<TIn, Task<TOut>> Aggregate<TIn, TOut>(TOut zero, Func<TOut, TIn, TOut> aggregate)
         {
             var fold = Flow.Create<TIn>()
-                .Fold(zero, aggregate)
+                .Aggregate(zero, aggregate)
                 .ToMaterialized(First<TOut>(), Keep.Right)
-                .Named("FoldSink");
+                .Named("AggregateSink");
 
             return FromGraph(fold);
         }
@@ -268,12 +268,12 @@ namespace Akka.Streams.Dsl
         /// function evaluation when the input stream ends, or completed with `Failure`
         /// if there is a failure signaled in the stream.
         /// </summary>
-        public static Sink<TIn, Task<TIn>> Reduce<TIn>(Func<TIn, TIn, TIn> reduce)
+        public static Sink<TIn, Task<TIn>> Sum<TIn>(Func<TIn, TIn, TIn> reduce)
         {
             var graph = Flow.Create<TIn>()
-                .Reduce(reduce)
+                .Sum(reduce)
                 .ToMaterialized(First<TIn>(), Keep.Right)
-                .Named("ReduceSink");
+                .Named("SumSink");
 
             return FromGraph(graph);
         }

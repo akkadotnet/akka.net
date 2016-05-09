@@ -83,7 +83,7 @@ namespace Akka.Streams.Tests.IO
             var resultFuture =
                 Source.FromPublisher(idle.PublisherProbe)
                     .Via(Sys.TcpStream().OutgoingConnection(server.Address))
-                    .RunFold(ByteString.Empty, (acc, input) => acc + input, Materializer);
+                    .RunAggregate(ByteString.Empty, (acc, input) => acc + input, Materializer);
             var serverConnection = server.WaitAccept();
 
             foreach (var input in testInput)
@@ -404,7 +404,7 @@ namespace Akka.Streams.Tests.IO
 
                 var t = Source.Maybe<ByteString>()
                     .Via(Sys.TcpStream().OutgoingConnection(serverAddress.Address.ToString(), serverAddress.Port))
-                    .ToMaterialized(Sink.Fold<ByteString, ByteString>(ByteString.Empty, (s, s1) => s + s1), Keep.Both)
+                    .ToMaterialized(Sink.Aggregate<ByteString, ByteString>(ByteString.Empty, (s, s1) => s + s1), Keep.Both)
                     .Run(Materializer);
                 var promise = t.Item1;
                 var result = t.Item2;
@@ -435,7 +435,7 @@ namespace Akka.Streams.Tests.IO
             var result = Source.From(Enumerable.Repeat(0, 1000)
                 .Select(i => ByteString.Create(new[] {Convert.ToByte(i)})))
                 .Via(Sys.TcpStream().OutgoingConnection(serverAddress))
-                .RunFold(0, (i, s) => i + s.Count, Materializer);
+                .RunAggregate(0, (i, s) => i + s.Count, Materializer);
 
             result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             result.Result.Should().Be(1000);
@@ -455,7 +455,7 @@ namespace Akka.Streams.Tests.IO
 
             var result = Source.Maybe<ByteString>()
                 .Via(system2.TcpStream().OutgoingConnection(serverAddress))
-                .RunFold(0, (i, s) => i + s.Count, mat2);
+                .RunAggregate(0, (i, s) => i + s.Count, mat2);
 
             // Getting rid of existing connection actors by using a blunt instrument
             system2.ActorSelection(system2.Tcp().Path/"selectors"/"$b"/"*").Tell(Kill.Instance);
@@ -497,7 +497,7 @@ namespace Akka.Streams.Tests.IO
             var resultFuture =
                 Source.From(testInput)
                     .Via(Sys.TcpStream().OutgoingConnection(serverAddress))
-                    .RunFold(ByteString.Empty, (agg, b) => agg.Concat(b), Materializer);
+                    .RunAggregate(ByteString.Empty, (agg, b) => agg.Concat(b), Materializer);
 
             resultFuture.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             resultFuture.Result.ShouldBeEquivalentTo(expectedOutput);
@@ -530,7 +530,7 @@ namespace Akka.Streams.Tests.IO
                 .Via(echoConnection)
                 .Via(echoConnection)
                 .Via(echoConnection)
-                .RunFold(ByteString.Empty, (agg, b) => agg.Concat(b), Materializer);
+                .RunAggregate(ByteString.Empty, (agg, b) => agg.Concat(b), Materializer);
 
             resultFuture.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             resultFuture.Result.ShouldBeEquivalentTo(expectedOutput);
@@ -597,7 +597,7 @@ namespace Akka.Streams.Tests.IO
                 var total = Source.From(
                     Enumerable.Range(0, 1000).Select(_ => ByteString.Create(new byte[] {0})))
                     .Via(Sys.TcpStream().OutgoingConnection(serverAddress))
-                    .RunFold(0, (i, s) => i + s.Count, Materializer);
+                    .RunAggregate(0, (i, s) => i + s.Count, Materializer);
 
                 total.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 total.Result.Should().Be(1000);
@@ -611,11 +611,11 @@ namespace Akka.Streams.Tests.IO
             {
                 var serverAddress = TestUtils.TemporaryServerAddress();
                 var firstClientConnected = new TaskCompletionSource<Unit>();
-                var takeTwoAndDropSecond = Flow.Create<Tcp.IncomingConnection>().Map(c =>
+                var takeTwoAndDropSecond = Flow.Create<Tcp.IncomingConnection>().Select(c =>
                 {
                     firstClientConnected.TrySetResult(Unit.Instance);
                     return c;
-                }).Grouped(2).Take(1).Map(e => e.First());
+                }).Grouped(2).Take(1).Select(e => e.First());
 
                 Sys.TcpStream()
                     .Bind(serverAddress.Address.ToString(), serverAddress.Port)
@@ -624,7 +624,7 @@ namespace Akka.Streams.Tests.IO
 
                 var folder = Source.From(Enumerable.Range(0, 100).Select(_ => ByteString.Create(new byte[] {0})))
                     .Via(Sys.TcpStream().OutgoingConnection(serverAddress))
-                    .Fold(0, (i, s) => i + s.Count)
+                    .Aggregate(0, (i, s) => i + s.Count)
                     .ToMaterialized(Sink.First<int>(), Keep.Right);
 
                 var total = folder.Run(Materializer);

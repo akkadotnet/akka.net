@@ -128,7 +128,7 @@ namespace Akka.Streams.Tests.Actor
         {
             var n = 117;
             Source.From(Enumerable.Range(1, n))
-                .Map(i => new Msg(i, TestActor))
+                .Select(i => new Msg(i, TestActor))
                 .RunWith(Sink.ActorSubscriber<Msg>(Streamer.Props), Sys.Materializer());
             ReceiveN(n).ShouldAllBeEquivalentTo(Enumerable.Range(1, n).Select(i => new Done(i)));
         }

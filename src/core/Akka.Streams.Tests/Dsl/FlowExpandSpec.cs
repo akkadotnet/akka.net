@@ -112,14 +112,14 @@ namespace Akka.Streams.Tests.Dsl
         public void Expand_must_work_on_a_variable_rate_chain()
         {
             var future = Source.From(Enumerable.Range(1, 100))
-                .Map(x =>
+                .Select(x =>
                 {
                     if (ThreadLocalRandom.Current.Next(1, 3) == 2)
                         Thread.Sleep(10);
                     return x;
                 })
                 .Expand(i => Enumerable.Repeat(i, 200).GetEnumerator())
-                .RunFold(new HashSet<int>(), (agg, elem) =>
+                .RunAggregate(new HashSet<int>(), (agg, elem) =>
                 {
                     agg.Add(elem);
                     return agg;

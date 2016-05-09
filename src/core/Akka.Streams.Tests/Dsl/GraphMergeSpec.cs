@@ -62,8 +62,8 @@ namespace Akka.Streams.Tests.Dsl
                     var sink = Sink.FromSubscriber(probe);
 
                     b.From(source1).To(m1.In(0));
-                    b.From(m1.Out).Via(Flow.Create<int>().Map(x => x*2)).To(m2.In(0));
-                    b.From(m2.Out).Via(Flow.Create<int>().Map(x => x / 2).Map(x=>x+1)).To(sink);
+                    b.From(m1.Out).Via(Flow.Create<int>().Select(x => x*2)).To(m2.In(0));
+                    b.From(m2.Out).Via(Flow.Create<int>().Select(x => x / 2).Select(x=>x+1)).To(sink);
                     b.From(source2).To(m1.In(1));
                     b.From(source3).To(m2.In(1));
 
@@ -94,7 +94,7 @@ namespace Akka.Streams.Tests.Dsl
                 b.From(source).To(merge.In(0));
 
                 return new SourceShape<int>(merge.Out);
-            })).RunFold(new List<int>(), (list, i) =>
+            })).RunAggregate(new List<int>(), (list, i) =>
             {
                 list.Add(i);
                 return list;

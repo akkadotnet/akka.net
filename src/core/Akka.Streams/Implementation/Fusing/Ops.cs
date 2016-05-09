@@ -21,12 +21,12 @@ using Akka.Util;
 
 namespace Akka.Streams.Implementation.Fusing
 {
-    internal sealed class Map<TIn, TOut> : PushStage<TIn, TOut>
+    internal sealed class Select<TIn, TOut> : PushStage<TIn, TOut>
     {
         private readonly Func<TIn, TOut> _func;
         private readonly Decider _decider;
 
-        public Map(Func<TIn, TOut> func, Decider decider)
+        public Select(Func<TIn, TOut> func, Decider decider)
         {
             _func = func;
             _decider = decider;
@@ -37,12 +37,12 @@ namespace Akka.Streams.Implementation.Fusing
         public override Directive Decide(Exception cause) => _decider(cause);
     }
 
-    internal sealed class Filter<T> : PushStage<T, T>
+    internal sealed class Where<T> : PushStage<T, T>
     {
         private readonly Predicate<T> _predicate;
         private readonly Decider _decider;
 
-        public Filter(Predicate<T> predicate, Decider decider)
+        public Where(Predicate<T> predicate, Decider decider)
         {
             _predicate = predicate;
             _decider = decider;
@@ -71,13 +71,13 @@ namespace Akka.Streams.Implementation.Fusing
         public override Directive Decide(Exception cause) => _decider(cause);
     }
 
-    internal sealed class DropWhile<T> : PushStage<T, T>
+    internal sealed class SkipWhile<T> : PushStage<T, T>
     {
         private readonly Predicate<T> _predicate;
         private readonly Decider _decider;
         private bool _taking;
 
-        public DropWhile(Predicate<T> predicate, Decider decider)
+        public SkipWhile(Predicate<T> predicate, Decider decider)
         {
             _predicate = predicate;
             _decider = decider;
@@ -232,14 +232,14 @@ namespace Akka.Streams.Implementation.Fusing
         public override IStage<TIn, TOut> Restart() => new Scan<TIn, TOut>(_zero, _aggregate, _decider);
     }
 
-    internal sealed class Fold<TIn, TOut> : PushPullStage<TIn, TOut>
+    internal sealed class Aggregate<TIn, TOut> : PushPullStage<TIn, TOut>
     {
         private readonly TOut _zero;
         private readonly Func<TOut, TIn, TOut> _aggregate;
         private readonly Decider _decider;
         private TOut _aggregator;
 
-        public Fold(TOut zero, Func<TOut, TIn, TOut> aggregate, Decider decider)
+        public Aggregate(TOut zero, Func<TOut, TIn, TOut> aggregate, Decider decider)
         {
             _zero = _aggregator = zero;
             _aggregate = aggregate;
@@ -259,7 +259,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         public override Directive Decide(Exception cause) => _decider(cause);
 
-        public override IStage<TIn, TOut> Restart() => new Fold<TIn, TOut>(_zero, _aggregate, _decider);
+        public override IStage<TIn, TOut> Restart() => new Aggregate<TIn, TOut>(_zero, _aggregate, _decider);
     }
 
     internal sealed class Intersperse<T> : GraphStage<FlowShape<T, T>>
@@ -882,7 +882,7 @@ namespace Akka.Streams.Implementation.Fusing
         public override string ToString() => "Expand";
     }
 
-    internal sealed class MapAsync<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
+    internal sealed class SelectAsync<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region internal classes
 
@@ -895,12 +895,12 @@ namespace Akka.Streams.Implementation.Fusing
 
             private static readonly Result<TOut> NotYetThere = Result.Failure<TOut>(new Exception());
 
-            private readonly MapAsync<TIn, TOut> _stage;
+            private readonly SelectAsync<TIn, TOut> _stage;
             private readonly Decider _decider;
             private IBuffer<Holder<TOut>> _buffer;
             private readonly Action<Tuple<Holder<TOut>, Result<TOut>>> _taskCallback;
 
-            public Logic(Attributes inheritedAttributes, MapAsync<TIn, TOut> stage) : base(stage.Shape)
+            public Logic(Attributes inheritedAttributes, SelectAsync<TIn, TOut> stage) : base(stage.Shape)
             {
                 _stage = stage;
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
@@ -1004,33 +1004,33 @@ namespace Akka.Streams.Implementation.Fusing
         public readonly Inlet<TIn> In = new Inlet<TIn>("in");
         public readonly Outlet<TOut> Out = new Outlet<TOut>("out");
 
-        public MapAsync(int parallelism, Func<TIn, Task<TOut>> mapFunc)
+        public SelectAsync(int parallelism, Func<TIn, Task<TOut>> mapFunc)
         {
             _parallelism = parallelism;
             _mapFunc = mapFunc;
             Shape = new FlowShape<TIn, TOut>(In, Out);
         }
 
-        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("MapAsync");
+        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("selectAsync");
 
         public override FlowShape<TIn, TOut> Shape { get; }
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(inheritedAttributes, this);
     }
 
-    internal sealed class MapAsyncUnordered<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
+    internal sealed class SelectAsyncUnordered<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region internal classes
 
         private sealed class Logic : GraphStageLogic
         {
-            private readonly MapAsyncUnordered<TIn, TOut> _stage;
+            private readonly SelectAsyncUnordered<TIn, TOut> _stage;
             private readonly Decider _decider;
             private IBuffer<TOut> _buffer;
             private readonly Action<Result<TOut>> _taskCallback;
             private int _inFlight;
 
-            public Logic(Attributes inheritedAttributes, MapAsyncUnordered<TIn, TOut> stage) : base(stage.Shape)
+            public Logic(Attributes inheritedAttributes, SelectAsyncUnordered<TIn, TOut> stage) : base(stage.Shape)
             {
                 _stage = stage;
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
@@ -1113,14 +1113,14 @@ namespace Akka.Streams.Implementation.Fusing
         public readonly Inlet<TIn> In = new Inlet<TIn>("in");
         public readonly Outlet<TOut> Out = new Outlet<TOut>("out");
 
-        public MapAsyncUnordered(int parallelism, Func<TIn, Task<TOut>> mapFunc)
+        public SelectAsyncUnordered(int parallelism, Func<TIn, Task<TOut>> mapFunc)
         {
             _parallelism = parallelism;
             _mapFunc = mapFunc;
             Shape = new FlowShape<TIn, TOut>(In, Out);
         }
 
-        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("MapAsyncUnordered");
+        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("selectAsyncUnordered");
 
         public override FlowShape<TIn, TOut> Shape { get; }
 
@@ -1511,7 +1511,7 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
-    internal sealed class DropWithin<T> : SimpleLinearGraphStage<T>
+    internal sealed class SkipWithin<T> : SimpleLinearGraphStage<T>
     {
         private readonly TimeSpan _timeout;
 
@@ -1519,10 +1519,10 @@ namespace Akka.Streams.Implementation.Fusing
 
         private sealed class Logic : TimerGraphStageLogic
         {
-            private readonly DropWithin<T> _stage;
+            private readonly SkipWithin<T> _stage;
             private bool _allow;
 
-            public Logic(DropWithin<T> stage) : base(stage.Shape)
+            public Logic(SkipWithin<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
                 SetHandler(_stage.Inlet, onPush: () =>
@@ -1542,7 +1542,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         #endregion
 
-        public DropWithin(TimeSpan timeout)
+        public SkipWithin(TimeSpan timeout)
         {
             _timeout = timeout;
         }
@@ -1550,7 +1550,7 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
-    internal sealed class Reduce<T> : SimpleLinearGraphStage<T>
+    internal sealed class Sum<T> : SimpleLinearGraphStage<T>
     {
         #region internal classes
 
@@ -1558,7 +1558,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             private T _aggregator;
 
-            public Logic(Reduce<T> stage) : base(stage.Shape)
+            public Logic(Sum<T> stage) : base(stage.Shape)
             {
                 var rest = new LambdaInHandler(onPush: () =>
                 {
@@ -1587,16 +1587,16 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly Func<T, T, T> _reduce;
 
-        public Reduce(Func<T,T,T> reduce)
+        public Sum(Func<T,T,T> reduce)
         {
             _reduce = reduce;
         }
 
-        protected override Attributes InitialAttributes { get; } = DefaultAttributes.Reduce;
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.Sum;
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
-        public override string ToString() => "Reduce";
+        public override string ToString() => "Sum";
     }
 
     internal sealed class RecoverWith<TOut, TMat> : SimpleLinearGraphStage<TOut>
@@ -1677,18 +1677,18 @@ namespace Akka.Streams.Implementation.Fusing
         public override string ToString() => "RecoverWith";
     }
 
-    internal sealed class StatefulMapConcat<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
+    internal sealed class StatefulSelectMany<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
         #region internal classes
 
         private sealed class Logic : GraphStageLogic
         {
-            private readonly StatefulMapConcat<TIn, TOut> _stage;
+            private readonly StatefulSelectMany<TIn, TOut> _stage;
             private IteratorAdapter<TOut> _currentIterator;
             private readonly Decider _decider;
             private Func<TIn, IEnumerable<TOut>> _plainConcat;
 
-            public Logic(StatefulMapConcat<TIn, TOut> stage, Attributes inheritedAttributes) : base(stage.Shape)
+            public Logic(StatefulSelectMany<TIn, TOut> stage, Attributes inheritedAttributes) : base(stage.Shape)
             {
                 _stage = stage;
                 _decider = inheritedAttributes.GetAttribute(new ActorAttributes.SupervisionStrategy(Deciders.StoppingDecider)).Decider;
@@ -1758,22 +1758,22 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly Func<Func<TIn, IEnumerable<TOut>>> _concatFactory;
 
-        private readonly Inlet<TIn> _in = new Inlet<TIn>("StatefulMapConcat.in");
-        private readonly Outlet<TOut> _out = new Outlet<TOut>("StatefulMapConcat.out");
+        private readonly Inlet<TIn> _in = new Inlet<TIn>("StatefulSelectMany.in");
+        private readonly Outlet<TOut> _out = new Outlet<TOut>("StatefulSelectMany.out");
 
-        public StatefulMapConcat(Func<Func<TIn, IEnumerable<TOut>>> concatFactory)
+        public StatefulSelectMany(Func<Func<TIn, IEnumerable<TOut>>> concatFactory)
         {
             _concatFactory = concatFactory;
 
             Shape = new FlowShape<TIn, TOut>(_in, _out);
         }
 
-        protected override Attributes InitialAttributes { get; } = DefaultAttributes.StatefulMapConcat;
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.StatefulSelectMany;
 
         public override FlowShape<TIn, TOut> Shape { get; }
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
 
-        public override string ToString() => "StatefulMapConcat";
+        public override string ToString() => "StatefulSelectMany";
     }
 }

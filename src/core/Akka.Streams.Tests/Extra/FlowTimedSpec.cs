@@ -55,7 +55,7 @@ namespace Akka.Streams.Tests.Extra
             testRuns.ForEach(
                 _ =>
                     RunScript(script(), Materializer.Settings,
-                        flow =>flow.Map(x => x)
+                        flow =>flow.Select(x => x)
                                 .TimedIntervalBetween(i => i%measureBetweenEvery == 0, printInfo)));
 
             var expectedNrOfOnIntervalCalls = testRuns.Length*((n/measureBetweenEvery) - 1); // first time has no value to compare to, so skips calling onInterval
@@ -82,7 +82,7 @@ namespace Akka.Streams.Tests.Extra
                             .Select(x => new Tuple<ICollection<int>, ICollection<int>>(new[] {x}, new[] {x})).ToArray());
 
             testRuns.ForEach(
-                _ => RunScript(script(), Materializer.Settings, flow => flow.Timed(f => f.Map(x => x), printInfo)));
+                _ => RunScript(script(), Materializer.Settings, flow => flow.Timed(f => f.Select(x => x), printInfo)));
             testRuns.ForEach(_ => testActor.ExpectMsg<TimeSpan>());
             testActor.ExpectNoMsg(TimeSpan.FromSeconds(1));
         }
@@ -96,7 +96,7 @@ namespace Akka.Streams.Tests.Extra
                 var probe = CreateTestProbe();
 
                 var flow =
-                    Flow.Create<int>().Map(x => (long) x).TimedIntervalBetween(i => i%2 == 1, d => probe.Tell(d));
+                    Flow.Create<int>().Select(x => (long) x).TimedIntervalBetween(i => i%2 == 1, d => probe.Tell(d));
 
                 var c1 = TestSubscriber.CreateManualProbe<long>(this);
                 Source.From(Enumerable.Range(1, 3)).Via(flow).RunWith(Sink.FromSubscriber(c1), Materializer);
@@ -122,9 +122,9 @@ namespace Akka.Streams.Tests.Extra
 
                 var flow =
                     Flow.Create<int>()
-                        .Timed(f => f.Map(x => (double)x).Map(x => (int)x).Map(x => x.ToString()),
+                        .Timed(f => f.Select(x => (double)x).Select(x => (int)x).Select(x => x.ToString()),
                             d => probe.Tell(d))
-                        .Map(s => s + "!");
+                        .Select(s => s + "!");
 
                 var t = flow.RunWith(Source.AsSubscriber<int>(), Sink.AsPublisher<string>(false), Materializer);
                 var flowIn = t.Item1;

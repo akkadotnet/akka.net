@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="FlowStatefulMapConcatSpec.cs" company="Akka.NET Project">
+// <copyright file="FlowStatefulSelectManySpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -19,11 +19,11 @@ using static Akka.Streams.Tests.Dsl.TestConfig;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class FlowStatefulMapConcatSpec : ScriptedTest
+    public class FlowStatefulSelectManySpec : ScriptedTest
     {
         private ActorMaterializer Materializer { get; }
 
-        public FlowStatefulMapConcatSpec()
+        public FlowStatefulSelectManySpec()
         {
             var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 16);
             Materializer = ActorMaterializer.Create(Sys, settings);
@@ -32,7 +32,7 @@ namespace Akka.Streams.Tests.Dsl
         private static readonly Exception Ex = new TestException("Test");
 
         [Fact]
-        public void A_StatefulMapConcat_must_work_in_happy_case()
+        public void A_StatefulSelectMany_must_work_in_happy_case()
         {
             Func<Script<int, int>> script = () =>
             {
@@ -48,7 +48,7 @@ namespace Akka.Streams.Tests.Dsl
 
             RandomTestRange(Sys).ForEach(_ =>
             {
-                RunScript(script(), Materializer.Settings, flow => flow.StatefulMapConcat<int,int,int, Unit>(() =>
+                RunScript(script(), Materializer.Settings, flow => flow.StatefulSelectMany<int,int,int, Unit>(() =>
                 {
                     int? prev = null;
                     return (x =>
@@ -68,9 +68,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_StatefulMapConcat_must_be_able_to_restart()
+        public void A_StatefulSelectMany_must_be_able_to_restart()
         {
-            var probe = Source.From(new[] {2, 1, 3, 4, 1}).StatefulMapConcat<int, int, Unit>(() =>
+            var probe = Source.From(new[] {2, 1, 3, 4, 1}).StatefulSelectMany<int, int, Unit>(() =>
             {
                 int? prev = null;
 
@@ -99,9 +99,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_StatefulMapConcat_must_be_able_to_resume()
+        public void A_StatefulSelectMany_must_be_able_to_resume()
         {
-            var probe = Source.From(new[] { 2, 1, 3, 4, 1 }).StatefulMapConcat<int, int, Unit>(() =>
+            var probe = Source.From(new[] { 2, 1, 3, 4, 1 }).StatefulSelectMany<int, int, Unit>(() =>
             {
                 int? prev = null;
 

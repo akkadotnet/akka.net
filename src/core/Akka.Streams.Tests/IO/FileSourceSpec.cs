@@ -173,7 +173,7 @@ namespace Akka.Streams.Tests.IO
             var s = FileIO.FromFile(ManyLines(), chunkSize)
                 .WithAttributes(Attributes.CreateInputBuffer(readAhead, readAhead));
             var f = s.RunWith(
-                Sink.Fold<ByteString, int>(0, (acc, l) => acc + l.DecodeString(Encoding.UTF8).Count(c => c == '\n')),
+                Sink.Aggregate<ByteString, int>(0, (acc, l) => acc + l.DecodeString(Encoding.UTF8).Count(c => c == '\n')),
                 _materializer);
 
             f.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();

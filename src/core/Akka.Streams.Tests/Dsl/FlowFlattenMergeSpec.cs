@@ -41,14 +41,14 @@ namespace Akka.Streams.Tests.Dsl
         private Sink<int, Task<ImmutableHashSet<int>>> ToSet =>
                 Flow.Create<int>()
                     .Grouped(1000)
-                    .Map(x => x.ToImmutableHashSet())
+                    .Select(x => x.ToImmutableHashSet())
                     .ToMaterialized(Sink.First<ImmutableHashSet<int>>(), Keep.Right);
 
         [Fact]
         public void A_FlattenMerge_must_work_in_the_nominal_case()
         {
             var task = Source.From(new[] {Src10(0), Src10(10), Src10(20), Src10(30)})
-                .FlatMapMerge(4, s => s)
+                .MergeMany(4, s => s)
                 .RunWith(ToSet, Materializer);
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
             task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(0, 40));
@@ -58,7 +58,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_FlattenMerge_must_not_be_held_back_by_one_slow_stream()
         {
             var task = Source.From(new[] { Src10(0), Src10(10), Blocked, Src10(20), Src10(30) })
-                .FlatMapMerge(3, s => s)
+                .MergeMany(3, s => s)
                 .Take(40)
                 .RunWith(ToSet, Materializer);
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
@@ -69,7 +69,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_FlattenMerge_must_respect_breadth()
         {
             var task = Source.From(new[] { Src10(0), Src10(10), Src10(20), Blocked, Blocked, Src10(30) })
-                .FlatMapMerge(3, s => s)
+                .MergeMany(3, s => s)
                 .Take(40)
                 .RunWith(ToSeq, Materializer);
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
@@ -83,7 +83,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var ex = new TestException("buh");
             var future = Source.Failed<Source<int, Unit>>(ex)
-                .FlatMapMerge(1, x => x)
+                .MergeMany(1, x => x)
                 .RunWith(Sink.First<int>(), Materializer);
 
             future.Invoking(f => f.Wait(TimeSpan.FromSeconds(1))).ShouldThrow<TestException>().And.Should().Be(ex);
@@ -96,7 +96,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var future = Source.Combine(Source.From(new[] {Blocked, Blocked}), Source.Failed<Source<int, Unit>>(ex),
                 i => new Merge<Source<int, Unit>>(i))
-                .FlatMapMerge(10, x => x)
+                .MergeMany(10, x => x)
                 .RunWith(Sink.First<int>(), Materializer);
 
             future.Invoking(f => f.Wait(TimeSpan.FromSeconds(1))).ShouldThrow<TestException>().And.Should().Be(ex);
@@ -107,7 +107,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var ex = new TestException("buh");
             var future = Source.From(Enumerable.Range(1, 3))
-                .FlatMapMerge(10, x =>
+                .MergeMany(10, x =>
                 {
                     if (x == 3)
                         throw ex;
@@ -123,7 +123,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var ex = new TestException("buh");
             var future = Source.From(new[] { Blocked, Blocked, Source.Failed<int>(ex) })
-                .FlatMapMerge(10, x => x)
+                .MergeMany(10, x => x)
                 .RunWith(Sink.First<int>(), Materializer);
 
             future.Invoking(f => f.Wait(TimeSpan.FromSeconds(1))).ShouldThrow<TestException>().And.Should().Be(ex);
@@ -140,7 +140,7 @@ namespace Akka.Streams.Tests.Dsl
             Source.Combine(
                 Source.From(new[] {Source.FromPublisher(p1), Source.FromPublisher(p2)}),
                 Source.FromTask(p.Task), i => new Merge<Source<int, Unit>>(i))
-                .FlatMapMerge(5, x => x)
+                .MergeMany(5, x => x)
                 .RunWith(Sink.First<int>(), Materializer);
 
             p1.ExpectRequest();
@@ -161,7 +161,7 @@ namespace Akka.Streams.Tests.Dsl
 
             Source.From(new[]
             {Source.FromPublisher(p1), Source.FromPublisher(p2), Source.FromTask(p.Task)})
-                .FlatMapMerge(5, x => x)
+                .MergeMany(5, x => x)
                 .RunWith(Sink.First<int>(), Materializer);
 
             p1.ExpectRequest();
@@ -180,7 +180,7 @@ namespace Akka.Streams.Tests.Dsl
             var ex = new TestException("buh");
             var latch = new TestLatch();
 
-            Source.From(Enumerable.Range(1, 3)).FlatMapMerge(10, i =>
+            Source.From(Enumerable.Range(1, 3)).MergeMany(10, i =>
             {
                 if (i == 1)
                     return Source.FromPublisher(p);
@@ -200,7 +200,7 @@ namespace Akka.Streams.Tests.Dsl
             var p2 = TestPublisher.CreateProbe<int>(this);
 
             var sink = Source.From(new[] {Source.FromPublisher(p1), Source.FromPublisher(p2)})
-                .FlatMapMerge(5, x => x)
+                .MergeMany(5, x => x)
                 .RunWith(this.SinkProbe<int>(), Materializer);
 
             sink.Request(1);
@@ -216,7 +216,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             const int noOfSources = 100;
             var p = Source.From(Enumerable.Range(0, noOfSources).Select(i => Src10(10*i)))
-                .FlatMapMerge(int.MaxValue, x => x)
+                .MergeMany(int.MaxValue, x => x)
                 .RunWith(this.SinkProbe<int>(), Materializer);
 
             p.EnsureSubscription();

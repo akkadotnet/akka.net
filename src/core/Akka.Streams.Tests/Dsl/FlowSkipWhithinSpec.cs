@@ -19,23 +19,23 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class FlowDropWithinSpec : AkkaSpec
+    public class FlowSkipWithinSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
 
-        public FlowDropWithinSpec(ITestOutputHelper helper) : base(helper)
+        public FlowSkipWithinSpec(ITestOutputHelper helper) : base(helper)
         {
             Materializer = ActorMaterializer.Create(Sys);
         }
 
         [Fact]
-        public void A_DropWithin_must_deliver_elements_after_the_duration_but_not_before()
+        public void A_SkipWithin_must_deliver_elements_after_the_duration_but_not_before()
         {
             var input = Enumerable.Range(1, 200).GetEnumerator();
             var p = TestPublisher.CreateManualProbe<int>(this);
             var c = TestSubscriber.CreateManualProbe<int>(this);
             Source.FromPublisher(p)
-                .DropWithin(TimeSpan.FromSeconds(1))
+                .SkipWithin(TimeSpan.FromSeconds(1))
                 .To(Sink.FromSubscriber(c))
                 .Run(Materializer);
             var pSub = p.ExpectSubscription();
@@ -68,13 +68,13 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_DropWithin_must_deliver_completion_even_before_the_duration()
+        public void A_SkipWithin_must_deliver_completion_even_before_the_duration()
         {
             var upstream = TestPublisher.CreateProbe<int>(this);
             var downstream = TestSubscriber.CreateProbe<int>(this);
 
             Source.FromPublisher(upstream)
-                .DropWithin(TimeSpan.FromDays(1))
+                .SkipWithin(TimeSpan.FromDays(1))
                 .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
             upstream.SendComplete();

@@ -85,7 +85,7 @@ namespace Akka.Streams.Dsl
             /// the outlets will emit the materialized value.
             /// 
             /// Be careful to not to feed the result of this outlet to a stage that produces the materialized value itself (for
-            /// example to a <see cref="Sink.Fold{TIn,TOut}"/> that contributes to the materialized value) since that might lead to an unresolvable
+            /// example to a <see cref="Sink.Aggregate{TIn,TOut}"/> that contributes to the materialized value) since that might lead to an unresolvable
             /// dependency cycle.
             /// </summary> 
             public Outlet<T> MaterializedValue

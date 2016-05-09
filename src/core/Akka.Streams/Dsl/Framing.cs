@@ -81,7 +81,7 @@ namespace Akka.Streams.Dsl
         /// <returns></returns>
         public static BidiFlow<ByteString, ByteString, ByteString, ByteString, Unit> SimpleFramingProtocol(int maximumMessageLength)
         {
-            var decoder = LengthField(4, maximumMessageLength + 4, 0, ByteOrder.BigEndian).Map(b => b.Drop(4));
+            var decoder = LengthField(4, maximumMessageLength + 4, 0, ByteOrder.BigEndian).Select(b => b.Drop(4));
             var encoder = Flow.Create<ByteString>().Transform(() => new FramingDecoderStage(maximumMessageLength));
 
             return BidiFlow.FromFlowsMat(encoder, decoder, Keep.Left);

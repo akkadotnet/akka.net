@@ -19,7 +19,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             return
                 (Source<Source<int, Unit>, TMat>)
-                    ((SubFlow<Source<int, Unit>, TMat, IRunnableGraph<TMat>>) source.PrefixAndTail(0).Map(x => x.Item2))
+                    ((SubFlow<Source<int, Unit>, TMat, IRunnableGraph<TMat>>) source.PrefixAndTail(0).Select(x => x.Item2))
                         .ConcatSubstream();
         }
 
@@ -27,7 +27,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             return
                 (Source<Tuple<int, Source<int, Unit>>, TMat>)
-                ((SubFlow<Tuple<int, Source<int, Unit>>, TMat, IRunnableGraph<TMat>>)source.PrefixAndTail(1).Map(p => Tuple.Create(key(p.Item1.First()), Source.Single(p.Item1.First()).Concat(p.Item2)))).ConcatSubstream();
+                ((SubFlow<Tuple<int, Source<int, Unit>>, TMat, IRunnableGraph<TMat>>)source.PrefixAndTail(1).Select(p => Tuple.Create(key(p.Item1.First()), Source.Single(p.Item1.First()).Concat(p.Item2)))).ConcatSubstream();
         }
     }
 }

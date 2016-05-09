@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="FlowMapAsyncUnorderedSpec .cs" company="Akka.NET Project">
+// <copyright file="FlowSelectAsyncSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -19,6 +19,7 @@ using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.TestKit.Internal;
+using Akka.Util;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
@@ -29,87 +30,91 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class FlowMapAsyncUnorderedSpec : AkkaSpec
+    public class FlowSelectAsyncSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
 
-        public FlowMapAsyncUnorderedSpec(ITestOutputHelper helper) : base(helper)
+        public FlowSelectAsyncSpec(ITestOutputHelper helper) : base(helper)
         {
             Materializer = ActorMaterializer.Create(Sys);
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_produce_future_elements_in_the_order_they_are_ready()
+        public void A_Flow_with_SelectAsync_must_produce_task_elements()
         {
             this.AssertAllStagesStopped(() =>
             {
                 var c = TestSubscriber.CreateManualProbe<int>(this);
-                var latch = Enumerable.Range(0, 4).Select(_ => new TestLatch(1)).ToArray();
-
-                Source.From(Enumerable.Range(0, 4)).MapAsyncUnordered(4, n => Task.Run(() =>
-                {
-                    latch[n].Ready(TimeSpan.FromSeconds(5));
-                    return n;
-                })).To(Sink.FromSubscriber(c)).Run(Materializer);
+                Source.From(Enumerable.Range(1, 3))
+                    .SelectAsync(4, Task.FromResult)
+                    .RunWith(Sink.FromSubscriber(c), Materializer);
                 var sub = c.ExpectSubscription();
-                sub.Request(5);
 
-                latch[1].CountDown();
-                c.ExpectNext(1);
+                sub.Request(2);
+                c.ExpectNext(1)
+                    .ExpectNext(2)
+                    .ExpectNoMsg(TimeSpan.FromMilliseconds(200));
+                sub.Request(2);
 
-                latch[3].CountDown();
-                c.ExpectNext(3);
-
-                latch[2].CountDown();
-                c.ExpectNext(2);
-
-                latch[0].CountDown();
-                c.ExpectNext(0);
-
-                c.ExpectComplete();
+                c.ExpectNext(3)
+                    .ExpectComplete();
             }, Materializer);
-            
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_not_run_more_futures_than_requested_elements()
+        public void A_Flow_with_SelectAsync_must_produce_task_elements_in_order()
         {
-            var probe = CreateTestProbe();
             var c = TestSubscriber.CreateManualProbe<int>(this);
-            Source.From(Enumerable.Range(1, 20))
-                .MapAsyncUnordered(4, n => Task.Run(() =>
+            Source.From(Enumerable.Range(1, 50))
+                .SelectAsync(4, i => Task.Run(()=>
                 {
-                    probe.Ref.Tell(n);
-                    return n;
+                    Thread.Sleep(ThreadLocalRandom.Current.Next(1, 10));
+                    return i;
                 }))
-                .To(Sink.FromSubscriber(c)).Run(Materializer);
+                .RunWith(Sink.FromSubscriber(c), Materializer);
             var sub = c.ExpectSubscription();
-            c.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
-            probe.ExpectNoMsg(TimeSpan.Zero);
-            sub.Request(1);
-            var got = new List<int> {c.ExpectNext()};
-            probe.ExpectMsgAllOf(1, 2, 3, 4, 5);
-            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
-            sub.Request(25);
-            probe.ExpectMsgAllOf(Enumerable.Range(6, 15).ToArray());
-            c.Within(TimeSpan.FromSeconds(3), () =>
-            {
-                Enumerable.Range(2, 19).ForEach(_ => got.Add(c.ExpectNext()));
-                return Unit.Instance;
-            });
-            got.ShouldAllBeEquivalentTo(Enumerable.Range(1, 20));
+            sub.Request(1000);
+            Enumerable.Range(1, 50).ForEach(n => c.ExpectNext(n));
             c.ExpectComplete();
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_signal_future_failure()
+        public void A_Flow_with_SelectAsync_must_not_run_more_futures_than_requested_parallelism()
+        {
+            var probe = CreateTestProbe();
+            var c = TestSubscriber.CreateManualProbe<int>(this);
+            Source.From(Enumerable.Range(1, 20))
+                .SelectAsync(8, n => Task.Run(() => 
+                {
+                    probe.Ref.Tell(n);
+                    return n;
+                }))
+                .RunWith(Sink.FromSubscriber(c), Materializer);
+            var sub = c.ExpectSubscription();
+            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+            sub.Request(1);
+            probe.ReceiveN(9).ShouldAllBeEquivalentTo(Enumerable.Range(1, 9));
+            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+            sub.Request(2);
+            probe.ReceiveN(2).ShouldAllBeEquivalentTo(Enumerable.Range(10, 2));
+            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+            sub.Request(10);
+            probe.ReceiveN(9).ShouldAllBeEquivalentTo(Enumerable.Range(12, 9));
+            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
+
+            Enumerable.Range(1, 13).ForEach(n => c.ExpectNext(n));
+            c.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
+        }
+
+        [Fact]
+        public void A_Flow_with_SelectAsync_must_signal_task_failure()
         {
             this.AssertAllStagesStopped(() =>
             {
                 var latch = new TestLatch(1);
                 var c = TestSubscriber.CreateManualProbe<int>(this);
                 Source.From(Enumerable.Range(1, 5))
-                    .MapAsyncUnordered(4, n => Task.Run(() =>
+                    .SelectAsync(4, n => Task.Run(() =>
                     {
                         if (n == 3)
                             throw new TestException("err1");
@@ -126,14 +131,14 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_signal_error_from_MapAsyncUnordered()
+        public void A_Flow_with_SelectAsync_must_signal_error_from_MapAsync()
         {
             this.AssertAllStagesStopped(() =>
             {
                 var latch = new TestLatch(1);
                 var c = TestSubscriber.CreateManualProbe<int>(this);
                 Source.From(Enumerable.Range(1, 5))
-                    .MapAsyncUnordered(4, n =>
+                    .SelectAsync(4, n =>
                     {
                         if (n == 3)
                             throw new TestException("err2");
@@ -153,30 +158,32 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_resume_after_future_failure()
+        public void A_Flow_with_SelectAsync_must_resume_after_task_failure()
         {
             this.AssertAllStagesStopped(() =>
             {
                 this.AssertAllStagesStopped(() =>
                 {
+                    var c = TestSubscriber.CreateManualProbe<int>(this);
                     Source.From(Enumerable.Range(1, 5))
-                        .MapAsyncUnordered(4, n => Task.Run(() =>
+                        .SelectAsync(4, n => Task.Run(() =>
                         {
                             if (n == 3)
                                 throw new TestException("err3");
                             return n;
                         }))
                         .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
-                        .RunWith(this.SinkProbe<int>(), Materializer)
-                        .Request(10)
-                        .ExpectNextUnordered(1, 2, 4, 5)
-                        .ExpectComplete();
+                        .RunWith(Sink.FromSubscriber(c), Materializer);
+                    var sub = c.ExpectSubscription();
+                    sub.Request(10);
+                    new[] {1, 2, 4, 5}.ForEach(i => c.ExpectNext(i));
+                    c.ExpectComplete();
                 }, Materializer);
             }, Materializer);
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_resume_after_multiple_failures()
+        public void A_Flow_with_SelectAsync_must_resume_after_multiple_failures()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -191,7 +198,7 @@ namespace Akka.Streams.Tests.Dsl
                 };
 
                 var t = Source.From(futures)
-                    .MapAsyncUnordered(2, x => x)
+                    .SelectAsync(2, x => x)
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                     .RunWith(Sink.First<string>(), Materializer);
 
@@ -201,12 +208,12 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_finish_after_future_failure()
+        public void A_Flow_with_SelectAsync_must_finish_after_task_failure()
         {
             this.AssertAllStagesStopped(() =>
             {
                 var t = Source.From(Enumerable.Range(1, 3))
-                    .MapAsyncUnordered(1, n => Task.Run(() =>
+                    .SelectAsync(1, n => Task.Run(() =>
                     {
                         if (n == 3)
                             throw new TestException("err3b");
@@ -222,29 +229,31 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_resume_when_MapAsyncUnordered_throws()
+        public void A_Flow_with_SelectAsync_must_resume_when_SelectAsync_throws()
         {
+            var c = TestSubscriber.CreateManualProbe<int>(this);
             Source.From(Enumerable.Range(1, 5))
-                .MapAsyncUnordered(4, n =>
+                .SelectAsync(4, n =>
                 {
                     if (n == 3)
                         throw new TestException("err4");
                     return Task.FromResult(n);
                 })
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
-                .RunWith(this.SinkProbe<int>(), Materializer)
-                .Request(10)
-                .ExpectNextUnordered(1, 2, 4, 5)
-                .ExpectComplete();
+                .RunWith(Sink.FromSubscriber(c), Materializer);
+            var sub = c.ExpectSubscription();
+            sub.Request(10);
+            new[] {1, 2, 4, 5}.ForEach(i => c.ExpectNext(i));
+            c.ExpectComplete();
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_signal_NPE_when_future_is_completed_with_null()
+        public void A_Flow_with_SelectAsync_must_signal_NPE_when_task_is_completed_with_null()
         {
             var c = TestSubscriber.CreateManualProbe<string>(this);
 
             Source.From(new[] {"a", "b"})
-                .MapAsyncUnordered(4, _ => Task.FromResult(null as string))
+                .SelectAsync(4, _ => Task.FromResult(null as string))
                 .To(Sink.FromSubscriber(c)).Run(Materializer);
 
             var sub = c.ExpectSubscription();
@@ -253,21 +262,22 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_resume_when_future_is_completed_with_null()
+        public void A_Flow_with_SelectAsync_must_resume_when_task_is_completed_with_null()
         {
             var c = TestSubscriber.CreateManualProbe<string>(this);
             Source.From(new[] { "a", "b", "c" })
-                .MapAsyncUnordered(4, s => s.Equals("b") ? Task.FromResult(null as string) : Task.FromResult(s))
+                .SelectAsync(4, s => s.Equals("b") ? Task.FromResult(null as string) : Task.FromResult(s))
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                 .To(Sink.FromSubscriber(c)).Run(Materializer);
             var sub = c.ExpectSubscription();
             sub.Request(10);
-            c.ExpectNextUnordered("a", "c");
+            c.ExpectNext("a");
+            c.ExpectNext("c");
             c.ExpectComplete();
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_handle_cancel_properly()
+        public void A_Flow_with_SelectAsync_must_handle_cancel_properly()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -275,7 +285,7 @@ namespace Akka.Streams.Tests.Dsl
                 var sub = TestSubscriber.CreateManualProbe<int>(this);
 
                 Source.FromPublisher(pub)
-                    .MapAsyncUnordered(4, _ => Task.FromResult(0))
+                    .SelectAsync(4, _ => Task.FromResult(0))
                     .RunWith(Sink.FromSubscriber(sub), Materializer);
 
                 var upstream = pub.ExpectSubscription();
@@ -288,7 +298,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_MapAsyncUnordered_must_not_run_more_futures_than_configured()
+        public void A_Flow_with_SelectAsync_must_not_run_more_futures_than_configured()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -329,6 +339,7 @@ namespace Akka.Streams.Tests.Dsl
                     if (counter.IncrementAndGet() > parallelism)
                         promise.SetException(new Exception("parallelism exceeded"));
                     else
+
                         queue.Enqueue(Tuple.Create(promise, DateTime.Now.Ticks));
                     return promise.Task;
                 };
@@ -337,8 +348,8 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     const int n = 10000;
                     var task = Source.From(Enumerable.Range(1, n))
-                        .MapAsyncUnordered(parallelism, _ => deferred())
-                        .RunFold(0, (c, _) => c + 1, Materializer);
+                        .SelectAsync(parallelism, _ => deferred())
+                        .RunAggregate(0, (c, _) => c + 1, Materializer);
 
                     task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                     task.Result.Should().Be(n);

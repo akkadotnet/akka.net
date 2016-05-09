@@ -116,8 +116,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var neverSource = Source.Maybe<int>().Filter(_ => false);
-                var counterSink = Sink.Fold<int, int>(0, (acc, _) => acc + 1);
+                var neverSource = Source.Maybe<int>().Where(_ => false);
+                var counterSink = Sink.Aggregate<int, int>(0, (acc, _) => acc + 1);
 
                 var t = neverSource.ToMaterialized(counterSink, Keep.Both).Run(Materializer);
                 var neverPromise = t.Item1;
@@ -292,7 +292,7 @@ namespace Akka.Streams.Tests.Dsl
                 if (a > 10000000)
                     return null;
                 return Tuple.Create(Tuple.Create(b, a + b), a);
-            }).RunFold(new LinkedList<int>(), (ints, i) =>
+            }).RunAggregate(new LinkedList<int>(), (ints, i) =>
             {
                 ints.AddFirst(i);
                 return ints;
@@ -311,7 +311,7 @@ namespace Akka.Streams.Tests.Dsl
                     if (a > 10000000)
                         throw new SystemException("expected");
                     return Tuple.Create(Tuple.Create(b, a + b), a);
-                }).RunFold(new LinkedList<int>(), (ints, i) =>
+                }).RunAggregate(new LinkedList<int>(), (ints, i) =>
                 {
                     ints.AddFirst(i);
                     return ints;
@@ -332,7 +332,7 @@ namespace Akka.Streams.Tests.Dsl
                 if (a > 10000000)
                     return Task.FromResult<Tuple<Tuple<int, int>, int>>(null);
                 return Task.FromResult(Tuple.Create(Tuple.Create(b, a + b), a));
-            }).RunFold(new LinkedList<int>(), (ints, i) =>
+            }).RunAggregate(new LinkedList<int>(), (ints, i) =>
             {
                 ints.AddFirst(i);
                 return ints;
@@ -349,7 +349,7 @@ namespace Akka.Streams.Tests.Dsl
                 return Tuple.Create(Tuple.Create(b, a + b), a);
             })
             .Take(36)
-            .RunFold(new LinkedList<int>(), (ints, i) =>
+            .RunAggregate(new LinkedList<int>(), (ints, i) =>
             {
                 ints.AddFirst(i);
                 return ints;

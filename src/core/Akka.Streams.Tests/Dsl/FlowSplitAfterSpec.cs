@@ -146,7 +146,7 @@ namespace Akka.Streams.Tests.Dsl
                 var task = Source.From(Enumerable.Range(1, 10))
                     .SplitAfter(_ => true)
                     .Lift()
-                    .MapAsync(1, s => s.RunWith(Sink.First<int>(), Materializer))
+                    .SelectAsync(1, s => s.RunWith(Sink.First<int>(), Materializer))
                     .Grouped(10)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();

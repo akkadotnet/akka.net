@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="FlowMapConcatSpec.cs" company="Akka.NET Project">
+// <copyright file="FlowSelectManySpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -20,19 +20,19 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class FlowMapConcatSpec : ScriptedTest
+    public class FlowSelectManySpec : ScriptedTest
     {
         private readonly ActorMaterializerSettings settings;
         private readonly ActorMaterializer materializer;
 
-        public FlowMapConcatSpec(ITestOutputHelper output) : base(output)
+        public FlowSelectManySpec(ITestOutputHelper output) : base(output)
         {
             settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(initialSize: 2, maxSize: 16);
             materializer = Sys.Materializer();
         }
 
         [Fact]
-        public void MapConcat_should_map_and_concat()
+        public void SelectMany_should_map_and_concat()
         {
             var script = Script.Create(
                 Tuple.Create<ICollection<int>, ICollection<int>>(new[] { 0 }, new int[0]),
@@ -44,11 +44,11 @@ namespace Akka.Streams.Tests.Dsl
 
             var random = ThreadLocalRandom.Current.Next(1, 10);
             for (int i = 0; i < random; i++)
-                RunScript(script, settings, a => a.MapConcat(x => Enumerable.Range(1, x).Select(_ => x)));
+                RunScript(script, settings, a => a.SelectMany(x => Enumerable.Range(1, x).Select(_ => x)));
         }
 
         [Fact]
-        public void MapConcat_should_map_and_concat_grouping_with_slow_downstream()
+        public void SelectMany_should_map_and_concat_grouping_with_slow_downstream()
         {
             var subscriber = this.CreateManualProbe<int>();
             var input = new[]
@@ -61,8 +61,8 @@ namespace Akka.Streams.Tests.Dsl
 
             Source
                 .From(input)
-                .MapConcat(x => x)
-                .Map(x =>
+                .SelectMany(x => x)
+                .Select(x =>
                 {
                     Thread.Sleep(10);
                     return x;
@@ -78,13 +78,13 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void MapConcat_should_be_able_to_resume()
+        public void SelectMany_should_be_able_to_resume()
         {
             var exception = new Exception("TEST");
 
             Source
                 .From(Enumerable.Range(1, 5))
-                .MapConcat(x =>
+                .SelectMany(x =>
                 {
                     if (x == 3) throw exception;
                     else return new[] {x};

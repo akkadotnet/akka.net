@@ -44,10 +44,10 @@ namespace Akka.Streams.Tests.Dsl
                 source1
                     .Merge(source2)
                     .Merge(source3)
-                    .Map(i => i*2)
-                    .Map(i => i/2)
-                    .Map(i => i + 1)
-                    .RunWith(Sink.FromSubscriber(probe), Materializer);
+                    .Select(i => i*2)
+                    .Select(i => i/2)
+                    .Select(i => i+1)
+                .RunWith(Sink.FromSubscriber(probe), Materializer);
 
                 var subscription = probe.ExpectSubscription();
 

@@ -82,9 +82,9 @@ namespace Akka.Streams.Dsl
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        public static Flow<T, TOut, TMat> Map<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow, Func<TIn, TOut> mapper)
+        public static Flow<T, TOut, TMat> Select<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow, Func<TIn, TOut> mapper)
         {
-            return (Flow<T, TOut, TMat>)InternalFlowOperations.Map(flow, mapper);
+            return (Flow<T, TOut, TMat>)InternalFlowOperations.Select(flow, mapper);
         }
         
         /// <summary>
@@ -108,9 +108,9 @@ namespace Akka.Streams.Dsl
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        public static Flow<T, TOut, TMat> MapConcat<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow, Func<TIn, IEnumerable<TOut>> mapConcater)
+        public static Flow<T, TOut, TMat> SelectMany<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow, Func<TIn, IEnumerable<TOut>> mapConcater)
         {
-            return (Flow<T, TOut, TMat>)InternalFlowOperations.MapConcat(flow, mapConcater);
+            return (Flow<T, TOut, TMat>)InternalFlowOperations.SelectMany(flow, mapConcater);
         }
 
         /// <summary>
@@ -118,7 +118,7 @@ namespace Akka.Streams.Dsl
         /// then flattened into the output stream. The transformation is meant to be stateful,
         /// which is enabled by creating the transformation function <paramref name="mapConcaterFactory"/> a new for every materialization —
         /// the returned function will typically close over mutable objects to store state between
-        /// invocations. For the stateless variant see <see cref="FlowOperations.MapConcat{T,TIn,TOut,TMat}"/>.
+        /// invocations. For the stateless variant see <see cref="SelectMany{T,TIn,TOut,TMat}"/>.
         /// 
         /// The returned Enumerable MUST NOT contain null values,
         /// as they are illegal as stream elements - according to the Reactive Streams specification.
@@ -137,19 +137,19 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Cancels when downstream cancels
         /// </para>
-        /// See also <see cref="FlowOperations.MapConcat{T,TIn,TOut,TMat}"/>
+        /// See also <see cref="SelectMany{T,TIn,TOut,TMat}"/>
         /// </summary>
-        public static Flow<T, TOut, TMat> StatefulMapConcat<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow,
+        public static Flow<T, TOut, TMat> StatefulSelectMany<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow,
             Func<Func<TIn, IEnumerable<TOut>>> mapConcaterFactory)
         {
-            return (Flow<T, TOut, TMat>) InternalFlowOperations.StatefulMapConcat(flow, mapConcaterFactory);
+            return (Flow<T, TOut, TMat>) InternalFlowOperations.StatefulSelectMany(flow, mapConcaterFactory);
         }
 
         /// <summary>
         /// Transform this stream by applying the given function <paramref name="asyncMapper"/> to each of the elements
         /// as they pass through this processing step. The function returns a <see cref="Task{TOut}"/> and the
         /// value of that task will be emitted downstream. The number of tasks
-        /// that shall run in parallel is given as the first argument to <see cref="MapAsync{T,TIn,TOut,TMat}"/>.
+        /// that shall run in parallel is given as the first argument to <see cref="SelectAsync{T,TIn,TOut,TMat}"/>.
         /// These tasks may complete in any order, but the elements that
         /// are emitted downstream are in the same order as received from upstream.
         /// 
@@ -174,10 +174,10 @@ namespace Akka.Streams.Dsl
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        /// <seealso cref="MapAsyncUnordered{T,TIn,TOut,TMat}"/>
-        public static Flow<T, TOut, TMat> MapAsync<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow, int parallelism, Func<TIn, Task<TOut>> asyncMapper)
+        /// <seealso cref="SelectAsyncUnordered{T,TIn,TOut,TMat}"/>
+        public static Flow<T, TOut, TMat> SelectAsync<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow, int parallelism, Func<TIn, Task<TOut>> asyncMapper)
         {
-            return (Flow<T, TOut, TMat>)InternalFlowOperations.MapAsync(flow, parallelism, asyncMapper);
+            return (Flow<T, TOut, TMat>)InternalFlowOperations.SelectAsync(flow, parallelism, asyncMapper);
         }
 
         /// <summary>
@@ -208,10 +208,10 @@ namespace Akka.Streams.Dsl
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        /// <seealso cref="MapAsync{T,TIn,TOut,TMat}"/>
-        public static Flow<T, TOut, TMat> MapAsyncUnordered<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow, int parallelism, Func<TIn, Task<TOut>> asyncMapper)
+        /// <seealso cref="SelectAsync{T,TIn,TOut,TMat}"/>
+        public static Flow<T, TOut, TMat> SelectAsyncUnordered<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow, int parallelism, Func<TIn, Task<TOut>> asyncMapper)
         {
-            return (Flow<T, TOut, TMat>)InternalFlowOperations.MapAsyncUnordered(flow, parallelism, asyncMapper);
+            return (Flow<T, TOut, TMat>)InternalFlowOperations.SelectAsyncUnordered(flow, parallelism, asyncMapper);
         }
 
         /// <summary>
@@ -227,9 +227,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static Flow<TIn, TOut, TMat> Filter<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Predicate<TOut> predicate)
+        public static Flow<TIn, TOut, TMat> Where<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Predicate<TOut> predicate)
         {
-            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.Filter(flow, predicate);
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.Where(flow, predicate);
         }
 
         /// <summary>
@@ -245,9 +245,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static Flow<TIn, TOut, TMat> FilterNot<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Predicate<TOut> predicate)
+        public static Flow<TIn, TOut, TMat> WhereNot<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Predicate<TOut> predicate)
         {
-            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.FilterNot(flow, predicate);
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.WhereNot(flow, predicate);
         }
 
         /// <summary>
@@ -284,9 +284,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static Flow<TIn, TOut, TMat> DropWhile<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Predicate<TOut> predicate)
+        public static Flow<TIn, TOut, TMat> SkipWhile<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Predicate<TOut> predicate)
         {
-            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.DropWhile(flow, predicate);
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.SkipWhile(flow, predicate);
         }
 
         /// <summary>
@@ -405,7 +405,7 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Similar to <see cref="Fold{TIn,TOut}"/> but is not a terminal operation,
+        /// Similar to <see cref="Aggregate{TIn,TOut1,TOut2,TMat}"/> but is not a terminal operation,
         /// emits its current value which starts at <paramref name="zero"/> and then
         /// applies the current and next value to the given function <paramref name="scan"/>,
         /// emitting the next current value.
@@ -444,13 +444,13 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static Flow<TIn, TOut2, TMat> Fold<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow, TOut2 zero, Func<TOut2, TOut1, TOut2> fold)
+        public static Flow<TIn, TOut2, TMat> Aggregate<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow, TOut2 zero, Func<TOut2, TOut1, TOut2> fold)
         {
-            return (Flow<TIn, TOut2, TMat>)InternalFlowOperations.Fold(flow, zero, fold);
+            return (Flow<TIn, TOut2, TMat>)InternalFlowOperations.Aggregate(flow, zero, fold);
         }
 
         /// <summary>
-        /// Similar to <see cref="Fold{TIn,TOut1,TOut2,TMat}"/> but uses first element as zero element.
+        /// Similar to <see cref="Aggregate{TIn,TOut1,TOut2,TMat}"/> but uses first element as zero element.
         /// Applies the given function <paramref name="reduce"/> towards its current and next value,
         /// yielding the next current value. 
         /// <para>
@@ -462,9 +462,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static Flow<TIn, TOut, TMat> Reduce<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Func<TOut, TOut, TOut> reduce)
+        public static Flow<TIn, TOut, TMat> Sum<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Func<TOut, TOut, TOut> reduce)
         {
-            return (Flow<TIn, TOut, TMat>) InternalFlowOperations.Reduce(flow, reduce);
+            return (Flow<TIn, TOut, TMat>) InternalFlowOperations.Sum(flow, reduce);
         }
 
         /// <summary>
@@ -580,9 +580,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static Flow<TIn, TOut, TMat> Drop<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, long n)
+        public static Flow<TIn, TOut, TMat> Skip<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, long n)
         {
-            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.Drop(flow, n);
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.Skip(flow, n);
         }
 
         /// <summary>
@@ -596,9 +596,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static Flow<TIn, TOut, TMat> DropWithin<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, TimeSpan duration)
+        public static Flow<TIn, TOut, TMat> SkipWithin<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, TimeSpan duration)
         {
-            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.DropWithin(flow, duration);
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.SkipWithin(flow, duration);
         }
 
         /// <summary>
@@ -1009,9 +1009,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static Flow<TIn, TOut2, TMat> FlatMapConcat<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow, Func<TOut1, IGraph<SourceShape<TOut2>, TMat>> flatten)
+        public static Flow<TIn, TOut2, TMat> ConcatMany<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow, Func<TOut1, IGraph<SourceShape<TOut2>, TMat>> flatten)
         {
-            return (Flow<TIn, TOut2, TMat>)InternalFlowOperations.FlatMapConcat(flow, flatten);
+            return (Flow<TIn, TOut2, TMat>)InternalFlowOperations.ConcatMany(flow, flatten);
         }
 
         /// <summary>
@@ -1027,9 +1027,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        public static Flow<TIn, TOut2, TMat> FlatMapMerge<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow, int breadth, Func<TOut1, IGraph<SourceShape<TOut2>, TMat>> flatten)
+        public static Flow<TIn, TOut2, TMat> MergeMany<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow, int breadth, Func<TOut1, IGraph<SourceShape<TOut2>, TMat>> flatten)
         {
-            return (Flow<TIn, TOut2, TMat>)InternalFlowOperations.FlatMapMerge(flow, breadth, flatten);
+            return (Flow<TIn, TOut2, TMat>)InternalFlowOperations.MergeMany(flow, breadth, flatten);
         }
 
         /// <summary>

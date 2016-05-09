@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FlowGraphCompileSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
@@ -274,7 +274,7 @@ namespace Akka.Streams.Tests.Dsl
 
 
                 b.From(source).To(unzip.In);
-                b.From(unzip.Out0).Via(Flow.Create<int>().Map(x => x * 2)).To(zip.In0);
+                b.From(unzip.Out0).Via(Flow.Create<int>().Select(x => x * 2)).To(zip.In0);
                 b.From(unzip.Out1).To(zip.In1);
                 b.From(zip.Out).To(sink);
 
@@ -340,7 +340,7 @@ namespace Akka.Streams.Tests.Dsl
                 //b.From(s2).Via(Flow.Create<Apple>()).To(merge.In(1));
 
                 b.From(merge.Out)
-                    .Via(Flow.Create<IFruit>().Map(x => x))
+                    .Via(Flow.Create<IFruit>().Select(x => x))
                     .To(Sink.FromSubscriber(TestSubscriber.CreateManualProbe<IFruit>(this)));
 
                 return ClosedShape.Instance;

@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="BidiFlow.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
@@ -83,7 +83,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static BidiFlow<TIn1, TOut1, TIn2, TOut2, Unit> FromFunction<TIn1, TOut1, TIn2, TOut2>(Func<TIn1, TOut1> outbound, Func<TIn2, TOut2> inbound)
         {
-            return FromFlows(Flow.Create<TIn1>().Map(outbound), Flow.Create<TIn2>().Map(inbound));
+            return FromFlows(Flow.Create<TIn1>().Select(outbound), Flow.Create<TIn2>().Select(inbound));
         }
 
         /// <summary>
