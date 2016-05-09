@@ -40,7 +40,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsync_must_produce_future_elements()
+        public void A_Flow_with_SelectAsync_must_produce_task_elements()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -62,7 +62,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsync_must_produce_future_elements_in_order()
+        public void A_Flow_with_SelectAsync_must_produce_task_elements_in_order()
         {
             var c = TestSubscriber.CreateManualProbe<int>(this);
             Source.From(Enumerable.Range(1, 50))
@@ -107,7 +107,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsync_must_signal_future_failure()
+        public void A_Flow_with_SelectAsync_must_signal_task_failure()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -158,7 +158,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsync_must_resume_after_future_failure()
+        public void A_Flow_with_SelectAsync_must_resume_after_task_failure()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -208,7 +208,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsync_must_finish_after_future_failure()
+        public void A_Flow_with_SelectAsync_must_finish_after_task_failure()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -248,7 +248,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsync_must_signal_NPE_when_future_is_completed_with_null()
+        public void A_Flow_with_SelectAsync_must_signal_NPE_when_task_is_completed_with_null()
         {
             var c = TestSubscriber.CreateManualProbe<string>(this);
 
@@ -262,7 +262,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsync_must_resume_when_future_is_completed_with_null()
+        public void A_Flow_with_SelectAsync_must_resume_when_task_is_completed_with_null()
         {
             var c = TestSubscriber.CreateManualProbe<string>(this);
             Source.From(new[] { "a", "b", "c" })

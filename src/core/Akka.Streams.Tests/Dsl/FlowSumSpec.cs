@@ -31,16 +31,16 @@ namespace Akka.Streams.Tests.Dsl
         private static int Expected => Input.Sum();
         private static Source<int, Unit> InputSource => Source.From(Input).Where(_ => true).Select(x => x);
 
-        private static Source<int, Unit> ReduceSource
+        private static Source<int, Unit> SumSource
             => InputSource.Sum((i, i1) => i + i1).Where(_ => true).Select(x => x);
 
-        private static Flow<int, int, Unit> ReduceFlow
+        private static Flow<int, int, Unit> SumFlow
             => Flow.Create<int>().Where(_ => true).Select(x => x).Sum((i, i1) => i + i1).Where(_ => true).Select(x => x);
 
-        private static Sink<int, Task<int>> ReduceSink => Sink.Sum<int>((i, i1) => i + i1);
+        private static Sink<int, Task<int>> SumSink => Sink.Sum<int>((i, i1) => i + i1);
 
         [Fact]
-        public void A_Sum_must_work_when_using_Source_RunReduce()
+        public void A_Sum_must_work_when_using_Source_RunSum()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -51,21 +51,21 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Sum_must_work_when_using_Source_Reduce()
+        public void A_Sum_must_work_when_using_Source_Sum()
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = ReduceSource.RunWith(Sink.First<int>(), Materializer);
+                var t = SumSource.RunWith(Sink.First<int>(), Materializer);
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 t.Result.Should().Be(Expected);
             }, Materializer);
         }
         [Fact]
-        public void A_Sum_must_work_when_using_Sink_Reduce()
+        public void A_Sum_must_work_when_using_Sink_Sum()
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = InputSource.RunWith(ReduceSink, Materializer);
+                var t = InputSource.RunWith(SumSink, Materializer);
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 t.Result.Should().Be(Expected);
 
@@ -73,22 +73,22 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Sum_must_work_when_using_Flow_Reduce()
+        public void A_Sum_must_work_when_using_Flow_Sum()
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = InputSource.Via(ReduceFlow).RunWith(Sink.First<int>(), Materializer);
+                var t = InputSource.Via(SumFlow).RunWith(Sink.First<int>(), Materializer);
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 t.Result.Should().Be(Expected);
             }, Materializer);
         }
 
         [Fact]
-        public void A_Sum_must_work_when_using_Source_Sum_and_Flow_Sum_and_Sink_Reduce()
+        public void A_Sum_must_work_when_using_Source_Sum_and_Flow_Sum_and_Sink_Sum()
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = ReduceSource.Via(ReduceFlow).RunWith(ReduceSink, Materializer);
+                var t = SumSource.Via(SumFlow).RunWith(SumSink, Materializer);
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 t.Result.Should().Be(Expected);
 
@@ -113,7 +113,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Sum_must_complete_future_with_failure_when_reducing_function_throws()
+        public void A_Sum_must_complete_task_with_failure_when_reducing_function_throws()
         {
             this.AssertAllStagesStopped(() =>
             {

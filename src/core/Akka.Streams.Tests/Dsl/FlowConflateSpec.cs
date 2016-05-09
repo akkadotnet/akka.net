@@ -181,7 +181,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Conflate_must_work_with_a_buffer_and_fold()
+        public void Conflate_must_work_with_a_buffer_and_aggregate()
         {
             var future =
                 Source.From(Enumerable.Range(1, 50))

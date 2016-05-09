@@ -40,7 +40,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Intersperse_must_inject_element_between_existing_elements_when_downstream_is_fold()
+        public void A_Intersperse_must_inject_element_between_existing_elements_when_downstream_is_aggregate()
         {
             var concated =
                 Source.From(new[] { 1, 2, 3 })

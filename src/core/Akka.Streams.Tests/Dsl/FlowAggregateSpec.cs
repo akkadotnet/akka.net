@@ -35,7 +35,7 @@ namespace Akka.Streams.Tests.Dsl
             InputSource.Aggregate(0, (sum, i) => sum + i).Where(_ => true).Select(x => x);
 
         private static Flow<int, int, Unit> FoldFlow =>
-            FlowOperations.Select(Flow.Create<int>().Where(_ => true).Select(x => x).Aggregate(0, (sum, i) => sum + i).Where(_ => true), x => x);
+            Flow.Create<int>().Where(_ => true).Select(x => x).Aggregate(0, (sum, i) => sum + i).Where(_ => true).Select(x => x);
 
         private static Sink<int, Task<int>> FoldSink => Sink.Aggregate<int, int>(0, (sum, i) => sum + i);
 

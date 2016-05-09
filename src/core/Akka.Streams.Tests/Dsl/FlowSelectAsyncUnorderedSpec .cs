@@ -39,7 +39,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsyncUnordered_must_produce_future_elements_in_the_order_they_are_ready()
+        public void A_Flow_with_SelectAsyncUnordered_must_produce_task_elements_in_the_order_they_are_ready()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -102,7 +102,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsyncUnordered_must_signal_future_failure()
+        public void A_Flow_with_SelectAsyncUnordered_must_signal_task_failure()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -126,7 +126,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsyncUnordered_must_signal_error_from_MapAsyncUnordered()
+        public void A_Flow_with_SelectAsyncUnordered_must_signal_error_from_SelectAsyncUnordered()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -153,7 +153,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsyncUnordered_must_resume_after_future_failure()
+        public void A_Flow_with_SelectAsyncUnordered_must_resume_after_task_failure()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -201,7 +201,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsyncUnordered_must_finish_after_future_failure()
+        public void A_Flow_with_SelectAsyncUnordered_must_finish_after_task_failure()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -239,7 +239,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsyncUnordered_must_signal_NPE_when_future_is_completed_with_null()
+        public void A_Flow_with_SelectAsyncUnordered_must_signal_NPE_when_task_is_completed_with_null()
         {
             var c = TestSubscriber.CreateManualProbe<string>(this);
 
@@ -253,7 +253,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_SelectAsyncUnordered_must_resume_when_future_is_completed_with_null()
+        public void A_Flow_with_SelectAsyncUnordered_must_resume_when_task_is_completed_with_null()
         {
             var c = TestSubscriber.CreateManualProbe<string>(this);
             Source.From(new[] { "a", "b", "c" })

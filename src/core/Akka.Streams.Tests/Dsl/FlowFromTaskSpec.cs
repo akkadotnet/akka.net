@@ -44,7 +44,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_based_on_a_Task_must_produce_error_from_already_failed_Future()
+        public void A_Flow_based_on_a_Task_must_produce_error_from_already_failed_Task()
         {
             this.AssertAllStagesStopped(() =>
             {

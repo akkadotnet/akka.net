@@ -30,7 +30,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Skip_must_drop()
+        public void A_Skip_must_skip()
         {
             Func<long, Script<int, int>> script =
                 d => Script.Create(RandomTestRange(Sys)
@@ -45,7 +45,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Skip_must_not_drop_anything_for_negative_n()
+        public void A_Skip_must_not_skip_anything_for_negative_n()
         {
             var probe = TestSubscriber.CreateManualProbe<int>(this);
             Source.From(new[] {1, 2, 3}).Skip(-1).To(Sink.FromSubscriber(probe)).Run(Materializer);

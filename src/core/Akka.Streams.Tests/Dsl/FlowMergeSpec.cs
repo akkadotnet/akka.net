@@ -41,12 +41,13 @@ namespace Akka.Streams.Tests.Dsl
                 var source3 = Source.From(Enumerable.Range(4, 6));
                 var probe = TestSubscriber.CreateManualProbe<int>(this);
 
-                SourceOperations.Select(source1
-                        .Merge(source2)
-                        .Merge(source3)
-                        .Select(i => i*2)
-                        .Select(i => i/2), i => i + 1)
-                    .RunWith(Sink.FromSubscriber(probe), Materializer);
+                source1
+                    .Merge(source2)
+                    .Merge(source3)
+                    .Select(i => i*2)
+                    .Select(i => i/2)
+                    .Select(i => i+1)
+                .RunWith(Sink.FromSubscriber(probe), Materializer);
 
                 var subscription = probe.ExpectSubscription();
 

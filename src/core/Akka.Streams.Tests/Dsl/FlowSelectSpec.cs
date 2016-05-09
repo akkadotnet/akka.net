@@ -32,7 +32,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Select_should_map()
+        public void Select_should_select()
         {
 
             var script = Script.Create(Enumerable.Range(1, ThreadLocalRandom.Current.Next(1, 10)).Select(_ =>

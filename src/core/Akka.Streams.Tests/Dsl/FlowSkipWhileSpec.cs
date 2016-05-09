@@ -27,7 +27,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_SkipWhile_must_drop_while_predicate_is_true()
+        public void A_SkipWhile_must_skip_while_predicate_is_true()
         {
             this.AssertAllStagesStopped(() =>
             {
