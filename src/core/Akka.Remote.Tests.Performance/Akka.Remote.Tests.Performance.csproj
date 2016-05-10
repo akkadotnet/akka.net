@@ -38,8 +38,8 @@
       <HintPath>..\..\packages\Google.ProtocolBuffers.2.4.1.555\lib\net40\Google.ProtocolBuffers.Serialization.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="NBench, Version=0.1.5.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\NBench.0.1.5\lib\net45\NBench.dll</HintPath>
+    <Reference Include="NBench, Version=0.2.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\NBench.0.2.2\lib\net45\NBench.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />

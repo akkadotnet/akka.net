@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.24720.0
+VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{69279534-1DBA-4115-BF8B-03F77FC8125E}"
 EndProject
@@ -260,6 +260,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Query", "core\Akka.Persistence.Query\Akka.Persistence.Query.csproj", "{92AB2788-E008-40D0-8B54-0C95B3CF3404}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Query.Tests", "core\Akka.Persistence.Query.Tests\Akka.Persistence.Query.Tests.csproj", "{C01FE575-10B5-4072-8EF9-66FA7CD86F6F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Streams.Tests.Performance", "core\Akka.Streams.Tests.Performance\Akka.Streams.Tests.Performance.csproj", "{F5934093-4B7C-4303-9E27-60B4021C05B2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -982,6 +984,14 @@ Global
 		{C01FE575-10B5-4072-8EF9-66FA7CD86F6F}.Release Mono|Any CPU.Build.0 = Release|Any CPU
 		{C01FE575-10B5-4072-8EF9-66FA7CD86F6F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C01FE575-10B5-4072-8EF9-66FA7CD86F6F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F5934093-4B7C-4303-9E27-60B4021C05B2}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
+		{F5934093-4B7C-4303-9E27-60B4021C05B2}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
+		{F5934093-4B7C-4303-9E27-60B4021C05B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F5934093-4B7C-4303-9E27-60B4021C05B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F5934093-4B7C-4303-9E27-60B4021C05B2}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
+		{F5934093-4B7C-4303-9E27-60B4021C05B2}.Release Mono|Any CPU.Build.0 = Release|Any CPU
+		{F5934093-4B7C-4303-9E27-60B4021C05B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F5934093-4B7C-4303-9E27-60B4021C05B2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1099,5 +1109,6 @@ Global
 		{B32850D2-E9CB-4638-83A4-164907595E56} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
 		{92AB2788-E008-40D0-8B54-0C95B3CF3404} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
 		{C01FE575-10B5-4072-8EF9-66FA7CD86F6F} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
+		{F5934093-4B7C-4303-9E27-60B4021C05B2} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
 	EndGlobalSection
 EndGlobal

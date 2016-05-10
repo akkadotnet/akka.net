@@ -20,7 +20,7 @@ namespace Akka.Streams.Implementation.Fusing
 {
     public static class GraphStages
     {
-        internal static SimpleLinearGraphStage<T> Identity<T>() => Implementation.Fusing.Identity<T>.Instance;
+        public static SimpleLinearGraphStage<T> Identity<T>() => Implementation.Fusing.Identity<T>.Instance;
 
         internal static GraphStageWithMaterializedValue<FlowShape<T, T>, Task<Unit>> TerminationWatcher<T>()
             => Implementation.Fusing.TerminationWatcher<T>.Instance;
@@ -73,7 +73,7 @@ namespace Akka.Streams.Implementation.Fusing
         public override string ToString() => Stage.ToString();
     }
 
-    internal abstract class SimpleLinearGraphStage<T> : GraphStage<FlowShape<T, T>>
+    public abstract class SimpleLinearGraphStage<T> : GraphStage<FlowShape<T, T>>
     {
         public readonly Inlet<T> Inlet;
         public readonly Outlet<T> Outlet;

@@ -263,7 +263,7 @@ namespace Akka.Streams.Implementation.IO
         public sealed override int ReadByte()
         {
             var a = new byte[1];
-            return Read(a, 0, 1) != -1 ? a[0] : -1;
+            return Read(a, 0, 1) != 0 ? a[0] : -1;
         }
 
         public override int Read(byte[] buffer, int offset, int count)
@@ -276,7 +276,7 @@ namespace Akka.Streams.Implementation.IO
             return ExecuteIfNotClosed(() =>
             {
                 if (!_isStageAlive)
-                    return -1;
+                    return 0;
 
                 if (_detachedChunk != null)
                     return ReadBytes(buffer, offset, count);
@@ -294,7 +294,7 @@ namespace Akka.Streams.Implementation.IO
                 if (msg is Finished)
                 {
                     _isStageAlive = false;
-                    return -1;
+                    return 0;
                 }
 
                 _isStageAlive = false;
