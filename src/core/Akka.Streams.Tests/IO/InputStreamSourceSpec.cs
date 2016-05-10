@@ -88,7 +88,7 @@ namespace Akka.Streams.Tests.IO
             public override int Read(byte[] buffer, int offset, int count)
             {
                 if (_buf.Count == 0)
-                    return -1;
+                    return 0;
 
                 _buf.CopyTo(buffer);
                 _buf = new List<byte>();
@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.IO
                 }
 
                 _latch.Ready();
-                return -1;
+                return 0;
             }
 
             public override void Write(byte[] buffer, int offset, int count)

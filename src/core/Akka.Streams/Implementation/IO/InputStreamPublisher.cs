@@ -92,10 +92,10 @@ namespace Akka.Streams.Implementation.IO
             {
                 // blocking read
                 var readBytes = _inputstream.Read(_bytes, 0, _chunkSize);
-                if (readBytes == -1)
+                if (readBytes == 0)
                 {
                     //had nothing to read into this chunk
-                    _log.Debug("No more bytes available to read (got -1 from read)");
+                    _log.Debug("No more bytes available to read (got 0 from read)");
                     OnCompleteThenStop();
                 }
                 else
