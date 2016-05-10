@@ -25,11 +25,11 @@ namespace Akka.Streams.Tests.Dsl
         {
         }
 
-        protected override Fixture CreateFixture(GraphDsl.Builder<Unit> builder) => new ZipFixture(builder);
+        protected override Fixture CreateFixture(GraphDsl.Builder<NotUsed> builder) => new ZipFixture(builder);
 
         private sealed class ZipFixture : Fixture
         {
-            public ZipFixture(GraphDsl.Builder<Unit> builder) : base(builder)
+            public ZipFixture(GraphDsl.Builder<NotUsed> builder) : base(builder)
             {
                 var zip = builder.Add(new Zip<int, int>());
                 Left = zip.In0;
@@ -51,7 +51,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var probe = TestSubscriber.CreateManualProbe<Tuple<int, string>>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     var zip = b.Add(new Zip<int, string>());
                     var source1 = Source.From(Enumerable.Range(1, 4));

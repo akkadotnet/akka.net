@@ -29,11 +29,11 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        private static Source<int, Unit> Source1 => Source.From(Enumerable.Range(0, 4));
+        private static Source<int, NotUsed> Source1 => Source.From(Enumerable.Range(0, 4));
 
-        private static IGraph<FlowShape<int, string>, Unit> PartialGraph()
+        private static IGraph<FlowShape<int, string>, NotUsed> PartialGraph()
         {
-            return GraphDsl.Create<FlowShape<int, string>, Unit>(b =>
+            return GraphDsl.Create<FlowShape<int, string>, NotUsed>(b =>
             {
                 var source2 = Source.From(Enumerable.Range(4, 6));
                 var source3 = Source.Empty<int>();
@@ -127,7 +127,7 @@ namespace Akka.Streams.Tests.Dsl
                 Flow.FromGraph(GraphDsl.Create(Flow.Create<int>().Select(x=>x*2),
                     (b, importFlow) => new FlowShape<int, int>(importFlow.Inlet, importFlow.Outlet)));
 
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape,Unit>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape,NotUsed>(b =>
             {
                 var source = Source.From(Enumerable.Range(1, 5));
                 b.From(source).Via(flow).Via(flow).To(Sink.FromSubscriber(probe));
@@ -225,7 +225,7 @@ namespace Akka.Streams.Tests.Dsl
                 var merge = b.Add(new Merge<int>(2));
                 b.From(s1.Outlet).To(merge.In(0));
                 b.From(merge.Out)
-                    .To(Sink.FromSubscriber(probe).MapMaterializedValue(_ => Tuple.Create(Unit.Instance, Unit.Instance)));
+                    .To(Sink.FromSubscriber(probe).MapMaterializedValue(_ => Tuple.Create(NotUsed.Instance, NotUsed.Instance)));
                 b.From(s2.Outlet).Via(Flow.Create<int>().Select(x => x*10)).To(merge.In(1));
                 return ClosedShape.Instance;
             })).Run(Materializer);
@@ -274,7 +274,7 @@ namespace Akka.Streams.Tests.Dsl
                     (b, partial, flow) =>
                     {
                         var s = Sink.FromSubscriber(probe)
-                            .MapMaterializedValue(_ => Tuple.Create(Unit.Instance, Unit.Instance));
+                            .MapMaterializedValue(_ => Tuple.Create(NotUsed.Instance, NotUsed.Instance));
 
                         b.From(flow.Outlet).To(partial.Inlet);
                         b.From(partial.Outlet).Via(Flow.Create<string>().Select(int.Parse)).To(s);

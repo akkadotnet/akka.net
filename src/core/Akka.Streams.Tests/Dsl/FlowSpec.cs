@@ -58,13 +58,13 @@ namespace Akka.Streams.Tests.Dsl
         [InlineData("identity2", 4)]
         public void A_flow_must_request_initial_elements_from_upstream(string name, int n)
         {
-            ChainSetup<int, int, Unit> setup;
+            ChainSetup<int, int, NotUsed> setup;
 
             if (name.Equals("identity"))
-                setup = new ChainSetup<int, int, Unit>(Identity, Settings.WithInputBuffer(n, n),
+                setup = new ChainSetup<int, int, NotUsed>(Identity, Settings.WithInputBuffer(n, n),
                     (settings, factory) => ActorMaterializer.Create(factory, settings), ToPublisher, this);
             else
-                setup = new ChainSetup<int, int, Unit>(Identity2, Settings.WithInputBuffer(n, n),
+                setup = new ChainSetup<int, int, NotUsed>(Identity2, Settings.WithInputBuffer(n, n),
                     (settings, factory) => ActorMaterializer.Create(factory, settings), ToPublisher, this);
 
             setup.Upstream.ExpectRequest(setup.UpstreamSubscription, setup.Settings.MaxInputBufferSize);
@@ -73,7 +73,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_must_request_more_elements_from_upstream_when_downstream_requests_more_elements()
         {
-            var setup = new ChainSetup<string, string, Unit>(Identity, Settings,
+            var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings,
                 (settings, factory) => ActorMaterializer.Create(factory, settings), ToPublisher, this);
             setup.Upstream.ExpectRequest(setup.UpstreamSubscription, Settings.MaxInputBufferSize);
             setup.DownstreamSubscription.Request(1);
@@ -94,7 +94,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_must_deliver_events_when_publisher_sends_elements_and_then_completes()
         {
-            var setup = new ChainSetup<string, string, Unit>(Identity, Settings,
+            var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings,
                 (settings, factory) => ActorMaterializer.Create(factory, settings), ToPublisher, this);
             setup.DownstreamSubscription.Request(1);
             setup.UpstreamSubscription.SendNext("test");
@@ -106,7 +106,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_must_deliver_complete_signal_when_publisher_immediately_completes()
         {
-            var setup = new ChainSetup<string, string, Unit>(Identity, Settings,
+            var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings,
                   (settings, factory) => ActorMaterializer.Create(factory, settings), ToPublisher, this);
             setup.UpstreamSubscription.SendComplete();
             setup.Downstream.ExpectComplete();
@@ -115,7 +115,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_must_deliver_error_signal_when_publisher_immediately_fails()
         {
-            var setup = new ChainSetup<string, string, Unit>(Identity, Settings,
+            var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings,
                 (settings, factory) => ActorMaterializer.Create(factory, settings), ToPublisher, this);
             var weirdError = new SystemException("weird test exception");
             setup.UpstreamSubscription.SendError(weirdError);
@@ -125,7 +125,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_must_cancel_upstream_when_single_subscriber_cancels_subscription_while_receiving_data()
         {
-            var setup = new ChainSetup<string, string, Unit>(Identity, Settings.WithInputBuffer(1, 1),
+            var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings), ToPublisher, this);
             setup.DownstreamSubscription.Request(5);
             setup.UpstreamSubscription.ExpectRequest(1);
@@ -301,24 +301,24 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_must_be_covariant()
         {
-            Source<IFruit, Unit> f1 = Source.From<IFruit>(Apples());
+            Source<IFruit, NotUsed> f1 = Source.From<IFruit>(Apples());
             IPublisher<IFruit> p1 = Source.From<IFruit>(Apples()).RunWith(Sink.AsPublisher<IFruit>(false), Materializer);
-            SubFlow<IFruit, Unit, IRunnableGraph<Unit>> f2 =
+            SubFlow<IFruit, NotUsed, IRunnableGraph<NotUsed>> f2 =
                 Source.From<IFruit>(Apples()).SplitWhen(_ => true);
-            SubFlow<IFruit, Unit, IRunnableGraph<Unit>> f3 =
+            SubFlow<IFruit, NotUsed, IRunnableGraph<NotUsed>> f3 =
                 Source.From<IFruit>(Apples()).GroupBy(2, _ => true);
-            Source<Tuple<IImmutableList<IFruit>, Source<IFruit, Unit>>, Unit> f4 =
+            Source<Tuple<IImmutableList<IFruit>, Source<IFruit, NotUsed>>, NotUsed> f4 =
                 Source.From<IFruit>(Apples()).PrefixAndTail(1);
-            SubFlow<IFruit, Unit, Sink<string, Unit>> d1 =
+            SubFlow<IFruit, NotUsed, Sink<string, NotUsed>> d1 =
                 Flow.Create<string>()
-                    .Select<string, string, IFruit, Unit>(_ => new Apple())
+                    .Select<string, string, IFruit, NotUsed>(_ => new Apple())
                     .SplitWhen(_ => true);
-            SubFlow<IFruit, Unit, Sink<string, Unit>> d2 =
+            SubFlow<IFruit, NotUsed, Sink<string, NotUsed>> d2 =
                 Flow.Create<string>()
-                    .Select<string, string, IFruit, Unit>(_ => new Apple())
+                    .Select<string, string, IFruit, NotUsed>(_ => new Apple())
                     .GroupBy(-1,_ => 2);
-            Flow<string, Tuple<IImmutableList<IFruit>, Source<IFruit, Unit>>, Unit> d3 =
-                Flow.Create<string>().Select<string, string, IFruit, Unit>(_ => new Apple()).PrefixAndTail(1);
+            Flow<string, Tuple<IImmutableList<IFruit>, Source<IFruit, NotUsed>>, NotUsed> d3 =
+                Flow.Create<string>().Select<string, string, IFruit, NotUsed>(_ => new Apple()).PrefixAndTail(1);
         }
 
         [Fact]
@@ -347,7 +347,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_with_multiple_subscribers_FanOutBox_must_adapt_speed_to_the_currently_slowest_subscriber()
         {
-            var setup = new ChainSetup<string, string, Unit>(Identity, Settings.WithInputBuffer(1, 1),
+            var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings),
                 (source, materializer) => ToFanoutPublisher(source, materializer, 1), this);
             var downstream2 = TestSubscriber.CreateManualProbe<string>(this);
@@ -376,7 +376,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_with_multiple_subscribers_FanOutBox_must_support_slow_subscriber_with_fan_out_2()
         {
-            var setup = new ChainSetup<string, string, Unit>(Identity, Settings.WithInputBuffer(1, 1),
+            var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings),
                 (source, materializer) => ToFanoutPublisher(source, materializer, 2), this);
             var downstream2 = TestSubscriber.CreateManualProbe<string>(this);
@@ -419,7 +419,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_with_multiple_subscribers_FanOutBox_must_support_incoming_subscriber_while_elements_were_requested_before()
         {
-            var setup = new ChainSetup<string, string, Unit>(Identity, Settings.WithInputBuffer(1, 1),
+            var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings),
                 (source, materializer) => ToFanoutPublisher(source, materializer, 1), this);
 
@@ -460,7 +460,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_with_multiple_subscribers_FanOutBox_must_be_unblocked_when_blocking_subscriber_cancels_subscription()
         {
-            var setup = new ChainSetup<string, string, Unit>(Identity, Settings.WithInputBuffer(1, 1),
+            var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings),
                 (source, materializer) => ToFanoutPublisher(source, materializer, 1), this);
             var downstream2 = TestSubscriber.CreateManualProbe<string>(this);
@@ -500,7 +500,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_with_multiple_subscribers_FanOutBox_must_call_future_subscribers_OnError_after_OnSubscribe_if_initial_upstream_was_completed()
         {
-            var setup = new ChainSetup<string, string, Unit>(Identity, Settings.WithInputBuffer(1, 1),
+            var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings),
                 (source, materializer) => ToFanoutPublisher(source, materializer, 1), this);
             var downstream2 = TestSubscriber.CreateManualProbe<string>(this);
@@ -541,7 +541,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_with_multiple_subscribers_FanOutBox_must_call_future_subscribers_OnError_should_be_called_instead_of_OnSubscribed_after_initial_upstream_reported_an_error()
         {
-            var setup = new ChainSetup<int, string, Unit>(flow => flow.Select<int,int,string,Unit>(_ =>
+            var setup = new ChainSetup<int, string, NotUsed>(flow => flow.Select<int,int,string,NotUsed>(_ =>
             {
                 throw new TestException("test");
             }), Settings.WithInputBuffer(1, 1),
@@ -564,7 +564,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_with_multiple_subscribers_FanOutBox_must_call_future_subscribers_OnError_when_all_subscriptions_were_cancelled()
         {
-            var setup = new ChainSetup<string, string, Unit>(Identity, Settings.WithInputBuffer(1, 1),
+            var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings),
                 (source, materializer) => ToFanoutPublisher(source, materializer, 16), this);
 
@@ -590,7 +590,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_borken_Flow_must_cancel_upstream_and_call_onError_on_current_and_future_downstream_subscribers_if_an_internal_error_occurs()
         {
-            var setup = new ChainSetup<string, string, Unit>(FaultyFlow<string,string,string>, Settings.WithInputBuffer(1, 1),
+            var setup = new ChainSetup<string, string, NotUsed>(FaultyFlow<string,string,string>, Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings),
                 (source, materializer) => ToFanoutPublisher(source, materializer, 16), this);
 
@@ -677,9 +677,9 @@ namespace Akka.Streams.Tests.Dsl
             }
         }
 
-        private Flow<TIn, TOut2, Unit> FaultyFlow<TIn, TOut, TOut2>(Flow<TIn, TOut, Unit> flow) where TOut : TOut2
+        private Flow<TIn, TOut2, NotUsed> FaultyFlow<TIn, TOut, TOut2>(Flow<TIn, TOut, NotUsed> flow) where TOut : TOut2
         {
-            Func<Flow<TOut, TOut2, Unit>> createGraph = () =>
+            Func<Flow<TOut, TOut2, NotUsed>> createGraph = () =>
             {
                 var stage = new FaultyFlowStage<TOut, TOut2>();
                 var assembly = new GraphAssembly(new IGraphStageWithMaterializedValue<Shape, object>[] { stage }, new[] { Attributes.None },

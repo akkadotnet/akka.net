@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Event;
 using Akka.IO;
@@ -828,9 +827,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels or substream cancels
         /// </summary> 
-        public static Source<Tuple<IImmutableList<TOut>, Source<TOut, Unit>>, TMat> PrefixAndTail<TOut, TMat>(this Source<TOut, TMat> flow, int n)
+        public static Source<Tuple<IImmutableList<TOut>, Source<TOut, NotUsed>>, TMat> PrefixAndTail<TOut, TMat>(this Source<TOut, TMat> flow, int n)
         {
-            return (Source<Tuple<IImmutableList<TOut>, Source<TOut, Unit>>, TMat>)InternalFlowOperations.PrefixAndTail(flow, n);
+            return (Source<Tuple<IImmutableList<TOut>, Source<TOut, NotUsed>>, TMat>)InternalFlowOperations.PrefixAndTail(flow, n);
         }
 
         /// <summary>
@@ -864,7 +863,7 @@ namespace Akka.Streams.Dsl
         public static SubFlow<TOut, TMat, IRunnableGraph<TMat>> GroupBy<TOut, TMat, TKey>(this Source<TOut, TMat> flow, int maxSubstreams, Func<TOut, TKey> groupingFunc)
         {
             return flow.GroupBy(maxSubstreams, groupingFunc,
-                (f, s) => ((Source<Source<TOut, Unit>, TMat>) f).To(s),
+                (f, s) => ((Source<Source<TOut, NotUsed>, TMat>) f).To(s),
                 (f, o) => ((Source<TOut, TMat>) f).DeprecatedAndThen(o)
                 );
         }
@@ -924,7 +923,7 @@ namespace Akka.Streams.Dsl
         /// <seealso cref="SplitAfter{TOut,TMat}(Source{TOut,TMat},SubstreamCancelStrategy,Func{TOut,bool})"/> 
         public static SubFlow<TOut, TMat, IRunnableGraph<TMat>> SplitWhen<TOut, TMat>(this Source<TOut, TMat> flow, SubstreamCancelStrategy substreamCancelStrategy, Func<TOut, bool> predicate)
         {
-            return flow.SplitWhen(substreamCancelStrategy, predicate, (f, s) => ((Source<Source<TOut, Unit>, TMat>) f).To(s));
+            return flow.SplitWhen(substreamCancelStrategy, predicate, (f, s) => ((Source<Source<TOut, NotUsed>, TMat>) f).To(s));
         }
 
         /// <summary>
@@ -982,7 +981,7 @@ namespace Akka.Streams.Dsl
         /// <seealso cref="SplitWhen{TOut,TMat}(Source{TOut,TMat},SubstreamCancelStrategy,Func{TOut,bool})"/>
         public static SubFlow<TOut, TMat, IRunnableGraph<TMat>> SplitAfter<TOut, TMat>(this Source<TOut, TMat> flow, SubstreamCancelStrategy substreamCancelStrategy, Func<TOut, bool> predicate)
         {
-            return flow.SplitAfter(substreamCancelStrategy, predicate, (f, s) => ((Source<Source<TOut, Unit>, TMat>) f).To(s));
+            return flow.SplitAfter(substreamCancelStrategy, predicate, (f, s) => ((Source<Source<TOut, NotUsed>, TMat>) f).To(s));
         }
 
         /// <summary>
@@ -1201,7 +1200,7 @@ namespace Akka.Streams.Dsl
         }
 
         ///<summary>
-        /// Materializes to <see cref="Task{Unit}"/> that completes on getting termination message.
+        /// Materializes to <see cref="Task{NotUsed}"/> that completes on getting termination message.
         /// The task completes with success when received complete message from upstream or cancel
         /// from downstream. It fails with the same error when received error message from
         /// downstream.
@@ -1209,7 +1208,7 @@ namespace Akka.Streams.Dsl
         /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
         ///</summary>    
-        public static Source<TOut, TMat2> WatchTermination<TOut, TMat, TMat2>(this Source<TOut, TMat> flow, Func<TMat, Task<Unit>, TMat2> materializerFunction)
+        public static Source<TOut, TMat2> WatchTermination<TOut, TMat, TMat2>(this Source<TOut, TMat> flow, Func<TMat, Task, TMat2> materializerFunction)
         {
             return (Source<TOut, TMat2>) InternalFlowOperations.WatchTermination(flow, materializerFunction);
         }

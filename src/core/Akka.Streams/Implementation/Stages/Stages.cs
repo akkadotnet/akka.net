@@ -497,7 +497,7 @@ namespace Akka.Streams.Implementation.Stages
         Func<object, object> Extractor { get; }
     }
 
-    internal sealed class GroupBy<TIn, TKey> : StageModule<TIn, Source<TIn, Unit>>, IGroupBy
+    internal sealed class GroupBy<TIn, TKey> : StageModule<TIn, Source<TIn, NotUsed>>, IGroupBy
     {
         private readonly Func<TIn, TKey> _extractor;
         private readonly Func<object, object> _extractorWrapper;

@@ -10,7 +10,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Streams;
-using System.Security.Policy;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl.Internal;
@@ -201,9 +200,9 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Combines several sources with fun-in strategy like <see cref="Merge{TIn,TOut}"/> or <see cref="Concat{TIn,TOut}"/> and returns <see cref="Source{TOut,TMat}"/>.
         /// </summary>
-        public Source<U, Unit> Combine<T, U>(Source<T, Unit> first, Source<T, Unit> second, Source<T, Unit>[] rest, Func<int, IGraph<UniformFanInShape<T,U>, Unit>> strategy)
+        public Source<U, NotUsed> Combine<T, U>(Source<T, NotUsed> first, Source<T, NotUsed> second, Source<T, NotUsed>[] rest, Func<int, IGraph<UniformFanInShape<T,U>, NotUsed>> strategy)
         {
-            return Source.FromGraph(GraphDsl.Create<SourceShape<U>, Unit>(b =>
+            return Source.FromGraph(GraphDsl.Create<SourceShape<U>, NotUsed>(b =>
             {
                 var c = b.Add(strategy(rest.Length + 2));
                 b.From(first).To(c.In(0));
@@ -231,9 +230,9 @@ namespace Akka.Streams.Dsl
         /// that mediate the flow of elements downstream and the propagation of
         /// back-pressure upstream.
         /// </summary>
-        public static Source<T, Unit> FromPublisher<T>(IPublisher<T> publisher)
+        public static Source<T, NotUsed> FromPublisher<T>(IPublisher<T> publisher)
         {
-            return new Source<T, Unit>(new PublisherSource<T>(publisher, DefaultAttributes.PublisherSource, Shape<T>("PublisherSource")));
+            return new Source<T, NotUsed>(new PublisherSource<T>(publisher, DefaultAttributes.PublisherSource, Shape<T>("PublisherSource")));
         }
 
         /// <summary>
@@ -246,7 +245,7 @@ namespace Akka.Streams.Dsl
         /// Elements are pulled out of the enumerator in accordance with the demand coming
         /// from the downstream transformation steps.
         /// </summary>
-        public static Source<T, Unit> FromEnumerator<T>(Func<IEnumerator<T>> enumeratorFactory)
+        public static Source<T, NotUsed> FromEnumerator<T>(Func<IEnumerator<T>> enumeratorFactory)
         {
             return From(new EnumeratorEnumerable<T>(enumeratorFactory));
         }
@@ -260,7 +259,7 @@ namespace Akka.Streams.Dsl
         /// stream will see an individual flow of elements (always starting from the
         /// beginning) regardless of when they subscribed.
         /// </summary>
-        public static Source<T, Unit> From<T>(IEnumerable<T> enumerable)
+        public static Source<T, NotUsed> From<T>(IEnumerable<T> enumerable)
         {
             return Single(enumerable).SelectMany(x => x).WithAttributes(DefaultAttributes.EnumerableSource);
         }
@@ -269,7 +268,7 @@ namespace Akka.Streams.Dsl
         /// Create a <see cref="Source{TOut,TMat}"/> with one element.
         /// Every connected <see cref="Sink{TIn,TMat}"/> of this stream will see an individual stream consisting of one element.
         /// </summary>
-        public static Source<T, Unit> Single<T>(T element)
+        public static Source<T, NotUsed> Single<T>(T element)
         {
             return FromGraph(new SingleSource<T>(element).WithAttributes(DefaultAttributes.SingleSource));
         }
@@ -289,7 +288,7 @@ namespace Akka.Streams.Dsl
         /// may happen before or after materializing the <see cref="IFlow{TOut,TMat}"/>.
         /// The stream terminates with a failure if the task is completed with a failure.
         /// </summary>
-        public static Source<T, Unit> FromTask<T>(Task<T> task) => FromGraph(new TaskSource<T>(task));
+        public static Source<T, NotUsed> FromTask<T>(Task<T> task) => FromGraph(new TaskSource<T>(task));
 
         /// <summary>
         /// Elements are emitted periodically with the specified interval.
@@ -306,7 +305,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Create a <see cref="Source{TOut,TMat}"/> that will continually emit the given element.
         /// </summary>
-        public static Source<T, Unit> Repeat<T>(T element)
+        public static Source<T, NotUsed> Repeat<T>(T element)
         {
             var next = new Tuple<T, T>(element, element);
             return Unfold(element, _ => next).WithAttributes(DefaultAttributes.Repeat);
@@ -325,7 +324,7 @@ namespace Akka.Streams.Dsl
         ///   }
         /// </code>
         /// </example>
-        public static Source<TElem, Unit> Unfold<TState, TElem>(TState state, Func<TState, Tuple<TState, TElem>> unfold)
+        public static Source<TElem, NotUsed> Unfold<TState, TElem>(TState state, Func<TState, Tuple<TState, TElem>> unfold)
         {
             return FromGraph(new Unfold<TState, TElem>(state, unfold)).WithAttributes(DefaultAttributes.Unfold);
         }
@@ -345,7 +344,7 @@ namespace Akka.Streams.Dsl
         /// }
         /// </code>
         /// </example>
-        public static Source<TElem, Unit> UnfoldAsync<TState, TElem>(TState state, Func<TState, Task<Tuple<TState, TElem>>> unfoldAsync)
+        public static Source<TElem, NotUsed> UnfoldAsync<TState, TElem>(TState state, Func<TState, Task<Tuple<TState, TElem>>> unfoldAsync)
         {
             return FromGraph(new UnfoldAsync<TState, TElem>(state, unfoldAsync)).WithAttributes(DefaultAttributes.UnfoldAsync);
         }
@@ -362,7 +361,7 @@ namespace Akka.Streams.Dsl
         /// }}}
         /// </code>
         /// </example>
-        public static Source<TElem, Unit> UnfoldInfinite<TState, TElem>(TState state, Func<TState, Tuple<TState, TElem>> unfold)
+        public static Source<TElem, NotUsed> UnfoldInfinite<TState, TElem>(TState state, Func<TState, Tuple<TState, TElem>> unfold)
         {
             throw new NotImplementedException();
         }
@@ -370,9 +369,9 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// A <see cref="Source{TOut,TMat}"/> with no elements, i.e. an empty stream that is completed immediately for every connected <see cref="Sink{TIn,TMat}"/>.
         /// </summary> 
-        public static Source<T, Unit> Empty<T>()
+        public static Source<T, NotUsed> Empty<T>()
         {
-            return new Source<T, Unit>(new PublisherSource<T>(
+            return new Source<T, NotUsed>(new PublisherSource<T>(
                 EmptyPublisher<T>.Instance,
                 DefaultAttributes.EmptySource,
                 Shape<T>("EmptySource")));
@@ -399,9 +398,9 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Create a <see cref="Source{TOut,TMat}"/> that immediately ends the stream with the <paramref name="cause"/> error to every connected <see cref="Sink{TIn,TMat}"/>.
         /// </summary>
-        public static Source<T, Unit> Failed<T>(Exception cause)
+        public static Source<T, NotUsed> Failed<T>(Exception cause)
         {
-            return new Source<T, Unit>(new PublisherSource<T>(
+            return new Source<T, NotUsed>(new PublisherSource<T>(
                 new ErrorPublisher<T>(cause, "FailedSource"),
                 DefaultAttributes.FailedSource,
                 Shape<T>("FailedSource")));
@@ -469,9 +468,9 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Combines several sources with fun-in strategy like <see cref="Merge{TIn,TOut}"/> or <see cref="Concat{TIn,TOut}"/> and returns <see cref="Source{TOut,TMat}"/>.
         /// </summary>
-        public static Source<U, Unit> Combine<T, U>(Source<T, Unit> first, Source<T, Unit> second, Func<int, IGraph<UniformFanInShape<T, U>, Unit>> strategy, params Source<T, Unit>[] rest)
+        public static Source<U, NotUsed> Combine<T, U>(Source<T, NotUsed> first, Source<T, NotUsed> second, Func<int, IGraph<UniformFanInShape<T, U>, NotUsed>> strategy, params Source<T, NotUsed>[] rest)
         {
-            return FromGraph(GraphDsl.Create<SourceShape<U>, Unit>(b =>
+            return FromGraph(GraphDsl.Create<SourceShape<U>, NotUsed>(b =>
             {
                 var c = b.Add(strategy(rest.Length + 2));
                 b.From(first).To(c.In(0));

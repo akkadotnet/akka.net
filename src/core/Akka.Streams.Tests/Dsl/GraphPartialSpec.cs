@@ -32,7 +32,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void FlowFlowGraph_Partial_must_be_able_to_build_and_reuse_simple_partial_graphs()
         {
-            var doubler = GraphDsl.Create<FlowShape<int, int>, Unit>(b =>
+            var doubler = GraphDsl.Create<FlowShape<int, int>, NotUsed>(b =>
             {
                 var broadcast = b.Add(new Broadcast<int>(2));
                 var zip = b.Add(ZipWith.Apply((int i, int i1) => i + i1));
@@ -49,7 +49,7 @@ namespace Akka.Streams.Tests.Dsl
                     {
                         var source =
                             Source.From(Enumerable.Range(1, 3))
-                                .MapMaterializedValue<Tuple<Unit, Unit, Task<IEnumerable<int>>>>(_ => null);
+                                .MapMaterializedValue<Tuple<NotUsed, NotUsed, Task<IEnumerable<int>>>>(_ => null);
 
                         b.From(source).To(d1.Inlet);
                         b.From(d1.Outlet).To(d2.Inlet);

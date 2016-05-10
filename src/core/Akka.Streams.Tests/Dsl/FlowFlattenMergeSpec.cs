@@ -31,9 +31,9 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys);
         }
 
-        private Source<int, Unit> Src10(int i) => Source.From(Enumerable.Range(i, 10));
+        private Source<int, NotUsed> Src10(int i) => Source.From(Enumerable.Range(i, 10));
 
-        private Source<int, Unit> Blocked => Source.FromTask(new TaskCompletionSource<int>().Task);
+        private Source<int, NotUsed> Blocked => Source.FromTask(new TaskCompletionSource<int>().Task);
 
         private Sink<int, Task<IEnumerable<int>>> ToSeq
             => Flow.Create<int>().Grouped(1000).ToMaterialized(Sink.First<IEnumerable<int>>(), Keep.Right);
@@ -82,7 +82,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_FlattenMerge_must_propagate_early_failure_from_main_stream()
         {
             var ex = new TestException("buh");
-            var future = Source.Failed<Source<int, Unit>>(ex)
+            var future = Source.Failed<Source<int, NotUsed>>(ex)
                 .MergeMany(1, x => x)
                 .RunWith(Sink.First<int>(), Materializer);
 
@@ -94,8 +94,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             var ex = new TestException("buh");
 
-            var future = Source.Combine(Source.From(new[] {Blocked, Blocked}), Source.Failed<Source<int, Unit>>(ex),
-                i => new Merge<Source<int, Unit>>(i))
+            var future = Source.Combine(Source.From(new[] {Blocked, Blocked}), Source.Failed<Source<int, NotUsed>>(ex),
+                i => new Merge<Source<int, NotUsed>>(i))
                 .MergeMany(10, x => x)
                 .RunWith(Sink.First<int>(), Materializer);
 
@@ -135,11 +135,11 @@ namespace Akka.Streams.Tests.Dsl
             var p1 = TestPublisher.CreateProbe<int>(this);
             var p2 = TestPublisher.CreateProbe<int>(this);
             var ex = new TestException("buh");
-            var p = new TaskCompletionSource<Source<int, Unit>>();
+            var p = new TaskCompletionSource<Source<int, NotUsed>>();
 
             Source.Combine(
                 Source.From(new[] {Source.FromPublisher(p1), Source.FromPublisher(p2)}),
-                Source.FromTask(p.Task), i => new Merge<Source<int, Unit>>(i))
+                Source.FromTask(p.Task), i => new Merge<Source<int, NotUsed>>(i))
                 .MergeMany(5, x => x)
                 .RunWith(Sink.First<int>(), Materializer);
 

@@ -63,15 +63,15 @@ namespace Akka.Streams.Tests.Dsl
 
         private void WithSubstreamsSupport(int splitAfter = 3, int elementCount = 6,
             SubstreamCancelStrategy substreamCancelStrategy = SubstreamCancelStrategy.Drain,
-            Action<TestSubscriber.ManualProbe<Source<int, Unit>>, ISubscription, Func<Source<int, Unit>>> run = null)
+            Action<TestSubscriber.ManualProbe<Source<int, NotUsed>>, ISubscription, Func<Source<int, NotUsed>>> run = null)
         {
 
             var source = Source.From(Enumerable.Range(1, elementCount));
             var groupStream =
                 source.SplitAfter(substreamCancelStrategy, i => i == splitAfter)
                     .Lift()
-                    .RunWith(Sink.AsPublisher<Source<int, Unit>>(false), Materializer);
-            var masterSubscriber = TestSubscriber.CreateManualProbe<Source<int, Unit>>(this);
+                    .RunWith(Sink.AsPublisher<Source<int, NotUsed>>(false), Materializer);
+            var masterSubscriber = TestSubscriber.CreateManualProbe<Source<int, NotUsed>>(this);
             groupStream.Subscribe(masterSubscriber);
             var masterSubscription = masterSubscriber.ExpectSubscription();
 
@@ -187,9 +187,9 @@ namespace Akka.Streams.Tests.Dsl
                     if (i == 3)
                         throw ex;
                     return i%3 == 0;
-                }).Lift().RunWith(Sink.AsPublisher<Source<int, Unit>>(false), Materializer);
+                }).Lift().RunWith(Sink.AsPublisher<Source<int, NotUsed>>(false), Materializer);
                 
-                var subscriber = TestSubscriber.CreateManualProbe<Source<int, Unit>>(this);
+                var subscriber = TestSubscriber.CreateManualProbe<Source<int, NotUsed>>(this);
                 publisher.Subscribe(subscriber);
 
                 var upstreamSubscription = publisherProbe.ExpectSubscription();
@@ -230,7 +230,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var up = TestPublisher.CreateManualProbe<int>(this);
-                var down = TestSubscriber.CreateManualProbe<Source<int, Unit>>(this);
+                var down = TestSubscriber.CreateManualProbe<Source<int, NotUsed>>(this);
 
                 var flowSubscriber =
                     Source.AsSubscriber<int>()

@@ -27,8 +27,8 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        private Source<int, Unit> IntSeq => Source.From(new [] {1,2,3});
-        private Source<string, Unit> StringSeq => Source.From(new[] { "a", "b", "c" });
+        private Source<int, NotUsed> IntSeq => Source.From(new [] {1,2,3});
+        private Source<string, NotUsed> StringSeq => Source.From(new[] { "a", "b", "c" });
 
         [Fact]
         public void Flow_should_not_run()
@@ -92,7 +92,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
 
-        private Sink<int, Unit> OpenSink
+        private Sink<int, NotUsed> OpenSink
             => Flow.Create<int>().Select(x => x.ToString()).To(Sink.AsPublisher<string>(false));
 
         [Fact]
@@ -115,7 +115,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
 
-        private Source<string, Unit> OpenSource => Source.From(new[] {1, 2, 3}).Select(x => x.ToString());
+        private Source<string, NotUsed> OpenSource => Source.From(new[] {1, 2, 3}).Select(x => x.ToString());
 
         [Fact]
         public void Source_should_accept_Sink() => OpenSource.To(Sink.AsPublisher<string>(false));

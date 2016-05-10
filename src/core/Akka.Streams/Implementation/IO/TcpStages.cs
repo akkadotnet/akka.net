@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Immutable;
 using System.Net;
-using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
@@ -36,7 +35,7 @@ namespace Akka.Streams.Implementation.IO
 
             private readonly ConnectionSourceStage _stage;
             private readonly TaskCompletionSource<StreamTcp.ServerBinding> _bindingPromise;
-            private readonly TaskCompletionSource<Unit> _unbindPromise = new TaskCompletionSource<Unit>();
+            private readonly TaskCompletionSource<NotUsed> _unbindPromise = new TaskCompletionSource<NotUsed>();
             private IActorRef _listener;
 
             public ConnectionSourceStageLogic(Shape shape, ConnectionSourceStage stage, TaskCompletionSource<StreamTcp.ServerBinding> bindingPromise) : base(shape)
@@ -118,7 +117,7 @@ namespace Akka.Streams.Implementation.IO
                     {
                         var ex = BindFailedException.Instance;
                         _bindingPromise.TrySetException(ex);
-                        _unbindPromise.TrySetResult(Unit.Instance);
+                        _unbindPromise.TrySetResult(NotUsed.Instance);
                         FailStage(ex);
                     })
                     .With<Tcp.Connected>(c =>
@@ -146,7 +145,7 @@ namespace Akka.Streams.Implementation.IO
 
             public override void PostStop()
             {
-                _unbindPromise.TrySetResult(Unit.Instance);
+                _unbindPromise.TrySetResult(NotUsed.Instance);
                 _bindingPromise.TrySetException(
                     new NoSuchElementException("Binding was unbound before it was completely finished"));
             }

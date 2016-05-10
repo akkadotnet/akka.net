@@ -16,10 +16,10 @@ namespace Akka.Streams.Implementation
     /// </summary>
     internal sealed class SinkholeSubscriber<TIn> : ISubscriber<TIn>
     {
-        private readonly TaskCompletionSource<Unit> _whenCompleted;
+        private readonly TaskCompletionSource<NotUsed> _whenCompleted;
         private bool _running;
 
-        public SinkholeSubscriber(TaskCompletionSource<Unit> whenCompleted)
+        public SinkholeSubscriber(TaskCompletionSource<NotUsed> whenCompleted)
         {
             _whenCompleted = whenCompleted;
         }
@@ -42,7 +42,7 @@ namespace Akka.Streams.Implementation
             _whenCompleted.TrySetException(cause);
         }
 
-        public void OnComplete() => _whenCompleted.TrySetResult(Unit.Instance);
+        public void OnComplete() => _whenCompleted.TrySetResult(NotUsed.Instance);
 
         public void OnNext(TIn element) => ReactiveStreamsCompliance.RequireNonNullElement(element);
 

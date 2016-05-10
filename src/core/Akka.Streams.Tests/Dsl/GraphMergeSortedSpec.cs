@@ -23,11 +23,11 @@ namespace Akka.Streams.Tests.Dsl
         {
         }
 
-        protected override Fixture CreateFixture(GraphDsl.Builder<Unit> builder) => new MergeSortedFixture(builder);
+        protected override Fixture CreateFixture(GraphDsl.Builder<NotUsed> builder) => new MergeSortedFixture(builder);
 
         private sealed class MergeSortedFixture : Fixture
         {
-            public MergeSortedFixture(GraphDsl.Builder<Unit> builder) : base(builder)
+            public MergeSortedFixture(GraphDsl.Builder<NotUsed> builder) : base(builder)
             {
                 var merge = builder.Add(new MergeSorted<int>((l, r) => l.CompareTo(r)));
                 Left = merge.In0;

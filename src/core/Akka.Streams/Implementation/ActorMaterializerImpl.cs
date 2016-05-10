@@ -95,7 +95,7 @@ namespace Akka.Streams.Implementation
                     MaterializeGraph(graph, effectiveAttributes, materializedValues);
                 }
 
-                return Unit.Instance;
+                return NotUsed.Instance;
             }
 
             private string StageName(Attributes attr) => $"{_flowName}-{_nextId++}-{attr.GetNameOrDefault()}";

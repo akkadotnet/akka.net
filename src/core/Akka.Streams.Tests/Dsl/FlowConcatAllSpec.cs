@@ -60,8 +60,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             var subscriber = TestSubscriber.CreateProbe<int>(this);
             var subflow = Source.From(Enumerable.Range(1, 10)).SplitWhen(x => x%2 == 0).PrefixAndTail(0).Select(x => x.Item2);
-            var source = ((SubFlow<Source<int, Unit>, Unit, IRunnableGraph<Unit>>) subflow).ConcatSubstream().ConcatMany(x => x);
-            ((Source<int, Unit>) source).RunWith(Sink.FromSubscriber(subscriber), Materializer);
+            var source = ((SubFlow<Source<int, NotUsed>, NotUsed, IRunnableGraph<NotUsed>>) subflow).ConcatSubstream().ConcatMany(x => x);
+            ((Source<int, NotUsed>) source).RunWith(Sink.FromSubscriber(subscriber), Materializer);
 
             for (var i = 1; i <= 10; i++)
                 subscriber.RequestNext(i);
@@ -74,7 +74,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var publisher = TestPublisher.CreateManualProbe<Source<int, Unit>>(this);
+                var publisher = TestPublisher.CreateManualProbe<Source<int, NotUsed>>(this);
                 var subscriber = TestSubscriber.CreateManualProbe<int>(this);
                 Source.FromPublisher(publisher)
                     .ConcatMany(x => x)
@@ -102,7 +102,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var publisher = TestPublisher.CreateManualProbe<Source<int, Unit>>(this);
+                var publisher = TestPublisher.CreateManualProbe<Source<int, NotUsed>>(this);
                 var subscriber = TestSubscriber.CreateManualProbe<int>(this);
                 Source.FromPublisher(publisher)
                     .ConcatMany(x => x)
@@ -133,10 +133,10 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var publisher = TestPublisher.CreateManualProbe<Source<int, Unit>>(this);
+                var publisher = TestPublisher.CreateManualProbe<Source<int, NotUsed>>(this);
                 var subscriber = TestSubscriber.CreateManualProbe<int>(this);
                 Source.FromPublisher(publisher)
-                    .ConcatMany<Source<int,Unit>,int,Unit>(x => { throw TestException; })
+                    .ConcatMany<Source<int,NotUsed>,int,NotUsed>(x => { throw TestException; })
                     .To(Sink.FromSubscriber(subscriber))
                     .Run(Materializer);
 
@@ -158,7 +158,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var publisher = TestPublisher.CreateManualProbe<Source<int, Unit>>(this);
+                var publisher = TestPublisher.CreateManualProbe<Source<int, NotUsed>>(this);
                 var subscriber = TestSubscriber.CreateManualProbe<int>(this);
                 Source.FromPublisher(publisher)
                     .ConcatMany(x => x)
@@ -186,7 +186,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var publisher = TestPublisher.CreateManualProbe<Source<int, Unit>>(this);
+                var publisher = TestPublisher.CreateManualProbe<Source<int, NotUsed>>(this);
                 var subscriber = TestSubscriber.CreateManualProbe<int>(this);
                 Source.FromPublisher(publisher)
                     .ConcatMany(x => x)
@@ -215,7 +215,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var publisher = TestPublisher.CreateManualProbe<Source<int, Unit>>(this);
+                var publisher = TestPublisher.CreateManualProbe<Source<int, NotUsed>>(this);
                 var subscriber = TestSubscriber.CreateManualProbe<int>(this);
                 Source.FromPublisher(publisher)
                     .ConcatMany(x => x)
@@ -246,11 +246,11 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var up = TestPublisher.CreateManualProbe<Source<int, Unit>>(this);
+                var up = TestPublisher.CreateManualProbe<Source<int, NotUsed>>(this);
                 var down = TestSubscriber.CreateManualProbe<int>(this);
 
-                var flowSubscriber = Source.AsSubscriber<Source<int, Unit>>()
-                    .ConcatMany(x => x.MapMaterializedValue<ISubscriber<Source<int, Unit>>>(_ => null))
+                var flowSubscriber = Source.AsSubscriber<Source<int, NotUsed>>()
+                    .ConcatMany(x => x.MapMaterializedValue<ISubscriber<Source<int, NotUsed>>>(_ => null))
                     .To(Sink.FromSubscriber(down))
                     .Run(Materializer);
 

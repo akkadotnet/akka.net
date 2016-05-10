@@ -9,7 +9,6 @@ using System;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -161,10 +160,10 @@ namespace Akka.Streams.Implementation.IO
             }
             catch (Exception ex)
             {
-                _completionPromise.TrySetResult(new IOResult(_readBytesTotal, Result.Failure<Unit>(ex)));
+                _completionPromise.TrySetResult(new IOResult(_readBytesTotal, Result.Failure<NotUsed>(ex)));
             }
 
-            _completionPromise.TrySetResult(new IOResult(_readBytesTotal, Result.Success(Unit.Instance)));
+            _completionPromise.TrySetResult(new IOResult(_readBytesTotal, Result.Success(NotUsed.Instance)));
         }
     }
 }

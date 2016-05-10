@@ -194,8 +194,8 @@ namespace Akka.Streams.Dsl
             var forEach = Flow.Create<TIn>().Select(input =>
             {
                 action(input);
-                return Unit.Instance;
-            }).ToMaterialized(Ignore<Unit>(), Keep.Right).Named("foreachSink");
+                return NotUsed.Instance;
+            }).ToMaterialized(Ignore<NotUsed>(), Keep.Right).Named("foreachSink");
 
             return FromGraph(forEach);
         }
@@ -240,8 +240,8 @@ namespace Akka.Streams.Dsl
                 .SelectAsyncUnordered(parallelism, input => Task.Run(() =>
                 {
                     action(input);
-                    return Unit.Instance;
-                })).ToMaterialized(Ignore<Unit>(), Keep.Right);
+                    return NotUsed.Instance;
+                })).ToMaterialized(Ignore<NotUsed>(), Keep.Right);
         }
 
         /// <summary>
@@ -279,14 +279,14 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// A <see cref="Sink{TIn, Unit}"/> that when the flow is completed, either through a failure or normal
+        /// A <see cref="Sink{TIn, NotUsed}"/> that when the flow is completed, either through a failure or normal
         /// completion, apply the provided function with <paramref name="success"/> or <paramref name="failure"/>.
         /// </summary>
-        public static Sink<TIn, Unit> OnComplete<TIn>(Action success, Action<Exception> failure)
+        public static Sink<TIn, NotUsed> OnComplete<TIn>(Action success, Action<Exception> failure)
         {
             var onCompleted = Flow.Create<TIn>()
-                .Transform(() => new OnCompleted<TIn, Unit>(success, failure))
-                .To(Ignore<Unit>())
+                .Transform(() => new OnCompleted<TIn, NotUsed>(success, failure))
+                .To(Ignore<NotUsed>())
                 .Named("OnCompleteSink");
 
             return FromGraph(onCompleted);
@@ -308,9 +308,9 @@ namespace Akka.Streams.Dsl
         /// to use a bounded mailbox with zero <see cref="BoundedMessageQueue.PushTimeOut"/> or use a rate
         /// limiting stage in front of this <see cref="Sink{TIn, TMat}"/>.
         ///</summary>
-        public static Sink<TIn, Unit> ActorRef<TIn>(IActorRef actorRef, object onCompleteMessage)
+        public static Sink<TIn, NotUsed> ActorRef<TIn>(IActorRef actorRef, object onCompleteMessage)
         {
-            return new Sink<TIn, Unit>(new ActorRefSink<TIn>(actorRef, onCompleteMessage, DefaultAttributes.ActorRefSink, Shape<TIn>("ActorRefSink")));
+            return new Sink<TIn, NotUsed>(new ActorRefSink<TIn>(actorRef, onCompleteMessage, DefaultAttributes.ActorRefSink, Shape<TIn>("ActorRefSink")));
         }
 
         /// <summary>
@@ -326,7 +326,7 @@ namespace Akka.Streams.Dsl
         /// When the stream is completed with failure - result of <paramref name="onFailureMessage"/>
         /// function will be sent to the destination actor.
         /// </summary>
-        public static Sink<TIn, Unit> ActorRefWithAck<TIn>(IActorRef actorRef, object onInitMessage, object ackMessage,
+        public static Sink<TIn, NotUsed> ActorRefWithAck<TIn>(IActorRef actorRef, object onInitMessage, object ackMessage,
             object onCompleteMessage, Func<Exception, object> onFailureMessage = null)
         {
             onFailureMessage = onFailureMessage ?? (ex => new Status.Failure(ex));
@@ -384,17 +384,17 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Helper to create <see cref="Sink{TIn,TMat}"/> from <see cref="ISubscriber{TIn}"/>.
         /// </summary>
-        public static Sink<TIn, Unit> FromSubscriber<TIn>(ISubscriber<TIn> subscriber)
+        public static Sink<TIn, NotUsed> FromSubscriber<TIn>(ISubscriber<TIn> subscriber)
         {
-            return new Sink<TIn, Unit>(new SubscriberSink<TIn>(subscriber, DefaultAttributes.SubscriberSink, Shape<TIn>("SubscriberSink")));
+            return new Sink<TIn, NotUsed>(new SubscriberSink<TIn>(subscriber, DefaultAttributes.SubscriberSink, Shape<TIn>("SubscriberSink")));
         }
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that immediately cancels its upstream after materialization.
         /// </summary>
-        public static Sink<TIn, Unit> Cancelled<TIn>()
+        public static Sink<TIn, NotUsed> Cancelled<TIn>()
         {
-            return new Sink<TIn, Unit>(new CancelSink<TIn>(DefaultAttributes.CancelledSink, Shape<TIn>("CancelledSink")));
+            return new Sink<TIn, NotUsed>(new CancelSink<TIn>(DefaultAttributes.CancelledSink, Shape<TIn>("CancelledSink")));
         }
 
         /// <summary>

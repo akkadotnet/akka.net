@@ -29,12 +29,12 @@ namespace Akka.Streams.Tests.Dsl
 
         private static IEnumerable<int> Input => Enumerable.Range(1, 100);
         private static int Expected => Input.Sum();
-        private static Source<int, Unit> InputSource => Source.From(Input).Where(_ => true).Select(x => x);
+        private static Source<int, NotUsed> InputSource => Source.From(Input).Where(_ => true).Select(x => x);
 
-        private static Source<int, Unit> FoldSource =>
+        private static Source<int, NotUsed> FoldSource =>
             InputSource.Aggregate(0, (sum, i) => sum + i).Where(_ => true).Select(x => x);
 
-        private static Flow<int, int, Unit> FoldFlow =>
+        private static Flow<int, int, NotUsed> FoldFlow =>
             Flow.Create<int>().Where(_ => true).Select(x => x).Aggregate(0, (sum, i) => sum + i).Where(_ => true).Select(x => x);
 
         private static Sink<int, Task<int>> FoldSink => Sink.Aggregate<int, int>(0, (sum, i) => sum + i);
@@ -108,7 +108,7 @@ namespace Akka.Streams.Tests.Dsl
                     if (x > 50)
                         throw error;
                     return x;
-                }).RunAggregate(Unit.Instance, Keep.None, Materializer);
+                }).RunAggregate(NotUsed.Instance, Keep.None, Materializer);
 
                 future.Invoking(f => f.Wait(TimeSpan.FromSeconds(3)))
                     .ShouldThrow<TestException>()

@@ -44,7 +44,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var subscriber = TestSubscriber.CreateManualProbe<Tuple<int, Source<int, Unit>>>(this);
+                var subscriber = TestSubscriber.CreateManualProbe<Tuple<int, Source<int, NotUsed>>>(this);
                 var publisherProbe = TestPublisher.CreateProbe<int>(this);
                 var publisher =
                     Source.FromPublisher(publisherProbe)
@@ -93,7 +93,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var subscriber = TestSubscriber.CreateManualProbe<Tuple<int, Source<int, Unit>>>(this);
+                var subscriber = TestSubscriber.CreateManualProbe<Tuple<int, Source<int, NotUsed>>>(this);
                 var publisherProbe = TestPublisher.CreateProbe<int>(this);
                 var publisher =
                     Source.FromPublisher(publisherProbe)
@@ -117,7 +117,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void GroupBy_and_SplitWhen_must_not_timeout_and_cancel_substream_publisher_when_they_have_been_subscribed_to()
         {
-            var subscriber = TestSubscriber.CreateManualProbe<Tuple<int, Source<int, Unit>>>(this);
+            var subscriber = TestSubscriber.CreateManualProbe<Tuple<int, Source<int, NotUsed>>>(this);
             var publisherProbe = TestPublisher.CreateProbe<int>(this);
             var publisher =
                 Source.FromPublisher(publisherProbe)

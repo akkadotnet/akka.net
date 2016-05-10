@@ -31,7 +31,7 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        private IEnumerable<int> Scan(Source<int, Unit> source, TimeSpan? duration = null)
+        private IEnumerable<int> Scan(Source<int, NotUsed> source, TimeSpan? duration = null)
         {
             duration = duration ?? TimeSpan.FromSeconds(5);
 

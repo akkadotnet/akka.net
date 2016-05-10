@@ -246,16 +246,16 @@ namespace Akka.Streams.Dsl
     /// </summary>
     public static class Flow
     {
-        public static Flow<T, T, Unit> Identity<T>() => new Flow<T, T, Unit>(GraphStages.Identity<T>().Module);
+        public static Flow<T, T, NotUsed> Identity<T>() => new Flow<T, T, NotUsed>(GraphStages.Identity<T>().Module);
 
         public static Flow<T, T, TMat> Identity<T, TMat>() => new Flow<T, T, TMat>(GraphStages.Identity<T>().Module);
 
         /// <summary>
         /// Creates flow from the Reactive Streams <see cref="IProcessor{T1,T2}"/>.
         /// </summary>
-        public static Flow<TIn, TOut, Unit> FromProcessor<TIn, TOut>(Func<IProcessor<TIn, TOut>> factory)
+        public static Flow<TIn, TOut, NotUsed> FromProcessor<TIn, TOut>(Func<IProcessor<TIn, TOut>> factory)
         {
-            return FromProcessorMaterialized(() => Tuple.Create(factory(), Unit.Instance));
+            return FromProcessorMaterialized(() => Tuple.Create(factory(), NotUsed.Instance));
         }
 
         /// <summary>
@@ -269,7 +269,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Helper to create a <see cref="Flow{TIn,TOut,TMat}"/> without a <see cref="Source"/> or <see cref="Sink"/>.
         /// </summary>
-        public static Flow<T, T, Unit> Create<T>() => Identity<T>();
+        public static Flow<T, T, NotUsed> Create<T>() => Identity<T>();
 
         /// <summary>
         /// Helper to create a <see cref="Flow{TIn,TOut,TMat}"/> without a <see cref="Source"/> or <see cref="Sink"/>.
@@ -280,7 +280,7 @@ namespace Akka.Streams.Dsl
         /// Creates a <see cref="Flow{TIn,TOut,TMat}"/> which will use the given function to transform its inputs to outputs. It is equivalent
         /// to <see cref="Flow.Create{TIn}.Map(function)"/>
         /// </summary>
-        public static Flow<TIn, TOut, Unit> FromFunction<TIn, TOut>(Func<TIn, TOut> function)
+        public static Flow<TIn, TOut, NotUsed> FromFunction<TIn, TOut>(Func<TIn, TOut> function)
         {
             return Create<TIn>().Select(function);
         } 
@@ -297,7 +297,7 @@ namespace Akka.Streams.Dsl
         /// Creates a <see cref="Flow{TIn,TOut,TMat}"/> from a <see cref="Sink{TIn,TMat}"/> and a <see cref="Source{TOut,TMat}"/> where the flow's input
         /// will be sent to the sink and the flow's output will come from the source.
         /// </summary>
-        public static Flow<TIn, TOut, Unit> FromSinkAndSource<TIn, TOut, TMat>(IGraph<SinkShape<TIn>, TMat> sink, IGraph<SourceShape<TOut>, TMat> source)
+        public static Flow<TIn, TOut, NotUsed> FromSinkAndSource<TIn, TOut, TMat>(IGraph<SinkShape<TIn>, TMat> sink, IGraph<SourceShape<TOut>, TMat> source)
         {
             return FromSinkAndSource(sink, source, Keep.None);
         }

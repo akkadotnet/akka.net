@@ -56,32 +56,32 @@ namespace Akka.Streams.Tests.Dsl
 
         private static IEnumerator<Apple> Apples() => Enumerable.Repeat(new Apple(), int.MaxValue).GetEnumerator();
 
-        private static Flow<string, string, Unit> F1
+        private static Flow<string, string, NotUsed> F1
             => Flow.FromGraph(Flow.Create<string>().Transform(Op<string, string>).Named("F1"));
-        private static Flow<string, string, Unit> F2
+        private static Flow<string, string, NotUsed> F2
             => Flow.FromGraph(Flow.Create<string>().Transform(Op<string, string>).Named("F2"));
-        private static Flow<string, string, Unit> F3
+        private static Flow<string, string, NotUsed> F3
             => Flow.FromGraph(Flow.Create<string>().Transform(Op<string, string>).Named("F3"));
-        private static Flow<string, string, Unit> F4
+        private static Flow<string, string, NotUsed> F4
             => Flow.FromGraph(Flow.Create<string>().Transform(Op<string, string>).Named("F4"));
-        private static Flow<string, string, Unit> F5
+        private static Flow<string, string, NotUsed> F5
             => Flow.FromGraph(Flow.Create<string>().Transform(Op<string, string>).Named("F5"));
-        private static Flow<string, string, Unit> F6
+        private static Flow<string, string, NotUsed> F6
             => Flow.FromGraph(Flow.Create<string>().Transform(Op<string, string>).Named("F6"));
 
-        private static Source<string, Unit> In1 => Source.From(new[] { "a", "b", "c" });
-        private static Source<string, Unit> In2 => Source.From(new[] { "d", "e", "f" });
+        private static Source<string, NotUsed> In1 => Source.From(new[] { "a", "b", "c" });
+        private static Source<string, NotUsed> In2 => Source.From(new[] { "d", "e", "f" });
 
-        private static Sink<string, Unit> Out1
-            => Sink.AsPublisher<string>(false).MapMaterializedValue(_ => Unit.Instance);
+        private static Sink<string, NotUsed> Out1
+            => Sink.AsPublisher<string>(false).MapMaterializedValue(_ => NotUsed.Instance);
 
-        private static Sink<string, Unit> Out2 => Sink.First<string>().MapMaterializedValue(_ => Unit.Instance);
+        private static Sink<string, NotUsed> Out2 => Sink.First<string>().MapMaterializedValue(_ => NotUsed.Instance);
 
 
         [Fact]
         public void A_Graph_should_build_simple_merge()
         {
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
             {
                 var merge = b.Add(new Merge<string>(2));
                 b.From(In1).Via(F1).To(merge.In(0));
@@ -94,7 +94,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Graph_should_build_simple_broadcast()
         {
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
             {
                 var broadcast = b.Add(new Broadcast<string>(2));
                 b.From(In1).Via(F1).To(broadcast.In);
@@ -107,7 +107,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Graph_should_build_simple_merge_broadcast()
         {
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
             {
                 var merge = b.Add(new Merge<string>(2));
                 var broadcast = b.Add(new Broadcast<string>(2));
@@ -123,7 +123,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Graph_should_build_simple_merge_broadcast_with_implicits()
         {
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
             {
                 var merge = b.Add(new Merge<string>(2));
                 var broadcast = b.Add(new Broadcast<string>(2));
@@ -154,7 +154,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact(Skip = "FIXME needs cycle detection capability")]
         public void A_Graph_should_detect_cycle_in()
         {
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
             {
                 var merge = b.Add(new Merge<string>(2));
                 var broadcast1 = b.Add(new Broadcast<string>(2));
@@ -175,7 +175,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Graph_should_express_complex_topologies_in_a_readable_way()
         {
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
             {
                 var merge = b.Add(new Merge<string>(2));
                 var broadcast1 = b.Add(new Broadcast<string>(2));
@@ -196,7 +196,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Graph_should_build_broadcast_merge()
         {
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
             {
                 var merge = b.Add(new Merge<string>(2));
                 var broadcast = b.Add(new Broadcast<string>(2));
@@ -212,7 +212,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Graph_should_build_wikipedia_Topological_sorting()
         {
             // see https://en.wikipedia.org/wiki/Topological_sorting#mediaviewer/File:Directed_acyclic_graph.png
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
             {
                 var b3 = b.Add(new Broadcast<string>(2));
                 var b7 = b.Add(new Broadcast<string>(2));
@@ -224,10 +224,10 @@ namespace Akka.Streams.Tests.Dsl
                 var in3 = Source.From(new[] { "b" });
                 var in5 = Source.From(new[] { "b" });
                 var in7 = Source.From(new[] { "a" });
-                var out2 = Sink.AsPublisher<string>(false).MapMaterializedValue(_ => Unit.Instance);
-                var out9 = Sink.AsPublisher<string>(false).MapMaterializedValue(_ => Unit.Instance);
-                var out10 = Sink.AsPublisher<string>(false).MapMaterializedValue(_ => Unit.Instance);
-                Func<string, Flow<string, string, Unit>> f =
+                var out2 = Sink.AsPublisher<string>(false).MapMaterializedValue(_ => NotUsed.Instance);
+                var out9 = Sink.AsPublisher<string>(false).MapMaterializedValue(_ => NotUsed.Instance);
+                var out10 = Sink.AsPublisher<string>(false).MapMaterializedValue(_ => NotUsed.Instance);
+                Func<string, Flow<string, string, NotUsed>> f =
                     s => Flow.FromGraph(Flow.Create<string>().Transform(Op<string, string>).Named(s));
 
                 b.From(in7).Via(f("a")).Via(b7).Via(f("b")).Via(m11).Via(f("c")).Via(b11).Via(f("d")).To(out2);
@@ -244,7 +244,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Graph_should_make_it_optional_to_specify_flows()
         {
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
             {
                 var merge = b.Add(new Merge<string>(2));
                 var broadcast = b.Add(new Broadcast<string>(2));
@@ -260,11 +260,11 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Graph_should_build_unzip_zip()
         {
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
             {
                 var zip = b.Add(new Zip<int, string>());
                 var unzip = b.Add(new UnZip<int, string>());
-                var sink = Sink.AsPublisher<Tuple<int, string>>(false).MapMaterializedValue(_ => Unit.Instance);
+                var sink = Sink.AsPublisher<Tuple<int, string>>(false).MapMaterializedValue(_ => NotUsed.Instance);
                 var source =
                     Source.From(new[]
                     {
@@ -287,12 +287,12 @@ namespace Akka.Streams.Tests.Dsl
         {
             Action action = () =>
             {
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(builder =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(builder =>
                 {
                     var zip = builder.Add(new Zip<int, string>());
                     var unzip = builder.Add(new UnZip<int, string>());
-                    var wrongOut = Sink.AsPublisher<Tuple<int, int>>(false).MapMaterializedValue(_ => Unit.Instance);
-                    var whatever = Sink.AsPublisher<object>(false).MapMaterializedValue(_ => Unit.Instance);
+                    var wrongOut = Sink.AsPublisher<Tuple<int, int>>(false).MapMaterializedValue(_ => NotUsed.Instance);
+                    var whatever = Sink.AsPublisher<object>(false).MapMaterializedValue(_ => NotUsed.Instance);
 
                     builder.Invoking(
                         b => ((dynamic)b).From(Source.From(new[] { 1, 2, 3 })).Via(((dynamic)zip).Left).To(wrongOut))
@@ -330,7 +330,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact(Skip = "FIXME Covariance  is not supported")]
         public void A_Graph_should_build_with_variance()
         {
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
             {
                 var merge = b.Add(new Merge<IFruit>(2));
                 var s1 = Source.FromEnumerator<IFruit>(Apples);
@@ -429,43 +429,43 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Graph_should_build_with_plain_flow_without_junctions()
         {
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape,Unit>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape,NotUsed>(b =>
             {
                 b.From(In1).Via(F1).To(Out1);
                 return ClosedShape.Instance;
             })).Run(Materializer);
 
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
             {
                 b.From(In1).Via(F1).Via(F2).To(Out1);
                 return ClosedShape.Instance;
             })).Run(Materializer);
 
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
             {
                 b.From(In1.Via(F1)).Via(F2).To(Out1);
                 return ClosedShape.Instance;
             })).Run(Materializer);
 
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
             {
                 b.From(In1).To(Out1);
                 return ClosedShape.Instance;
             })).Run(Materializer);
 
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
             {
                 b.From(In1).To(F1.To(Out1));
                 return ClosedShape.Instance;
             })).Run(Materializer);
 
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
             {
                 b.From(In1.Via(F1)).To(Out1);
                 return ClosedShape.Instance;
             })).Run(Materializer);
 
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
             {
                 b.From(In1.Via(F1)).To(F2.To(Out1));
                 return ClosedShape.Instance;

@@ -97,12 +97,12 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var c = TestSubscriber.CreateManualProbe<int>(this);
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     var zip = b.Add(new Zip<int, string>());
                     b.From(Source.From(Enumerable.Range(1, 100))).To(zip.In0);
                     b.From(Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), "tick")
-                        .MapMaterializedValue(_ => Unit.Instance)).To(zip.In1);
+                        .MapMaterializedValue(_ => NotUsed.Instance)).To(zip.In1);
                     b.From(zip.Out)
                         .Via(Flow.Create<Tuple<int, string>>().Select(t => t.Item1))
                         .To(Sink.FromSubscriber(c));

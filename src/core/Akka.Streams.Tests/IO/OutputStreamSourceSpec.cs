@@ -92,14 +92,14 @@ namespace Akka.Streams.Tests.IO
                 var f = Task.Run(() =>
                 {
                     outputStream.Flush();
-                    return Unit.Instance;
+                    return NotUsed.Instance;
                 });
 
                 ExpectTimeout(f, Timeout);
                 probe.ExpectNoMsg(TimeSpan.MinValue);
 
                 s.Request(1);
-                ExpectSuccess(f, Unit.Instance);
+                ExpectSuccess(f, NotUsed.Instance);
                 probe.ExpectNext(_byteString);
 
                 outputStream.Close();
@@ -123,18 +123,18 @@ namespace Akka.Streams.Tests.IO
                 var f = Task.Run(() =>
                 {
                     outputStream.Flush();
-                    return Unit.Instance;
+                    return NotUsed.Instance;
                 });
                 s.Request(1);
-                ExpectSuccess(f, Unit.Instance);
+                ExpectSuccess(f, NotUsed.Instance);
                 probe.ExpectNext(_byteString);
 
                 var f2 = Task.Run(() =>
                 {
                     outputStream.Flush();
-                    return Unit.Instance;
+                    return NotUsed.Instance;
                 });
-                ExpectSuccess(f2, Unit.Instance);
+                ExpectSuccess(f2, NotUsed.Instance);
 
                 outputStream.Close();
                 probe.ExpectComplete();
@@ -162,13 +162,13 @@ namespace Akka.Streams.Tests.IO
                 var f = Task.Run(() =>
                 {
                     outputStream.Write(_bytesArray, 0, _byteString.Count);
-                    return Unit.Instance;
+                    return NotUsed.Instance;
                 });
                 ExpectTimeout(f, Timeout);
                 probe.ExpectNoMsg(TimeSpan.MinValue);
 
                 s.Request(17);
-                ExpectSuccess(f, Unit.Instance);
+                ExpectSuccess(f, NotUsed.Instance);
                 probe.ExpectNextN(Enumerable.Repeat(_byteString, 17).ToList());
 
                 outputStream.Close();

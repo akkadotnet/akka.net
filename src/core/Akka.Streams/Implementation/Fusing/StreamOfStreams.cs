@@ -149,7 +149,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class PrefixAndTail<T> : GraphStage<FlowShape<T, Tuple<IImmutableList<T>, Source<T, Unit>>>>
+    internal sealed class PrefixAndTail<T> : GraphStage<FlowShape<T, Tuple<IImmutableList<T>, Source<T, NotUsed>>>>
     {
         #region internal classes
         
@@ -200,7 +200,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             private bool IsPrefixComplete => ReferenceEquals(_builder, null);
 
-            private Source<T, Unit> OpenSubstream()
+            private Source<T, NotUsed> OpenSubstream()
             {
                 var timeout = ActorMaterializer.Downcast(Interpreter.Materializer).Settings.SubscriptionTimeoutSettings.Timeout;
                 _tailSource = new SubSourceOutlet<T>(this, "TailSource");
@@ -279,18 +279,18 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly int _count;
         private readonly Inlet<T> _in = new Inlet<T>("PrefixAndTail.in");
-        private readonly Outlet<Tuple<IImmutableList<T>, Source<T, Unit>>> _out = new Outlet<Tuple<IImmutableList<T>, Source<T, Unit>>>("PrefixAndTail.out");
+        private readonly Outlet<Tuple<IImmutableList<T>, Source<T, NotUsed>>> _out = new Outlet<Tuple<IImmutableList<T>, Source<T, NotUsed>>>("PrefixAndTail.out");
 
         public PrefixAndTail(int count)
         {
             _count = count;
 
-            Shape = new FlowShape<T, Tuple<IImmutableList<T>, Source<T, Unit>>>(_in, _out);
+            Shape = new FlowShape<T, Tuple<IImmutableList<T>, Source<T, NotUsed>>>(_in, _out);
         }
 
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.PrefixAndTail;
 
-        public override FlowShape<T, Tuple<IImmutableList<T>, Source<T, Unit>>> Shape { get; }
+        public override FlowShape<T, Tuple<IImmutableList<T>, Source<T, NotUsed>>> Shape { get; }
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
@@ -308,16 +308,16 @@ namespace Akka.Streams.Implementation.Fusing
             SplitAfter
         }
 
-        public static IGraph<FlowShape<T, Source<T, Unit>>, Unit> When<T>(Func<T, bool> p, SubstreamCancelStrategy substreamCancelStrategy) => new Split<T>(SplitDecision.SplitBefore, p, substreamCancelStrategy);
+        public static IGraph<FlowShape<T, Source<T, NotUsed>>, NotUsed> When<T>(Func<T, bool> p, SubstreamCancelStrategy substreamCancelStrategy) => new Split<T>(SplitDecision.SplitBefore, p, substreamCancelStrategy);
 
 
-        public static IGraph<FlowShape<T, Source<T, Unit>>, Unit> After<T>(Func<T, bool> p, SubstreamCancelStrategy substreamCancelStrategy) => new Split<T>(SplitDecision.SplitAfter, p, substreamCancelStrategy);
+        public static IGraph<FlowShape<T, Source<T, NotUsed>>, NotUsed> After<T>(Func<T, bool> p, SubstreamCancelStrategy substreamCancelStrategy) => new Split<T>(SplitDecision.SplitAfter, p, substreamCancelStrategy);
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class Split<T> : GraphStage<FlowShape<T, Source<T, Unit>>>
+    internal sealed class Split<T> : GraphStage<FlowShape<T, Source<T, NotUsed>>>
     {
         #region internal classes
 
@@ -512,7 +512,7 @@ namespace Akka.Streams.Implementation.Fusing
         #endregion
 
         private readonly Inlet<T> _in = new Inlet<T>("Split.in");
-        private readonly Outlet<Source<T, Unit>> _out = new Outlet<Source<T, Unit>>("Split.out");
+        private readonly Outlet<Source<T, NotUsed>> _out = new Outlet<Source<T, NotUsed>>("Split.out");
 
         private readonly Split.SplitDecision _decision;
         private readonly Func<T, bool> _predicate;
@@ -524,10 +524,10 @@ namespace Akka.Streams.Implementation.Fusing
             _predicate = predicate;
             _propagateSubstreamCancel = substreamCancelStrategy == SubstreamCancelStrategy.Propagate;
 
-            Shape = new FlowShape<T, Source<T, Unit>>(_in, _out);
+            Shape = new FlowShape<T, Source<T, NotUsed>>(_in, _out);
         }
 
-        public override FlowShape<T, Source<T, Unit>> Shape { get; }
+        public override FlowShape<T, Source<T, NotUsed>> Shape { get; }
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
@@ -686,7 +686,7 @@ namespace Akka.Streams.Implementation.Fusing
             var pub = s.Module as PublisherSource<T>;
             if (pub != null)
             {
-                Unit _;
+                NotUsed _;
                 pub.Create(default(MaterializationContext), out _).Subscribe(CancelingSubscriber<T>.Instance);
                 return;
             }

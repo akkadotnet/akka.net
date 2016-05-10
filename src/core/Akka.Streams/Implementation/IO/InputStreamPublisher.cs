@@ -7,7 +7,6 @@
 
 using System;
 using System.IO;
-using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -68,9 +67,9 @@ namespace Akka.Streams.Implementation.IO
             }
             catch (Exception ex)
             {
-                _completionSource.SetResult(new IOResult(_readBytesTotal, Result.Failure<Unit>(ex)));
+                _completionSource.SetResult(new IOResult(_readBytesTotal, Result.Failure<NotUsed>(ex)));
             }
-            _completionSource.SetResult(new IOResult(_readBytesTotal, Result.Success(Unit.Instance)));
+            _completionSource.SetResult(new IOResult(_readBytesTotal, Result.Success(NotUsed.Instance)));
         }
 
         private void ReadAndSignal()

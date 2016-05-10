@@ -177,8 +177,8 @@ namespace Akka.Streams.Tests.Dsl
 
                 var runnable = testSource.ToMaterialized(Sink.Ignore<IEnumerable<int>>(), Keep.Left);
                 var t = runnable.Run(Materializer);
-                t.Item1.Should().BeOfType<Unit>();
-                t.Item2.Should().BeOfType<Unit>();
+                t.Item1.Should().BeOfType<NotUsed>();
+                t.Item2.Should().BeOfType<NotUsed>();
 
                 runnable.MapMaterializedValue(_ => "boo").Run(Materializer).Should().Be("boo");
             }, Materializer);
@@ -227,9 +227,9 @@ namespace Akka.Streams.Tests.Dsl
                 //    .MapMaterializedValue(
                 //        x =>
                 //        {
-                //            x.Item1.Item1.Should().BeOfType<Unit>();
-                //            x.Item1.Item2.Should().BeOfType<Unit>();
-                //            x.Item2.Should().BeOfType<Unit>();
+                //            x.Item1.Item1.Should().BeOfType<NotUsed>();
+                //            x.Item1.Item2.Should().BeOfType<NotUsed>();
+                //            x.Item2.Should().BeOfType<NotUsed>();
                 //            return "boo";
                 //        });
 

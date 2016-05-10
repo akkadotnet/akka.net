@@ -7,7 +7,6 @@
 
 using System;
 using System.Linq;
-using System.Reactive.Streams;
 using Akka.Streams.Implementation;
 
 namespace Akka.Streams.Dsl
@@ -54,7 +53,7 @@ namespace Akka.Streams.Dsl
         }
 
         ///<summary>
-        /// Wraps two Flows to create a <see cref="BidiFlow{TIn1,TOut1,TIn2,TOut2,TMat}"/>. The materialized value of the resulting BidiFlow is Unit.
+        /// Wraps two Flows to create a <see cref="BidiFlow{TIn1,TOut1,TIn2,TOut2,TMat}"/>. The materialized value of the resulting BidiFlow is NotUsed.
         ///<![CDATA[ 
         /// {{{
         ///     +----------------------------+
@@ -71,7 +70,7 @@ namespace Akka.Streams.Dsl
         /// }}}
         ///]]>
         ///</summary>
-        public static BidiFlow<TIn1, TOut1, TIn2, TOut2, Unit> FromFlows<TIn1, TOut1, TIn2, TOut2, TMat1, TMat2>(
+        public static BidiFlow<TIn1, TOut1, TIn2, TOut2, NotUsed> FromFlows<TIn1, TOut1, TIn2, TOut2, TMat1, TMat2>(
             IGraph<FlowShape<TIn1, TOut1>, TMat1> flow1, IGraph<FlowShape<TIn2, TOut2>, TMat2> flow2)
         {
             return FromFlowsMat(flow1, flow2, Keep.None);
@@ -81,7 +80,7 @@ namespace Akka.Streams.Dsl
         /// Create a <see cref="BidiFlow{TIn1,TOut1,TIn2,TOut2,TMat}"/> where the top and bottom flows are just one simple mapping
         /// stage each, expressed by the two functions.
         /// </summary>
-        public static BidiFlow<TIn1, TOut1, TIn2, TOut2, Unit> FromFunction<TIn1, TOut1, TIn2, TOut2>(Func<TIn1, TOut1> outbound, Func<TIn2, TOut2> inbound)
+        public static BidiFlow<TIn1, TOut1, TIn2, TOut2, NotUsed> FromFunction<TIn1, TOut1, TIn2, TOut2>(Func<TIn1, TOut1> outbound, Func<TIn2, TOut2> inbound)
         {
             return FromFlows(Flow.Create<TIn1>().Select(outbound), Flow.Create<TIn2>().Select(inbound));
         }
@@ -95,7 +94,7 @@ namespace Akka.Streams.Dsl
         /// every second in one direction, but no elements are flowing in the other direction. I.e. this stage considers
         /// the ///joint/// frequencies of the elements in both directions.
         /// </summary>
-        public static BidiFlow<TIn, TIn, TOut, TOut, Unit> BidirectionalIdleTimeout<TIn, TOut>(TimeSpan timeout)
+        public static BidiFlow<TIn, TIn, TOut, TOut, NotUsed> BidirectionalIdleTimeout<TIn, TOut>(TimeSpan timeout)
         {
             return FromGraph(new IdleTimeoutBidi<TIn, TOut>(timeout));
         }

@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Reactive.Streams;
 using System.Runtime.Serialization;
 using System.Threading;
 using Akka.Actor;
@@ -107,10 +106,10 @@ namespace Akka.Streams.Stage
     /// its input and output ports and a factory function that creates a <see cref="GraphStageLogic"/> which implements the processing
     /// logic that ties the ports together.
     /// </summary>
-    public abstract class GraphStage<TShape> : GraphStageWithMaterializedValue<TShape, Unit> where TShape : Shape
+    public abstract class GraphStage<TShape> : GraphStageWithMaterializedValue<TShape, NotUsed> where TShape : Shape
     {
-        public sealed override ILogicAndMaterializedValue<Unit> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
-            => new LogicAndMaterializedValue<Unit>(CreateLogic(inheritedAttributes), Unit.Instance);
+        public sealed override ILogicAndMaterializedValue<NotUsed> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+            => new LogicAndMaterializedValue<NotUsed>(CreateLogic(inheritedAttributes), NotUsed.Instance);
 
         protected abstract GraphStageLogic CreateLogic(Attributes inheritedAttributes);
     }
@@ -1169,7 +1168,7 @@ namespace Akka.Streams.Stage
         /// This object can be cached and reused within the same <see cref="GraphStageLogic"/>.
         /// </summary>
         protected Action GetAsyncCallback(Action handler)
-            => () => Interpreter.OnAsyncInput(this, Unit.Instance, _ => handler());
+            => () => Interpreter.OnAsyncInput(this, NotUsed.Instance, _ => handler());
 
         /// <summary>
         /// Initialize a <see cref="StageActorRef"/> which can be used to interact with from the outside world "as-if" an actor.
@@ -1268,7 +1267,7 @@ namespace Akka.Streams.Stage
                     }));
             }
 
-            public IGraph<SinkShape<T>, Unit> Sink => _sink;
+            public IGraph<SinkShape<T>, NotUsed> Sink => _sink;
 
             public void SetHandler(InHandler handler) => _handler = handler;
 
@@ -1358,7 +1357,7 @@ namespace Akka.Streams.Stage
             /// <summary>
             /// Get the Source for this dynamic output port.
             /// </summary>
-            public IGraph<SourceShape<T>, Unit> Source => _source;
+            public IGraph<SourceShape<T>, NotUsed> Source => _source;
 
             /// <summary>
             /// Returns true if this output port can be pushed.

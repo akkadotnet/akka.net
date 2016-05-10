@@ -7,7 +7,6 @@
 
 using System;
 using System.Linq;
-using System.Reactive.Streams;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -22,7 +21,7 @@ namespace Akka.Streams.Implementation.Fusing
     {
         public static SimpleLinearGraphStage<T> Identity<T>() => Implementation.Fusing.Identity<T>.Instance;
 
-        internal static GraphStageWithMaterializedValue<FlowShape<T, T>, Task<Unit>> TerminationWatcher<T>()
+        internal static GraphStageWithMaterializedValue<FlowShape<T, T>, Task> TerminationWatcher<T>()
             => Implementation.Fusing.TerminationWatcher<T>.Instance;
 
         /// <summary>
@@ -179,7 +178,7 @@ namespace Akka.Streams.Implementation.Fusing
         public override string ToString() => "Detacher";
     }
 
-    internal sealed class TerminationWatcher<T> : GraphStageWithMaterializedValue<FlowShape<T, T>, Task<Unit>>
+    internal sealed class TerminationWatcher<T> : GraphStageWithMaterializedValue<FlowShape<T, T>, Task>
     {
         public static readonly TerminationWatcher<T> Instance = new TerminationWatcher<T>();
 
@@ -187,11 +186,11 @@ namespace Akka.Streams.Implementation.Fusing
 
         private sealed class Logic : GraphStageLogic
         {
-            public Logic(TerminationWatcher<T> watcher, TaskCompletionSource<Unit> finishPromise) : base(watcher.Shape)
+            public Logic(TerminationWatcher<T> watcher, TaskCompletionSource<NotUsed> finishPromise) : base(watcher.Shape)
             {
                 SetHandler(watcher._inlet, onPush: ()=> Push(watcher._outlet, Grab(watcher._inlet)), onUpstreamFinish:()=>
                 {
-                    finishPromise.TrySetResult(Unit.Instance);
+                    finishPromise.TrySetResult(NotUsed.Instance);
                     CompleteStage();
                 }, onUpstreamFailure: ex=>
                 {
@@ -201,7 +200,7 @@ namespace Akka.Streams.Implementation.Fusing
 
                 SetHandler(watcher._outlet, onPull: ()=> Pull(watcher._inlet), onDownstreamFinish: ()=> 
                 {
-                    finishPromise.TrySetResult(Unit.Instance);
+                    finishPromise.TrySetResult(NotUsed.Instance);
                     CompleteStage();
                 });
             }
@@ -221,10 +220,10 @@ namespace Akka.Streams.Implementation.Fusing
 
         public override FlowShape<T, T> Shape { get; }
 
-        public override ILogicAndMaterializedValue<Task<Unit>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        public override ILogicAndMaterializedValue<Task> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var finishPromise = new TaskCompletionSource<Unit>();
-            return new LogicAndMaterializedValue<Task<Unit>>(new Logic(this, finishPromise), finishPromise.Task);
+            var finishPromise = new TaskCompletionSource<NotUsed>();
+            return new LogicAndMaterializedValue<Task>(new Logic(this, finishPromise), finishPromise.Task);
         }
 
         public override string ToString() => "TerminationWatcher";
@@ -237,7 +236,7 @@ namespace Akka.Streams.Implementation.Fusing
         private sealed class TickSourceCancellable : ICancelable
         {
             internal readonly AtomicBoolean Cancelled;
-            private readonly TaskCompletionSource<Unit> _cancelPromise = new TaskCompletionSource<Unit>();
+            private readonly TaskCompletionSource<NotUsed> _cancelPromise = new TaskCompletionSource<NotUsed>();
 
             public TickSourceCancellable(AtomicBoolean cancelled)
             {
@@ -247,7 +246,7 @@ namespace Akka.Streams.Implementation.Fusing
             public void Cancel()
             {
                 if (!IsCancellationRequested)
-                    _cancelPromise.SetResult(Unit.Instance);
+                    _cancelPromise.SetResult(NotUsed.Instance);
             }
 
             public bool IsCancellationRequested => Cancelled.Value;
@@ -263,7 +262,7 @@ namespace Akka.Streams.Implementation.Fusing
             public void Cancel(bool throwOnFirstException)
             {
                 if (!IsCancellationRequested)
-                    _cancelPromise.SetResult(Unit.Instance);
+                    _cancelPromise.SetResult(NotUsed.Instance);
             }
         }
 
@@ -283,13 +282,13 @@ namespace Akka.Streams.Implementation.Fusing
             public override void PreStart()
             {
                 ScheduleRepeatedly("TickTimer", _stage._initialDelay, _stage._interval);
-                var callback = GetAsyncCallback<Unit>(_ =>
+                var callback = GetAsyncCallback(() =>
                 {
                     CompleteStage();
                     _cancelable.Cancelled.Value = true;
                 });
 
-                _cancelable.CancelTask.ContinueWith(t => callback(Unit.Instance), TaskContinuationOptions.AttachedToParent | TaskContinuationOptions.ExecuteSynchronously);
+                _cancelable.CancelTask.ContinueWith(t => callback(), TaskContinuationOptions.AttachedToParent | TaskContinuationOptions.ExecuteSynchronously);
             }
 
             protected internal override void OnTimer(object timerKey)

@@ -610,10 +610,10 @@ namespace Akka.Streams.Tests.IO
             this.AssertAllStagesStopped(() =>
             {
                 var serverAddress = TestUtils.TemporaryServerAddress();
-                var firstClientConnected = new TaskCompletionSource<Unit>();
+                var firstClientConnected = new TaskCompletionSource<NotUsed>();
                 var takeTwoAndDropSecond = Flow.Create<Tcp.IncomingConnection>().Select(c =>
                 {
-                    firstClientConnected.TrySetResult(Unit.Instance);
+                    firstClientConnected.TrySetResult(NotUsed.Instance);
                     return c;
                 }).Grouped(2).Take(1).Select(e => e.First());
 

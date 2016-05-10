@@ -7,7 +7,6 @@
 
 using System;
 using System.Linq;
-using System.Reactive.Streams;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -42,7 +41,6 @@ namespace Akka.Streams.Tests.Dsl
 
                 p.Request(4).ExpectNext(1, 2, 3, 4);
                 future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                future.Result.Should().Be(Unit.Instance);
                 p.ExpectComplete();
             }, Materializer);
         }
@@ -63,7 +61,6 @@ namespace Akka.Streams.Tests.Dsl
                 p.Request(3).ExpectNext(1, 2, 3);
                 p.Cancel();
                 future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                future.Result.Should().Be(Unit.Instance);
             }, Materializer);
         }
 
@@ -96,7 +93,6 @@ namespace Akka.Streams.Tests.Dsl
                 var p = t.Item2;
                 p.Request(1);
                 future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                future.Result.Should().Be(Unit.Instance);
             }, Materializer);
         }
 
@@ -106,10 +102,10 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 //var first = this.SourceProbe<int>().WatchTermination(Keep.Both);
-                //var second = Source.From(Enumerable.Range(2, 4)).MapMaterializedValue(new Func<Unit, Tuple<TestPublisher.Probe<int>, Task<Unit>>>(_ => null));
+                //var second = Source.From(Enumerable.Range(2, 4)).MapMaterializedValue(new Func<NotUsed, Tuple<TestPublisher.Probe<int>, Task>>(_ => null));
                 
                 //var t = Source.FromGraph(
-                //    GraphDsl.Create<SourceShape<int>, Tuple<TestPublisher.Probe<int>, Task<Unit>>>(b =>
+                //    GraphDsl.Create<SourceShape<int>, Tuple<TestPublisher.Probe<int>, Task>>(b =>
                 //    {
                 //        var c = b.Add(new Merge<int, int>(2));
                 //        b.From(first).To(c.In(0));

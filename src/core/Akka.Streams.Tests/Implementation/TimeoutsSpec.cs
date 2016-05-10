@@ -252,7 +252,7 @@ namespace Akka.Streams.Tests.Implementation
                 var downWrite = TestPublisher.CreateProbe<int>(this);
                 var downRead = TestSubscriber.CreateProbe<string>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     var timeoutStage = b.Add(BidiFlow.BidirectionalIdleTimeout<string, int>(TimeSpan.FromSeconds(2)));
 
@@ -307,7 +307,7 @@ namespace Akka.Streams.Tests.Implementation
                 var downWrite = TestPublisher.CreateProbe<int>(this);
                 var downRead = TestSubscriber.CreateProbe<string>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     var timeoutStage = b.Add(BidiFlow.BidirectionalIdleTimeout<string, int>(TimeSpan.FromSeconds(2)));
 

@@ -180,7 +180,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 var upstream = TestPublisher.CreateProbe<int>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     var faily = b.Add(failyStage);
 

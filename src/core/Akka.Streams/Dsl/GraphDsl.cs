@@ -7,7 +7,6 @@
 
 using System;
 using System.Linq;
-using System.Reactive.Streams;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 
@@ -283,7 +282,7 @@ namespace Akka.Streams.Dsl
             return new GraphDsl.ForwardOps<TOut2, TMat>(b, flow.Outlet);
         }
 
-        public static GraphDsl.ForwardOps<TOut2, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, IGraph<FlowShape<TIn, TOut2>, Unit> flow)
+        public static GraphDsl.ForwardOps<TOut2, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, IGraph<FlowShape<TIn, TOut2>, NotUsed> flow)
             where TIn : TOut1
         {
             var b = ops.Builder;

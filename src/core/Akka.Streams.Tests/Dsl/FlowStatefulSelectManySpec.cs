@@ -48,7 +48,7 @@ namespace Akka.Streams.Tests.Dsl
 
             RandomTestRange(Sys).ForEach(_ =>
             {
-                RunScript(script(), Materializer.Settings, flow => flow.StatefulSelectMany<int,int,int, Unit>(() =>
+                RunScript(script(), Materializer.Settings, flow => flow.StatefulSelectMany<int,int,int, NotUsed>(() =>
                 {
                     int? prev = null;
                     return (x =>
@@ -70,7 +70,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_StatefulSelectMany_must_be_able_to_restart()
         {
-            var probe = Source.From(new[] {2, 1, 3, 4, 1}).StatefulSelectMany<int, int, Unit>(() =>
+            var probe = Source.From(new[] {2, 1, 3, 4, 1}).StatefulSelectMany<int, int, NotUsed>(() =>
             {
                 int? prev = null;
 
@@ -101,7 +101,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_StatefulSelectMany_must_be_able_to_resume()
         {
-            var probe = Source.From(new[] { 2, 1, 3, 4, 1 }).StatefulSelectMany<int, int, Unit>(() =>
+            var probe = Source.From(new[] { 2, 1, 3, 4, 1 }).StatefulSelectMany<int, int, NotUsed>(() =>
             {
                 int? prev = null;
 

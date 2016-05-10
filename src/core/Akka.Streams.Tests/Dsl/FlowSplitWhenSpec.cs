@@ -65,15 +65,15 @@ namespace Akka.Streams.Tests.Dsl
 
         private void WithSubstreamsSupport(int splitWhen = 3, int elementCount = 6,
             SubstreamCancelStrategy substreamCancelStrategy = SubstreamCancelStrategy.Drain,
-            Action<TestSubscriber.ManualProbe<Source<int, Unit>>, ISubscription, Func<Source<int, Unit>>> run = null)
+            Action<TestSubscriber.ManualProbe<Source<int, NotUsed>>, ISubscription, Func<Source<int, NotUsed>>> run = null)
         {
 
             var source = Source.From(Enumerable.Range(1, elementCount));
             var groupStream =
                 source.SplitWhen(substreamCancelStrategy, i => i == splitWhen)
                     .Lift()
-                    .RunWith(Sink.AsPublisher<Source<int, Unit>>(false), Materializer);
-            var masterSubscriber = TestSubscriber.CreateManualProbe<Source<int, Unit>>(this);
+                    .RunWith(Sink.AsPublisher<Source<int, NotUsed>>(false), Materializer);
+            var masterSubscriber = TestSubscriber.CreateManualProbe<Source<int, NotUsed>>(this);
             groupStream.Subscribe(masterSubscriber);
             var masterSubscription = masterSubscriber.ExpectSubscription();
 
@@ -190,7 +190,7 @@ namespace Akka.Streams.Tests.Dsl
                 var inputs = TestPublisher.CreateProbe<int>(this);
 
                 var substream = TestSubscriber.CreateProbe<int>(this);
-                var masterStream = TestSubscriber.CreateProbe<Unit>(this);
+                var masterStream = TestSubscriber.CreateProbe<NotUsed>(this);
 
                 Source.FromPublisher(inputs)
                     .SplitWhen(x => x == 2)
@@ -203,7 +203,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 substream.Cancel();
 
-                masterStream.ExpectNext(Unit.Instance);
+                masterStream.ExpectNext(NotUsed.Instance);
                 masterStream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
                 masterStream.Cancel();
                 inputs.ExpectCancellation();
@@ -213,11 +213,11 @@ namespace Akka.Streams.Tests.Dsl
                     .SplitWhen(x => x == 2)
                     .Lift()
                     .Select(x => x.RunWith(Sink.Cancelled<int>(), Materializer))
-                    .RunWith(Sink.Cancelled<Unit>(), Materializer);
+                    .RunWith(Sink.Cancelled<NotUsed>(), Materializer);
                 inputs2.ExpectCancellation();
 
                 var inputs3 = TestPublisher.CreateProbe<int>(this);
-                var masterStream3 = TestSubscriber.CreateProbe<Source<int, Unit>>(this);
+                var masterStream3 = TestSubscriber.CreateProbe<Source<int, NotUsed>>(this);
 
                 Source.FromPublisher(inputs3)
                     .SplitWhen(x => x == 2)
@@ -285,9 +285,9 @@ namespace Akka.Streams.Tests.Dsl
                     if (i == 3)
                         throw ex;
                     return i % 3 == 0;
-                }).Lift().RunWith(Sink.AsPublisher<Source<int, Unit>>(false), Materializer);
+                }).Lift().RunWith(Sink.AsPublisher<Source<int, NotUsed>>(false), Materializer);
 
-                var subscriber = TestSubscriber.CreateManualProbe<Source<int, Unit>>(this);
+                var subscriber = TestSubscriber.CreateManualProbe<Source<int, NotUsed>>(this);
                 publisher.Subscribe(subscriber);
 
                 var upstreamSubscription = publisherProbe.ExpectSubscription();
@@ -397,7 +397,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var up = TestPublisher.CreateManualProbe<int>(this);
-                var down = TestSubscriber.CreateManualProbe<Source<int, Unit>>(this);
+                var down = TestSubscriber.CreateManualProbe<Source<int, NotUsed>>(this);
 
                 var flowSubscriber =
                     Source.AsSubscriber<int>()

@@ -22,7 +22,7 @@ namespace Akka.Streams.Tests.Dsl
     public class FlowSupervisionSpec : AkkaSpec
     {
         private static readonly SystemException Exception = new SystemException("simulated exception");
-        private static Flow<int, int, Unit> FailingMap => Flow.Create<int>().Select(n =>
+        private static Flow<int, int, NotUsed> FailingMap => Flow.Create<int>().Select(n =>
         {
             if (n == 3)
                 throw Exception;
@@ -36,7 +36,7 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys);
         }
 
-        private IImmutableList<int> Run(IGraph<FlowShape<int, int>, Unit> flow)
+        private IImmutableList<int> Run(IGraph<FlowShape<int, int>, NotUsed> flow)
         {
             var task =
                 Source.From(Enumerable.Range(1, 5).Concat(Enumerable.Range(1, 5).ToList()))

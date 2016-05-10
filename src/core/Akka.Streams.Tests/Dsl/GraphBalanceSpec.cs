@@ -37,7 +37,7 @@ namespace Akka.Streams.Tests.Dsl
                 var c1 = TestSubscriber.CreateManualProbe<int>(this);
                 var c2 = TestSubscriber.CreateManualProbe<int>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     var balance = b.Add(new Balance<int>(2));
                     var source = Source.From(Enumerable.Range(1, 3));
@@ -144,7 +144,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var task = Source.FromGraph(GraphDsl.Create<SourceShape<int>, Unit>(b =>
+                var task = Source.FromGraph(GraphDsl.Create<SourceShape<int>, NotUsed>(b =>
                 {
                     var balance = b.Add(new Balance<int>(1));
                     var source = b.Add(Source.From(Enumerable.Range(1, 3)));
@@ -262,7 +262,7 @@ namespace Akka.Streams.Tests.Dsl
                 var c1 = TestSubscriber.CreateManualProbe<int>(this);
                 var c2 = TestSubscriber.CreateManualProbe<int>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     var balance = b.Add(new Balance<int>(2));
                     var source = Source.From(Enumerable.Range(1, 3));
@@ -289,7 +289,7 @@ namespace Akka.Streams.Tests.Dsl
                 var c1 = TestSubscriber.CreateManualProbe<int>(this);
                 var c2 = TestSubscriber.CreateManualProbe<int>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     var balance = b.Add(new Balance<int>(2));
                     var source = Source.From(Enumerable.Range(1, 3));
@@ -317,7 +317,7 @@ namespace Akka.Streams.Tests.Dsl
                 var c1 = TestSubscriber.CreateManualProbe<int>(this);
                 var c2 = TestSubscriber.CreateManualProbe<int>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     var balance = b.Add(new Balance<int>(2));
                     var source = Source.FromPublisher(p1.Publisher);

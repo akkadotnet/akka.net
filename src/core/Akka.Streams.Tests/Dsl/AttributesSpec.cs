@@ -33,7 +33,7 @@ namespace Akka.Streams.Tests.Dsl
         public void Attributes_must_be_overridable_on_a_module_basis()
         {
             var runnable =
-                Source.Empty<Unit>()
+                Source.Empty<NotUsed>()
                     .ToMaterialized(AttributesSink.Create().WithAttributes(Attributes.CreateName("new-name")),
                         Keep.Right);
             var task = runnable.Run(Materializer);
@@ -46,7 +46,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var runnable =
                 RunnableGraph.FromGraph(
-                    Source.Empty<Unit>()
+                    Source.Empty<NotUsed>()
                         .ToMaterialized(AttributesSink.Create(), Keep.Right)
                         .WithAttributes(Attributes.CreateName("new-name")));
             var task = runnable.Run(Materializer);
@@ -62,14 +62,14 @@ namespace Akka.Streams.Tests.Dsl
         public void Attributes_must_give_access_to_attribute_by_type()
             => Attributes.GetAttribute<Attributes.Name>().Value.Should().Be("b");
 
-        private sealed class AttributesSink : SinkModule<Unit, Task<Attributes>>
+        private sealed class AttributesSink : SinkModule<NotUsed, Task<Attributes>>
         {
-            public static Sink<Unit, Task<Attributes>> Create() =>
-                    new Sink<Unit, Task<Attributes>>(new AttributesSink(
+            public static Sink<NotUsed, Task<Attributes>> Create() =>
+                    new Sink<NotUsed, Task<Attributes>>(new AttributesSink(
                         Attributes.CreateName("attributesSink"),
-                        new SinkShape<Unit>(new Inlet<Unit>("attributesSink"))));
+                        new SinkShape<NotUsed>(new Inlet<NotUsed>("attributesSink"))));
 
-            private AttributesSink(Attributes attributes, SinkShape<Unit> shape) : base(shape)
+            private AttributesSink(Attributes attributes, SinkShape<NotUsed> shape) : base(shape)
             {
                 Attributes = attributes;
             }
@@ -79,13 +79,13 @@ namespace Akka.Streams.Tests.Dsl
             public override IModule WithAttributes(Attributes attributes)
                 => new AttributesSink(attributes, AmendShape(attributes));
 
-            protected override SinkModule<Unit, Task<Attributes>> NewInstance(SinkShape<Unit> shape)
+            protected override SinkModule<NotUsed, Task<Attributes>> NewInstance(SinkShape<NotUsed> shape)
                 => new AttributesSink(Attributes, shape);
 
-            public override ISubscriber<Unit> Create(MaterializationContext context, out Task<Attributes> materializer)
+            public override ISubscriber<NotUsed> Create(MaterializationContext context, out Task<Attributes> materializer)
             {
                 materializer = Task.FromResult(context.EffectiveAttributes);
-                return new SinkholeSubscriber<Unit>(new TaskCompletionSource<Unit>());
+                return new SinkholeSubscriber<NotUsed>(new TaskCompletionSource<NotUsed>());
             }
         }
     }

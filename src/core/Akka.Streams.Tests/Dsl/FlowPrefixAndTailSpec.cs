@@ -35,8 +35,8 @@ namespace Akka.Streams.Tests.Dsl
         private static readonly TestException TestException = new TestException("test");
 
         private static
-            Sink<Tuple<IImmutableList<int>, Source<int, Unit>>, Task<Tuple<IImmutableList<int>, Source<int, Unit>>>>
-            NewHeadSink => Sink.First<Tuple<IImmutableList<int>, Source<int, Unit>>>();
+            Sink<Tuple<IImmutableList<int>, Source<int, NotUsed>>, Task<Tuple<IImmutableList<int>, Source<int, NotUsed>>>>
+            NewHeadSink => Sink.First<Tuple<IImmutableList<int>, Source<int, NotUsed>>>();
 
 
         [Fact]
@@ -210,7 +210,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var publisher = TestPublisher.CreateManualProbe<int>(this);
-                var subscriber = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, Unit>>>(this);
+                var subscriber = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, NotUsed>>>(this);
 
                 Source.FromPublisher(publisher)
                     .PrefixAndTail(3)
@@ -236,7 +236,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var publisher = TestPublisher.CreateManualProbe<int>(this);
-                var subscriber = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, Unit>>>(this);
+                var subscriber = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, NotUsed>>>(this);
 
                 Source.FromPublisher(publisher)
                     .PrefixAndTail(1)
@@ -270,7 +270,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var publisher = TestPublisher.CreateManualProbe<int>(this);
-                var subscriber = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, Unit>>>(this);
+                var subscriber = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, NotUsed>>>(this);
 
                 Source.FromPublisher(publisher)
                     .PrefixAndTail(3)
@@ -296,7 +296,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var publisher = TestPublisher.CreateManualProbe<int>(this);
-                var subscriber = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, Unit>>>(this);
+                var subscriber = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, NotUsed>>>(this);
 
                 Source.FromPublisher(publisher)
                     .PrefixAndTail(1)
@@ -330,7 +330,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var up = TestPublisher.CreateManualProbe<int>(this);
-                var down = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, Unit>>>(this);
+                var down = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, NotUsed>>>(this);
 
                 var flowSubscriber = Source.AsSubscriber<int>()
                     .PrefixAndTail(1)
@@ -354,7 +354,7 @@ namespace Akka.Streams.Tests.Dsl
             var f =
                 Source.FromPublisher(pub)
                     .PrefixAndTail(1)
-                    .RunWith(Sink.First<Tuple<IImmutableList<int>, Source<int, Unit>>>(), Materializer);
+                    .RunWith(Sink.First<Tuple<IImmutableList<int>, Source<int, NotUsed>>>(), Materializer);
             var s = pub.ExpectSubscription();
             s.SendNext(0);
 

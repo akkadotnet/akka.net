@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Reactive.Streams;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Streams.Dsl;
@@ -154,7 +153,7 @@ namespace Akka.Streams.Tests.Performance
 
         #region Builder
 
-        public static IRunnableGraph<Unit> FlowWithMapBuilder(int numberOfCombinators)
+        public static IRunnableGraph<NotUsed> FlowWithMapBuilder(int numberOfCombinators)
         {
             var source = Source.Single(1);
             for (var i = 0; i < numberOfCombinators; i++)
@@ -162,45 +161,45 @@ namespace Akka.Streams.Tests.Performance
             return source.To(Sink.Ignore<int>());
         }
 
-        public static IRunnableGraph<Unit> GraphWithJunctionsBuilder(int numberOfJunctions)
+        public static IRunnableGraph<NotUsed> GraphWithJunctionsBuilder(int numberOfJunctions)
         {
-            return RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+            return RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
             {
-                var broadcast = b.Add(new Broadcast<Unit>(numberOfJunctions));
+                var broadcast = b.Add(new Broadcast<NotUsed>(numberOfJunctions));
                 var outlet = broadcast.Out(0);
                 for (var i = 1; i < numberOfJunctions; i++)
                 {
-                    var merge = b.Add(new Merge<Unit>(2));
+                    var merge = b.Add(new Merge<NotUsed>(2));
                     b.From(outlet).To(merge);
                     b.From(broadcast.Out(i)).To(merge);
                     outlet = merge.Out;
                 }
-                b.From(Source.Single(Unit.Instance)).To(broadcast);
-                b.From(outlet).To(Sink.Ignore<Unit>().MapMaterializedValue(_ => Unit.Instance));
+                b.From(Source.Single(NotUsed.Instance)).To(broadcast);
+                b.From(outlet).To(Sink.Ignore<NotUsed>().MapMaterializedValue(_ => NotUsed.Instance));
                 return ClosedShape.Instance;
             }));
         }
 
-        public static IRunnableGraph<Unit> GraphWithNestedImportsBuilder(int numberOfNestedGraphs)
+        public static IRunnableGraph<NotUsed> GraphWithNestedImportsBuilder(int numberOfNestedGraphs)
         {
-            var flow = Flow.Create<Unit>().Select(x => x);
+            var flow = Flow.Create<NotUsed>().Select(x => x);
             for (var i = 0; i < numberOfNestedGraphs; i++)
-                flow = Flow.FromGraph(GraphDsl.Create(flow, (b, f) => new FlowShape<Unit, Unit>(f.Inlet, f.Outlet)));
+                flow = Flow.FromGraph(GraphDsl.Create(flow, (b, f) => new FlowShape<NotUsed, NotUsed>(f.Inlet, f.Outlet)));
 
             return RunnableGraph.FromGraph(GraphDsl.Create(flow, (b, f) =>
             {
-                b.From(Source.Single(Unit.Instance))
+                b.From(Source.Single(NotUsed.Instance))
                     .Via(f)
-                    .To(Sink.Ignore<Unit>().MapMaterializedValue(_ => Unit.Instance));
+                    .To(Sink.Ignore<NotUsed>().MapMaterializedValue(_ => NotUsed.Instance));
                 return ClosedShape.Instance;
             }));
         }
 
-        public static IRunnableGraph<Unit> GraphWithImportedFlowBuilder(int numberOfFlows)
+        public static IRunnableGraph<NotUsed> GraphWithImportedFlowBuilder(int numberOfFlows)
         {
-            return RunnableGraph.FromGraph(GraphDsl.Create(Source.Single(Unit.Instance), (b, s) =>
+            return RunnableGraph.FromGraph(GraphDsl.Create(Source.Single(NotUsed.Instance), (b, s) =>
             {
-                var flow = Flow.Create<Unit>().Select(x => x);
+                var flow = Flow.Create<NotUsed>().Select(x => x);
                 var outlet = s.Outlet;
                 for (var i = 0; i < numberOfFlows; i++)
                 {
@@ -208,7 +207,7 @@ namespace Akka.Streams.Tests.Performance
                     b.From(outlet).To(flowShape);
                     outlet = flowShape.Outlet;
                 }
-                b.From(outlet).To(Sink.Ignore<Unit>().MapMaterializedValue(_ => Unit.Instance));
+                b.From(outlet).To(Sink.Ignore<NotUsed>().MapMaterializedValue(_ => NotUsed.Instance));
                 return ClosedShape.Instance;
             }));
         }
