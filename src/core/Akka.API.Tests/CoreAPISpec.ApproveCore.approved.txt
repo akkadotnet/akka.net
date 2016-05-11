@@ -542,9 +542,9 @@ namespace Akka.Actor
         public Akka.Actor.Scope Scope { get; }
         public bool Equals(Akka.Actor.Deploy other) { }
         public Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
-        public Akka.Actor.Deploy WithDispatcher(string path) { }
+        public Akka.Actor.Deploy WithDispatcher(string dispatcher) { }
         public Akka.Actor.Deploy WithFallback(Akka.Actor.Deploy other) { }
-        public Akka.Actor.Deploy WithMailbox(string path) { }
+        public Akka.Actor.Deploy WithMailbox(string mailbox) { }
         public Akka.Actor.Deploy WithRouterConfig(Akka.Routing.RouterConfig routerConfig) { }
         public Akka.Actor.Deploy WithScope(Akka.Actor.Scope scope) { }
         public class DeploySurrogate : Akka.Util.ISurrogate
@@ -1306,10 +1306,10 @@ namespace Akka.Actor
         public virtual Akka.Actor.ActorBase NewActor() { }
         public Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
         public Akka.Actor.Props WithDeploy(Akka.Actor.Deploy deploy) { }
-        public Akka.Actor.Props WithDispatcher(string path) { }
-        public Akka.Actor.Props WithMailbox(string path) { }
+        public Akka.Actor.Props WithDispatcher(string dispatcher) { }
+        public Akka.Actor.Props WithMailbox(string mailbox) { }
         public Akka.Actor.Props WithRouter(Akka.Routing.RouterConfig routerConfig) { }
-        public Akka.Actor.Props WithSupervisorStrategy(Akka.Actor.SupervisorStrategy strategy) { }
+        public Akka.Actor.Props WithSupervisorStrategy(Akka.Actor.SupervisorStrategy supervisorStrategy) { }
         public class PropsSurrogate : Akka.Util.ISurrogate
         {
             public PropsSurrogate() { }
@@ -1975,7 +1975,8 @@ namespace Akka.Configuration
         public virtual System.Collections.Generic.IList<int> GetIntList(string path) { }
         public virtual long GetLong(string path, long default = 0) { }
         public virtual System.Collections.Generic.IList<long> GetLongList(string path) { }
-        [System.ObsoleteAttribute("Use GetTimeSpan instead")]
+        [System.ObsoleteAttribute("Use GetTimeSpan to retrieve TimeSpan information. This method will be removed in " +
+            "future versions.")]
         public System.TimeSpan GetMillisDuration(string path, System.Nullable<System.TimeSpan> default = null, bool allowInfinite = True) { }
         public virtual string GetString(string path, string default = null) { }
         public virtual System.Collections.Generic.IList<string> GetStringList(string path) { }
@@ -2155,7 +2156,8 @@ namespace Akka.Configuration.Hocon
         public System.Collections.Generic.IList<int> GetIntList() { }
         public long GetLong() { }
         public System.Collections.Generic.IList<long> GetLongList() { }
-        [System.ObsoleteAttribute("Use GetTimeSpan instead")]
+        [System.ObsoleteAttribute("Use GetTimeSpan to retrieve TimeSpan information. This method will be removed in " +
+            "future versions.")]
         public System.TimeSpan GetMillisDuration(bool allowInfinite = True) { }
         public Akka.Configuration.Hocon.HoconObject GetObject() { }
         public string GetString() { }

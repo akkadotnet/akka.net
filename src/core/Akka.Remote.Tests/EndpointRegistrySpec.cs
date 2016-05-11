@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EndpointRegistrySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -147,6 +147,71 @@ namespace Akka.Remote.Tests
             Assert.False(reg.IsQuarantined(address1, 33));
             Assert.Equal(42, reg.WritableEndpointWithPolicyFor(address1).AsInstanceOf<EndpointManager.Quarantined>().Uid);
             Assert.Equal(deadline, reg.WritableEndpointWithPolicyFor(address1).AsInstanceOf<EndpointManager.Quarantined>().Deadline);
+        }
+
+        [Fact]
+        public void Fix_1845_EndpointRegistry_should_override_ReadOnly_endpoint()
+        {
+            var reg = new EndpointRegistry();
+            var endpoint = TestActor;
+            reg.RegisterReadOnlyEndpoint(address1, endpoint, 1);
+            reg.RegisterReadOnlyEndpoint(address1, endpoint, 2);
+
+            var ep = reg.ReadOnlyEndpointFor(address1);
+            ep.Item1.ShouldBe(endpoint);
+            ep.Item2.ShouldBe(2);
+        }
+
+        [Fact]
+        public void EndpointRegistry_should_overwrite_Quarantine_policy_with_Pass_on_RegisterWritableEndpoint()
+        {
+            var reg = new EndpointRegistry();
+            var deadline = Deadline.Now + TimeSpan.FromMinutes(30);
+            var quarantinedUid = 42;
+
+            Assert.Null(reg.WritableEndpointWithPolicyFor(address1));
+            reg.MarkAsQuarantined(address1, quarantinedUid, deadline);
+            Assert.True(reg.IsQuarantined(address1, quarantinedUid));
+
+            var writableUid = 43;
+            reg.RegisterWritableEndpoint(address1, TestActor, writableUid, quarantinedUid);
+            Assert.True(reg.IsWritable(TestActor));
+        }
+
+        [Fact]
+        public void EndpointRegistry_should_overwrite_Gated_policy_with_Pass_on_RegisterWritableEndpoint()
+        {
+            var reg = new EndpointRegistry();
+            var deadline = Deadline.Now + TimeSpan.FromMinutes(30);
+            var willBeGated = 42;
+
+            reg.RegisterWritableEndpoint(address1, TestActor, willBeGated, null);
+            Assert.NotNull(reg.WritableEndpointWithPolicyFor(address1));
+            Assert.True(reg.IsWritable(TestActor));
+            reg.MarkAsFailed(TestActor, deadline);
+            Assert.False(reg.IsWritable(TestActor));
+
+            var writableUid = 43;
+            reg.RegisterWritableEndpoint(address1, TestActor, writableUid, willBeGated);
+            Assert.True(reg.IsWritable(TestActor));
+        }
+
+        [Fact]
+        public void EndpointRegister_should_not_report_endpoint_as_writeable_if_no_Pass_policy()
+        {
+            var reg = new EndpointRegistry();
+            var deadline = Deadline.Now + TimeSpan.FromMinutes(30);
+            
+            Assert.False(reg.IsWritable(TestActor)); // no policy
+
+            reg.RegisterWritableEndpoint(address1, TestActor, 42, null);
+            Assert.True(reg.IsWritable(TestActor)); // pass
+            reg.MarkAsFailed(TestActor, deadline); 
+            Assert.False(reg.IsWritable(TestActor)); // Gated
+            reg.RegisterWritableEndpoint(address1, TestActor, 43, 42); // restarted
+            Assert.True(reg.IsWritable(TestActor)); // pass
+            reg.MarkAsQuarantined(address1, 43, deadline);
+            Assert.False(reg.HasWriteableEndpointFor(address1)); // Quarantined
         }
     }
 }

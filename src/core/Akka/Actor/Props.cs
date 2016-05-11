@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Props.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -19,8 +19,8 @@ using Newtonsoft.Json;
 namespace Akka.Actor
 {
     /// <summary>
-    ///     Props is a configuration object used in creating an <see cref="Akka.Actor.ActorBase">Actor</see>; it is
-    ///     immutable, so it is thread-safe and fully shareable.
+    /// This class represents a configuration object used in creating an <see cref="Akka.Actor.ActorBase">actor</see>.
+    /// It is immutable and thus thread-safe.
     /// <example>
     /// <code>
     ///   private Props props = Props.Empty();
@@ -28,24 +28,48 @@ namespace Akka.Actor
     /// 
     ///   private Props otherProps = props.WithDispatcher("dispatcher-id");
     ///   private Props otherProps = props.WithDeploy(deployment info);
-    ///  </code>
-    ///  </example>
+    /// </code>
+    /// </example>
     /// </summary>
     public class Props : IEquatable<Props> , ISurrogated
     {
         private const string NullActorTypeExceptionText = "Props must be instantiated with an actor type.";
 
+        /// <summary>
+        /// This class represents a surrogate of a <see cref="Props"/> configuration object.
+        /// Its main use is to help during the serialization process.
+        /// </summary>
         public class PropsSurrogate : ISurrogate
         {
+            /// <summary>
+            /// The type of actor to create
+            /// </summary>
             public Type Type { get; set; }
+            /// <summary>
+            /// The configuration used to deploy the actor.
+            /// </summary>
             public Deploy Deploy { get; set; }
+            /// <summary>
+            /// The arguments used to create the actor.
+            /// </summary>
             public object[] Arguments { get; set; }
+
+            /// <summary>
+            /// Creates a <see cref="Props"/> encapsulated by this surrogate.
+            /// </summary>
+            /// <param name="system">The actor system that owns this router.</param>
+            /// <returns>The <see cref="Props"/> encapsulated by this surrogate.</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new Props(Deploy, Type, Arguments);
             }
         }
 
+        /// <summary>
+        /// Creates a surrogate representation of the current <see cref="Props"/>.
+        /// </summary>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>The surrogate representation of the current <see cref="Props"/>.</returns>
         public ISurrogate ToSurrogate(ActorSystem system)
         {
             return new PropsSurrogate()
@@ -56,6 +80,13 @@ namespace Akka.Actor
             };
         }
 
+        /// <summary>
+        /// Indicates whether the current object is equal to another object of the same type.
+        /// </summary>
+        /// <param name="other">An object to compare with this object.</param>
+        /// <returns>
+        /// <c>true</c> if the current object is equal to the <paramref name="other" /> parameter; otherwise, <c>false</c>.
+        /// </returns>
         public bool Equals(Props other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -100,6 +131,13 @@ namespace Akka.Actor
             return true;
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        /// <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -108,6 +146,12 @@ namespace Akka.Actor
             return Equals((Props) obj);
         }
 
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             unchecked
@@ -120,69 +164,51 @@ namespace Akka.Actor
             }
         }
 
-
-
-        /// <summary>
-        ///     The default deploy
-        /// </summary>
         private static readonly Deploy defaultDeploy = new Deploy();
-
-        /// <summary>
-        ///     No args
-        /// </summary>
         private static readonly Object[] noArgs = { };
-
-        /// <summary>
-        ///     A Props instance whose creator will create an actor that doesn't respond to any message
-        /// </summary>
         private static readonly Props empty = Props.Create<EmptyActor>();
 
         /// <summary>
-        ///     The none
+        /// A pre-configured <see cref="Akka.Actor.Props"/> that doesn't create actors.
+        /// 
+        /// <note>
+        /// The value of this field is null.
+        /// </note>
         /// </summary>
         public static readonly Props None = null;
 
-        /// <summary>
-        ///     The default producer
-        /// </summary>
         private static readonly IIndirectActorProducer defaultProducer = new DefaultProducer();
-
-        /// <summary>
-        ///     The intern type of the actor or the producer
-        /// </summary>
         private Type inputType;
-
-        /// <summary>
-        ///     The extern type of the actor
-        /// </summary>
         private Type outputType;
-
-        /// <summary>
-        ///     The producer of the actor
-        /// </summary>
         private IIndirectActorProducer producer;
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="Props" /> class.
+        /// Initializes a new instance of the <see cref="Props"/> class.
         /// </summary>
-        protected Props() 
+        protected Props()
             : this(defaultDeploy, null, noArgs)
         {
         }
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="Props" /> class from a copy.
+        /// Initializes a new instance of the <see cref="Props" /> class.
         /// </summary>
+        /// <param name="copy">The object that is being cloned.</param>
         protected Props(Props copy)
             : this(copy.Deploy, copy.inputType, copy.SupervisorStrategy, copy.Arguments)
         {
         }
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="Props" /> class.
+        /// Initializes a new instance of the <see cref="Props" /> class.
+        /// 
+        /// <note>
+        /// <see cref="Props"/> configured in this way uses the <see cref="Akka.Actor.Deploy"/> deployer.
+        /// </note>
         /// </summary>
-        /// <param name="type">The type.</param>
-        /// <param name="args">The arguments.</param>
+        /// <param name="type">The type of the actor to create.</param>
+        /// <param name="args">The arguments needed to create the actor.</param>
+        /// <exception cref="ArgumentNullException">Props must be instantiated with an actor type.</exception>
         public Props(Type type, object[] args)
             : this(defaultDeploy, type, args)
         {
@@ -191,9 +217,14 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="Props" /> class.
+        /// Initializes a new instance of the <see cref="Props" /> class.
+        ///
+        /// <note>
+        /// <see cref="Props"/> configured in this way uses the <see cref="Akka.Actor.Deploy"/> deployer.
+        /// </note>
         /// </summary>
-        /// <param name="type">The type.</param>
+        /// <param name="type">The type of the actor to create.</param>
+        /// <exception cref="ArgumentNullException">Props must be instantiated with an actor type.</exception>
         public Props(Type type)
             : this(defaultDeploy, type, noArgs)
         {
@@ -202,11 +233,12 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="Props" /> class.
+        /// Initializes a new instance of the <see cref="Props" /> class.
         /// </summary>
-        /// <param name="type">The type.</param>
-        /// <param name="supervisorStrategy">The supervisor strategy.</param>
-        /// <param name="args">The arguments.</param>
+        /// <param name="type">The type of the actor to create.</param>
+        /// <param name="supervisorStrategy">The supervisor strategy used to manage the actor.</param>
+        /// <param name="args">The arguments needed to create the actor.</param>
+        /// <exception cref="ArgumentNullException">Props must be instantiated with an actor type.</exception>
         public Props(Type type, SupervisorStrategy supervisorStrategy, IEnumerable<object> args)
             : this(defaultDeploy, type, args.ToArray())
         {
@@ -217,11 +249,12 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="Props" /> class.
+        /// Initializes a new instance of the <see cref="Props" /> class.
         /// </summary>
-        /// <param name="type">The type.</param>
-        /// <param name="supervisorStrategy">The supervisor strategy.</param>
-        /// <param name="args">The arguments.</param>
+        /// <param name="type">The type of the actor to create.</param>
+        /// <param name="supervisorStrategy">The supervisor strategy used to manage the actor.</param>
+        /// <param name="args">The arguments needed to create the actor.</param>
+        /// <exception cref="ArgumentNullException">Props must be instantiated with an actor type.</exception>
         public Props(Type type, SupervisorStrategy supervisorStrategy, params object[] args)
             : this(defaultDeploy, type, args)
         {
@@ -232,11 +265,12 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="Props" /> class.
+        /// Initializes a new instance of the <see cref="Props" /> class.
         /// </summary>
-        /// <param name="deploy">The deploy.</param>
-        /// <param name="type">The type.</param>
-        /// <param name="args">The arguments.</param>
+        /// <param name="deploy">The configuration used to deploy the actor.</param>
+        /// <param name="type">The type of the actor to create.</param>
+        /// <param name="args">The arguments needed to create the actor.</param>
+        /// <exception cref="ArgumentNullException">Props must be instantiated with an actor type.</exception>
         public Props(Deploy deploy, Type type, IEnumerable<object> args)
             : this(deploy, type, args.ToArray())
         {
@@ -245,11 +279,11 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="Props" /> class.
+        /// Initializes a new instance of the <see cref="Props" /> class.
         /// </summary>
-        /// <param name="deploy">The deploy.</param>
-        /// <param name="type">The type.</param>
-        /// <param name="args">The arguments.</param>
+        /// <param name="deploy">The configuration used to deploy the actor.</param>
+        /// <param name="type">The type of the actor to create.</param>
+        /// <param name="args">The arguments needed to create the actor.</param>
         public Props(Deploy deploy, Type type, params object[] args)
         {
             Deploy = deploy;
@@ -259,9 +293,8 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Gets the type.
+        /// The type of the actor that is created.
         /// </summary>
-        /// <value>The type.</value>
         [JsonIgnore]
         public Type Type
         {
@@ -275,9 +308,8 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Gets or sets the dispatcher.
+        /// The dispatcher used in the deployment of the actor.
         /// </summary>
-        /// <value>The dispatcher.</value>
         [JsonIgnore]
         public string Dispatcher
         {
@@ -289,9 +321,8 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Gets or sets the mailbox.
+        /// The mailbox used in the deployment of the actor.
         /// </summary>
-        /// <value>The mailbox.</value>
         [JsonIgnore]
         public string Mailbox
         {
@@ -301,6 +332,9 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// The assembly qualified name of the type of the actor that is created.
+        /// </summary>
         public string TypeName
         {
             get { return inputType.AssemblyQualifiedName; }
@@ -309,9 +343,8 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Gets or sets the router configuration.
+        /// The router used in the deployment of the actor.
         /// </summary>
-        /// <value>The router configuration.</value>
         [JsonIgnore]
         public RouterConfig RouterConfig
         {
@@ -319,39 +352,35 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Gets or sets the deploy.
+        /// The configuration used to deploy the actor.
         /// </summary>
-        /// <value>The deploy.</value>
         public Deploy Deploy { get; protected set; }
 
         /// <summary>
-        ///     Gets or sets the supervisor strategy.
+        /// The supervisor strategy used to manage the actor.
         /// </summary>
-        /// <value>The supervisor strategy.</value>
         public SupervisorStrategy SupervisorStrategy { get; protected set; }
 
         /// <summary>
-        ///     A Props instance whose creator will create an actor that doesn't respond to any message
+        /// A pre-configured <see cref="Akka.Actor.Props"/> that creates an actor that doesn't respond to messages.
         /// </summary>
-        /// <value>The empty.</value>
         public static Props Empty
         {
             get { return empty; }
         }
 
         /// <summary>
-        ///     Gets the arguments.
+        /// The arguments needed to create the actor.
         /// </summary>
-        /// <value>The arguments.</value>
         public object[] Arguments { get; private set; }
 
         /// <summary>
-        ///     Creates the specified factory.
+        /// Creates an actor using a specified lambda expression.
         /// </summary>
-        /// <typeparam name="TActor">The type of the actor.</typeparam>
-        /// <param name="factory">The factory.</param>
-        /// <param name="supervisorStrategy">Optional: Supervisor strategy</param>
-        /// <returns>Props.</returns>
+        /// <typeparam name="TActor">The type of the actor to create.</typeparam>
+        /// <param name="factory">The lambda expression used to create the actor.</param>
+        /// <param name="supervisorStrategy">Optional: The supervisor strategy used to manage the actor.</param>
+        /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
         /// <exception cref="System.ArgumentException">The create function must be a 'new T (args)' expression</exception>
         public static Props Create<TActor>(Expression<Func<TActor>> factory, SupervisorStrategy supervisorStrategy=null) where TActor : ActorBase
         {
@@ -368,45 +397,45 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Creates this instance.
+        /// Creates an actor using the given arguments.
         /// </summary>
-        /// <typeparam name="TActor">The type of the actor.</typeparam>
-        /// <returns>Props.</returns>
+        /// <typeparam name="TActor">The type of the actor to create.</typeparam>
+        /// <param name="args">The arguments needed to create the actor.</param>
+        /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
         public static Props Create<TActor>(params object[] args) where TActor : ActorBase
         {
             return new Props(typeof(TActor), args);
         }
 
         /// <summary>
-        ///     Creates an actor by an actor producer
+        /// Creates an actor using a specified actor producer.
         /// </summary>
-        /// <typeparam name="TProducer">The type of the actor producer</typeparam>
-        /// <param name="args">The arguments</param>
-        /// <returns>Props</returns>
+        /// <typeparam name="TProducer">The type of producer used to create the actor.</typeparam>
+        /// <param name="args">The arguments needed to create the actor.</param>
+        /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
         public static Props CreateBy<TProducer>(params object[] args) where TProducer : class, IIndirectActorProducer
         {
             return new Props(typeof(TProducer), args);
         }
 
-
         /// <summary>
-        ///     Creates this instance.
+        /// Creates an actor using a specified supervisor strategy.
         /// </summary>
-        /// <typeparam name="TActor">The type of the actor.</typeparam>
-        /// <returns>Props.</returns>
+        /// <typeparam name="TActor">The type of the actor to create.</typeparam>
+        /// <param name="supervisorStrategy">The supervisor stratgey used to manage the actor.</param>
+        /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
         public static Props Create<TActor>(SupervisorStrategy supervisorStrategy) where TActor : ActorBase, new()
         {
             return new Props(typeof(TActor), supervisorStrategy);
         }
 
-
-
         /// <summary>
-        ///     Creates the specified type.
+        /// Creates an actor of a specified type.
         /// </summary>
-        /// <param name="type">The type.</param>
-        /// <param name="args"></param>
-        /// <returns>Props.</returns>
+        /// <param name="type">The type of the actor to create.</param>
+        /// <param name="args">The arguments needed to create the actor.</param>
+        /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
+        /// <exception cref="ArgumentNullException">Props must be instantiated with an actor type.</exception>
         public static Props Create(Type type, params object[] args)
         {
             if (type == null)
@@ -416,34 +445,46 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Returns a new Props with the specified mailbox set.
+        /// Creates a new <see cref="Akka.Actor.Props" /> with a given <paramref name="mailbox" />.
+        /// 
+        /// <note>
+        /// This method is immutable and returns a new instance of <see cref="Akka.Actor.Props" />.
+        /// </note>
         /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns>Props.</returns>
-        public Props WithMailbox(string path)
+        /// <param name="mailbox">The mailbox used when deploying the actor.</param>
+        /// <returns>A new <see cref="Akka.Actor.Props" /> with the provided <paramref name="mailbox" />.</returns>
+        public Props WithMailbox(string mailbox)
         {
             Props copy = Copy();
-            copy.Deploy = Deploy.WithMailbox(path);
+            copy.Deploy = Deploy.WithMailbox(mailbox);
             return copy;
         }
 
         /// <summary>
-        ///     Returns a new Props with the specified dispatcher set.
+        /// Creates a new <see cref="Akka.Actor.Props" /> with a given <paramref name="dispatcher" />.
+        /// 
+        /// <note>
+        /// This method is immutable and returns a new instance of <see cref="Akka.Actor.Props" />.
+        /// </note>
         /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns>Props.</returns>
-        public Props WithDispatcher(string path)
+        /// <param name="dispatcher">The dispatcher used when deploying the actor.</param>
+        /// <returns>A new <see cref="Akka.Actor.Props" /> with the provided <paramref name="dispatcher" />.</returns>
+        public Props WithDispatcher(string dispatcher)
         {
             Props copy = Copy();
-            copy.Deploy = Deploy.WithDispatcher(path);
+            copy.Deploy = Deploy.WithDispatcher(dispatcher);
             return copy;
         }
 
         /// <summary>
-        ///     Returns a new Props with the specified router config set.
+        /// Creates a new <see cref="Akka.Actor.Props" /> with a given router.
+        /// 
+        /// <note>
+        /// This method is immutable and returns a new instance of <see cref="Akka.Actor.Props" />.
+        /// </note>
         /// </summary>
-        /// <param name="routerConfig">The router configuration.</param>
-        /// <returns>Props.</returns>
+        /// <param name="routerConfig">The router used when deploying the actor.</param>
+        /// <returns>A new <see cref="Akka.Actor.Props" /> with the provided <paramref name="routerConfig" />.</returns>
         public Props WithRouter(RouterConfig routerConfig)
         {
             Props copy = Copy();
@@ -452,10 +493,14 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Returns a new Props with the specified deployment configuration.
+        /// Creates a new <see cref="Akka.Actor.Props" /> with a given deployment configuration.
+        ///
+        /// <note>
+        /// This method is immutable and returns a new instance of <see cref="Akka.Actor.Props" />.
+        /// </note>
         /// </summary>
-        /// <param name="deploy">The deploy.</param>
-        /// <returns>Props.</returns>
+        /// <param name="deploy">The configuration used to deploy the actor.</param>
+        /// <returns>A new <see cref="Akka.Actor.Props" /> with the provided <paramref name="deploy" />.</returns>
         public Props WithDeploy(Deploy deploy)
         {
             Props copy = Copy();
@@ -485,25 +530,33 @@ namespace Akka.Actor
             return copy;
         }
 
-        /// <summary>
-        ///     Returns a new Props with the specified supervisor strategy set.
-        /// </summary>
-        /// <param name="strategy">The strategy.</param>
-        /// <returns>Props.</returns>
-        public Props WithSupervisorStrategy(SupervisorStrategy strategy)
+        ///  <summary>
+        ///  Creates a new <see cref="Akka.Actor.Props" /> with a given supervisor strategy.
+        /// 
+        ///  <note>
+        ///  This method is immutable and returns a new instance of <see cref="Akka.Actor.Props" />.
+        ///  </note>
+        ///  </summary>
+        ///  <param name="supervisorStrategy">The supervisor stratgey used to manage the actor.</param>
+        /// <returns>A new <see cref="Akka.Actor.Props" /> with the provided <paramref name="supervisorStrategy" />.</returns>
+        public Props WithSupervisorStrategy(SupervisorStrategy supervisorStrategy)
         {
             Props copy = Copy();
-            copy.SupervisorStrategy = strategy;
+            copy.SupervisorStrategy = supervisorStrategy;
             return copy;
         }
 
         //TODO: use Linq Expressions so compile a creator
         //cache the creator
         /// <summary>
-        ///     Create a new actor instance. This method is only useful when called during
-        ///     actor creation by the ActorSystem.
+        /// Creates a new actor using the configured actor producer.
+        /// 
+        /// <remarks>
+        /// This method is only useful when called during actor creation by the ActorSystem.
+        /// </remarks>
         /// </summary>
-        /// <returns>ActorBase.</returns>
+        /// <returns>The newly created actor</returns>
+        /// <exception cref="TypeLoadException"></exception>
         public virtual ActorBase NewActor()
         {
             var type = Type;
@@ -516,9 +569,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Copies this instance.
+        /// Creates a copy of the current instance.
         /// </summary>
-        /// <returns>Props.</returns>
+        /// <returns>The newly created <see cref="Akka.Actor.Props"/></returns>
         protected virtual Props Copy()
         {
             return new Props(Deploy, inputType, Arguments) { SupervisorStrategy = SupervisorStrategy };
@@ -527,11 +580,14 @@ namespace Akka.Actor
         #region INTERNAL API
 
         /// <summary>
-        /// EmptyActor is used by <see cref="Props.None"/> in order to create actors that
-        /// don't respond to any messages.
+        /// This class represents a specialized <see cref="UntypedActor" /> that doesn't respond to messages.
         /// </summary>
         internal class EmptyActor : UntypedActor
         {
+            /// <summary>
+            /// Handles messages received by the actor.
+            /// </summary>
+            /// <param name="message">The message past to the actor.</param>
             protected override void OnReceive(object message)
             {
 
@@ -627,6 +683,10 @@ namespace Akka.Actor
             throw new ArgumentException(string.Format("Unknown actor producer [{0}]", type.FullName));
         }
 
+        /// <summary>
+        /// Signals the producer that it can release its reference to the actor.
+        /// </summary>
+        /// <param name="actor">The actor to release</param>
         internal void Release(ActorBase actor)
         {
             try
@@ -635,14 +695,21 @@ namespace Akka.Actor
             }
             finally
             {
-                actor = null;	
+                actor = null;
             }
-
         }
     }
 
+    /// <summary>
+    /// This class represents a specialized <see cref="Akka.Actor.Props"/> used when the actor has been terminated.
+    /// </summary>
     public class TerminatedProps : Props
     {
+        /// <summary>
+        /// N/A
+        /// </summary>
+        /// <returns>N/A</returns>
+        /// <exception cref="System.InvalidOperationException">This actor has been terminated</exception>
         public override ActorBase NewActor()
         {
             throw new InvalidOperationException("This actor has been terminated");
@@ -650,22 +717,22 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    ///     Props instance that uses dynamic invocation to create new Actor instances,
-    ///     rather than a traditional Activator.
-    ///     Intended to be used in conjunction with Dependency Injection.
+    /// This class represents a specialized <see cref="Akka.Actor.Props"/> that uses dynamic invocation
+    /// to create new actor instances, rather than a traditional <see cref="System.Activator"/>.
+    /// 
+    /// <note>
+    /// This is intended to be used in conjunction with Dependency Injection.
+    /// </note>
     /// </summary>
-    /// <typeparam name="TActor">The type of the actor.</typeparam>
+    /// <typeparam name="TActor">The type of the actor to create.</typeparam>
     internal class DynamicProps<TActor> : Props where TActor : ActorBase
     {
-        /// <summary>
-        ///     The _invoker
-        /// </summary>
         private readonly Func<TActor> invoker;
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="DynamicProps{TActor}" /> class.
+        /// Initializes a new instance of the <see cref="DynamicProps{TActor}" /> class.
         /// </summary>
-        /// <param name="invoker">The invoker.</param>
+        /// <param name="invoker">The factory method used to create an actor.</param>
         public DynamicProps(Func<TActor> invoker)
             : base(typeof(TActor))
         {
@@ -673,9 +740,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     News the actor.
+        /// Creates a new actor using the configured factory method.
         /// </summary>
-        /// <returns>ActorBase.</returns>
+        /// <returns>The actor created using the factory method.</returns>
         public override ActorBase NewActor()
         {
             return invoker.Invoke();
@@ -683,11 +750,6 @@ namespace Akka.Actor
 
         #region Copy methods
 
-        /// <summary>
-        ///     Copy constructor
-        /// </summary>
-        /// <param name="copy">The copy.</param>
-        /// <param name="invoker">The invoker.</param>
         private DynamicProps(Props copy, Func<TActor> invoker)
             : base(copy)
         {
@@ -695,9 +757,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Copies this instance.
+        /// Creates a copy of the current instance.
         /// </summary>
-        /// <returns>Props.</returns>
+        /// <returns>The newly created <see cref="Akka.Actor.Props"/></returns>
         protected override Props Copy()
         {
             Props initialCopy = base.Copy();
@@ -709,33 +771,37 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    ///     This interface defines a class of actor creation strategies deviating from
-    ///     the usual default of just reflectively instantiating the <see cref="Akka.Actor.ActorBase">Actor</see>
-    ///     subclass. It can be used to allow a dependency injection framework to
-    ///     determine the actual actor class and how it shall be instantiated.
+    /// This interface defines a class of actor creation strategies deviating from
+    /// the usual default of just reflectively instantiating the <see cref="Akka.Actor.ActorBase">Actor</see>
+    /// subclass. It can be used to allow a dependency injection framework to
+    /// determine the actual actor class and how it shall be instantiated.
     /// </summary>
     public interface IIndirectActorProducer
     {
         /// <summary>
-        ///     This factory method must produce a fresh actor instance upon each
-        ///     invocation. It is not permitted to return the same instance more than
-        ///     once.
+        /// This factory method must produce a fresh actor instance upon each
+        /// invocation. It is not permitted to return the same instance more than
+        /// once.
         /// </summary>
         /// <returns>A fresh actor instance.</returns>
         ActorBase Produce();
 
         /// <summary>
-        ///     This method is used by <see cref="Akka.Actor.Props"/> to determine the type of actor which will
-        ///     be created. The returned type is not used to produce the actor.
+        /// This method is used by <see cref="Akka.Actor.Props"/> to determine the type of actor to create.
+        /// The returned type is not used to produce the actor.
         /// </summary>
+        /// <returns>The type of the actor created.</returns>
         Type ActorType { get; }
 
         /// <summary>
-        /// This method is used by <see cref="Akka.Actor.Props"/> to signal the Producer that it can
-        /// release it's reference.  <see href="http://www.amazon.com/Dependency-Injection-NET-Mark-Seemann/dp/1935182501/ref=sr_1_1?ie=UTF8&qid=1425861096&sr=8-1&keywords=mark+seemann">HERE</see> 
+        /// This method is used by <see cref="Akka.Actor.Props"/> to signal the producer that it can
+        /// release it's reference.
+        /// 
+        /// <remarks>
+        /// To learn more about using Dependency Injection in .NET, see <see href="http://www.amazon.com/Dependency-Injection-NET-Mark-Seemann/dp/1935182501">HERE</see>.
+        /// </remarks>
         /// </summary>
-        /// <param name="actor"></param>
+        /// <param name="actor">The actor to release</param>
         void Release(ActorBase actor);
     }
 }
-

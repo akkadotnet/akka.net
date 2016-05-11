@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Eventsourced.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -238,7 +238,7 @@ namespace Akka.Persistence
         /// persisted event data, notify listeners and reply to command senders.
         /// 
         ///
-        /// If persistence of an event fails, <see cref="OnPersistFailure"> will be invoked and the actor will
+        /// If persistence of an event fails, <see cref="OnPersistFailure" /> will be invoked and the actor will
         /// unconditionally be stopped. The reason that it cannot resume when persist fails is that it
         /// is unknown if the event was actually persisted or not, and therefore it is in an inconsistent
         /// state. Restarting on persistent failures will most likely fail anyway, since the journal
@@ -299,7 +299,7 @@ namespace Akka.Persistence
         /// persisted event data, notify listeners and reply to command senders.
         /// 
         /// 
-        /// If persistence of an event fails, <see cref="OnPersistFailure"> will be invoked and the actor will
+        /// If persistence of an event fails, <see cref="OnPersistFailure" /> will be invoked and the actor will
         /// unconditionally be stopped. The reason that it cannot resume when persist fails is that it
         /// is unknown if the event was actually persisted or not, and therefore it is in an inconsistent
         /// state. Restarting on persistent failures will most likely fail anyway, since the journal
@@ -422,7 +422,7 @@ namespace Akka.Persistence
         /// </summary>
         protected virtual void OnPersistFailure(Exception cause, object @event, long sequenceNr)
         {
-            _log.Error(cause, "Failed to persist event type [{}] with sequence number [{}] for persistenceId [{}].",
+            _log.Error(cause, "Failed to persist event type [{0}] with sequence number [{1}] for persistenceId [{2}].",
                 @event.GetType(), sequenceNr, PersistenceId);
         }
 

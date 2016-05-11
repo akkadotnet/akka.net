@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AtLeastOnceDeliverySemantic.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -166,7 +166,7 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// This exception is thrown when the <see cref=AtLeastOnceDeliverySemantic."MaxUnconfirmedMessages" /> threshold has been exceeded.
+    /// This exception is thrown when the <see cref="AtLeastOnceDeliverySemantic.MaxUnconfirmedMessages" /> threshold has been exceeded.
     /// </summary>
     public class MaxUnconfirmedMessagesExceededException : Exception
     {

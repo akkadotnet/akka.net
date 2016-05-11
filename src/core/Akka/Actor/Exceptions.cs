@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Exceptions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -440,7 +440,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// <see cref="ActorNotFoundException"/> that takes a descriptive <see cref="message"/> and optional <see cref="innerException"/>.
+        /// <see cref="ActorNotFoundException"/> that takes a descriptive <paramref name="message"/> and optional <paramref name="innerException"/>.
         /// </summary>
         /// <param name="message">A user-defined error message.</param>
         /// <param name="innerException">An inner <see cref="Exception"/>.</param>

@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemotingLifecycleEvent.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -191,6 +191,29 @@ namespace Akka.Remote
                     "Association to [{0}] having UID [{1}] is irrecoverably failed. UID is now quarantined and all " +
                     "messages to this UID will be delivered to dead letters. Remote actorsystem must be restarted to recover " +
                     "from this situation.", Address, Uid);
+        }
+    }
+
+    public sealed class ThisActorSystemQuarantinedEvent : RemotingLifecycleEvent
+    {
+        public ThisActorSystemQuarantinedEvent(Address localAddress, Address remoteAddress)
+        {
+            LocalAddress = localAddress;
+            RemoteAddress = remoteAddress;
+        }
+
+        public Address LocalAddress { get; private set; }
+
+        public Address RemoteAddress { get; private set; }
+
+        public override LogLevel LogLevel()
+        {
+            return Event.LogLevel.WarningLevel;
+        }
+
+        public override string ToString()
+        {
+            return string.Format("The remote system {0} has quarantined this system {1}.", RemoteAddress, LocalAddress);
         }
     }
 

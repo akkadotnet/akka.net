@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentActorFailureSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -280,7 +280,7 @@ namespace Akka.Persistence.Tests
         #endregion
 
         public PersistentActorFailureSpec()
-            : base(Configuration("inmem", "PersistentActorFailureSpec",
+            : base(Configuration("PersistentActorFailureSpec",
                 extraConfig:
                     @"akka.persistence.journal.inmem.class = ""Akka.Persistence.Tests.PersistentActorFailureSpec+FailingMemoryJournal, Akka.Persistence.Tests""
                     akka.actor.serialize-messages=off"))
