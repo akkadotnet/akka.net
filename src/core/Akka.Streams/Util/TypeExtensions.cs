@@ -7,7 +7,7 @@
 
 using System;
 using System.Linq;
-using System.Reactive.Streams;
+using Reactive.Streams;
 
 namespace Akka.Streams.Util
 {

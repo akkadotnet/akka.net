@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Reactive.Streams;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
@@ -18,6 +17,7 @@ using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
 using Akka.Util;
+using Reactive.Streams;
 using Decider = Akka.Streams.Supervision.Decider;
 
 namespace Akka.Streams

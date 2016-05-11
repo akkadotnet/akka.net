@@ -221,7 +221,6 @@ Target "CopyOutput" <| fun _ ->
       "core/Akka.Persistence.TestKit"
       "core/Akka.Persistence.Query"
       "core/Akka.Streams"
-      "System.Reactive.Streams"
       "contrib/dependencyinjection/Akka.DI.Core"
       "contrib/dependencyinjection/Akka.DI.TestKit"
       "contrib/testkits/Akka.TestKit.Xunit" 
@@ -370,7 +369,7 @@ module Nuget =
         | persistence when (persistence.StartsWith("Akka.Persistence.")) -> ["Akka.Persistence", preReleaseVersion]
         | "Akka.DI.TestKit" -> ["Akka.DI.Core", release.NugetVersion; "Akka.TestKit.Xunit2", release.NugetVersion]
         | testkit when testkit.StartsWith("Akka.TestKit.") -> ["Akka.TestKit", release.NugetVersion]
-        | "Akka.Streams" -> ["Akka", release.NugetVersion; "System.Reactive.Streams", preReleaseVersion]
+        | "Akka.Streams" -> ["Akka", release.NugetVersion]
         | _ -> ["Akka", release.NugetVersion]
 
     // used to add -pre suffix to pre-release packages
@@ -381,7 +380,6 @@ module Nuget =
       | persistence when persistence.StartsWith("Akka.Persistence") -> preReleaseVersion
       | "Akka.Serialization.Wire" -> preReleaseVersion
       | "Akka.Streams" -> preReleaseVersion
-      | "System.Reactive.Streams" -> preReleaseVersion
       | _ -> release.NugetVersion
 
 open Nuget

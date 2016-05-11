@@ -8,11 +8,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reactive.Streams;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Util;
+using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
 {

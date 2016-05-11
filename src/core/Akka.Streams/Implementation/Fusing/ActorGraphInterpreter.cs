@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reactive.Streams;
 using System.Threading;
 using Akka.Actor;
 using Akka.Event;
@@ -16,6 +15,7 @@ using Akka.Pattern;
 using Akka.Streams.Stage;
 using Akka.Util;
 using Akka.Util.Internal;
+using Reactive.Streams;
 
 // ReSharper disable MemberHidesStaticFromOuterClass
 namespace Akka.Streams.Implementation.Fusing

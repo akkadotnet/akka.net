@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Reactive.Streams;
 using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit.Tests;

@@ -7,11 +7,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.Reactive.Streams;
 using Akka.Streams.Dsl;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using Reactive.Streams;
 
 namespace Akka.Streams.TestKit.Tests
 {

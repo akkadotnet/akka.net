@@ -34,6 +34,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Reactive.Streams, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Reactive.Streams.1.0.0\lib\net40\Reactive.Streams.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -64,10 +68,6 @@
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj">
       <Project>{7dbd5c17-5e9d-40c4-9201-d092751532a7}</Project>
       <Name>Akka.TestKit.Xunit2</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\System.Reactive.Streams\System.Reactive.Streams.csproj">
-      <Project>{68FBB4DF-6D83-4CF1-8105-A1D41912852F}</Project>
-      <Name>System.Reactive.Streams</Name>
     </ProjectReference>
     <ProjectReference Include="..\Akka.Persistence.Query\Akka.Persistence.Query.csproj">
       <Project>{92ab2788-e008-40d0-8b54-0c95b3cf3404}</Project>

@@ -6,9 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Reactive.Streams;
 using System.Runtime.Serialization;
 using Akka.Pattern;
+using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
 {

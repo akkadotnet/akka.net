@@ -6,12 +6,12 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit.Tests;
 using FluentAssertions;
+using Reactive.Streams;
 using Xunit;
 
 namespace Akka.Streams.Tests.Dsl

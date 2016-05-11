@@ -7,12 +7,12 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Reactive.Streams;
 using System.Threading;
 using Akka.Actor;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
+using Reactive.Streams;
 
 namespace Akka.Streams.Actors
 {

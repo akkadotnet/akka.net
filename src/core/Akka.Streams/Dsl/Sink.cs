@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Immutable;
-using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch.MessageQueues;
@@ -15,6 +14,8 @@ using Akka.Pattern;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
+using Reactive.Streams;
+
 // ReSharper disable UnusedMember.Global
 
 namespace Akka.Streams.Dsl

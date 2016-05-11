@@ -7,12 +7,12 @@
 
 using System;
 using System.IO;
-using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.IO;
 using Akka.Streams.Actors;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.IO;
+using Reactive.Streams;
 
 namespace Akka.Streams.Implementation.IO
 {

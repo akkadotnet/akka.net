@@ -6,10 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Reactive.Streams;
 using Akka.Actor;
 using Akka.Pattern;
 using Akka.Util.Internal;
+using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
 {
