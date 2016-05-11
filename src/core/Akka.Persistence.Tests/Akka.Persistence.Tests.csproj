@@ -85,6 +85,7 @@
     <Compile Include="LoadPluginSpec.cs" />
     <Compile Include="MemoryEventAdapterSpec.cs" />
     <Compile Include="PerformanceSpec.cs" />
+    <Compile Include="PersistenceConfigSpec.cs" />
     <Compile Include="PersistenceSpec.cs" />
     <Compile Include="PersistentActorBoundedStashingSpec.cs" />
     <Compile Include="PersistentActorDeleteFailureSpec.cs" />

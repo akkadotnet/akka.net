@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EndpointRegistry.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -37,28 +37,29 @@ namespace Akka.Remote
                 throw new ArgumentException("Attempting to overwrite existing endpoint " + e + " with " + endpoint);
             }
 
-            _addressToWritable.AddOrSet(address, new EndpointManager.Pass(endpoint, uid, refuseUid));
-            _writableToAddress.AddOrSet(endpoint, address);
+            _addressToWritable[address] = new EndpointManager.Pass(endpoint, uid, refuseUid);
+            _writableToAddress[endpoint] = address;
             return endpoint;
         }
 
-        public void RegisterWritableEndpointUid(IActorRef writer, int uid)
+        public void RegisterWritableEndpointUid(Address remoteAddress, int uid)
         {
-            var address = _writableToAddress[writer];
-            if (_addressToWritable[address] is EndpointManager.Pass)
+            EndpointManager.EndpointPolicy existing;
+            if (_addressToWritable.TryGetValue(remoteAddress, out existing))
             {
-                var pass = (EndpointManager.Pass)_addressToWritable[address];
-                _addressToWritable[address] = new EndpointManager.Pass(pass.Endpoint, uid, pass.RefuseUid);
+                var pass = existing as EndpointManager.Pass;
+                if (pass != null)
+                {
+                    _addressToWritable[remoteAddress] = new EndpointManager.Pass(pass.Endpoint, uid, pass.RefuseUid);
+                }
+                // if the policy is not Pass, then the GotUid might have lost the race with some failure
             }
-
-            // if the policy is not Pass, then the GotUid might have lost the race with some failure
-
         }
 
         public IActorRef RegisterReadOnlyEndpoint(Address address, IActorRef endpoint, int uid)
         {
-            _addressToReadonly.Add(address, Tuple.Create(endpoint, uid));
-            _readonlyToAddress.Add(endpoint, address);
+            _addressToReadonly[address] = Tuple.Create(endpoint, uid);
+            _readonlyToAddress[endpoint] = address;
             return endpoint;
         }
 
@@ -67,8 +68,9 @@ namespace Akka.Remote
             if (IsWritable(endpoint))
             {
                 var address = _writableToAddress[endpoint];
-                var policy = _addressToWritable[address];
-                if (policy.IsTombstone)
+                EndpointManager.EndpointPolicy policy;
+                _addressToWritable.TryGetValue(address, out policy);
+                if (policy != null && policy.IsTombstone)
                 {
                     //if there is already a tombstone directive, leave it there
                 }
@@ -144,7 +146,8 @@ namespace Akka.Remote
 
         public bool HasWriteableEndpointFor(Address address)
         {
-            return WritableEndpointWithPolicyFor(address) != null;
+            var policy = WritableEndpointWithPolicyFor(address);
+            return policy is EndpointManager.Pass;
         }
 
         /// <summary>
@@ -155,7 +158,7 @@ namespace Akka.Remote
         {
             if (IsWritable(endpoint))
             {
-                _addressToWritable.AddOrSet(_writableToAddress[endpoint], new EndpointManager.Gated(timeOfRelease));
+                _addressToWritable[_writableToAddress[endpoint]] = new EndpointManager.Gated(timeOfRelease);
                 _writableToAddress.Remove(endpoint);
             }
             else if (IsReadOnly(endpoint))
@@ -167,7 +170,7 @@ namespace Akka.Remote
 
         public void MarkAsQuarantined(Address address, int uid, Deadline timeOfRelease)
         {
-            _addressToWritable.AddOrSet(address, new EndpointManager.Quarantined(uid, timeOfRelease));
+            _addressToWritable[address] = new EndpointManager.Quarantined(uid, timeOfRelease);
         }
 
         public void RemovePolicy(Address address)

@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HoconValue.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -341,8 +341,12 @@ namespace Akka.Configuration.Hocon
             return GetArray() != null;
         }
 
-
-        [Obsolete("Use GetTimeSpan instead")]
+        /// <summary>
+        /// Obsolete. Use <see cref="GetTimeSpan"/> to retrieve <see cref="TimeSpan"/> information. This method will be removed in future versions.
+        /// </summary>
+        /// <param name="allowInfinite">N/A</param>
+        /// <returns>N/A</returns>
+        [Obsolete("Use GetTimeSpan to retrieve TimeSpan information. This method will be removed in future versions.")]
         public TimeSpan GetMillisDuration(bool allowInfinite = true)
         {
             return GetTimeSpan(allowInfinite);
@@ -357,7 +361,7 @@ namespace Akka.Configuration.Hocon
         {
             string res = GetString();
             if (res.EndsWith("ms"))
-            //TODO: Add support for ns, us, and non abbreviated versions (second, seconds and so on) see https://github.com/typesafehub/config/blob/master/HOCON.md#duration-format
+            //TODO: Add support for ns, us, and non abbreviated versions (second, seconds and so on) see https://github.com/Lightbendhub/config/blob/master/HOCON.md#duration-format
             {
                 var v = res.Substring(0, res.Length - 2);
                 return TimeSpan.FromMilliseconds(ParsePositiveValue(v));

@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FsApi.fs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -24,22 +24,6 @@ module Serialization =
     let internal deserializeFromBinary<'t> (fsp:BinarySerializer) (bytes: byte array) =
             use stream = new System.IO.MemoryStream(bytes)
             fsp.Deserialize<'t> stream
-            
-    let private jobjectType = Type.GetType("Newtonsoft.Json.Linq.JObject, Newtonsoft.Json") 
-    let private jsonSerlizerType = Type.GetType("Newtonsoft.Json.JsonSerializer, Newtonsoft.Json")
-    let private toObjectMethod = jobjectType.GetMethod("ToObject", [|typeof<System.Type>; jsonSerlizerType|])
-
-    let tryDeserializeJObject jsonSerializer o : 'Message option =
-        let t = typeof<'Message>
-        if o <> null && o.GetType().Equals jobjectType 
-        then 
-            try
-                let res = toObjectMethod.Invoke(o, [|t; jsonSerializer|]) 
-                Some (res :?> 'Message)
-            with
-            | _ -> None // type conversion failed (passed JSON is not of expected type)
-        else None
-
     
     // used for top level serialization
     type ExprSerializer(system) = 
@@ -66,12 +50,13 @@ module Actors =
         | o ->
             let context = Akka.Actor.Internal.InternalCurrentActorCellKeeper.Current
             if context = null 
-            then failwith "Cannot cast JObject outside the actor system context "
+            then failwith "Cannot cast object outside the actor system context "
             else
-                let serializer = context.System.Serialization.FindSerializerForType typeof<'Message> :?> Akka.Serialization.NewtonSoftJsonSerializer
-                match Serialization.tryDeserializeJObject serializer.Serializer o with
-                | Some m -> m
-                | None -> raise (InvalidCastException("Tried to cast JObject to " + typeof<'Message>.ToString()))
+                match o with
+                | :? (byte[]) as bytes -> 
+                    let serializer = context.System.Serialization.FindSerializerForType typeof<'Message>
+                    serializer.FromBinary(bytes, typeof<'Message>) :?> 'Message
+                | _ -> raise (InvalidCastException("Tried to cast object to " + typeof<'Message>.ToString()))
 
     /// <summary>
     /// Unidirectional send operator. 

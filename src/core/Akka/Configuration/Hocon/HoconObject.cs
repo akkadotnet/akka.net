@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HoconObject.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -178,6 +178,10 @@ namespace Akka.Configuration.Hocon
             return text;
         }
 
+        /// <summary>
+        /// Merges the specified object into this instance.
+        /// </summary>
+        /// <param name="other">The object to merge into this instance.</param>
         public void Merge(HoconObject other)
         {
             var thisItems = Items;
@@ -202,8 +206,7 @@ namespace Akka.Configuration.Hocon
                     //other key was not present in this object, just copy it over
                     Items.Add(otherItem.Key,otherItem.Value);
                 }
-            }            
+            }
         }
     }
 }
-

@@ -223,10 +223,6 @@ Target "CopyOutput" <| fun _ ->
       "core/Akka.Streams"
       "System.Reactive.Streams"
       "contrib/dependencyinjection/Akka.DI.Core"
-      "contrib/dependencyinjection/Akka.DI.AutoFac"
-      "contrib/dependencyinjection/Akka.DI.CastleWindsor"
-      "contrib/dependencyinjection/Akka.DI.Ninject"
-      "contrib/dependencyinjection/Akka.DI.Unity"
       "contrib/dependencyinjection/Akka.DI.TestKit"
       "contrib/testkits/Akka.TestKit.Xunit" 
       "contrib/testkits/Akka.TestKit.Xunit2" 
@@ -373,7 +369,6 @@ module Nuget =
         | persistence when (persistence.Contains("Sql") && not (persistence.Equals("Akka.Persistence.Sql.Common"))) -> ["Akka.Persistence.Sql.Common", preReleaseVersion]
         | persistence when (persistence.StartsWith("Akka.Persistence.")) -> ["Akka.Persistence", preReleaseVersion]
         | "Akka.DI.TestKit" -> ["Akka.DI.Core", release.NugetVersion; "Akka.TestKit.Xunit2", release.NugetVersion]
-        | di when (di.StartsWith("Akka.DI.") && not (di.EndsWith("Core"))) -> ["Akka.DI.Core", release.NugetVersion]
         | testkit when testkit.StartsWith("Akka.TestKit.") -> ["Akka.TestKit", release.NugetVersion]
         | "Akka.Streams" -> ["Akka", release.NugetVersion; "System.Reactive.Streams", preReleaseVersion]
         | _ -> ["Akka", release.NugetVersion]

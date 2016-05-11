@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonManagerSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -25,13 +25,18 @@ namespace Akka.Cluster.Tools.Singleton
 
         public static ClusterSingletonManagerSettings Create(Config config)
         {
-            var role = config.GetString("role");
-            if (role == string.Empty) role = null;
             return new ClusterSingletonManagerSettings(
                 singletonName: config.GetString("singleton-name"),
-                role: role,
-                removalMargin: TimeSpan.MinValue,
+                role: RoleOption(config.GetString("role")),
+                removalMargin: TimeSpan.Zero, // defaults to ClusterSettins.DownRemovalMargin
                 handOverRetryInterval: config.GetTimeSpan("hand-over-retry-interval"));
+        }
+
+        private static string RoleOption(string role)
+        {
+            if (String.IsNullOrEmpty(role))
+                return null;
+            return role;
         }
 
         public readonly string SingletonName;
@@ -65,9 +70,9 @@ namespace Akka.Cluster.Tools.Singleton
         {
             if (string.IsNullOrWhiteSpace(singletonName))
                 throw new ArgumentNullException("singletonName");
-            if (removalMargin == TimeSpan.Zero)
+            if (removalMargin < TimeSpan.Zero)
                 throw new ArgumentException("ClusterSingletonManagerSettings.RemovalMargin must be positive", "removalMargin");
-            if (handOverRetryInterval == TimeSpan.Zero)
+            if (handOverRetryInterval <= TimeSpan.Zero)
                 throw new ArgumentException("ClusterSingletonManagerSettings.HandOverRetryInterval must be positive", "handOverRetryInterval");
 
             SingletonName = singletonName;
@@ -83,11 +88,7 @@ namespace Akka.Cluster.Tools.Singleton
 
         public ClusterSingletonManagerSettings WithRole(string role)
         {
-            return new ClusterSingletonManagerSettings(
-                singletonName: SingletonName,
-                role: role,
-                removalMargin: RemovalMargin,
-                handOverRetryInterval: HandOverRetryInterval);
+            return Copy(role: RoleOption(role));
         }
 
         public ClusterSingletonManagerSettings WithRemovalMargin(TimeSpan removalMargin)
