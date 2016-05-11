@@ -1931,6 +1931,15 @@ namespace Akka
     {
         bool WasHandled { get; }
     }
+    public sealed class NotUsed : System.IComparable<Akka.NotUsed>, System.IEquatable<Akka.NotUsed>
+    {
+        public static readonly Akka.NotUsed Instance;
+        public int CompareTo(Akka.NotUsed other) { }
+        public override bool Equals(object obj) { }
+        public bool Equals(Akka.NotUsed other) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
     public class static PatternMatch
     {
         public static Akka.Case Match(this object target) { }

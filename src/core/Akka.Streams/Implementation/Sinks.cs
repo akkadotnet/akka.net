@@ -155,7 +155,7 @@ namespace Akka.Streams.Implementation
 
         public override ISubscriber<TIn> Create(MaterializationContext context, out Task materializer)
         {
-            var p = new TaskCompletionSource<Unit>();
+            var p = new TaskCompletionSource<NotUsed>();
             materializer = p.Task;
             return new SinkholeSubscriber<TIn>(p);
         }
@@ -168,7 +168,7 @@ namespace Akka.Streams.Implementation
     /// 
     /// Attaches a subscriber to this stream.
     /// </summary>
-    internal sealed class SubscriberSink<TIn> : SinkModule<TIn, Unit>
+    internal sealed class SubscriberSink<TIn> : SinkModule<TIn, NotUsed>
     {
         private readonly ISubscriber<TIn> _subscriber;
 
@@ -183,12 +183,12 @@ namespace Akka.Streams.Implementation
         public override IModule WithAttributes(Attributes attributes)
             => new SubscriberSink<TIn>(_subscriber, attributes, AmendShape(attributes));
 
-        protected override SinkModule<TIn, Unit> NewInstance(SinkShape<TIn> shape)
+        protected override SinkModule<TIn, NotUsed> NewInstance(SinkShape<TIn> shape)
             => new SubscriberSink<TIn>(_subscriber, Attributes, shape);
 
-        public override ISubscriber<TIn> Create(MaterializationContext context, out Unit materializer)
+        public override ISubscriber<TIn> Create(MaterializationContext context, out NotUsed materializer)
         {
-            materializer = Unit.Instance;
+            materializer = NotUsed.Instance;
             return _subscriber;
         }
 
@@ -200,7 +200,7 @@ namespace Akka.Streams.Implementation
     /// 
     /// A sink that immediately cancels its upstream upon materialization.
     /// </summary>
-    internal sealed class CancelSink<T> : SinkModule<T, Unit>
+    internal sealed class CancelSink<T> : SinkModule<T, NotUsed>
     {
         public CancelSink(Attributes attributes, SinkShape<T> shape)
             : base(shape)
@@ -210,11 +210,11 @@ namespace Akka.Streams.Implementation
 
         public override Attributes Attributes { get; }
 
-        protected override SinkModule<T, Unit> NewInstance(SinkShape<T> shape) => new CancelSink<T>(Attributes, shape);
+        protected override SinkModule<T, NotUsed> NewInstance(SinkShape<T> shape) => new CancelSink<T>(Attributes, shape);
 
-        public override ISubscriber<T> Create(MaterializationContext context, out Unit materializer)
+        public override ISubscriber<T> Create(MaterializationContext context, out NotUsed materializer)
         {
-            materializer = Unit.Instance;
+            materializer = NotUsed.Instance;
             return new CancellingSubscriber<T>();
         }
 
@@ -263,7 +263,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class ActorRefSink<TIn> : SinkModule<TIn, Unit>
+    internal sealed class ActorRefSink<TIn> : SinkModule<TIn, NotUsed>
     {
         private readonly IActorRef _ref;
         private readonly object _onCompleteMessage;
@@ -282,10 +282,10 @@ namespace Akka.Streams.Implementation
         public override IModule WithAttributes(Attributes attributes)
             => new ActorRefSink<TIn>(_ref, _onCompleteMessage, attributes, AmendShape(attributes));
 
-        protected override SinkModule<TIn, Unit> NewInstance(SinkShape<TIn> shape)
+        protected override SinkModule<TIn, NotUsed> NewInstance(SinkShape<TIn> shape)
             => new ActorRefSink<TIn>(_ref, _onCompleteMessage, _attributes, shape);
 
-        public override ISubscriber<TIn> Create(MaterializationContext context, out Unit materializer)
+        public override ISubscriber<TIn> Create(MaterializationContext context, out NotUsed materializer)
         {
             var actorMaterializer = ActorMaterializer.Downcast(context.Materializer);
             var effectiveSettings = actorMaterializer.EffectiveSettings(context.EffectiveAttributes);

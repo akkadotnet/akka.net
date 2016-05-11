@@ -7,7 +7,6 @@
 
 using System;
 using System.Linq;
-using System.Reactive.Streams;
 using Akka.IO;
 using Akka.Streams.Stage;
 using Akka.Util;
@@ -29,7 +28,7 @@ namespace Akka.Streams.Dsl
         /// <param name="maximumFrameLength">The maximum length of allowed frames while decoding. If the maximum length is exceeded this Flow will fail the stream.</param>
         /// <param name="allowTruncation">If false, then when the last frame being decoded contains no valid delimiter this Flow fails the stream instead of returning a truncated frame.</param>
         /// <returns></returns>
-        public static Flow<ByteString, ByteString, Unit> Delimiter(ByteString delimiter, int maximumFrameLength,
+        public static Flow<ByteString, ByteString, NotUsed> Delimiter(ByteString delimiter, int maximumFrameLength,
             bool allowTruncation = false)
         {
             var graph = Flow.Create<ByteString>()
@@ -50,7 +49,7 @@ namespace Akka.Streams.Dsl
         /// <param name="fieldOffset">The offset of the field from the beginning of the frame in bytes</param>
         /// <param name="byteOrder">The <see cref="ByteOrder"/> to be used when decoding the field</param>
         /// <returns></returns>
-        public static Flow<ByteString, ByteString, Unit> LengthField(int fieldLength, int maximumFramelength,
+        public static Flow<ByteString, ByteString, NotUsed> LengthField(int fieldLength, int maximumFramelength,
             int fieldOffset = 0, ByteOrder byteOrder = ByteOrder.LittleEndian)
         {
             if (fieldLength < 1 || fieldLength > 4)
@@ -79,7 +78,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="maximumMessageLength">Maximum length of allowed messages. If sent or received messages exceed the configured limit this BidiFlow will fail the stream. The header attached by this BidiFlow are not included in this limit.</param>
         /// <returns></returns>
-        public static BidiFlow<ByteString, ByteString, ByteString, ByteString, Unit> SimpleFramingProtocol(int maximumMessageLength)
+        public static BidiFlow<ByteString, ByteString, ByteString, ByteString, NotUsed> SimpleFramingProtocol(int maximumMessageLength)
         {
             var decoder = LengthField(4, maximumMessageLength + 4, 0, ByteOrder.BigEndian).Select(b => b.Drop(4));
             var encoder = Flow.Create<ByteString>().Transform(() => new FramingDecoderStage(maximumMessageLength));

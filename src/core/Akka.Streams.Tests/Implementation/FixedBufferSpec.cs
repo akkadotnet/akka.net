@@ -22,7 +22,7 @@ namespace Akka.Streams.Tests.Implementation
         [MemberData("Sizes")]
         public void FixedSizeBuffer_must_start_as_empty(int size)
         {
-            var buf = FixedSizeBuffer.Create<Unit>(size);
+            var buf = FixedSizeBuffer.Create<NotUsed>(size);
             buf.IsEmpty.Should().BeTrue();
             buf.IsFull.Should().BeFalse();
         }

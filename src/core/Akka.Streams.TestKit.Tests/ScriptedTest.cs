@@ -147,7 +147,7 @@ namespace Akka.Streams.TestKit.Tests
             private bool _completed;
 
             public ScriptRunner(
-                Func<Flow<TIn, TIn, Unit>, Flow<TIn, TOut, TMat>> op,
+                Func<Flow<TIn, TIn, NotUsed>, Flow<TIn, TOut, TMat>> op,
                 ActorMaterializerSettings settings,
                 Script<TIn, TOut> script,
                 int maximumOverrun,
@@ -300,13 +300,13 @@ namespace Akka.Streams.TestKit.Tests
         }
 
         protected void RunScript<TIn2, TOut2, TMat2>(Script<TIn2, TOut2> script, ActorMaterializerSettings settings,
-            Func<Flow<TIn2, TIn2, Unit>, Flow<TIn2, TOut2, TMat2>> op,
+            Func<Flow<TIn2, TIn2, NotUsed>, Flow<TIn2, TOut2, TMat2>> op,
             int maximumOverrun = 3, int maximumRequest = 3, int maximumBuffer = 3)
         {
             new ScriptRunner<TIn2, TOut2, TMat2>(op, settings, script, maximumOverrun, maximumRequest, maximumBuffer, this).Run();
         }
 
-        protected static IPublisher<TOut> ToPublisher<TOut>(Source<TOut, Unit> source, IMaterializer materializer)
+        protected static IPublisher<TOut> ToPublisher<TOut>(Source<TOut, NotUsed> source, IMaterializer materializer)
         {
             return source.RunWith(Sink.AsPublisher<TOut>(false), materializer);
         }

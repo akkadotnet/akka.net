@@ -29,7 +29,7 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        private static BidiFlow<int, long, ByteString, string, Unit> Bidi()
+        private static BidiFlow<int, long, ByteString, string, NotUsed> Bidi()
         {
             return
                 BidiFlow.FromFlows(
@@ -39,7 +39,7 @@ namespace Akka.Streams.Tests.Dsl
                         .WithAttributes(Attributes.CreateName("bottom")));
         }
 
-        private static BidiFlow<long, int, string, ByteString, Unit> Inverse()
+        private static BidiFlow<long, int, string, ByteString, NotUsed> Inverse()
         {
             return
                 BidiFlow.FromFlows(
@@ -205,7 +205,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_BidiFlow_must_suitably_ovveride_attribute_handling_methods()
         {
             // ReSharper disable once UnusedVariable
-            var b = (BidiFlow<int, long, ByteString, string, Unit>)
+            var b = (BidiFlow<int, long, ByteString, string, NotUsed>)
                 Bidi().WithAttributes(Attributes.CreateName("")).Async().Named("");
         }
     }

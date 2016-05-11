@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Reactive.Streams;
 
 namespace Akka.Streams.Dsl
 {
@@ -22,6 +21,6 @@ namespace Akka.Streams.Dsl
 
         public static Tuple<TLeft, TRight> Both<TLeft, TRight>(TLeft left, TRight right) => Tuple.Create(left, right);
 
-        public static Unit None<TLeft, TRight>(TLeft left, TRight right) => Unit.Instance;
+        public static NotUsed None<TLeft, TRight>(TLeft left, TRight right) => NotUsed.Instance;
     }
 }

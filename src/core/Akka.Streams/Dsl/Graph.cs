@@ -306,10 +306,10 @@ namespace Akka.Streams.Dsl
 
     public static class Interleave
     {
-        public static IGraph<UniformFanInShape<T, T>, Unit> Create<T>(int inputPorts, int segmentSize,
+        public static IGraph<UniformFanInShape<T, T>, NotUsed> Create<T>(int inputPorts, int segmentSize,
             bool eagerClose = false)
         {
-            return GraphStages.WithDetachedInputs<T, Unit>(new Interleave<T, T>(inputPorts, segmentSize, eagerClose));
+            return GraphStages.WithDetachedInputs<T, NotUsed>(new Interleave<T, T>(inputPorts, segmentSize, eagerClose));
         }
     }
 
@@ -982,9 +982,9 @@ namespace Akka.Streams.Dsl
 
     public static class Concat
     {
-        public static IGraph<UniformFanInShape<T, T>, Unit> Create<T>(int inputPorts = 2)
+        public static IGraph<UniformFanInShape<T, T>, NotUsed> Create<T>(int inputPorts = 2)
         {
-            return GraphStages.WithDetachedInputs<T, Unit>(new Concat<T, T>(inputPorts));
+            return GraphStages.WithDetachedInputs<T, NotUsed>(new Concat<T, T>(inputPorts));
         }
     }
 

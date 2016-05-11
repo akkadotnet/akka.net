@@ -97,7 +97,7 @@ namespace Akka.Streams.Implementation
     /// downstream and the propagation of back-pressure upstream.
     /// </summary>
     /// <typeparam name="TOut"></typeparam>
-    internal sealed class PublisherSource<TOut> : SourceModule<TOut, Unit>
+    internal sealed class PublisherSource<TOut> : SourceModule<TOut, NotUsed>
     {
         private readonly IPublisher<TOut> _publisher;
 
@@ -112,12 +112,12 @@ namespace Akka.Streams.Implementation
         public override IModule WithAttributes(Attributes attributes)
             => new PublisherSource<TOut>(_publisher, attributes, AmendShape(attributes));
 
-        protected override SourceModule<TOut, Unit> NewInstance(SourceShape<TOut> shape)
+        protected override SourceModule<TOut, NotUsed> NewInstance(SourceShape<TOut> shape)
             => new PublisherSource<TOut>(_publisher, Attributes, shape);
 
-        public override IPublisher<TOut> Create(MaterializationContext context, out Unit materializer)
+        public override IPublisher<TOut> Create(MaterializationContext context, out NotUsed materializer)
         {
-            materializer = Unit.Instance;
+            materializer = NotUsed.Instance;
             return _publisher;
         }
     }

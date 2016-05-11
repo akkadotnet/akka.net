@@ -39,7 +39,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Sink_must_be_composable_without_importing_modules()
         {
             var probes = CreateProbes();
-            var sink = Sink.FromGraph(GraphDsl.Create<SinkShape<int>, Unit>(b =>
+            var sink = Sink.FromGraph(GraphDsl.Create<SinkShape<int>, NotUsed>(b =>
             {
                 var broadcast = b.Add(new Broadcast<int>(3));
                 for (var i = 0; i < 3; i++)
@@ -91,7 +91,7 @@ namespace Akka.Streams.Tests.Dsl
             var probes = CreateProbes();
             var sink =
                 Sink.FromGraph(GraphDsl.Create(Sink.FromSubscriber(probes[0]),
-                    Sink.FromSubscriber(probes[1]), (_, __) => Unit.Instance, (b, shape0, shape1) =>
+                    Sink.FromSubscriber(probes[1]), (_, __) => NotUsed.Instance, (b, shape0, shape1) =>
                     {
                         var broadcast = b.Add(new Broadcast<int>(3));
                         b.From(broadcast.Out(0)).Via(Flow.Create<int>().Where(x => x == 0)).To(shape0.Inlet);
@@ -117,7 +117,7 @@ namespace Akka.Streams.Tests.Dsl
             var sink =
                 Sink.FromGraph(GraphDsl.Create(Sink.FromSubscriber(probes[0]),
                     Sink.FromSubscriber(probes[1]), Sink.FromSubscriber(probes[2]),
-                    (_, __, ___) => Unit.Instance, (b, shape0, shape1, shape2) =>
+                    (_, __, ___) => NotUsed.Instance, (b, shape0, shape1, shape2) =>
                     {
                         var broadcast = b.Add(new Broadcast<int>(3));
                         b.From(broadcast.Out(0)).Via(Flow.Create<int>().Where(x => x == 0)).To(shape0.Inlet);

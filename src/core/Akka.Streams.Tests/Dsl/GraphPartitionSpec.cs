@@ -70,7 +70,7 @@ namespace Akka.Streams.Tests.Dsl
                 var c1 = TestSubscriber.CreateProbe<string>(this);
                 var c2 = TestSubscriber.CreateProbe<string>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     var partition = b.Add(new Partition<string>(2, s => s.Length > 4 ? 0 : 1));
                     var source = Source.From(new[] {"this", "is", "just", "another", "test"});
@@ -99,7 +99,7 @@ namespace Akka.Streams.Tests.Dsl
                 var c1 = TestSubscriber.CreateProbe<int>(this);
                 var c2 = TestSubscriber.CreateProbe<int>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     var partition = b.Add(new Partition<int>(2, i => i < 6 ? 0 : 1));
                     var source = Source.From(new [] {6,3});
@@ -130,7 +130,7 @@ namespace Akka.Streams.Tests.Dsl
                 var c1 = TestSubscriber.CreateProbe<int>(this);
                 var c2 = TestSubscriber.CreateProbe<int>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     var partition = b.Add(new Partition<int>(2, i => i < 6 ? 0 : 1));
                     var source = Source.FromPublisher(p1.Publisher);
@@ -198,7 +198,7 @@ namespace Akka.Streams.Tests.Dsl
                 var c1 = TestSubscriber.CreateProbe<int>(this);
                 var c2 = TestSubscriber.CreateProbe<int>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     var partition = b.Add(new Partition<int>(2, i => i < 6 ? 0 : 1));
                     var source = Source.From(new[] { 6 });
@@ -226,14 +226,14 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var c1 = TestSubscriber.CreateProbe<int>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     var partition = b.Add(new Partition<int>(2, i => i < 0 ? -1 : 0));
                     var source = Source.From(new[] { -3 });
 
                     b.From(source).To(partition.In);
                     b.From(partition.Out(0)).To(Sink.FromSubscriber(c1));
-                    b.From(partition.Out(1)).To(Sink.Ignore<int>().MapMaterializedValue(_ => Unit.Instance));
+                    b.From(partition.Out(1)).To(Sink.Ignore<int>().MapMaterializedValue(_ => NotUsed.Instance));
 
                     return ClosedShape.Instance;
                 })).Run(Materializer);

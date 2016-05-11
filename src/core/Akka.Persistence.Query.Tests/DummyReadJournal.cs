@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
-using System.Reactive.Streams;
 using Akka.Configuration;
 using Akka.Streams.Dsl;
 
@@ -20,7 +19,7 @@ namespace Akka.Persistence.Query.Tests
     {
         public static readonly string Identifier = "akka.persistence.query.journal.dummy";
 
-        public Source<string, Unit> AllPersistenceIds() => Source.From(Iterate(0)).Select(i => i.ToString());
+        public Source<string, NotUsed> AllPersistenceIds() => Source.From(Iterate(0)).Select(i => i.ToString());
 
         private IEnumerable<int> Iterate(int start)
         {

@@ -20,9 +20,9 @@ namespace Akka.Streams.TestKit.Tests
 
         protected abstract class Fixture
         {
-            protected GraphDsl.Builder<Unit> Builder { get; private set; }
+            protected GraphDsl.Builder<NotUsed> Builder { get; private set; }
 
-            protected Fixture(GraphDsl.Builder<Unit> builder)
+            protected Fixture(GraphDsl.Builder<NotUsed> builder)
             {
                 Builder = builder;
             }
@@ -32,12 +32,12 @@ namespace Akka.Streams.TestKit.Tests
             public abstract Outlet<TOutputs> Out { get; }
         }
 
-        protected abstract Fixture CreateFixture(GraphDsl.Builder<Unit> builder);
+        protected abstract Fixture CreateFixture(GraphDsl.Builder<NotUsed> builder);
 
         protected override TestSubscriber.Probe<TOutputs> Setup(IPublisher<int> p1, IPublisher<int> p2)
         {
             var subscriber = this.CreateProbe<TOutputs>();
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
             {
                 var f = CreateFixture(b);
 

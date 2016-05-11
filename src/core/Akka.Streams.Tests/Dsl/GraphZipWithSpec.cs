@@ -26,11 +26,11 @@ namespace Akka.Streams.Tests.Dsl
         {
         }
 
-        protected override Fixture CreateFixture(GraphDsl.Builder<Unit> builder) => new ZipWithFixture(builder);
+        protected override Fixture CreateFixture(GraphDsl.Builder<NotUsed> builder) => new ZipWithFixture(builder);
 
         private sealed class ZipWithFixture : Fixture
         {
-            public ZipWithFixture(GraphDsl.Builder<Unit> builder) : base(builder)
+            public ZipWithFixture(GraphDsl.Builder<NotUsed> builder) : base(builder)
             {
                 var zipWith = builder.Add(new ZipWith<int, int, int>((i, i1) => i + i1));
 
@@ -95,7 +95,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var probe = TestSubscriber.CreateManualProbe<int>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     var zipWith = b.Add(new ZipWith<int, int, int>((i, i1) => i+i1));
                     var source1 = Source.From(Enumerable.Range(1, 4));
@@ -131,7 +131,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var probe = TestSubscriber.CreateManualProbe<int>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     var zipWith = b.Add(new ZipWith<int, int, int>((i, i1) => i / i1));
                     var source1 = Source.From(Enumerable.Range(1, 4));
@@ -161,7 +161,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var probe = TestSubscriber.CreateManualProbe<Person>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     var zipWith =
                         b.Add(
@@ -194,7 +194,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var probe = TestSubscriber.CreateManualProbe<string>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     Func<int, string, int, string, int, string, int, string, int, string> sum9 =
                         (i1, s1, i2, s2, i3, s3, i4, s4, i5) => i1 + s1 + i2 + s2 + i3 + s3 + i4 + s4 + i5;

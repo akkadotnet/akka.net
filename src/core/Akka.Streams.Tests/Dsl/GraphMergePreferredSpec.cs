@@ -25,11 +25,11 @@ namespace Akka.Streams.Tests.Dsl
         {
         }
 
-        protected override Fixture CreateFixture(GraphDsl.Builder<Unit> builder) => new MergePreferredFixture(builder);
+        protected override Fixture CreateFixture(GraphDsl.Builder<NotUsed> builder) => new MergePreferredFixture(builder);
 
         private sealed class MergePreferredFixture : Fixture
         {
-            public MergePreferredFixture(GraphDsl.Builder<Unit> builder) : base(builder)
+            public MergePreferredFixture(GraphDsl.Builder<NotUsed> builder) : base(builder)
             {
                 var merge = builder.Add(new MergePreferred<int>(1));
                 Left = merge.Preferred;
@@ -99,13 +99,13 @@ namespace Akka.Streams.Tests.Dsl
             var s = Source.From(Enumerable.Range(0, 4));
             Action action = () =>
             {
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape,Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape,NotUsed>(b =>
                 {
                     var merge = b.Add(new MergePreferred<int>(1));
                     b.From(s).To(merge.Preferred);
                     b.From(s).To(merge.Preferred);
                     b.From(s).To(merge.In(0));
-                    b.From(merge.Out).To(Sink.First<int>().MapMaterializedValue(_ => Unit.Instance));
+                    b.From(merge.Out).To(Sink.First<int>().MapMaterializedValue(_ => NotUsed.Instance));
                     return ClosedShape.Instance;
                 }));
             };

@@ -5,7 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Reactive.Streams;
 using Akka.Streams.Dsl;
 
 namespace Akka.Persistence.Query
@@ -59,7 +58,7 @@ namespace Akka.Persistence.Query
         /// Corresponding query that is completed when it reaches the end of the currently
         /// stored events is provided by <see cref="ICurrentEventsByTagQuery.CurrentEventsByTag"/>.
         /// </summary>
-        Source<EventEnvelope, Unit> EventsByTag(string tag, long offset);
+        Source<EventEnvelope, NotUsed> EventsByTag(string tag, long offset);
     }
 
     /// <summary>
@@ -72,7 +71,7 @@ namespace Akka.Persistence.Query
         /// is completed immediately when it reaches the end of the "result set". Events that are
         /// stored after the query is completed are not included in the event stream.
         /// </summary>
-        Source<EventEnvelope, Unit> CurrentEventsByTag(string tag, long offset);
+        Source<EventEnvelope, NotUsed> CurrentEventsByTag(string tag, long offset);
     }
 
     /// <summary>
@@ -94,7 +93,7 @@ namespace Akka.Persistence.Query
         /// stored events is provided by <see cref="ICurrentEventsByPersistenceIdQuery.CurrentEventsByPersistenceId"/>.
         /// </para>
         /// </summary>
-        Source<EventEnvelope, Unit> EventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr);
+        Source<EventEnvelope, NotUsed> EventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr);
     }
 
     /// <summary>
@@ -108,7 +107,7 @@ namespace Akka.Persistence.Query
         /// the "result set". Events that are stored after the query is completed are
         /// not included in the event stream.
         /// </summary>
-        Source<EventEnvelope, Unit> CurrentEventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr);
+        Source<EventEnvelope, NotUsed> CurrentEventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr);
     }
 
     /// <summary>
@@ -121,7 +120,7 @@ namespace Akka.Persistence.Query
         /// is completed immediately when it reaches the end of the "result set". Persistent
         /// actors that are created after the query is completed are not included in the stream.
         /// </summary>
-        Source<string, Unit> CurrentPersistenceIds();
+        Source<string, NotUsed> CurrentPersistenceIds();
     }
 
     public interface IAllPersistenceIdsQuery : IReadJournal
@@ -135,6 +134,6 @@ namespace Akka.Persistence.Query
         /// Corresponding query that is completed when it reaches the end of the currently
         /// currently used `persistenceIds` is provided by <see cref="ICurrentPersistenceIdsQuery.CurrentPersistenceIds"/>.
         /// </summary>
-        Source<string, Unit> AllPersistenceIds();
+        Source<string, NotUsed> AllPersistenceIds();
     }
 }

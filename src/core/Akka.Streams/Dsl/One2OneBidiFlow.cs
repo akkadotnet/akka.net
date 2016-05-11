@@ -6,14 +6,13 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Reactive.Streams;
 using Akka.Streams.Stage;
 
 namespace Akka.Streams.Dsl
 {
     public static class One2OneBidiFlow
     {
-        public static BidiFlow<TIn, TIn, TOut, TOut, Unit> Apply<TIn, TOut>(int maxPending)
+        public static BidiFlow<TIn, TIn, TOut, TOut, NotUsed> Apply<TIn, TOut>(int maxPending)
         {
             return BidiFlow.FromGraph(new One2OneBidi<TIn, TOut>(maxPending));
         }

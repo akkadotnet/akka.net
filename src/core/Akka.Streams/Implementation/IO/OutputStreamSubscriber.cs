@@ -7,7 +7,6 @@
 
 using System;
 using System.IO;
-using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -66,7 +65,7 @@ namespace Akka.Streams.Implementation.IO
                     }
                     catch (Exception ex)
                     {
-                        _completionPromise.TrySetResult(new IOResult(_bytesWritten, Result.Failure<Unit>(ex)));
+                        _completionPromise.TrySetResult(new IOResult(_bytesWritten, Result.Failure<NotUsed>(ex)));
                         Cancel();
                     }
                 })
@@ -74,7 +73,7 @@ namespace Akka.Streams.Implementation.IO
                 {
                     _log.Error(error.Cause,
                         $"Tearing down OutputStreamSink due to upstream error, wrote bytes: {_bytesWritten}");
-                    _completionPromise.TrySetResult(new IOResult(_bytesWritten, Result.Failure<Unit>(error.Cause)));
+                    _completionPromise.TrySetResult(new IOResult(_bytesWritten, Result.Failure<NotUsed>(error.Cause)));
                     Context.Stop(Self);
                 })
                 .With<OnComplete>(() =>
@@ -93,10 +92,10 @@ namespace Akka.Streams.Implementation.IO
             }
             catch (Exception ex)
             {
-                _completionPromise.TrySetResult(new IOResult(_bytesWritten, Result.Failure<Unit>(ex)));
+                _completionPromise.TrySetResult(new IOResult(_bytesWritten, Result.Failure<NotUsed>(ex)));
             }
 
-            _completionPromise.TrySetResult(new IOResult(_bytesWritten, Result.Success(Unit.Instance)));
+            _completionPromise.TrySetResult(new IOResult(_bytesWritten, Result.Success(NotUsed.Instance)));
             base.PostStop();
         }
     }

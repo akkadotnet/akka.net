@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -50,10 +49,10 @@ namespace Akka.Streams.Tests.Performance
             _tenGraph = ToSource(tenSources);
         }
 
-        private static IRunnableGraph<Task> ToSource(IGraph<SourceShape<int>, Unit> graph)
+        private static IRunnableGraph<Task> ToSource(IGraph<SourceShape<int>, NotUsed> graph)
             => Source.FromGraph(graph).ToMaterialized(Sink.Ignore<int>(), Keep.Right);
 
-        private static IGraph<SourceShape<int>, Unit> CreateSource(int count)
+        private static IGraph<SourceShape<int>, NotUsed> CreateSource(int count)
             => Fusing.Aggressive(Source.Repeat(1).Take(count));
 
         [PerfCleanup]

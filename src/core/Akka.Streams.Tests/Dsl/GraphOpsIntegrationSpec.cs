@@ -67,9 +67,9 @@ namespace Akka.Streams.Tests.Dsl
                 }
             }
 
-            internal static IGraph<ShufflePorts, Unit> Create<TIn, TOut>(Flow<TIn, TOut, Unit> pipeline)
+            internal static IGraph<ShufflePorts, NotUsed> Create<TIn, TOut>(Flow<TIn, TOut, NotUsed> pipeline)
             {
-                return GraphDsl.Create<ShufflePorts, Unit>(b =>
+                return GraphDsl.Create<ShufflePorts, NotUsed>(b =>
                 {
                     var merge = b.Add(new Merge<TIn>(2));
                     var balance = b.Add(new Balance<TOut>(2));
@@ -221,7 +221,7 @@ namespace Akka.Streams.Tests.Dsl
             var s = TestSubscriber.CreateManualProbe<int>(this);
             var flow = Flow.Create<int>().Select(x => x*2);
 
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
             {
                 b.From(Source.FromPublisher(p)).Via(flow).To(Sink.FromSubscriber(s));
                 return ClosedShape.Instance;
@@ -235,10 +235,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void FlowGraphs_must_be_possibe_to_use_as_lego_bricks()
         {
-            Func<int, Source<int, Tuple<Unit, Unit, Unit, Task<IEnumerable<int>>>>> source =
+            Func<int, Source<int, Tuple<NotUsed, NotUsed, NotUsed, Task<IEnumerable<int>>>>> source =
                 i =>
                     Source.From(Enumerable.Range(i, 3))
-                        .MapMaterializedValue<Tuple<Unit, Unit, Unit, Task<IEnumerable<int>>>>(_ => null);
+                        .MapMaterializedValue<Tuple<NotUsed, NotUsed, NotUsed, Task<IEnumerable<int>>>>(_ => null);
             var shuffler = Shuffle.Create(Flow.Create<int>().Select(x => x + 1));
 
             var task =

@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FlowOperations.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
@@ -8,12 +8,10 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Event;
 using Akka.IO;
 using Akka.Streams.Dsl.Internal;
-using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
 using Akka.Streams.Util;
@@ -829,9 +827,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels or substream cancels
         /// </summary> 
-        public static Flow<TIn, Tuple<IImmutableList<TOut>, Source<TOut, Unit>>, TMat> PrefixAndTail<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, int n)
+        public static Flow<TIn, Tuple<IImmutableList<TOut>, Source<TOut, NotUsed>>, TMat> PrefixAndTail<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, int n)
         {
-            return (Flow<TIn, Tuple<IImmutableList<TOut>, Source<TOut, Unit>>, TMat>)InternalFlowOperations.PrefixAndTail(flow, n);
+            return (Flow<TIn, Tuple<IImmutableList<TOut>, Source<TOut, NotUsed>>, TMat>)InternalFlowOperations.PrefixAndTail(flow, n);
         }
 
         /// <summary>
@@ -865,7 +863,7 @@ namespace Akka.Streams.Dsl
         public static SubFlow<TOut, TMat, Sink<TIn, TMat>> GroupBy<TIn, TOut, TMat, TKey>(this Flow<TIn, TOut, TMat> flow, int maxSubstreams, Func<TOut, TKey> groupingFunc)
         {
             return flow.GroupBy(maxSubstreams, groupingFunc,
-                (f, s) => ((Flow<TIn, Source<TOut, Unit>, TMat>) f).To(s),
+                (f, s) => ((Flow<TIn, Source<TOut, NotUsed>, TMat>) f).To(s),
                 (f, o) => ((Flow<TIn, TOut, TMat>) f).DeprecatedAndThen(o)
                 );
         }
@@ -925,7 +923,7 @@ namespace Akka.Streams.Dsl
         /// <seealso cref="SplitAfter{TIn,TOut,TMat}(Flow{TIn,TOut,TMat},SubstreamCancelStrategy,Func{TOut,bool})"/> 
         public static SubFlow<TOut, TMat, Sink<TIn, TMat>> SplitWhen<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, SubstreamCancelStrategy substreamCancelStrategy, Func<TOut, bool> predicate)
         {
-            return flow.SplitWhen(substreamCancelStrategy, predicate, (f, s) => ((Flow<TIn, Source<TOut, Unit>, TMat>) f).To(s));
+            return flow.SplitWhen(substreamCancelStrategy, predicate, (f, s) => ((Flow<TIn, Source<TOut, NotUsed>, TMat>) f).To(s));
         }
 
         /// <summary>
@@ -983,7 +981,7 @@ namespace Akka.Streams.Dsl
         /// <seealso cref="SplitWhen{TIn,TOut,TMat}(Flow{TIn,TOut,TMat},SubstreamCancelStrategy,Func{TOut,bool})"/> 
         public static SubFlow<TOut, TMat, Sink<TIn, TMat>> SplitAfter<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, SubstreamCancelStrategy substreamCancelStrategy, Func<TOut, bool> predicate)
         {
-            return flow.SplitAfter(substreamCancelStrategy, predicate, (f, s) => ((Flow<TIn, Source<TOut, Unit>, TMat>) f).To(s));
+            return flow.SplitAfter(substreamCancelStrategy, predicate, (f, s) => ((Flow<TIn, Source<TOut, NotUsed>, TMat>) f).To(s));
         }
 
         /// <summary>
@@ -1202,7 +1200,7 @@ namespace Akka.Streams.Dsl
         }
 
         ///<summary>
-        /// Materializes to <see cref="Task{Unit}"/> that completes on getting termination message.
+        /// Materializes to <see cref="Task{NotUsed}"/> that completes on getting termination message.
         /// The task completes with success when received complete message from upstream or cancel
         /// from downstream. It fails with the same error when received error message from
         /// downstream.

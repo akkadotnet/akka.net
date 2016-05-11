@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Immutable;
 using System.Net;
-using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
@@ -26,9 +25,9 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public struct ServerBinding
         {
-            private readonly Func<Task<Unit>> _unbindAction;
+            private readonly Func<Task> _unbindAction;
 
-            public ServerBinding(EndPoint localAddress, Func<Task<Unit>> unbindAction)
+            public ServerBinding(EndPoint localAddress, Func<Task> unbindAction)
             {
                 _unbindAction = unbindAction;
                 LocalAddress = localAddress;
@@ -36,7 +35,7 @@ namespace Akka.Streams.Dsl
 
             public readonly EndPoint LocalAddress;
 
-            public Task<Unit> Unbind() => _unbindAction();
+            public Task Unbind() => _unbindAction();
         }
 
         /// <summary>
@@ -44,7 +43,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public struct IncomingConnection
         {
-            public IncomingConnection(EndPoint localAddress, EndPoint remoteAddress, Flow<ByteString, ByteString, Unit> flow)
+            public IncomingConnection(EndPoint localAddress, EndPoint remoteAddress, Flow<ByteString, ByteString, NotUsed> flow)
             {
                 LocalAddress = localAddress;
                 RemoteAddress = remoteAddress;
@@ -55,7 +54,7 @@ namespace Akka.Streams.Dsl
 
             public readonly EndPoint RemoteAddress;
 
-            public readonly Flow<ByteString, ByteString, Unit> Flow;
+            public readonly Flow<ByteString, ByteString, NotUsed> Flow;
 
             /// <summary>
             /// Handles the connection using the given flow, which is materialized exactly once and the respective
@@ -148,7 +147,7 @@ namespace Akka.Streams.Dsl
         /// independently whether the client is still attempting to write. This setting is recommended
         /// for servers, and therefore it is the default setting.
         /// </param>
-        public Task<Tcp.ServerBinding> BindAndHandle(Flow<ByteString, ByteString, Unit> handler, IMaterializer materializer, string host, int port, int backlog = 100,
+        public Task<Tcp.ServerBinding> BindAndHandle(Flow<ByteString, ByteString, NotUsed> handler, IMaterializer materializer, string host, int port, int backlog = 100,
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = false, TimeSpan? idleTimeout = null)
         {
             return Bind(host, port, backlog, options, halfClose, idleTimeout)

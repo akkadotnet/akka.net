@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
-using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.IO;
 using Akka.Streams.Implementation.Stages;
@@ -78,10 +77,10 @@ namespace Akka.Streams.Implementation.IO
         private sealed class Logic : GraphStageLogic, IStageWithCallback
         {
             private readonly OutputStreamSourceStage _stage;
-            private TaskCompletionSource<Unit> _flush;
-            private TaskCompletionSource<Unit> _close;
+            private TaskCompletionSource<NotUsed> _flush;
+            private TaskCompletionSource<NotUsed> _close;
             private Action<Either<ByteString, Exception>> _downstreamCallback;
-            private Action<Tuple<IAdapterToStageMessage, TaskCompletionSource<Unit>>> _upstreamCallback;
+            private Action<Tuple<IAdapterToStageMessage, TaskCompletionSource<NotUsed>>> _upstreamCallback;
 
             public Logic(OutputStreamSourceStage stage) : base(stage.Shape)
             {
@@ -93,7 +92,7 @@ namespace Akka.Streams.Implementation.IO
                     else
                         FailStage(result.Value as Exception);
                 });
-                _upstreamCallback = GetAsyncCallback<Tuple<IAdapterToStageMessage, TaskCompletionSource<Unit>>>(OnAsyncMessage);
+                _upstreamCallback = GetAsyncCallback<Tuple<IAdapterToStageMessage, TaskCompletionSource<NotUsed>>>(OnAsyncMessage);
                 SetHandler(_stage._out, onPull: OnPull, onDownstreamFinish: OnDownstreamFinish);
             }
 
@@ -131,12 +130,12 @@ namespace Akka.Streams.Implementation.IO
 
             public Task WakeUp(IAdapterToStageMessage msg)
             {
-                var p = new TaskCompletionSource<Unit>();
-                _upstreamCallback(new Tuple<IAdapterToStageMessage, TaskCompletionSource<Unit>>(msg, p));
+                var p = new TaskCompletionSource<NotUsed>();
+                _upstreamCallback(new Tuple<IAdapterToStageMessage, TaskCompletionSource<NotUsed>>(msg, p));
                 return p.Task;
             }
 
-            private void OnAsyncMessage(Tuple<IAdapterToStageMessage, TaskCompletionSource<Unit>> @event)
+            private void OnAsyncMessage(Tuple<IAdapterToStageMessage, TaskCompletionSource<NotUsed>> @event)
             {
                 if (@event.Item1 is Flush)
                 {
@@ -161,7 +160,7 @@ namespace Akka.Streams.Implementation.IO
             {
                 if (_flush != null)
                 {
-                    _flush.TrySetResult(Unit.Instance);
+                    _flush.TrySetResult(NotUsed.Instance);
                     _flush = null;
                     return true;
                 }
@@ -169,7 +168,7 @@ namespace Akka.Streams.Implementation.IO
                 if (_close == null)
                     return false;
 
-                _close.TrySetResult(Unit.Instance);
+                _close.TrySetResult(NotUsed.Instance);
                 _close = null;
                 return true;
             }

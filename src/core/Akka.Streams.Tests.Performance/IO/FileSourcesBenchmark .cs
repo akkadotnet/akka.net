@@ -8,7 +8,6 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Reactive.Streams;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -27,7 +26,7 @@ namespace Akka.Streams.Tests.Performance.IO
         private FileInfo _file;
         private Source<ByteString, Task<IOResult>> _fileChannelSource;
         private Source<ByteString, Task<IOResult>> _fileInputStreamSource;
-        private Source<ByteString, Unit> _ioSourceLinesIterator;
+        private Source<ByteString, NotUsed> _ioSourceLinesIterator;
 
         [PerfSetup]
         public void Setup(BenchmarkContext context)

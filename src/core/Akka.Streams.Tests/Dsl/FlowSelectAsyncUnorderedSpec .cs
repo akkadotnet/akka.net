@@ -95,7 +95,7 @@ namespace Akka.Streams.Tests.Dsl
             c.Within(TimeSpan.FromSeconds(3), () =>
             {
                 Enumerable.Range(2, 19).ForEach(_ => got.Add(c.ExpectNext()));
-                return Unit.Instance;
+                return NotUsed.Instance;
             });
             got.ShouldAllBeEquivalentTo(Enumerable.Range(1, 20));
             c.ExpectComplete();

@@ -26,11 +26,11 @@ namespace Akka.Streams.Tests.Dsl
         {
         }
 
-        protected override Fixture CreateFixture(GraphDsl.Builder<Unit> builder) => new ConcatFixture(builder);
+        protected override Fixture CreateFixture(GraphDsl.Builder<NotUsed> builder) => new ConcatFixture(builder);
 
         private class ConcatFixture : Fixture
         {
-            public ConcatFixture(GraphDsl.Builder<Unit> builder) : base(builder)
+            public ConcatFixture(GraphDsl.Builder<NotUsed> builder) : base(builder)
             {
                var concat =  builder.Add(new Concat<int, int>());
                 Left = concat.In(0);
@@ -52,7 +52,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var probe = TestSubscriber.CreateManualProbe<int>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     var concat1 = b.Add(new Concat<int, int>());
                     var concat2 = b.Add(new Concat<int, int>());
@@ -179,7 +179,7 @@ namespace Akka.Streams.Tests.Dsl
                 var promise = new TaskCompletionSource<int>();
                 var subscriber = TestSubscriber.CreateManualProbe<int>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     var concat = b.Add(new Concat<int, int>());
                     var source = Source.From(Enumerable.Range(1, 3));

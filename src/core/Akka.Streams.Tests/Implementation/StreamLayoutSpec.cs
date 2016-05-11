@@ -132,7 +132,7 @@ namespace Akka.Streams.Tests.Implementation
                     AssignPort(outPort, publisher);
                 }
 
-                return Unit.Instance;
+                return NotUsed.Instance;
             }
         }
 
@@ -165,7 +165,7 @@ namespace Akka.Streams.Tests.Implementation
             stage1.IsSource.Should().Be(false);
 
             var stage2 = TestStage();
-            var flow12 = stage1.Compose<object, object, Unit>(stage2, Keep.None).Wire(stage1.OutPorts.First(), stage2.InPorts.First());
+            var flow12 = stage1.Compose<object, object, NotUsed>(stage2, Keep.None).Wire(stage1.OutPorts.First(), stage2.InPorts.First());
 
             flow12.InPorts.Should().BeEquivalentTo(stage1.InPorts);
             flow12.OutPorts.Should().BeEquivalentTo(stage2.OutPorts);
@@ -192,7 +192,7 @@ namespace Akka.Streams.Tests.Implementation
             sink3.IsSink.Should().Be(true);
             sink3.IsSource.Should().Be(false);
 
-            var source012 = source0.Compose<object, object, Unit>(flow12, Keep.None).Wire(source0.OutPorts.First(), flow12.InPorts.First());
+            var source012 = source0.Compose<object, object, NotUsed>(flow12, Keep.None).Wire(source0.OutPorts.First(), flow12.InPorts.First());
 
             source012.InPorts.Count.Should().Be(0);
             source012.OutPorts.Should().BeEquivalentTo(flow12.OutPorts);
@@ -201,7 +201,7 @@ namespace Akka.Streams.Tests.Implementation
             source012.IsSink.Should().Be(false);
             source012.IsSource.Should().Be(true);
 
-            var sink123 = flow12.Compose<object, object, Unit>(sink3, Keep.None).Wire(flow12.OutPorts.First(), sink3.InPorts.First());
+            var sink123 = flow12.Compose<object, object, NotUsed>(sink3, Keep.None).Wire(flow12.OutPorts.First(), sink3.InPorts.First());
 
             sink123.InPorts.Should().BeEquivalentTo(flow12.InPorts);
             sink123.OutPorts.Count.Should().Be(0);
@@ -210,11 +210,11 @@ namespace Akka.Streams.Tests.Implementation
             sink123.IsSink.Should().Be(true);
             sink123.IsSource.Should().Be(false);
 
-            var runnable0123a = source0.Compose<object, object, Unit>(sink123, Keep.None).Wire(source0.OutPorts.First(), sink123.InPorts.First());
-            var runnable0123b = source012.Compose<object, object, Unit>(sink3, Keep.None).Wire(source012.OutPorts.First(), sink3.InPorts.First());
+            var runnable0123a = source0.Compose<object, object, NotUsed>(sink123, Keep.None).Wire(source0.OutPorts.First(), sink123.InPorts.First());
+            var runnable0123b = source012.Compose<object, object, NotUsed>(sink3, Keep.None).Wire(source012.OutPorts.First(), sink3.InPorts.First());
             var runnable0123c = source0
-                .Compose<object, object, Unit>(flow12, Keep.None).Wire(source0.OutPorts.First(), flow12.InPorts.First())
-                .Compose<object, object, Unit>(sink3, Keep.None).Wire(flow12.OutPorts.First(), sink3.InPorts.First());
+                .Compose<object, object, NotUsed>(flow12, Keep.None).Wire(source0.OutPorts.First(), flow12.InPorts.First())
+                .Compose<object, object, NotUsed>(sink3, Keep.None).Wire(flow12.OutPorts.First(), sink3.InPorts.First());
 
             runnable0123a.InPorts.Count.Should().Be(0);
             runnable0123a.OutPorts.Count.Should().Be(0);

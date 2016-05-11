@@ -18,10 +18,10 @@ namespace Akka.Streams.TestKit.Tests
         protected readonly TestKitBase System;
 
         public ChainSetup(
-            Func<Flow<TIn, TIn, Unit>, Flow<TIn, TOut, TMat>> stream,
+            Func<Flow<TIn, TIn, NotUsed>, Flow<TIn, TOut, TMat>> stream,
             ActorMaterializerSettings settings,
             ActorMaterializer materializer,
-            Func<Source<TOut, Unit>, ActorMaterializer, IPublisher<TOut>> toPublisher,
+            Func<Source<TOut, NotUsed>, ActorMaterializer, IPublisher<TOut>> toPublisher,
             TestKitBase system)
         {
 
@@ -31,7 +31,7 @@ namespace Akka.Streams.TestKit.Tests
             Upstream = TestPublisher.CreateManualProbe<TIn>(system);
             Downstream = TestSubscriber.CreateProbe<TOut>(system);
 
-            var s = Source.FromPublisher(Upstream).Via(stream((Flow<TIn, TIn, Unit>)Flow.Identity<TIn>().Select(x => x).Named("buh")));
+            var s = Source.FromPublisher(Upstream).Via(stream((Flow<TIn, TIn, NotUsed>)Flow.Identity<TIn>().Select(x => x).Named("buh")));
             Publisher = toPublisher(s, materializer);
             UpstreamSubscription = Upstream.ExpectSubscription();
             Publisher.Subscribe(Downstream);
@@ -39,19 +39,19 @@ namespace Akka.Streams.TestKit.Tests
         }
 
         public ChainSetup(
-            Func<Flow<TIn, TIn, Unit>, Flow<TIn, TOut, TMat>> stream,
+            Func<Flow<TIn, TIn, NotUsed>, Flow<TIn, TOut, TMat>> stream,
             ActorMaterializerSettings settings,
-            Func<Source<TOut, Unit>, ActorMaterializer, IPublisher<TOut>> toPublisher,
+            Func<Source<TOut, NotUsed>, ActorMaterializer, IPublisher<TOut>> toPublisher,
             TestKitBase system)
             : this(stream, settings, system.Sys.Materializer(), toPublisher, system)
         {
         }
 
         public ChainSetup(
-            Func<Flow<TIn, TIn, Unit>, Flow<TIn, TOut, TMat>> stream,
+            Func<Flow<TIn, TIn, NotUsed>, Flow<TIn, TOut, TMat>> stream,
             ActorMaterializerSettings settings,
             Func<ActorMaterializerSettings, IActorRefFactory, ActorMaterializer> materializerCreator,
-            Func<Source<TOut, Unit>, ActorMaterializer, IPublisher<TOut>> toPublisher,
+            Func<Source<TOut, NotUsed>, ActorMaterializer, IPublisher<TOut>> toPublisher,
             TestKitBase system)
             : this(stream, settings, materializerCreator(settings, system.Sys), toPublisher, system)
         {

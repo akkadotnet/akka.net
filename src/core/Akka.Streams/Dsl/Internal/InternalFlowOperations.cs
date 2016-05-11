@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Event;
 using Akka.IO;
@@ -858,7 +857,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels or substream cancels
         /// </summary> 
-        public static IFlow<Tuple<IImmutableList<T>, Source<T, Unit>>, TMat> PrefixAndTail<T, TMat>(
+        public static IFlow<Tuple<IImmutableList<T>, Source<T, NotUsed>>, TMat> PrefixAndTail<T, TMat>(
             this IFlow<T, TMat> flow, int n)
         {
             return flow.Via(new Fusing.PrefixAndTail<T>(n));
@@ -896,8 +895,8 @@ namespace Akka.Streams.Dsl.Internal
             this IFlow<T, TMat> flow,
             int maxSubstreams,
             Func<T, TKey> groupingFunc,
-            Func<IFlow<Source<T, Unit>, TMat>, Sink<Source<T, Unit>, Task>, TClosed> toFunc,
-            Func<IFlow<T, TMat>, StageModule<T, Source<T, Unit>>, IFlow<Source<T, Unit>, TMat>> deprecatedAndThenFunc)
+            Func<IFlow<Source<T, NotUsed>, TMat>, Sink<Source<T, NotUsed>, Task>, TClosed> toFunc,
+            Func<IFlow<T, TMat>, StageModule<T, Source<T, NotUsed>>, IFlow<Source<T, NotUsed>, TMat>> deprecatedAndThenFunc)
         {
             var merge = new GroupByMergeBack<T, TMat, TKey>(flow, deprecatedAndThenFunc, maxSubstreams, groupingFunc);
 
@@ -905,7 +904,7 @@ namespace Akka.Streams.Dsl.Internal
             {
                 return toFunc(
                     deprecatedAndThenFunc(flow, new GroupBy<T, TKey>(maxSubstreams, groupingFunc)),
-                    Sink.ForEach<Source<T, Unit>>(e => e.RunWith(s, Fusing.GraphInterpreter.Current.Materializer)));
+                    Sink.ForEach<Source<T, NotUsed>>(e => e.RunWith(s, Fusing.GraphInterpreter.Current.Materializer)));
             };
 
             return new SubFlowImpl<T, T, TMat, TClosed>(Flow.Create<T, TMat>(), merge, finish);
@@ -914,12 +913,12 @@ namespace Akka.Streams.Dsl.Internal
         internal class GroupByMergeBack<TOut, TMat, TKey> : IMergeBack<TOut, TMat>
         {
             private readonly IFlow<TOut, TMat> _self;
-            private readonly Func<IFlow<TOut, TMat>, StageModule<TOut, Source<TOut, Unit>>, IFlow<Source<TOut, Unit>, TMat>> _deprecatedAndThenFunc;
+            private readonly Func<IFlow<TOut, TMat>, StageModule<TOut, Source<TOut, NotUsed>>, IFlow<Source<TOut, NotUsed>, TMat>> _deprecatedAndThenFunc;
             private readonly int _maxSubstreams;
             private readonly Func<TOut, TKey> _groupingFunc;
 
             public GroupByMergeBack(IFlow<TOut, TMat> self,
-                Func<IFlow<TOut, TMat>, StageModule<TOut, Source<TOut, Unit>>, IFlow<Source<TOut, Unit>, TMat>> deprecatedAndThenFunc,
+                Func<IFlow<TOut, TMat>, StageModule<TOut, Source<TOut, NotUsed>>, IFlow<Source<TOut, NotUsed>, TMat>> deprecatedAndThenFunc,
                 int maxSubstreams,
                 Func<TOut, TKey> groupingFunc)
             {
@@ -933,7 +932,7 @@ namespace Akka.Streams.Dsl.Internal
             {
                 return _deprecatedAndThenFunc(_self, new GroupBy<TOut, TKey>(_maxSubstreams, o => _groupingFunc(o)))
                     .Select(f => f.Via(flow))
-                    .Via(new Fusing.FlattenMerge<Source<T, Unit>, T, Unit>(breadth));
+                    .Via(new Fusing.FlattenMerge<Source<T, NotUsed>, T, NotUsed>(breadth));
             }
         }
 
@@ -992,14 +991,14 @@ namespace Akka.Streams.Dsl.Internal
         /// <seealso cref="SplitAfter{T,TMat,TVal}"/> 
         public static SubFlow<T, TMat, TClosed> SplitWhen<T, TMat, TClosed>(this IFlow<T, TMat> flow,
             SubstreamCancelStrategy substreamCancelStrategy, Func<T, bool> predicate,
-            Func<IFlow<Source<T, Unit>, TMat>, Sink<Source<T, Unit>, Task>, TClosed> toFunc)
+            Func<IFlow<Source<T, NotUsed>, TMat>, Sink<Source<T, NotUsed>, Task>, TClosed> toFunc)
         {
             var merge = new SplitWhenMergeBack<T, TMat>(flow, predicate, substreamCancelStrategy);
 
             Func<Sink<T, TMat>, TClosed> finish = s =>
             {
                 return toFunc(flow.Via(Fusing.Split.When(predicate, substreamCancelStrategy)),
-                    Sink.ForEach<Source<T, Unit>>(e => e.RunWith(s, Fusing.GraphInterpreter.Current.Materializer)));
+                    Sink.ForEach<Source<T, NotUsed>>(e => e.RunWith(s, Fusing.GraphInterpreter.Current.Materializer)));
             };
 
             return new SubFlowImpl<T, T, TMat, TClosed>(Flow.Create<T, TMat>(), merge, finish);
@@ -1022,7 +1021,7 @@ namespace Akka.Streams.Dsl.Internal
             {
                 return _self.Via(Fusing.Split.When(_predicate, _substreamCancelStrategy))
                     .Select(f => f.Via(flow))
-                    .Via(new Fusing.FlattenMerge<Source<T, Unit>, T, Unit>(breadth));
+                    .Via(new Fusing.FlattenMerge<Source<T, NotUsed>, T, NotUsed>(breadth));
             }
         }
 
@@ -1071,14 +1070,14 @@ namespace Akka.Streams.Dsl.Internal
         /// <seealso cref="SplitWhen{T,TMat,TVal}"/> 
         public static SubFlow<T, TMat, TClosed> SplitAfter<T, TMat, TClosed>(this IFlow<T, TMat> flow,
             SubstreamCancelStrategy substreamCancelStrategy, Func<T, bool> predicate,
-            Func<IFlow<Source<T, Unit>, TMat>, Sink<Source<T, Unit>, Task>, TClosed> toFunc)
+            Func<IFlow<Source<T, NotUsed>, TMat>, Sink<Source<T, NotUsed>, Task>, TClosed> toFunc)
         {
             var merge = new SplitAfterMergeBack<T, TMat>(flow, predicate, substreamCancelStrategy);
 
             Func<Sink<T, TMat>, TClosed> finish = s =>
             {
                 return toFunc(flow.Via(Fusing.Split.After(predicate, substreamCancelStrategy)),
-                    Sink.ForEach<Source<T, Unit>>(e => e.RunWith(s, Fusing.GraphInterpreter.Current.Materializer)));
+                    Sink.ForEach<Source<T, NotUsed>>(e => e.RunWith(s, Fusing.GraphInterpreter.Current.Materializer)));
             };
 
             return new SubFlowImpl<T, T, TMat, TClosed>(Flow.Create<T, TMat>(), merge, finish);
@@ -1101,7 +1100,7 @@ namespace Akka.Streams.Dsl.Internal
             {
                 return _self.Via(Fusing.Split.After(_predicate, _substreamCancelStrategy))
                     .Select(f => f.Via(flow))
-                    .Via(new Fusing.FlattenMerge<Source<T, Unit>, T, Unit>(breadth));
+                    .Via(new Fusing.FlattenMerge<Source<T, NotUsed>, T, NotUsed>(breadth));
             }
         }
 
@@ -1701,7 +1700,7 @@ namespace Akka.Streams.Dsl.Internal
         }
 
         ///<summary>
-        /// Materializes to <see cref="Task{Unit}"/> that completes on getting termination message.
+        /// Materializes to <see cref="Task{NotUsed}"/> that completes on getting termination message.
         /// The task completes with success when received complete message from upstream or cancel
         /// from downstream. It fails with the same error when received error message from
         /// downstream.
@@ -1710,7 +1709,7 @@ namespace Akka.Streams.Dsl.Internal
         /// where appropriate instead of manually writing functions that pass through one of the values.
         ///</summary>    
         public static IFlow<T, TMat2> WatchTermination<T, TMat, TMat2>(this IFlow<T, TMat> flow,
-            Func<TMat, Task<Unit>, TMat2> materializerFunction)
+            Func<TMat, Task, TMat2> materializerFunction)
         {
             return flow.ViaMaterialized(Fusing.GraphStages.TerminationWatcher<T>(), materializerFunction);
         }

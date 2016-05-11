@@ -28,7 +28,7 @@ namespace Akka.Streams.TestKit.Tests
             AssertAllStagesStopped(spec, () =>
             {
                 block();
-                return Unit.Instance;
+                return NotUsed.Instance;
             }, materializer);
         }
 

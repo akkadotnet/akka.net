@@ -77,7 +77,7 @@ namespace Akka.Streams.Tests.Dsl
                 var leftProbe = TestSubscriber.CreateManualProbe<int>(this);
                 var rightProbe = TestSubscriber.CreateManualProbe<string>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     var unzip = b.Add(new UnzipWith<int, int, string>(Zipper));
                     var source = Source.From(Enumerable.Range(1, 4));
@@ -133,7 +133,7 @@ namespace Akka.Streams.Tests.Dsl
                 var leftProbe = TestSubscriber.CreateManualProbe<int>(this);
                 var rightProbe = TestSubscriber.CreateManualProbe<string>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     var unzip = b.Add(new UnzipWith<int, int, string>(i => Tuple.Create(1/i, 1 + "/" + i)));
                     var source = Source.From(Enumerable.Range(-2, 5));
@@ -181,7 +181,7 @@ namespace Akka.Streams.Tests.Dsl
                 var probe1 = TestSubscriber.CreateManualProbe<string>(this);
                 var probe2 = TestSubscriber.CreateManualProbe<int>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     var unzip = b.Add(new UnzipWith<Person, string, string, int>(p => Tuple.Create(p.Name, p.Surname, p.Age)));
                     var source = Source.Single(new Person("Caplin", "Capybara", 55));
@@ -226,7 +226,7 @@ namespace Akka.Streams.Tests.Dsl
                 var probe4 = TestSubscriber.CreateManualProbe<int>(this);
                 var probe5 = TestSubscriber.CreateManualProbe<string>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
                 {
                     // odd input ports will be Int, even input ports will be String
                     var unzip =
@@ -280,7 +280,7 @@ namespace Akka.Streams.Tests.Dsl
 
         private sealed class UnzipWithFixture
         {
-            public UnzipWithFixture(GraphDsl.Builder<Unit> builder)
+            public UnzipWithFixture(GraphDsl.Builder<NotUsed> builder)
             {
                 var unzip = builder.Add(new UnzipWith<int, int, string>(i => Tuple.Create(i + i, i + "+" + i)));
                 In = unzip.In;
@@ -298,7 +298,7 @@ namespace Akka.Streams.Tests.Dsl
             var leftSubscriber = TestSubscriber.CreateManualProbe<int>(this);
             var rightSubscriber = TestSubscriber.CreateManualProbe<string>(this);
 
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, Unit>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
             {
                 var f = new UnzipWithFixture(b);
                 b.From(Source.FromPublisher(p)).To(f.In);

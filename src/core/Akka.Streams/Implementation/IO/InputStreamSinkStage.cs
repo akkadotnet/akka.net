@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
-using System.Reactive.Streams;
 using Akka.IO;
 using Akka.Pattern;
 using Akka.Streams.Implementation.Stages;
@@ -256,7 +255,7 @@ namespace Akka.Streams.Implementation.IO
                     _sendToStage.WakeUp(InputStreamSinkStage.Close.Instance);
 
                 _isActive = false;
-                return Unit.Instance;
+                return NotUsed.Instance;
             });
         }
 

@@ -27,7 +27,7 @@ namespace Akka.Streams.Tests.Dsl
         {
         }
 
-        protected override Source<int, Unit> CreateSource(int elements)
+        protected override Source<int, NotUsed> CreateSource(int elements)
             => Source.FromEnumerator(() => Enumerable.Range(1, elements).GetEnumerator());
     }
 
@@ -37,7 +37,7 @@ namespace Akka.Streams.Tests.Dsl
         {
         }
 
-        protected override Source<int, Unit> CreateSource(int elements)
+        protected override Source<int, NotUsed> CreateSource(int elements)
             => Source.From(Enumerable.Range(1, elements));
 
         [Fact]
@@ -140,7 +140,7 @@ namespace Akka.Streams.Tests.Dsl
             
         }
 
-        protected abstract Source<int, Unit> CreateSource(int elements);
+        protected abstract Source<int, NotUsed> CreateSource(int elements);
 
         [Fact]
         public void A_Flow_based_on_an_iterable_must_produce_elements()

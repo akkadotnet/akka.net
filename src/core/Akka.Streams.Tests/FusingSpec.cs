@@ -32,7 +32,7 @@ namespace Akka.Streams.Tests
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        private static Source<int, Unit> Graph (bool async)
+        private static Source<int, NotUsed> Graph (bool async)
         {
             return
                 Source.Unfold(1, x => Tuple.Create(x, x))

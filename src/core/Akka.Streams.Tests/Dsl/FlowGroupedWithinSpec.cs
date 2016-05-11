@@ -184,7 +184,7 @@ namespace Akka.Streams.Tests.Dsl
             downstream.Within(TimeSpan.FromMilliseconds(1000), () =>
             {
                 downstream.ExpectNext().ShouldAllBeEquivalentTo(new[] {1, 2, 3});
-                return Unit.Instance;
+                return NotUsed.Instance;
             });
 
             downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(1500));
@@ -192,7 +192,7 @@ namespace Akka.Streams.Tests.Dsl
             downstream.Within(TimeSpan.FromMilliseconds(1000), () =>
             {
                 downstream.ExpectNext().ShouldAllBeEquivalentTo(new[] {4});
-                return Unit.Instance;
+                return NotUsed.Instance;
             });
 
             upstream.SendComplete();
