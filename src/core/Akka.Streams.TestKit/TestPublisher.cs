@@ -7,10 +7,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.Reactive.Streams;
 using Akka.Actor;
 using Akka.Streams.Implementation;
 using Akka.TestKit;
+using Reactive.Streams;
 
 namespace Akka.Streams.TestKit
 {

@@ -6,8 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Reactive.Streams;
 using System.Threading.Tasks;
+using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
 {

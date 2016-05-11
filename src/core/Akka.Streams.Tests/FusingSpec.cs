@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reactive.Streams;
 using System.Reflection;
 using Akka.Actor;
 using Akka.Event;

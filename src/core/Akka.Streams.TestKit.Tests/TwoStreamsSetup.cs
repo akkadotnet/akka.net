@@ -5,8 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Reactive.Streams;
 using Akka.Streams.Dsl;
+using Reactive.Streams;
 using Xunit.Abstractions;
 
 namespace Akka.Streams.TestKit.Tests

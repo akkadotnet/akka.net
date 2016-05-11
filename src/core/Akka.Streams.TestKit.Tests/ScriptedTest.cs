@@ -9,13 +9,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reactive.Streams;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Streams.Dsl;
 using Akka.TestKit;
 using Akka.Util;
+using Reactive.Streams;
 using Xunit.Abstractions;
 
 namespace Akka.Streams.TestKit.Tests

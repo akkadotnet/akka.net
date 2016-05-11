@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System.Linq;
-using System.Reactive.Streams;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -14,6 +13,8 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 using Akka.Streams.Dsl.Internal;
+using Reactive.Streams;
+
 // ReSharper disable InvokeAsExtensionMethod
 
 namespace Akka.Streams.Tests.Dsl

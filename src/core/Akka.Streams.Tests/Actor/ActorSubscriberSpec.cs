@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reactive.Streams;
 using Akka.Actor;
 using Akka.Routing;
 using Akka.Streams.Actors;
@@ -16,6 +15,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit.Tests;
 using Akka.Util.Internal;
 using FluentAssertions;
+using Reactive.Streams;
 using Xunit;
 
 namespace Akka.Streams.Tests.Actor

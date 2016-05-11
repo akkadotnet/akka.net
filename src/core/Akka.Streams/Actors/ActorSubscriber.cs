@@ -7,9 +7,9 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Reactive.Streams;
 using Akka.Actor;
 using Akka.Streams.Dsl;
+using Reactive.Streams;
 
 namespace Akka.Streams.Actors
 {

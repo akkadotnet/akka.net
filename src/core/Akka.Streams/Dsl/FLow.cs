@@ -7,11 +7,11 @@
 
 using System;
 using System.Linq;
-using System.Reactive.Streams;
 using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
+using Reactive.Streams;
 
 namespace Akka.Streams.Dsl
 {

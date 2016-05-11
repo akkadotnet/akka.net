@@ -8,9 +8,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reactive.Streams;
 using Akka.Pattern;
 using Akka.Streams.Actors;
+using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
 {

@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Reactive.Streams;
 using System.Reflection;
 using Akka.Actor;
 using Akka.Dispatch;
@@ -19,6 +18,7 @@ using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
 using Akka.Util;
 using Akka.Util.Internal;
+using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
 {

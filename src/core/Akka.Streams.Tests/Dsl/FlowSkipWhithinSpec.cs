@@ -7,10 +7,7 @@
 
 using System;
 using System.Linq;
-using System.Reactive.Streams;
 using Akka.Streams.Dsl;
-using Akka.Streams.Dsl.Internal;
-using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.Util.Internal;

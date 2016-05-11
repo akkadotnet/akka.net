@@ -7,13 +7,13 @@
 
 using System;
 using System.Collections.Generic;
-using System.Reactive.Streams;
 using System.Threading.Tasks;
 using Akka.Event;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
 using Akka.Streams.Util;
+using Reactive.Streams;
 
 namespace Akka.Streams.Implementation.Stages
 {

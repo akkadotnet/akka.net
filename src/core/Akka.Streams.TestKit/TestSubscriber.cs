@@ -8,9 +8,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reactive.Streams;
 using Akka.Actor;
 using Akka.TestKit;
+using Reactive.Streams;
 
 namespace Akka.Streams.TestKit
 {

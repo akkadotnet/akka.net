@@ -6,10 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Reactive.Streams;
 using System.Runtime.Serialization;
 using System.Threading;
 using Akka.Actor;
+using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
 {

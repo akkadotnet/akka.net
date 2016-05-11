@@ -8,12 +8,12 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Reactive.Streams;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Pattern;
 using Akka.Streams.Util;
 using Akka.Util;
+using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
 {

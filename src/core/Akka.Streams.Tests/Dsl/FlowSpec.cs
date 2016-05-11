@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Reactive.Streams;
 using Akka.Actor;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
@@ -22,6 +21,7 @@ using Akka.Streams.TestKit.Tests;
 using Akka.TestKit.Internal;
 using Akka.TestKit.TestEvent;
 using FluentAssertions;
+using Reactive.Streams;
 using Xunit;
 using Xunit.Abstractions;
 // ReSharper disable InvokeAsExtensionMethod

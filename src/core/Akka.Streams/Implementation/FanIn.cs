@@ -6,11 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Reactive.Streams;
 using System.Runtime.CompilerServices;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Pattern;
+using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
 {

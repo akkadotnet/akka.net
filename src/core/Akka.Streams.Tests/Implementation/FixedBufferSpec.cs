@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Reactive.Streams;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit.Tests;
 using FluentAssertions;

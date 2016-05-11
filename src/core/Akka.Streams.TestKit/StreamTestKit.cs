@@ -6,10 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Reactive.Streams;
 using Akka.TestKit;
 using Akka.Actor;
 using Akka.Streams.Implementation;
+using Reactive.Streams;
 
 namespace Akka.Streams.TestKit
 {

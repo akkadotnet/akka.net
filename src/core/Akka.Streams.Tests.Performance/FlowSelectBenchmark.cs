@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Reactive.Streams;
 using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
@@ -15,6 +14,7 @@ using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.TestKit.Tests;
 using Akka.Util;
 using NBench;
+using Reactive.Streams;
 
 namespace Akka.Streams.Tests.Performance
 {

@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Reactive.Streams;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;

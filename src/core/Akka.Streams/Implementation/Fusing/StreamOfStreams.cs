@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Reactive.Streams;
 using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
@@ -16,6 +15,7 @@ using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Streams.Util;
 using Akka.Util;
+using Reactive.Streams;
 
 namespace Akka.Streams.Implementation.Fusing
 {
