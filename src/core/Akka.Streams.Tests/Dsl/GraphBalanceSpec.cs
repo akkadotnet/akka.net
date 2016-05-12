@@ -104,22 +104,28 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var s1 = TestSubscriber.CreateManualProbe<int>(this);
 
-                var t = RunnableGraph.FromGraph(GraphDsl.Create(Sink.AsPublisher<int>(false), Sink.AsPublisher<int>(false), Keep.Both, (b, p2Sink, p3Sink) =>
-                {
-                    var balance = b.Add(new Balance<int>(3, true));
-                    var source = Source.From(Enumerable.Range(1, 3)).MapMaterializedValue<Tuple<IPublisher<int>, IPublisher<int>>>(_ => null);
-                    b.From(source).To(balance.In);
-                    b.From(balance.Out(0)).To(Sink.FromSubscriber(s1).MapMaterializedValue<Tuple<IPublisher<int>, IPublisher<int>>>(_ => null));
-                    b.From(balance.Out(1)).To(p2Sink);
-                    b.From(balance.Out(2)).To(p3Sink);
-                    return ClosedShape.Instance;
-                })).Run(Materializer);
+                var t = RunnableGraph.FromGraph(GraphDsl.Create(Sink.AsPublisher<int>(false),
+                    Sink.AsPublisher<int>(false), Keep.Both, (b, p2Sink, p3Sink) =>
+                    {
+                        var balance = b.Add(new Balance<int>(3, true));
+                        var source =
+                            Source.From(Enumerable.Range(1, 3))
+                                .MapMaterializedValue<Tuple<IPublisher<int>, IPublisher<int>>>(_ => null);
+                        b.From(source).To(balance.In);
+                        b.From(balance.Out(0))
+                            .To(
+                                Sink.FromSubscriber(s1)
+                                    .MapMaterializedValue<Tuple<IPublisher<int>, IPublisher<int>>>(_ => null));
+                        b.From(balance.Out(1)).To(p2Sink);
+                        b.From(balance.Out(2)).To(p3Sink);
+                        return ClosedShape.Instance;
+                    })).Run(Materializer);
                 var p2 = t.Item1;
                 var p3 = t.Item2;
 
                 var sub1 = s1.ExpectSubscription();
                 sub1.Request(1);
-                
+
                 var s2 = TestSubscriber.CreateManualProbe<int>(this);
                 p2.Subscribe(s2);
                 var sub2 = s2.ExpectSubscription();
@@ -131,9 +137,9 @@ namespace Akka.Streams.Tests.Dsl
                 sub2.Request(2);
                 s1.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
                 sub3.Cancel();
-                
+
                 s1.ExpectNext(1);
-                s2.ExpectNext(2, 3);
+                s2.ExpectNextN(2).ShouldAllBeEquivalentTo(new[] {2, 3});
                 s1.ExpectComplete();
                 s2.ExpectComplete();
             }, Materializer);

@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using Akka.Actor;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
@@ -562,11 +563,14 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Flow_with_multiple_subscribers_FanOutBox_must_call_future_subscribers_OnError_when_all_subscriptions_were_cancelled()
+        public void A_Flow_with_multiple_subscribers_FanOutBox_must_call_future_subscribers_OnError_when_all_subscriptions_were_cancelled ()
         {
             var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings.WithInputBuffer(1, 1),
                 (settings, factory) => ActorMaterializer.Create(factory, settings),
                 (source, materializer) => ToFanoutPublisher(source, materializer, 16), this);
+
+            // make sure stream is initialized before canceling downstream
+            Thread.Sleep(100);
 
             setup.UpstreamSubscription.ExpectRequest(1);
             setup.DownstreamSubscription.Cancel();
