@@ -249,7 +249,11 @@ Target "CleanTests" <| fun _ ->
 
 open Fake.Testing
 Target "RunTests" <| fun _ ->  
-    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll"
+    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- 
+                                 // Akka.Streams.Tests is referencing Akka.Streams.TestKit.Tests
+                                 "src/**/Akka.Streams.Tests/bin/Release/Akka.Streams.TestKit.Tests.dll" --
+                                 // Akka.Streams.Tests.Performance is referencing Akka.Streams.Tests and Akka.Streams.TestKit.Tests
+                                 "src/**/Akka.Streams.Tests.Performance/bin/Release/*.Tests.dll"
 
     mkdir testOutput
    
