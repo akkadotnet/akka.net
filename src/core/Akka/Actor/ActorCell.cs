@@ -11,6 +11,7 @@ using System.Threading;
 using Akka.Actor.Internal;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
+using Akka.Event;
 using Akka.Serialization;
 
 namespace Akka.Actor
@@ -272,14 +273,19 @@ namespace Akka.Actor
                 //this._systemImpl.DeadLetters.Tell(new DeadLetter(message, sender, this.Self));
             }
 
-            if (_systemImpl.Settings.SerializeAllMessages && !(message is INoSerializationVerificationNeeded))
+            if (_systemImpl.Settings.SerializeAllMessages)
             {
-                Serializer serializer = _systemImpl.Serialization.FindSerializerFor(message);
-                byte[] serialized = serializer.ToBinary(message);
-                object deserialized = _systemImpl.Serialization.Deserialize(serialized, serializer.Identifier,
-                    message.GetType());
-                message = deserialized;
-            }           
+                DeadLetter deadLetter;
+                var unwrapped = (deadLetter = message as DeadLetter) != null ? deadLetter.Message : message;
+                if (!(unwrapped is INoSerializationVerificationNeeded))
+                {
+                    Serializer serializer = _systemImpl.Serialization.FindSerializerFor(message);
+                    byte[] serialized = serializer.ToBinary(message);
+                    object deserialized = _systemImpl.Serialization.Deserialize(serialized, serializer.Identifier,
+                        message.GetType());
+                    message = deserialized;
+                }
+            }
 
             var m = new Envelope
             {
