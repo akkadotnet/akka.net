@@ -18,8 +18,7 @@ namespace Akka.Streams.Actors
 {
     #region Internal messages
 
-    [Serializable]
-    public sealed class Subscribe<T>
+    public sealed class Subscribe<T> : INoSerializationVerificationNeeded
     {
         public readonly ISubscriber<T> Subscriber;
         public Subscribe(ISubscriber<T> subscriber)
