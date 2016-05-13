@@ -12,6 +12,7 @@ using Akka.Actor;
 using Google.ProtocolBuffers;
 using Helios;
 using Helios.Buffers;
+using Helios.Channels;
 using Helios.Exceptions;
 using Helios.Net;
 using Helios.Ops;
