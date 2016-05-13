@@ -12,7 +12,7 @@ namespace Akka.Event
     /// <summary>
     /// Represents an UnhandledMessage that was not handled by the Recipient.
     /// </summary>
-    public class UnhandledMessage
+    public sealed class UnhandledMessage
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="UnhandledMessage" /> class.
@@ -20,7 +20,7 @@ namespace Akka.Event
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
         /// <param name="recipient">The recipient.</param>
-        internal UnhandledMessage(object message, IActorRef sender, IActorRef recipient)
+        public UnhandledMessage(object message, IActorRef sender, IActorRef recipient)
         {
             Message = message;
             Sender = sender;
