@@ -6,14 +6,14 @@
     <version>@build.number@</version>
     <authors>@authors@</authors>
     <owners>@authors@</owners>
-    <description>Testkit for Persistence actor support for Akka.NET</description>
+    <description>Testkit for Reactive stream support for Akka.NET</description>
     <licenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</licenseUrl>
     <projectUrl>https://github.com/akkadotnet/akka.net</projectUrl>
     <iconUrl>http://getakka.net/images/AkkaNetLogo.Normal.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <releaseNotes>@releaseNotes@</releaseNotes>
     <copyright>@copyright@</copyright>
-    <tags>@tags@ persistence eventsource testkit</tags>
+    <tags>@tags@ reactive stream testkit</tags>
     @dependencies@
     @references@
   </metadata>
