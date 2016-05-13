@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Akka.Util;
 using NBench;
-using NBench.PerformanceCounters;
 
 namespace Akka.Tests.Performance.Util
 {
@@ -31,9 +30,7 @@ namespace Akka.Tests.Performance.Util
         [CounterMeasurement(ConsoleWriteThroughputCounterName)]
         [MemoryAssertion(MemoryMetric.TotalBytesAllocated, MustBe.LessThan, ByteConstants.SixtyFourKb)]
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
-        [PerformanceCounterMeasurement(".NET CLR Memory", "# of Pinned Objects", InstanceName = NBenchPerformanceCounterConstants.CurrentProcessName, UnitName = "objects")]
-        [PerformanceCounterMeasurement(".NET CLR Memory", "# Bytes in all Heaps", InstanceName = NBenchPerformanceCounterConstants.CurrentProcessName, UnitName = "bytes")]
-        [PerformanceCounterMeasurement(".NET CLR Memory", "# GC Handles", InstanceName = NBenchPerformanceCounterConstants.CurrentProcessName, UnitName = "handles")]
+
         public void StressTestStandardOutWriter(BenchmarkContext context)
         {
             StandardOutWriter.WriteLine(InputStr, ConsoleColor.Black, ConsoleColor.DarkGreen);

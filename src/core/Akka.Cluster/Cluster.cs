@@ -80,10 +80,10 @@ namespace Akka.Cluster
             //create supervisor for daemons under path "/system/cluster"
             _clusterDaemons = system.SystemActorOf(Props.Create(() => new ClusterDaemon(_settings)).WithDeploy(Deploy.Local), "cluster");
 
-            //TODO: Pretty sure this is bad and will at least throw aggregateexception possibly worse. 
-            _clusterCore = GetClusterCoreRef().Result;
-
             _readView = new ClusterReadView(this);
+
+            // force the underlying system to warmup
+            GetClusterCoreRef();
         }
 
         /// <summary>
@@ -130,8 +130,7 @@ namespace Akka.Cluster
         /// <param name="to"><see cref="ClusterEvent.IClusterDomainEvent"/> subclasses</param>
         public void Subscribe(IActorRef subscriber, ClusterEvent.SubscriptionInitialStateMode initialStateMode, Type[] to)
         {
-            var val = _clusterCore;
-            _clusterCore.Tell(new InternalClusterAction.Subscribe(subscriber, initialStateMode, ImmutableHashSet.Create<Type>(to)));
+            ClusterCore.Tell(new InternalClusterAction.Subscribe(subscriber, initialStateMode, ImmutableHashSet.Create<Type>(to)));
         }
 
         /// <summary>
@@ -147,7 +146,7 @@ namespace Akka.Cluster
         /// </summary>
         public void Unsubscribe(IActorRef subscriber, Type to)
         {
-            _clusterCore.Tell(new InternalClusterAction.Unsubscribe(subscriber, to));
+            ClusterCore.Tell(new InternalClusterAction.Unsubscribe(subscriber, to));
         }
 
         /// <summary>
@@ -157,7 +156,7 @@ namespace Akka.Cluster
         /// </summary>
         public void SendCurrentClusterState(IActorRef receiver)
         {
-            _clusterCore.Tell(new InternalClusterAction.SendCurrentClusterState(receiver));
+            ClusterCore.Tell(new InternalClusterAction.SendCurrentClusterState(receiver));
         }
 
         /// <summary>
@@ -170,7 +169,7 @@ namespace Akka.Cluster
         /// </summary>
         public void Join(Address address)
         {
-            _clusterCore.Tell(new ClusterUserAction.JoinTo(address));
+            ClusterCore.Tell(new ClusterUserAction.JoinTo(address));
         }
 
         /// <summary>
@@ -183,7 +182,7 @@ namespace Akka.Cluster
         /// </summary>
         public void JoinSeedNodes(ImmutableList<Address> seedNodes)
         {
-            _clusterCore.Tell(new InternalClusterAction.JoinSeedNodes(seedNodes));
+            ClusterCore.Tell(new InternalClusterAction.JoinSeedNodes(seedNodes));
         }
 
         /// <summary>
@@ -201,7 +200,7 @@ namespace Akka.Cluster
         /// <param name="address"></param>
         public void Leave(Address address)
         {
-            _clusterCore.Tell(new ClusterUserAction.Leave(address));
+            ClusterCore.Tell(new ClusterUserAction.Leave(address));
         }
 
         /// <summary>
@@ -214,7 +213,7 @@ namespace Akka.Cluster
         /// </summary>
         public void Down(Address address)
         {
-            _clusterCore.Tell(new ClusterUserAction.Down(address));
+            ClusterCore.Tell(new ClusterUserAction.Down(address));
         }
 
         /// <summary>
@@ -290,7 +289,18 @@ namespace Akka.Cluster
 
         readonly IActorRef _clusterDaemons;
         IActorRef _clusterCore;
-        public IActorRef ClusterCore { get { return _clusterCore; } }
+
+        public IActorRef ClusterCore
+        {
+            get
+            {
+                if (_clusterCore == null)
+                {
+                    _clusterCore = GetClusterCoreRef().Result;
+                }
+                return _clusterCore;
+            }
+        }
 
         public void LogInfo(string message)
         {

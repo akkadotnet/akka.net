@@ -2887,8 +2887,9 @@ namespace Akka.Event
         public TraceLogger() { }
         protected override void OnReceive(object message) { }
     }
-    public class UnhandledMessage
+    public sealed class UnhandledMessage
     {
+        public UnhandledMessage(object message, Akka.Actor.IActorRef sender, Akka.Actor.IActorRef recipient) { }
         public object Message { get; }
         public Akka.Actor.IActorRef Recipient { get; }
         public Akka.Actor.IActorRef Sender { get; }
