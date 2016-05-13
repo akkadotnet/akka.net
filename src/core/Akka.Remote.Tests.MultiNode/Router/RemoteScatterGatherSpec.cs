@@ -19,7 +19,7 @@ using Akka.TestKit.TestEvent;
 using Akka.Util.Internal;
 using Xunit;
 
-namespace Akka.Remote.Tests.MultiNode
+namespace Akka.Remote.Tests.MultiNode.Router
 {
     public class RemoteScatterGatherMultiNetSpec : MultiNodeConfig
     {

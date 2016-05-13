@@ -21,7 +21,7 @@ namespace Akka.Remote.Tests.Performance.Transports
     public abstract class RemoteMessagingThroughputSpecBase
     {
         private const string RemoteMessageCounterName = "RemoteMessageReceived";
-        private const long RemoteMessageCount = 10000;
+        private const long RemoteMessageCount = 50000;
         private Counter _remoteMessageThroughput;
         private readonly ManualResetEventSlim _resetEvent = new ManualResetEventSlim(false);
         private IActorRef _receiver;
@@ -32,6 +32,8 @@ namespace Akka.Remote.Tests.Performance.Transports
         private static readonly AtomicCounter ActorSystemNameCounter = new AtomicCounter(0);
         protected ActorSystem System1;
         protected ActorSystem System2;
+
+        protected static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(8);
 
         private class EchoActor : UntypedActor
         {
@@ -93,18 +95,27 @@ namespace Akka.Remote.Tests.Performance.Transports
             var system1EchoActorPath = new RootActorPath(system1Address) / "user" / "echo";
             var system2RemoteActorPath = new RootActorPath(system2Address) / "user" / "benchmark";
 
-            // set the timeout high here to avoid timeouts
-            // TL;DR; - on slow machines it can take longer than 2 seconds to form the association, do the handshake, and reply back
-            // using the in-memory transport.
-            _remoteReceiver = System1.ActorSelection(system2RemoteActorPath).ResolveOne(TimeSpan.FromSeconds(30)).Result;
-            _remoteEcho =
-                System2.ActorSelection(system1EchoActorPath).ResolveOne(TimeSpan.FromSeconds(2)).Result;
+            try
+            {
+                // set the timeout high here to avoid timeouts
+                // TL;DR; - on slow machines it can take longer than 2 seconds to form the association, do the handshake, and reply back
+                // using the in-memory transport.
+                _remoteReceiver =
+                    System1.ActorSelection(system2RemoteActorPath).ResolveOne(TimeSpan.FromSeconds(30)).Result;
+                _remoteEcho =
+                    System2.ActorSelection(system1EchoActorPath).ResolveOne(TimeSpan.FromSeconds(2)).Result;
+            }
+            catch (Exception ex)
+            {
+                context.Trace.Error(ex, "error occurred during setup.");
+                throw; // re-throw the error to blow up the benchmark
+            }
         }
 
         [PerfBenchmark(
            Description =
                "Measures the throughput of Akka.Remote over a particular transport using one-way messaging",
-           RunMode = RunMode.Iterations, NumberOfIterations = 13, TestMode = TestMode.Measurement,
+           RunMode = RunMode.Iterations, NumberOfIterations = 3, TestMode = TestMode.Measurement,
            RunTimeMilliseconds = 1000)]
         [CounterMeasurement(RemoteMessageCounterName)]
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
@@ -115,13 +126,17 @@ namespace Akka.Remote.Tests.Performance.Transports
                 _remoteReceiver.Tell("foo"); // send a remote message
                 ++i;
             }
-            _resetEvent.Wait(); 
+
+            if (!_resetEvent.Wait(WaitTimeout))
+            {
+                context.Trace.Warning($"Timed out after {WaitTimeout}s");
+            } 
         }
 
         [PerfBenchmark(
            Description =
                "Measures the throughput of Akka.Remote over a particular transport using two-way messaging",
-           RunMode = RunMode.Iterations, NumberOfIterations = 13, TestMode = TestMode.Measurement,
+           RunMode = RunMode.Iterations, NumberOfIterations = 3, TestMode = TestMode.Measurement,
            RunTimeMilliseconds = 1000)]
         [CounterMeasurement(RemoteMessageCounterName)]
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
@@ -132,7 +147,11 @@ namespace Akka.Remote.Tests.Performance.Transports
                 _remoteEcho.Tell("foo", _receiver); // send a remote message
                 ++i;
             }
-            _resetEvent.Wait();
+
+            if (!_resetEvent.Wait(WaitTimeout))
+            {
+                context.Trace.Warning($"Timed out after {WaitTimeout}s");
+            }
         }
 
         [PerfCleanup]

@@ -334,6 +334,7 @@ Target "NBench" <| fun _ ->
                 |> append assembly
                 |> append (sprintf "output-directory=\"%s\"" perfOutput)
                 |> append (sprintf "concurrent=\"%b\"" true)
+                |> append (sprintf "trace=\"%b\"" true)
                 |> toText
 
         let result = ExecProcess(fun info -> 

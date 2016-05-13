@@ -20,6 +20,10 @@ namespace Samples.Cluster.Transformation
         protected override void PreStart()
         {
             Cluster.Subscribe(Self, new[] { typeof(ClusterEvent.MemberUp) });
+            Cluster.RegisterOnMemberUp(() =>
+            {
+                // create routers and other things that depend on me being UP in the cluster
+            });
         }
 
         /// <summary>
@@ -35,7 +39,7 @@ namespace Samples.Cluster.Transformation
             if (message is TransformationMessages.TransformationJob)
             {
                 var job = (TransformationMessages.TransformationJob) message;
-                Sender.Tell(new TransformationMessages.TransformationResult(job.ToString().ToUpper()), Self);
+                Sender.Tell(new TransformationMessages.TransformationResult($"[{Self.Path.ToStringWithAddress(Cluster.SelfAddress)}]{job.ToString().ToUpper()}"), Self);
             }
             else if (message is ClusterEvent.CurrentClusterState)
             {
