@@ -19,7 +19,12 @@ namespace Akka.Cluster.Tools.Client
     {
         public static ClusterClientSettings Create(ActorSystem system)
         {
+            system.Settings.InjectTopLevelFallback(ClusterClientReceptionist.DefaultConfig());
+
             var config = system.Settings.Config.GetConfig("akka.cluster.client");
+            if (config == null)
+                throw new ArgumentException(string.Format("Actor system [{0}] doesn't have `akka.cluster.client` config set up", system.Name));
+
             var initialContacts = config.GetStringList("initial-contacts").Select(ActorPath.Parse).ToImmutableSortedSet();
 
             return new ClusterClientSettings(initialContacts,
