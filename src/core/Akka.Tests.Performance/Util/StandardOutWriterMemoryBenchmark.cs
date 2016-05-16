@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -21,6 +22,8 @@ namespace Akka.Tests.Performance.Util
         [PerfSetup]
         public void SetUp(BenchmarkContext context)
         {
+            // disable SO so we don't fill up the build log with garbage
+            Console.SetOut(new StreamWriter(Stream.Null));
             _consoleWriteThroughputCounter = context.GetCounter(ConsoleWriteThroughputCounterName);
         }
 
@@ -35,6 +38,13 @@ namespace Akka.Tests.Performance.Util
         {
             StandardOutWriter.WriteLine(InputStr, ConsoleColor.Black, ConsoleColor.DarkGreen);
             _consoleWriteThroughputCounter.Increment();
+        }
+
+        [PerfCleanup]
+        public void CleanUp()
+        {
+            // cleanup SO
+            Console.SetOut(new StreamWriter(Console.OpenStandardOutput()));
         }
     }
 }
