@@ -87,6 +87,7 @@ namespace Akka.Cluster.Tests.MultiNode
             ReachInitialConvergence();
             MarkNodeAsUNREACHABLEWhenWePullTheNetwork();
             MarkTheNodeAsDOWN();
+            AllowFreshNodeWithSameHostAndPortToJoinAgainWhenTheNetworkIsPluggedBackIn();
         }
 
         public void ReachInitialConvergence()

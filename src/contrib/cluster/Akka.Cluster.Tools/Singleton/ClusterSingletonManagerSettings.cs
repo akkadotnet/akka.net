@@ -16,6 +16,8 @@ namespace Akka.Cluster.Tools.Singleton
     {
         public static ClusterSingletonManagerSettings Create(ActorSystem system)
         {
+            system.Settings.InjectTopLevelFallback(ClusterSingletonManager.DefaultConfig());
+
             var config = system.Settings.Config.GetConfig("akka.cluster.singleton");
             if (config == null)
                 throw new ConfigurationException(string.Format("Cannot initialize {0}: akka.cluster.singleton configuration node was not provided", typeof(ClusterSingletonManagerSettings)));

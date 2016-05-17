@@ -244,7 +244,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// Marker interface for all transport operations
     /// </summary>
-    internal abstract class TransportOperation
+    internal abstract class TransportOperation : INoSerializationVerificationNeeded
     {
         public static readonly TimeSpan AskTimeout = TimeSpan.FromSeconds(5);
     }

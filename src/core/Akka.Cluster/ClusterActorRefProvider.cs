@@ -61,18 +61,40 @@ namespace Akka.Cluster
     }
 
     /// <summary>
-    /// Cluster-aware scope of a <see cref="Deploy"/>
+    /// This class represents a binding of an actor deployment to a cluster-aware system.
     /// </summary>
     public class ClusterScope : Scope
     {
         private ClusterScope() { }
 
+        /// <summary>
+        /// The singleton instance of this scope.
+        /// </summary>
         public static readonly ClusterScope Instance = new ClusterScope();
+
+        /// <summary>
+        /// Creates a new <see cref="Akka.Actor.Scope" /> from this scope using another <see cref="Akka.Actor.Scope" />
+        /// to backfill options that might be missing from this scope.
+        ///
+        /// <note>
+        /// This method ignores the given scope and returns the singleton instance of this scope.
+        /// </note>
+        /// </summary>
+        /// <param name="other">The <see cref="Akka.Actor.Scope" /> used for fallback configuration.</param>
+        /// <returns>The singleton instance of this scope</returns>
         public override Scope WithFallback(Scope other)
         {
             return Instance;
         }
 
+        /// <summary>
+        /// Creates a copy of the current instance.
+        /// 
+        /// <note>
+        /// This method returns the singleton instance of this scope.
+        /// </note>
+        /// </summary>
+        /// <returns>The singleton instance of this scope</returns>
         public override Scope Copy()
         {
             return Instance;

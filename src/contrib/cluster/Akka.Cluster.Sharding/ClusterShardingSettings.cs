@@ -92,8 +92,6 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         public static ClusterShardingSettings Create(ActorSystem system)
         {
-            system.Settings.InjectTopLevelFallback(ClusterSingletonManager.DefaultConfig());
-
             var config = system.Settings.Config.GetConfig("akka.cluster.sharding");
             var coordinatorSingletonPath = config.GetString("coordinator-singleton");
 

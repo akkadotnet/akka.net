@@ -9,33 +9,47 @@ using System.Collections.Generic;
 using Helios.Buffers;
 using Helios.Net;
 using Google.ProtocolBuffers;
+using Helios.Channels;
+using Helios.Codecs;
+using Helios.Logging;
 
 namespace Akka.Remote.TestKit.Proto
 {
     /// <summary>
     /// Encodes a generic object into a <see cref="IByteBuf"/> using Google protobufs
     /// </summary>
-    public class ProtobufEncoder 
+    public class ProtobufEncoder : MessageToMessageEncoder<object>
     {
-        public void Encode(IConnection connection, object message, out List<IByteBuf> encoded)
+        private readonly ILogger _logger = LoggingFactory.GetLogger<ProtobufEncoder>();
+
+        protected override void Encode(IChannelHandlerContext context, object message, List<object> output)
         {
-            encoded = new List<IByteBuf>();
+            _logger.Debug("Encoding {0}", message);
             var messageLite = message as IMessageLite;
             if (messageLite != null)
             {
-                var buffer = connection.Allocator.Buffer();
-                buffer.WriteBytes(messageLite.ToByteArray());
-                encoded.Add(buffer);
+                var bytes = messageLite.ToByteArray();
+                var buffer = context.Allocator.Buffer(bytes.Length);
+                buffer.WriteBytes(bytes);
+                _logger.Debug("Encoded {0}", buffer);
+                output.Add(buffer);
                 return;
             }
 
             var builderLite = message as IBuilderLite;
             if (builderLite != null)
             {
-                var buffer = connection.Allocator.Buffer();
-                buffer.WriteBytes(builderLite.WeakBuild().ToByteArray());
-                encoded.Add(buffer);
+                var bytes = builderLite.WeakBuild().ToByteArray();
+                var buffer = context.Allocator.Buffer(bytes.Length);
+                buffer.WriteBytes(bytes);
+                _logger.Debug("Encoded {0}", buffer);
+                output.Add(buffer);
+                return;
             }
+
+            // if the message is neither
+            _logger.Debug("Encoded {0}", message);
+            output.Add(message);
         }
     }
 }

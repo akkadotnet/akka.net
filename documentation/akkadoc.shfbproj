@@ -56,32 +56,12 @@
       <DocumentationSource sourceFile="..\src\contrib\cluster\Akka.Cluster.Sharding\bin\Release\Akka.Cluster.Sharding.xml" />
       <DocumentationSource sourceFile="..\src\contrib\cluster\Akka.Cluster.Tools\bin\Release\Akka.Cluster.Tools.dll" />
       <DocumentationSource sourceFile="..\src\contrib\cluster\Akka.Cluster.Tools\bin\Release\Akka.Cluster.Tools.xml" />
-      <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.AutoFac\bin\Release\Akka.DI.AutoFac.dll" />
-      <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.AutoFac\bin\Release\Akka.DI.AutoFac.xml" />
-      <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.CastleWindsor\bin\Release\Akka.DI.CastleWindsor.dll" />
-      <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.CastleWindsor\bin\Release\Akka.DI.CastleWindsor.xml" />
       <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.Core\bin\Release\Akka.DI.Core.dll" />
       <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.Core\bin\Release\Akka.DI.Core.xml" />
-      <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.Ninject\bin\Release\Akka.DI.Ninject.dll" />
-      <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.Ninject\bin\Release\Akka.DI.Ninject.xml" />
-      <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.StructureMap\bin\Release\Akka.DI.StructureMap.dll" />
-      <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.StructureMap\bin\Release\Akka.DI.StructureMap.xml" />
-      <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.Unity\bin\Release\Akka.DI.Unity.dll" />
-      <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.Unity\bin\Release\Akka.DI.Unity.xml" />
       <DocumentationSource sourceFile="..\src\core\Akka\bin\Release\Akka.dll" />
       <DocumentationSource sourceFile="..\src\core\Akka\bin\Release\Akka.ExternalAnnotations.xml" />
       <DocumentationSource sourceFile="..\src\core\Akka.FSharp\bin\Release\Akka.FSharp.dll" />
       <DocumentationSource sourceFile="..\src\core\Akka.FSharp\bin\Release\Akka.FSharp.xml" />
-      <DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.CommonLogging\bin\Release\Akka.Logger.CommonLogging.dll" />
-      <DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.CommonLogging\bin\Release\Akka.Logger.CommonLogging.xml" />
-      <DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.log4net\bin\Release\Akka.Logger.log4net.dll" />
-      <DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.log4net\bin\Release\Akka.Logger.log4net.xml" />
-      <DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.NLog\bin\Release\Akka.Logger.NLog.dll" />
-      <DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.NLog\bin\Release\Akka.Logger.NLog.xml" />
-      <DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.Serilog\bin\Release\Akka.Logger.Serilog.dll" />
-      <DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.Serilog\bin\Release\Akka.Logger.Serilog.xml" />
-      <DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.slf4net\bin\Release\Akka.Logger.slf4net.dll" />
-      <DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.slf4net\bin\Release\Akka.Logger.slf4net.xml" />
       <DocumentationSource sourceFile="..\src\contrib\serializers\Akka.Serialization.Wire\bin\Release\Akka.Serialization.Wire.dll" />
       <DocumentationSource sourceFile="..\src\contrib\serializers\Akka.Serialization.Wire\bin\Release\Akka.Serialization.Wire.xml" />
       <DocumentationSource sourceFile="..\src\core\Akka.Persistence\bin\Release\Akka.Persistence.dll" />
@@ -168,24 +148,9 @@
         The Akka.Configuration.Hocon namespace contains classes used to interact with configuration values via their internal
         HOCON (Human-Optimized Config Object Notation) representation.
       </NamespaceSummaryItem>
-      <NamespaceSummaryItem name="Akka.DI.AutoFac" isDocumented="True">
-        The Akka.DI.AutoFac namespace contains classes used to perform dependency injection using the AutoFac library.
-      </NamespaceSummaryItem>
-      <NamespaceSummaryItem name="Akka.DI.CastleWindsor" isDocumented="True">
-        The Akka.DI.CastleWindsor namespace contains classes used to perform dependency injection using the CastleWindsor library.
-      </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.DI.Core" isDocumented="True">
         The Akka.DI.Core namespace contains classes used to provide extension points for dependency injection (DI).
         These classes rely on the different DI libraries to do the heavy lifting.
-      </NamespaceSummaryItem>
-      <NamespaceSummaryItem name="Akka.DI.Ninject" isDocumented="True">
-        The Akka.DI.Ninject namespace contains classes used to perform dependency injection using the Ninject library.
-      </NamespaceSummaryItem>
-      <NamespaceSummaryItem name="Akka.DI.StructureMap" isDocumented="True">
-        The Akka.DI.StructureMap namespace contains classes used to perform dependency injection using the StructureMap library.
-      </NamespaceSummaryItem>
-      <NamespaceSummaryItem name="Akka.DI.Unity" isDocumented="True">
-        The Akka.DI.Unity namespace contains classes used to perform dependency injection using the Unity library.
       </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Dispatch" isDocumented="True">
         The Akka.Dispatch namespace contains classes used to dispatch messages to the actors.
@@ -204,21 +169,6 @@
       </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.IO" isDocumented="True">
         The Akka.IO namespace contains classes and methods used to interact directly with actors via TCP/UDP.
-      </NamespaceSummaryItem>
-      <NamespaceSummaryItem name="Akka.Logger.NLog" isDocumented="True">
-        The Akka.Logger.NLog namespace contains classes used to log messages using the NLog library.
-      </NamespaceSummaryItem>
-      <NamespaceSummaryItem name="Akka.Logger.Serilog" isDocumented="True">
-        The Akka.Logger.Serilog namespace contains classes used to log messages using the Serilog library.
-      </NamespaceSummaryItem>
-      <NamespaceSummaryItem name="Akka.Logger.slf4net" isDocumented="True">
-        The Akka.Logger.slf4net namespace contains classes used to log messages using the slf4net library.
-      </NamespaceSummaryItem>
-      <NamespaceSummaryItem name="Akka.Logger.log4net" isDocumented="True">
-        The Akka.Logger.log4net namespace contains classes used to log messages using the log4net library.
-      </NamespaceSummaryItem>
-      <NamespaceSummaryItem name="Akka.Logger.CommonLogging" isDocumented="True">
-        The Akka.Logger.CommonLogging namespace contains classes used to log messages using the Common.Logging library.
       </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Pattern" isDocumented="True">
         The Akka.Pattern namespace contains classes containing common usage patterns when interacting with actors.
@@ -301,8 +251,6 @@
       </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Serialization" isDocumented="True">
         The Akka.Serialization namespace contains classes used to (de-)serialize messages.
-      </NamespaceSummaryItem>
-      <NamespaceSummaryItem name="Akka.Serilog.Event.Serilog" isDocumented="False">
       </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.TestKit" isDocumented="True">
         The Akka.TestKit namespace contains classes that provide base testing functionality used by the different testkit extensions.
