@@ -190,7 +190,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// Marker type for whenever new actors / endpoints are associated with this <see cref="ActorSystem"/> via remoting.
     /// </summary>
-    public interface IAssociationEvent
+    public interface IAssociationEvent : INoSerializationVerificationNeeded
     {
 
     }

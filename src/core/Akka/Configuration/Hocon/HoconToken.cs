@@ -72,6 +72,10 @@ namespace Akka.Configuration.Hocon
         /// This token type represents a replacement variable, <c>$foo</c> .
         /// </summary>
         Substitute,
+
+        /// <summary>
+        /// This token type represents an include statement.
+        /// </summary>
         Include
     }
 

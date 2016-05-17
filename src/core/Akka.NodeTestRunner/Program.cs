@@ -58,7 +58,6 @@ namespace Akka.NodeTestRunner
                 {
                     using (var sink = new Sink(nodeIndex, tcpClient))
                     {
-                        Thread.Sleep(10000);
                         try
                         {
                             controller.Find(true, discovery, TestFrameworkOptions.ForDiscovery());
@@ -111,8 +110,7 @@ namespace Akka.NodeTestRunner
                         }
 
                         FlushLogMessages();
-                        system.Shutdown();
-                        system.AwaitTermination();
+                        system.Terminate().Wait();
 
                         Environment.Exit(sink.Passed && !timedOut ? 0 : 1);
                         return sink.Passed ? 0 : 1;

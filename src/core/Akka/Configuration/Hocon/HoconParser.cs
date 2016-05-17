@@ -137,8 +137,9 @@ namespace Akka.Configuration.Hocon
         /// to the supplied element <paramref name="owner"/>.
         /// </summary>
         /// <param name="owner">The element to append the next token.</param>
+        /// <param name="currentPath">The location in the HOCON object hierarchy that the parser is currently reading.</param>
         /// <exception cref="System.Exception">End of file reached while trying to read a value</exception>
-        public void ParseValue(HoconValue owner,string currentPath)
+        public void ParseValue(HoconValue owner, string currentPath)
         {
             if (_reader.EoF)
                 throw new Exception("End of file reached while trying to read a value");
@@ -209,6 +210,7 @@ namespace Akka.Configuration.Hocon
         /// <summary>
         /// Retrieves the next array token from the tokenizer.
         /// </summary>
+        /// <param name="currentPath">The location in the HOCON object hierarchy that the parser is currently reading.</param>
         /// <returns>An array of elements retrieved from the token.</returns>
         public HoconArray ParseArray(string currentPath)
         {
