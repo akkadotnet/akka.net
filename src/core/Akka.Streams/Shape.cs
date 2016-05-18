@@ -401,4 +401,11 @@ namespace Akka.Streams
 
         public Shape Reversed() => new BidiShape<TIn2, TOut2, TIn1, TOut1>(Inlet2, Outlet2, Inlet1, Outlet1);
     }
+    
+    public static class BidiShape
+    {
+        public static BidiShape<TIn1, TOut1, TIn2, TOut2> FromFlows<TIn1, TOut1, TIn2, TOut2>(
+            FlowShape<TIn1, TOut1> top, FlowShape<TIn2, TOut2> bottom)
+            => new BidiShape<TIn1, TOut1, TIn2, TOut2>(top.Inlet, top.Outlet, bottom.Inlet, bottom.Outlet);
+    }
 }
