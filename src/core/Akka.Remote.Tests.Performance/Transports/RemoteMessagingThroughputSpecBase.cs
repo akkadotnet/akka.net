@@ -21,7 +21,7 @@ namespace Akka.Remote.Tests.Performance.Transports
     public abstract class RemoteMessagingThroughputSpecBase
     {
         private const string RemoteMessageCounterName = "RemoteMessageReceived";
-        private const long RemoteMessageCount = 10000;
+        private const long RemoteMessageCount = 1000000;
         private Counter _remoteMessageThroughput;
         private readonly ManualResetEventSlim _resetEvent = new ManualResetEventSlim(false);
         private IActorRef _receiver;
@@ -104,10 +104,11 @@ namespace Akka.Remote.Tests.Performance.Transports
         [PerfBenchmark(
            Description =
                "Measures the throughput of Akka.Remote over a particular transport using one-way messaging",
-           RunMode = RunMode.Iterations, NumberOfIterations = 13, TestMode = TestMode.Measurement,
+           RunMode = RunMode.Iterations, NumberOfIterations = 1, TestMode = TestMode.Measurement,
            RunTimeMilliseconds = 1000)]
         [CounterMeasurement(RemoteMessageCounterName)]
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
+        [TimingMeasurement]
         public void OneWay(BenchmarkContext context)
         {
             for (var i = 0; i < RemoteMessageCount;)
@@ -121,10 +122,11 @@ namespace Akka.Remote.Tests.Performance.Transports
         [PerfBenchmark(
            Description =
                "Measures the throughput of Akka.Remote over a particular transport using two-way messaging",
-           RunMode = RunMode.Iterations, NumberOfIterations = 13, TestMode = TestMode.Measurement,
+           RunMode = RunMode.Iterations, NumberOfIterations = 1, TestMode = TestMode.Measurement,
            RunTimeMilliseconds = 1000)]
         [CounterMeasurement(RemoteMessageCounterName)]
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
+        [TimingMeasurement]
         public void TwoWay(BenchmarkContext context)
         {
             for (var i = 0; i < RemoteMessageCount;)
