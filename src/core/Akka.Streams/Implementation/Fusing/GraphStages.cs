@@ -32,9 +32,9 @@ namespace Akka.Streams.Implementation.Fusing
         /// This can either be implemented inside the stage itself, or this method can be used,
         /// which adds a detacher stage to every input.
         /// </summary>
-        internal static IGraph<UniformFanInShape<T, T>, TMat> WithDetachedInputs<T, TMat>(GraphStage<UniformFanInShape<T, T>> stage)
+        internal static IGraph<UniformFanInShape<T, T>, NotUsed> WithDetachedInputs<T>(GraphStage<UniformFanInShape<T, T>> stage)
         {
-            return GraphDsl.Create<UniformFanInShape<T, T>, TMat>(builder =>
+            return GraphDsl.Create(builder =>
             {
                 var concat = builder.Add(stage);
                 var detachers = concat.Ins.Select(inlet =>

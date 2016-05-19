@@ -32,7 +32,7 @@ namespace Akka.Streams.Tests.Dsl
 
         private static IGraph<FlowShape<int, string>, NotUsed> PartialGraph()
         {
-            return GraphDsl.Create<FlowShape<int, string>, NotUsed>(b =>
+            return GraphDsl.Create(b =>
             {
                 var source2 = Source.From(Enumerable.Range(4, 6));
                 var source3 = Source.Empty<int>();
@@ -126,7 +126,7 @@ namespace Akka.Streams.Tests.Dsl
                 Flow.FromGraph(GraphDsl.Create(Flow.Create<int>().Select(x=>x*2),
                     (b, importFlow) => new FlowShape<int, int>(importFlow.Inlet, importFlow.Outlet)));
 
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape,NotUsed>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 var source = Source.From(Enumerable.Range(1, 5));
                 b.From(source).Via(flow).Via(flow).To(Sink.FromSubscriber(probe));

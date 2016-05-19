@@ -31,7 +31,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void FlowFlowGraph_Partial_must_be_able_to_build_and_reuse_simple_partial_graphs()
         {
-            var doubler = GraphDsl.Create<FlowShape<int, int>, NotUsed>(b =>
+            var doubler = GraphDsl.Create(b =>
             {
                 var broadcast = b.Add(new Broadcast<int>(2));
                 var zip = b.Add(ZipWith.Apply((int i, int i1) => i + i1));

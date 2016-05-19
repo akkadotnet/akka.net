@@ -80,7 +80,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Graph_should_build_simple_merge()
         {
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 var merge = b.Add(new Merge<string>(2));
                 b.From(In1).Via(F1).To(merge.In(0));
@@ -93,7 +93,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Graph_should_build_simple_broadcast()
         {
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 var broadcast = b.Add(new Broadcast<string>(2));
                 b.From(In1).Via(F1).To(broadcast.In);
@@ -106,7 +106,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Graph_should_build_simple_merge_broadcast()
         {
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 var merge = b.Add(new Merge<string>(2));
                 var broadcast = b.Add(new Broadcast<string>(2));
@@ -122,7 +122,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Graph_should_build_simple_merge_broadcast_with_implicits()
         {
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 var merge = b.Add(new Merge<string>(2));
                 var broadcast = b.Add(new Broadcast<string>(2));
@@ -153,7 +153,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact(Skip = "FIXME needs cycle detection capability")]
         public void A_Graph_should_detect_cycle_in()
         {
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 var merge = b.Add(new Merge<string>(2));
                 var broadcast1 = b.Add(new Broadcast<string>(2));
@@ -174,7 +174,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Graph_should_express_complex_topologies_in_a_readable_way()
         {
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 var merge = b.Add(new Merge<string>(2));
                 var broadcast1 = b.Add(new Broadcast<string>(2));
@@ -195,7 +195,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Graph_should_build_broadcast_merge()
         {
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 var merge = b.Add(new Merge<string>(2));
                 var broadcast = b.Add(new Broadcast<string>(2));
@@ -211,7 +211,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Graph_should_build_wikipedia_Topological_sorting()
         {
             // see https://en.wikipedia.org/wiki/Topological_sorting#mediaviewer/File:Directed_acyclic_graph.png
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 var b3 = b.Add(new Broadcast<string>(2));
                 var b7 = b.Add(new Broadcast<string>(2));
@@ -243,7 +243,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Graph_should_make_it_optional_to_specify_flows()
         {
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 var merge = b.Add(new Merge<string>(2));
                 var broadcast = b.Add(new Broadcast<string>(2));
@@ -259,7 +259,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Graph_should_build_unzip_zip()
         {
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 var zip = b.Add(new Zip<int, string>());
                 var unzip = b.Add(new UnZip<int, string>());
@@ -286,7 +286,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             Action action = () =>
             {
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(builder =>
+                RunnableGraph.FromGraph(GraphDsl.Create(builder =>
                 {
                     var zip = builder.Add(new Zip<int, string>());
                     var unzip = builder.Add(new UnZip<int, string>());
@@ -329,7 +329,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact(Skip = "FIXME Covariance  is not supported")]
         public void A_Graph_should_build_with_variance()
         {
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 var merge = b.Add(new Merge<IFruit>(2));
                 var s1 = Source.FromEnumerator<IFruit>(Apples);
@@ -428,43 +428,43 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Graph_should_build_with_plain_flow_without_junctions()
         {
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape,NotUsed>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 b.From(In1).Via(F1).To(Out1);
                 return ClosedShape.Instance;
             })).Run(Materializer);
 
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 b.From(In1).Via(F1).Via(F2).To(Out1);
                 return ClosedShape.Instance;
             })).Run(Materializer);
 
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 b.From(In1.Via(F1)).Via(F2).To(Out1);
                 return ClosedShape.Instance;
             })).Run(Materializer);
 
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 b.From(In1).To(Out1);
                 return ClosedShape.Instance;
             })).Run(Materializer);
 
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 b.From(In1).To(F1.To(Out1));
                 return ClosedShape.Instance;
             })).Run(Materializer);
 
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 b.From(In1.Via(F1)).To(Out1);
                 return ClosedShape.Instance;
             })).Run(Materializer);
 
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 b.From(In1.Via(F1)).To(F2.To(Out1));
                 return ClosedShape.Instance;

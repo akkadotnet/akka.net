@@ -66,7 +66,7 @@ namespace Akka.Streams.Tests.Dsl
         public void Reverse_Arrows_in_the_GraphDsl_must_work_from_Sink()
         {
             var sub = TestSubscriber.CreateManualProbe<int>(this);
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 b.To(Streams.Dsl.Sink.FromSubscriber(sub))
                     .From(Streams.Dsl.Source.From(Enumerable.Range(1, 3)));
@@ -83,7 +83,7 @@ namespace Akka.Streams.Tests.Dsl
         public void Reverse_Arrows_in_the_GraphDsl_must_not_work_from_Outlets()
         {
             RunnableGraph.FromGraph(
-                GraphDsl.Create<ClosedShape, Task<IImmutableList<int>>>(b =>
+                GraphDsl.Create(b =>
                 {
                     var o = b.Add(Source).Outlet;
                     b.Invoking(builder => ((dynamic) builder).To(o).From(Source))
@@ -97,7 +97,7 @@ namespace Akka.Streams.Tests.Dsl
         public void Reverse_Arrows_in_the_GraphDsl_must_not_work_from_SourceShape()
         {
             RunnableGraph.FromGraph(
-                GraphDsl.Create<ClosedShape, Task<IImmutableList<int>>>(b =>
+                GraphDsl.Create(b =>
                 {
                     var o = b.Add(Source);
                     b.Invoking(builder => ((dynamic) builder).To(o).From(Source))

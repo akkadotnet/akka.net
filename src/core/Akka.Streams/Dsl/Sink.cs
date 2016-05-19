@@ -204,9 +204,9 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Combine several sinks with fun-out strategy like <see cref="Broadcast{TIn}"/> or <see cref="Balance{TIn}"/> and returns <see cref="Sink{TIn,TMat}"/>.
         /// </summary>
-        public static Sink<TIn, TMat> Combine<TIn, TOut, TMat>(Func<int, IGraph<UniformFanOutShape<TIn, TOut>, TMat>> strategy, Sink<TOut, TMat> first, Sink<TOut, TMat> second, params Sink<TOut, TMat>[] rest)
+        public static Sink<TIn, NotUsed> Combine<TIn, TOut, TMat>(Func<int, IGraph<UniformFanOutShape<TIn, TOut>, TMat>> strategy, Sink<TOut, NotUsed> first, Sink<TOut, NotUsed> second, params Sink<TOut, NotUsed>[] rest)
         {
-            return FromGraph(GraphDsl.Create<SinkShape<TIn>, TMat>(builder =>
+            return FromGraph(GraphDsl.Create(builder =>
             {
                 var d = builder.Add(strategy(rest.Length + 2));
 

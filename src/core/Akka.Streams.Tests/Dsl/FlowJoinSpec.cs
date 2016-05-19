@@ -42,7 +42,7 @@ namespace Akka.Streams.Tests.Dsl
                 var result = even.Concat(odd).Concat(odd.Select(x => x*10));
                 var probe = TestSubscriber.CreateManualProbe<IEnumerable<int>>(this);
 
-                var flow1 = Flow.FromGraph(GraphDsl.Create<FlowShape<int,int>, NotUsed>(b =>
+                var flow1 = Flow.FromGraph(GraphDsl.Create(b =>
                 {
                     var merge = b.Add(new Merge<int>(2));
                     var broadcast = b.Add(new Broadcast<int>(2));

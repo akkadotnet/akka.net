@@ -1,4 +1,4 @@
-﻿// --- auto generated: 21.04.2016 07:48:41 --- //
+﻿// --- auto generated: 19.05.2016 16:27:08 --- //
 //-----------------------------------------------------------------------
 // <copyright file="FanInShape.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
@@ -15,13 +15,13 @@ namespace Akka.Streams.Dsl
 		/// <summary>
 		/// Creates a new <see cref="IGraph{TShape, TMat}"/> by passing a <see cref="Builder{TMat}"/> to the given create function.
 		/// </summary>
-		public static IGraph<TShape, TMat> Create<TShape, TMat>(Func<Builder<TMat>, TShape> buildBlock) where TShape: Shape
+		public static IGraph<TShape, NotUsed> Create<TShape>(Func<Builder<NotUsed>, TShape> buildBlock) where TShape: Shape
 		{
-			var builder = new Builder<TMat>();
+			var builder = new Builder<NotUsed>();
 			var shape = buildBlock(builder);
 			var module = builder.Module.ReplaceShape(shape);
 
-			return new GraphImpl<TShape, TMat>(shape, module);
+			return new GraphImpl<TShape, NotUsed>(shape, module);
 		}
 		
 		/// <summary>

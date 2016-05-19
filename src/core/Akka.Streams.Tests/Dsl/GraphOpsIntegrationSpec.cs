@@ -68,7 +68,7 @@ namespace Akka.Streams.Tests.Dsl
 
             internal static IGraph<ShufflePorts, NotUsed> Create<TIn, TOut>(Flow<TIn, TOut, NotUsed> pipeline)
             {
-                return GraphDsl.Create<ShufflePorts, NotUsed>(b =>
+                return GraphDsl.Create(b =>
                 {
                     var merge = b.Add(new Merge<TIn>(2));
                     var balance = b.Add(new Balance<TOut>(2));
@@ -220,7 +220,7 @@ namespace Akka.Streams.Tests.Dsl
             var s = TestSubscriber.CreateManualProbe<int>(this);
             var flow = Flow.Create<int>().Select(x => x*2);
 
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 b.From(Source.FromPublisher(p)).Via(flow).To(Sink.FromSubscriber(s));
                 return ClosedShape.Instance;

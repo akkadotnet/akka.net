@@ -36,7 +36,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var c1 = TestSubscriber.CreateManualProbe<int>(this);
                 var c2 = TestSubscriber.CreateManualProbe<int>(this);
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed> (b =>
+                RunnableGraph.FromGraph(GraphDsl.Create (b =>
                 {
                     var broadcast = b.Add(new Broadcast<int>(2));
                     var source = Source.From(Enumerable.Range(1, 3));
@@ -70,7 +70,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t = Source.FromGraph(GraphDsl.Create<SourceShape<int>, NotUsed>(b =>
+                var t = Source.FromGraph(GraphDsl.Create(b =>
                 {
                     var broadcast = b.Add(new Broadcast<int>(1));
                     var source = b.Add(Source.From(Enumerable.Range(1, 3)));
@@ -172,7 +172,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var c1 = TestSubscriber.CreateManualProbe<int>(this);
                 var c2 = TestSubscriber.CreateManualProbe<int>(this);
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
                     var broadcast = b.Add(new Broadcast<int>(2));
                     var source = Source.From(Enumerable.Range(1, 3));
@@ -202,7 +202,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var c1 = TestSubscriber.CreateManualProbe<int>(this);
                 var c2 = TestSubscriber.CreateManualProbe<int>(this);
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
                     var broadcast = b.Add(new Broadcast<int>(2));
                     var source = Source.From(Enumerable.Range(1, 3));
@@ -233,7 +233,7 @@ namespace Akka.Streams.Tests.Dsl
                 var p1 = TestPublisher.CreateManualProbe<int>(this);
                 var c1 = TestSubscriber.CreateManualProbe<int>(this);
                 var c2 = TestSubscriber.CreateManualProbe<int>(this);
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
                     var broadcast = b.Add(new Broadcast<int>(2));
                     var source = Source.FromPublisher(p1.Publisher);
@@ -274,7 +274,7 @@ namespace Akka.Streams.Tests.Dsl
                 var c1 = TestSubscriber.CreateManualProbe<int>(this);
                 var c2 = TestSubscriber.CreateManualProbe<int>(this);
 
-                var sink = Sink.FromGraph(GraphDsl.Create<SinkShape<int>, NotUsed>(b =>
+                var sink = Sink.FromGraph(GraphDsl.Create(b =>
                 {
                     var broadcast = b.Add(new Broadcast<int>(2));
                     b.From(broadcast.Out(0)).To(Sink.FromSubscriber(c1));

@@ -202,7 +202,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public Source<U, NotUsed> Combine<T, U>(Source<T, NotUsed> first, Source<T, NotUsed> second, Source<T, NotUsed>[] rest, Func<int, IGraph<UniformFanInShape<T,U>, NotUsed>> strategy)
         {
-            return Source.FromGraph(GraphDsl.Create<SourceShape<U>, NotUsed>(b =>
+            return Source.FromGraph(GraphDsl.Create(b =>
             {
                 var c = b.Add(strategy(rest.Length + 2));
                 b.From(first).To(c.In(0));
@@ -470,7 +470,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Source<U, NotUsed> Combine<T, U>(Source<T, NotUsed> first, Source<T, NotUsed> second, Func<int, IGraph<UniformFanInShape<T, U>, NotUsed>> strategy, params Source<T, NotUsed>[] rest)
         {
-            return FromGraph(GraphDsl.Create<SourceShape<U>, NotUsed>(b =>
+            return FromGraph(GraphDsl.Create(b =>
             {
                 var c = b.Add(strategy(rest.Length + 2));
                 b.From(first).To(c.In(0));

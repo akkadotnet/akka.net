@@ -163,7 +163,7 @@ namespace Akka.Streams.Tests.Performance
 
         public static IRunnableGraph<NotUsed> GraphWithJunctionsBuilder(int numberOfJunctions)
         {
-            return RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+            return RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 var broadcast = b.Add(new Broadcast<NotUsed>(numberOfJunctions));
                 var outlet = broadcast.Out(0);

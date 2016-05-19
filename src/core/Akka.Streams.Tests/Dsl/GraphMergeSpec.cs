@@ -55,7 +55,7 @@ namespace Akka.Streams.Tests.Dsl
                 var source3 = Source.From(new List<int>());
                 var probe = TestSubscriber.CreateManualProbe<int>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
                     var m1 = b.Add(new Merge<int>(2));
                     var m2 = b.Add(new Merge<int>(2));
@@ -86,7 +86,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Merge_must_work_with_one_way_merge()
         {
-            var task = Source.FromGraph(GraphDsl.Create<SourceShape<int>, NotUsed>(b =>
+            var task = Source.FromGraph(GraphDsl.Create(b =>
             {
                 var merge = b.Add(new Merge<int>(1));
                 var source = b.Add(Source.From(Enumerable.Range(1, 3)));
@@ -116,7 +116,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var probe = TestSubscriber.CreateManualProbe<int>(this);
 
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 var merge = b.Add(new Merge<int>(6));
 

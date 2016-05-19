@@ -51,7 +51,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var probe = TestSubscriber.CreateManualProbe<int>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
                     var concat1 = b.Add(new Concat<int, int>());
                     var concat2 = b.Add(new Concat<int, int>());
@@ -178,7 +178,7 @@ namespace Akka.Streams.Tests.Dsl
                 var promise = new TaskCompletionSource<int>();
                 var subscriber = TestSubscriber.CreateManualProbe<int>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
                     var concat = b.Add(new Concat<int, int>());
                     var source = Source.From(Enumerable.Range(1, 3));
