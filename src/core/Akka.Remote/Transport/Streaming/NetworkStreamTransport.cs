@@ -111,7 +111,7 @@ namespace Akka.Remote.Transport.Streaming
                 s.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, 1);
         }
 
-        public override bool ShutdownOutput(Stream stream, object state)
+        public override bool ShutdownStreamGracefully(Stream stream, object state)
         {
             Socket socket = (Socket)state;
 
@@ -132,25 +132,37 @@ namespace Akka.Remote.Transport.Streaming
 
         public override void CloseStream(Stream stream, object state)
         {
-            Socket socket = (Socket)state;
-
-            try
-            {
-                if (socket.Connected)
-                    socket.Shutdown(SocketShutdown.Both);
-            }
-            catch (Exception)
-            {
-                // Not fatal
-                //TODO Log
-            }
-
-            socket.Close();
+            CloseSocket((Socket)state);
         }
 
         public IPEndPoint GetBindEndPoint()
         {
             return new IPEndPoint(BindIp, BindPort);
+        }
+
+        internal void CloseSocket(Socket socket)
+        {
+            if (socket != null)
+            {
+                try
+                {
+                    if (socket.Connected)
+                        socket.Shutdown(SocketShutdown.Both);
+                }
+                catch (Exception)
+                {
+                    //Not fatal
+                }
+
+                try
+                {
+                    socket.Close();
+                }
+                catch (Exception)
+                {
+                    //Not fatal
+                }
+            }
         }
     }
 
@@ -224,33 +236,20 @@ namespace Akka.Remote.Transport.Streaming
                     when (ex.SocketErrorCode == SocketError.ConnectionReset ||
                           ex.SocketErrorCode == SocketError.TimedOut)
                 {
+                    Settings.CloseSocket(socket);
+
                     if (ShutdownToken.IsCancellationRequested)
                         return;
 
                     // Tcp handshake failed on new connection, not fatal
                     Settings.Log.Warning("SocketException occured while accepting connection");
-
-                    socket?.Close();
                 }
                 catch (Exception ex)
                 {
+                    Settings.CloseSocket(socket);
+
                     if (ShutdownToken.IsCancellationRequested)
                         return;
-
-                    if (socket != null)
-                    {
-                        try
-                        {
-                            if (socket.Connected)
-                                socket.Shutdown(SocketShutdown.Both);
-
-                            socket.Close();
-                        }
-                        catch (Exception)
-                        {
-                            //Not fatal
-                        }
-                    }
 
                     // Should not happen if listen on Loopback or IPAny
                     //TODO Otherwise might need to rebind if network adapter was disabled/enabled
@@ -293,12 +292,8 @@ namespace Akka.Remote.Transport.Streaming
             Socket socket = CreateSocket(endpoint);
             Settings.ConfigureSocket(socket);
 
-            var connectTask = Task.Factory.FromAsync(socket.BeginConnect, socket.EndConnect, remoteAddress.Host, port, null);
-
-            var completedTask = await Task.WhenAny(connectTask, Task.Delay(Settings.ConnectionTimeout));
-
-            if (completedTask != connectTask)
-                throw new TimeoutException($"Unable to establish connection in {(int)Settings.ConnectionTimeout.TotalSeconds}s");
+            await Task.Factory.FromAsync(socket.BeginConnect, socket.EndConnect, remoteAddress.Host, port, null)
+                .WithTimeout(Settings.ConnectionTimeout);
 
             NetworkStream stream = new NetworkStream(socket, false);
 
@@ -314,19 +309,17 @@ namespace Akka.Remote.Transport.Streaming
             var association = new StreamAssociationHandle(Settings, stream, localAddress, remoteAddress, socket);
             RegisterAssociation(association);
 
-#pragma warning disable CS4014
             association.ReadHandlerSource.Task.ContinueWith(task => association.Initialize(task.Result),
                 CancellationToken.None,
                 TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion,
                 TaskScheduler.Default);
-#pragma warning restore CS4014
 
             return Task.FromResult((AssociationHandle)association);
         }
 
         private static Socket CreateSocket(EndPoint endpoint)
         {
-            if (endpoint.AddressFamily == AddressFamily.Unspecified)
+            if (endpoint.AddressFamily == AddressFamily.Unspecified && Socket.OSSupportsIPv6)
             {
                 // DualMode works with IPv6 and IPv4
                 return new Socket(SocketType.Stream, ProtocolType.Tcp);
