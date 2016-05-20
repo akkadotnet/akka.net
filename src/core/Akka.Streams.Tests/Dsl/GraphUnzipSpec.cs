@@ -34,7 +34,7 @@ namespace Akka.Streams.Tests.Dsl
                 var c1 = TestSubscriber.CreateManualProbe<int>(this);
                 var c2 = TestSubscriber.CreateManualProbe<string>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
                     var unzip = b.Add(new UnZip<int, string>());
                     var source =
@@ -82,7 +82,7 @@ namespace Akka.Streams.Tests.Dsl
                 var c1 = TestSubscriber.CreateManualProbe<int>(this);
                 var c2 = TestSubscriber.CreateManualProbe<string>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
                     var unzip = b.Add(new UnZip<int, string>());
                     var source =
@@ -118,7 +118,7 @@ namespace Akka.Streams.Tests.Dsl
                 var c1 = TestSubscriber.CreateManualProbe<int>(this);
                 var c2 = TestSubscriber.CreateManualProbe<string>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
                     var unzip = b.Add(new UnZip<int, string>());
                     var source =
@@ -155,7 +155,7 @@ namespace Akka.Streams.Tests.Dsl
                 var c1 = TestSubscriber.CreateManualProbe<int>(this);
                 var c2 = TestSubscriber.CreateManualProbe<string>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
                     var unzip = b.Add(new UnZip<int, string>());
                     var source = Source.FromPublisher(p1.Publisher);
@@ -193,7 +193,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var c1 = TestSubscriber.CreateManualProbe<Tuple<int, string>>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
                     var zip = b.Add(new Zip<int, string>());
                     var unzip = b.Add(new UnZip<int, string>());

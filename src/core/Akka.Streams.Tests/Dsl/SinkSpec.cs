@@ -36,7 +36,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Sink_must_be_composable_without_importing_modules()
         {
             var probes = CreateProbes();
-            var sink = Sink.FromGraph(GraphDsl.Create<SinkShape<int>, NotUsed>(b =>
+            var sink = Sink.FromGraph(GraphDsl.Create(b =>
             {
                 var broadcast = b.Add(new Broadcast<int>(3));
                 for (var i = 0; i < 3; i++)

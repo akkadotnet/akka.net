@@ -50,7 +50,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var probe = TestSubscriber.CreateManualProbe<Tuple<int, string>>(this);
 
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
                     var zip = b.Add(new Zip<int, string>());
                     var source1 = Source.From(Enumerable.Range(1, 4));

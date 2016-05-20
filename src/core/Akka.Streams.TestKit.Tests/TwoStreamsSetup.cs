@@ -37,7 +37,7 @@ namespace Akka.Streams.TestKit.Tests
         protected override TestSubscriber.Probe<TOutputs> Setup(IPublisher<int> p1, IPublisher<int> p2)
         {
             var subscriber = this.CreateProbe<TOutputs>();
-            RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 var f = CreateFixture(b);
 

@@ -97,7 +97,7 @@ namespace Akka.Streams.Tests.Dsl
             var s = Source.From(Enumerable.Range(0, 4));
             Action action = () =>
             {
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape,NotUsed>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
                     var merge = b.Add(new MergePreferred<int>(1));
                     b.From(s).To(merge.Preferred);

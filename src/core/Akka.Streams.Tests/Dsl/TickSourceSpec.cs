@@ -96,7 +96,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var c = TestSubscriber.CreateManualProbe<int>(this);
-                RunnableGraph.FromGraph(GraphDsl.Create<ClosedShape, NotUsed>(b =>
+                RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
                     var zip = b.Add(new Zip<int, string>());
                     b.From(Source.From(Enumerable.Range(1, 100))).To(zip.In0);
