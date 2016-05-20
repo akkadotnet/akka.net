@@ -56,17 +56,17 @@ namespace Akka.Streams.Tests.Dsl
         private static IEnumerator<Apple> Apples() => Enumerable.Repeat(new Apple(), int.MaxValue).GetEnumerator();
 
         private static Flow<string, string, NotUsed> F1
-            => Flow.FromGraph(Flow.Create<string>().Transform(Op<string, string>).Named("F1"));
+            => Flow.Create<string>().Transform(Op<string, string>).Named("F1");
         private static Flow<string, string, NotUsed> F2
-            => Flow.FromGraph(Flow.Create<string>().Transform(Op<string, string>).Named("F2"));
+            => Flow.Create<string>().Transform(Op<string, string>).Named("F2");
         private static Flow<string, string, NotUsed> F3
-            => Flow.FromGraph(Flow.Create<string>().Transform(Op<string, string>).Named("F3"));
+            => Flow.Create<string>().Transform(Op<string, string>).Named("F3");
         private static Flow<string, string, NotUsed> F4
-            => Flow.FromGraph(Flow.Create<string>().Transform(Op<string, string>).Named("F4"));
+            => Flow.Create<string>().Transform(Op<string, string>).Named("F4");
         private static Flow<string, string, NotUsed> F5
-            => Flow.FromGraph(Flow.Create<string>().Transform(Op<string, string>).Named("F5"));
+            => Flow.Create<string>().Transform(Op<string, string>).Named("F5");
         private static Flow<string, string, NotUsed> F6
-            => Flow.FromGraph(Flow.Create<string>().Transform(Op<string, string>).Named("F6"));
+            => Flow.Create<string>().Transform(Op<string, string>).Named("F6");
 
         private static Source<string, NotUsed> In1 => Source.From(new[] { "a", "b", "c" });
         private static Source<string, NotUsed> In2 => Source.From(new[] { "d", "e", "f" });
@@ -227,7 +227,7 @@ namespace Akka.Streams.Tests.Dsl
                 var out9 = Sink.AsPublisher<string>(false).MapMaterializedValue(_ => NotUsed.Instance);
                 var out10 = Sink.AsPublisher<string>(false).MapMaterializedValue(_ => NotUsed.Instance);
                 Func<string, Flow<string, string, NotUsed>> f =
-                    s => Flow.FromGraph(Flow.Create<string>().Transform(Op<string, string>).Named(s));
+                    s => Flow.Create<string>().Transform(Op<string, string>).Named(s);
 
                 b.From(in7).Via(f("a")).Via(b7).Via(f("b")).Via(m11).Via(f("c")).Via(b11).Via(f("d")).To(out2);
                 b.From(b11).Via(f("e")).Via(m9).Via(f("f")).To(out9);

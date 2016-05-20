@@ -50,12 +50,12 @@ namespace Akka.Streams
         IGraph<TShape, TMaterialized> AddAttributes(Attributes attributes);
 
         /// <summary>
-        /// Add a name attribute to this Flow.
+        /// Add a name attribute to this Graph.
         /// </summary>
         IGraph<TShape, TMaterialized> Named(string name);
 
         /// <summary>
-        /// Put an asynchronous boundary around this Source.
+        /// Put an asynchronous boundary around this Graph.
         /// </summary>
         IGraph<TShape, TMaterialized> Async();
     }

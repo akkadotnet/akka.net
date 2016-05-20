@@ -64,7 +64,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         private Flow<ByteString, ByteString, NotUsed> Rechunk
-            => Flow.FromGraph(Flow.Create<ByteString>().Transform(() => new Rechunker()).Named("rechunker"));
+            => Flow.Create<ByteString>().Transform(() => new Rechunker()).Named("rechunker");
 
         private static readonly List<ByteString> DelimiterBytes =
             new List<string> {"\n", "\r\n", "FOO"}.Select(ByteString.FromString).ToList();
@@ -74,8 +74,8 @@ namespace Akka.Streams.Tests.Dsl
 
         private static Flow<ByteString, string, NotUsed> SimpleLines(string delimiter, int maximumBytes, bool allowTruncation = true)
         {
-            return  Flow.FromGraph(Framing.Delimiter(ByteString.FromString(delimiter), maximumBytes, allowTruncation)
-                .Select(x => x.DecodeString(Encoding.UTF8)).Named("LineFraming"));
+            return  Framing.Delimiter(ByteString.FromString(delimiter), maximumBytes, allowTruncation)
+                .Select(x => x.DecodeString(Encoding.UTF8)).Named("LineFraming");
         }
 
         private static IEnumerable<ByteString> CompleteTestSequence(ByteString delimiter)
