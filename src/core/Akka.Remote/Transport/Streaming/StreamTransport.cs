@@ -54,7 +54,7 @@ namespace Akka.Remote.Transport.Streaming
             FrameSizeHardLimit = 67108864;
         }
 
-        public virtual bool ShutdownOutput(Stream stream, object state)
+        public virtual bool ShutdownStreamGracefully(Stream stream, object state)
         {
             return false;
         }
@@ -65,7 +65,7 @@ namespace Akka.Remote.Transport.Streaming
             {
                 stream.Close();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 //TODO Log
                 // Weird but not fatal

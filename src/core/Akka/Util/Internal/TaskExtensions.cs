@@ -40,8 +40,39 @@ namespace Akka.Util.Internal
             return tcs.Task;
         }
 
+        public static Task WithTimeout(this Task task, TimeSpan timeout)
+        {
+            if (timeout == Timeout.InfiniteTimeSpan)
+                return task;
+
+            CancellationTokenSource cancel = new CancellationTokenSource(timeout);
+
+            var t = task.WithCancellation(cancel.Token);
+
+            t.ContinueWithSynchronously((_, state) => ((CancellationTokenSource)state).Dispose(), cancel);
+
+            return t;
+        }
+
+        public static Task<T> WithTimeout<T>(this Task<T> task, TimeSpan timeout)
+        {
+            if (timeout == Timeout.InfiniteTimeSpan)
+                return task;
+
+            CancellationTokenSource cancel = new CancellationTokenSource(timeout);
+
+            var t = task.WithCancellation(cancel.Token);
+
+            t.ContinueWithSynchronously((_, state) => ((CancellationTokenSource)state).Dispose(), cancel);
+
+            return t;
+        }
+
         public static Task WithCancellation(this Task task, CancellationToken ct)
         {
+            if (!ct.CanBeCanceled)
+                return task;
+
             TaskCompletionSource<object> completion = new TaskCompletionSource<object>();
 
             if (ct.IsCancellationRequested)
@@ -85,6 +116,9 @@ namespace Akka.Util.Internal
 
         public static Task<T> WithCancellation<T>(this Task<T> task, CancellationToken ct)
         {
+            if (!ct.CanBeCanceled)
+                return task;
+
             TaskCompletionSource<T> completion = new TaskCompletionSource<T>();
 
             if (ct.IsCancellationRequested)
@@ -131,5 +165,15 @@ namespace Akka.Util.Internal
 
         public static void IgnoreResult<T>(this Task<T> task)
         { }
+
+        public static Task ContinueWithSynchronously(this Task task, Action<Task> continuationAction)
+        {
+            return task.ContinueWith(continuationAction, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        }
+
+        public static Task ContinueWithSynchronously(this Task task, Action<Task, object> continuationAction, object state)
+        {
+            return task.ContinueWith(continuationAction, state, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        }
     }
 }
