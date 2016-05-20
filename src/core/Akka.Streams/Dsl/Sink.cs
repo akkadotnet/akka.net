@@ -32,6 +32,7 @@ namespace Akka.Streams.Dsl
         }
 
         public SinkShape<TIn> Shape => (SinkShape<TIn>)Module.Shape;
+
         public IModule Module { get; }
 
         /// <summary>
@@ -43,43 +44,77 @@ namespace Akka.Streams.Dsl
         /// Cancels when original <see cref="Sink"/> backpressures
         /// </summary>
         public Sink<TIn2, TMat> ContraMap<TIn2>(Func<TIn2, TIn> function)
-        {
-            return Flow.FromFunction(function).ToMaterialized(this, Keep.Right);
-        }
+            => Flow.FromFunction(function).ToMaterialized(this, Keep.Right);
 
         /// <summary>
         /// Connect this <see cref="Sink{TIn,TMat}"/> to a <see cref="Source{T,TMat}"/> and run it. The returned value is the materialized value
         /// of the <see cref="Source{T,TMat}"/>, e.g. the <see cref="ISubscriber{T}"/>.
         /// </summary>
         public TMat2 RunWith<TMat2>(IGraph<SourceShape<TIn>, TMat2> source, IMaterializer materializer)
-        {
-            return Source.FromGraph(source).To(this).Run(materializer);
-        }
+            => Source.FromGraph(source).To(this).Run(materializer);
 
         public Sink<TIn, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> fn)
-        {
-            return new Sink<TIn, TMat2>(Module.TransformMaterializedValue(fn));
-        }
+            => new Sink<TIn, TMat2>(Module.TransformMaterializedValue(fn));
 
-        public IGraph<SinkShape<TIn>, TMat> WithAttributes(Attributes attributes)
-        {
-            return new Sink<TIn, TMat>(Module.WithAttributes(attributes));
-        }
+        /// <summary>
+        /// Change the attributes of this <see cref="IGraph{TShape}"/> to the given ones
+        /// and seal the list of attributes. This means that further calls will not be able
+        /// to remove these attributes, but instead add new ones. Note that this
+        /// operation has no effect on an empty Flow (because the attributes apply
+        /// only to the contained processing stages).
+        /// </summary>
+        IGraph<SinkShape<TIn>, TMat> IGraph<SinkShape<TIn>, TMat>.WithAttributes(Attributes attributes)
+            => WithAttributes(attributes);
 
-        public IGraph<SinkShape<TIn>, TMat> AddAttributes(Attributes attributes)
-        {
-            return WithAttributes(Module.Attributes.And(attributes));
-        }
+        /// <summary>
+        /// Change the attributes of this <see cref="Sink{TIn,TMat}"/> to the given ones
+        /// and seal the list of attributes. This means that further calls will not be able
+        /// to remove these attributes, but instead add new ones. Note that this
+        /// operation has no effect on an empty Flow (because the attributes apply
+        /// only to the contained processing stages).
+        /// </summary>
+        public Sink<TIn, TMat> WithAttributes(Attributes attributes)
+            => new Sink<TIn, TMat>(Module.WithAttributes(attributes));
 
-        public IGraph<SinkShape<TIn>, TMat> Named(string name)
-        {
-            return AddAttributes(Attributes.CreateName(name));
-        }
+        /// <summary>
+        /// Add the given attributes to this <see cref="IGraph{TShape}"/>.
+        /// Further calls to <see cref="WithAttributes"/>
+        /// will not remove these attributes. Note that this
+        /// operation has no effect on an empty Flow (because the attributes apply
+        /// only to the contained processing stages).
+        /// </summary>
+        IGraph<SinkShape<TIn>, TMat> IGraph<SinkShape<TIn>, TMat>.AddAttributes(Attributes attributes)
+            => AddAttributes(attributes);
 
-        public IGraph<SinkShape<TIn>, TMat> Async()
-        {
-            return AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
-        }
+        /// <summary>
+        /// Add the given attributes to this <see cref="Sink{TIn,TMat}"/>.
+        /// Further calls to <see cref="WithAttributes"/>
+        /// will not remove these attributes. Note that this
+        /// operation has no effect on an empty Flow (because the attributes apply
+        /// only to the contained processing stages).
+        /// </summary>
+        public Sink<TIn, TMat> AddAttributes(Attributes attributes)
+            => WithAttributes(Module.Attributes.And(attributes));
+
+        /// <summary>
+        /// Add a name attribute to this Sink.
+        /// </summary>
+        IGraph<SinkShape<TIn>, TMat> IGraph<SinkShape<TIn>, TMat>.Named(string name) => Named(name);
+
+        /// <summary>
+        /// Add a name attribute to this Sink.
+        /// </summary>
+        public Sink<TIn, TMat> Named(string name) => AddAttributes(Attributes.CreateName(name));
+
+        /// <summary>
+        /// Put an asynchronous boundary around this Sink.
+        /// </summary>
+        IGraph<SinkShape<TIn>, TMat> IGraph<SinkShape<TIn>, TMat>.Async() => Async();
+
+        /// <summary>
+        /// Put an asynchronous boundary around this Sink.
+        /// </summary>
+        public Sink<TIn, TMat> Async() => AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
     }
 
     public static class Sink
@@ -91,19 +126,15 @@ namespace Akka.Streams.Dsl
         /// it so also in type.
         /// </summary> 
         public static Sink<TIn, TMat> Wrap<TIn, TMat>(IGraph<SinkShape<TIn>, TMat> graph)
-        {
-            return graph is Sink<TIn, TMat>
+            => graph is Sink<TIn, TMat>
                 ? (Sink<TIn, TMat>) graph
                 : new Sink<TIn, TMat>(graph.Module);
-        }
 
         /// <summary>
         /// Helper to create <see cref="Sink{TIn, TMat}"/> from <see cref="ISubscriber{TIn}"/>.
         /// </summary>
         public static Sink<TIn, object> Create<TIn>(ISubscriber<TIn> subscriber)
-        {
-            return new Sink<TIn, object>(new SubscriberSink<TIn>(subscriber, DefaultAttributes.SubscriberSink, Shape<TIn>("SubscriberSink")));
-        }
+            => new Sink<TIn, object>(new SubscriberSink<TIn>(subscriber, DefaultAttributes.SubscriberSink, Shape<TIn>("SubscriberSink")));
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that materializes into a <see cref="Task{TIn}"/> of the first value received.
@@ -111,17 +142,15 @@ namespace Akka.Streams.Dsl
         /// If the stream signals an error errors before signaling at least a single element, the Task will be failed with the streams exception.
         /// </summary>
         public static Sink<TIn, Task<TIn>> First<TIn>()
-        {
-            return FromGraph(new FirstOrDefault<TIn>(throwOnDefault: true)
-                .WithAttributes(DefaultAttributes.FirstOrDefaultSink))
+            => FromGraph(new FirstOrDefault<TIn>(throwOnDefault: true))
+                .WithAttributes(DefaultAttributes.FirstOrDefaultSink)
                 .MapMaterializedValue(e =>
                 {
-                    if(e.IsCompleted && e.Result == null)
+                    if (e.IsCompleted && e.Result == null)
                         throw new InvalidOperationException("Sink.First materialized on an empty stream");
 
                     return e;
                 });
-        }
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that materializes into a <see cref="Task{TIn}"/> of the first value received.
@@ -129,19 +158,16 @@ namespace Akka.Streams.Dsl
         /// If the stream signals an error errors before signaling at least a single element, the Task will be failed with the streams exception.
         /// </summary>
         public static Sink<TIn, Task<TIn>> FirstOrDefault<TIn>()
-        {
-            return FromGraph(new FirstOrDefault<TIn>().WithAttributes(DefaultAttributes.FirstOrDefaultSink));
-        }
+            => FromGraph(new FirstOrDefault<TIn>()).WithAttributes(DefaultAttributes.FirstOrDefaultSink);
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that materializes into a <see cref="Task{TIn}"/> of the last value received.
         /// If the stream completes before signaling at least a single element, the Task will be failed with a <see cref="NoSuchElementException"/>.
         /// If the stream signals an error errors before signaling at least a single element, the Task will be failed with the streams exception.
         /// </summary>
-        public static Sink<TIn, Task<TIn>> Last<TIn>()
-        {
-            return FromGraph(new LastOrDefault<TIn>(throwOnDefault: true).WithAttributes(DefaultAttributes.LastOrDefaultSink));
-        }
+        public static Sink<TIn, Task<TIn>> Last<TIn>() 
+            => FromGraph(new LastOrDefault<TIn>(throwOnDefault: true)).WithAttributes(DefaultAttributes.LastOrDefaultSink);
+
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that materializes into a <see cref="Task{TIn}"/> of the last value received.
@@ -149,40 +175,29 @@ namespace Akka.Streams.Dsl
         /// If the stream signals an error errors before signaling at least a single element, the Task will be failed with the streams exception.
         /// </summary>
         public static Sink<TIn, Task<TIn>> LastOrDefault<TIn>()
-        {
-            return FromGraph(new LastOrDefault<TIn>().WithAttributes(DefaultAttributes.LastOrDefaultSink));
-        }
+            => FromGraph(new LastOrDefault<TIn>()).WithAttributes(DefaultAttributes.LastOrDefaultSink);
 
-        public static Sink<TIn, Task<IImmutableList<TIn>>> Seq<TIn>()
-        {
-            return FromGraph(new SeqStage<TIn>());
-        }
+        public static Sink<TIn, Task<IImmutableList<TIn>>> Seq<TIn>() => FromGraph(new SeqStage<TIn>());
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that materializes into a <see cref="IPublisher{TIn}"/>.
         /// that can handle one <see cref="ISubscriber{TIn}"/>.
         /// </summary>
         public static Sink<TIn, IPublisher<TIn>> Publisher<TIn>()
-        {
-            return new Sink<TIn, IPublisher<TIn>>(new PublisherSink<TIn>(DefaultAttributes.PublisherSink, Shape<TIn>("PublisherSink")));
-        }
+            => new Sink<TIn, IPublisher<TIn>>(new PublisherSink<TIn>(DefaultAttributes.PublisherSink, Shape<TIn>("PublisherSink")));
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that materializes into <see cref="IPublisher{TIn}"/>
         /// that can handle more than one <see cref="ISubscriber{TIn}"/>.
         /// </summary>
         public static Sink<TIn, IPublisher<TIn>> FanoutPublisher<TIn>()
-        {
-            return new Sink<TIn, IPublisher<TIn>>(new FanoutPublisherSink<TIn>(DefaultAttributes.FanoutPublisherSink, Shape<TIn>("FanoutPublisherSink")));
-        }
+            => new Sink<TIn, IPublisher<TIn>>(new FanoutPublisherSink<TIn>(DefaultAttributes.FanoutPublisherSink, Shape<TIn>("FanoutPublisherSink")));
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that will consume the stream and discard the elements.
         /// </summary>
         public static Sink<TIn, Task> Ignore<TIn>()
-        {
-            return new Sink<TIn, Task>(new SinkholeSink<TIn>(Shape<TIn>("BlackholeSink"), DefaultAttributes.IgnoreSink));
-        }
+            => new Sink<TIn, Task>(new SinkholeSink<TIn>(Shape<TIn>("BlackholeSink"), DefaultAttributes.IgnoreSink));
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that will invoke the given <paramref name="action"/> for each received element. 
@@ -190,23 +205,18 @@ namespace Akka.Streams.Dsl
         /// normal end of the stream, or completed with a failure if there is a failure signaled in
         /// the stream..
         /// </summary>
-        public static Sink<TIn, Task> ForEach<TIn>(Action<TIn> action)
-        {
-            var forEach = Flow.Create<TIn>().Select(input =>
+        public static Sink<TIn, Task> ForEach<TIn>(Action<TIn> action) => Flow.Create<TIn>()
+            .Select(input =>
             {
                 action(input);
                 return NotUsed.Instance;
             }).ToMaterialized(Ignore<NotUsed>(), Keep.Right).Named("foreachSink");
 
-            return FromGraph(forEach);
-        }
-
         /// <summary>
         /// Combine several sinks with fun-out strategy like <see cref="Broadcast{TIn}"/> or <see cref="Balance{TIn}"/> and returns <see cref="Sink{TIn,TMat}"/>.
         /// </summary>
         public static Sink<TIn, NotUsed> Combine<TIn, TOut, TMat>(Func<int, IGraph<UniformFanOutShape<TIn, TOut>, TMat>> strategy, Sink<TOut, NotUsed> first, Sink<TOut, NotUsed> second, params Sink<TOut, NotUsed>[] rest)
-        {
-            return FromGraph(GraphDsl.Create(builder =>
+            => FromGraph(GraphDsl.Create(builder =>
             {
                 var d = builder.Add(strategy(rest.Length + 2));
 
@@ -219,7 +229,6 @@ namespace Akka.Streams.Dsl
 
                 return new SinkShape<TIn>(d.In);
             }));
-        }
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that will invoke the given <paramref name="action"/> 
@@ -235,15 +244,12 @@ namespace Akka.Streams.Dsl
         ///  <para/>
         /// See also <seealso cref="SelectAsyncUnordered{TIn,TOut}"/> 
         /// </summary>
-        public static Sink<TIn, Task> ForEachParallel<TIn>(int parallelism, Action<TIn> action)
-        {
-            return Flow.Create<TIn>()
-                .SelectAsyncUnordered(parallelism, input => Task.Run(() =>
-                {
-                    action(input);
-                    return NotUsed.Instance;
-                })).ToMaterialized(Ignore<NotUsed>(), Keep.Right);
-        }
+        public static Sink<TIn, Task> ForEachParallel<TIn>(int parallelism, Action<TIn> action) => Flow.Create<TIn>()
+            .SelectAsyncUnordered(parallelism, input => Task.Run(() =>
+            {
+                action(input);
+                return NotUsed.Instance;
+            })).ToMaterialized(Ignore<NotUsed>(), Keep.Right);
 
         /// <summary>
         /// A <see cref="Sink{TIn, Task}"/> that will invoke the given <paramref name="aggregate"/> function for every received element, 
@@ -253,14 +259,10 @@ namespace Akka.Streams.Dsl
         /// if there is a failure signaled in the stream.
         /// </summary>
         public static Sink<TIn, Task<TOut>> Aggregate<TIn, TOut>(TOut zero, Func<TOut, TIn, TOut> aggregate)
-        {
-            var fold = Flow.Create<TIn>()
+            => Flow.Create<TIn>()
                 .Aggregate(zero, aggregate)
                 .ToMaterialized(First<TOut>(), Keep.Right)
                 .Named("AggregateSink");
-
-            return FromGraph(fold);
-        }
 
         /// <summary>
         /// A <see cref="Sink{TIn,Task}"/> that will invoke the given <paramref name="reduce"/> for every received element, giving it its previous
@@ -269,29 +271,20 @@ namespace Akka.Streams.Dsl
         /// function evaluation when the input stream ends, or completed with `Failure`
         /// if there is a failure signaled in the stream.
         /// </summary>
-        public static Sink<TIn, Task<TIn>> Sum<TIn>(Func<TIn, TIn, TIn> reduce)
-        {
-            var graph = Flow.Create<TIn>()
-                .Sum(reduce)
-                .ToMaterialized(First<TIn>(), Keep.Right)
-                .Named("SumSink");
-
-            return FromGraph(graph);
-        }
+        public static Sink<TIn, Task<TIn>> Sum<TIn>(Func<TIn, TIn, TIn> reduce) => Flow.Create<TIn>()
+            .Sum(reduce)
+            .ToMaterialized(First<TIn>(), Keep.Right)
+            .Named("SumSink");
 
         /// <summary>
         /// A <see cref="Sink{TIn, NotUsed}"/> that when the flow is completed, either through a failure or normal
         /// completion, apply the provided function with <paramref name="success"/> or <paramref name="failure"/>.
         /// </summary>
         public static Sink<TIn, NotUsed> OnComplete<TIn>(Action success, Action<Exception> failure)
-        {
-            var onCompleted = Flow.Create<TIn>()
+            => Flow.Create<TIn>()
                 .Transform(() => new OnCompleted<TIn, NotUsed>(success, failure))
                 .To(Ignore<NotUsed>())
                 .Named("OnCompleteSink");
-
-            return FromGraph(onCompleted);
-        }
 
 
         ///<summary>
@@ -310,9 +303,7 @@ namespace Akka.Streams.Dsl
         /// limiting stage in front of this <see cref="Sink{TIn, TMat}"/>.
         ///</summary>
         public static Sink<TIn, NotUsed> ActorRef<TIn>(IActorRef actorRef, object onCompleteMessage)
-        {
-            return new Sink<TIn, NotUsed>(new ActorRefSink<TIn>(actorRef, onCompleteMessage, DefaultAttributes.ActorRefSink, Shape<TIn>("ActorRefSink")));
-        }
+            => new Sink<TIn, NotUsed>(new ActorRefSink<TIn>(actorRef, onCompleteMessage, DefaultAttributes.ActorRefSink, Shape<TIn>("ActorRefSink")));
 
         /// <summary>
         /// Sends the elements of the stream to the given <see cref="IActorRef"/> that sends back back-pressure signal.
@@ -343,9 +334,7 @@ namespace Akka.Streams.Dsl
         /// be <see cref="ActorSubscriberSink{TIn}"/>.
         ///</summary>
         public static Sink<TIn, IActorRef> ActorSubscriber<TIn>(Props props)
-        {
-            return new Sink<TIn, IActorRef>(new ActorSubscriberSink<TIn>(props, DefaultAttributes.ActorSubscriberSink, Shape<TIn>("ActorSubscriberSink")));
-        }
+            => new Sink<TIn, IActorRef>(new ActorSubscriberSink<TIn>(props, DefaultAttributes.ActorSubscriberSink, Shape<TIn>("ActorSubscriberSink")));
 
         ///<summary>
         /// <para>
@@ -366,37 +355,28 @@ namespace Akka.Streams.Dsl
         /// as completion marker.
         /// </para>
         ///</summary>
-        public static Sink<TIn, ISinkQueue<TIn>> Queue<TIn>()
-        {
-            return FromGraph(new QueueSink<TIn>());
-        }
+        public static Sink<TIn, ISinkQueue<TIn>> Queue<TIn>() => FromGraph(new QueueSink<TIn>());
 
         /// <summary>
         /// A graph with the shape of a sink logically is a sink, this method makes
         /// it so also in type.
         /// </summary>
         public static Sink<TIn, TMat> FromGraph<TIn, TMat>(IGraph<SinkShape<TIn>, TMat> graph)
-        {
-            return graph is Sink<TIn, TMat>
+            => graph is Sink<TIn, TMat>
                 ? (Sink<TIn, TMat>) graph
                 : new Sink<TIn, TMat>(graph.Module);
-        }
 
         /// <summary>
         /// Helper to create <see cref="Sink{TIn,TMat}"/> from <see cref="ISubscriber{TIn}"/>.
         /// </summary>
         public static Sink<TIn, NotUsed> FromSubscriber<TIn>(ISubscriber<TIn> subscriber)
-        {
-            return new Sink<TIn, NotUsed>(new SubscriberSink<TIn>(subscriber, DefaultAttributes.SubscriberSink, Shape<TIn>("SubscriberSink")));
-        }
+            => new Sink<TIn, NotUsed>(new SubscriberSink<TIn>(subscriber, DefaultAttributes.SubscriberSink, Shape<TIn>("SubscriberSink")));
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that immediately cancels its upstream after materialization.
         /// </summary>
         public static Sink<TIn, NotUsed> Cancelled<TIn>()
-        {
-            return new Sink<TIn, NotUsed>(new CancelSink<TIn>(DefaultAttributes.CancelledSink, Shape<TIn>("CancelledSink")));
-        }
+            => new Sink<TIn, NotUsed>(new CancelSink<TIn>(DefaultAttributes.CancelledSink, Shape<TIn>("CancelledSink")));
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that materializes into a <see cref="IPublisher{TIn}"/>.

@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -35,16 +34,14 @@ namespace Akka.Streams.Dsl
         }
 
         public SourceShape<TOut> Shape => (SourceShape<TOut>)Module.Shape;
+
         public IModule Module { get; }
 
         /// <summary>
         /// Connect this <see cref="Source{TOut,TMat}"/> to a <see cref="Sink{TIn,TMat}"/>,
         /// concatenating the processing steps of both.
         /// </summary>
-        public IRunnableGraph<TMat> To<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink)
-        {
-            return ToMaterialized(sink, Keep.Left);
-        }
+        public IRunnableGraph<TMat> To<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink) => ToMaterialized(sink, Keep.Left);
 
         /// <summary>
         /// Connect this <see cref="Source{TOut,TMat}"/> to a <see cref="Sink{TIn,TMat}"/>,
@@ -73,29 +70,15 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public Source<TOut, TMat3> ConcatMaterialized<TMat2, TMat3>(IGraph<SourceShape<TOut>, TMat2> that,
             Func<TMat, TMat2, TMat3> materializedFunction)
-        {
-            return ViaMaterialized(InternalFlowOperations.ConcatGraph(that), materializedFunction);
-        }
+            => ViaMaterialized(InternalFlowOperations.ConcatGraph(that), materializedFunction);
 
+        /// <summary>
+        /// Nests the current Source and returns a Source with the given Attributes
+        /// </summary>
+        /// <param name="attributes">The attributes to add</param>
+        /// <returns>A new Source with the added attributes</returns>
         IGraph<SourceShape<TOut>, TMat> IGraph<SourceShape<TOut>, TMat>.WithAttributes(Attributes attributes)
-        {
-            return WithAttributes(attributes);
-        }
-
-        public IGraph<SourceShape<TOut>, TMat> AddAttributes(Attributes attributes)
-        {
-            return WithAttributes(Module.Attributes.And(attributes));
-        }
-
-        public IGraph<SourceShape<TOut>, TMat> Named(string name)
-        {
-            return AddAttributes(Attributes.CreateName(name));
-        }
-
-        public IGraph<SourceShape<TOut>, TMat> Async()
-        {
-            return AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
-        }
+            => WithAttributes(attributes);
 
         /// <summary>
         /// Nests the current Source and returns a Source with the given Attributes
@@ -103,44 +86,94 @@ namespace Akka.Streams.Dsl
         /// <param name="attributes">The attributes to add</param>
         /// <returns>A new Source with the added attributes</returns>
         public Source<TOut, TMat> WithAttributes(Attributes attributes)
-        {
-            return new Source<TOut, TMat>(Module.WithAttributes(attributes));
-        }
+            => new Source<TOut, TMat>(Module.WithAttributes(attributes));
 
+        /// <summary>
+        /// Add the given attributes to this <see cref="IGraph{TShape}"/>.
+        /// Further calls to <see cref="WithAttributes"/>
+        /// will not remove these attributes. Note that this
+        /// operation has no effect on an empty Flow (because the attributes apply
+        /// only to the contained processing stages).
+        /// </summary>
+        IGraph<SourceShape<TOut>, TMat> IGraph<SourceShape<TOut>, TMat>.AddAttributes(Attributes attributes)
+            => AddAttributes(attributes);
+
+        /// <summary>
+        /// Add the given attributes to this <see cref="Source{TOut,TMat}"/>.
+        /// Further calls to <see cref="WithAttributes"/>
+        /// will not remove these attributes. Note that this
+        /// operation has no effect on an empty Flow (because the attributes apply
+        /// only to the contained processing stages).
+        /// </summary>
+        public Source<TOut, TMat> AddAttributes(Attributes attributes)
+            => WithAttributes(Module.Attributes.And(attributes));
+
+        /// <summary>
+        /// Add a name attribute to this Source.
+        /// </summary>
+        IGraph<SourceShape<TOut>, TMat> IGraph<SourceShape<TOut>, TMat>.Named(string name) => Named(name);
+
+        /// <summary>
+        /// Add a name attribute to this Source.
+        /// </summary>
+        public Source<TOut, TMat> Named(string name) => AddAttributes(Attributes.CreateName(name));
+
+        /// <summary>
+        /// Put an asynchronous boundary around this Source.
+        /// </summary>
+        IGraph<SourceShape<TOut>, TMat> IGraph<SourceShape<TOut>, TMat>.Async() => Async();
+
+        /// <summary>
+        /// Put an asynchronous boundary around this Source.
+        /// </summary>
+        public Source<TOut, TMat> Async() => AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
+
+        /// <summary>
+        /// Transform this <see cref="IFlow{T,TMat}"/> by appending the given processing steps.
+        /// The <paramref name="combine"/> function is used to compose the materialized values of this flow and that
+        /// flow into the materialized value of the resulting Flow.
+        /// </summary>
+        IFlow<T, TMat3> IFlow<TOut, TMat>.ViaMaterialized<T, TMat2, TMat3>(IGraph<FlowShape<TOut, T>, TMat2> flow, Func<TMat, TMat2, TMat3> combine) 
+            => ViaMaterialized(flow, combine);
+
+        /// <summary>
+        /// Transform this <see cref="Source{TOut,TMat}"/> by appending the given processing steps.
+        /// The <paramref name="combine"/> function is used to compose the materialized values of this flow and that
+        /// flow into the materialized value of the resulting Flow.
+        /// </summary>
         public Source<TOut2, TMat3> ViaMaterialized<TOut2, TMat2, TMat3>(IGraph<FlowShape<TOut, TOut2>, TMat2> flow, Func<TMat, TMat2, TMat3> combine)
         {
-            if (flow.Module == GraphStages.Identity<TOut2>().Module) return this as Source<TOut2, TMat3>;
-            else
-            {
-                var flowCopy = flow.Module.CarbonCopy();
-                return new Source<TOut2, TMat3>(Module
-                    .Fuse(flowCopy, Shape.Outlet, flowCopy.Shape.Inlets.First(), combine)
-                    .ReplaceShape(new SourceShape<TOut2>((Outlet<TOut2>) flowCopy.Shape.Outlets.First())));
-            }
+            if (flow.Module == GraphStages.Identity<TOut2>().Module)
+                return this as Source<TOut2, TMat3>;
+
+            var flowCopy = flow.Module.CarbonCopy();
+            return new Source<TOut2, TMat3>(Module
+                .Fuse(flowCopy, Shape.Outlet, flowCopy.Shape.Inlets.First(), combine)
+                .ReplaceShape(new SourceShape<TOut2>((Outlet<TOut2>)flowCopy.Shape.Outlets.First())));
         }
 
-        IFlow<T, TMat3> IFlow<TOut, TMat>.ViaMaterialized<T, TMat2, TMat3>(IGraph<FlowShape<TOut, T>, TMat2> flow, Func<TMat, TMat2, TMat3> combine)
-        {
-            return ViaMaterialized(flow, combine);
-        }
+        /// <summary>
+        /// Transform this <see cref="IFlow{TOut,TMat}"/> by appending the given processing steps.
+        /// The materialized value of the combined <see cref="IFlow{TOut,TMat}"/> will be the materialized
+        /// value of the current flow (ignoring the other flow’s value), use
+        /// <see cref="ViaMaterialized{T2,TMat2,TMat3}"/> if a different strategy is needed.
+        /// </summary>
+        IFlow<T2, TMat> IFlow<TOut, TMat>.Via<T2, TMat2>(IGraph<FlowShape<TOut, T2>, TMat2> flow) => Via(flow);
 
+        /// <summary>
+        /// Transform this <see cref="Source{TOut,TMat}"/> by appending the given processing steps.
+        /// The materialized value of the combined <see cref="Source{TOut,TMat}"/> will be the materialized
+        /// value of the current flow (ignoring the other flow’s value), use
+        /// <see cref="ViaMaterialized{T2,TMat2,TMat3}"/> if a different strategy is needed.
+        /// </summary>
         public Source<T2, TMat> Via<T2, TMat2>(IGraph<FlowShape<TOut, T2>, TMat2> flow)
-        {
-            return ViaMaterialized(flow, Keep.Left);
-        }
-
-        IFlow<T2, TMat> IFlow<TOut, TMat>.Via<T2, TMat2>(IGraph<FlowShape<TOut, T2>, TMat2> flow)
-        {
-            return Via(flow);
-        }
+            => ViaMaterialized(flow, Keep.Left);
 
         /// <summary>
         /// Transform only the materialized value of this Source, leaving all other properties as they were.
         /// </summary>
         public Source<TOut, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> mapFunc)
-        {
-            return new Source<TOut, TMat2>(Module.TransformMaterializedValue(mapFunc));
-        }
+            => new Source<TOut, TMat2>(Module.TransformMaterializedValue(mapFunc));
 
         internal Source<TOut2, TMat> DeprecatedAndThen<TOut2>(StageModule<TOut, TOut2> op)
         {
@@ -155,9 +188,7 @@ namespace Akka.Streams.Dsl
         /// of the <see cref="Sink{TIn,TMat}"/> , e.g. the <see cref="IPublisher{TIn}"/> of a <see cref="Sink.Publisher{TIn}"/>.
         /// </summary>
         public TMat2 RunWith<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink, IMaterializer materializer)
-        {
-            return ToMaterialized(sink, Keep.Right).Run(materializer);
-        }
+            => ToMaterialized(sink, Keep.Right).Run(materializer);
 
         /// <summary>
         /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a fold function.
@@ -167,10 +198,8 @@ namespace Akka.Streams.Dsl
         /// function evaluation when the input stream ends, or completed with Failure
         /// if there is a failure signaled in the stream.
         /// </summary>
-        public Task<TOut2> RunAggregate<TOut2>(TOut2 zero, Func<TOut2, TOut, TOut2> aggregate, IMaterializer materializer)
-        {
-            return RunWith(Sink.Aggregate(zero, aggregate), materializer);
-        }
+        public Task<TOut2> RunAggregate<TOut2>(TOut2 zero, Func<TOut2, TOut, TOut2> aggregate, IMaterializer materializer) 
+            => RunWith(Sink.Aggregate(zero, aggregate), materializer);
 
         /// <summary>
         /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a reduce function.
@@ -181,9 +210,7 @@ namespace Akka.Streams.Dsl
         /// if there is a failure signaled in the stream.
         /// </summary>
         public Task<TOut> RunSum(Func<TOut, TOut, TOut> reduce, IMaterializer materializer)
-        {
-            return RunWith(Sink.Sum(reduce), materializer);
-        }
+            => RunWith(Sink.Sum(reduce), materializer);
 
         /// <summary>
         /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a foreach procedure. The given procedure is invoked
@@ -193,16 +220,13 @@ namespace Akka.Streams.Dsl
         /// the stream.
         /// </summary>
         public Task RunForeach(Action<TOut> action, IMaterializer materializer)
-        {
-            return RunWith(Sink.ForEach(action), materializer);
-        }
+            => RunWith(Sink.ForEach(action), materializer);
 
         /// <summary>
         /// Combines several sources with fun-in strategy like <see cref="Merge{TIn,TOut}"/> or <see cref="Concat{TIn,TOut}"/> and returns <see cref="Source{TOut,TMat}"/>.
         /// </summary>
-        public Source<U, NotUsed> Combine<T, U>(Source<T, NotUsed> first, Source<T, NotUsed> second, Source<T, NotUsed>[] rest, Func<int, IGraph<UniformFanInShape<T,U>, NotUsed>> strategy)
-        {
-            return Source.FromGraph(GraphDsl.Create(b =>
+        public Source<U, NotUsed> Combine<T, U>(Source<T, NotUsed> first, Source<T, NotUsed> second, Source<T, NotUsed>[] rest, Func<int, IGraph<UniformFanInShape<T, U>, NotUsed>> strategy)
+            => Source.FromGraph(GraphDsl.Create(b =>
             {
                 var c = b.Add(strategy(rest.Length + 2));
                 b.From(first).To(c.In(0));
@@ -212,15 +236,11 @@ namespace Akka.Streams.Dsl
                     b.From(rest[i]).To(c.In(i + 2));
                 return new SourceShape<U>(c.Out);
             }));
-        }
     }
 
     public static class Source
     {
-        private static SourceShape<T> Shape<T>(string name)
-        {
-            return new SourceShape<T>(new Outlet<T>(name + ".out"));
-        }
+        private static SourceShape<T> Shape<T>(string name) => new SourceShape<T>(new Outlet<T>(name + ".out"));
 
         /// <summary>
         /// Helper to create <see cref="Source{TOut,TMat}"/> from <see cref="IPublisher{T}"/>.
@@ -231,9 +251,7 @@ namespace Akka.Streams.Dsl
         /// back-pressure upstream.
         /// </summary>
         public static Source<T, NotUsed> FromPublisher<T>(IPublisher<T> publisher)
-        {
-            return new Source<T, NotUsed>(new PublisherSource<T>(publisher, DefaultAttributes.PublisherSource, Shape<T>("PublisherSource")));
-        }
+            => new Source<T, NotUsed>(new PublisherSource<T>(publisher, DefaultAttributes.PublisherSource, Shape<T>("PublisherSource")));
 
         /// <summary>
         /// Helper to create <see cref="Source{TOut,TMat}"/> from <see cref="IEnumerator{T}"/>.
@@ -246,9 +264,7 @@ namespace Akka.Streams.Dsl
         /// from the downstream transformation steps.
         /// </summary>
         public static Source<T, NotUsed> FromEnumerator<T>(Func<IEnumerator<T>> enumeratorFactory)
-        {
-            return From(new EnumeratorEnumerable<T>(enumeratorFactory));
-        }
+            => From(new EnumeratorEnumerable<T>(enumeratorFactory));
 
         /// <summary>
         /// Helper to create <see cref="Source{TOut,TMat}"/> from <see cref="IEnumerable{T}"/>.
@@ -259,28 +275,22 @@ namespace Akka.Streams.Dsl
         /// stream will see an individual flow of elements (always starting from the
         /// beginning) regardless of when they subscribed.
         /// </summary>
-        public static Source<T, NotUsed> From<T>(IEnumerable<T> enumerable)
-        {
-            return Single(enumerable).SelectMany(x => x).WithAttributes(DefaultAttributes.EnumerableSource);
-        }
+        public static Source<T, NotUsed> From<T>(IEnumerable<T> enumerable) 
+            => Single(enumerable).SelectMany(x => x).WithAttributes(DefaultAttributes.EnumerableSource);
 
         /// <summary>
         /// Create a <see cref="Source{TOut,TMat}"/> with one element.
         /// Every connected <see cref="Sink{TIn,TMat}"/> of this stream will see an individual stream consisting of one element.
         /// </summary>
-        public static Source<T, NotUsed> Single<T>(T element)
-        {
-            return FromGraph(new SingleSource<T>(element).WithAttributes(DefaultAttributes.SingleSource));
-        }
+        public static Source<T, NotUsed> Single<T>(T element) 
+            => FromGraph(new SingleSource<T>(element).WithAttributes(DefaultAttributes.SingleSource));
 
         /// <summary>
         /// A graph with the shape of a source logically is a source, this method makes
         /// it so also in type.
         /// </summary>
         public static Source<T, TMat> FromGraph<T, TMat>(IGraph<SourceShape<T>, TMat> source)
-        {
-            return source as Source<T, TMat> ?? new Source<T, TMat>(source.Module);
-        }
+            => source as Source<T, TMat> ?? new Source<T, TMat>(source.Module);
 
         /// <summary>
         /// Start a new <see cref="Source{TOut,TMat}"/> from the given <see cref="Task{T}"/>. The stream will consist of
@@ -297,10 +307,8 @@ namespace Akka.Streams.Dsl
         /// element is produced it will not receive that tick element later. It will
         /// receive new tick elements as soon as it has requested more elements.
         /// </summary>
-        public static Source<T, ICancelable> Tick<T>(TimeSpan initialDelay, TimeSpan interval, T tick)
-        {
-            return FromGraph(new TickSource<T>(initialDelay, interval, tick)).WithAttributes(DefaultAttributes.TickSource);
-        }
+        public static Source<T, ICancelable> Tick<T>(TimeSpan initialDelay, TimeSpan interval, T tick) 
+            => FromGraph(new TickSource<T>(initialDelay, interval, tick)).WithAttributes(DefaultAttributes.TickSource);
 
         /// <summary>
         /// Create a <see cref="Source{TOut,TMat}"/> that will continually emit the given element.
@@ -324,10 +332,8 @@ namespace Akka.Streams.Dsl
         ///   }
         /// </code>
         /// </example>
-        public static Source<TElem, NotUsed> Unfold<TState, TElem>(TState state, Func<TState, Tuple<TState, TElem>> unfold)
-        {
-            return FromGraph(new Unfold<TState, TElem>(state, unfold)).WithAttributes(DefaultAttributes.Unfold);
-        }
+        public static Source<TElem, NotUsed> Unfold<TState, TElem>(TState state, Func<TState, Tuple<TState, TElem>> unfold) 
+            => FromGraph(new Unfold<TState, TElem>(state, unfold)).WithAttributes(DefaultAttributes.Unfold);
 
         /// <summary>
         /// Same as <see cref="Unfold{TState,TElem}"/>, but uses an async function to generate the next state-element tuple.
@@ -344,10 +350,8 @@ namespace Akka.Streams.Dsl
         /// }
         /// </code>
         /// </example>
-        public static Source<TElem, NotUsed> UnfoldAsync<TState, TElem>(TState state, Func<TState, Task<Tuple<TState, TElem>>> unfoldAsync)
-        {
-            return FromGraph(new UnfoldAsync<TState, TElem>(state, unfoldAsync)).WithAttributes(DefaultAttributes.UnfoldAsync);
-        }
+        public static Source<TElem, NotUsed> UnfoldAsync<TState, TElem>(TState state, Func<TState, Task<Tuple<TState, TElem>>> unfoldAsync) 
+            => FromGraph(new UnfoldAsync<TState, TElem>(state, unfoldAsync)).WithAttributes(DefaultAttributes.UnfoldAsync);
 
         /// <summary>
         /// Simpler <see cref="Unfold{TState,TElem}"/>, for infinite sequences. 
@@ -390,9 +394,9 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Source<T, TaskCompletionSource<T>> Maybe<T>()
         {
-            return new Source<T, TaskCompletionSource<T>>(new MaybeSource<T>(
-                DefaultAttributes.MaybeSource,
-                new SourceShape<T>(new Outlet<T>("MaybeSource"))));
+            return new Source<T, TaskCompletionSource<T>>(
+                    new MaybeSource<T>(DefaultAttributes.MaybeSource,
+                    new SourceShape<T>(new Outlet<T>("MaybeSource"))));
         }
 
         /// <summary>
@@ -423,7 +427,9 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Source<T, IActorRef> ActorPublisher<T>(Props props)
         {
-            if (!typeof(Actors.ActorPublisher<T>).IsAssignableFrom(props.Type)) throw new ArgumentException("Actor must be ActorPublisher");
+            if (!typeof(Actors.ActorPublisher<T>).IsAssignableFrom(props.Type))
+                throw new ArgumentException("Actor must be ActorPublisher");
+
             return new Source<T, IActorRef>(new ActorPublisherSource<T>(props, DefaultAttributes.ActorPublisherSource, Shape<T>("ActorPublisherSource")));
         }
 
@@ -469,8 +475,7 @@ namespace Akka.Streams.Dsl
         /// Combines several sources with fun-in strategy like <see cref="Merge{TIn,TOut}"/> or <see cref="Concat{TIn,TOut}"/> and returns <see cref="Source{TOut,TMat}"/>.
         /// </summary>
         public static Source<U, NotUsed> Combine<T, U>(Source<T, NotUsed> first, Source<T, NotUsed> second, Func<int, IGraph<UniformFanInShape<T, U>, NotUsed>> strategy, params Source<T, NotUsed>[] rest)
-        {
-            return FromGraph(GraphDsl.Create(b =>
+            => FromGraph(GraphDsl.Create(b =>
             {
                 var c = b.Add(strategy(rest.Length + 2));
                 b.From(first).To(c.In(0));
@@ -480,7 +485,6 @@ namespace Akka.Streams.Dsl
                     b.From(rest[i]).To(c.In(i + 2));
                 return new SourceShape<U>(c.Out);
             }));
-        }
 
 
         /// <summary>

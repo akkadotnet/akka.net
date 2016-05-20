@@ -83,8 +83,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Select(x => SentThreadNameTo(probe1.Ref, x))
                     .WithAttributes(ActorAttributes.CreateDispatcher("my-dispatcher1"));
 
-            var flow2 =
-                Flow.FromGraph(flow1)
+            var flow2 = flow1
                     .Via(Flow.Create<int>().Select(x => SentThreadNameTo(probe2.Ref, x)))
                     .WithAttributes(ActorAttributes.CreateDispatcher("my-dispatcher2"));
 
@@ -99,12 +98,12 @@ namespace Akka.Streams.Tests.Dsl
         {
             var n = "Uppercase reverser";
             var f1 = Flow.Create<string>().Select(c => c.ToLower());
-            var graph =
+            var f2 =
                 Flow.Create<string>()
                     .Select(c => c.ToUpper())
                     .Select(s => s.Reverse().Aggregate("", (agg, c) => agg + c))
-                    .Named(n);
-            var f2 = Flow.FromGraph(graph).Select(c => c.ToLower());
+                    .Named(n)
+                    .Select(c => c.ToLower());
 
             f1.Via(f2).ToString().Should().Contain(n);
         }

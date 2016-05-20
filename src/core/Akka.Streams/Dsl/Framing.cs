@@ -31,10 +31,9 @@ namespace Akka.Streams.Dsl
         public static Flow<ByteString, ByteString, NotUsed> Delimiter(ByteString delimiter, int maximumFrameLength,
             bool allowTruncation = false)
         {
-            var graph = Flow.Create<ByteString>()
+            return Flow.Create<ByteString>()
                 .Transform(() => new DelimiterFramingStage(delimiter, maximumFrameLength, allowTruncation))
                 .Named("DelimiterFraming");
-            return Flow.FromGraph(graph);
         }
 
         /// <summary>
@@ -55,11 +54,9 @@ namespace Akka.Streams.Dsl
             if (fieldLength < 1 || fieldLength > 4)
                 throw new ArgumentException("Length field length must be 1,2,3 or 4");
 
-            var graph = Flow.Create<ByteString>()
+            return Flow.Create<ByteString>()
                 .Transform(() => new LengthFieldFramingStage(fieldLength, maximumFramelength, fieldOffset, byteOrder))
                 .Named("LengthFieldFraming");
-
-            return Flow.FromGraph(graph);
         }
 
         /// <summary>
