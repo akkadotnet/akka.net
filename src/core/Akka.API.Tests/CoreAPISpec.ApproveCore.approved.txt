@@ -177,6 +177,7 @@ namespace Akka.Actor
         public string ToStringWithUid() { }
         public Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
         public static bool TryParse(string path, out Akka.Actor.ActorPath actorPath) { }
+        [System.ObsoleteAttribute()]
         public static bool TryParseAddress(string path, out Akka.Actor.Address address) { }
         public abstract Akka.Actor.ActorPath WithUid(long uid);
         public class Surrogate : Akka.Util.ISurrogate, System.IEquatable<Akka.Actor.ActorPath.Surrogate>, System.IEquatable<Akka.Actor.ActorPath>

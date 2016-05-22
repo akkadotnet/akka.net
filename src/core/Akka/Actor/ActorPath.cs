@@ -98,7 +98,7 @@ namespace Akka.Actor
             #endregion
         }
 
-         /** INTERNAL API */
+        /** INTERNAL API */
         internal static char[] ValidSymbols = @"""-_.*$+:@&=,!~';""()".ToCharArray();
 
         /// <summary> 
@@ -278,7 +278,6 @@ namespace Akka.Actor
         {
             actorPath = null;
 
-
             Address address;
             Uri uri;
             if (!TryParseAddress(path, out address, out uri)) return false;
@@ -287,6 +286,7 @@ namespace Akka.Actor
             return true;
         }
 
+        [Obsolete]
         public static bool TryParseAddress(string path, out Address address)
         {
             Uri uri;

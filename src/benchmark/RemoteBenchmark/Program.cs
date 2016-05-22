@@ -12,7 +12,71 @@ namespace RemoteBenchmark
     {
         static void Main(string[] args)
         {
-            var actorSystemProvider = new HeliosActorSystemProvider();
+            ThroughputWithSenderTest(args);
+            //MaximumThroughputTest(args);
+        }
+
+        static void ThroughputWithSenderTest(string[] args)
+        {
+            var actorSystemProvider = new NetworkStreamActorSystemProvider();
+            var heliosSystemProvider = new HeliosActorSystemProvider();
+
+            var system1 = actorSystemProvider.CreateSystem(8080);
+            var system2 = actorSystemProvider.CreateSystem(8081);
+
+            int concurrency = Environment.ProcessorCount;
+            int messageCount = 10000;
+            SemaphoreSlim ready = new SemaphoreSlim(0);
+            ManualResetEventSlim start = new ManualResetEventSlim(false);
+
+            if (args.Length == 1)
+                concurrency = int.Parse(args[0]);
+
+            var workers = new List<Task>();
+            for (int i = 1; i <= concurrency; i++)
+            {
+                int index = i;
+                workers.Add(RunThread(() =>
+                {
+                    var receiver = system1.ActorOf<ReceiverActor>("Receiver_" + index);
+                    system2.ActorOf<EchoActor>("EchoActor_" + index);
+
+                    string echoActorPath = actorSystemProvider.GetBaseAddress(8081) + "EchoActor_" + index;
+
+                    var remoteEchoRef = system1.ActorSelection(echoActorPath).ResolveOne(Timeout.InfiniteTimeSpan).Result;
+
+                    receiver.Ask(new ReceiverActor.Init(remoteEchoRef)).Wait();
+
+                    ready.Release();
+
+                    start.Wait();
+
+                    var task = receiver.Ask(new ReceiverActor.PerformanceRun(messageCount));
+
+                    for (int j = 0; j < messageCount; j++)
+                    {
+                        remoteEchoRef.Tell("a", receiver);
+                    }
+
+                    task.Wait();
+                }));
+            }
+
+            for (int i = 0; i < concurrency; i++)
+                ready.Wait();
+
+            start.Set();
+            Stopwatch sw = Stopwatch.StartNew();
+
+            Task.WaitAll(workers.ToArray());
+
+            Console.WriteLine("Message per seconds: " + messageCount * concurrency * 2 / sw.Elapsed.TotalSeconds);
+        }
+
+
+        static void MaximumThroughputTest(string[] args)
+        {
+            var actorSystemProvider = new NetworkStreamActorSystemProvider();
             var heliosSystemProvider = new HeliosActorSystemProvider();
 
             var system1 = actorSystemProvider.CreateSystem(8080);
@@ -33,7 +97,7 @@ namespace RemoteBenchmark
                 workers.Add(RunThread(() =>
                 {
                     var receiver = system1.ActorOf<ReceiverActor>("Receiver_" + index);
-                    system2.ActorOf<EchoActor>("EchoActor_" + index);
+                    system2.ActorOf<OptimizedEchoActor>("EchoActor_" + index);
 
                     string echoActorPath = actorSystemProvider.GetBaseAddress(8081) + "EchoActor_" + index;
 
@@ -226,7 +290,7 @@ akka {
         }
     }
 
-    public class EchoActor : UntypedActor
+    public class OptimizedEchoActor : UntypedActor
     {
         private IActorRef _sender;
 
@@ -236,6 +300,14 @@ akka {
                 _sender = Sender;
 
             _sender.Tell(message, ActorRefs.NoSender);
+        }
+    }
+
+    public class EchoActor : UntypedActor
+    {
+        protected override void OnReceive(object message)
+        {
+            Sender.Tell(message);
         }
     }
 }

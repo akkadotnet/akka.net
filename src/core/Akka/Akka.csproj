@@ -283,6 +283,7 @@
     <Compile Include="Util\Internal\InterlockedSpin.cs" />
     <Compile Include="Util\Internal\Collections\IBinaryTreeNode.cs" />
     <Compile Include="Util\Internal\Collections\IKeyValuePair.cs" />
+    <Compile Include="Util\Internal\RefEqualityComparer.cs" />
     <Compile Include="Util\Internal\StringBuilderExtensions.cs" />
     <Compile Include="Util\Internal\TaskExtensions.cs" />
     <Compile Include="Util\ISurrogate.cs" />

@@ -13,12 +13,10 @@ using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Transport;
-using Akka.Serialization;
 using Akka.Util;
 using Akka.Util.Internal;
 using Google.ProtocolBuffers;
@@ -31,7 +29,7 @@ namespace Akka.Remote
     // ReSharper disable once InconsistentNaming
     internal interface IInboundMessageDispatcher
     {
-        void Dispatch(IInternalActorRef recipient, Address recipientAddress, SerializedMessage message,
+        void Dispatch(IInternalActorRef recipient, SerializedMessage message,
             IActorRef senderOption = null);
     }
 
@@ -55,14 +53,14 @@ namespace Akka.Remote
             settings = provider.RemoteSettings;
         }
 
-        public void Dispatch(IInternalActorRef recipient, Address recipientAddress, SerializedMessage message,
+        public void Dispatch(IInternalActorRef recipient, SerializedMessage message,
             IActorRef senderOption = null)
         {
             var payload = MessageSerializer.Deserialize(system, message);
             Type payloadClass = payload == null ? null : payload.GetType();
             var sender = senderOption ?? system.DeadLetters;
             var originalReceiver = recipient.Path;
-
+            var recipientAddress = recipient.Path.Address;
 
             // message is intended for the RemoteDaemon, usually a command to create a remote actor
             if (recipient.Equals(remoteDaemon))
@@ -1528,7 +1526,6 @@ namespace Akka.Remote
                         else
                         {
                             _msgDispatch.Dispatch(ackAndMessage.MessageOption.Recipient,
-                                ackAndMessage.MessageOption.RecipientAddress,
                                 ackAndMessage.MessageOption.SerializedMessage,
                                 ackAndMessage.MessageOption.SenderOptional);
                         }
@@ -1633,7 +1630,7 @@ namespace Akka.Remote
 
             // Notify writer that some messages can be acked
             Context.Parent.Tell(new EndpointWriter.OutboundAck(deliverable.Ack));
-            deliverable.Deliverables.ForEach(msg => _msgDispatch.Dispatch(msg.Recipient, msg.RecipientAddress, msg.SerializedMessage, msg.SenderOptional));
+            deliverable.Deliverables.ForEach(msg => _msgDispatch.Dispatch(msg.Recipient, msg.SerializedMessage, msg.SenderOptional));
         }
 
         private AckAndMessage TryDecodeMessageAndAck(ByteString pdu)

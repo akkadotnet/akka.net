@@ -64,18 +64,15 @@ namespace Akka.Remote.Transport
 
     internal sealed class Message : IAkkaPdu, IHasSequenceNumber
     {
-        public Message(IInternalActorRef recipient, Address recipientAddress, SerializedMessage serializedMessage, IActorRef senderOptional = null, SeqNo seq = null)
+        public Message(IInternalActorRef recipient, SerializedMessage serializedMessage, IActorRef senderOptional = null, SeqNo seq = null)
         {
             Seq = seq;
             SenderOptional = senderOptional;
             SerializedMessage = serializedMessage;
-            RecipientAddress = recipientAddress;
             Recipient = recipient;
         }
 
         public IInternalActorRef Recipient { get; private set; }
-
-        public Address RecipientAddress { get; private set; }
 
         public SerializedMessage SerializedMessage { get; private set; }
 
@@ -220,8 +217,6 @@ namespace Akka.Remote.Transport
                 if (envelopeContainer != null)
                 {
                     var recipient = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Recipient.Path, localAddress);
-                    Address recipientAddress;
-                    ActorPath.TryParseAddress(envelopeContainer.Recipient.Path, out recipientAddress);
                     var serializedMessage = envelopeContainer.Message;
                     IActorRef senderOption = null;
                     if (envelopeContainer.HasSender)
@@ -236,7 +231,7 @@ namespace Akka.Remote.Transport
                             seqOption = new SeqNo((long)envelopeContainer.Seq); //proto takes a ulong
                         }
                     }
-                    messageOption = new Message(recipient, recipientAddress, serializedMessage, senderOption, seqOption);
+                    messageOption = new Message(recipient, serializedMessage, senderOption, seqOption);
                 }
             }
             

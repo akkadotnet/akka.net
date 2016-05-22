@@ -17,17 +17,20 @@ namespace Akka.TestKit
                                  IAdvancedScheduler
     {
         private DateTimeOffset _now;
+        private TimeSpan _monotonicClock;
         private readonly ConcurrentDictionary<long, Queue<ScheduledItem>>  _scheduledWork; 
 
         public TestScheduler(ActorSystem system)
         {
             _now = DateTimeOffset.UtcNow;
+            _monotonicClock = new TimeSpan();
             _scheduledWork = new ConcurrentDictionary<long, Queue<ScheduledItem>>();
         }
 
         public void Advance(TimeSpan offset)
         {
             _now = _now.Add(offset);
+            _monotonicClock += offset;
 
             var tickItems = _scheduledWork.Where(s => s.Key <= _now.Ticks).OrderBy(s => s.Key).ToList();
 
@@ -127,8 +130,8 @@ namespace Akka.TestKit
 
         protected DateTimeOffset TimeNow { get { return _now; } }
         public DateTimeOffset Now { get { return _now; } }
-        public TimeSpan MonotonicClock { get { return Util.MonotonicClock.Elapsed; } }
-        public TimeSpan HighResMonotonicClock { get { return Util.MonotonicClock.ElapsedHighRes; } }
+        public TimeSpan MonotonicClock { get { return _monotonicClock; } }
+        public TimeSpan HighResMonotonicClock { get { return _monotonicClock; } }
 
         public IAdvancedScheduler Advanced
         {

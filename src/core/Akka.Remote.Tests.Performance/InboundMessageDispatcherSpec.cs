@@ -93,7 +93,7 @@ namespace Akka.Remote.Tests.Performance
         [CounterMeasurement(MessageDispatcherThroughputCounterName)]
         public void DispatchThroughput(BenchmarkContext context)
         {
-            _dispatcher.Dispatch(_targetActorRef, _systemAddress, _message);
+            _dispatcher.Dispatch(_targetActorRef, _message);
         }
 
         [PerfCleanup]

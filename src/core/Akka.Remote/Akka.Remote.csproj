@@ -76,6 +76,7 @@
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="AckedDelivery.cs" />
+    <Compile Include="ActorRefCache.cs" />
     <Compile Include="AddressUidExtension.cs" />
     <Compile Include="AkkaProtocolSettings.cs" />
     <Compile Include="AssociationEvent.cs" />

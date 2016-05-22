@@ -98,6 +98,7 @@ namespace Akka.Remote
         private volatile IActorRef _remotingTerminator;
         private volatile IActorRef _remoteWatcher;
         private volatile IActorRef _remoteDeploymentWatcher;
+        private ActorRefCache _actorRefCache;
 
         public virtual void Init(ActorSystemImpl system)
         {
@@ -111,6 +112,8 @@ namespace Akka.Remote
                     "remoting-terminator");
 
             _remotingTerminator.Tell(RemoteInternals);
+
+            _actorRefCache = ActorRefCache.Create(_system, RemoteSettings);
 
             Transport.Start();
             _remoteWatcher = CreateRemoteWatcher(system);
@@ -275,7 +278,6 @@ namespace Akka.Remote
             return _local.ActorOf(system, props, supervisor, path, systemService, deploy, lookupDeploy, async);
         }
 
-
         /// <summary>
         /// INTERNAL API.
         /// 
@@ -283,13 +285,21 @@ namespace Akka.Remote
         /// </summary>
         internal IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress)
         {
+            IInternalActorRef actorRef;
+            if (_actorRefCache.TryGetActorRef(path, out actorRef))
+                return actorRef;
+
             ActorPath actorPath;
             if (ActorPath.TryParse(path, out actorPath))
             {
                 //the actor's local address was already included in the ActorPath
-                if (HasAddress(actorPath.Address))
-                    return (IInternalActorRef)ResolveActorRef(actorPath);
-                return new RemoteActorRef(Transport, localAddress, new RootActorPath(actorPath.Address) / actorPath.Elements, ActorRefs.Nobody, Props.None, Deploy.None);
+                actorRef = HasAddress(actorPath.Address)
+                    ? (IInternalActorRef) ResolveActorRef(actorPath)
+                    : new RemoteActorRef(Transport, localAddress, new RootActorPath(actorPath.Address)/actorPath.Elements, ActorRefs.Nobody, Props.None, Deploy.None);
+
+                _actorRefCache.Add(path, actorRef);
+                return actorRef;
+
             }
             _log.Debug("resolve of unknown path [{0}] failed", path);
             return InternalDeadLetters;
