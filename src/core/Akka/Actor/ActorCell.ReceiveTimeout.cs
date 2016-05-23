@@ -8,7 +8,11 @@
 using System;
 
 namespace Akka.Actor
-{	
+{
+    public interface INotInfluenceReceiveTimeout
+    {
+    }
+
     public partial class ActorCell
     {
         private TimeSpan? _receiveTimeoutDuration = null;
