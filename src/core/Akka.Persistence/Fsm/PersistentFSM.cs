@@ -35,7 +35,7 @@ namespace Akka.Persistence.Fsm
 
         protected abstract TData ApplyEvent(TEvent e, TData data);
 
-        protected override void ApplyState(State<TState, TData, TEvent> upcomingState)
+        protected override void ApplyState(State upcomingState)
         {
             var eventsToPersist = new List<object>();
             if (upcomingState.DomainEvents != null)

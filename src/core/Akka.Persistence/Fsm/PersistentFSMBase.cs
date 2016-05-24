@@ -21,8 +21,8 @@ namespace Akka.Persistence.Fsm
 {
     public abstract class PersistentFSMBase<TState, TData, TEvent> : PersistentActor, IListeners
     {
-        public delegate State<TState, TData, TEvent> StateFunction(
-            FSMBase.Event<TData> fsmEvent, State<TState, TData, TEvent> state = null);
+        public delegate State StateFunction(
+            FSMBase.Event<TData> fsmEvent, State state = null);
 
         public delegate void TransitionHandler(TState initialState, TState nextState);
 
@@ -52,11 +52,11 @@ namespace Akka.Persistence.Fsm
         ///     FSM state data and current timeout handling
         /// </summary>
         /// a
-        protected State<TState, TData, TEvent> _currentState;
+        protected State _currentState;
 
         protected long _generation;
         private StateFunction _handleEvent;
-        private State<TState, TData, TEvent> _nextState;
+        private State _nextState;
 
         /// <summary>
         ///     Termination handling
@@ -112,7 +112,7 @@ namespace Akka.Persistence.Fsm
         {
             get
             {
-                return delegate(FSMBase.Event<TData> @event, State<TState, TData, TEvent> state)
+                return delegate(FSMBase.Event<TData> @event, State state)
                 {
                     _log.Warning("unhandled event {0} in state {1}", @event.FsmEvent, StateName);
                     return Stay();
@@ -158,7 +158,7 @@ namespace Akka.Persistence.Fsm
         /// <param name="timeout">State timeout for the initial state, overriding the default timeout for that state.</param>
         public void StartWith(TState stateName, TData stateData, TimeSpan? timeout = null)
         {
-            _currentState = new State<TState, TData, TEvent>(stateName, stateData, timeout);
+            _currentState = new State(stateName, stateData, timeout);
         }
 
         /// <summary>
@@ -167,9 +167,9 @@ namespace Akka.Persistence.Fsm
         /// </summary>
         /// <param name="nextStateName">State designator for the next state</param>
         /// <returns>State transition descriptor</returns>
-        public State<TState, TData, TEvent> GoTo(TState nextStateName)
+        public State GoTo(TState nextStateName)
         {
-            return new State<TState, TData, TEvent>(nextStateName, _currentState.StateData);
+            return new State(nextStateName, _currentState.StateData);
         }
 
         /// <summary>
@@ -179,9 +179,9 @@ namespace Akka.Persistence.Fsm
         /// <param name="nextStateName">State designator for the next state</param>
         /// <param name="stateData">Data for next state</param>
         /// <returns>State transition descriptor</returns>
-        public State<TState, TData, TEvent> GoTo(TState nextStateName, TData stateData)
+        public State GoTo(TState nextStateName, TData stateData)
         {
-            return new State<TState, TData, TEvent>(nextStateName, stateData);
+            return new State(nextStateName, stateData);
         }
 
         /// <summary>
@@ -189,7 +189,7 @@ namespace Akka.Persistence.Fsm
         ///     when no state change is to be effected.
         /// </summary>
         /// <returns>Descriptor for staying in the current state.</returns>
-        public State<TState, TData, TEvent> Stay()
+        public State Stay()
         {
             return GoTo(_currentState.StateName);
         }
@@ -197,7 +197,7 @@ namespace Akka.Persistence.Fsm
         /// <summary>
         ///     Produce change descriptor to stop this FSM actor with <see cref="FSMBase.Reason" /> <see cref="FSMBase.Normal" />
         /// </summary>
-        public State<TState, TData, TEvent> Stop()
+        public State Stop()
         {
             return Stop(new FSMBase.Normal());
         }
@@ -205,12 +205,12 @@ namespace Akka.Persistence.Fsm
         /// <summary>
         ///     Produce change descriptor to stop this FSM actor with the specified <see cref="FSMBase.Reason" />.
         /// </summary>
-        public State<TState, TData, TEvent> Stop(FSMBase.Reason reason)
+        public State Stop(FSMBase.Reason reason)
         {
             return Stop(reason, _currentState.StateData);
         }
 
-        public State<TState, TData, TEvent> Stop(FSMBase.Reason reason, TData stateData)
+        public State Stop(FSMBase.Reason reason, TData stateData)
         {
             return Stay().Using(stateData).WithStopReason(reason);
         }
@@ -357,7 +357,7 @@ namespace Akka.Persistence.Fsm
         /// </returns>
         private static StateFunction OrElse(StateFunction original, StateFunction fallback)
         {
-            StateFunction chained = delegate(FSMBase.Event<TData> @event, State<TState, TData, TEvent> state)
+            StateFunction chained = delegate(FSMBase.Event<TData> @event, State state)
             {
                 var originalResult = original.Invoke(@event, state);
                 if (originalResult == null) return fallback.Invoke(@event, state);
@@ -382,7 +382,7 @@ namespace Akka.Persistence.Fsm
             }
             var stateFunc = _stateFunctions[_currentState.StateName];
             var oldState = _currentState;
-            State<TState, TData, TEvent> upcomingState = null;
+            State upcomingState = null;
 
             if (stateFunc != null)
             {
@@ -413,7 +413,7 @@ namespace Akka.Persistence.Fsm
         }
 
 
-        protected virtual void ApplyState(State<TState, TData, TEvent> upcomingState)
+        protected virtual void ApplyState(State upcomingState)
         {
             if (upcomingState.StopReason == null)
             {
@@ -430,7 +430,7 @@ namespace Akka.Persistence.Fsm
             Context.Stop(Self);
         }
 
-        private void MakeTransition(State<TState, TData, TEvent> upcomingState)
+        private void MakeTransition(State upcomingState)
         {
             if (!_stateFunctions.ContainsKey(upcomingState.StateName))
             {
@@ -532,7 +532,7 @@ namespace Akka.Persistence.Fsm
             return match.WasHandled;
         }
 
-        protected void Terminate(State<TState, TData, TEvent> upcomingState)
+        protected void Terminate(State upcomingState)
         {
             if (_currentState.StopReason == null)
             {
@@ -597,7 +597,7 @@ namespace Akka.Persistence.Fsm
 
             public StateFunction Func { get; private set; }
 
-            public StateFunction Using(Func<State<TState, TData, TEvent>, State<TState, TData, TEvent>> andThen)
+            public StateFunction Using(Func<State, State> andThen)
             {
                 StateFunction continuedDelegate = (@event, state) => andThen.Invoke(Func.Invoke(@event, state));
                 return continuedDelegate;
@@ -701,22 +701,197 @@ namespace Akka.Persistence.Fsm
             }
         }
 
+        /// <summary>
+        ///     This captures all of the managed state of the <see cref="PersistentFSM{T,S,E}" />: the state name,
+        ///     the state data, possibly custom timeout, stop reason, and replies accumulated while
+        ///     processing the last message.
+        /// </summary>
+        [Obsolete("This was left for backward compatibility. Use type parameterless class instead. Can be removed in future releases.")]
+        public class State<TS, TD, TE>
+            where TS : TState where TD : TData where TE : TEvent
+        {
+            private State _state;
+
+            public State(State state)
+            {
+                _state = state;
+            }
+
+            public State(
+                TState stateName,
+                TData stateData,
+                TimeSpan? timeout = null,
+                FSMBase.Reason stopReason = null,
+                List<object> replies = null,
+                ILinearSeq<TEvent> domainEvents = null,
+                Action<TData> afterTransitionDo = null)
+            {
+                _state = new State(stateName, stateData, timeout, stopReason, replies, domainEvents, afterTransitionDo);
+            }
+
+            /// <summary>
+            /// Converts original object to wrapper
+            /// </summary>
+            /// <param name="state">The original object</param>
+            public static implicit operator State(State<TS, TD, TE> state)
+            {
+                return state._state;
+            }
+
+
+            /// <summary>
+            /// Converts original object to wrapper
+            /// </summary>
+            /// <param name="state">The original object</param>
+            public static implicit operator State<TS, TD, TE>(State state)
+            {
+                return new State<TS, TD, TE>(state);
+            }
+
+            public Action<TData> AfterTransitionHandler
+            {
+                get
+                {
+                    return _state.AfterTransitionHandler;
+
+                }
+            }
+
+            public ILinearSeq<TEvent> DomainEvents
+            {
+                get
+                {
+                    return _state.DomainEvents;
+
+                }
+            }
+
+            public bool Notifies
+            {
+                get
+                {
+                    return _state.Notifies;
+                }
+                set
+                {
+                    _state.Notifies = value;
+                }
+            }
+
+            public State Applying(ILinearSeq<TEvent> events)
+            {
+                return _state.Applying(events);
+            }
+
+            /// <summary>
+            ///     Specify domain event to be applied when transitioning to the new state.
+            /// </summary>
+            /// <param name="e"></param>
+            /// <returns></returns>
+            public State Applying(TEvent e)
+            {
+                return _state.Applying(e);
+            }
+
+            /// <summary>
+            ///     Register a handler to be triggered after the state has been persisted successfully
+            /// </summary>
+            /// <param name="handler"></param>
+            /// <returns></returns>
+            public State AndThen(Action<TData> handler)
+            {
+                return _state.AndThen(handler);
+            }
+
+            public State Copy(
+                TimeSpan? timeout,
+                FSMBase.Reason stopReason = null,
+                List<object> replies = null,
+                ILinearSeq<TEvent> domainEvents = null,
+                Action<TData> afterTransitionDo = null)
+            {
+                return _state.Copy(timeout, stopReason, replies, domainEvents, afterTransitionDo);
+            }
+
+            /// <summary>
+            ///     Modify state transition descriptor with new state data. The data will be set
+            ///     when transitioning to the new state.
+            /// </summary>
+            public State Using(TData nextStateData)
+            {
+                return _state.Using(nextStateData);
+            }
+
+            public State Replying(object replyValue)
+            {
+                return _state.Replying(replyValue);
+            }
+
+            public State ForMax(TimeSpan timeout)
+            {
+                return _state.ForMax(timeout);
+            }
+
+            public List<object> Replies
+            {
+                get
+                {
+                    return _state.Replies;
+                }
+            }
+
+            public TState StateName
+            {
+                get
+                {
+                    return _state.StateName;
+                }
+            }
+
+            public TData StateData
+            {
+                get
+                {
+                    return _state.StateData;
+                }
+            }
+
+            public TimeSpan? Timeout
+            {
+                get
+                {
+                    return _state.Timeout;
+                }
+            }
+
+            public FSMBase.Reason StopReason
+            {
+                get
+                {
+                    return _state.StopReason;
+                }
+            }
+
+
+
+
+
+
+        }
+
 
         /// <summary>
         ///     This captures all of the managed state of the <see cref="PersistentFSM{T,S,E}" />: the state name,
         ///     the state data, possibly custom timeout, stop reason, and replies accumulated while
         ///     processing the last message.
         /// </summary>
-        /// <typeparam name="TS">The name of the state</typeparam>
-        /// <typeparam name="TD">The data of the state</typeparam>
-        /// <typeparam name="TE">The event of the state</typeparam>
-        public class State<TS, TD, TE> : FSMBase.State<TS, TD>
+        public class State : FSMBase.State<TState, TData>
         {
-            public Action<TD> AfterTransitionHandler { get; private set; }
+            public Action<TData> AfterTransitionHandler { get; private set; }
 
 
-            public State(TS stateName, TD stateData, TimeSpan? timeout = null, FSMBase.Reason stopReason = null,
-                List<object> replies = null, ILinearSeq<TE> domainEvents = null, Action<TD> afterTransitionDo = null)
+            public State(TState stateName, TData stateData, TimeSpan? timeout = null, FSMBase.Reason stopReason = null,
+                List<object> replies = null, ILinearSeq<TEvent> domainEvents = null, Action<TData> afterTransitionDo = null)
                 : base(stateName, stateData, timeout, stopReason, replies)
             {
                 AfterTransitionHandler = afterTransitionDo;
@@ -724,7 +899,7 @@ namespace Akka.Persistence.Fsm
                 Notifies = true;
             }
 
-            public ILinearSeq<TE> DomainEvents { get; private set; }
+            public ILinearSeq<TEvent> DomainEvents { get; private set; }
 
             public bool Notifies { get; set; }
 
@@ -733,13 +908,13 @@ namespace Akka.Persistence.Fsm
             /// </summary>
             /// <param name="events"></param>
             /// <returns></returns>
-            public State<TS, TD, TE> Applying(ILinearSeq<TE> events)
+            public State Applying(ILinearSeq<TEvent> events)
             {
                 if (DomainEvents == null)
                 {
                     return Copy(null, null, null, events);
                 }
-                return Copy(null, null, null, new ArrayLinearSeq<TE>(DomainEvents.Concat(events).ToArray()));
+                return Copy(null, null, null, new ArrayLinearSeq<TEvent>(DomainEvents.Concat(events).ToArray()));
             }
 
 
@@ -748,16 +923,16 @@ namespace Akka.Persistence.Fsm
             /// </summary>
             /// <param name="e"></param>
             /// <returns></returns>
-            public State<TS, TD, TE> Applying(TE e)
+            public State Applying(TEvent e)
             {
                 if (DomainEvents == null)
                 {
-                    return Copy(null, null, null, new ArrayLinearSeq<TE>(new[] {e}));
+                    return Copy(null, null, null, new ArrayLinearSeq<TEvent>(new[] {e}));
                 }
-                var events = new List<TE>();
+                var events = new List<TEvent>();
                 events.AddRange(DomainEvents);
                 events.Add(e);
-                return Copy(null, null, null, new ArrayLinearSeq<TE>(DomainEvents.Concat(events).ToArray()));
+                return Copy(null, null, null, new ArrayLinearSeq<TEvent>(DomainEvents.Concat(events).ToArray()));
             }
 
 
@@ -766,15 +941,15 @@ namespace Akka.Persistence.Fsm
             /// </summary>
             /// <param name="handler"></param>
             /// <returns></returns>
-            public State<TS, TD, TE> AndThen(Action<TD> handler)
+            public State AndThen(Action<TData> handler)
             {
                 return Copy(null, null, null, null, handler);
             }
 
-            public State<TS, TD, TE> Copy(TimeSpan? timeout, FSMBase.Reason stopReason = null,
-                List<object> replies = null, ILinearSeq<TE> domainEvents = null, Action<TD> afterTransitionDo = null)
+            public State Copy(TimeSpan? timeout, FSMBase.Reason stopReason = null,
+                List<object> replies = null, ILinearSeq<TEvent> domainEvents = null, Action<TData> afterTransitionDo = null)
             {
-                return new State<TS, TD, TE>(StateName, StateData, timeout ?? Timeout, stopReason ?? StopReason,
+                return new State(StateName, StateData, timeout ?? Timeout, stopReason ?? StopReason,
                     replies ?? Replies,
                     domainEvents ?? DomainEvents, afterTransitionDo ?? AfterTransitionHandler);
             }
@@ -783,13 +958,13 @@ namespace Akka.Persistence.Fsm
             ///     Modify state transition descriptor with new state data. The data will be set
             ///     when transitioning to the new state.
             /// </summary>
-            public new State<TS, TD, TE> Using(TD nextStateData)
+            public new State Using(TData nextStateData)
             {
-                return new State<TS, TD, TE>(StateName, nextStateData, Timeout, StopReason, Replies);
+                return new State(StateName, nextStateData, Timeout, StopReason, Replies);
             }
 
 
-            public new State<TS, TD, TE> Replying(object replyValue)
+            public new State Replying(object replyValue)
             {
                 if (Replies == null) Replies = new List<object>();
                 var newReplies = Replies.ToArray().ToList();
@@ -797,7 +972,7 @@ namespace Akka.Persistence.Fsm
                 return Copy(Timeout, replies: newReplies);
             }
 
-            public new State<TS, TD, TE> ForMax(TimeSpan timeout)
+            public new State ForMax(TimeSpan timeout)
             {
                 if (timeout <= TimeSpan.MaxValue) return Copy(timeout);
                 return Copy(null);
@@ -806,7 +981,7 @@ namespace Akka.Persistence.Fsm
             /// <summary>
             ///     INTERNAL API
             /// </summary>
-            internal State<TS, TD, TE> WithStopReason(FSMBase.Reason reason)
+            internal State WithStopReason(FSMBase.Reason reason)
             {
                 return Copy(null, reason);
             }

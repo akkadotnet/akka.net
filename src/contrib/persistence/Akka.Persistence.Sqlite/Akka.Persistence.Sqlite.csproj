@@ -61,7 +61,7 @@
     <None Include="Akka.Persistence.Sqlite.nuspec" />
     <None Include="packages.config" />
     <EmbeddedResource Include="sqlite.conf">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
