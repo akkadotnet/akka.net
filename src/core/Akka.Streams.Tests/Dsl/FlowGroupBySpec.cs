@@ -127,11 +127,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void GroupBy_must_work_in_normal_user_scenario()
         {
-            var sub = (SubFlow<IEnumerable<string>, NotUsed, IRunnableGraph<NotUsed>>) Source.From(new[] {"Aaa", "Abb", "Bcc", "Cdd", "Cee"})
+            var source = Source.From(new[] {"Aaa", "Abb", "Bcc", "Cdd", "Cee"})
                 .GroupBy(3, s => s.Substring(0, 1))
+                .Grouped(10)
+                .MergeSubstreams()
                 .Grouped(10);
-            var source = (Source<IEnumerable<string>, NotUsed>)sub.MergeSubstreams();
-            var task  = source.Grouped(10).RunWith(Sink.First<IEnumerable<IEnumerable<string>>>(), Materializer);
+            var task =
+                ((Source<IEnumerable<IEnumerable<string>>, NotUsed>) source).RunWith(
+                    Sink.First<IEnumerable<IEnumerable<string>>>(), Materializer);
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             task.Result.OrderBy(e => e.First())
                 .ShouldBeEquivalentTo(new[] {new[] {"Aaa", "Abb"}, new[] {"Bcc"}, new[] {"Cdd", "Cee"}});
@@ -376,8 +379,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var sub = Flow.Create<int>().GroupBy(1, x => x%2).PrefixAndTail(0);
-                var f = ((SubFlow<Tuple<IImmutableList<int>, Source<int, NotUsed>>, NotUsed, Sink<int, NotUsed>>) sub).MergeSubstreams();
+                var f = Flow.Create<int>().GroupBy(1, x => x%2).PrefixAndTail(0).MergeSubstreams();
                 var t = ((Flow<int, Tuple<IImmutableList<int>, Source<int, NotUsed>>, NotUsed>) f)
                     .RunWith(TestSource.SourceProbe<int>(this), TestSink.SinkProbe<Tuple<IImmutableList<int>, Source<int, NotUsed>>>(this), Materializer);
                 var up = t.Item1;
