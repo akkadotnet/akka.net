@@ -86,6 +86,7 @@
     <Compile Include="Dsl\One2OneBidiFlow.cs" />
     <Compile Include="Dsl\RunnableGraph.cs" />
     <Compile Include="Dsl\Sink.cs" />
+    <Compile Include="Dsl\SubFlowOperations.cs" />
     <Compile Include="Dsl\SourceOperations.cs" />
     <Compile Include="Dsl\StreamConverters.cs" />
     <Compile Include="Dsl\SubFlow.cs" />
