@@ -377,7 +377,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Akka.ExternalAnnotations.xml">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
   <ItemGroup />
