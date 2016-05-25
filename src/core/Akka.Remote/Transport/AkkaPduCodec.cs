@@ -226,7 +226,7 @@ namespace Akka.Remote.Transport
                     IActorRef senderOption = null;
                     if (envelopeContainer.HasSender)
                     {
-                        senderOption = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Sender.Path, localAddress);
+                        senderOption = new LazyActorRef(provider,localAddress, envelopeContainer.Sender.Path);
                     }
                     SeqNo seqOption = null;
                     if (envelopeContainer.HasSeq)

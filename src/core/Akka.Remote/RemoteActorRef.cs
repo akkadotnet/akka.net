@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
+using Akka.Util;
 
 namespace Akka.Remote
 {
@@ -176,6 +177,43 @@ namespace Akka.Remote
             if (_props != null && _deploy != null)
                 Remote.Provider.UseActorOnNode(this, _props, _deploy, _parent);
         }
+    }
+
+    public class LazyActorRef : IActorRef
+    {
+        private readonly Lazy<IActorRef> _lazyActorRef;
+
+        public LazyActorRef(RemoteActorRefProvider provider,Address address, string path)
+        {
+            _lazyActorRef = new Lazy<IActorRef>(() => provider.ResolveActorRefWithLocalAddress(path,address));
+        }
+
+        public void Tell(object message, IActorRef sender)
+        {
+            _lazyActorRef.Value.Tell(message, sender);
+        }
+
+        public bool Equals(IActorRef other)
+        {
+            return _lazyActorRef.Value.Equals(other);
+        }
+
+        public int CompareTo(IActorRef other)
+        {
+            return _lazyActorRef.Value.CompareTo(other);
+        }
+
+        public ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return _lazyActorRef.Value.ToSurrogate(system);
+        }
+
+        public int CompareTo(object obj)
+        {
+            return _lazyActorRef.Value.CompareTo(obj);
+        }
+
+        public ActorPath Path => _lazyActorRef.Value.Path;
     }
 }
 
