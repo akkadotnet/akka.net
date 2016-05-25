@@ -265,7 +265,7 @@ namespace Akka.Actor
         {
             foreach (var child in ChildrenContainer.Children)
             {
-                child.Stop();
+                Stop(child);
             }
         }
 
