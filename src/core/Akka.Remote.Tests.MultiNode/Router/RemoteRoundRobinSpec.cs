@@ -13,11 +13,10 @@ using Akka.Actor;
 using Akka.Remote.TestKit;
 using Akka.Routing;
 using Akka.TestKit;
-using Akka.TestKit.TestActors;
 using Akka.Util.Internal;
 using Xunit;
 
-namespace Akka.Remote.Tests.MultiNode
+namespace Akka.Remote.Tests.MultiNode.Router
 {
     public class RoundRobinMultiNodeConfig : MultiNodeConfig
     {
@@ -114,7 +113,7 @@ namespace Akka.Remote.Tests.MultiNode
             }
         }
 
-        //[MultiNodeFact(Skip = "racy")]
+        //[MultiNodeFact()]
         public void RemoteRoundRobinSpecs()
         {
             A_remote_round_robin_must_be_locally_instantiated_on_a_remote_node_and_be_able_to_communicate_through_its_remote_actor_ref();
@@ -275,7 +274,7 @@ namespace Akka.Remote.Tests.MultiNode
                 EnterBarrier("end");
                 Log.Debug("Counts for RemoteRoundRobinSpec nodes. First: {0}, Second: {1}, Third: {2}", replies[Node(_config.First).Address],
                     replies[Node(_config.Second).Address], replies[Node(_config.Third).Address]);
-                replies.Values.ForEach(x => Assert.Equal(x, iterationCount));
+                replies.ForEach(x => Assert.True(x.Value == iterationCount, $"Expected {x.Key} to have {iterationCount} replies but instead had {x.Value}"));
                 Assert.False(replies.ContainsKey(Node(_config.Fourth).Address));
             });
 
