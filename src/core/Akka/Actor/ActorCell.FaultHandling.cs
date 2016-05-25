@@ -263,12 +263,8 @@ namespace Akka.Actor
 
         private void StopChildren()
         {
-            foreach (var child in ChildrenContainer.Children)
-            {
-                child.Stop();
-            }
+            ChildrenContainer.Children.ForEach(Stop);
         }
-
 
         private void FinishTerminate()
         {
