@@ -10,6 +10,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Dispatch;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Util;
@@ -550,32 +551,31 @@ namespace Akka.Cluster
         }
     }
 
-    //TODO: IRequiresMessageQueue?
     /// <summary>
     /// Supervisor managing the different Cluster daemons.
     /// </summary>
-    internal sealed class ClusterDaemon : UntypedActor
+    internal sealed class ClusterDaemon : UntypedActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
-        readonly IActorRef _coreSupervisor;
+        IActorRef _coreSupervisor;
         readonly ClusterSettings _settings;
 
         public ClusterDaemon(ClusterSettings settings)
         {
-            // Important - don't use Cluster(context.system) here because that would
+            // Important - don't use Cluster(context.system) in constructor because that would
             // cause deadlock. The Cluster extension is currently being created and is waiting
             // for response from GetClusterCoreRef in its constructor.
-            _coreSupervisor =
-                Context.ActorOf(Props.Create<ClusterCoreSupervisor>().WithDispatcher(settings.UseDispatcher), "core");
-
-            Context.ActorOf(Props.Create<ClusterHeartbeatReceiver>().WithDispatcher(settings.UseDispatcher), "heartbeatReceiver");
-
             _settings = settings;
         }
 
         protected override void OnReceive(object message)
         {
             message.Match()
-                .With<InternalClusterAction.GetClusterCoreRef>(msg => _coreSupervisor.Forward(msg))
+                .With<InternalClusterAction.GetClusterCoreRef>(msg =>
+                {
+                    if(_coreSupervisor == null)
+                        CreateChildren();
+                    _coreSupervisor.Forward(msg);
+                })
                 .With<InternalClusterAction.AddOnMemberUpListener>(
                     msg =>
                         Context.ActorOf(Props.Create(() => new OnMemberUpListener(msg.Callback)).WithDispatcher(_settings.UseDispatcher).WithDeploy(Deploy.Local)))
@@ -589,6 +589,13 @@ namespace Akka.Cluster
                     });
         }
 
+        private void CreateChildren()
+        {
+            _coreSupervisor = Context.ActorOf(Props.Create<ClusterCoreSupervisor>().WithDispatcher(_settings.UseDispatcher), "core");
+
+            Context.ActorOf(Props.Create<ClusterHeartbeatReceiver>().WithDispatcher(_settings.UseDispatcher), "heartbeatReceiver");
+        }
+
         private readonly ILoggingAdapter _log = Context.GetLogger();
     }
 
@@ -596,23 +603,25 @@ namespace Akka.Cluster
     /// ClusterCoreDaemon and ClusterDomainEventPublisher can't be restarted because the state
     /// would be obsolete. Shutdown the member if any those actors crashed.
     /// </summary>
-    class ClusterCoreSupervisor : ReceiveActor
+    internal class ClusterCoreSupervisor : ReceiveActor
     {
-        readonly IActorRef _publisher;
-        readonly IActorRef _coreDaemon;
+        private IActorRef _publisher;
+        private IActorRef _coreDaemon;
 
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
         public ClusterCoreSupervisor()
         {
-            _publisher =
-                Context.ActorOf(Props.Create<ClusterDomainEventPublisher>().WithDispatcher(Context.Props.Dispatcher), "publisher");
-            _coreDaemon = Context.ActorOf(Props.Create(() => new ClusterCoreDaemon(_publisher)).WithDispatcher(Context.Props.Dispatcher), "daemon");
-            Context.Watch(_coreDaemon);
+            // Important - don't use Cluster(context.system) in constructor because that would
+            // cause deadlock. The Cluster extension is currently being created and is waiting
+            // for response from GetClusterCoreRef in its constructor.
 
-            Context.Parent.Tell(new InternalClusterAction.PublisherCreated(_publisher));
-
-            Receive<InternalClusterAction.GetClusterCoreRef>(cr => Sender.Tell(_coreDaemon));
+            Receive<InternalClusterAction.GetClusterCoreRef>(cr =>
+            {
+                if(_coreDaemon == null)
+                    CreateChildren();
+                Sender.Tell(_coreDaemon);
+            });
         }
 
         protected override SupervisorStrategy SupervisorStrategy()
@@ -632,9 +641,19 @@ namespace Akka.Cluster
             Cluster.Get(Context.System).Shutdown();
         }
 
+        private void CreateChildren()
+        {
+            _publisher =
+                Context.ActorOf(Props.Create<ClusterDomainEventPublisher>().WithDispatcher(Context.Props.Dispatcher), "publisher");
+            _coreDaemon = Context.ActorOf(Props.Create(() => new ClusterCoreDaemon(_publisher)).WithDispatcher(Context.Props.Dispatcher), "daemon");
+            Context.Watch(_coreDaemon);
+
+            Context.Parent.Tell(new InternalClusterAction.PublisherCreated(_publisher));
+        }
+
     }
 
-    class ClusterCoreDaemon : UntypedActor
+    internal class ClusterCoreDaemon : UntypedActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         readonly Cluster _cluster = Cluster.Get(Context.System);
         protected readonly UniqueAddress SelfUniqueAddress;
