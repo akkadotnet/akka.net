@@ -82,8 +82,8 @@ namespace Akka.Cluster
 
             _readView = new ClusterReadView(this);
 
-            // force the underlying system to warmup
-            GetClusterCoreRef();
+            // force the underlying system to start
+            _clusterCore = GetClusterCoreRef().Result;
         }
 
         /// <summary>
@@ -103,7 +103,6 @@ namespace Akka.Cluster
                 System.DeadLetters.Tell(ex); //don't re-throw the error. Just log it.
                 return System.DeadLetters;
             }
-            //TODO: add system.terminationCallback support
         }
 
         /// <summary>
