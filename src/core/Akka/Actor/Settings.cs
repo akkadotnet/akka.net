@@ -78,7 +78,7 @@ namespace Akka.Actor
             LogLevel = Config.GetString("akka.loglevel");
             StdoutLogLevel = Config.GetString("akka.stdout-loglevel");
             Loggers = Config.GetStringList("akka.loggers");
-
+            LoggersDispatcher = Config.GetString("akka.loggers-dispatcher");
             LoggerStartTimeout = Config.GetTimeSpan("akka.logger-startup-timeout");
 
             //handled
@@ -195,6 +195,12 @@ namespace Akka.Actor
         /// </summary>
         /// <value>The loggers.</value>
         public IList<string> Loggers { get; private set; }
+
+        /// <summary>
+        ///     Gets the default loggers dispatcher.
+        /// </summary>
+        /// <value>The loggers dispatcher.</value>
+        public string LoggersDispatcher { get; private set; }
 
         /// <summary>
         ///     Gets the logger start timeout.
