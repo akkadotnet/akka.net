@@ -223,7 +223,7 @@ namespace Akka.Remote.Tests.MultiNode.Router
                         .Select(x => x.Address);
 
                     // check if they have same elements (ignoring order)
-                    Assert.All(repliesFromAddresses, x => expectedAddresses.Contains(x));
+                    Assert.All(repliesFromAddresses, x => Assert.Contains(x, expectedAddresses));
                     Assert.True(repliesFromAddresses.Count() == expectedAddresses.Count());
 
                     Sys.Stop(actor);
