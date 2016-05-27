@@ -73,8 +73,8 @@ namespace Akka.Streams.Implementation
                     {stage, effectiveAttributes, _materializer.EffectiveSettings(effectiveAttributes), null};
                     var processor = methodInfo.Invoke(this, parameters);
                     object materialized = parameters[3];
-                    AssignPort(stage.In, (ISubscriber) processor);
-                    AssignPort(stage.Out, (IPublisher) processor);
+                    AssignPort(stage.In, UntypedSubscriber.FromTyped(processor));
+                    AssignPort(stage.Out, UntypedPublisher.FromTyped(processor));
                     materializedValues.Add(atomic, materialized);
                 }
                 //else if (atomic is TlsModule)
@@ -123,7 +123,7 @@ namespace Akka.Streams.Implementation
                     var inlet = inletsEnumerator.Current;
                     var elementType = inlet.GetType().GetGenericArguments().First();
                     var subscriber = typeof(ActorGraphInterpreter.BoundarySubscriber<>).Instantiate(elementType, impl, shell, i);
-                    AssignPort(inlet, (ISubscriber)subscriber);
+                    AssignPort(inlet, UntypedSubscriber.FromTyped(subscriber));
                     i++;
                 }
 
@@ -136,7 +136,7 @@ namespace Akka.Streams.Implementation
                     var publisher = typeof(ActorGraphInterpreter.BoundaryPublisher<>).Instantiate(elementType, impl, shell, i);
                     var message = new ActorGraphInterpreter.ExposedPublisher(shell, i, (IActorPublisher)publisher);
                     impl.Tell(message);
-                    AssignPort(outletsEnumerator.Current, (IPublisher)publisher);
+                    AssignPort(outletsEnumerator.Current, (IUntypedPublisher) publisher);
                     i++;
                 }
             }

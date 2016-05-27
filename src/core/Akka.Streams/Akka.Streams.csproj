@@ -30,8 +30,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Reactive.Streams, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\Reactive.Streams.1.0.0\lib\net40\Reactive.Streams.dll</HintPath>
+    <Reference Include="Reactive.Streams, Version=1.0.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Reactive.Streams.1.0.1\lib\net40\Reactive.Streams.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -137,6 +137,7 @@
     <Compile Include="Implementation\Timers.cs" />
     <Compile Include="Implementation\Unfold.cs" />
     <Compile Include="IO\IOResult.cs" />
+    <Compile Include="Implementation\UntypedPublisher.cs" />
     <Compile Include="Queue.cs" />
     <Compile Include="Dsl\Flow.cs" />
     <Compile Include="Dsl\Internal\InternalFlowOperations.cs" />
@@ -165,6 +166,7 @@
     <Compile Include="Stage\Stage.cs" />
     <Compile Include="StreamLimitReachedException.cs" />
     <Compile Include="StreamTcpException.cs" />
+    <Compile Include="Implementation\UntypedSubscriber.cs" />
     <Compile Include="SubstreamCancelStrategy.cs" />
     <Compile Include="Supervision\Supervision.cs" />
     <Compile Include="ThrottleMode.cs" />

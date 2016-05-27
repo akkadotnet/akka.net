@@ -34,8 +34,6 @@ namespace Akka.Streams.Implementation
         }
 
         public override string ToString() => "already-completed-publisher";
-
-        void IPublisher.Subscribe(ISubscriber subscriber) => Subscribe((ISubscriber<T>)subscriber);
     }
 
     internal sealed class ErrorPublisher<T> : IPublisher<T>
@@ -66,8 +64,6 @@ namespace Akka.Streams.Implementation
         }
 
         public override string ToString() => Name;
-
-        void IPublisher.Subscribe(ISubscriber subscriber) => Subscribe((ISubscriber<T>)subscriber);
     }
 
     internal sealed class MaybePublisher<T> : IPublisher<T>
@@ -138,8 +134,6 @@ namespace Akka.Streams.Implementation
             }
         }
 
-        void IPublisher.Subscribe(ISubscriber subscriber) => Subscribe((ISubscriber<T>)subscriber);
-
         public override string ToString() => Name;
     }
 
@@ -181,8 +175,6 @@ namespace Akka.Streams.Implementation
                     throw;
             }
         }
-
-        void IPublisher.Subscribe(ISubscriber subscriber) => Subscribe((ISubscriber<T>)subscriber);
 
         public override string ToString() => "already-subscribed-publisher";
     }

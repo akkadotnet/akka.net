@@ -223,7 +223,7 @@ namespace Akka.Streams.Implementation
         public readonly IPump Pump;
 
         protected IActorPublisher ExposedPublisher;
-        protected ISubscriber Subscriber;
+        protected IUntypedSubscriber Subscriber;
         protected long DownstreamDemand;
         protected bool IsDownstreamCompleted;
 
@@ -291,7 +291,7 @@ namespace Akka.Streams.Implementation
 
         protected ISubscription CreateSubscription() => ActorSubscription.Create(Actor, Subscriber);
 
-        private void SubscribePending(IEnumerable<ISubscriber> subscribers)
+        private void SubscribePending(IEnumerable<IUntypedSubscriber> subscribers)
         {
             foreach (var subscriber in subscribers)
             {
@@ -369,7 +369,7 @@ namespace Akka.Streams.Implementation
                 _self = self;
             }
 
-            public override void ReceiveExposedPublisher(ExposedPublisher publisher)
+            internal override void ReceiveExposedPublisher(ExposedPublisher publisher)
             {
                 _self.PrimaryOutputs.SubReceive.CurrentReceive(publisher);
                 Context.Become(ActiveReceive);

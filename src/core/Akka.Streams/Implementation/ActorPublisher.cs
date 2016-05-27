@@ -8,24 +8,24 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Pattern;
-using Akka.Streams.Util;
 using Akka.Util;
 using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
 {
     [Serializable]
-    public sealed class SubscribePending
+    internal sealed class SubscribePending
     {
         public static readonly SubscribePending Instance = new SubscribePending();
         private SubscribePending() { }
     }
 
     [Serializable]
-    public sealed class RequestMore
+    internal sealed class RequestMore
     {
         public readonly IActorSubscription Subscription;
         public readonly long Demand;
@@ -38,7 +38,7 @@ namespace Akka.Streams.Implementation
     }
 
     [Serializable]
-    public sealed class Cancel
+    internal sealed class Cancel
     {
         public readonly IActorSubscription Subscription;
 
@@ -49,7 +49,7 @@ namespace Akka.Streams.Implementation
     }
 
     [Serializable]
-    public sealed class ExposedPublisher
+    internal sealed class ExposedPublisher
     {
         public readonly IActorPublisher Publisher;
 
@@ -66,10 +66,10 @@ namespace Akka.Streams.Implementation
         protected NormalShutdownException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
-    public interface IActorPublisher : IPublisher
+    internal interface IActorPublisher : IUntypedPublisher
     {
         void Shutdown(Exception reason);
-        IEnumerable<ISubscriber> TakePendingSubscribers();
+        IEnumerable<IUntypedSubscriber> TakePendingSubscribers();
     }
 
     internal static class ActorPublisher
@@ -125,7 +125,7 @@ namespace Akka.Streams.Implementation
             }
         }
 
-        void IPublisher.Subscribe(ISubscriber subscriber) => Subscribe((ISubscriber<TOut>)subscriber);
+        void IUntypedPublisher.Subscribe(IUntypedSubscriber subscriber) => Subscribe(UntypedSubscriber.ToTyped<TOut>(subscriber));
 
         public IEnumerable<ISubscriber<TOut>> TakePendingSubscribers()
         {
@@ -133,7 +133,7 @@ namespace Akka.Streams.Implementation
             return pending ?? ImmutableList<ISubscriber<TOut>>.Empty;
         }
 
-        IEnumerable<ISubscriber> IActorPublisher.TakePendingSubscribers() => TakePendingSubscribers();
+        IEnumerable<IUntypedSubscriber> IActorPublisher.TakePendingSubscribers() => TakePendingSubscribers().Select(UntypedSubscriber.FromTyped);
 
         public void Shutdown(Exception reason)
         {
@@ -179,11 +179,11 @@ namespace Akka.Streams.Implementation
 
     public static class ActorSubscription
     {
-        public static IActorSubscription Create(IActorRef implementor, ISubscriber subscriber)
+        internal static IActorSubscription Create(IActorRef implementor, IUntypedSubscriber subscriber)
         {
-            var subscribedType = subscriber.GetType().GetSubscribedType();
+            var subscribedType = subscriber.GetType().GetGenericArguments().First(); // assumes type is UntypedSubscriberWrapper
             var subscriptionType = typeof(ActorSubscription<>).MakeGenericType(subscribedType);
-            return (IActorSubscription) Activator.CreateInstance(subscriptionType, implementor, subscriber);
+            return (IActorSubscription) Activator.CreateInstance(subscriptionType, implementor, UntypedSubscriber.ToTyped(subscriber));
         }
 
         public static IActorSubscription Create<T>(IActorRef implementor, ISubscriber<T> subscriber)

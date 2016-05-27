@@ -950,10 +950,6 @@ namespace Akka.Streams.Implementation
             else
                 ReactiveStreamsCompliance.TryOnComplete(_subscriptionStatus.Value as ISubscriber<T>);
         }
-
-        void ISubscriber.OnNext(object element) => OnNext((T)element);
-
-        void IPublisher.Subscribe(ISubscriber subscriber) => Subscribe((ISubscriber<T>)subscriber);
     }
 
     internal abstract class MaterializerSession
@@ -974,8 +970,8 @@ namespace Akka.Streams.Implementation
         protected readonly IModule TopLevel;
         protected readonly Attributes InitialAttributes;
 
-        private readonly LinkedList<IDictionary<InPort, ISubscriber>> _subscribersStack = new LinkedList<IDictionary<InPort, ISubscriber>>();
-        private readonly LinkedList<IDictionary<OutPort, IPublisher>> _publishersStack = new LinkedList<IDictionary<OutPort, IPublisher>>();
+        private readonly LinkedList<IDictionary<InPort, IUntypedSubscriber>> _subscribersStack = new LinkedList<IDictionary<InPort, IUntypedSubscriber>>();
+        private readonly LinkedList<IDictionary<OutPort, IUntypedPublisher>> _publishersStack = new LinkedList<IDictionary<OutPort, IUntypedPublisher>>();
         private readonly IDictionary<StreamLayout.IMaterializedValueNode, LinkedList<IMaterializedValueSource>> _materializedValueSources =
             new Dictionary<StreamLayout.IMaterializedValueNode, LinkedList<IMaterializedValueSource>>();
 
@@ -993,13 +989,13 @@ namespace Akka.Streams.Implementation
         {
             TopLevel = topLevel;
             InitialAttributes = initialAttributes;
-            _subscribersStack.AddFirst(new Dictionary<InPort, ISubscriber>());
-            _publishersStack.AddFirst(new Dictionary<OutPort, IPublisher>());
+            _subscribersStack.AddFirst(new Dictionary<InPort, IUntypedSubscriber>());
+            _publishersStack.AddFirst(new Dictionary<OutPort, IUntypedPublisher>());
             _moduleStack.AddFirst(TopLevel);
         }
 
-        private IDictionary<InPort, ISubscriber> Subscribers => _subscribersStack.First.Value;
-        private IDictionary<OutPort, IPublisher> Publishers => _publishersStack.First.Value;
+        private IDictionary<InPort, IUntypedSubscriber> Subscribers => _subscribersStack.First.Value;
+        private IDictionary<OutPort, IUntypedPublisher> Publishers => _publishersStack.First.Value;
         private IModule CurrentLayout => _moduleStack.First.Value;
 
         ///<summary>
@@ -1009,8 +1005,8 @@ namespace Akka.Streams.Implementation
         /// </summary>
         private void EnterScope(CopiedModule enclosing)
         {
-            _subscribersStack.AddFirst(new Dictionary<InPort, ISubscriber>());
-            _publishersStack.AddFirst(new Dictionary<OutPort, IPublisher>());
+            _subscribersStack.AddFirst(new Dictionary<InPort, IUntypedSubscriber>());
+            _publishersStack.AddFirst(new Dictionary<OutPort, IUntypedPublisher>());
             _moduleStack.AddFirst(enclosing.CopyOf);
         }
 
@@ -1066,19 +1062,19 @@ namespace Akka.Streams.Implementation
                 foreach (var subMap in _subscribersStack)
                     foreach (var subscriber in subMap.Values)
                     {
-                        var subscribedType = subscriber.GetType().GetSubscribedType();
+                        var subscribedType = UntypedSubscriber.ToTyped(subscriber).GetType().GetSubscribedType();
                         var publisher = typeof(ErrorPublisher<>).Instantiate(subscribedType, ex, string.Empty);
 
-                        ((IPublisher)publisher).Subscribe(subscriber);
+                        UntypedPublisher.FromTyped(publisher).Subscribe(subscriber);
                     }
 
                 foreach (var pubMap in _publishersStack)
                     foreach (var publisher in pubMap.Values)
                     {
-                        var publishedType = publisher.GetType().GetPublishedType();
-                        var subscribe = typeof(CancellingSubscriber<>).Instantiate(publishedType);
+                        var publishedType = UntypedPublisher.ToTyped(publisher).GetType().GetPublishedType();
+                        var subscriber = typeof(CancellingSubscriber<>).Instantiate(publishedType);
 
-                        publisher.Subscribe((ISubscriber)subscribe);
+                        publisher.Subscribe(UntypedSubscriber.FromTyped(subscriber));
                     }
 
                 throw;
@@ -1178,25 +1174,25 @@ namespace Akka.Streams.Implementation
             return result;
         }
 
-        protected void AssignPort(InPort inPort, ISubscriber subscriber)
+        protected void AssignPort(InPort inPort, IUntypedSubscriber subscriber)
         {
             Subscribers[inPort] = subscriber;
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
             if (!CurrentLayout.InPorts.Contains(inPort))
             {
-                IPublisher publisher;
+                IUntypedPublisher publisher;
                 if (Publishers.TryGetValue(CurrentLayout.Upstreams[inPort], out publisher))
                     publisher.Subscribe(subscriber);
             }
         }
 
-        protected void AssignPort(OutPort outPort, IPublisher publisher)
+        protected void AssignPort(OutPort outPort, IUntypedPublisher publisher)
         {
             Publishers[outPort] = publisher;
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
             if (!CurrentLayout.OutPorts.Contains(outPort))
             {
-                ISubscriber subscriber;
+                IUntypedSubscriber subscriber;
                 if (Subscribers.TryGetValue(CurrentLayout.Downstreams[outPort], out subscriber))
                     publisher.Subscribe(subscriber);
             }

@@ -377,8 +377,6 @@ namespace Akka.Streams.Implementation
                 ReactiveStreamsCompliance.RequireNonNullElement(element);
                 _impl.Tell(new FanIn.OnNext(_id, element));
             }
-
-            void ISubscriber.OnNext(object element) => OnNext((T)element);
         }
 
         private sealed class AnonymousInputBunch : InputBunch

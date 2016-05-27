@@ -356,10 +356,6 @@ namespace Akka.Streams.Dsl
         public void OnNext(TIn element) => _subscriber.OnNext(element);
 
         public void Subscribe(ISubscriber<TOut> subscriber) => _publisher.Subscribe(subscriber);
-
-        void ISubscriber.OnNext(object element) => _subscriber.OnNext(element);
-
-        void IPublisher.Subscribe(ISubscriber subscriber) => _publisher.Subscribe(subscriber);
     }
 
     /// <summary>

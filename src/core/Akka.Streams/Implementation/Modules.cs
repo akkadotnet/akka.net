@@ -16,7 +16,7 @@ namespace Akka.Streams.Implementation
     internal interface ISourceModule
     {
         Shape Shape { get; }
-        IPublisher Create(MaterializationContext context, out object materializer);
+        IUntypedPublisher Create(MaterializationContext context, out object materializer);
     }
 
     internal abstract class SourceModule<TOut, TMat> : AtomicModule, ISourceModule
@@ -34,12 +34,12 @@ namespace Akka.Streams.Implementation
         protected abstract SourceModule<TOut, TMat> NewInstance(SourceShape<TOut> shape);
         public abstract IPublisher<TOut> Create(MaterializationContext context, out TMat materializer);
 
-        IPublisher ISourceModule.Create(MaterializationContext context, out object materializer)
+        IUntypedPublisher ISourceModule.Create(MaterializationContext context, out object materializer)
         {
             TMat m;
             var result = Create(context, out m);
             materializer = m;
-            return result;
+            return UntypedPublisher.FromTyped(result);
         }
 
         public override IModule ReplaceShape(Shape shape)

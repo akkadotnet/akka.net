@@ -22,7 +22,7 @@ namespace Akka.Streams.Implementation
     internal interface ISinkModule
     {
         Shape Shape { get; }
-        ISubscriber Create(MaterializationContext context, out object materializer);
+        IUntypedSubscriber Create(MaterializationContext context, out object materializer);
     }
 
     public abstract class SinkModule<TIn, TMat> : AtomicModule, ISinkModule
@@ -40,12 +40,12 @@ namespace Akka.Streams.Implementation
 
         public abstract ISubscriber<TIn> Create(MaterializationContext context, out TMat materializer);
 
-        ISubscriber ISinkModule.Create(MaterializationContext context, out object materializer)
+        IUntypedSubscriber ISinkModule.Create(MaterializationContext context, out object materializer)
         {
             TMat m;
             var result = Create(context, out m);
             materializer = m;
-            return result;
+            return UntypedSubscriber.FromTyped(result);
         }
 
         public override IModule ReplaceShape(Shape shape)

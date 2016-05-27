@@ -133,11 +133,6 @@ namespace Akka.Streams.TestKit
             {
                 return _probe.ExpectMsg<IPublisherEvent>();
             }
-
-            void IPublisher.Subscribe(ISubscriber subscriber)
-            {
-                Subscribe((ISubscriber<T>)subscriber);
-            }
         }
 
         /// <summary>
@@ -221,11 +216,6 @@ namespace Akka.Streams.TestKit
             {
                 return "soon-to-complete-publisher";
             }
-
-            void IPublisher.Subscribe(ISubscriber subscriber)
-            {
-                Subscribe((ISubscriber<T>) subscriber);
-            }
         }
 
         internal sealed class LazyErrorPublisher<T> : IPublisher<T>
@@ -247,11 +237,6 @@ namespace Akka.Streams.TestKit
             public override string ToString()
             {
                 return Name;
-            }
-
-            void IPublisher.Subscribe(ISubscriber subscriber)
-            {
-                Subscribe((ISubscriber<T>) subscriber);
             }
         }
 

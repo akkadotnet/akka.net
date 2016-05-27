@@ -228,7 +228,7 @@ namespace Akka.Streams.Actors
 
         /// <summary>
         /// Attach a <see cref="ActorSubscriber"/> actor as a <see cref="ISubscriber{T}"/>
-        /// to a <see cref="IPublisher"/> or <see cref="IFlow{TOut,TMat}"/>
+        /// to a <see cref="IPublisher{T}"/> or <see cref="IFlow{TOut,TMat}"/>
         /// </summary>
         public static ISubscriber<T> Create<T>(IActorRef @ref) => new ActorSubscriberImpl<T>(@ref);
     }
