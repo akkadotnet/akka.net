@@ -134,7 +134,7 @@ namespace Akka.Streams.Actors
     /// </summary>
     public abstract class ActorPublisher<T> : ActorBase
     {
-        protected readonly ActorPublisherState State = ActorPublisherState.Instance.Apply(Context.System);
+        private readonly ActorPublisherState _state = ActorPublisherState.Instance.Apply(Context.System);
         private long _demand;
         private LifecycleState _lifecycleState = LifecycleState.PreSubscriber;
         private ISubscriber<T> _subscriber;
@@ -473,16 +473,16 @@ namespace Akka.Streams.Actors
         public override void AroundPreRestart(Exception cause, object message)
         {
             // some state must survive restart
-            State.Set(Self, new ActorPublisherState.State(_subscriber, _demand, _lifecycleState));
+            _state.Set(Self, new ActorPublisherState.State(UntypedSubscriber.FromTyped(_subscriber), _demand, _lifecycleState));
             base.AroundPreRestart(cause, message);
         }
 
         public override void AroundPostRestart(Exception cause, object message)
         {
-            var s = State.Remove(Self);
+            var s = _state.Remove(Self);
             if (s != null)
             {
-                _subscriber = (ISubscriber<T>) s.Subscriber;
+                _subscriber = UntypedSubscriber.ToTyped<T>(s.Subscriber);
                 _demand = s.Demand;
                 _lifecycleState = s.LifecycleState;
             }
@@ -492,7 +492,7 @@ namespace Akka.Streams.Actors
 
         public override void AroundPostStop()
         {
-            State.Remove(Self);
+            _state.Remove(Self);
             try
             {
                 if (_lifecycleState == LifecycleState.Active)
@@ -527,8 +527,6 @@ namespace Akka.Streams.Actors
             if (subscriber == null) throw new ArgumentNullException(nameof(subscriber), "Subscriber must not be null");
             _ref.Tell(new Subscribe<T>(subscriber));
         }
-
-        void IPublisher.Subscribe(ISubscriber subscriber) => Subscribe((ISubscriber<T>) subscriber);
     }
 
     public sealed class ActorPublisherSubscription : ISubscription
@@ -558,15 +556,15 @@ namespace Akka.Streams.Actors
         }
     }
 
-    public class ActorPublisherState : ExtensionIdProvider<ActorPublisherState>, IExtension
+    internal class ActorPublisherState : ExtensionIdProvider<ActorPublisherState>, IExtension
     {
         public sealed class State
         {
-            public readonly ISubscriber Subscriber;
+            public readonly IUntypedSubscriber Subscriber;
             public readonly long Demand;
             public readonly LifecycleState LifecycleState;
 
-            public State(ISubscriber subscriber, long demand, LifecycleState lifecycleState)
+            public State(IUntypedSubscriber subscriber, long demand, LifecycleState lifecycleState)
             {
                 Subscriber = subscriber;
                 Demand = demand;

@@ -76,7 +76,6 @@ namespace Akka.Streams.Tests.Implementation
                 }
             }
 
-            public void Subscribe(ISubscriber subscriber) => Subscribe((ISubscriber<object>)subscriber);
             public void Request(long n) { }
             public void Cancel() { }
         }
@@ -108,6 +107,7 @@ namespace Akka.Streams.Tests.Implementation
             void ISubscriber<object>.OnNext(object element) { }
             public void OnNext(object element) { }
         }
+
         private class FlatTestMaterializer : MaterializerSession
         {
             internal ImmutableList<TestPublisher> Publishers = ImmutableList<TestPublisher>.Empty;
@@ -123,13 +123,13 @@ namespace Akka.Streams.Tests.Implementation
                 {
                     var subscriber = new TestSubscriber(atomic, inPort);
                     Subscribers = Subscribers.Add(subscriber);
-                    AssignPort(inPort, subscriber);
+                    AssignPort(inPort, UntypedSubscriber.FromTyped(subscriber));
                 }
                 foreach (var outPort in atomic.OutPorts)
                 {
                     var publisher = new TestPublisher(atomic, outPort);
                     Publishers = Publishers.Add(publisher);
-                    AssignPort(outPort, publisher);
+                    AssignPort(outPort, UntypedPublisher.FromTyped(publisher));
                 }
 
                 return NotUsed.Instance;

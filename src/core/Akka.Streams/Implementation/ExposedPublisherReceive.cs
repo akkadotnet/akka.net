@@ -25,7 +25,7 @@ namespace Akka.Streams.Implementation
             Unhandled = unhandled;
         }
 
-        public abstract void ReceiveExposedPublisher(ExposedPublisher publisher);
+        internal abstract void ReceiveExposedPublisher(ExposedPublisher publisher);
 
         public bool Apply(object message)
         {

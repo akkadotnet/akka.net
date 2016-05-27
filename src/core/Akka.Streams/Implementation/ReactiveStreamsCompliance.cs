@@ -48,7 +48,19 @@ namespace Akka.Streams.Implementation
 
         public static Exception ExceptionMustNotBeNullException { get; } = new ArgumentNullException("exception", ExceptionMustNotBeNullMsg);
 
-        public static void TryOnSubscribe(ISubscriber subscriber, ISubscription subscription)
+        public static void TryOnSubscribe<T>(ISubscriber<T> subscriber, ISubscription subscription)
+        {
+            try
+            {
+                subscriber.OnSubscribe(subscription);
+            }
+            catch (Exception e)
+            {
+                throw new SignalThrewException($"{subscriber}.OnSubscribe", e);
+            }
+        }
+
+        internal static void TryOnSubscribe(IUntypedSubscriber subscriber, ISubscription subscription)
         {
             try
             {
@@ -73,7 +85,7 @@ namespace Akka.Streams.Implementation
             }
         }
 
-        public static void TryOnNext(ISubscriber subscriber, object element)
+        internal static void TryOnNext(IUntypedSubscriber subscriber, object element)
         {
             RequireNonNullElement(element);
             try
@@ -86,7 +98,7 @@ namespace Akka.Streams.Implementation
             }
         }
 
-        public static void TryOnError(ISubscriber subscriber, Exception cause)
+        public static void TryOnError<T>(ISubscriber<T> subscriber, Exception cause)
         {
             if (cause is ISpecViolation)
                 throw new IllegalStateException("It's illegal to try to signal OnError with a spec violation", cause);
@@ -101,7 +113,34 @@ namespace Akka.Streams.Implementation
             }
         }
 
-        public static void TryOnComplete(ISubscriber subscriber)
+        internal static void TryOnError(IUntypedSubscriber subscriber, Exception cause)
+        {
+            if (cause is ISpecViolation)
+                throw new IllegalStateException("It's illegal to try to signal OnError with a spec violation", cause);
+
+            try
+            {
+                subscriber.OnError(cause);
+            }
+            catch (Exception e)
+            {
+                throw new SignalThrewException($"{subscriber}.OnError", e);
+            }
+        }
+
+        public static void TryOnComplete<T>(ISubscriber<T> subscriber)
+        {
+            try
+            {
+                subscriber.OnComplete();
+            }
+            catch (Exception e)
+            {
+                throw new SignalThrewException($"{subscriber}.OnComplete", e);
+            }
+        }
+
+        internal static void TryOnComplete(IUntypedSubscriber subscriber)
         {
             try
             {
@@ -120,18 +159,24 @@ namespace Akka.Streams.Implementation
             TryOnError(subscriber, CanNotSubscribeTheSameSubscriberMultipleTimesException);
         }
 
-        public static void RejectAdditionalSubscriber(ISubscriber subscriber, string rejector)
+        public static void RejectAdditionalSubscriber<T>(ISubscriber<T> subscriber, string rejector)
         {
             TryOnSubscribe(subscriber, CancelledSubscription.Instance);
             TryOnError(subscriber, new IllegalStateException(rejector + " supports only a single subscriber"));
         }
 
-        public static void RejectDueToNonPositiveDemand(ISubscriber subscriber)
+        internal static void RejectAdditionalSubscriber(IUntypedSubscriber subscriber, string rejector)
+        {
+            TryOnSubscribe(subscriber, CancelledSubscription.Instance);
+            TryOnError(subscriber, new IllegalStateException(rejector + " supports only a single subscriber"));
+        }
+
+        public static void RejectDueToNonPositiveDemand<T>(ISubscriber<T> subscriber)
         {
             TryOnError(subscriber, NumberOfElementsInRequestMustBePositiveException);
         }
 
-        public static void RequireNonNullSubscriber(ISubscriber subscriber)
+        public static void RequireNonNullSubscriber<T>(ISubscriber<T> subscriber)
         {
             if (ReferenceEquals(subscriber, null))
                 throw SubscriberMustNotBeNullException;

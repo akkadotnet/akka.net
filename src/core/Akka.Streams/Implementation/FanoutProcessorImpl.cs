@@ -85,7 +85,10 @@ namespace Akka.Streams.Implementation
 
         protected override void RequestFromUpstream(long elements) => _downstreamBufferSpace += elements;
 
-        private void SubscribePending() => ExposedPublisher.TakePendingSubscribers().ForEach(RegisterSubscriber);
+        private void SubscribePending()
+            =>
+                ExposedPublisher.TakePendingSubscribers()
+                    .ForEach(s => RegisterSubscriber(UntypedSubscriber.ToTyped<T>(s)));
 
         protected override void Shutdown(bool isCompleted)
         {

@@ -137,9 +137,9 @@ namespace Akka.Streams.Implementation
             [Serializable]
             public sealed class Attached : IPublisherState
             {
-                public readonly ISubscriber Subscriber;
+                public readonly ISubscriber<T> Subscriber;
 
-                public Attached(ISubscriber subscriber)
+                public Attached(ISubscriber<T> subscriber)
                 {
                     Subscriber = subscriber;
                 }
@@ -221,8 +221,6 @@ namespace Akka.Streams.Implementation
                 }
             }
 
-            void IPublisher.Subscribe(ISubscriber subscriber) => Subscribe((ISubscriber<T>)subscriber);
-
             public void Subscribe(ISubscriber<T> subscriber)
             {
                 ReactiveStreamsCompliance.RequireNonNullSubscriber(subscriber);
@@ -249,7 +247,7 @@ namespace Akka.Streams.Implementation
             {
                 if (Subscriber == null)
                 {
-                    Subscriber = subscriber;
+                    Subscriber = UntypedSubscriber.FromTyped(subscriber);
                     ReactiveStreamsCompliance.TryOnSubscribe(subscriber, _subscription);
                 }
                 else
@@ -274,7 +272,7 @@ namespace Akka.Streams.Implementation
                 }
             }
 
-            private void CloseSubscriber(ISubscriber subscriber, ICompletedState withState)
+            private void CloseSubscriber(ISubscriber<T> subscriber, ICompletedState withState)
             {
                 var f = withState as Failed;
                 if (withState is Completed)
@@ -391,7 +389,7 @@ namespace Akka.Streams.Implementation
                 {
                     SubstreamOutput output;
                     if (_substreamOutputs.TryGetValue(timeout.Substream, out output) && !output.IsAttached)
-                        SubscriptionTimedOut(output);
+                        SubscriptionTimedOut(UntypedPublisher.FromTyped(output));
                 })
                 .With<SubstreamCancel>(cancel => InvalidateSubstreamOutput(cancel.Substream))
                 .WasHandled;
@@ -408,7 +406,7 @@ namespace Akka.Streams.Implementation
                 : Context.System.Scheduler.ScheduleTellOnceCancelable(SubscriptionTimeoutSettings.Timeout, actorRef, message, Self);
         }
 
-        public void SubscriptionTimedOut(IPublisher target)
+        public void SubscriptionTimedOut(IUntypedPublisher target)
         {
             switch (SubscriptionTimeoutSettings.Mode)
             {
@@ -420,26 +418,27 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// Callback that should ensure that the target is canceled with the given cause.
         /// </summary>
-        public void HandleSubscriptionTimeout(IPublisher target, Exception cause)
+        public void HandleSubscriptionTimeout(IUntypedPublisher target, Exception cause)
         {
             SubstreamOutput output;
-            if ((output = target as SubstreamOutput) != null)
+            if ((output = UntypedPublisher.ToTyped<T>(target) as SubstreamOutput) != null)
             {
                 output.Error(cause);
                 output.AttachSubscriber(CancelingSubscriber<T>.Instance);
             }
         }
 
-        private void Cancel(IPublisher target, TimeSpan timeout)
+        private void Cancel(IUntypedPublisher target, TimeSpan timeout)
         {
+            var typedTarget = UntypedPublisher.ToTyped<T>(target);
             if (
-                target.GetType()
+                typedTarget.GetType()
                     .GetInterfaces()
                     .Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IProcessor<,>)))
             {
                 if (Log.IsDebugEnabled)
                     Log.Debug(
-                        $"Cancelling {target} Processor's publisher and subscriber sides (after {timeout.TotalMilliseconds} ms)");
+                        $"Cancelling {typedTarget} Processor's publisher and subscriber sides (after {timeout.TotalMilliseconds} ms)");
                 HandleSubscriptionTimeout(target, new SubscriptionTimeoutException(
                     $"Publisher was not attached to upstream within deadline {timeout.TotalMilliseconds} ms"));
                 
@@ -447,14 +446,18 @@ namespace Akka.Streams.Implementation
             else
                 if (Log.IsDebugEnabled)
                     Log.Debug(
-                        $"Cancelling {target} (after {timeout.TotalMilliseconds} ms)");
+                        $"Cancelling {typedTarget} (after {timeout.TotalMilliseconds} ms)");
                 HandleSubscriptionTimeout(target, new SubscriptionTimeoutException(
-                    $"Publisher {target} you are trying to subscribe to has been shut-down because exceeing its subscription timeout"));
+                    $"Publisher {typedTarget} you are trying to subscribe to has been shut-down because exceeing its subscription timeout"));
         }
 
-        private void Warn(IPublisher target, TimeSpan timeout) => Log.Warning(
-                    "Timed out {0} detected (after {1})! You should investigate if you either cancel or consume all {2} instances",
-                    target, timeout, target.GetType().Name);
+        private void Warn(IUntypedPublisher target, TimeSpan timeout)
+        {
+            var typedTarget = UntypedPublisher.ToTyped<T>(target);
+            Log.Warning(
+                "Timed out {0} detected (after {1})! You should investigate if you either cancel or consume all {2} instances",
+                typedTarget, timeout, typedTarget.GetType().Name);
+        }
 
         #endregion
     }

@@ -44,8 +44,6 @@ namespace Akka.Streams.Implementation
 
         public void OnNext(T element) => ReactiveStreamsCompliance.RequireNonNullElement(element);
 
-        void ISubscriber.OnNext(object element) => OnNext((T)element);
-
         public void OnError(Exception cause) => ReactiveStreamsCompliance.RequireNonNullException(cause);
 
         public void OnComplete() { }
@@ -82,7 +80,7 @@ namespace Akka.Streams.Implementation
     /// 
     /// See "akka.stream.materializer.subscription-timeout" for configuration options.
     /// </summary>
-    public interface IStreamSubscriptionTimeoutSupport
+    internal interface IStreamSubscriptionTimeoutSupport
     {
         /// <summary>
         /// Default settings for subscription timeouts.
@@ -96,13 +94,13 @@ namespace Akka.Streams.Implementation
         ICancelable ScheduleSubscriptionTimeout(IActorRef actorRef, object message);
 
         /// <summary>
-        /// Called by the actor when a subscription has timed out. Expects the actual <see cref="IPublisher"/> or <see cref="IProcessor{T1,T2}"/> target.
+        /// Called by the actor when a subscription has timed out. Expects the actual <see cref="IUntypedPublisher"/> or <see cref="IProcessor{T1,T2}"/> target.
         /// </summary>
-        void SubscriptionTimedOut(IPublisher target);
+        void SubscriptionTimedOut(IUntypedPublisher target);
 
         /// <summary>
         /// Callback that should ensure that the target is canceled with the given cause.
         /// </summary>
-        void HandleSubscriptionTimeout(IPublisher target, Exception cause);
+        void HandleSubscriptionTimeout(IUntypedPublisher target, Exception cause);
     }
 }

@@ -283,8 +283,6 @@ akka {
             }
 
             public void Subscribe(ISubscriber<int> subscriber) => subscriber.OnSubscribe(new Subscription(subscriber));
-
-            public void Subscribe(ISubscriber subscriber) => Subscribe(subscriber as ISubscriber<int>);
         }
 
         private static Source<TOut, TMat> MakeSelects<TOut, TMat>(Source<TOut, TMat> source, int count, Func<IGraph<FlowShape<TOut, TOut>, TMat>> flow)
