@@ -102,6 +102,11 @@ namespace Akka.IO
                 get { return _bytes[idx]; }
             }
 
+            public sealed override ByteBuffer AsByteBuffer()
+            {
+                return new ByteString1(_bytes).AsByteBuffer();
+            }
+
             public override int Count
             {
                 get { return _bytes.Length; }
@@ -164,6 +169,11 @@ namespace Akka.IO
             public override byte this[int idx]
             {
                 get { return _bytes[checkRangeConvert(idx)]; }
+            }
+
+            public sealed override ByteBuffer AsByteBuffer()
+            {
+                return ByteBuffer.Wrap(_bytes, _startIndex, _length);
             }
 
             public override ByteIterator Iterator()
@@ -267,6 +277,11 @@ namespace Akka.IO
                 }
             }
 
+            public sealed override ByteBuffer AsByteBuffer()
+            {
+                return Compact().AsByteBuffer();
+            }
+
             public override ByteIterator Iterator()
             {
                 return new ByteIterator.MultiByteIterator(
@@ -356,9 +371,11 @@ namespace Akka.IO
     /// when concatenating and slicing sequences of bytes,
     /// and also providing a thread safe way of working with bytes.
     /// </summary>
-    public abstract partial class ByteString : IReadOnlyList<byte>
+    public abstract partial class ByteString : IReadOnlyList<byte>, IEquatable<ByteString>
     {
         public abstract byte this[int index] { get; }
+
+        public abstract ByteBuffer AsByteBuffer();
 
         protected virtual ByteStringBuilder newBuilder()
         {
@@ -504,6 +521,23 @@ namespace Akka.IO
         public static ByteString Create(byte[] buffer)
         {
             return Create(buffer, 0, buffer.Length);
+        }
+
+        public bool Equals(ByteString other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            if (Count != other.Count) return false;
+            for (int i = 0; i < Count; i++)
+            {
+                if (this[i] != other[i]) return false;
+            }
+            return true;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is ByteString && Equals((ByteString) obj);
         }
     }
 

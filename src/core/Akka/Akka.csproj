@@ -273,12 +273,14 @@
     <Compile Include="IO\TcpListener.cs" />
     <Compile Include="IO\TcpManager.cs" />
     <Compile Include="IO\TcpOutgoingConnection.cs" />
+    <Compile Include="NotUsed.cs" />
     <Compile Include="Util\ByteIterator.cs" />
     <Compile Include="Util\ByteString.cs" />
     <Compile Include="Util\ContinuousEnumerator.cs" />
     <Compile Include="Util\Internal\AtomicState.cs" />
     <Compile Include="Util\Internal\Collections\EnumeratorExtensions.cs" />
     <Compile Include="Util\Internal\Collections\Iterator.cs" />
+    <Compile Include="Util\Internal\DictionaryExtensions.cs" />
     <Compile Include="Util\Internal\ImmutabilityUtils.cs" />
     <Compile Include="Util\Internal\InterlockedSpin.cs" />
     <Compile Include="Util\Internal\Collections\IBinaryTreeNode.cs" />
@@ -287,6 +289,7 @@
     <Compile Include="Util\Internal\TaskExtensions.cs" />
     <Compile Include="Util\ISurrogate.cs" />
     <Compile Include="Util\MonotonicClock.cs" />
+    <Compile Include="Util\Result.cs" />
     <Compile Include="Util\Reflection\TypeCache.cs" />
     <Compile Include="Util\StandardOutWriter.cs" />
     <Compile Include="Event\Subscription.cs" />

@@ -36,7 +36,7 @@ namespace Akka.Dispatch
         ///     Attaches an ActorCell to the Mailbox.
         /// </summary>
         /// <param name="actorCell"></param>
-        public void SetActor(ActorCell actorCell)
+        public virtual void SetActor(ActorCell actorCell)
         {
             _actorCell = actorCell;
         }

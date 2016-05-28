@@ -275,7 +275,7 @@ namespace Akka.Actor
 
         public abstract bool IsTerminated { get; }
         public abstract bool IsLocal { get; }
-        public void SendSystemMessage(ISystemMessage message, IActorRef sender)
+        public virtual void SendSystemMessage(ISystemMessage message, IActorRef sender)
         {
             var d = message as DeathWatchNotification;
             if (message is Terminate)

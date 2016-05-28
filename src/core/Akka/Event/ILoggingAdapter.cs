@@ -67,5 +67,28 @@ namespace Akka.Event
         /// <param name="args">The arguments.</param>
         void Log(LogLevel logLevel, string format, params object[] args);
     }
+
+    public sealed class NoLogger : ILoggingAdapter
+    {
+        public static readonly ILoggingAdapter Instance = new NoLogger();
+        private NoLogger() { }
+
+        public bool IsDebugEnabled { get { return false; } }
+        public bool IsInfoEnabled { get { return false; } }
+        public bool IsWarningEnabled { get { return false; } }
+        public bool IsErrorEnabled { get { return false; } }
+        public bool IsEnabled(LogLevel logLevel)
+        {
+            return false;
+        }
+
+        public void Debug(string format, params object[] args) { }
+        public void Info(string format, params object[] args) { }
+        public void Warn(string format, params object[] args) { }
+        public void Warning(string format, params object[] args) { }
+        public void Error(string format, params object[] args) { }
+        public void Error(Exception cause, string format, params object[] args) { }
+        public void Log(LogLevel logLevel, string format, params object[] args) { }
+    }
 }
 

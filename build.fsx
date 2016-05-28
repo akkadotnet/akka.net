@@ -219,6 +219,9 @@ Target "CopyOutput" <| fun _ ->
       "core/Akka.Persistence"
       "core/Akka.Persistence.FSharp"
       "core/Akka.Persistence.TestKit"
+      "core/Akka.Persistence.Query"
+      "core/Akka.Streams"
+      "core/Akka.Streams.TestKit"
       "contrib/dependencyinjection/Akka.DI.Core"
       "contrib/dependencyinjection/Akka.DI.TestKit"
       "contrib/testkits/Akka.TestKit.Xunit" 
@@ -247,7 +250,11 @@ Target "CleanTests" <| fun _ ->
 
 open Fake.Testing
 Target "RunTests" <| fun _ ->  
-    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll"
+    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- 
+                                 // Akka.Streams.Tests is referencing Akka.Streams.TestKit.Tests
+                                 "src/**/Akka.Streams.Tests/bin/Release/Akka.Streams.TestKit.Tests.dll" --
+                                 // Akka.Streams.Tests.Performance is referencing Akka.Streams.Tests and Akka.Streams.TestKit.Tests
+                                 "src/**/Akka.Streams.Tests.Performance/bin/Release/*.Tests.dll"
 
     mkdir testOutput
    
@@ -364,10 +371,13 @@ module Nuget =
         | "Akka.Cluster.Sharding" -> ["Akka.Cluster.Tools", preReleaseVersion; "Akka.Persistence", preReleaseVersion]
         | "Akka.Cluster.Tools" -> ["Akka.Cluster", preReleaseVersion]
         | "Akka.Persistence.TestKit" -> ["Akka.Persistence", preReleaseVersion; "Akka.TestKit.Xunit2", release.NugetVersion]
+        | "Akka.Persistence.Query" -> ["Akka.Persistence", preReleaseVersion; "Akka.Streams", preReleaseVersion]
         | persistence when (persistence.Contains("Sql") && not (persistence.Equals("Akka.Persistence.Sql.Common"))) -> ["Akka.Persistence.Sql.Common", preReleaseVersion]
         | persistence when (persistence.StartsWith("Akka.Persistence.")) -> ["Akka.Persistence", preReleaseVersion]
         | "Akka.DI.TestKit" -> ["Akka.DI.Core", release.NugetVersion; "Akka.TestKit.Xunit2", release.NugetVersion]
         | testkit when testkit.StartsWith("Akka.TestKit.") -> ["Akka.TestKit", release.NugetVersion]
+        | "Akka.Streams" -> ["Akka", release.NugetVersion]
+        | "Akka.Streams.TestKit" -> ["Akka.Streams", preReleaseVersion; "Akka.TestKit", release.NugetVersion]
         | _ -> ["Akka", release.NugetVersion]
 
     // used to add -pre suffix to pre-release packages
@@ -377,6 +387,7 @@ module Nuget =
       | cluster when cluster.StartsWith("Akka.Cluster.") -> preReleaseVersion
       | persistence when persistence.StartsWith("Akka.Persistence") -> preReleaseVersion
       | "Akka.Serialization.Wire" -> preReleaseVersion
+      | streams when streams.StartsWith("Akka.Streams") -> preReleaseVersion
       | _ -> release.NugetVersion
 
 open Nuget
