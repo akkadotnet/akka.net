@@ -101,6 +101,7 @@
     <Compile Include="Routing\ClusterRouterAsk1343BugFixSpec.cs" />
     <Compile Include="Routing\ClusterRouterSupervisorSpec.cs" />
     <Compile Include="SerializationChecksSpec.cs" />
+    <Compile Include="StartupWithOneThreadSpec.cs" />
     <Compile Include="TestMember.cs" />
     <Compile Include="VectorClockSpec.cs" />
   </ItemGroup>

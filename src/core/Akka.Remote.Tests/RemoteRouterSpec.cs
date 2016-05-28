@@ -46,7 +46,7 @@ namespace Akka.Remote.Tests
             akka.remote.retry-gate-closed-for = 1 s #in the event of a Sys <--> System2 whoosh (both tried to connect to each other), retry quickly
             akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
             akka.remote.helios.tcp {
-                hostname = localhost
+                hostname = 127.0.0.1
                 port = 0
             }
             akka.actor.deployment {
@@ -66,7 +66,7 @@ namespace Akka.Remote.Tests
         /blub {
           router = round-robin-pool
           nr-of-instances = 2
-          target.nodes = [""akka.tcp://${sysName}@localhost:${port}""]
+          target.nodes = [""akka.tcp://${sysName}@127.0.0.1:${port}""]
         }
         /elastic-blub {
           router = round-robin-pool
@@ -75,10 +75,10 @@ namespace Akka.Remote.Tests
             lower-bound = 2
             upper-bound = 3
           }
-          target.nodes = [""akka.tcp://${sysName}@localhost:${port}""]
+          target.nodes = [""akka.tcp://${sysName}@127.0.0.1:${port}""]
         }
         /remote-blub {
-          remote = ""akka.tcp://${sysName}@localhost:${port}""
+          remote = ""akka.tcp://${sysName}@127.0.0.1:${port}""
           router = round-robin-pool
           nr-of-instances = 2
         }
@@ -86,12 +86,12 @@ namespace Akka.Remote.Tests
           remote = ""akka://${masterSysName}""
           router = round-robin-pool
           nr-of-instances = 2
-          target.nodes = [""akka.tcp://${sysName}@localhost:${port}""]
+          target.nodes = [""akka.tcp://${sysName}@127.0.0.1:${port}""]
         }
         /local-blub2 {
           router = round-robin-pool
           nr-of-instances = 4
-          target.nodes = [""akka.tcp://${sysName}@localhost:${port}""]
+          target.nodes = [""akka.tcp://${sysName}@127.0.0.1:${port}""]
         }
       }
     }
@@ -99,7 +99,7 @@ namespace Akka.Remote.Tests
 
             masterActorSystem = ActorSystem.Create("Master" + sysName, conf);
 
-            intendedRemoteAddress = Address.Parse("akka.tcp://${sysName}@localhost:${port}"
+            intendedRemoteAddress = Address.Parse("akka.tcp://${sysName}@127.0.0.1:${port}"
                 .Replace("${sysName}", sysName)
                 .Replace("${port}", port.ToString()));
         }
@@ -132,7 +132,7 @@ namespace Akka.Remote.Tests
         public void RemoteRouter_must_deploy_its_children_on_remote_host_driven_by_programmatic_definition()
         {
             var probe = CreateTestProbe(masterActorSystem);
-            var router = masterActorSystem.ActorOf(new RemoteRouterConfig(new RoundRobinPool(2), new[] { new Address("akka.tcp", sysName, "localhost", port) })
+            var router = masterActorSystem.ActorOf(new RemoteRouterConfig(new RoundRobinPool(2), new[] { new Address("akka.tcp", sysName, "127.0.0.1", port) })
                 .Props(Props.Create<Echo>()), "blub2");
             var replies = new HashSet<ActorPath>();
             for (var i = 0; i < 5; i++)
@@ -236,7 +236,7 @@ namespace Akka.Remote.Tests
 
             Assert.Equal(2, replies.Count);
             var parents = replies.Select(x => x.Parent).Distinct().ToList();
-            parents.Head().Address.ShouldBe(new Address("akka.tcp", sysName, "localhost", port));
+            parents.Head().Address.ShouldBe(new Address("akka.tcp", sysName, "127.0.0.1", port));
 
             Assert.True(replies.All(x => x.Address.Equals(intendedRemoteAddress)));
             masterActorSystem.Stop(router);
@@ -262,7 +262,7 @@ namespace Akka.Remote.Tests
 
             Assert.Equal(4, replies.Count);
             var parents = replies.Select(x => x.Parent).Distinct().ToList();
-            parents.Head().Address.ShouldBe(new Address("akka.tcp", sysName, "localhost", port));
+            parents.Head().Address.ShouldBe(new Address("akka.tcp", sysName, "127.0.0.1", port));
 
             Assert.True(replies.All(x => x.Address.Equals(intendedRemoteAddress)));
             masterActorSystem.Stop(router);
@@ -289,7 +289,7 @@ namespace Akka.Remote.Tests
             Assert.Equal(4, replies.Count);
             var parents = replies.Select(x => x.Parent).Distinct().ToList();
             parents.Count.ShouldBe(1);
-            parents.Head().Address.ShouldBe(new Address("akka.tcp", sysName, "localhost", port));
+            parents.Head().Address.ShouldBe(new Address("akka.tcp", sysName, "127.0.0.1", port));
 
             Assert.True(replies.All(x => x.Address.Equals(intendedRemoteAddress)));
             masterActorSystem.Stop(router);
@@ -308,7 +308,7 @@ namespace Akka.Remote.Tests
             var router =
                 masterActorSystem.ActorOf(
                     new RemoteRouterConfig(new RoundRobinPool(1, null, escalator, null),
-                        new[] { new Address("akka.tcp", sysName, "localhost", port) })
+                        new[] { new Address("akka.tcp", sysName, "127.0.0.1", port) })
                         .Props(Props.Empty), "blub3");
 
             router.Tell(new GetRoutees(), probe.Ref);
