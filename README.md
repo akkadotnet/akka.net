@@ -6,11 +6,7 @@
 [![Issue Stats](http://www.issuestats.com/github/akkadotnet/akka.net/badge/pr)](http://www.issuestats.com/github/akkadotnet/akka.net)
 [![Issue Stats](http://www.issuestats.com/github/akkadotnet/akka.net/badge/issue)](http://www.issuestats.com/github/akkadotnet/akka.net)
 
-***[Issues for Next Release (v1.1)](https://waffle.io/akkadotnet/akka.net?milestone=Akka.NET%20v1.1)***<br>
-[![Critical Issues](https://badge.waffle.io/akkadotnet/akka.net.svg?label=help%20wanted&title=Issues Needing Help Now!)](http://waffle.io/akkadotnet/akka.net)
-<br>
-[![Stories Up For Grabs](https://badge.waffle.io/akkadotnet/akka.net.svg?label=up%20for%20grabs&title=General Issues Up For Grabs)](http://waffle.io/akkadotnet/akka.net)
-
+## [Akka.NET Current Roadmap](https://petabridge.com/blog/akkadotnet-2016-roadmap/)
 
 **Akka.NET** is a community-driven port of the popular Java/Scala framework [Akka](http://akka.io) to .NET.
 

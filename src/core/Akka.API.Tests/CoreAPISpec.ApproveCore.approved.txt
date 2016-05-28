@@ -1036,6 +1036,7 @@ namespace Akka.Actor
         public Akka.Actor.IActorRef Watch(Akka.Actor.IActorRef subject) { }
     }
     public interface INoSerializationVerificationNeeded { }
+    public interface INotInfluenceReceiveTimeout { }
     public abstract class InternalActorRefBase : Akka.Actor.ActorRefBase, Akka.Actor.IActorRef, Akka.Actor.IActorRefScope, Akka.Actor.ICanTell, Akka.Actor.IInternalActorRef, Akka.Util.ISurrogated, System.IComparable, System.IComparable<Akka.Actor.IActorRef>, System.IEquatable<Akka.Actor.IActorRef>
     {
         protected InternalActorRefBase() { }

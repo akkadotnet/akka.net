@@ -94,8 +94,9 @@ namespace Akka.Remote.Tests
             Assert.True(s.TcpKeepAlive);
             Assert.True(s.TcpReuseAddr);
             Assert.True(string.IsNullOrEmpty(c.GetString("hostname")));
-            Assert.Equal(1, s.ServerSocketWorkerPoolSize);
-            Assert.Equal(1, s.ClientSocketWorkerPoolSize);
+            Assert.Equal(2, s.ServerSocketWorkerPoolSize);
+            Assert.Equal(2, s.ClientSocketWorkerPoolSize);
+            Assert.False(s.BackwardsCompatibilityModeEnabled);
         }
 
         [Fact]
@@ -106,17 +107,17 @@ namespace Akka.Remote.Tests
             // server-socket-worker-pool
             {
                 var pool = c.GetConfig("server-socket-worker-pool");
-                Assert.Equal(1, pool.GetInt("pool-size-min"));
+                Assert.Equal(2, pool.GetInt("pool-size-min"));
                 Assert.Equal(1.0d, pool.GetDouble("pool-size-factor"));
-                Assert.Equal(1, pool.GetInt("pool-size-max"));
+                Assert.Equal(2, pool.GetInt("pool-size-max"));
             }
 
             //client-socket-worker-pool
             {
                 var pool = c.GetConfig("client-socket-worker-pool");
-                Assert.Equal(1, pool.GetInt("pool-size-min"));
+                Assert.Equal(2, pool.GetInt("pool-size-min"));
                 Assert.Equal(1.0d, pool.GetDouble("pool-size-factor"));
-                Assert.Equal(1, pool.GetInt("pool-size-max"));
+                Assert.Equal(2, pool.GetInt("pool-size-max"));
             }
         }
 

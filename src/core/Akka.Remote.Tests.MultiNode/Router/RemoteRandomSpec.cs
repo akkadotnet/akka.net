@@ -6,11 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Remote.TestKit;
 using Akka.Routing;
@@ -18,7 +15,7 @@ using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
 
-namespace Akka.Remote.Tests.MultiNode
+namespace Akka.Remote.Tests.MultiNode.Router
 {
     public class RemoteRandomMultiNodeConfig : MultiNodeConfig
     {

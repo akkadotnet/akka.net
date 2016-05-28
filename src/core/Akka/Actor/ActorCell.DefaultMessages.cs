@@ -49,17 +49,29 @@ namespace Akka.Actor
         public void Invoke(Envelope envelope)
         {
             var message = envelope.Message;
-            CurrentMessage = message;
-            _currentEnvelopeId ++;
-            Sender = MatchSender(envelope);
+            var influenceReceiveTimeout = !(message is INotInfluenceReceiveTimeout);
 
             try
             {
-                var autoReceivedMessage = message as IAutoReceivedMessage;
-                if (autoReceivedMessage != null)
+                // Akka JVM doesn't have these lines
+                CurrentMessage = envelope.Message;
+                _currentEnvelopeId++;
+
+                Sender = MatchSender(envelope);
+
+                if (influenceReceiveTimeout)
+                {
+                    CancelReceiveTimeout();
+                }
+
+                if (message is IAutoReceivedMessage)
+                {
                     AutoReceiveMessage(envelope);
+                }
                 else
+                {
                     ReceiveMessage(message);
+                }
                 CurrentMessage = null;
             }
             catch (Exception cause)
@@ -68,7 +80,10 @@ namespace Akka.Actor
             }
             finally
             {
-                CheckReceiveTimeout(); // Reschedule receive timeout
+                if (influenceReceiveTimeout)
+                {
+                    CheckReceiveTimeout(); // Reschedule receive timeout
+                }
             }
         }
 
