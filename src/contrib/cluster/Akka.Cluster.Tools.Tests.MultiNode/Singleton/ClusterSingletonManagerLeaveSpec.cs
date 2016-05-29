@@ -111,7 +111,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 "echo");
         }
 
-        [MultiNodeFact]
+        //[MultiNodeFact]
         public void Leaving_ClusterSingletonManager_should_handover_to_new_instance()
         {
             Join(_first, _first);
