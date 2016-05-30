@@ -133,7 +133,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             });
         }
 
-        [MultiNodeFact]
+        //[MultiNodeFact]
         public void ClusterSingletonManager_in_chaotic_cluster_should_take_over_when_tree_oldest_nodes_crash_in_6_nodes_cluster()
         {
             ClusterSingletonManager_in_chaotic_cluster_should_startup_6_node_cluster();

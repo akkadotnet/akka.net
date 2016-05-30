@@ -238,6 +238,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Query.Test
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Streams.Tests.Performance", "core\Akka.Streams.Tests.Performance\Akka.Streams.Tests.Performance.csproj", "{F5934093-4B7C-4303-9E27-60B4021C05B2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster.Tools.Tests.MultiNode", "contrib\cluster\Akka.Cluster.Tools.Tests.MultiNode\Akka.Cluster.Tools.Tests.MultiNode.csproj", "{666698AB-85BC-4C91-894C-CBB4316DC1A4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug Mono|Any CPU = Debug Mono|Any CPU
@@ -879,6 +881,14 @@ Global
 		{F5934093-4B7C-4303-9E27-60B4021C05B2}.Release Mono|Any CPU.Build.0 = Release|Any CPU
 		{F5934093-4B7C-4303-9E27-60B4021C05B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F5934093-4B7C-4303-9E27-60B4021C05B2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{666698AB-85BC-4C91-894C-CBB4316DC1A4}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
+		{666698AB-85BC-4C91-894C-CBB4316DC1A4}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
+		{666698AB-85BC-4C91-894C-CBB4316DC1A4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{666698AB-85BC-4C91-894C-CBB4316DC1A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{666698AB-85BC-4C91-894C-CBB4316DC1A4}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
+		{666698AB-85BC-4C91-894C-CBB4316DC1A4}.Release Mono|Any CPU.Build.0 = Release|Any CPU
+		{666698AB-85BC-4C91-894C-CBB4316DC1A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{666698AB-85BC-4C91-894C-CBB4316DC1A4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -986,5 +996,6 @@ Global
 		{92AB2788-E008-40D0-8B54-0C95B3CF3404} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
 		{C01FE575-10B5-4072-8EF9-66FA7CD86F6F} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
 		{F5934093-4B7C-4303-9E27-60B4021C05B2} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
+		{666698AB-85BC-4C91-894C-CBB4316DC1A4} = {76F58DC4-19F1-43EF-A6E2-EC1CC8395AC5}
 	EndGlobalSection
 EndGlobal
