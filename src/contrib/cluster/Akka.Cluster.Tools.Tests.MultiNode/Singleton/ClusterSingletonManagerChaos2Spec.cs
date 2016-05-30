@@ -20,25 +20,21 @@ using Xunit;
 
 namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 {
-    public class ClusterSingletonManagerChaosConfig : MultiNodeConfig
+    public class ClusterSingletonManagerChaos2Config : MultiNodeConfig
     {
         public readonly RoleName Controller;
         public readonly RoleName First;
         public readonly RoleName Second;
         public readonly RoleName Third;
         public readonly RoleName Fourth;
-        public readonly RoleName Fifth;
-        public readonly RoleName Sixth;
 
-        public ClusterSingletonManagerChaosConfig()
+        public ClusterSingletonManagerChaos2Config()
         {
             Controller = Role("controller");
             First = Role("_config.First");
             Second = Role("second");
             Third = Role("third");
             Fourth = Role("fourth");
-            Fifth = Role("fifth");
-            Sixth = Role("sixth");
 
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = DEBUG
@@ -52,15 +48,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         }
     }
 
-    public class ClusterSingletonManagerChaosNode1 : ClusterSingletonManagerChaosSpec { }
-    public class ClusterSingletonManagerChaosNode2 : ClusterSingletonManagerChaosSpec { }
-    public class ClusterSingletonManagerChaosNode3 : ClusterSingletonManagerChaosSpec { }
-    public class ClusterSingletonManagerChaosNode4 : ClusterSingletonManagerChaosSpec { }
-    public class ClusterSingletonManagerChaosNode5 : ClusterSingletonManagerChaosSpec { }
-    public class ClusterSingletonManagerChaosNode6 : ClusterSingletonManagerChaosSpec { }
-    public class ClusterSingletonManagerChaosNode7 : ClusterSingletonManagerChaosSpec { }
+    public class ClusterSingletonManagerChaos2Node1 : ClusterSingletonManagerChaos2Spec { }
+    public class ClusterSingletonManagerChaos2Node2 : ClusterSingletonManagerChaos2Spec { }
+    public class ClusterSingletonManagerChaos2Node3 : ClusterSingletonManagerChaos2Spec { }
+    public class ClusterSingletonManagerChaos2Node4 : ClusterSingletonManagerChaos2Spec { }
+    public class ClusterSingletonManagerChaos2Node5 : ClusterSingletonManagerChaos2Spec { }
 
-    public abstract class ClusterSingletonManagerChaosSpec : MultiNodeClusterSpec
+    public abstract class ClusterSingletonManagerChaos2Spec : MultiNodeClusterSpec
     {
         private class EchoStarted
         {
@@ -78,13 +72,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             }
         }
 
-        private readonly ClusterSingletonManagerChaosConfig _config;
+        private readonly ClusterSingletonManagerChaos2Config _config;
 
-        protected ClusterSingletonManagerChaosSpec() : this(new ClusterSingletonManagerChaosConfig())
+        protected ClusterSingletonManagerChaos2Spec() : this(new ClusterSingletonManagerChaos2Config())
         {
         }
 
-        protected ClusterSingletonManagerChaosSpec(ClusterSingletonManagerChaosConfig config) : base(config)
+        protected ClusterSingletonManagerChaos2Spec(ClusterSingletonManagerChaos2Config config) : base(config)
         {
             _config = config;
         }
@@ -92,9 +86,9 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         protected override int InitialParticipantsValueFactory { get { return Roles.Count; } }
 
         [MultiNodeFact]
-        public void ClusterSingletonManager_in_chaotic_cluster_should_startup_6_node_cluster()
+        public void ClusterSingletonManager_in_chaotic_cluster_should_take_over_when_tree_oldest_nodes_crash_in_6_nodes_cluster()
         {
-            Within(TimeSpan.FromSeconds(60), () =>
+            Within(TimeSpan.FromSeconds(90), () =>
             {
                 var memberProbe = CreateTestProbe();
                 Cluster.Subscribe(memberProbe.Ref, new[] { typeof(ClusterEvent.MemberUp) });
@@ -102,11 +96,6 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
                 Join(_config.First, _config.First);
                 AwaitMemberUp(memberProbe, _config.First);
-                RunOn(() =>
-                {
-                    ExpectMsg<EchoStarted>();
-                }, _config.First);
-                EnterBarrier("_config.First-started");
 
                 Join(_config.Second, _config.First);
                 AwaitMemberUp(memberProbe, _config.Second, _config.First);
@@ -117,21 +106,26 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 Join(_config.Fourth, _config.First);
                 AwaitMemberUp(memberProbe, _config.Fourth, _config.Third, _config.Second, _config.First);
 
-                Join(_config.Fifth, _config.First);
-                AwaitMemberUp(memberProbe, _config.Fifth, _config.Fourth, _config.Third, _config.Second, _config.First);
+                // mute logging of deadLetters during shutdown of systems
+                if (!Log.IsDebugEnabled)
+                    Sys.EventStream.Publish(new Mute(new WarningFilter()));
+                EnterBarrier("logs-muted");
 
-                Join(_config.Sixth, _config.First);
-                AwaitMemberUp(memberProbe, _config.Sixth, _config.Fifth, _config.Fourth, _config.Third, _config.Second, _config.First);
+                Crash(_config.First, _config.Second, _config.Third);
+                EnterBarrier("after-crash");
+                RunOn(() =>
+                {
+                    ExpectMsg<EchoStarted>();
+                }, _config.Fourth);
+                EnterBarrier("_config.Fourth-active");
 
                 RunOn(() =>
                 {
-                    Echo(_config.First).Tell("hello");
-                    ExpectMsg<IActorRef>(TimeSpan.FromSeconds(3)).Path.Address
-                        .Should()
-                        .Be(GetAddress(_config.First));
+                    Echo(_config.Fourth).Tell("hello");
+                    var address = ExpectMsg<IActorRef>(TimeSpan.FromSeconds(3)).Path.Address;
+                    Assert.Equal(address, GetAddress(_config.Fourth));
                 }, _config.Controller);
-
-                EnterBarrier("_config.First-verified");
+                EnterBarrier("_config.Fourth-verified");
             });
         }
 
