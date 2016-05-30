@@ -1498,6 +1498,7 @@ namespace Akka.Actor
         public int LogDeadLetters { get; }
         public bool LogDeadLettersDuringShutdown { get; }
         public System.Collections.Generic.IList<string> Loggers { get; }
+        public string LoggersDispatcher { get; }
         public System.TimeSpan LoggerStartTimeout { get; }
         public string LogLevel { get; }
         public string ProviderClass { get; }

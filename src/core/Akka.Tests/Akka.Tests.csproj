@@ -157,6 +157,7 @@
     <Compile Include="Event\EventBusSpec.cs" />
     <Compile Include="Event\EventStreamSpec.cs" />
     <Compile Include="Event\LoggerMailboxSpec.cs" />
+    <Compile Include="Event\LoggerSpec.cs" />
     <Compile Include="IO\SimpleDnsCacheSpec.cs" />
     <Compile Include="IO\TcpConnectionSpec.cs" />
     <Compile Include="IO\TcpIntegrationSpec.cs" />
