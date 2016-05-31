@@ -70,6 +70,7 @@
   <ItemGroup>
     <Compile Include="ClusterDeathWatchSpec.cs" />
     <Compile Include="ConvergenceSpec.cs" />
+    <Compile Include="DisallowJoinOfTwoClustersSpec.cs" />
     <Compile Include="InitialHeartbeatSpec.cs" />
     <Compile Include="JoinInProgressSpec.cs" />
     <Compile Include="JoinSeedNodeSpec.cs" />
