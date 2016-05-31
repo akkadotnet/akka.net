@@ -207,6 +207,22 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
 
         /// <summary>
+        /// Saves the highest sequence number when messages was deleted from journal.
+        /// </summary>
+        public async Task UpdateSequenceNr(string persistenceId, long highestSequenceNr)
+        {
+            using (var connection = CreateDbConnection())
+            {
+                await connection.OpenAsync();
+
+                var sqlCommand = QueryBuilder.UpdateHighestSequenceNr(persistenceId, highestSequenceNr);
+                CompleteCommand(sqlCommand, connection);
+
+                await sqlCommand.ExecuteNonQueryAsync();
+            }
+        }
+
+        /// <summary>
         /// Asynchronously writes all persistent <paramref name="messages"/> inside SQL Server database.
         /// 
         /// Specific table used for message persistence may be defined through configuration within 

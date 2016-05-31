@@ -42,6 +42,11 @@ namespace Akka.Persistence.Sql.Common
         public string TableName { get; private set; }
 
         /// <summary>
+        /// Name of the metadata table.
+        /// </summary>
+        public string MetadataTableName { get; private set; }
+
+        /// <summary>
         /// Fully qualified type name for <see cref="ITimestampProvider"/> used to generate journal timestamps.
         /// </summary>
         public string TimestampProvider { get; set; }
@@ -56,6 +61,7 @@ namespace Akka.Persistence.Sql.Common
             SchemaName = config.GetString("schema-name");
             TableName = config.GetString("table-name");
             TimestampProvider = config.GetString("timestamp-provider");
+            MetadataTableName = config.GetString("metadata-table-name");
         }
     }
 

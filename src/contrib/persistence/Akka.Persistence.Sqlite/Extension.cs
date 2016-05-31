@@ -80,7 +80,10 @@ namespace Akka.Persistence.Sqlite
                 system.WhenTerminated.ContinueWith(t => ConnectionContext.Forget(JournalSettings.ConnectionString));
 
                 if (JournalSettings.AutoInitialize)
+                {
                     DbHelper.CreateJournalTable(JournalSettings.ConnectionString, JournalSettings.TableName);
+                    DbHelper.CreateMetadataTable(JournalSettings.ConnectionString, JournalSettings.MetadataTableName);
+                }
             }
 
             if (!string.IsNullOrEmpty(SnapshotSettings.ConnectionString))
