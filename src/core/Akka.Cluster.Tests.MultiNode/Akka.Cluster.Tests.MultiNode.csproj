@@ -74,6 +74,7 @@
     <Compile Include="JoinInProgressSpec.cs" />
     <Compile Include="JoinSeedNodeSpec.cs" />
     <Compile Include="LeaderLeavingSpec.cs" />
+    <Compile Include="NodeMembershipSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RestartFirstSeedNodeSpec.cs" />
     <Compile Include="RestartNodeSpec.cs" />
