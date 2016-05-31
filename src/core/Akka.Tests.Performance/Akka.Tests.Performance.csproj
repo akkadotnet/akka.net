@@ -49,6 +49,7 @@
     <Compile Include="Actor\ActorSystemShutdownSpec.cs" />
     <Compile Include="Actor\AddressSpec.cs" />
     <Compile Include="Actor\MinimalActorRefThroughputSpec.cs" />
+    <Compile Include="Actor\Pattern\AskSpec.cs" />
     <Compile Include="Actor\ReceiveActorThroughputSpec.cs" />
     <Compile Include="Actor\UntypedActorThroughputSpec.cs" />
     <Compile Include="Dispatch\DefaultDispatcherColdThroughputSpec.cs" />
