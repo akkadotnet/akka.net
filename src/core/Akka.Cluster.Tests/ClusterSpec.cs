@@ -5,9 +5,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
@@ -105,6 +107,13 @@ namespace Akka.Cluster.Tests
         {
             _cluster.Join(_selfAddress);
             LeaderActions(); // Joining -> Up
+
+            var callbackProbe = CreateTestProbe();
+            _cluster.RegisterOnMemberRemoved(() =>
+            {
+                callbackProbe.Tell("OnMemberRemoved");
+            });
+
             _cluster.Subscribe(TestActor, new []{typeof(ClusterEvent.MemberRemoved)});
             // first, is in response to the subscription
             ExpectMsg<ClusterEvent.CurrentClusterState>();
@@ -112,6 +121,44 @@ namespace Akka.Cluster.Tests
             _cluster.Shutdown();
             var memberRemoved = ExpectMsg<ClusterEvent.MemberRemoved>();
             Assert.Equal(_selfAddress, memberRemoved.Member.Address);
+
+            callbackProbe.ExpectMsg("OnMemberRemoved");
+        }
+
+        // TODO: https://github.com/akkadotnet/akka.net/issues/1983
+        [Fact(Skip = "fails for now - will need to implement https://github.com/akkadotnet/akka.net/issues/1983")]
+        public void A_cluster_must_be_allowed_to_join_and_leave_with_local_address()
+        {
+            var sys2 = ActorSystem.Create("ClusterSpec2", ConfigurationFactory.ParseString(@"akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+        akka.remote.helios.tcp.port = 0"));
+
+            try
+            {
+                var ref2 = sys2.ActorOf(Props.Empty);
+                Cluster.Get(sys2).Join(ref2.Path.Address); // address doesn't contain full address information
+                Within(TimeSpan.FromSeconds(5), () =>
+                {
+                    AwaitAssert(() =>
+                    {
+                        Cluster.Get(sys2).State.Members.Count.ShouldBe(1);
+                        Cluster.Get(sys2).State.Members.First().Status.ShouldBe(MemberStatus.Up);
+                    });
+                });
+
+                Cluster.Get(sys2).Leave(ref2.Path.Address);
+
+                Within(TimeSpan.FromSeconds(5), () =>
+                {
+                    AwaitAssert(() =>
+                    {
+                        Cluster.Get(sys2).IsTerminated.ShouldBe(true);
+                    });
+                });
+            }
+            finally
+            {
+                Shutdown(sys2);
+            }
         }
     }
 }

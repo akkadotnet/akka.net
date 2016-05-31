@@ -431,21 +431,29 @@ namespace Akka.Cluster
 
         /// <summary>
         /// Command to <see cref="Akka.Cluster.ClusterDaemon"/> to create a
-        /// <see cref="Akka.Cluster.OnMemberUpListener"/>
+        /// <see cref="OnMemberStatusChangedListener"/>
         /// </summary>
         public sealed class AddOnMemberUpListener : INoSerializationVerificationNeeded
         {
-            readonly Action _callback;
-
             public AddOnMemberUpListener(Action callback)
             {
-                _callback = callback;
+                Callback = callback;
             }
 
-            public Action Callback
+            public Action Callback { get; }
+        }
+
+        /// <summary>
+        /// Command to the <see cref="ClusterDaemon"/> to create a 
+        /// </summary>
+        public sealed class AddOnMemberRemovedListener : INoSerializationVerificationNeeded
+        {
+            public AddOnMemberRemovedListener(Action callback)
             {
-                get { return _callback; }
+                Callback = callback;
             }
+
+            public Action Callback { get; }
         }
 
         public interface ISubscriptionMessage { }
@@ -554,7 +562,7 @@ namespace Akka.Cluster
     /// <summary>
     /// Supervisor managing the different Cluster daemons.
     /// </summary>
-    internal sealed class ClusterDaemon : UntypedActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
+    internal sealed class ClusterDaemon : ReceiveActor
     {
         IActorRef _coreSupervisor;
         readonly ClusterSettings _settings;
@@ -564,29 +572,29 @@ namespace Akka.Cluster
             // Important - don't use Cluster(context.system) in constructor because that would
             // cause deadlock. The Cluster extension is currently being created and is waiting
             // for response from GetClusterCoreRef in its constructor.
+            Receive<InternalClusterAction.GetClusterCoreRef>(msg =>
+            {
+                if(_coreSupervisor == null)
+                    CreateChildren();
+                _coreSupervisor.Forward(msg);
+            });
+            Receive<InternalClusterAction.AddOnMemberUpListener>(msg =>
+                       Context.ActorOf(Props.Create(() => new OnMemberStatusChangedListener(msg.Callback, MemberStatus.Up)).WithDispatcher(_settings.UseDispatcher).WithDeploy(Deploy.Local)));
+            Receive <InternalClusterAction.AddOnMemberRemovedListener>(msg =>
+            {
+                Context.ActorOf(
+                    Props.Create(() => new OnMemberStatusChangedListener(msg.Callback, MemberStatus.Removed))
+                        .WithDispatcher(_settings.UseDispatcher)
+                        .WithDeploy(Deploy.Local));
+            });
+            Receive<InternalClusterAction.PublisherCreated>(msg =>
+            {
+                if (_settings.MetricsEnabled)
+                    Context.ActorOf(
+                        Props.Create<ClusterHeartbeatReceiver>().WithDispatcher(_settings.UseDispatcher),
+                        "metrics");
+            });
             _settings = settings;
-        }
-
-        protected override void OnReceive(object message)
-        {
-            message.Match()
-                .With<InternalClusterAction.GetClusterCoreRef>(msg =>
-                {
-                    if(_coreSupervisor == null)
-                        CreateChildren();
-                    _coreSupervisor.Forward(msg);
-                })
-                .With<InternalClusterAction.AddOnMemberUpListener>(
-                    msg =>
-                        Context.ActorOf(Props.Create(() => new OnMemberUpListener(msg.Callback)).WithDispatcher(_settings.UseDispatcher).WithDeploy(Deploy.Local)))
-                .With<InternalClusterAction.PublisherCreated>(
-                    msg =>
-                    {
-                        if (_settings.MetricsEnabled)
-                            Context.ActorOf(
-                                Props.Create<ClusterHeartbeatReceiver>().WithDispatcher(_settings.UseDispatcher),
-                                "metrics");
-                    });
         }
 
         private void CreateChildren()
@@ -2015,38 +2023,48 @@ namespace Akka.Cluster
     /// <summary>
     /// INTERNAL API
     /// 
-    /// The supplied callback will be run once when the current cluster member is <see cref="MemberStatus.Up"/>
+    /// The supplied callback will be run once when the current cluster member has the same status.
     /// </summary>
-    class OnMemberUpListener : ReceiveActor
+    internal class OnMemberStatusChangedListener : ReceiveActor
     {
         readonly Action _callback;
         readonly ILoggingAdapter _log = Context.GetLogger();
         readonly Cluster _cluster;
+        private readonly MemberStatus _targetStatus;
 
-        public OnMemberUpListener(Action callback)
+        public OnMemberStatusChangedListener(Action callback, MemberStatus targetStatus)
         {
+            _targetStatus = targetStatus;
             _callback = callback;
             _cluster = Cluster.Get(Context.System);
             Receive<ClusterEvent.CurrentClusterState>(state =>
             {
-                if (state.Members.Any(IsSelfUp))
+                if (state.Members.Any(IsTriggered))
                     Done();
             });
 
             Receive<ClusterEvent.MemberUp>(up =>
             {
-                if (IsSelfUp(up.Member))
+                if (IsTriggered(up.Member))
+                    Done();
+            });
+
+            Receive<ClusterEvent.MemberRemoved>(removed =>
+            {
+                if (IsTriggered(removed.Member))
                     Done();
             });
         }
 
         protected override void PreStart()
         {
-            _cluster.Subscribe(Self, new[] { typeof(ClusterEvent.MemberUp) });
+            _cluster.Subscribe(Self, new[] { typeof(ClusterEvent.MemberUp), typeof(ClusterEvent.MemberRemoved) });
         }
 
         protected override void PostStop()
         {
+            if (_targetStatus == MemberStatus.Removed)
+                Done();
             _cluster.Unsubscribe(Self);
         }
 
@@ -2058,7 +2076,7 @@ namespace Akka.Cluster
             }
             catch (Exception ex)
             {
-                _log.Error(ex, "OnMemberUp callback failed with [{0}]", ex.Message);
+                _log.Error(ex, "{0} callback failed with [{1}]", _targetStatus, ex.Message);
             }
             finally
             {
@@ -2066,9 +2084,9 @@ namespace Akka.Cluster
             }
         }
 
-        private bool IsSelfUp(Member m)
+        private bool IsTriggered(Member m)
         {
-            return m.UniqueAddress == _cluster.SelfUniqueAddress && m.Status == MemberStatus.Up;
+            return m.UniqueAddress == _cluster.SelfUniqueAddress && m.Status == _targetStatus;
         }
     }
 
