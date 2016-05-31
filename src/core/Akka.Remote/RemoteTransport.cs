@@ -31,7 +31,7 @@ namespace Akka.Remote
             Provider = provider;
         }
 
-        protected ExtendedActorSystem System { get; private set; }
+        public ExtendedActorSystem System { get; private set; }
         public RemoteActorRefProvider Provider { get; private set; }
 
         /// <summary>

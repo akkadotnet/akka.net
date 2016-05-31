@@ -142,7 +142,12 @@ namespace Akka.TestKit
 
         public void SendSystemMessage(ISystemMessage message, IActorRef sender)
         {
-            ((IInternalActorRef)TestActor).SendSystemMessage(message, sender);
+            ((IInternalActorRef)TestActor).SendSystemMessage(message);
+        }
+
+        public void SendSystemMessage(ISystemMessage message)
+        {
+            ((IInternalActorRef)TestActor).SendSystemMessage(message);
         }
 
         public int CompareTo(object obj)

@@ -441,7 +441,7 @@ akka {
 
         protected override void AfterTermination()
         {
-            _remoteSystem.Terminate().Wait(TimeSpan.FromMinutes(10));
+            _remoteSystem.Terminate().Wait(TimeSpan.FromSeconds(2));
             base.AfterTermination();
         }
 

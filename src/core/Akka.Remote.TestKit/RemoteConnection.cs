@@ -119,7 +119,12 @@ namespace Akka.Remote.TestKit
 
         public static void Shutdown(IChannel connection)
         {
-            connection.CloseAsync().Wait();
+            var disconnectTimeout = TimeSpan.FromSeconds(2); //todo: make into setting loaded from HOCON
+            if (!connection.CloseAsync().Wait(disconnectTimeout))
+            {
+                LoggingFactory.GetLogger<RemoteConnection>().Warning("Failed to shutdown remote connection within {0}", disconnectTimeout);
+            }
+            
         }
 
         public static async Task ReleaseAll()

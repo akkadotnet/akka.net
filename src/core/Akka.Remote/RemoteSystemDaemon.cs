@@ -249,12 +249,12 @@ namespace Akka.Remote
                     message.Deploy, true, false);
                     string childName = subPath.Join("/");
                     AddChild(childName, actor);
-                    actor.Tell(new Watch(actor, this));
+                    actor.SendSystemMessage(new Watch(actor, this));
                     actor.Start();
                     if (AddChildParentNeedsWatch(parent, actor))
                     {
                         //TODO: figure out why current transport is not set when this message is sent
-                        parent.Tell(new Watch(parent, this),this);
+                        parent.SendSystemMessage(new Watch(parent, this));
                     }
                 });
                 if (isTerminating)

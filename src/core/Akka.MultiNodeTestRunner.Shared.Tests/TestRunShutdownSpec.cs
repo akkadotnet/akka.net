@@ -46,7 +46,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
             //end the test run...
             var sinkReadyToTerminate =
                 consoleMessageSink.AskAndWait<MessageSinkActor.SinkCanBeTerminated>(new EndTestRun(),
-                    TimeSpan.FromSeconds(3));
+                    TimeSpan.FromSeconds(10));
             Assert.NotNull(sinkReadyToTerminate);
 
         }

@@ -197,7 +197,7 @@ namespace Akka.Tests.Actor
         public void DeathWatch_must_notify_only_when_watching()
         {
             var subject = Sys.ActorOf(Props.Create(() => new EchoActor(_terminal)));
-            TestActor.Tell(new DeathWatchNotification(subject, true, false));
+            ((IInternalActorRef)TestActor).SendSystemMessage(new DeathWatchNotification(subject, true, false));
             ExpectNoMsg(TimeSpan.FromSeconds(3));
         }
 

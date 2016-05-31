@@ -242,7 +242,12 @@ namespace Akka.TestKit
 
         public void SendSystemMessage(ISystemMessage message, IActorRef sender)
         {
-            _internalRef .SendSystemMessage(message, sender);
+            _internalRef .SendSystemMessage(message);
+        }
+
+        public void SendSystemMessage(ISystemMessage message)
+        {
+            _internalRef.SendSystemMessage(message);
         }
     }
 }

@@ -178,7 +178,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Systems the invoke.
+        ///   Used to invoke system messages.
         /// </summary>
         /// <param name="envelope">The envelope.</param>
         public void SystemInvoke(Envelope envelope)
@@ -389,11 +389,12 @@ namespace Akka.Actor
             SendSystemMessage(Dispatch.SysMsg.Suspend.Instance);
         }
 
-        private void SendSystemMessage(ISystemMessage systemMessage)
+        public void SendSystemMessage(ISystemMessage systemMessage)
         {
             try
             {
-                Self.Tell(systemMessage);
+                // TODO: use a dispatcher or the mailbox to post a message directly
+                _mailbox.Post(Self, new Envelope() { Message = systemMessage, Sender = ActorRefs.NoSender});
             }
             catch (Exception e)
             {

@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
@@ -63,7 +64,6 @@ namespace Akka.Remote
             var sender = senderOption ?? system.DeadLetters;
             var originalReceiver = recipient.Path;
 
-
             // message is intended for the RemoteDaemon, usually a command to create a remote actor
             if (recipient.Equals(remoteDaemon))
             {
@@ -115,7 +115,7 @@ namespace Akka.Remote
                 }
                 else if (payload is ISystemMessage)
                 {
-                    recipient.Tell(payload);
+                    recipient.SendSystemMessage((ISystemMessage)payload);
                 }
                 else
                 {

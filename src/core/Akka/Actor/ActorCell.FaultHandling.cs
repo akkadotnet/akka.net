@@ -266,6 +266,9 @@ namespace Akka.Actor
             foreach (var child in ChildrenContainer.Children)
             {
                 child.Stop();
+
+                //ActorCell.Children line 84 https://github.com/akkadotnet/akka.net/issues/2024
+                //Stop(child); // TODO: need to call this, but only after ActorCell.AttachChild and proper child creation semantics have been added
             }
         }
 
@@ -311,7 +314,7 @@ namespace Akka.Actor
                 }
                 finally
                 {
-                    try { Parent.Tell(new DeathWatchNotification(_self, existenceConfirmed: true, addressTerminated: false)); }
+                    try { Parent.SendSystemMessage(new DeathWatchNotification(_self, existenceConfirmed: true, addressTerminated: false)); }
                     finally
                     {
                         try { TellWatchersWeDied(); }

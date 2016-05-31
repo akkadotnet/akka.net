@@ -1876,7 +1876,6 @@ namespace Akka.Cluster
         readonly Address _selfAddress;
         readonly Cluster _cluster;
         readonly Deadline _timeout;
-        private Task _retryTask;
         readonly ICancelable _retryTaskToken;
 
         public FirstSeedNodeProcess(ImmutableList<Address> seeds)
