@@ -19,6 +19,7 @@ using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Cluster.Tests.MultiNode
@@ -303,11 +304,11 @@ namespace Akka.Cluster.Tests.MultiNode
         {
             var members = gotMembers.ToImmutableList();
             _assertions.AssertEqual(expectedAddresses.Length, members.Count);
-            expectedAddresses.ToImmutableSortedSet(Member.AddressOrdering);
-            for (var i = 0; i < expectedAddresses.Length; i++)
+
+            expectedAddresses.ToImmutableSortedSet(Member.AddressOrdering).ZipWithIndex().ForEach(kvp =>
             {
-                _assertions.AssertEqual(expectedAddresses[i], members[i].Address);
-            }
+                _assertions.AssertEqual(kvp.Key, members[kvp.Value].Address);
+            });
         }
 
         /// <summary>
