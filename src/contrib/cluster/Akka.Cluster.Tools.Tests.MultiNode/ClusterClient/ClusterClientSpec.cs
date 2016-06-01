@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="ClusterClientSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
@@ -7,28 +7,29 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
-using Akka.Cluster.Tests.MultiNode;
 using Akka.Cluster.Tools.Client;
 using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Cluster.Tools.PublishSubscribe.Internal;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
-using Xunit;
+using Akka.Util.Internal;
+using FluentAssertions;
 
-namespace Akka.Cluster.Tools.Tests.MultiNode.ClusterClient
+namespace Akka.Cluster.Tools.Tests.MultiNode.Client
 {
     public class ClusterClientSpecConfig : MultiNodeConfig
     {
-        public readonly RoleName Client;
-        public readonly RoleName First;
-        public readonly RoleName Second;
-        public readonly RoleName Third;
-        public readonly RoleName Fourth;
+        public RoleName Client { get; }
+        public RoleName First { get; }
+        public RoleName Second { get; }
+        public RoleName Third { get; }
+        public RoleName Fourth { get; }
 
         public ClusterClientSpecConfig()
         {
@@ -39,36 +40,53 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.ClusterClient
             Fourth = Role("fourth");
 
             CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
+                akka.loglevel = DEBUG
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = 0s
                 akka.cluster.client.heartbeat-interval = 1s
                 akka.cluster.client.acceptable-heartbeat-pause = 3s
-            ").WithFallback(MultiNodeClusterSpec.ClusterConfig());
+                akka.cluster.client.refresh-contacts-interval = 1s
+                # number-of-contacts must be >= 4 because we shutdown all but one in the end
+                akka.cluster.client.receptionist.number-of-contacts = 4
+                akka.cluster.client.receptionist.heartbeat-interval = 10s
+                akka.cluster.client.receptionist.acceptable-heartbeat-pause = 10s
+                akka.cluster.client.receptionist.failure-detection-interval = 1s
+                akka.test.filter-leeway = 10s
+            ")
+            .WithFallback(ClusterClientReceptionist.DefaultConfig())
+            .WithFallback(DistributedPubSub.DefaultConfig());
 
             TestTransport = true;
         }
-    }
 
-    public class ClusterClientNode1 : ClusterClientSpec { }
-    public class ClusterClientNode2 : ClusterClientSpec { }
-    public class ClusterClientNode3 : ClusterClientSpec { }
-    public class ClusterClientNode4 : ClusterClientSpec { }
-    public class ClusterClientNode5 : ClusterClientSpec { }
+        #region Helpers
 
-    public abstract class ClusterClientSpec : MultiNodeClusterSpec
-    {
-        #region setup
+        public class Reply
+        {
+            public Reply(object msg, Address node)
+            {
+                Msg = msg;
+                Node = node;
+            }
+
+            public object Msg { get; }
+            public Address Node { get; }
+        }
 
         public class TestService : ReceiveActor
         {
             public TestService(IActorRef testActorRef)
             {
+                Receive<string>(cmd => cmd.Equals("shutdown"), msg =>
+                {
+                    Context.System.Terminate();
+                });
+
                 ReceiveAny(msg =>
                 {
                     testActorRef.Forward(msg);
-                    Sender.Tell(msg.ToString() + "-ack");
+                    Sender.Tell(new Reply(msg.ToString() + "-ack", Cluster.Get(Context.System).SelfAddress));
                 });
             }
         }
@@ -81,21 +99,135 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.ClusterClient
             }
         }
 
-        private readonly RoleName _client;
-        private readonly RoleName _first;
-        private readonly RoleName _second;
-        private readonly RoleName _third;
-        private readonly RoleName _fourth;
-
-        private ISet<RoleName> _remainingServerRoleNames;
-
-        private ActorPath[] InitialContacts
+        public class TestClientListener : ReceiveActor
         {
-            get
+            #region TestClientListener messages
+            public sealed class GetLatestContactPoints
             {
-                return _remainingServerRoleNames.Except(new[] { _first, _fourth }).Select(r => Node(r) / "user" / "receptionist").ToArray();
+                public static readonly GetLatestContactPoints Instance = new GetLatestContactPoints();
+                private GetLatestContactPoints() { }
+            }
+
+            public sealed class LatestContactPoints : INoSerializationVerificationNeeded
+            {
+                public LatestContactPoints(ImmutableHashSet<ActorPath> contactPoints)
+                {
+                    ContactPoints = contactPoints;
+                }
+
+                public ImmutableHashSet<ActorPath> ContactPoints { get; }
+            }
+
+            #endregion
+
+            private readonly IActorRef _targetClient;
+            private ImmutableHashSet<ActorPath> _contactPoints;
+
+            public TestClientListener(IActorRef targetClient)
+            {
+                _targetClient = targetClient;
+                _contactPoints = ImmutableHashSet<ActorPath>.Empty;
+
+                Receive<GetLatestContactPoints>(_ =>
+                {
+                    Sender.Tell(new LatestContactPoints(_contactPoints));
+                });
+
+                Receive<ContactPoints>(cps =>
+                {
+                    // Now do something with the up-to-date "cps"
+                    _contactPoints = cps.ContactPointsList;
+                });
+
+                Receive<ContactPointAdded>(cp =>
+                {
+                    // Now do something with an up-to-date "contactPoints + cp"
+                    _contactPoints = _contactPoints.Add(cp.ContactPoint);
+                });
+
+                Receive<ContactPointRemoved>(cp =>
+                {
+                    // Now do something with an up-to-date "contactPoints - cp"
+                    _contactPoints = _contactPoints.Remove(cp.ContactPoint);
+                });
+            }
+
+            protected override void PreStart()
+            {
+                _targetClient.Tell(SubscribeContactPoints.Instance);
             }
         }
+
+        public class TestReceptionistListener : ReceiveActor
+        {
+            #region TestReceptionistListener messages
+            public sealed class GetLatestClusterClients
+            {
+                public static readonly GetLatestClusterClients Instance = new GetLatestClusterClients();
+                private GetLatestClusterClients() { }
+            }
+
+            public sealed class LatestClusterClients : INoSerializationVerificationNeeded
+            {
+                public LatestClusterClients(ImmutableHashSet<IActorRef> clusterClients)
+                {
+                    ClusterClients = clusterClients;
+                }
+
+                public ImmutableHashSet<IActorRef> ClusterClients { get; }
+            }
+            #endregion
+
+            private readonly IActorRef _targetReceptionist;
+            private ImmutableHashSet<IActorRef> _clusterClients;
+
+            public TestReceptionistListener(IActorRef targetReceptionist)
+            {
+                _targetReceptionist = targetReceptionist;
+                _clusterClients = ImmutableHashSet<IActorRef>.Empty;
+
+                Receive<GetLatestClusterClients>(_ =>
+                {
+                    Sender.Tell(new LatestClusterClients(_clusterClients));
+                });
+
+                Receive<ClusterClients>(cs =>
+                {
+                    // Now do something with the up-to-date "c"
+                    _clusterClients = cs.ClusterClientsList;
+                });
+
+                Receive<ClusterClientUp>(c =>
+                {
+                    // Now do something with an up-to-date "clusterClients + c"
+                    _clusterClients = _clusterClients.Add(c.ClusterClient);
+                });
+
+                Receive<ClusterClientUnreachable>(c =>
+                {
+                    // Now do something with an up-to-date "clusterClients - c"
+                    _clusterClients = _clusterClients.Remove(c.ClusterClient);
+                });
+            }
+
+            protected override void PreStart()
+            {
+                _targetReceptionist.Tell(SubscribeClusterClients.Instance);
+            }
+        }
+
+        #endregion
+    }
+
+    public class ClusterClientMultiNode1 : ClusterClientSpec { }
+    public class ClusterClientMultiNode2 : ClusterClientSpec { }
+    public class ClusterClientMultiNode3 : ClusterClientSpec { }
+    public class ClusterClientMultiNode4 : ClusterClientSpec { }
+    public class ClusterClientMultiNode5 : ClusterClientSpec { }
+
+    public abstract class ClusterClientSpec : MultiNodeClusterSpec
+    {
+        private readonly ClusterClientSpecConfig _config;
 
         protected ClusterClientSpec() : this(new ClusterClientSpecConfig())
         {
@@ -103,13 +235,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.ClusterClient
 
         protected ClusterClientSpec(ClusterClientSpecConfig config) : base(config)
         {
-            _client = config.Client;
-            _first = config.First;
-            _second = config.Second;
-            _third = config.Third;
-            _fourth = config.Fourth;
+            _config = config;
+            _remainingServerRoleNames = ImmutableHashSet.Create(_config.First, _config.Second, _config.Third, _config.Fourth);
+        }
 
-            _remainingServerRoleNames = new HashSet<RoleName>(new[] { _first, _second, _third, _fourth });
+        protected override int InitialParticipantsValueFactory
+        {
+            get { return Roles.Count; }
         }
 
         private void Join(RoleName from, RoleName to)
@@ -119,12 +251,12 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.ClusterClient
                 Cluster.Join(Node(to).Address);
                 CreateReceptionist();
             }, from);
-            EnterBarrier(to.Name + "-joined");
+            EnterBarrier(from.Name + "-joined");
         }
 
         private void CreateReceptionist()
         {
-            var x = ClusterClientReceptionist.Get(Sys);
+            ClusterClientReceptionist.Get(Sys);
         }
 
         private void AwaitCount(int expected)
@@ -132,7 +264,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.ClusterClient
             AwaitAssert(() =>
             {
                 DistributedPubSub.Get(Sys).Mediator.Tell(Count.Instance);
-                Assert.Equal(expected, ExpectMsg<int>());
+                ExpectMsg<int>().Should().Be(expected);
             });
         }
 
@@ -141,94 +273,116 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.ClusterClient
             return _remainingServerRoleNames.FirstOrDefault(r => Node(r).Address.Equals(address));
         }
 
-        #endregion
+        private ImmutableHashSet<RoleName> _remainingServerRoleNames;
 
-        //[MultiNodeFact(Skip = "TODO")]
-        public void ClusterClient_should_startup_cluster()
+        private ImmutableHashSet<ActorPath> InitialContacts
         {
-            Within(TimeSpan.FromSeconds(30), () =>
+            get
             {
-                Join(_first, _first);
-                Join(_second, _first);
-                Join(_third, _first);
-                Join(_fourth, _first);
+                return _remainingServerRoleNames.Remove(_config.First).Remove(_config.Fourth).Select(r => Node(r) / "system" / "receptionist").ToImmutableHashSet();
+            }
+        }
+
+        [MultiNodeFact]
+        public void ClusterClientSpecs()
+        {
+            ClusterClient_must_startup_cluster();
+            ClusterClient_must_communicate_to_any_node_in_cluster();
+            ClusterClient_must_demonstrate_usage();
+            ClusterClient_must_report_events();
+            ClusterClient_must_reestablish_connection_to_another_receptionist_when_server_is_shutdown();
+            ClusterClient_must_reestablish_connection_to_receptionist_after_partition();
+            //ClusterClient_must_reestablish_connection_to_receptionist_after_server_restart();
+        }
+
+        public void ClusterClient_must_startup_cluster()
+        {
+            Within(30.Seconds(), () =>
+            {
+                Join(_config.First, _config.First);
+                Join(_config.Second, _config.First);
+                Join(_config.Third, _config.First);
+                Join(_config.Fourth, _config.First);
 
                 RunOn(() =>
                 {
-                    var service = Sys.ActorOf(Props.Create(() => new TestService(TestActor)), "testService");
+                    var service = Sys.ActorOf(Props.Create(() => new ClusterClientSpecConfig.TestService(TestActor)), "testService");
                     ClusterClientReceptionist.Get(Sys).RegisterService(service);
-                }, _fourth);
+                }, _config.Fourth);
 
                 RunOn(() =>
                 {
                     AwaitCount(1);
-                }, _first, _second, _third, _fourth);
+                }, _config.First, _config.Second, _config.Third, _config.Fourth);
+
                 EnterBarrier("after-1");
             });
         }
 
-        //[MultiNodeFact(Skip = "TODO")]
-        public void ClusterClient_should_communicate_to_any_node_in_cluster()
+        public void ClusterClient_must_communicate_to_any_node_in_cluster()
         {
-            ClusterClient_should_startup_cluster();
-
-            Within(TimeSpan.FromSeconds(10), () =>
+            Within(10.Seconds(), () =>
             {
                 RunOn(() =>
                 {
-                    var c = Sys.ActorOf(Client.ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client1");
-                    c.Tell(new Client.ClusterClient.Send("/user/testService", "hello", localAffinity: true));
-                    ExpectMsg("hello-ack");
+                    var c = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client1");
+                    c.Tell(new ClusterClient.Send("/user/testService", "hello", localAffinity: true));
+                    ExpectMsg<ClusterClientSpecConfig.Reply>().Msg.Should().Be("hello-ack");
                     Sys.Stop(c);
-                }, _client);
+                }, _config.Client);
 
                 RunOn(() =>
                 {
                     ExpectMsg("hello");
-                }, _fourth);
+                }, _config.Fourth);
 
                 EnterBarrier("after-2");
             });
         }
 
-        //[MultiNodeFact(Skip = "TODO")]
-        public void ClusterClient_should_demonstrate_usage()
+        public void ClusterClient_must_demonstrate_usage()
         {
-            ClusterClient_should_communicate_to_any_node_in_cluster();
+            var host1 = _config.First;
+            var host2 = _config.Second;
+            var host3 = _config.Third;
 
-            Within(TimeSpan.FromSeconds(15), () =>
+            Within(15.Seconds(), () =>
             {
+                //#server
                 RunOn(() =>
                 {
-                    var serviceA = Sys.ActorOf(Props.Create<Service>(), "serviceA");
+                    var serviceA = Sys.ActorOf(Props.Create<ClusterClientSpecConfig.Service>(), "serviceA");
                     ClusterClientReceptionist.Get(Sys).RegisterService(serviceA);
-                }, _first);
+                }, host1);
 
                 RunOn(() =>
                 {
-                    var serviceB = Sys.ActorOf(Props.Create<Service>(), "serviceB");
+                    var serviceB = Sys.ActorOf(Props.Create<ClusterClientSpecConfig.Service>(), "serviceB");
                     ClusterClientReceptionist.Get(Sys).RegisterService(serviceB);
-                }, _second, _third);
+                }, host2, host3);
+                //#server
 
                 RunOn(() =>
                 {
                     AwaitCount(4);
-                }, _first, _second, _third, _fourth);
+                }, host1, host2, host3, _config.Fourth);
+                EnterBarrier("services-replicated");
 
+                //#client
                 RunOn(() =>
                 {
-                    var c = Sys.ActorOf(Client.ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client");
-                    c.Tell(new Client.ClusterClient.Send("/user/serviceA", "hello", localAffinity: true));
-                    c.Tell(new Client.ClusterClient.SendToAll("/user/serviceB", "hi"));
-                }, _client);
+                    var c = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client");
+                    c.Tell(new ClusterClient.Send("/user/serviceA", "hello", localAffinity: true));
+                    c.Tell(new ClusterClient.SendToAll("/user/serviceB", "hi"));
+                }, _config.Client);
+                //#client
 
                 RunOn(() =>
                 {
                     // note that "hi" was sent to 2 "serviceB"
                     var received = ReceiveN(3);
-                    Assert.True(received.Contains("hello"));
-                    Assert.True(received.Contains("hi"));
-                }, _client);
+                    received.ToImmutableHashSet().Should().BeEquivalentTo(ImmutableHashSet.Create("hello", "hi"));
+                }, _config.Client);
 
                 // strange, barriers fail without this sleep
                 Thread.Sleep(1000);
@@ -236,98 +390,232 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.ClusterClient
             });
         }
 
-        //[MultiNodeFact(Skip = "TODO")]
-        public void ClusterClient_should_reestablish_connection_to_another_receptionist_when_server_is_shutdown()
+        public void ClusterClient_must_report_events()
         {
-            ClusterClient_should_demonstrate_usage();
-
-            Within(TimeSpan.FromSeconds(30), () =>
+            Within(15.Seconds(), () =>
             {
                 RunOn(() =>
                 {
-                    var service2 = Sys.ActorOf(Props.Create(() => new TestService(TestActor)), "service2");
+                    var c = Sys.ActorSelection("/user/client").ResolveOne(Dilated(1.Seconds())).Result;
+                    var l = Sys.ActorOf(
+                        Props.Create(() => new ClusterClientSpecConfig.TestClientListener(c)),
+                        "reporter-client-listener");
+
+                    var expectedContacts = ImmutableHashSet.Create(_config.First, _config.Second, _config.Third, _config.Fourth)
+                        .Select(_ => Node(_) / "system" / "receptionist");
+
+                    Within(10.Seconds(), () =>
+                    {
+                        AwaitAssert(() =>
+                        {
+                            var probe = CreateTestProbe();
+                            l.Tell(ClusterClientSpecConfig.TestClientListener.GetLatestContactPoints.Instance, probe.Ref);
+                            probe.ExpectMsg<ClusterClientSpecConfig.TestClientListener.LatestContactPoints>()
+                                .ContactPoints.Should()
+                                .BeEquivalentTo(expectedContacts);
+                        });
+                    });
+                }, _config.Client);
+
+
+                EnterBarrier("reporter-client-listener-tested");
+
+                RunOn(() =>
+                {
+                    // Only run this test on a node that knows about our client. It could be that no node knows
+                    // but there isn't a means of expressing that at least one of the nodes needs to pass the test.
+                    var r = ClusterClientReceptionist.Get(Sys).Underlying;
+                    r.Tell(GetClusterClients.Instance);
+                    var cps = ExpectMsg<ClusterClients>();
+                    if (cps.ClusterClientsList.Any(c => c.Path.Name.Equals("client")))
+                    {
+                        Log.Info("Testing that the receptionist has just one client");
+                        var l = Sys.ActorOf(
+                            Props.Create(() => new ClusterClientSpecConfig.TestReceptionistListener(r)),
+                            "reporter-receptionist-listener");
+
+                        var c = Sys
+                            .ActorSelection(Node(_config.Client) / "user" / "client")
+                            .ResolveOne(Dilated(2.Seconds())).Result;
+
+                        var expectedClients = ImmutableHashSet.Create(c);
+                        Within(10.Seconds(), () =>
+                        {
+                            AwaitAssert(() =>
+                            {
+                                var probe = CreateTestProbe();
+                                l.Tell(ClusterClientSpecConfig.TestReceptionistListener.GetLatestClusterClients.Instance, probe.Ref);
+                                probe.ExpectMsg<ClusterClientSpecConfig.TestReceptionistListener.LatestClusterClients>()
+                                    .ClusterClients.Should()
+                                    .BeEquivalentTo(expectedClients);
+                            });
+                        });
+
+                    }
+
+                }, _config.First, _config.Second, _config.Third);
+
+                EnterBarrier("after-6");
+            });
+        }
+
+        public void ClusterClient_must_reestablish_connection_to_another_receptionist_when_server_is_shutdown()
+        {
+            Within(30.Seconds(), () =>
+            {
+                RunOn(() =>
+                {
+                    var service2 = Sys.ActorOf(Props.Create(() => new ClusterClientSpecConfig.TestService(TestActor)), "service2");
                     ClusterClientReceptionist.Get(Sys).RegisterService(service2);
                     AwaitCount(8);
-                }, _first, _second, _third, _fourth);
+                }, _config.First, _config.Second, _config.Third, _config.Fourth);
                 EnterBarrier("service2-replicated");
 
                 RunOn(() =>
                 {
-                    var c = Sys.ActorOf(Client.ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client2");
-                    c.Tell(new Client.ClusterClient.Send("/user/service2", "bonjour", localAffinity: true));
-                    ExpectMsg("bonjour-ack");
-                    var lastSenderAddress = LastSender.Path.Address;
+                    var c = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client2");
+                    c.Tell(new ClusterClient.Send("/user/service2", "bonjour", localAffinity: true));
+                    var reply = ExpectMsg<ClusterClientSpecConfig.Reply>();
+                    reply.Msg.Should().Be("bonjour-ack");
 
-                    var receptionistRoleName = RoleName(lastSenderAddress);
-                    if (receptionistRoleName == null) throw new Exception("Unexpected missing role name: " + lastSenderAddress);
+                    RoleName receptionistRoleName = GetRoleName(reply.Node);
+                    if (receptionistRoleName == null)
+                    {
+                        throw new Exception("Unexpected missing role name: " + reply.Node);
+                    }
 
                     TestConductor.Exit(receptionistRoleName, 0).Wait();
-                    _remainingServerRoleNames.Remove(receptionistRoleName);
+                    _remainingServerRoleNames = _remainingServerRoleNames.Remove(receptionistRoleName);
 
-                    Within(Remaining - TimeSpan.FromSeconds(3), () =>
+                    Within(Remaining - 3.Seconds(), () =>
                     {
                         AwaitAssert(() =>
                         {
-                            c.Tell(new Client.ClusterClient.Send("/user/service2", "hi again", localAffinity: true));
-                            ExpectMsg("hi again-ack", TimeSpan.FromSeconds(1));
+                            c.Tell(new ClusterClient.Send("/user/service2", "hi again", localAffinity: true));
+                            ExpectMsg<ClusterClientSpecConfig.Reply>(1.Seconds()).Msg.Should().Be("hi again-ack");
                         });
                     });
                     Sys.Stop(c);
-                }, _client);
+                }, _config.Client);
                 EnterBarrier("verified-3");
-
-                ReceiveWhile(TimeSpan.FromSeconds(2), msg =>
+                ReceiveWhile(2.Seconds(), msg =>
                 {
                     if (msg.Equals("hi again")) return msg;
-                    else throw new Exception("unexpected message: " + msg);
+                    else throw new Exception("Unexpected message: " + msg);
                 });
+
+                RunOn(() =>
+                {
+                    // Locate the test listener from a previous test and see that it agrees
+                    // with what the client is telling it about what receptionists are alive
+                    var l = Sys.ActorSelection("/user/reporter-client-listener");
+                    var expectedContacts = _remainingServerRoleNames.Select(c => Node(c) / "system" / "receptionist");
+                    Within(10.Seconds(), () =>
+                    {
+                        AwaitAssert(() =>
+                        {
+                            var probe = CreateTestProbe();
+                            l.Tell(ClusterClientSpecConfig.TestClientListener.GetLatestContactPoints.Instance, probe.Ref);
+                            probe.ExpectMsg<ClusterClientSpecConfig.TestClientListener.LatestContactPoints>()
+                                .ContactPoints.Should()
+                                .BeEquivalentTo(expectedContacts);
+                        });
+                    });
+                }, _config.Client);
+
                 EnterBarrier("after-4");
             });
         }
 
-        //[MultiNodeFact(Skip = "TODO")]
-        public void ClusterClient_should_reestablish_connection_to_receptionist_after_partition()
+        public void ClusterClient_must_reestablish_connection_to_receptionist_after_partition()
         {
-            ClusterClient_should_reestablish_connection_to_another_receptionist_when_server_is_shutdown();
-
-            Within(TimeSpan.FromSeconds(30), () =>
+            Within(30.Seconds(), () =>
             {
                 RunOn(() =>
                 {
-                    var c = Sys.ActorOf(Client.ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client3");
-                    c.Tell(new Client.ClusterClient.Send("/user/service2", "bonjour2", localAffinity: true));
-                    ExpectMsg("bonjour2-ack");
-                    var lastSenderAddress = LastSender.Path.Address;
+                    var c = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client3");
+                    c.Tell(new ClusterClient.Send("/user/service2", "bonjour2", localAffinity: true));
+                    var reply = ExpectMsg<ClusterClientSpecConfig.Reply>();
+                    reply.Msg.Should().Be("bonjour2-ack");
 
-                    var receptionistRoleName = RoleName(lastSenderAddress);
-                    if (receptionistRoleName == null) throw new Exception("Unexpected missing role name: " + lastSenderAddress);
+                    RoleName receptionistRoleName = GetRoleName(reply.Node);
+                    if (receptionistRoleName == null)
+                    {
+                        throw new Exception("Unexpected missing role name: " + reply.Node);
+                    }
 
                     // shutdown all but the one that the client is connected to
-                    foreach (var roleName in _remainingServerRoleNames.ToArray())
-                        if (!roleName.Equals(receptionistRoleName)) TestConductor.Exit(roleName, 0).Wait();
-                    _remainingServerRoleNames = new HashSet<RoleName>(new[] { receptionistRoleName });
+                    _remainingServerRoleNames.Where(r => !r.Equals(receptionistRoleName)).ForEach(r =>
+                    {
+                        TestConductor.Exit(r, 0).Wait();
+                    });
+                    _remainingServerRoleNames = ImmutableHashSet.Create(receptionistRoleName);
 
                     // network partition between client and server
-                    TestConductor.Blackhole(_client, receptionistRoleName, ThrottleTransportAdapter.Direction.Both).Wait();
-                    c.Tell(new Client.ClusterClient.Send("/user/service2", "ping", localAffinity: true));
+                    TestConductor.Blackhole(_config.Client, receptionistRoleName, ThrottleTransportAdapter.Direction.Both).Wait();
+                    c.Tell(new ClusterClient.Send("/user/service2", "ping", localAffinity: true));
                     // if we would use remote watch the failure detector would trigger and
                     // connection quarantined
-                    ExpectNoMsg(TimeSpan.FromSeconds(5));
+                    ExpectNoMsg(5.Seconds());
 
-                    TestConductor.PassThrough(_client, receptionistRoleName, ThrottleTransportAdapter.Direction.Both).Wait();
+                    TestConductor.PassThrough(_config.Client, receptionistRoleName, ThrottleTransportAdapter.Direction.Both).Wait();
 
-                    var expectedAddress = Node(receptionistRoleName).Address;
+                    var expectedAddress = GetAddress(receptionistRoleName);
                     AwaitAssert(() =>
                     {
-                        c.Tell(new Client.ClusterClient.Send("/user/service2", "bonjour3", localAffinity: true));
-                        ExpectMsg("bonjour3-ack", TimeSpan.FromSeconds(1));
-                        var lastSenderAddress2 = LastSender.Path.Address;
-                        Assert.Equal(expectedAddress, lastSenderAddress2);
+                        var probe = CreateTestProbe();
+                        c.Tell(new ClusterClient.Send("/user/service2", "bonjour3", localAffinity: true), probe.Ref);
+                        var reply2 = probe.ExpectMsg<ClusterClientSpecConfig.Reply>(1.Seconds());
+                        reply2.Msg.Should().Be("bonjour3-ack");
+                        reply2.Node.Should().Be(expectedAddress);
                     });
                     Sys.Stop(c);
+                }, _config.Client);
 
-                }, _client);
                 EnterBarrier("after-5");
+            });
+        }
+
+        public void ClusterClient_must_reestablish_connection_to_receptionist_after_server_restart()
+        {
+            Within(30.Seconds(), () =>
+            {
+                RunOn(() =>
+                {
+                    _remainingServerRoleNames.Count.Should().Be(1);
+                    var remainingContacts = _remainingServerRoleNames.Select(r => Node(r) / "system" / "receptionist").ToList();
+                    var c = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(remainingContacts)), "client4");
+                    c.Tell(new ClusterClient.Send("/user/service2", "bonjour4", localAffinity: true));
+                    var reply = ExpectMsg<ClusterClientSpecConfig.Reply>(10.Seconds());
+                    reply.Msg.Should().Be("bonjour4-ack");
+                    reply.Node.Should().Be(remainingContacts.First().Address);
+
+                    var logSource = $"{(Sys as ExtendedActorSystem).Provider.DefaultAddress}/user/client4";
+                    EventFilter.Info(start: "Connected to", source: logSource).ExpectOne(() =>
+                    {
+                        EventFilter.Info(start: "Lost contact", source: logSource).ExpectOne(() =>
+                        {
+                            // shutdown server
+                            TestConductor.Shutdown(_remainingServerRoleNames.First()).Wait();
+                        });
+                    });
+
+                    c.Tell(new ClusterClient.Send("/user/service2", "shutdown", localAffinity: true));
+                    Thread.Sleep(2000); // to ensure that it is sent out before shutting down system
+                }, _config.Client);
+
+                RunOn(() =>
+                {
+                    Sys.WhenTerminated.Wait(20.Seconds());
+                    // start new system on same port
+                    var sys2 = ActorSystem.Create(
+                        Sys.Name,
+                        ConfigurationFactory.ParseString("akka.remote.helios.tcp.port=" + Cluster.Get(Sys).SelfAddress.Port).WithFallback(Sys.Settings.Config));
+                    Cluster.Get(sys2).Join(Cluster.Get(sys2).SelfAddress);
+                    var service2 = sys2.ActorOf(Props.Create(() => new ClusterClientSpecConfig.TestService(TestActor)), "service2");
+                    ClusterClientReceptionist.Get(sys2).RegisterService(service2);
+                    sys2.WhenTerminated.Wait(20.Seconds());
+                }, _remainingServerRoleNames.ToArray());
             });
         }
     }
