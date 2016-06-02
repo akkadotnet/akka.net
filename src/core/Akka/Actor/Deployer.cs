@@ -31,7 +31,7 @@ namespace Akka.Actor
             var rootObj = config.Root.GetObject();
             if (rootObj == null) return;
             var unwrapped = rootObj.Unwrapped.Where(d => !d.Key.Equals("default")).ToArray();
-            foreach (var d in unwrapped.Select(x => ParseConfig(x.Key, config.GetConfig(x.Key))))
+            foreach (var d in unwrapped.Select(x => ParseConfig(x.Key, config.GetConfig(x.Key.BetweenDoubleQuotes()))))
             {
                 SetDeploy(d);
             }

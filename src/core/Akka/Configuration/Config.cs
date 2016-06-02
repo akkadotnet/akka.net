@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using Akka.Configuration.Hocon;
+using Akka.Util.Internal;
 
 namespace Akka.Configuration
 {
@@ -95,7 +96,7 @@ namespace Akka.Configuration
 
         private HoconValue GetNode(string path)
         {
-            string[] elements = path.Split('.');
+            var elements = path.SplitDottedPathHonouringQuotes();
             HoconValue currentNode = Root;
             if (currentNode == null)
             {

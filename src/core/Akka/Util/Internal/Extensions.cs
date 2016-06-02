@@ -41,9 +41,42 @@ namespace Akka.Util.Internal
             return self.FirstOrDefault();
         }
 
+        /// <summary>
+        /// Like selectMany, but alternates between two selectors (starting with even for item 0)
+        /// </summary>
+        /// <typeparam name="TIn"></typeparam>
+        /// <typeparam name="TOut"></typeparam>
+        /// <param name="self">The input sequence</param>
+        /// <param name="evenSelector">The selector to use for items 0, 2, 4 etc.</param>
+        /// <param name="oddSelector">The selector to use for items 1, 3, 5 etc.</param>
+        /// <returns></returns>
+        public static IEnumerable<TOut> AlternateSelectMany<TIn, TOut>(this IEnumerable<TIn> self,
+            Func<TIn, IEnumerable<TOut>> evenSelector, Func<TIn, IEnumerable<TOut>> oddSelector)
+        {
+            return self.SelectMany((val, i) => i%2 == 0 ? evenSelector(val) : oddSelector(val));
+        }
+
+        /// <summary>
+        /// Splits a 'dotted path' in its elements, honouring quotes (not splitting by dots between quotes)
+        /// </summary>
+        /// <param name="path">The input path</param>
+        /// <returns>The path elements</returns>
+        public static IEnumerable<string> SplitDottedPathHonouringQuotes(this string path)
+        {
+            return path.Split('\"')
+                .AlternateSelectMany(
+                    outsideQuote => outsideQuote.Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries),
+                    insideQuote => new[] { insideQuote });
+        }
+
         public static string Join(this IEnumerable<string> self, string separator)
         {
             return string.Join(separator, self);
+        }
+
+        public static string BetweenDoubleQuotes(this string self)
+        {
+            return @"""" + self + @"""";
         }
 
         /// <summary>
