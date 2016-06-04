@@ -35,7 +35,7 @@ namespace Akka.Cluster
     /// the cluster address of this actor system is [[#selfAddress]]. A member also has a status;
     /// initially <see cref="Akka.Cluster.MemberStatus.Joining"/> followed by <see cref="Akka.Cluster.MemberStatus.Up"/>.
     /// </summary>
-    public class Cluster :IExtension
+    public class Cluster : IExtension
     {
         //TODO: Issue with missing overrides for Get and Lookup
 
@@ -53,18 +53,18 @@ namespace Akka.Cluster
         readonly ClusterSettings _settings;
         public ClusterSettings Settings { get { return _settings; } }
         readonly UniqueAddress _selfUniqueAddress;
-        public UniqueAddress SelfUniqueAddress {get{return _selfUniqueAddress;}}
-        
+        public UniqueAddress SelfUniqueAddress { get { return _selfUniqueAddress; } }
+
         public Cluster(ActorSystemImpl system)
         {
             System = system;
-            _settings = new ClusterSettings(system.Settings.Config, system.Name);    
+            _settings = new ClusterSettings(system.Settings.Config, system.Name);
 
             var provider = system.Provider as ClusterActorRefProvider;
-            if(provider == null)
+            if (provider == null)
                 throw new ConfigurationException(
-                    String.Format("ActorSystem {0} needs to have a 'ClusterActorRefProvider' enabled in the configuration, currently uses {1}", 
-                        system, 
+                    String.Format("ActorSystem {0} needs to have a 'ClusterActorRefProvider' enabled in the configuration, currently uses {1}",
+                        system,
                         system.Provider.GetType().FullName));
             _selfUniqueAddress = new UniqueAddress(provider.Transport.DefaultAddress, AddressUidExtension.Uid(system));
 
@@ -137,7 +137,7 @@ namespace Akka.Cluster
         /// </summary>
         public void Unsubscribe(IActorRef subscriber)
         {
-            Unsubscribe(subscriber,null);
+            Unsubscribe(subscriber, null);
         }
 
         /// <summary>
@@ -220,10 +220,24 @@ namespace Akka.Cluster
         /// Typically used together with configuration option 'akka.cluster.min-nr-of-members' to defer some action,
         /// such as starting actors, until the cluster has reached a certain size.
         /// </summary>
-        /// <param name="callback"></param>
+        /// <param name="callback">The callback that will be run whenever the current member achieves a status of <see cref="MemberStatus.Up"/></param>
         public void RegisterOnMemberUp(Action callback)
         {
             _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberUpListener(callback));
+        }
+
+        /// <summary>
+        /// The supplied callback will be run once when the current cluster member is <see cref="MemberStatus.Removed"/>.
+        /// 
+        /// Typically used in combination with <see cref="Leave"/> and <see cref="ActorSystem.Terminate"/>.
+        /// </summary>
+        /// <param name="callback">The callback that will be run whenever the current member achieves a status of <see cref="MemberStatus.Down"/></param>
+        public void RegisterOnMemberRemoved(Action callback)
+        {
+            if (IsTerminated)
+                callback();
+            else
+                _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberRemovedListener(callback));
         }
 
         /// <summary>
@@ -252,7 +266,7 @@ namespace Akka.Cluster
 
         readonly ILoggingAdapter _log;
         readonly ClusterReadView _readView;
-        public ClusterReadView ReadView {get { return _readView; }}
+        public ClusterReadView ReadView { get { return _readView; } }
 
         readonly DefaultFailureDetectorRegistry<Address> _failureDetector;
         public DefaultFailureDetectorRegistry<Address> FailureDetector { get { return _failureDetector; } }
@@ -270,7 +284,16 @@ namespace Akka.Cluster
             return system.Scheduler;
         }
 
-        public void Shutdown()
+        /// <summary>
+        /// INTERNAL API.
+        /// 
+        /// Shuts down all connections to other members, the cluster daemon and the periodic gossip and cleanup tasks.
+        /// Should not called by the user. 
+        /// 
+        /// The user can issue a <see cref="Leave"/> command which will tell the node
+        /// to go through graceful handoff process `LEAVE -> EXITING ->  REMOVED -> SHUTDOWN`.
+        /// </summary>
+        internal void Shutdown()
         {
             if (_isTerminated.CompareAndSet(false, true))
             {

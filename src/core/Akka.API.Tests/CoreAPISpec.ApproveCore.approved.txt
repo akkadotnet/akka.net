@@ -1,4 +1,5 @@
 ﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests.MultiNode")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.MultiNodeTestRunner.Shared.Tests")]
@@ -1498,6 +1499,7 @@ namespace Akka.Actor
         public int LogDeadLetters { get; }
         public bool LogDeadLettersDuringShutdown { get; }
         public System.Collections.Generic.IList<string> Loggers { get; }
+        public string LoggersDispatcher { get; }
         public System.TimeSpan LoggerStartTimeout { get; }
         public string LogLevel { get; }
         public string ProviderClass { get; }

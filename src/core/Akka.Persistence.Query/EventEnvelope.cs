@@ -56,5 +56,7 @@ namespace Akka.Persistence.Query
                 return hashCode;
             }
         }
+
+        public override string ToString() => $"EventEnvelope(persistenceId:{PersistenceId}, seqNr:{SequenceNr}, offset:{Offset}, event:{Event})";
     }
 }

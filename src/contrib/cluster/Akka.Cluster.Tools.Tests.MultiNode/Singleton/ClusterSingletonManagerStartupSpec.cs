@@ -12,36 +12,58 @@ using Akka.Cluster.Tests.MultiNode;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
+using FluentAssertions;
 using Xunit;
 
-namespace Akka.Cluster.Tools.Tests.Singleton
+namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 {
     public class ClusterSingletonManagerStartupConfig : MultiNodeConfig
     {
+        public readonly RoleName First;
+        public readonly RoleName Second;
+        public readonly RoleName Third;
+
         public ClusterSingletonManagerStartupConfig()
         {
-            var first = Role("first");
-            var second = Role("second");
-            var third = Role("third");
+            First = Role("first");
+            Second = Role("second");
+            Third = Role("third");
 
             CommonConfig = ConfigurationFactory.ParseString(@"
-            akka.loglevel = DEBUG
-            akka.actor.provider = ""Akka.Aluster.ClusterActorRefProvider, Akka.Cluster""
-            akka.remote.log-remote-lifecycle-events = off
-            akka.cluster.auto-down-unreachable-after = 0s")
+                akka.loglevel = INFO
+                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+                akka.remote.log-remote-lifecycle-events = off
+                akka.cluster.auto-down-unreachable-after = 0s")
             .WithFallback(ClusterSingletonManager.DefaultConfig())
+            .WithFallback(ClusterSingletonProxy.DefaultConfig())
             .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
     }
 
-    public class ClusterSingletonManagerStartupNode1 : ClusterSingletonManagerStartupConfig { }
-    public class ClusterSingletonManagerStartupNode2 : ClusterSingletonManagerStartupConfig { }
-    public class ClusterSingletonManagerStartupNode3 : ClusterSingletonManagerStartupConfig { }
+    public class ClusterSingletonManagerStartupNode1 : ClusterSingletonManagerStartupSpec { }
+    public class ClusterSingletonManagerStartupNode2 : ClusterSingletonManagerStartupSpec { }
+    public class ClusterSingletonManagerStartupNode3 : ClusterSingletonManagerStartupSpec { }
 
     public abstract class ClusterSingletonManagerStartupSpec : MultiNodeClusterSpec
     {
-        protected ClusterSingletonManagerStartupSpec() : base(new ClusterSingletonManagerStartupConfig())
+        private class Echo : ReceiveActor
         {
+            public Echo()
+            {
+                ReceiveAny(_ => Sender.Tell(Self));
+            }
+        }
+
+        private readonly ClusterSingletonManagerStartupConfig _config;
+
+        protected ClusterSingletonManagerStartupSpec() : this(new ClusterSingletonManagerStartupConfig())
+        {
+
+        }
+
+        protected ClusterSingletonManagerStartupSpec(ClusterSingletonManagerStartupConfig config) : base(config)
+        {
+            _config = config;
             EchoProxy = new Lazy<IActorRef>(() => Sys.ActorOf(ClusterSingletonProxy.Props(
                 singletonManagerPath: "/user/echo",
                 settings: ClusterSingletonProxySettings.Create(Sys)),
@@ -53,26 +75,24 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         protected Lazy<IActorRef> EchoProxy;
 
         [MultiNodeFact]
+        public void ClusterSingletonManagerStartupSpecs()
+        {
+            Startup_of_ClusterSingleton_should_be_quick();
+        }
+        
         public void Startup_of_ClusterSingleton_should_be_quick()
         {
-            var first = GetRole("first");
-            var second = GetRole("second");
-            var third = GetRole("third");
-            
-            Join(first, first);
-            Join(second, first);
-            Join(third, first);
+            Join(_config.First, _config.First);
+            Join(_config.Second, _config.First);
+            Join(_config.Third, _config.First);
 
             Within(TimeSpan.FromSeconds(7), () =>
             {
                 AwaitAssert(() =>
                 {
-                    var members = Cluster.Get(Sys).ReadView.State.Members;
+                    var members = Cluster.ReadView.State.Members;
                     Assert.Equal(3, members.Count);
-                    foreach (var member in members)
-                    {
-                        Assert.Equal(MemberStatus.Up, member.Status);
-                    }
+                    members.All(c => c.Status == MemberStatus.Up).Should().BeTrue();
                 });
             });
             EnterBarrier("all-up");
@@ -84,16 +104,11 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             EnterBarrier("done");
         }
 
-        private RoleName GetRole(string name)
-        {
-            return Roles.First(roleName => roleName.Name == name);
-        }
-
         private void Join(RoleName from, RoleName to)
         {
             RunOn(() =>
             {
-                Cluster.Get(Sys).Join(Node(to).Address);
+                Cluster.Join(GetAddress(to));
                 CreateSingleton();
             }, from);
         }
@@ -101,7 +116,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         private IActorRef CreateSingleton()
         {
             return Sys.ActorOf(ClusterSingletonManager.Props(
-                singletonProps: Props.Create(() => new Echo(TestActor)),
+                singletonProps: Props.Create<Echo>(),
                 settings: ClusterSingletonManagerSettings.Create(Sys),
                 terminationMessage: PoisonPill.Instance),
                 name: "echo");

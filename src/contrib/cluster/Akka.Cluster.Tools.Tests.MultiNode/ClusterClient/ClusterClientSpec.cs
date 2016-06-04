@@ -19,7 +19,7 @@ using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Xunit;
 
-namespace Akka.Cluster.Tools.Tests.Client
+namespace Akka.Cluster.Tools.Tests.MultiNode.ClusterClient
 {
     public class ClusterClientSpecConfig : MultiNodeConfig
     {
@@ -175,8 +175,8 @@ namespace Akka.Cluster.Tools.Tests.Client
             {
                 RunOn(() =>
                 {
-                    var c = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client1");
-                    c.Tell(new ClusterClient.Send("/user/testService", "hello", localAffinity: true));
+                    var c = Sys.ActorOf(Client.ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client1");
+                    c.Tell(new Client.ClusterClient.Send("/user/testService", "hello", localAffinity: true));
                     ExpectMsg("hello-ack");
                     Sys.Stop(c);
                 }, _client);
@@ -216,9 +216,9 @@ namespace Akka.Cluster.Tools.Tests.Client
 
                 RunOn(() =>
                 {
-                    var c = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client");
-                    c.Tell(new ClusterClient.Send("/user/serviceA", "hello", localAffinity: true));
-                    c.Tell(new ClusterClient.SendToAll("/user/serviceB", "hi"));
+                    var c = Sys.ActorOf(Client.ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client");
+                    c.Tell(new Client.ClusterClient.Send("/user/serviceA", "hello", localAffinity: true));
+                    c.Tell(new Client.ClusterClient.SendToAll("/user/serviceB", "hi"));
                 }, _client);
 
                 RunOn(() =>
@@ -252,8 +252,8 @@ namespace Akka.Cluster.Tools.Tests.Client
 
                 RunOn(() =>
                 {
-                    var c = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client2");
-                    c.Tell(new ClusterClient.Send("/user/service2", "bonjour", localAffinity: true));
+                    var c = Sys.ActorOf(Client.ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client2");
+                    c.Tell(new Client.ClusterClient.Send("/user/service2", "bonjour", localAffinity: true));
                     ExpectMsg("bonjour-ack");
                     var lastSenderAddress = LastSender.Path.Address;
 
@@ -267,7 +267,7 @@ namespace Akka.Cluster.Tools.Tests.Client
                     {
                         AwaitAssert(() =>
                         {
-                            c.Tell(new ClusterClient.Send("/user/service2", "hi again", localAffinity: true));
+                            c.Tell(new Client.ClusterClient.Send("/user/service2", "hi again", localAffinity: true));
                             ExpectMsg("hi again-ack", TimeSpan.FromSeconds(1));
                         });
                     });
@@ -284,7 +284,7 @@ namespace Akka.Cluster.Tools.Tests.Client
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void ClusterClient_should_reestablish_connection_to_receptionist_after_partition()
         {
             ClusterClient_should_reestablish_connection_to_another_receptionist_when_server_is_shutdown();
@@ -293,8 +293,8 @@ namespace Akka.Cluster.Tools.Tests.Client
             {
                 RunOn(() =>
                 {
-                    var c = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client3");
-                    c.Tell(new ClusterClient.Send("/user/service2", "bonjour2", localAffinity: true));
+                    var c = Sys.ActorOf(Client.ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(InitialContacts)), "client3");
+                    c.Tell(new Client.ClusterClient.Send("/user/service2", "bonjour2", localAffinity: true));
                     ExpectMsg("bonjour2-ack");
                     var lastSenderAddress = LastSender.Path.Address;
 
@@ -308,7 +308,7 @@ namespace Akka.Cluster.Tools.Tests.Client
 
                     // network partition between client and server
                     TestConductor.Blackhole(_client, receptionistRoleName, ThrottleTransportAdapter.Direction.Both).Wait();
-                    c.Tell(new ClusterClient.Send("/user/service2", "ping", localAffinity: true));
+                    c.Tell(new Client.ClusterClient.Send("/user/service2", "ping", localAffinity: true));
                     // if we would use remote watch the failure detector would trigger and
                     // connection quarantined
                     ExpectNoMsg(TimeSpan.FromSeconds(5));
@@ -318,7 +318,7 @@ namespace Akka.Cluster.Tools.Tests.Client
                     var expectedAddress = Node(receptionistRoleName).Address;
                     AwaitAssert(() =>
                     {
-                        c.Tell(new ClusterClient.Send("/user/service2", "bonjour3", localAffinity: true));
+                        c.Tell(new Client.ClusterClient.Send("/user/service2", "bonjour3", localAffinity: true));
                         ExpectMsg("bonjour3-ack", TimeSpan.FromSeconds(1));
                         var lastSenderAddress2 = LastSender.Path.Address;
                         Assert.Equal(expectedAddress, lastSenderAddress2);

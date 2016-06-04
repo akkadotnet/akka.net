@@ -18,7 +18,7 @@ using Akka.Event;
 using Akka.Remote.TestKit;
 using Xunit;
 
-namespace Akka.Cluster.Tools.Tests.PublishSubscribe
+namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 {
     public class DistributedPubSubMediatorSpecConfig : MultiNodeConfig
     {
@@ -711,7 +711,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void DistributedPubSubMediator_should_get_topics_after_simple_publish()
         {
             DistributedPubSubMediator_should_receive_proper_UnsubscribeAck_message();
