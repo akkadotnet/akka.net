@@ -1,3 +1,5 @@
+This branch in this fork is to port Akka.net over to .Net Core. It's a work-in-progress (keyworks: coreclr).
+
 # Akka.NET
 
 ![Akka.NET logo](documentation/icons/AkkaNetLogo.Normal.png)
