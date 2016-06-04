@@ -7,9 +7,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Util.Internal;
@@ -17,6 +19,8 @@ using Akka.Util.Internal;
 namespace Akka.Remote
 {
     /// <summary>
+    /// INTERNAL API
+    /// 
     /// Remote nodes with actors that are watched are monitored by this actor to be able
     /// to detect network failures and process crashes. <see cref="RemoteActorRefProvider"/>
     /// intercepts Watch and Unwatch system messages and sends corresponding
@@ -33,65 +37,43 @@ namespace Akka.Remote
     /// For bi-directional watch between two nodes the same thing will be established in
     /// both directions, but independent of each other.
     /// </summary>
-    public class RemoteWatcher : UntypedActor
+    public class RemoteWatcher : UntypedActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         public static Props Props(
-            DefaultFailureDetectorRegistry<Address> failureDetector,
+            IFailureDetectorRegistry<Address> failureDetector,
             TimeSpan heartbeatInterval,
             TimeSpan unreachableReaperInterval,
             TimeSpan heartbeatExpectedResponseAfter)
         {
-            return new Props(
-                Deploy.Local,
-                typeof(RemoteWatcher),
-                new Object[] { failureDetector, heartbeatInterval, unreachableReaperInterval, heartbeatExpectedResponseAfter });
+            return Actor.Props.Create(() => new RemoteWatcher(failureDetector, heartbeatInterval, unreachableReaperInterval, heartbeatExpectedResponseAfter))
+                .WithDeploy(Deploy.Local);
         }
 
         public abstract class WatchCommand
         {
-            readonly IActorRef _watchee;
-            readonly IActorRef _watcher;
+            readonly IInternalActorRef _watchee;
+            readonly IInternalActorRef _watcher;
 
-            protected WatchCommand(IActorRef watchee, IActorRef watcher)
+            protected WatchCommand(IInternalActorRef watchee, IInternalActorRef watcher)
             {
                 _watchee = watchee;
                 _watcher = watcher;
             }
 
-            public IActorRef Watchee
-            {
-                get { return _watchee; }
-            }
+            public IInternalActorRef Watchee => _watchee;
 
-            public IActorRef Watcher
-            {
-                get { return _watcher; }
-            }
+            public IInternalActorRef Watcher => _watcher;
         }
         public sealed class WatchRemote : WatchCommand
         {
-            public WatchRemote(IActorRef watchee, IActorRef watcher)
+            public WatchRemote(IInternalActorRef watchee, IInternalActorRef watcher)
                 : base(watchee, watcher)
             {
             }
         }
         public sealed class UnwatchRemote : WatchCommand
         {
-            public UnwatchRemote(IActorRef watchee, IActorRef watcher)
-                : base(watchee, watcher)
-            {
-            }
-        }
-        public sealed class RewatchRemote : WatchCommand
-        {
-            public RewatchRemote(IActorRef watchee, IActorRef watcher)
-                : base(watchee, watcher)
-            {
-            }
-        }
-        public class Rewatch : Watch
-        {
-            public Rewatch(IInternalActorRef watchee, IInternalActorRef watcher)
+            public UnwatchRemote(IInternalActorRef watchee, IInternalActorRef watcher)
                 : base(watchee, watcher)
             {
             }
@@ -199,36 +181,32 @@ namespace Akka.Remote
 
             public static Stats Counts(int watching, int watchingNodes)
             {
-                return new Stats(watching, watchingNodes, new HashSet<Tuple<IActorRef, IActorRef>>());
+                return new Stats(watching, watchingNodes);
             }
 
             readonly int _watching;
             readonly int _watchingNodes;
-            //TODO: This should either be a deep copy or immutable
-            //@Aaronontheweb 2/7/2015 - we now return a deep copy everytime the refs get shared, see line 334
-            readonly HashSet<Tuple<IActorRef, IActorRef>> _watchingRefs;
+            readonly ImmutableHashSet<Tuple<IActorRef, IActorRef>> _watchingRefs;
+            readonly ImmutableHashSet<Address> _watchingAddresses;
 
-            public Stats(int watching, int watchingNodes, HashSet<Tuple<IActorRef, IActorRef>> watchingRefs)
+            public Stats(int watching, int watchingNodes) : this(watching, watchingNodes, 
+                ImmutableHashSet<Tuple<IActorRef, IActorRef>>.Empty, ImmutableHashSet<Address>.Empty) { }
+
+            public Stats(int watching, int watchingNodes, ImmutableHashSet<Tuple<IActorRef, IActorRef>> watchingRefs, ImmutableHashSet<Address> watchingAddresses)
             {
                 _watching = watching;
                 _watchingNodes = watchingNodes;
                 _watchingRefs = watchingRefs;
+                _watchingAddresses = watchingAddresses;
             }
 
-            public int Watching
-            {
-                get { return _watching; }
-            }
+            public int Watching => _watching;
 
-            public int WatchingNodes
-            {
-                get { return _watchingNodes; }
-            }
+            public int WatchingNodes => _watchingNodes;
 
-            public HashSet<Tuple<IActorRef, IActorRef>> WatchingRefs
-            {
-                get { return _watchingRefs; }
-            }
+            public ImmutableHashSet<Tuple<IActorRef, IActorRef>> WatchingRefs => _watchingRefs;
+
+            public ImmutableHashSet<Address> WatchingAddresses => _watchingAddresses;
 
             public override string ToString()
             {
@@ -236,30 +214,22 @@ namespace Akka.Remote
                 {
                     if (!_watchingRefs.Any()) return "";
                     return
-                        String.Format(", watchingRefs=[{0}]",
-                            _watchingRefs.Select(r => r.Item2.Path.Name + "-> " + r.Item1.Path.Name)
-                                .Aggregate((a, b) => a + ", " + b));
+                        $"{_watchingRefs.Select(r => r.Item2.Path.Name + "-> " + r.Item1.Path.Name).Aggregate((a, b) => a + ", " + b)}";
                 };
 
-                return string.Format("Stats(watching={0}, watchingNodes={1}{2}", _watching, _watchingNodes,
-                    formatWatchingRefs());
+                Func<string> formatWatchingAddresses = () =>
+                {
+                    if (!_watchingAddresses.Any())
+                        return "";
+                    return string.Join(",", WatchingAddresses);
+                };
+
+                return $"Stats(watching={_watching}, watchingNodes={_watchingNodes}, watchingRefs=[{formatWatchingRefs()}], watchingAddresses=[{formatWatchingAddresses()}])";
             }
 
-            public static Stats Copy(int watching, int watchingNodes, HashSet<Tuple<IActorRef, IActorRef>> watchingRefs = null)
+            public Stats Copy(int watching, int watchingNodes, ImmutableHashSet<Tuple<IActorRef, IActorRef>> watchingRefs = null, ImmutableHashSet<Address> watchingAddresses = null)
             {
-                HashSet<Tuple<IActorRef, IActorRef>> finalRefs;
-                if (watchingRefs != null)
-                {
-                    var arr = new Tuple<IActorRef, IActorRef>[watchingRefs.Count];
-                    watchingRefs.CopyTo(arr);
-                    finalRefs = new HashSet<Tuple<IActorRef, IActorRef>>(arr);
-                }
-                else
-                {
-                    finalRefs = new HashSet<Tuple<IActorRef, IActorRef>>();
-                }
-
-                return new Stats(watching, watchingNodes, finalRefs);
+                return new Stats(watching, watchingNodes, watchingRefs ?? WatchingRefs, watchingAddresses ?? WatchingAddresses);
             }
         }
 
@@ -274,7 +244,8 @@ namespace Akka.Remote
             _heartbeatExpectedResponseAfter = heartbeatExpectedResponseAfter;
             var systemProvider = Context.System.AsInstanceOf<ExtendedActorSystem>().Provider as RemoteActorRefProvider;
             if (systemProvider != null) _remoteProvider = systemProvider;
-            else throw new ConfigurationException(String.Format("ActorSystem {0} needs to have a 'RemoteActorRefProvider' enabled in the configuration, current uses {1}", Context.System, Context.System.AsInstanceOf<ExtendedActorSystem>().Provider.GetType().FullName));
+            else throw new ConfigurationException(
+                $"ActorSystem {Context.System} needs to have a 'RemoteActorRefProvider' enabled in the configuration, current uses {Context.System.AsInstanceOf<ExtendedActorSystem>().Provider.GetType().FullName}");
 
             _heartbeatCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(heartbeatInterval, heartbeatInterval, Self, HeartbeatTick.Instance, Self);
             _failureDetectorReaperCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(unreachableReaperInterval, unreachableReaperInterval, Self, ReapUnreachableTick.Instance, Self);
@@ -285,11 +256,20 @@ namespace Akka.Remote
         readonly IScheduler _scheduler = Context.System.Scheduler;
         readonly RemoteActorRefProvider _remoteProvider;
         readonly HeartbeatRsp _selfHeartbeatRspMsg = new HeartbeatRsp(AddressUidExtension.Uid(Context.System));
-        readonly HashSet<Tuple<IActorRef, IActorRef>> _watching = new HashSet<Tuple<IActorRef, IActorRef>>();
-        protected HashSet<Tuple<IActorRef, IActorRef>> Watching { get { return _watching; } } //TODO: this needs to be immutable
-        readonly HashSet<Address> _watchingNodes = new HashSet<Address>();
-        readonly HashSet<Address> _unreachable = new HashSet<Address>();
-        protected HashSet<Address> Unreachable { get { return _unreachable; } }
+       
+        /// <summary>
+        ///  Actors that this node is watching, map of watchee --> Set(watchers)
+        /// </summary>
+        protected readonly Dictionary<IInternalActorRef, HashSet<IInternalActorRef>>  Watching = new Dictionary<IInternalActorRef, HashSet<IInternalActorRef>>();
+
+        /// <summary>
+        /// Nodes that this node is watching, i.e. expecting heartbeats from these nodes. Map of address --> Set(watchee) on this address.
+        /// </summary>
+        protected readonly Dictionary<Address, HashSet<IInternalActorRef>> WatcheeByNodes = new Dictionary<Address, HashSet<IInternalActorRef>>();
+
+        protected ICollection<Address> WatchingNodes => WatcheeByNodes.Keys;
+        protected HashSet<Address> Unreachable { get; } = new HashSet<Address>();
+
         readonly Dictionary<Address, int> _addressUids = new Dictionary<Address, int>();
 
         readonly ICancelable _heartbeatCancelable;
@@ -312,26 +292,35 @@ namespace Akka.Remote
             else if (message is WatchRemote)
             {
                 var watchRemote = (WatchRemote)message;
-                ProcessWatchRemote(watchRemote.Watchee, watchRemote.Watcher);
+                AddWatching(watchRemote.Watchee, watchRemote.Watcher);
             }
             else if (message is UnwatchRemote)
             {
                 var unwatchRemote = (UnwatchRemote)message;
-                ProcessUnwatchRemote(unwatchRemote.Watchee, unwatchRemote.Watcher);
+                RemoveWatch(unwatchRemote.Watchee, unwatchRemote.Watcher);
             }
             else if (message is Terminated)
             {
                 var t = (Terminated)message;
-                ProcessTerminated(t.ActorRef, t.ExistenceConfirmed, t.AddressTerminated);
+                ProcessTerminated(t.ActorRef.AsInstanceOf<IInternalActorRef>(), t.ExistenceConfirmed, t.AddressTerminated);
             }
-            else if (message is RewatchRemote)
-            {
-                var rewatchRemote = (RewatchRemote)message;
-                ProcessRewatchRemote(rewatchRemote.Watchee, rewatchRemote.Watcher);
-            }
-
             // test purpose
-            else if (message is Stats) Sender.Tell(Stats.Copy(_watching.Count(), _watchingNodes.Count, _watching));
+            else if (message is Stats)
+            {
+                var watchSet = ImmutableHashSet.Create(Watching.SelectMany(pair =>
+                {
+                    var list = new List<Tuple<IActorRef, IActorRef>>(pair.Value.Count);
+                    var wee = pair.Key;
+                    list.AddRange(pair.Value.Select(wer => Tuple.Create<IActorRef, IActorRef>(wee, wer)));
+                    return list;
+                }).ToArray());
+                Sender.Tell(new Stats(watchSet.Count(), WatchingNodes.Count, watchSet,
+                    ImmutableHashSet.Create(WatchingNodes.ToArray())));
+            }
+            else
+            {
+                Unhandled(message);
+            }
         }
 
         private void ReceiveHeartbeat()
@@ -345,14 +334,14 @@ namespace Akka.Remote
 
             if (_failureDetector.IsMonitoring(from))
             {
-                _log.Debug("Received heartbeat rsp from [{0}]", from);
+                Log.Debug("Received heartbeat rsp from [{0}]", from);
             }
             else
             {
-                _log.Debug("Received first heartbeat rsp from [{0}]", from);
+                Log.Debug("Received first heartbeat rsp from [{0}]", from);
             }
 
-            if (_watchingNodes.Contains(from) && !_unreachable.Contains(from))
+            if (WatcheeByNodes.ContainsKey(from) && !Unreachable.Contains(from))
             {
                 if (!_addressUids.ContainsKey(from) || _addressUids[from] != uid)
                     ReWatch(from);
@@ -363,18 +352,18 @@ namespace Akka.Remote
 
         private void ReapUnreachable()
         {
-            foreach (var a in _watchingNodes)
+            foreach (var a in WatchingNodes)
             {
-                if (!_unreachable.Contains(a) && !_failureDetector.IsAvailable(a))
+                if (!Unreachable.Contains(a) && !_failureDetector.IsAvailable(a))
                 {
-                    _log.Warning("Detected unreachable: [{0}]", a);
+                    Log.Warning("Detected unreachable: [{0}]", a);
                     int addressUid;
                     var nullableAddressUid =
                         _addressUids.TryGetValue(a, out addressUid) ? new int?(addressUid) : null;
 
                     Quarantine(a, nullableAddressUid);
                     PublishAddressTerminated(a);
-                    _unreachable.Add(a);
+                    Unreachable.Add(a);
                 }
             }
         }
@@ -389,107 +378,115 @@ namespace Akka.Remote
             _remoteProvider.Quarantine(address, addressUid);
         }
 
-        private void ProcessRewatchRemote(IActorRef watchee, IActorRef watcher)
+        protected void AddWatching(IInternalActorRef watchee, IInternalActorRef watcher)
         {
-            if (_watching.Contains(Tuple.Create(watchee, watcher)))
-                ProcessWatchRemote(watchee, watcher);
-            else
-                //has been unwatched inbetween, skip re-watch
-                _log.Debug("Ignoring re-watch after being unwatched in the meantime: [{0} -> {1}]", watcher.Path,
-                    watchee.Path);
+            // TODO: replace with Code Contracts assertion
+            if(watcher.Equals(Self)) throw new InvalidOperationException("Watcher cannot be the RemoteWatcher!");
+            Log.Debug("Watching: [{0} -> {1}]", watcher.Path, watchee.Path);
+
+            HashSet<IInternalActorRef> watching;
+            if (Watching.TryGetValue(watchee, out watching))
+                watching.Add(watcher);
+           else Watching.Add(watchee, new HashSet<IInternalActorRef> { watcher });
+            WatchNode(watchee);
+
+            // add watch from self, this will actually send a Watch to the target when necessary
+            Context.Watch(watchee);
         }
 
-        private void ProcessWatchRemote(IActorRef watchee, IActorRef watcher)
+        protected virtual void WatchNode(IInternalActorRef watchee)
         {
-            if (watcher != Self)
-            {
-                _log.Debug("Watching: [{0} -> {1}]", watcher.Path, watchee.Path);
-                AddWatching(watchee, watcher);
-
-                // also watch from self, to be able to cleanup on termination of the watchee
-                Context.Watch(watchee);
-                _watching.Add(Tuple.Create(watchee, Self));
-            }
-        }
-
-        private void AddWatching(IActorRef watchee, IActorRef watcher)
-        {
-            _watching.Add(Tuple.Create(watchee, watcher));
             var watcheeAddress = watchee.Path.Address;
-            if (!_watchingNodes.Contains(watcheeAddress) && _unreachable.Contains(watcheeAddress))
+            if (!WatcheeByNodes.ContainsKey(watcheeAddress) && Unreachable.Contains(watcheeAddress))
             {
-                // first watch to that node after previous unreachable
-                _unreachable.Remove(watcheeAddress);
+                // first watch to a node after a previous unreachable
+                Unreachable.Remove(watcheeAddress);
                 _failureDetector.Remove(watcheeAddress);
             }
-            _watchingNodes.Add(watcheeAddress);
+
+            HashSet<IInternalActorRef> watchees;
+            if (WatcheeByNodes.TryGetValue(watcheeAddress, out watchees))
+                watchees.Add(watchee);
+            else WatcheeByNodes.Add(watcheeAddress, new HashSet<IInternalActorRef> { watchee });
         }
 
-        protected void ProcessUnwatchRemote(IActorRef watchee, IActorRef watcher)
-        {
-            if (!Equals(watcher, Self))
-            {
-                _log.Debug("Unwatching: [{0} -> {1}]", watcher.Path, watchee.Path);
-                _watching.Remove(Tuple.Create(watchee, watcher));
 
-                // clean up self watch when no more watchers of this watchee
-                if (_watching.All(t => !Equals(t.Item1, watchee) || Equals(t.Item2, Self)))
+        protected void RemoveWatch(IInternalActorRef watchee, IInternalActorRef watcher)
+        {
+            if (watcher.Equals(Self)) throw new InvalidOperationException("Watcher cannot be the RemoteWatcher!");
+            Log.Debug($"Unwatching: [{watcher.Path} -> {watchee.Path}]");
+            HashSet<IInternalActorRef> watchers;
+            if (Watching.TryGetValue(watchee, out watchers))
+            {
+                watchers.Remove(watcher);
+                if (!watchers.Any())
                 {
-                    _log.Debug("Cleanup self watch of [{0}]", watchee.Path);
+                    // clean up self watch when no more watchers of this watchee
+                    Log.Debug("Cleanup self watch of [{0}]", watchee.Path);
                     Context.Unwatch(watchee);
-                    _watching.Remove(Tuple.Create(watchee, Self));
+                    RemoveWatchee(watchee);
                 }
-                CheckLastUnwatchOfNode(watchee.Path.Address);
             }
         }
 
-        private void ProcessTerminated(IActorRef watchee, bool existenceConfirmed, bool addressTerminated)
+        protected void RemoveWatchee(IInternalActorRef watchee)
         {
-            _log.Debug("Watchee terminated: [{0}]", watchee.Path);
-
-            // When watchee is stopped it sends DeathWatchNotification to the watcher and to this RemoteWatcher,
-            // which is also watching. Send extra DeathWatchNotification to the watcher in case the
-            // DeathWatchNotification message is only delivered to RemoteWatcher. Otherwise there is a risk that
-            // the monitoring is removed, subsequent node failure is not detected and the original watcher is
-            // never notified. This may occur for normal system shutdown of the watchee system when not all remote
-            // messages are flushed at shutdown.
-            var toProcess = _watching.Where(t => t.Item1.Equals(watchee)).ToList();
-            foreach (var t in toProcess)
+            var watcheeAddress = watchee.Path.Address;
+            Watching.Remove(watchee);
+            HashSet<IInternalActorRef> watchees;
+            if (WatcheeByNodes.TryGetValue(watcheeAddress, out watchees))
             {
-                if (!addressTerminated && !Equals(t.Item2, Self))
-                    t.Item2.Tell(new DeathWatchNotification(watchee, existenceConfirmed, false));
+                watchees.Remove(watchee);
+                if (!watchees.Any())
+                {
+                    // unwatched last watchee on that node
+                    Log.Debug("Unwatched last watchee of node: [{0}]", watcheeAddress);
+                    UnwatchNode(watcheeAddress);
+                }
             }
-
-            foreach (var t in toProcess) _watching.Remove(t);
-
-            CheckLastUnwatchOfNode(watchee.Path.Address);
         }
 
-        private void CheckLastUnwatchOfNode(Address watcheeAddress)
+        protected void UnwatchNode(Address watcheeAddress)
         {
-            if (_watchingNodes.Contains(watcheeAddress) && _watching.All(t => t.Item1.Path.Address != watcheeAddress))
+            WatcheeByNodes.Remove(watcheeAddress);
+            _addressUids.Remove(watcheeAddress);
+            _failureDetector.Remove(watcheeAddress);
+        }
+
+      
+        private void ProcessTerminated(IInternalActorRef watchee, bool existenceConfirmed, bool addressTerminated)
+        {
+            Log.Debug("Watchee terminated: [{0}]", watchee.Path);
+
+            // When watchee is stopped it sends DeathWatchNotification to this RemoteWatcher,
+            // which will propagate it to all watchers of this watchee.
+            // addressTerminated case is already handled by the watcher itself in DeathWatch trait
+
+            if (!addressTerminated)
             {
-                // unwatched last watchee on that node
-                _log.Debug("Unwatched last watchee of node: [{0}]", watcheeAddress);
-                _watchingNodes.Remove(watcheeAddress);
-                _addressUids.Remove(watcheeAddress);
-                _failureDetector.Remove(watcheeAddress);
+                foreach (var watcher in Watching[watchee])
+                {
+                    // ReSharper disable once ConditionIsAlwaysTrueOrFalse
+                    watcher.SendSystemMessage(new DeathWatchNotification(watchee, existenceConfirmed, addressTerminated));
+                }
             }
+
+            RemoveWatchee(watchee);
         }
 
         private void SendHeartbeat()
         {
-            foreach (var a in _watchingNodes)
+            foreach (var a in WatchingNodes)
             {
-                if (!_unreachable.Contains(a))
+                if (!Unreachable.Contains(a))
                 {
                     if (_failureDetector.IsMonitoring(a))
                     {
-                        _log.Debug("Sending Heartbeat to [{0}]", a);
+                        Log.Debug("Sending Heartbeat to [{0}]", a);
                     }
                     else
                     {
-                        _log.Debug("Sending first Heartbeat to [{0}]", a);
+                        Log.Debug("Sending first Heartbeat to [{0}]", a);
                         // schedule the expected first heartbeat for later, which will give the
                         // other side a chance to reply, and also trigger some resends if needed
                         _scheduler.ScheduleTellOnce(_heartbeatExpectedResponseAfter, Self, new ExpectedFirstHeartbeat(a), Self);
@@ -501,9 +498,9 @@ namespace Akka.Remote
 
         private void TriggerFirstHeartbeat(Address address)
         {
-            if (_watchingNodes.Contains(address) && !_failureDetector.IsMonitoring(address))
+            if (WatchingNodes.Contains(address) && !_failureDetector.IsMonitoring(address))
             {
-                _log.Debug("Trigger extra expected heartbeat from [{0}]", address);
+                Log.Debug("Trigger extra expected heartbeat from [{0}]", address);
                 _failureDetector.Heartbeat(address);
             }
         }
@@ -518,25 +515,15 @@ namespace Akka.Remote
         /// <param name="address"></param>
         private void ReWatch(Address address)
         {
-            foreach (var t in _watching)
+            var watcher = Self.AsInstanceOf<IInternalActorRef>();
+            foreach (var watchee in WatcheeByNodes[address])
             {
-                var wee = t.Item1 as IInternalActorRef;
-                var wer = t.Item2 as IInternalActorRef;
-                if (wee != null && wer != null)
-                {
-                    if (wee.Path.Address == address)
-                    {
-                        // this re-watch will result in a RewatchRemote message to this actor
-                        // must be a special message to be able to detect if an UnwatchRemote comes in
-                        // before the extra RewatchRemote, then the re-watch should be ignored
-                        _log.Debug("Re-watch [{0} -> {1}]", wer, wee);
-                        wee.Tell(new Rewatch(wee, wer)); // ➡➡➡ NEVER SEND THE SAME SYSTEM MESSAGE OBJECT TO TWO ACTORS
-                    }
-                }
+                Log.Debug("Re-watch [{0} -> {1}]", watcher.Path, watchee.Path);
+                watchee.SendSystemMessage(new Watch(watchee, watcher)); // ➡➡➡ NEVER SEND THE SAME SYSTEM MESSAGE OBJECT TO TWO ACTORS ⬅⬅⬅
             }
         }
 
-        private readonly ILoggingAdapter _log = Context.GetLogger();
+        protected readonly ILoggingAdapter Log = Context.GetLogger();
     }
 }
 

@@ -8,19 +8,20 @@
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
 using Akka.TestKit;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Tests.Actor
 {
     public class SystemGuardianTests : AkkaSpec
     {
-        readonly IActorRef _userGuardian;
-        readonly IActorRef _systemGuardian;
+        readonly IInternalActorRef _userGuardian;
+        readonly IInternalActorRef _systemGuardian;
 
         public SystemGuardianTests()
         {
-            _userGuardian = Sys.ActorOf(Props.Create<GuardianActor>());
-            _systemGuardian = Sys.ActorOf(Props.Create(() => new SystemGuardianActor(_userGuardian)));
+            _userGuardian = Sys.ActorOf(Props.Create<GuardianActor>()).AsInstanceOf<IInternalActorRef>();
+            _systemGuardian = Sys.ActorOf(Props.Create(() => new SystemGuardianActor(_userGuardian))).AsInstanceOf<IInternalActorRef>();
             _systemGuardian.Tell(new Watch(_userGuardian, _systemGuardian));            
         }
 

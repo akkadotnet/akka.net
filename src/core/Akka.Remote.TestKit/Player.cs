@@ -463,10 +463,10 @@ namespace Akka.Remote.TestKit
                     }
                     if (@event.FsmEvent is DisconnectMsg)
                         return Stay(); //FIXME is this the right EC for the future below?
-                    // FIXME: Currently ignoring, needs support from Remoting
                     var terminateMsg = @event.FsmEvent as TerminateMsg;
                     if (terminateMsg != null)
                     {
+                        _log.Info("Received TerminateMsg - shutting down...");
                         if (terminateMsg.ShutdownOrExit.IsLeft && terminateMsg.ShutdownOrExit.ToLeft().Value == false)
                         {
                             Context.System.Terminate();
@@ -507,7 +507,14 @@ namespace Akka.Remote.TestKit
             OnTermination(@event =>
             {
                 _log.Info("Terminating connection to multi-node test controller...");
-                if (@event.StateData.Channel != null) @event.StateData.Channel.CloseAsync().Wait();
+                if (@event.StateData.Channel != null)
+                {
+                    var disconnectTimeout = TimeSpan.FromSeconds(2); //todo: make into setting loaded from HOCON
+                    if (!@event.StateData.Channel.CloseAsync().Wait(disconnectTimeout))
+                    {
+                        _log.Warning("Failed to disconnect from conductor within {0}", disconnectTimeout);
+                    }
+                }
             });
 
             Initialize();            

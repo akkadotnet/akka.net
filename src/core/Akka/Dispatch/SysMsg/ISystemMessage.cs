@@ -152,9 +152,12 @@ namespace Akka.Dispatch.SysMsg
         }
     }
 
-    //used to start watching another actor (deathwatch)
     /// <summary>
-    ///     Class Watch.
+    /// Creates a deathwatch subscription  between <see cref="Watchee"/> and <see cref="Watcher"/>.
+    /// 
+    /// <see cref="Watcher"/> will be notified via a <see cref="Terminated"/> message when <see cref="Watchee"/>
+    /// is stopped. In the case of a remote actor references, a <see cref="Terminated"/> may also be produced in
+    /// the event that the association between the two remote actor systems fails.
     /// </summary>
     public class Watch : ISystemMessage
     {
@@ -163,7 +166,7 @@ namespace Akka.Dispatch.SysMsg
         /// </summary>
         /// <param name="watchee">The watchee.</param>
         /// <param name="watcher">The watcher.</param>
-        public Watch(IActorRef watchee, IActorRef watcher)
+        public Watch(IInternalActorRef watchee, IInternalActorRef watcher)
         {
             Watchee = watchee;
             Watcher = watcher;
@@ -173,13 +176,13 @@ namespace Akka.Dispatch.SysMsg
         ///     Gets the watchee.
         /// </summary>
         /// <value>The watchee.</value>
-        public IActorRef Watchee { get; private set; }
+        public IInternalActorRef Watchee { get; private set; }
 
         /// <summary>
         ///     Gets the watcher.
         /// </summary>
         /// <value>The watcher.</value>
-        public IActorRef Watcher { get; private set; }
+        public IInternalActorRef Watcher { get; private set; }
 
         public override string ToString()
         {
@@ -187,9 +190,8 @@ namespace Akka.Dispatch.SysMsg
         }
     }
 
-    //used to unsubscribe to deathwatch
     /// <summary>
-    ///     Class Unwatch.
+    /// Unsubscribes <see cref="Watcher"/> from any death watch notifications for <see cref="Watchee"/>.
     /// </summary>
     public sealed class Unwatch : ISystemMessage
     {
@@ -198,7 +200,7 @@ namespace Akka.Dispatch.SysMsg
         /// </summary>
         /// <param name="watchee">The watchee.</param>
         /// <param name="watcher">The watcher.</param>
-        public Unwatch(IActorRef watchee, IActorRef watcher)
+        public Unwatch(IInternalActorRef watchee, IInternalActorRef watcher)
         {
             Watchee = watchee;
             Watcher = watcher;
@@ -208,13 +210,13 @@ namespace Akka.Dispatch.SysMsg
         ///     Gets the watchee.
         /// </summary>
         /// <value>The watchee.</value>
-        public IActorRef Watchee { get; private set; }
+        public IInternalActorRef Watchee { get; private set; }
 
         /// <summary>
         ///     Gets the watcher.
         /// </summary>
         /// <value>The watcher.</value>
-        public IActorRef Watcher { get; private set; }
+        public IInternalActorRef Watcher { get; private set; }
 
         public override string ToString()
         {

@@ -89,7 +89,7 @@ namespace Akka.Actor
 
             if (message is ISystemMessage) //we have special handling for system messages
             {
-                SendSystemMessage(message.AsInstanceOf<ISystemMessage>(), sender);
+                SendSystemMessage(message.AsInstanceOf<ISystemMessage>());
             }
             else
             {
@@ -99,6 +99,11 @@ namespace Akka.Actor
                     _result.TrySetResult(message);
                 }
             }
+        }
+
+        public override void SendSystemMessage(ISystemMessage message)
+        {
+            base.SendSystemMessage(message);
         }
     }
 
@@ -250,7 +255,10 @@ namespace Akka.Actor
         void Stop();
         void Restart(Exception cause);
         void Suspend();
+
+        [Obsolete("Use SendSystemMessage(message)")]
         void SendSystemMessage(ISystemMessage message, IActorRef sender);
+        void SendSystemMessage(ISystemMessage message);
     }
 
     public abstract class InternalActorRefBase : ActorRefBase, IInternalActorRef
@@ -275,18 +283,14 @@ namespace Akka.Actor
 
         public abstract bool IsTerminated { get; }
         public abstract bool IsLocal { get; }
-        public virtual void SendSystemMessage(ISystemMessage message, IActorRef sender)
+
+        [Obsolete("Use SendSystemMessage(message) instead")]
+        public void SendSystemMessage(ISystemMessage message, IActorRef sender)
         {
-            var d = message as DeathWatchNotification;
-            if (message is Terminate)
-            {
-                Stop();
-            }
-            else if (d != null)
-            {
-                this.Tell(new Terminated(d.Actor, d.ExistenceConfirmed, d.AddressTerminated));
-            }
+            SendSystemMessage(message);
         }
+
+        public abstract void SendSystemMessage(ISystemMessage message);
     }
 
     public abstract class MinimalActorRef : InternalActorRefBase, ILocalRef
@@ -325,6 +329,11 @@ namespace Akka.Actor
 
         protected override void TellInternal(object message, IActorRef sender)
         {
+        }
+
+        public override void SendSystemMessage(ISystemMessage message)
+        {
+           
         }
 
         public override bool IsLocal

@@ -24,6 +24,9 @@ namespace Akka.Actor
         private Props _props;
         private static readonly Props terminatedProps=new TerminatedProps();
 
+        private const int DefaultStatus = 0;
+        private const int SuspendedStatus = 1;
+        private const int SuspendedWaitForChildrenStatus = 2;
 
         private long _uid;
         private ActorBase _actor;
@@ -121,7 +124,7 @@ namespace Akka.Actor
 
             if(sendSupervise)
             {
-                Parent.Tell(new Supervise(self, async: false), self);
+                Parent.SendSystemMessage(new Supervise(self, async: false));
             }
         }
 
@@ -369,6 +372,8 @@ namespace Akka.Actor
             var current = Current;
             return current != null ? current.Sender : ActorRefs.NoSender;
         }
+
+ 
     }
 }
 

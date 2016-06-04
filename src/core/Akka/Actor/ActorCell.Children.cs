@@ -79,6 +79,7 @@ namespace Akka.Actor
 
         /// <summary>
         ///     Stops the specified child.
+        /// BUGGY: see https://github.com/akkadotnet/akka.net/issues/2024
         /// </summary>
         /// <param name="child">The child.</param>
         public void Stop(IActorRef child)

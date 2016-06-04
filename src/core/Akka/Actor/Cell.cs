@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using Akka.Actor.Internal;
+using Akka.Dispatch.SysMsg;
 
 namespace Akka.Actor
 {
@@ -89,7 +90,12 @@ namespace Akka.Actor
         /// </summary>
         bool TryGetChildStatsByName(string name, out IChildStats child); //This is called getChildByName in Akka JVM
 
-
+        /// <summary>
+        /// Enqueue a message to be sent to the actor; may or may not actually
+        /// schedule the actor to run, depending on which type of cell it is.
+        /// </summary>
+        /// <param name="message">The system message we're passing along</param>
+        void SendSystemMessage(ISystemMessage message);
 
         // TODO: Missing:
         //    /**
@@ -125,13 +131,6 @@ namespace Akka.Actor
         //    */
         //    final def sendMessage(message: Any, sender: ActorRef): Unit =
         //    sendMessage(Envelope(message, sender, system))
-
-        //    /**
-        //    * Enqueue a message to be sent to the actor; may or may not actually
-        //    * schedule the actor to run, depending on which type of cell it is.
-        //    * Is only allowed to throw Fatal Throwables.
-        //    */
-        //    def sendSystemMessage(msg: ISystemMessage): Unit
     }
 }
 

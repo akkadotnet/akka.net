@@ -39,6 +39,15 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
+        public void Can_resolve_absolute_path()
+        {
+            var actorPath = new RootActorPath(TestActor.Path.Address) / "user" / "test";
+            var selection = Sys.ActorSelection(actorPath);
+            selection.Tell("hello");
+            ExpectMsg("hello");
+        }
+
+        [Fact]
         public void Can_resolve_up_and_down_path()
         {
             var selection = Sys.ActorSelection("user/test/../../user/test");

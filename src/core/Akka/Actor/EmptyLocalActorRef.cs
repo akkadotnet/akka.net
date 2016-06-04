@@ -31,37 +31,16 @@ namespace Akka.Actor
 
         protected override void TellInternal(object message, IActorRef sender)
         {
-            var systemMessage = message as ISystemMessage;
-            if(systemMessage != null)
+            if(message == null) throw new InvalidMessageException("Message is null");
+            var d = message as DeadLetter;
+            if (d != null) SpecialHandle(d.Message, d.Sender);
+            else if (!SpecialHandle(message, sender))
             {
-                SendSystemMessage(systemMessage);
-                return;
-            }
-            SendUserMessage(message, sender);
-        }
-
-        protected virtual void SendUserMessage(object message, IActorRef sender)
-        {
-            if(message == null) throw new InvalidMessageException();
-            var deadLetter = message as DeadLetter;
-            if(deadLetter != null)
-                HandleDeadLetter(deadLetter);
-            else
-            {
-                var wasHandled = SpecialHandle(message, sender);
-                if(!wasHandled)
-                {
-                    _eventStream.Publish(new DeadLetter(message, sender.IsNobody() ? _provider.DeadLetters : sender, this));
-                }
+                _eventStream.Publish(new DeadLetter(message, sender.IsNobody() ? _provider.DeadLetters : sender, this));
             }
         }
 
-        protected virtual void HandleDeadLetter(DeadLetter deadLetter)
-        {
-            SpecialHandle(deadLetter.Message, deadLetter.Sender);
-        }
-
-        private void SendSystemMessage(ISystemMessage message)
+        public override void SendSystemMessage(ISystemMessage message)
         {
             Mailbox.DebugPrint("EmptyLocalActorRef {0} having enqueued {1}", Path, message);
             SpecialHandle(message, _provider.DeadLetters);
@@ -72,9 +51,9 @@ namespace Akka.Actor
             var w = message as Watch;
             if(w != null)
             {
-                if(w.Watchee == this && w.Watcher != this)
+                if(w.Watchee.Equals(this) && !w.Watcher.Equals(this))
                 {
-                    w.Watcher.Tell(new DeathWatchNotification(w.Watchee, existenceConfirmed: false, addressTerminated: false));
+                    w.Watcher.SendSystemMessage(new DeathWatchNotification(w.Watchee, existenceConfirmed: false, addressTerminated: false));
                 }
                 return true;
             }
@@ -101,6 +80,7 @@ namespace Akka.Actor
                 }
                 return true;
             }
+            //todo: DeadLetterSupression
             return false;
         }
     }

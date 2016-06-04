@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor.Internal;
 using Akka.Dispatch;
+using Akka.Dispatch.SysMsg;
 using Akka.Util.Internal;
 
 namespace Akka.Actor
@@ -110,6 +111,11 @@ namespace Akka.Actor
         public override bool IsLocal
         {
             get { return true; }
+        }
+
+        public override void SendSystemMessage(ISystemMessage message)
+        {
+            _cell.SendSystemMessage(message);
         }
 
         public override ActorPath Path

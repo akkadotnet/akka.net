@@ -61,6 +61,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="LookupRemoteActorMultiNetSpec.cs" />
+    <Compile Include="AttemptSysMsgRedeliverySpec.cs" />
     <Compile Include="NewRemoteActorSpec.cs" />
     <Compile Include="PiercingShouldKeepQuarantineSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

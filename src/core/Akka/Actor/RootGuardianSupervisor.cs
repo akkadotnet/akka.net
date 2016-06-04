@@ -22,8 +22,10 @@ namespace Akka.Actor
         private readonly ILoggingAdapter _log;
         private readonly TaskCompletionSource<Status> _terminationPromise;
         private readonly ActorPath _path;
-        private readonly Switch _stopped=new Switch(false);
+        private readonly Switch _stopped = new Switch(false);
         private readonly IActorRefProvider _provider;
+
+        private bool IsWalking => !_terminationPromise.Task.IsCompleted;
 
         public RootGuardianSupervisor(RootActorPath root, IActorRefProvider provider, TaskCompletionSource<Status> terminationPromise, ILoggingAdapter log)
         {
@@ -35,62 +37,48 @@ namespace Akka.Actor
 
         protected override void TellInternal(object message, IActorRef sender)
         {
-            var systemMessage = message as ISystemMessage;
-            if(systemMessage!=null)
+            if (IsWalking)
             {
-                SendSystemMessage(systemMessage);
-            }
-            else
-            {
-                _stopped.IfOff(() =>
-                {
-                    if(message == null) throw new InvalidMessageException();
-                    _log.Error("{0} received unexpected message [{1}]", _path, message);
-                });
+                if (message == null) throw new InvalidMessageException("Message is null");
+                _log.Error("{0} received unexpected message [{1}]", _path, message);
             }
         }
 
-        private void SendSystemMessage(ISystemMessage systemMessage)
+        public override void SendSystemMessage(ISystemMessage systemMessage)
         {
-            _stopped.IfOff(() =>
+            var failed = systemMessage as Failed;
+            if (failed != null)
             {
-                var failed = systemMessage as Failed;
-                if(failed != null)
-                {
-                    var cause = failed.Cause;
-                    var child = failed.Child;
-                    _log.Error(cause, "guardian {0} failed, shutting down!", child);
-                    CauseOfTermination = cause;
-                    ((IInternalActorRef) child).Stop();
-                    return;
-                }
-                var supervise = systemMessage as Supervise;
-                if(supervise != null)
-                {
-                    // This comment comes from AKKA: TO DO register child in some map to keep track of it and enable shutdown after all dead
-                    return;
-                }
-                var deathWatchNotification = systemMessage as DeathWatchNotification;
-                if(deathWatchNotification != null)
-                {
-                    Stop();
-                    return;
-                }
-                _log.Error("{0} received unexpected system message [{1}]",_path,systemMessage);
-            });
+                var cause = failed.Cause;
+                var child = failed.Child;
+                _log.Error(cause, "guardian {0} failed, shutting down!", child);
+                CauseOfTermination = cause;
+                ((IInternalActorRef)child).Stop();
+                return;
+            }
+            var supervise = systemMessage as Supervise;
+            if (supervise != null)
+            {
+                // This comment comes from AKKA: TO DO register child in some map to keep track of it and enable shutdown after all dead
+                return;
+            }
+            var deathWatchNotification = systemMessage as DeathWatchNotification;
+            if (deathWatchNotification != null)
+            {
+                Stop();
+                return;
+            }
+            _log.Error("{0} received unexpected system message [{1}]", _path, systemMessage);
         }
 
         public Exception CauseOfTermination { get; private set; }
         public override void Stop()
         {
-            _stopped.SwitchOn(() =>
-            {
-                var causeOfTermination = CauseOfTermination;
-                var status = causeOfTermination == null ? (Status) new Status.Success(null) : new Status.Failure(causeOfTermination);
-                _terminationPromise.SetResult(status);
-            });
+            var causeOfTermination = CauseOfTermination;
+            var status = causeOfTermination == null ? (Status)new Status.Success(null) : new Status.Failure(causeOfTermination);
+            _terminationPromise.SetResult(status);
         }
-       
+
         public override ActorPath Path
         {
             get { return _path; }

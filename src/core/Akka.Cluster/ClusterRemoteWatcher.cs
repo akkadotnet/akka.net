@@ -42,8 +42,8 @@ namespace Akka.Cluster
             }).WithDeploy(Deploy.Local);
         }
 
-        readonly Cluster _cluster;
-        ImmutableHashSet<Address> _clusterNodes = ImmutableHashSet.Create<Address>();
+        private readonly Cluster _cluster;
+        private ImmutableHashSet<Address> _clusterNodes = ImmutableHashSet.Create<Address>();
 
         public ClusterRemoteWatcher(
             IFailureDetectorRegistry<Address> failureDetector,
@@ -68,9 +68,6 @@ namespace Akka.Cluster
 
         protected override void OnReceive(object message)
         {
-            var watchRemote = message as WatchRemote;
-            if (watchRemote != null && _clusterNodes.Contains(watchRemote.Watchee.Path.Address))
-                return; // cluster managed node, don't propagate to super;
             var state = message as ClusterEvent.CurrentClusterState;
             if (state != null)
             {
@@ -83,30 +80,45 @@ namespace Akka.Cluster
             var memberUp = message as ClusterEvent.MemberUp;
             if (memberUp != null)
             {
-                if (memberUp.Member.Address != _cluster.SelfAddress)
-                {
-                    _clusterNodes = _clusterNodes.Add(memberUp.Member.Address);
-                    TakeOverResponsibility(memberUp.Member.Address);
-                    Unreachable.Remove(memberUp.Member.Address);
-                }
+                MemberUp(memberUp);
                 return;
             }
             var memberRemoved = message as ClusterEvent.MemberRemoved;
             if (memberRemoved != null)
             {
-                if (memberRemoved.Member.Address != _cluster.SelfAddress)
-                {
-                    _clusterNodes = _clusterNodes.Remove(memberRemoved.Member.Address);
-                    if (memberRemoved.PreviousStatus == MemberStatus.Down)
-                    {
-                        Quarantine(memberRemoved.Member.Address, memberRemoved.Member.UniqueAddress.Uid);
-                    }
-                    PublishAddressTerminated(memberRemoved.Member.Address);
-                }
+                MemberRemoved(memberRemoved);
                 return;
             }
             if (message is ClusterEvent.IMemberEvent) return; // not interesting
             base.OnReceive(message);
+        }
+
+        private void MemberUp(ClusterEvent.MemberUp memberUp)
+        {
+            if (memberUp.Member.Address != _cluster.SelfAddress)
+            {
+                _clusterNodes = _clusterNodes.Add(memberUp.Member.Address);
+                TakeOverResponsibility(memberUp.Member.Address);
+                Unreachable.Remove(memberUp.Member.Address);
+            }
+        }
+
+        private void MemberRemoved(ClusterEvent.MemberRemoved memberRemoved)
+        {
+            if (memberRemoved.Member.Address != _cluster.SelfAddress)
+            {
+                _clusterNodes = _clusterNodes.Remove(memberRemoved.Member.Address);
+                if (memberRemoved.PreviousStatus == MemberStatus.Down)
+                {
+                    Quarantine(memberRemoved.Member.Address, memberRemoved.Member.UniqueAddress.Uid);
+                }
+                PublishAddressTerminated(memberRemoved.Member.Address);
+            }
+        }
+
+        protected override void WatchNode(IInternalActorRef watchee)
+        {
+            if(!_clusterNodes.Contains(watchee.Path.Address)) base.WatchNode(watchee);
         }
 
         /// <summary>
@@ -116,11 +128,10 @@ namespace Akka.Cluster
         /// </summary>
         private void TakeOverResponsibility(Address address)
         {
-            foreach (var watching in Watching.Where(x => x.Item1.Path.Address.Equals(address)).ToList())
+            if (WatchingNodes.Contains(address))
             {
-                var watchee = watching.Item1;
-                var watcher = watching.Item2;
-                ProcessUnwatchRemote(watchee, watcher);
+                Log.Debug("Cluster is taking over responsibility of node: {0}", address);
+                UnwatchNode(address);
             }
         }
     }

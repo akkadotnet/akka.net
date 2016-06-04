@@ -100,6 +100,7 @@ namespace Akka.Actor
         public void ReserveChild(string name) { }
         public void Restart(System.Exception cause) { }
         public void Resume(System.Exception causedByFailure) { }
+        public void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage systemMessage) { }
         protected void SetActorFields(Akka.Actor.ActorBase actor) { }
         protected bool SetChildrenTerminationReason(Akka.Actor.Internal.SuspendReason reason) { }
         public void SetReceiveTimeout(System.Nullable<System.TimeSpan> timeout = null) { }
@@ -480,8 +481,8 @@ namespace Akka.Actor
     public class DeadLetterActorRef : Akka.Actor.EmptyLocalActorRef
     {
         public DeadLetterActorRef(Akka.Actor.IActorRefProvider provider, Akka.Actor.ActorPath path, Akka.Event.EventStream eventStream) { }
-        protected override void HandleDeadLetter(Akka.Event.DeadLetter deadLetter) { }
         protected override bool SpecialHandle(object message, Akka.Actor.IActorRef sender) { }
+        protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
     public class DeadLetterMailbox : Akka.Dispatch.Mailbox
     {
@@ -628,8 +629,7 @@ namespace Akka.Actor
         public override bool IsTerminated { get; }
         public override Akka.Actor.ActorPath Path { get; }
         public override Akka.Actor.IActorRefProvider Provider { get; }
-        protected virtual void HandleDeadLetter(Akka.Event.DeadLetter deadLetter) { }
-        protected virtual void SendUserMessage(object message, Akka.Actor.IActorRef sender) { }
+        public override void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message) { }
         protected virtual bool SpecialHandle(object message, Akka.Actor.IActorRef sender) { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
@@ -806,6 +806,7 @@ namespace Akka.Actor
         public FutureActorRef(System.Threading.Tasks.TaskCompletionSource<object> result, System.Action unregister, Akka.Actor.ActorPath path) { }
         public override Akka.Actor.ActorPath Path { get; }
         public override Akka.Actor.IActorRefProvider Provider { get; }
+        public override void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message) { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
     public class static Futures
@@ -818,9 +819,10 @@ namespace Akka.Actor
         public static System.Threading.Tasks.Task<bool> GracefulStop(this Akka.Actor.IActorRef target, System.TimeSpan timeout) { }
         public static System.Threading.Tasks.Task<bool> GracefulStop(this Akka.Actor.IActorRef target, System.TimeSpan timeout, object stopMessage) { }
     }
-    public class GuardianActor : Akka.Actor.ActorBase
+    public class GuardianActor : Akka.Actor.ActorBase, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedMessageQueueSemantics>
     {
         public GuardianActor() { }
+        protected override void PreStart() { }
         protected override bool Receive(object message) { }
     }
     public interface IActionScheduler
@@ -939,6 +941,7 @@ namespace Akka.Actor
         void Post(Akka.Actor.IActorRef sender, object message);
         void Restart(System.Exception cause);
         void Resume(System.Exception causedByFailure);
+        void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message);
         void Start();
         void Stop();
         void Suspend();
@@ -1003,7 +1006,9 @@ namespace Akka.Actor
         Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name);
         void Restart(System.Exception cause);
         void Resume(System.Exception causedByFailure = null);
+        [System.ObsoleteAttribute("Use SendSystemMessage(message)")]
         void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message, Akka.Actor.IActorRef sender);
+        void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message);
         void Start();
         void Stop();
         void Suspend();
@@ -1048,7 +1053,9 @@ namespace Akka.Actor
         public abstract Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name);
         public abstract void Restart(System.Exception cause);
         public abstract void Resume(System.Exception causedByFailure = null);
-        public virtual void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message, Akka.Actor.IActorRef sender) { }
+        [System.ObsoleteAttribute("Use SendSystemMessage(message) instead")]
+        public void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message, Akka.Actor.IActorRef sender) { }
+        public abstract void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message);
         public abstract void Start();
         public abstract void Stop();
         public abstract void Suspend();
@@ -1133,6 +1140,7 @@ namespace Akka.Actor
         public override Akka.Actor.IInternalActorRef GetSingleChild(string name) { }
         public override void Restart(System.Exception cause) { }
         public override void Resume(System.Exception causedByFailure = null) { }
+        public override void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message) { }
         public override void Start() { }
         public override void Stop() { }
         public override void Suspend() { }
@@ -1145,6 +1153,7 @@ namespace Akka.Actor
         public Akka.Actor.IActorRef DeadLetters { get; }
         public Akka.Actor.Address DefaultAddress { get; }
         public Akka.Actor.Deployer Deployer { get; }
+        public Akka.Event.EventStream EventStream { get; }
         public Akka.Actor.LocalActorRef Guardian { get; }
         public Akka.Event.ILoggingAdapter Log { get; }
         public Akka.Actor.IInternalActorRef RootGuardian { get; }
@@ -1197,6 +1206,7 @@ namespace Akka.Actor
         public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name) { }
         public override void Restart(System.Exception cause) { }
         public override void Resume(System.Exception causedByFailure = null) { }
+        public override void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message) { }
         public override void Start() { }
         public override void Stop() { }
         public override void Suspend() { }
@@ -1384,6 +1394,7 @@ namespace Akka.Actor
         public void Point() { }
         public override void Restart(System.Exception cause) { }
         public override void Resume(System.Exception causedByFailure = null) { }
+        public override void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message) { }
         public override void Start() { }
         public override void Stop() { }
         public override void Suspend() { }
@@ -1412,6 +1423,7 @@ namespace Akka.Actor
         public System.Exception CauseOfTermination { get; }
         public override Akka.Actor.ActorPath Path { get; }
         public override Akka.Actor.IActorRefProvider Provider { get; }
+        public override void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage systemMessage) { }
         public override void Stop() { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
@@ -1567,7 +1579,7 @@ namespace Akka.Actor
         public abstract Akka.Actor.SupervisorStrategy Create();
         public static Akka.Actor.SupervisorStrategyConfigurator CreateConfigurator(string typeName) { }
     }
-    public class SystemGuardianActor : Akka.Actor.ActorBase
+    public class SystemGuardianActor : Akka.Actor.ActorBase, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedMessageQueueSemantics>
     {
         public SystemGuardianActor(Akka.Actor.IActorRef userGuardian) { }
         protected override void PreRestart(System.Exception reason, object message) { }
@@ -1610,6 +1622,7 @@ namespace Akka.Actor
         public void ReplaceWith(Akka.Actor.ICell cell) { }
         public void Restart(System.Exception cause) { }
         public void Resume(System.Exception causedByFailure) { }
+        public void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message) { }
         public void Start() { }
         public void Stop() { }
         public void Suspend() { }
@@ -2636,16 +2649,16 @@ namespace Akka.Dispatch.SysMsg
     }
     public sealed class Unwatch : Akka.Actor.INoSerializationVerificationNeeded, Akka.Dispatch.SysMsg.ISystemMessage
     {
-        public Unwatch(Akka.Actor.IActorRef watchee, Akka.Actor.IActorRef watcher) { }
-        public Akka.Actor.IActorRef Watchee { get; }
-        public Akka.Actor.IActorRef Watcher { get; }
+        public Unwatch(Akka.Actor.IInternalActorRef watchee, Akka.Actor.IInternalActorRef watcher) { }
+        public Akka.Actor.IInternalActorRef Watchee { get; }
+        public Akka.Actor.IInternalActorRef Watcher { get; }
         public override string ToString() { }
     }
     public class Watch : Akka.Actor.INoSerializationVerificationNeeded, Akka.Dispatch.SysMsg.ISystemMessage
     {
-        public Watch(Akka.Actor.IActorRef watchee, Akka.Actor.IActorRef watcher) { }
-        public Akka.Actor.IActorRef Watchee { get; }
-        public Akka.Actor.IActorRef Watcher { get; }
+        public Watch(Akka.Actor.IInternalActorRef watchee, Akka.Actor.IInternalActorRef watcher) { }
+        public Akka.Actor.IInternalActorRef Watchee { get; }
+        public Akka.Actor.IInternalActorRef Watcher { get; }
         public override string ToString() { }
     }
 }

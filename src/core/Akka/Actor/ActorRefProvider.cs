@@ -178,6 +178,8 @@ namespace Akka.Actor
 
         public LocalActorRef Guardian { get { return _userGuardian; } }
 
+        public EventStream EventStream { get { return _eventStream; } }
+
         private MessageDispatcher DefaultDispatcher { get { return _system.Dispatchers.DefaultGlobalDispatcher; } }
 
         private SupervisorStrategy UserGuardianSupervisorStrategy { get { return _userGuardianStrategyConfigurator.Create(); } }
@@ -284,8 +286,8 @@ namespace Akka.Actor
 
             _rootGuardian.Start();
             // chain death watchers so that killing guardian stops the application
-            _systemGuardian.Tell(new Watch(_userGuardian, _systemGuardian));    //Should be SendSystemMessage
-            _rootGuardian.Tell(new Watch(_systemGuardian, _rootGuardian));      //Should be SendSystemMessage
+            _systemGuardian.SendSystemMessage(new Watch(_userGuardian, _systemGuardian)); 
+            _rootGuardian.SendSystemMessage(new Watch(_systemGuardian, _rootGuardian)); 
             _eventStream.StartDefaultLoggers(_system);
         }
 
@@ -331,7 +333,7 @@ namespace Akka.Actor
             //throw new NotSupportedException("The provided actor path is not valid in the LocalActorRefProvider");
         }
 
-        private IActorRef ResolveActorRef(IInternalActorRef actorRef, IReadOnlyCollection<string> pathElements)
+        internal IInternalActorRef ResolveActorRef(IInternalActorRef actorRef, IReadOnlyCollection<string> pathElements)
         {
             if(pathElements.Count == 0)
             {
@@ -344,7 +346,7 @@ namespace Akka.Actor
                 _log.Debug("Resolve of path sequence [/{0}] failed", ActorPath.FormatPathElements(pathElements));
                 return new EmptyLocalActorRef(_system.Provider, actorRef.Path / pathElements, _eventStream);
             }
-            return child;
+            return (IInternalActorRef)child;
         }
 
 

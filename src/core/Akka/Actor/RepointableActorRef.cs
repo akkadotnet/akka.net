@@ -79,7 +79,7 @@ namespace Akka.Actor
                 var newCell = new UnstartedCell(_system, this, _props, _supervisor);
                 SwapUnderlying(newCell);
                 SwapLookup(newCell);
-                _supervisor.Tell(new Supervise(this, async));
+                _supervisor.SendSystemMessage(new Supervise(this, async));
                 if (!async)
                     Point();
 
@@ -144,6 +144,11 @@ namespace Akka.Actor
         public override void Suspend()
         {
             Underlying.Suspend();
+        }
+
+        public override void SendSystemMessage(ISystemMessage message)
+        {
+            Underlying.SendSystemMessage(message);
         }
 
         public override void Resume(Exception causedByFailure = null)
@@ -307,6 +312,11 @@ namespace Akka.Actor
         {
             child = null;
             return false;
+        }
+
+        public void SendSystemMessage(ISystemMessage message)
+        {
+            SendSystemMessage(message, ActorRefs.Nobody);
         }
 
         public void Post(IActorRef sender, object message)
