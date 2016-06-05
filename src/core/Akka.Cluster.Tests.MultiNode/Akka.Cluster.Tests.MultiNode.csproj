@@ -70,6 +70,7 @@
   <ItemGroup>
     <Compile Include="ClientDowningNodeThatIsUnreachableSpec.cs" />
     <Compile Include="ClientDowningNodeThatIsUpSpec.cs" />
+    <Compile Include="ClusterAccrualFailureDetectorSpec.cs" />
     <Compile Include="ClusterDeathWatchSpec.cs" />
     <Compile Include="ConvergenceSpec.cs" />
     <Compile Include="DisallowJoinOfTwoClustersSpec.cs" />
