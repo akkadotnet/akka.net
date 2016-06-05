@@ -84,6 +84,7 @@
     <Compile Include="RestartNodeSpec.cs" />
     <Compile Include="Routing\ClusterConsistentHashingGroupSpec.cs" />
     <Compile Include="Routing\ClusterConsistentHashingRouterSpec.cs" />
+    <Compile Include="SplitBrainSpec.cs" />
     <Compile Include="UnreachableNodeJoinsAgainSpec.cs" />
   </ItemGroup>
   <ItemGroup>
