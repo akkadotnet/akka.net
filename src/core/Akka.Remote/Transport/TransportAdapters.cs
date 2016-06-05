@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
+using Akka.Event;
 
 namespace Akka.Remote.Transport
 {
@@ -285,7 +286,7 @@ namespace Akka.Remote.Transport
         public Task<IAssociationEventListener> UpstreamListener { get; private set; }
     }
 
-    internal sealed class DisassociateUnderlying : TransportOperation
+    internal sealed class DisassociateUnderlying : TransportOperation, IDeadLetterSuppression
     {
         public DisassociateUnderlying(DisassociateInfo info = DisassociateInfo.Unknown)
         {

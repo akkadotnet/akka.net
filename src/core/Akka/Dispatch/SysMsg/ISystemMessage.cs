@@ -8,6 +8,7 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Event;
 using Assert = System.Diagnostics.Debug;
 
 namespace Akka.Dispatch.SysMsg
@@ -213,7 +214,7 @@ namespace Akka.Dispatch.SysMsg
         }
     }
 
-    
+
 
     /// <summary>
     /// INTERNAL API
@@ -276,7 +277,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class DeathWatchNotification.
     /// </summary>
-    public sealed class DeathWatchNotification : SystemMessage
+    public sealed class DeathWatchNotification : SystemMessage, IDeadLetterSuppression
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="DeathWatchNotification" /> class.
@@ -504,14 +505,14 @@ namespace Akka.Dispatch.SysMsg
         /// </summary>
         /// <param name="exception">The exception.</param>
         /// <param name="message">The message causing the exception</param>
-        public ActorTaskSchedulerMessage(Exception exception,object message)
+        public ActorTaskSchedulerMessage(Exception exception, object message)
         {
             Exception = exception;
             Message = message;
         }
 
         public Exception Exception { get; private set; }
-        public object Message { get;private set; }
+        public object Message { get; private set; }
 
         public void ExecuteTask()
         {
@@ -656,7 +657,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class Terminate.
     /// </summary>
-    public sealed class Terminate : SystemMessage, IPossiblyHarmful
+    public sealed class Terminate : SystemMessage, IPossiblyHarmful, IDeadLetterSuppression
     {
         public override string ToString()
         {
@@ -687,7 +688,7 @@ namespace Akka.Dispatch.SysMsg
         }
     }
 
-    public sealed class RegisterTerminationHook 
+    public sealed class RegisterTerminationHook
     {
         private RegisterTerminationHook() { }
         private static readonly RegisterTerminationHook _instance = new RegisterTerminationHook();
@@ -744,4 +745,3 @@ namespace Akka.Dispatch.SysMsg
         }
     }
 }
-

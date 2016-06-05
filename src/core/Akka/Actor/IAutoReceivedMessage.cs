@@ -14,7 +14,7 @@ namespace Akka.Actor
     }
 
     public sealed class
-        Terminated : IAutoReceivedMessage, IPossiblyHarmful
+        Terminated : IAutoReceivedMessage, IPossiblyHarmful, IDeadLetterSuppression
     {
         public Terminated(IActorRef actorRef, bool existenceConfirmed, bool addressTerminated)
         {
@@ -93,7 +93,7 @@ namespace Akka.Actor
     /// it processes the message, which gets handled using the normal supervisor mechanism, and
     /// <see cref="IActorContext.Stop"/> which causes the actor to stop without processing any more messages. </para>
     /// </summary>
-    public sealed class PoisonPill : IAutoReceivedMessage , IPossiblyHarmful
+    public sealed class PoisonPill : IAutoReceivedMessage, IPossiblyHarmful, IDeadLetterSuppression
     {
         private PoisonPill() { }
         private static readonly PoisonPill _instance = new PoisonPill();

@@ -25,7 +25,7 @@ namespace Akka.Remote.TestKit
     /// </summary>
     class Controller : UntypedActor, ILogReceive
     {
-        public sealed class ClientDisconnected
+        public sealed class ClientDisconnected : IDeadLetterSuppression
         {
             private readonly RoleName _name;
 

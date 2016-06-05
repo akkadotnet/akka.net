@@ -7,6 +7,7 @@
 
 using System;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Util;
 
 namespace Akka.Pattern
@@ -42,14 +43,14 @@ namespace Akka.Pattern
         }
 
         [Serializable]
-        public sealed class StartChild
+        public sealed class StartChild : IDeadLetterSuppression
         {
             public static readonly StartChild Instance = new StartChild();
             private StartChild() { }
         }
 
         [Serializable]
-        public sealed class ResetRestartCount
+        public sealed class ResetRestartCount : IDeadLetterSuppression
         {
             public readonly int Current;
 
