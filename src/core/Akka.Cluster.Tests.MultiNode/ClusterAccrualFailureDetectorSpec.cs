@@ -10,6 +10,7 @@ using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Akka.TestKit;
+using Akka.Cluster.Tests.MultiNode;
 
 namespace Akka.Cluster.Tests.MultiNode
 {
@@ -60,6 +61,7 @@ namespace Akka.Cluster.Tests.MultiNode
             _config = config;
         }
 
+        [MultiNodeFact()]
         public void
             A_heartbeat_driven_Failure_Detector_receive_heartbeats_so_that_all_member_nodes_in_the_cluster_are_marked_available
             ()
@@ -74,6 +76,7 @@ namespace Akka.Cluster.Tests.MultiNode
             EnterBarrier("after-1");
         }
 
+        [MultiNodeFact()]
         public void
             A_heartbeat_driven_Failure_Detector_mark_node_as_unavailable_when_network_partition_and_then_back_to_available_when_partition_is_healed
             ()
@@ -126,6 +129,7 @@ namespace Akka.Cluster.Tests.MultiNode
             EnterBarrier("after-2");
         }
 
+        [MultiNodeFact()]
         public void
             A_heartbeat_driven_Failure_Detector_mark_node_as_unavailable_if_a_node_in_the_cluster_is_shut_down_and_its_heartbeats_stops
             ()
