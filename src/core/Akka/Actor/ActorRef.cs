@@ -238,6 +238,8 @@ namespace Akka.Actor
     {
         IInternalActorRef Parent { get; }
         IActorRefProvider Provider { get; }
+
+        [Obsolete("Use Context.Watch and Receive<Terminated>")]
         bool IsTerminated { get; }
 
         /// <summary>
@@ -341,6 +343,7 @@ namespace Akka.Actor
             get { return true; }
         }
 
+        [Obsolete("Use Context.Watch and Receive<Terminated>")]
         public override bool IsTerminated { get { return false; } }
     }
 

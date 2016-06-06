@@ -626,6 +626,7 @@ namespace Akka.Actor
     public class EmptyLocalActorRef : Akka.Actor.MinimalActorRef
     {
         public EmptyLocalActorRef(Akka.Actor.IActorRefProvider provider, Akka.Actor.ActorPath path, Akka.Event.EventStream eventStream) { }
+        [System.ObsoleteAttribute("Use Context.Watch and Receive<Terminated>")]
         public override bool IsTerminated { get; }
         public override Akka.Actor.ActorPath Path { get; }
         public override Akka.Actor.IActorRefProvider Provider { get; }
@@ -1000,6 +1001,7 @@ namespace Akka.Actor
     }
     public interface IInternalActorRef : Akka.Actor.IActorRef, Akka.Actor.IActorRefScope, Akka.Actor.ICanTell, Akka.Util.ISurrogated, System.IComparable, System.IComparable<Akka.Actor.IActorRef>, System.IEquatable<Akka.Actor.IActorRef>
     {
+        [System.ObsoleteAttribute("Use Context.Watch and Receive<Terminated>")]
         bool IsTerminated { get; }
         Akka.Actor.IInternalActorRef Parent { get; }
         Akka.Actor.IActorRefProvider Provider { get; }
@@ -1201,6 +1203,7 @@ namespace Akka.Actor
     {
         protected MinimalActorRef() { }
         public override bool IsLocal { get; }
+        [System.ObsoleteAttribute("Use Context.Watch and Receive<Terminated>")]
         public override bool IsTerminated { get; }
         public override Akka.Actor.IInternalActorRef Parent { get; }
         public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name) { }

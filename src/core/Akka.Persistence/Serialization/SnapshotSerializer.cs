@@ -34,7 +34,7 @@ namespace Akka.Persistence.Serialization
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Snapshot && Equals((Snapshot) obj);
+            return obj is Snapshot && Equals((Snapshot)obj);
         }
 
         public override int GetHashCode()
@@ -112,9 +112,10 @@ namespace Akka.Persistence.Serialization
             using (var headerOut = new MemoryStream())
             {
                 WriteInt(headerOut, serializer.Identifier);
-                if (serializer is SerializerWithStringManifest)
+                var serializerManifest = serializer as SerializerWithStringManifest;
+                if (serializerManifest != null)
                 {
-                    var manifest = ((SerializerWithStringManifest) serializer).Manifest(snapshot);
+                    var manifest = serializerManifest.Manifest(snapshot);
                     if (!string.IsNullOrEmpty(manifest))
                     {
                         var manifestBinary = Encoding.UTF8.GetBytes(manifest);
@@ -204,4 +205,3 @@ namespace Akka.Persistence.Serialization
         }
     }
 }
-
