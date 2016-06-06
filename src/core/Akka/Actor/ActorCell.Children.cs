@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Akka.Actor.Internal;
+using Akka.Serialization;
 using Akka.Util;
 using Akka.Util.Internal;
 
@@ -336,44 +337,77 @@ namespace Akka.Actor
 
         private IInternalActorRef MakeChild(Props props, string name, bool async, bool systemService)
         {
-            //TODO: Implement SerializeAllCreators
-            //   if (cell.system.settings.SerializeAllCreators && !systemService && props.deploy.scope != LocalScope)
-            //     try {
-            //       val ser = SerializationExtension(cell.system)
-            //       props.args forall (arg ⇒
-            //         arg == null ||
-            //           arg.isInstanceOf[INoSerializationVerificationNeeded] ||
-            //           ser.deserialize(ser.serialize(arg.asInstanceOf[AnyRef]).get, arg.getClass).get != null)
-            //     } catch {
-            //       case NonFatal(e) ⇒ throw new IllegalArgumentException(s"pre-creation serialization check failed at [${cell.self.path}/$name]", e)
-            //     }
+            if (_systemImpl.Settings.SerializeAllCreators && !systemService && props.Deploy != Deploy.Local)
+            {
+                var ser = _systemImpl.Serialization;
+                if (props.Arguments != null)
+                {
+                    foreach (var argument in props.Arguments)
+                    {
+                        if (argument != null && !(argument is INoSerializationVerificationNeeded))
+                        {
+                            var objectType = argument.GetType();
+                            var serializer = ser.FindSerializerFor(objectType);
+                            var bytes = serializer.ToBinary(objectType);
+                            var manifestSerializer = serializer as SerializerWithStringManifest;
+                            if (manifestSerializer != null)
+                            {
+                                var manifest = manifestSerializer.Manifest(objectType);
+                                if (ser.Deserialize(bytes, manifestSerializer.Identifier, manifest) == null)
+                                {
+                                    throw new ArgumentException(string.Format("Pre-creation serialization check failed at [${0}/{1}]", _self.Path, name));
+                                }
+                            }
+                            else
+                            {
+                                if (ser.Deserialize(bytes, serializer.Identifier, argument.GetType().AssemblyQualifiedName) == null)
+                                {
+                                    throw new ArgumentException(string.Format("Pre-creation serialization check failed at [${0}/{1}]", _self.Path, name));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             // In case we are currently terminating, fail external attachChild requests
             // (internal calls cannot happen anyway because we are suspended)
-            if (IsTerminating)
+            if (ChildrenContainer.IsTerminating)
+            {
                 throw new InvalidOperationException("Cannot create child while terminating or terminated");
-            //reserve the name before we create the actor
-            ReserveChild(name);
-            IInternalActorRef actor;
-            try
-            {
-                var childPath = new ChildActorPath(Self.Path, name, NewUid());
-                actor = _systemImpl.Provider.ActorOf(_systemImpl, props, _self, childPath, systemService: systemService, deploy: null, lookupDeploy: true, async: async);
             }
-            catch
+            else
             {
-                //if actor creation failed, unreserve the name
-                UnreserveChild(name);
-                throw;
-            }
-            //TODO: When Mailbox has SuspendCount implement this
-            //      // mailbox==null during RoutedActorCell constructor, where suspends are queued otherwise
-            //      if (mailbox ne null) for (_ ← 1 to mailbox.suspendCount) actor.suspend()
+                // this name will either be unreserved or overwritten with a real child below
+                ReserveChild(name);
+                IInternalActorRef actor;
+                try
+                {
+                    var childPath = new ChildActorPath(Self.Path, name, NewUid());
+                    actor = _systemImpl.Provider.ActorOf(_systemImpl, props, _self, childPath,
+                        systemService: systemService, deploy: null, lookupDeploy: true, async: async);
+                }
+                catch
+                {
+                    //if actor creation failed, unreserve the name
+                    UnreserveChild(name);
+                    throw;
+                }
 
-            //replace the reservation with the real actor
-            InitChild(actor);
-            actor.Start();
-            return actor;
+                // TODO: When Mailbox has SuspendCount implement it
+                //if (Mailbox != null)
+                //{
+                //    foreach (var _ in Mailbox.SuspendCound)
+                //    {
+                //        actor.Suspend();
+                //    }
+                //}
+
+                //replace the reservation with the real actor
+                InitChild(actor);
+                actor.Start();
+                return actor;
+            }
         }
     }
 }

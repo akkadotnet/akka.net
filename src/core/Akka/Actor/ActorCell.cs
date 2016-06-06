@@ -266,7 +266,7 @@ namespace Akka.Actor
             }
         }
 
-
+        // TODO: why not a sendMessage method?
         public virtual void Post(IActorRef sender, object message)
         {
             if (Mailbox == null)
@@ -284,9 +284,18 @@ namespace Akka.Actor
                 {
                     Serializer serializer = _systemImpl.Serialization.FindSerializerFor(message);
                     byte[] serialized = serializer.ToBinary(message);
-                    object deserialized = _systemImpl.Serialization.Deserialize(serialized, serializer.Identifier,
-                        message.GetType());
-                    message = deserialized;
+
+
+                    var manifestSerializer = serializer as SerializerWithStringManifest;
+                    if (manifestSerializer != null)
+                    {
+                        var manifest = manifestSerializer.Manifest(serialized);
+                        message = _systemImpl.Serialization.Deserialize(serialized, manifestSerializer.Identifier, manifest);
+                    }
+                    else
+                    {
+                        message = _systemImpl.Serialization.Deserialize(serialized, serializer.Identifier, message.GetType().AssemblyQualifiedName);
+                    }
                 }
             }
 

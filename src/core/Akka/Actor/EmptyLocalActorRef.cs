@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -27,6 +28,8 @@ namespace Akka.Actor
         public override ActorPath Path { get { return _path; } }
 
         public override IActorRefProvider Provider { get { return _provider; } }
+
+        [Obsolete("Use Context.Watch and Receive<Terminated>")]
         public override bool IsTerminated { get { return true; } }
 
         protected override void TellInternal(object message, IActorRef sender)
@@ -48,39 +51,43 @@ namespace Akka.Actor
 
         protected virtual bool SpecialHandle(object message, IActorRef sender)
         {
-            var w = message as Watch;
-            if(w != null)
+            var watch = message as Watch;
+            if (watch != null)
             {
-                if(w.Watchee.Equals(this) && !w.Watcher.Equals(this))
+                if (watch.Watchee.Equals(this) && !watch.Watcher.Equals(this))
                 {
-                    w.Watcher.SendSystemMessage(new DeathWatchNotification(w.Watchee, existenceConfirmed: false, addressTerminated: false));
+                    watch.Watcher.SendSystemMessage(new DeathWatchNotification(watch.Watchee, existenceConfirmed: false, addressTerminated: false));
                 }
                 return true;
             }
-            if(message is Unwatch)
+            if (message is Unwatch)
                 return true;    //Just ignore
+
             var identify = message as Identify;
-            if(identify != null)
+            if (identify != null)
             {
                 sender.Tell(new ActorIdentity(identify.MessageId, null));
                 return true;
             }
-            var sel = message as ActorSelectionMessage;
-            if(sel != null)
+
+            var actorSelectionMessage = message as ActorSelectionMessage;
+            if (actorSelectionMessage != null)
             {
-                var selectionIdentify = sel.Message as Identify;
-                if(selectionIdentify != null)
+                var selectionIdentify = actorSelectionMessage.Message as Identify;
+                if (selectionIdentify != null)
                 {
-                    if(!sel.WildCardFanOut)
+                    if(!actorSelectionMessage.WildCardFanOut)
                         sender.Tell(new ActorIdentity(selectionIdentify.MessageId, null));
                 }
                 else
                 {
-                    _eventStream.Publish(new DeadLetter(sel.Message, sender.IsNobody() ? _provider.DeadLetters : sender, this));
+                    _eventStream.Publish(new DeadLetter(actorSelectionMessage.Message, sender.IsNobody() ? _provider.DeadLetters : sender, this));
                 }
                 return true;
             }
-            //todo: DeadLetterSupression
+
+            // TODO: DeadLetterSupression
+
             return false;
         }
     }
