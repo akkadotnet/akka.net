@@ -16,9 +16,10 @@ using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
+using FluentAssertions;
 using Xunit;
 
-namespace Akka.Cluster.Tools.Tests.Singleton
+namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 {
     public class ClusterSingletonManagerSpecConfig : MultiNodeConfig
     {
@@ -43,15 +44,16 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             Sixth = Role("sixth");
 
             CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = DEBUG
+                akka.loglevel = INFO
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = 0s
             ")
             .WithFallback(ClusterSingletonManager.DefaultConfig())
+            .WithFallback(ClusterSingletonProxy.DefaultConfig())
             .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 
-            NodeConfig(new[] { First, Second, Third, Fourth, Fifth, Sixth }, new[] { ConfigurationFactory.ParseString(@"akka.cluster.roles =[worker]") });
+            NodeConfig(new[] { First, Second, Third, Fourth, Fifth, Sixth }, new[] { ConfigurationFactory.ParseString(@"akka.cluster.roles = [worker]") });
         }
     }
 
@@ -148,11 +150,10 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
         #endregion
 
-        private readonly ILoggingAdapter _log;
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+
         public PointToPointChannel()
         {
-            _log = Context.GetLogger();
-
             Become(Idle);
         }
 
@@ -171,7 +172,8 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                     Sender.Tell(UnexpectedRegistration.Instance);
                     Context.Stop(Self);
                 })
-                .With<Reset>(_ => Sender.Tell(ResetOk.Instance));
+                .With<Reset>(_ => Sender.Tell(ResetOk.Instance))
+                .Default(msg => { });
         }
 
         private UntypedReceive Active(IActorRef consumer)
@@ -183,20 +185,20 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                     {
                         if (Sender.Equals(consumer))
                         {
-                            _log.Info("Unregistration ok: [{0}]", Sender.Path);
+                            _log.Info("UnregistrationOk: [{0}]", Sender.Path);
                             Sender.Tell(UnregistrationOk.Instance);
                             Context.Become(Idle);
                         }
                         else
                         {
-                            _log.Info("Unexpected unregistration: [{0}], expected: [{1}]", Sender.Path, consumer.Path);
+                            _log.Info("UnexpectedUnregistration: [{0}], expected: [{1}]", Sender.Path, consumer.Path);
                             Sender.Tell(UnexpectedUnregistration.Instance);
                             Context.Stop(Self);
                         }
                     })
                     .With<RegisterConsumer>(_ =>
                     {
-                        _log.Info("Unexpected registration: [{0}], active consumer: [{1}]", Sender.Path, consumer.Path);
+                        _log.Info("Unexpected RegisterConsumer: [{0}], active consumer: [{1}]", Sender.Path, consumer.Path);
                         Sender.Tell(UnexpectedRegistration.Instance);
                         Context.Stop(Self);
                     })
@@ -205,7 +207,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                         Context.Become(Idle);
                         Sender.Tell(ResetOk.Instance);
                     })
-                    .Default(m => Sender.Tell(m));
+                    .Default(msg => consumer.Tell(msg));
             };
         }
 
@@ -215,6 +217,8 @@ namespace Akka.Cluster.Tools.Tests.Singleton
     internal class Consumer : ReceiveActor
     {
         private readonly IActorRef _queue;
+        private readonly IActorRef _delegateTo;
+        private readonly ILoggingAdapter _log = Context.GetLogger();
 
         #region messages
 
@@ -256,28 +260,43 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
         #endregion
 
-        private int current = 0;
+        private int _current = 0;
+        private bool stoppedBeforeUnregistration = true;
 
         public Consumer(IActorRef queue, IActorRef delegateTo)
         {
             _queue = queue;
-            Receive<int>(n => n <= current, n => Context.Stop(Self));
+            _delegateTo = delegateTo;
+
+            Receive<int>(n => n <= _current, n => Context.Stop(Self));
             Receive<int>(n =>
             {
-                current = n;
-                delegateTo.Tell(n);
+                _current = n;
+                _delegateTo.Tell(n);
             });
-            Receive<PointToPointChannel.RegistrationOk>(x => delegateTo.Tell(x));
-            Receive<PointToPointChannel.UnexpectedRegistration>(x => delegateTo.Tell(x));
-            Receive<GetCurrent>(_ => Sender.Tell(current));
+            Receive<PointToPointChannel.RegistrationOk>(x => _delegateTo.Tell(x));
+            Receive<PointToPointChannel.UnexpectedRegistration>(x => _delegateTo.Tell(x));
+            Receive<GetCurrent>(_ => Sender.Tell(_current));
             Receive<End>(_ => queue.Tell(PointToPointChannel.UnregisterConsumer.Instance));
-            Receive<PointToPointChannel.UnregistrationOk>(_ => Context.Stop(Self));
+            Receive<PointToPointChannel.UnregistrationOk>(_ =>
+            {
+                stoppedBeforeUnregistration = false;
+                Context.Stop(Self);
+            });
             Receive<Ping>(_ => Sender.Tell(Pong.Instance));
         }
 
         protected override void PreStart()
         {
             _queue.Tell(PointToPointChannel.RegisterConsumer.Instance);
+        }
+
+        protected override void PostStop()
+        {
+            if (stoppedBeforeUnregistration)
+            {
+                _log.Warning("Stopped before unregistration");
+            }
         }
     }
 
@@ -298,7 +317,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         private readonly RoleName _fifth;
         private readonly RoleName _sixth;
 
-        public int Msg { get { return (_msg++); } }
+        public int Msg { get { return ++_msg; } }
 
         public IActorRef Queue
         {
@@ -310,7 +329,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             }
         }
 
-        protected ClusterSingletonManagerSpec() : base(new ClusterSingletonManagerSpecConfig())
+        protected ClusterSingletonManagerSpec() : this(new ClusterSingletonManagerSpecConfig())
         {
         }
 
@@ -344,20 +363,27 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
         private void AwaitMemberUp(TestProbe memberProbe, params RoleName[] nodes)
         {
-            RunOn(() =>
+            if (nodes.Length > 1)
             {
-                Assert.Equal(Node(nodes[0]).Address, memberProbe.ExpectMsg<ClusterEvent.MemberUp>(TimeSpan.FromSeconds(15)).Member.Address);
-            }, nodes.Skip(1).ToArray());
-            RunOn(() =>
-            {
-                var membersUp = memberProbe.ReceiveN(nodes.Length, TimeSpan.FromSeconds(15))
-                    .Where(x => x is ClusterEvent.MemberUp)
-                    .Select(x => (x as ClusterEvent.MemberUp).Member.Address)
-                    .Distinct()
-                    .ToArray();
+                RunOn(() =>
+                {
+                    memberProbe.ExpectMsg<ClusterEvent.MemberUp>(TimeSpan.FromSeconds(15)).Member.Address
+                        .Should()
+                        .Be(Node(nodes.First()).Address);
+                }, nodes.Skip(1).ToArray());
+            }
 
-                Assert.True(nodes.Select(x => Node(x).Address).ToArray().All(x => membersUp.Contains(x)));
-            }, nodes[0]);
+            RunOn(() =>
+            {
+                var roleNodes = nodes.Select(node => Node(node).Address);
+
+                var addresses = memberProbe.ReceiveN(nodes.Length, TimeSpan.FromSeconds(15))
+                    .Where(x => x is ClusterEvent.MemberUp)
+                    .Select(x => (x as ClusterEvent.MemberUp).Member.Address);
+
+                addresses.Except(roleNodes).Count().Should().Be(0);
+            }, nodes.First());
+
             EnterBarrier(nodes[0].Name + "-up");
         }
 
@@ -365,9 +391,9 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         {
             Sys.ActorOf(ClusterSingletonManager.Props(
                 singletonProps: Props.Create(() => new Consumer(Queue, TestActor)),
-                terminationMessage: Akka.Cluster.Tools.Tests.Singleton.Consumer.End.Instance,
+                terminationMessage: Consumer.End.Instance,
                 settings: ClusterSingletonManagerSettings.Create(Sys).WithRole("worker")),
-                "consumer");
+                name: "consumer");
         }
 
         private void CreateSingletonProxy()
@@ -375,7 +401,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             Sys.ActorOf(ClusterSingletonProxy.Props(
                 singletonManagerPath: "/user/consumer",
                 settings: ClusterSingletonProxySettings.Create(Sys).WithRole("worker")),
-                "consumerProxy");
+                name: "consumerProxy");
         }
 
         private void VerifyProxyMsg(RoleName oldest, RoleName proxyNode, int msg)
@@ -392,7 +418,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 {
                     AwaitAssert(() =>
                     {
-                        Sys.ActorSelection("/user/consumerProxy").Tell(Akka.Cluster.Tools.Tests.Singleton.Consumer.Ping.Instance, p.Ref);
+                        Sys.ActorSelection("/user/consumerProxy").Tell(Consumer.Ping.Instance, p.Ref);
                         p.ExpectMsg<Consumer.Pong>(TimeSpan.FromSeconds(1));
                     });
                 });
@@ -461,7 +487,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 ExpectMsg<PointToPointChannel.ResetOk>();
                 foreach (var role in roles)
                 {
-                    Log.Info("Shutdown [{0}]", Node(role).Address);
+                    Log.Info("Shutdown [{0}]", GetAddress(role));
                     TestConductor.Exit(role, 0).Wait();
                 }
             }, _controller);
@@ -469,11 +495,21 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
         #endregion
 
-        //[MultiNodeFact()]
+
+        //[MultiNodeFact]
+        public void ClusterSingletonManagerSpecs()
+        {
+            ClusterSingletonManager_should_startup_6_node_cluster();
+            ClusterSingletonManager_should_let_the_proxy_messages_to_the_singleton_in_a_6_node_cluster();
+            ClusterSingletonManager_should_handover_when_oldest_leaves_in_6_node_cluster();
+            ClusterSingletonManager_should_takeover_when_oldest_crashes_in_5_node_cluster();
+            // TODO: fix specs
+            // ClusterSingletonManager_should_takeover_when_two_oldest_crash_in_3_node_cluster();
+            // ClusterSingletonManager_should_takeover_when_oldest_crashes_in_2_node_cluster();
+        }
+
         public void ClusterSingletonManager_should_startup_6_node_cluster()
         {
-            AwaitClusterUp(_controller, _observer, _first, _second, _third, _fourth, _fifth, _sixth);
-
             Within(TimeSpan.FromSeconds(60), () =>
             {
                 var memberProbe = CreateTestProbe();
@@ -521,13 +557,13 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 AwaitMemberUp(memberProbe, _sixth, _fifth, _fourth, _third, _second, _observer, _first);
                 VerifyMsg(_first, Msg);
                 VerifyProxyMsg(_first, _sixth, Msg);
+
+                EnterBarrier("after-1");
             });
         }
 
-        //[MultiNodeFact(Skip = "TODO")]
         public void ClusterSingletonManager_should_let_the_proxy_messages_to_the_singleton_in_a_6_node_cluster()
         {
-            ClusterSingletonManager_should_startup_6_node_cluster();
             Within(TimeSpan.FromSeconds(60), () =>
             {
                 VerifyProxyMsg(_first, _first, Msg);
@@ -539,19 +575,15 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             });
         }
 
-        //[MultiNodeFact(Skip = "TODO")]
         public void ClusterSingletonManager_should_handover_when_oldest_leaves_in_6_node_cluster()
         {
-            ClusterSingletonManager_should_let_the_proxy_messages_to_the_singleton_in_a_6_node_cluster();
-
             Within(TimeSpan.FromSeconds(30), () =>
             {
                 var leaveNode = _first;
-                var newOldestNode = _second;
 
                 RunOn(() =>
                 {
-                    Cluster.Leave(Node(leaveNode).Address);
+                    Cluster.Leave(GetAddress(leaveNode));
                 }, leaveNode);
 
                 VerifyRegistration(_second);
@@ -578,11 +610,8 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             });
         }
 
-        //[MultiNodeFact(Skip = "TODO")]
         public void ClusterSingletonManager_should_takeover_when_oldest_crashes_in_5_node_cluster()
         {
-            ClusterSingletonManager_should_handover_when_oldest_leaves_in_6_node_cluster();
-
             Within(TimeSpan.FromSeconds(60), () =>
             {
                 // mute logging of deadLetters during shutdown of systems
@@ -600,25 +629,20 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             });
         }
 
-        //[MultiNodeFact(Skip = "TODO")]
         public void ClusterSingletonManager_should_takeover_when_two_oldest_crash_in_3_node_cluster()
         {
-            ClusterSingletonManager_should_takeover_when_oldest_crashes_in_5_node_cluster();
             Within(TimeSpan.FromSeconds(60), () =>
             {
                 Crash(_third, _fourth);
                 VerifyRegistration(_fifth);
                 VerifyMsg(_fifth, Msg);
                 VerifyProxyMsg(_fifth, _fifth, Msg);
-                VerifyProxyMsg(_fifth, _fifth, Msg);
+                VerifyProxyMsg(_fifth, _sixth, Msg);
             });
         }
 
-        //[MultiNodeFact]
         public void ClusterSingletonManager_should_takeover_when_oldest_crashes_in_2_node_cluster()
         {
-            ClusterSingletonManager_should_takeover_when_two_oldest_crash_in_3_node_cluster();
-
             Within(TimeSpan.FromSeconds(60), () =>
             {
                 Crash(_fifth);

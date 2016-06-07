@@ -1,6 +1,7 @@
 ﻿using System;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
+using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Cluster.Tools.Tests.Singleton
@@ -17,29 +18,30 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         }
 
         [Fact]
-        public void Should_cluster_singleton_manager_settings_have_default_config()
+        public void ClusterSingletonManagerSettings_must_have_default_config()
         {
-            ClusterSingletonManagerSettings.Create(Sys);
-            var config = Sys.Settings.Config.GetConfig("akka.cluster.singleton");
+            var clusterSingletonManagerSettings = ClusterSingletonManagerSettings.Create(Sys);
 
-            Assert.NotNull(config);
-            Assert.Equal("singleton", config.GetString("singleton-name"));
-            Assert.Equal(string.Empty, config.GetString("role"));
-            Assert.Equal(TimeSpan.FromSeconds(1), config.GetTimeSpan("hand-over-retry-interval"));
-            Assert.Equal(10, config.GetInt("min-number-of-hand-over-retries"));
+            clusterSingletonManagerSettings.ShouldNotBe(null);
+            clusterSingletonManagerSettings.SingletonName.ShouldBe("singleton");
+            clusterSingletonManagerSettings.Role.ShouldBe(null);
+            clusterSingletonManagerSettings.HandOverRetryInterval.TotalSeconds.ShouldBe(1);
+            clusterSingletonManagerSettings.RemovalMargin.TotalSeconds.ShouldBe(20);
+
+            var config = Sys.Settings.Config.GetConfig("akka.cluster.singleton");
+            config.GetInt("min-number-of-hand-over-retries").ShouldBe(10);
         }
 
         [Fact]
-        public void Should_singleton_proxy_have_default_config()
+        public void ClusterSingletonProxySettings_must_have_default_config()
         {
-            ClusterSingletonProxySettings.Create(Sys);
-            var config = Sys.Settings.Config.GetConfig("akka.cluster.singleton-proxy");
+            var clusterSingletonProxySettings = ClusterSingletonProxySettings.Create(Sys);
 
-            Assert.NotNull(config);
-            Assert.Equal("singleton", config.GetString("singleton-name"));
-            Assert.Equal(string.Empty, config.GetString("role"));
-            Assert.Equal(TimeSpan.FromSeconds(1), config.GetTimeSpan("singleton-identification-interval"));
-            Assert.Equal(1000, config.GetInt("buffer-size"));
+            clusterSingletonProxySettings.ShouldNotBe(null);
+            clusterSingletonProxySettings.SingletonName.ShouldBe("singleton");
+            clusterSingletonProxySettings.Role.ShouldBe(null);
+            clusterSingletonProxySettings.SingletonIdentificationInterval.TotalSeconds.ShouldBe(1);
+            clusterSingletonProxySettings.BufferSize.ShouldBe(1000);
         }
     }
 }
