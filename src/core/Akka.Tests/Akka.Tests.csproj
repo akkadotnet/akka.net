@@ -191,6 +191,7 @@
     <Compile Include="Util\CollectionExtensionsSpec.cs" />
     <Compile Include="Util\ContinuousEnumeratorSpec.cs" />
     <Compile Include="Util\Internal\Collections\IteratorTests.cs" />
+    <Compile Include="Util\Internal\ExtensionsTests.cs" />
     <Compile Include="Util\Internal\InterlockedSpinTests.cs" />
     <Compile Include="Util\PatternSpec.cs" />
     <Compile Include="Util\SwitchTests.cs" />

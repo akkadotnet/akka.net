@@ -70,6 +70,9 @@ namespace Akka.Tests.Actor
         ""/*/some"" {
           router = round-robin-pool
         }
+        ""/*/so.me"" {
+          router = round-robin-pool
+        }
       }
             ";
         }
