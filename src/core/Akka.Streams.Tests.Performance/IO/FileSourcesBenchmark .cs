@@ -70,7 +70,7 @@ namespace Akka.Streams.Tests.Performance.IO
         [PerfBenchmark(Description = "Test the performance of a FileSource using a file channel",
             RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 1)]
         [TimingMeasurement]
-        [ElapsedTimeAssertion(MaxTimeMilliseconds = 2000)]
+        [ElapsedTimeAssertion(MaxTimeMilliseconds = 2500)]
         public void FileChannel()
             => _fileChannelSource.To(Sink.Ignore<ByteString>())
                 .Run(_materializer)
