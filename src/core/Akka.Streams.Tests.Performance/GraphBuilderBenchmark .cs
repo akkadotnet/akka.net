@@ -86,7 +86,7 @@ namespace Akka.Streams.Tests.Performance
         [PerfBenchmark(Description = "Test the performance of the GraphBuilder for a graph with 100 nested imports",
             RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
         [TimingMeasurement]
-        [ElapsedTimeAssertion(MaxTimeMilliseconds = 2)]
+        [ElapsedTimeAssertion(MaxTimeMilliseconds = 5)]
         public void Graph_with_100_nested_imports() => MaterializationBenchmark.GraphWithNestedImportsBuilder(100);
 
 
@@ -115,14 +115,14 @@ namespace Akka.Streams.Tests.Performance
         [PerfBenchmark(Description = "Test the performance of the GraphBuilder for a graph with 100 imported flows",
             RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
         [TimingMeasurement]
-        [ElapsedTimeAssertion(MaxTimeMilliseconds = 2)]
+        [ElapsedTimeAssertion(MaxTimeMilliseconds = 5)]
         public void Graph_with_100_imported_flows() => MaterializationBenchmark.GraphWithImportedFlowBuilder(100);
 
 
         [PerfBenchmark(Description = "Test the performance of the GraphBuilder for a graph with 1000 imported flows",
             RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
         [TimingMeasurement]
-        [ElapsedTimeAssertion(MaxTimeMilliseconds = 50)]
+        [ElapsedTimeAssertion(MaxTimeMilliseconds = 70)]
         public void Graph_with_1000_imported_flows() => MaterializationBenchmark.GraphWithImportedFlowBuilder(1000);
     }
 }
