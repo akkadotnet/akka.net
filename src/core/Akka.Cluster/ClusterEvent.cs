@@ -205,12 +205,30 @@ namespace Akka.Cluster
         }
 
         /// <summary>
+        /// Member status changed to Joining.
+        /// </summary>
+        public sealed class MemberJoined : MemberStatusChange
+        {
+            public MemberJoined(Member member)
+                : base(member, MemberStatus.Joining) { }
+        }
+
+        /// <summary>
         /// Member status changed to Up.
         /// </summary>
         public sealed class MemberUp : MemberStatusChange
         {
             public MemberUp(Member member)
                 : base(member, MemberStatus.Up) { }
+        }
+
+        /// <summary>
+        ///  Member status changed to Leaving.
+        /// </summary>
+        public sealed class MemberLeft : MemberStatusChange
+        {
+            public MemberLeft(Member member)
+                : base(member, MemberStatus.Leaving) { }
         }
 
         //TODO: Sort out xml doc references
@@ -584,6 +602,7 @@ namespace Akka.Cluster
             var changedMembers = membersGroupedByAddress
                 .Where(g => g.Count() == 2 && g.First().Status != g.Skip(1).First().Status)
                 .Select(g => g.First());
+
             var memberEvents = CollectMemberEvents(newMembers.Union(changedMembers));
 
             var removedMembers = oldGossip.Members.Except(newGossip.Members);
@@ -596,7 +615,9 @@ namespace Akka.Cluster
         {
             foreach (var member in members)
             {
+                if (member.Status == MemberStatus.Joining) yield return new MemberJoined(member);
                 if (member.Status == MemberStatus.Up) yield return new MemberUp(member);
+                if (member.Status == MemberStatus.Leaving) yield return new MemberLeft(member);
                 if (member.Status == MemberStatus.Exiting) yield return new MemberExited(member);
             }
         }

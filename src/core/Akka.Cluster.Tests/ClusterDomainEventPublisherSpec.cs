@@ -38,7 +38,7 @@ namespace Akka.Cluster.Tests
         static readonly Member dUp = TestMember.Create(new Address("akka.tcp", "sys", "d", 2552), MemberStatus.Up, ImmutableHashSet.Create("GRP"));
 
         static readonly Gossip g0 = new Gossip(ImmutableSortedSet.Create(aUp)).Seen(aUp.UniqueAddress);
-        static readonly Gossip g1 = new Gossip(ImmutableSortedSet.Create(aUp, bExiting, cJoining)).Seen(aUp.UniqueAddress).Seen(bExiting.UniqueAddress).Seen(cJoining.UniqueAddress);
+        static readonly Gossip g1 = new Gossip(ImmutableSortedSet.Create(aUp, cJoining)).Seen(aUp.UniqueAddress).Seen(bExiting.UniqueAddress).Seen(cJoining.UniqueAddress);
         static readonly Gossip g2 = new Gossip(ImmutableSortedSet.Create(aUp, bExiting, cUp)).Seen(aUp.UniqueAddress);
         static readonly Gossip g3 = g2.Seen(bExiting.UniqueAddress).Seen(cUp.UniqueAddress);
         static readonly Gossip g4 = new Gossip(ImmutableSortedSet.Create(a51Up, aUp, bExiting, cUp)).Seen(aUp.UniqueAddress);
@@ -61,6 +61,13 @@ namespace Akka.Cluster.Tests
             _publisher.Tell(new InternalClusterAction.PublishChanges(g0));
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberUp(aUp));
             _memberSubscriber.ExpectMsg(new ClusterEvent.LeaderChanged(aUp.Address));
+        }
+
+        [Fact]
+        public void ClusterDomainEventPublisher_must_publish_member_joined()
+        {
+            _publisher.Tell(new InternalClusterAction.PublishChanges(g1));
+            _memberSubscriber.ExpectMsg(new ClusterEvent.MemberJoined(cJoining));
         }
 
         [Fact]
@@ -90,7 +97,7 @@ namespace Akka.Cluster.Tests
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberExited(bExiting));
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberUp(cUp));
             _publisher.Tell(new InternalClusterAction.PublishChanges(g6));
-            _memberSubscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+            _memberSubscriber.ExpectMsg(new ClusterEvent.MemberLeft(aLeaving));
             _publisher.Tell(new InternalClusterAction.PublishChanges(g7));
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberExited(aExiting));
             _memberSubscriber.ExpectMsg(new ClusterEvent.LeaderChanged(cUp.Address));
