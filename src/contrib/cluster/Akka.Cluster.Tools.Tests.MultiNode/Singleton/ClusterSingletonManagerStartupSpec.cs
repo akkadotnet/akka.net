@@ -79,7 +79,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         {
             Startup_of_ClusterSingleton_should_be_quick();
         }
-        
+
         public void Startup_of_ClusterSingleton_should_be_quick()
         {
             Join(_config.First, _config.First);
@@ -91,7 +91,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 AwaitAssert(() =>
                 {
                     var members = Cluster.ReadView.State.Members;
-                    Assert.Equal(3, members.Count);
+                    members.Count.ShouldBe(3);
                     members.All(c => c.Status == MemberStatus.Up).Should().BeTrue();
                 });
             });

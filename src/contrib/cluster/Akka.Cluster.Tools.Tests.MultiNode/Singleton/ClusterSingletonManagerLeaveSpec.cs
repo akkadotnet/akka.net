@@ -6,15 +6,15 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Linq;
 using Akka.Actor;
+using Akka.Cluster.Tests.MultiNode;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
-using Xunit;
-using System.Linq;
-using Akka.Cluster.Tests.MultiNode;
+using FluentAssertions;
 
-namespace Akka.Cluster.Tools.Tests.Singleton
+namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 {
     public class ClusterSingletonManagerLeaveSpecConfig : MultiNodeConfig
     {
@@ -35,6 +35,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 akka.cluster.auto-down-unreachable-after = off
             ")
             .WithFallback(ClusterSingletonManager.DefaultConfig())
+            .WithFallback(ClusterSingletonProxy.DefaultConfig())
             .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
     }
@@ -45,16 +46,9 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
     public abstract class ClusterSingletonManagerLeaveSpec : MultiNodeClusterSpec
     {
-        public sealed class EchoStarted
-        {
-            public static readonly EchoStarted Instance = new EchoStarted();
+        private readonly ClusterSingletonManagerLeaveSpecConfig _config;
 
-            private EchoStarted()
-            {
-            }
-        }
-
-        public class Echo : ReceiveActor
+        private class Echo : ReceiveActor
         {
             private readonly IActorRef _testActorRef;
 
@@ -66,14 +60,9 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
             protected override void PostStop()
             {
-                base.PostStop();
                 _testActorRef.Tell("stopped");
             }
         }
-
-        private readonly RoleName _first;
-        private readonly RoleName _second;
-        private readonly RoleName _third;
 
         private readonly Lazy<IActorRef> _echoProxy;
 
@@ -83,14 +72,12 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
         protected ClusterSingletonManagerLeaveSpec(ClusterSingletonManagerLeaveSpecConfig config) : base(config)
         {
-            _first = config.First;
-            _second = config.Second;
-            _third = config.Third;
+            _config = config;
 
             _echoProxy = new Lazy<IActorRef>(() => Sys.ActorOf(ClusterSingletonProxy.Props(
                 singletonManagerPath: "/user/echo",
                 settings: ClusterSingletonProxySettings.Create(Sys)),
-                "echoProxy"));
+                name: "echoProxy"));
         }
 
         private void Join(RoleName from, RoleName to)
@@ -108,50 +95,62 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 singletonProps: Props.Create(() => new Echo(TestActor)),
                 terminationMessage: PoisonPill.Instance,
                 settings: ClusterSingletonManagerSettings.Create(Sys)),
-                "echo");
+                name: "echo");
         }
 
-        //[MultiNodeFact]
-        public void Leaving_ClusterSingletonManager_should_handover_to_new_instance()
+        [MultiNodeFact]
+        public void ClusterSingletonManagerLeaveSpecs()
         {
-            Join(_first, _first);
+            Leaving_ClusterSingletonManager_must_handover_to_new_instance();
+        }
+
+        public void Leaving_ClusterSingletonManager_must_handover_to_new_instance()
+        {
+            var first = _config.First;
+            var second = _config.Second;
+            var third = _config.Third;
+
+            Join(first, first);
             RunOn(() =>
             {
-
-            }, _first);
+                _echoProxy.Value.Tell("hello1");
+                ExpectMsg<IActorRef>(TimeSpan.FromSeconds(5));
+            }, first);
             EnterBarrier("first-active");
 
-            Join(_second, _first);
-            Join(_third, _first);
+            Join(second, first);
+            Join(third, first);
             Within(TimeSpan.FromSeconds(10), () =>
             {
-                AwaitAssert(() => Assert.Equal(3, Cluster.ReadView.State.Members.Count(m => m.Status == MemberStatus.Up)));
+                AwaitAssert(() => Cluster.ReadView.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(3));
             });
             EnterBarrier("all-up");
 
             RunOn(() =>
             {
-                Cluster.Leave(Node(_first).Address);
-            }, _second);
+                Cluster.Leave(Node(first).Address);
+            }, second);
+
             RunOn(() =>
             {
                 ExpectMsg("stopped", TimeSpan.FromSeconds(10));
-            }, _first);
+            }, first);
             EnterBarrier("first-stopped");
 
             RunOn(() =>
             {
                 var p = CreateTestProbe();
-                var firstAddress = Node(_first).Address;
+                var firstAddress = Node(first).Address;
                 p.Within(TimeSpan.FromSeconds(10), () =>
                 {
                     p.AwaitAssert(() =>
                     {
                         _echoProxy.Value.Tell("hello2", p.Ref);
-                        Assert.NotEqual(firstAddress, p.ExpectMsg<IActorRef>(TimeSpan.FromSeconds(1)).Path.Address);
+                        var actualAddress = p.ExpectMsg<IActorRef>(TestKitSettings.DefaultTimeout);
+                        actualAddress.Path.Address.Should().NotBe(firstAddress);
                     });
                 });
-            }, _second, _third);
+            }, second, third);
             EnterBarrier("handover-done");
         }
     }

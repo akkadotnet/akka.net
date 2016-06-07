@@ -92,6 +92,7 @@ namespace Akka.Cluster.Tools.Singleton
                 .With<ClusterEvent.MemberUp>(m => Add(m.Member))
                 .With<ClusterEvent.MemberExited>(m => Remove(m.Member))
                 .With<ClusterEvent.MemberRemoved>(m => Remove(m.Member))
+                .With<ClusterEvent.IMemberEvent>(m => { /* do nothing */ })
                 .With<ActorIdentity>(identity =>
                 {
                     if (identity.Subject != null)
@@ -164,6 +165,15 @@ namespace Akka.Cluster.Tools.Singleton
             return member.HasRole(_settings.Role);
         }
 
+        private void HandleInitial(ClusterEvent.CurrentClusterState state)
+        {
+            TrackChanges(() =>
+                _membersByAge = state.Members
+                    .Where(m => m.Status == MemberStatus.Up && MatchingRole(m))
+                    .ToImmutableSortedSet(MemberAgeOrdering.Descending));
+        }
+
+        // Discard old singleton ActorRef and send a periodic message to self to identify the singleton.
         private void IdentifySingleton()
         {
             Log.Debug("Creating singleton identification timer...");
@@ -172,7 +182,7 @@ namespace Akka.Cluster.Tools.Singleton
             _singleton = null;
             CancelTimer();
             _identityTimer = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
-                initialDelay: TimeSpan.FromMilliseconds(1), //TODO: this should be TimeSpan.Zero
+                initialDelay: TimeSpan.Zero,
                 interval: _settings.SingletonIdentificationInterval,
                 receiver: Self,
                 message: TryToIdentifySingleton.Instance,
@@ -189,15 +199,14 @@ namespace Akka.Cluster.Tools.Singleton
             if (!Equals(before, after)) IdentifySingleton();
         }
 
-        private void HandleInitial(ClusterEvent.CurrentClusterState state)
-        {
-            TrackChanges(() => _membersByAge = state.Members.Where(m => m.Status == MemberStatus.Up && MatchingRole(m)).ToImmutableSortedSet(MemberAgeOrdering.Descending));
-        }
-
         private void Add(Member member)
         {
             if (MatchingRole(member))
-                TrackChanges(() => _membersByAge = _membersByAge.Add(member));
+                TrackChanges(() =>
+                {
+                    _membersByAge = _membersByAge.Remove(member);
+                    _membersByAge = _membersByAge.Add(member);
+                });
         }
 
         private void Remove(Member member)

@@ -83,6 +83,7 @@
     <Compile Include="ClusterClient\ClusterClientSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PublishSubscribe\DistributedPubSubMediatorSpec.cs" />
+    <Compile Include="Singleton\ClusterSingletonManagerChaos2Spec.cs" />
     <Compile Include="Singleton\ClusterSingletonManagerChaosSpec.cs" />
     <Compile Include="Singleton\ClusterSingletonManagerLeaveSpec.cs" />
     <Compile Include="Singleton\ClusterSingletonManagerSpec.cs" />
