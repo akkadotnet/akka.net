@@ -36,7 +36,7 @@ namespace Akka.Cluster.Tools.Singleton
     /// Note that this is a best effort implementation: messages can always be lost due to the distributed nature of the actors involved.
     /// </remarks>
     /// </summary>
-    public sealed class ClusterSingletonProxy : UntypedActor
+    public sealed class ClusterSingletonProxy : ReceiveActor
     {
         internal sealed class TryToIdentifySingleton
         {
@@ -81,19 +81,16 @@ namespace Akka.Cluster.Tools.Singleton
             _settings = settings;
             _singletonPath = (singletonManagerPath + "/" + settings.SingletonName).Split('/');
             _identityId = CreateIdentifyId(_identityCounter);
-        }
 
-        private ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
-
-        protected override void OnReceive(object message)
-        {
-            message.Match()
-                .With<ClusterEvent.CurrentClusterState>(HandleInitial)
-                .With<ClusterEvent.MemberUp>(m => Add(m.Member))
-                .With<ClusterEvent.MemberExited>(m => Remove(m.Member))
-                .With<ClusterEvent.MemberRemoved>(m => Remove(m.Member))
-                .With<ClusterEvent.IMemberEvent>(m => { /* do nothing */ })
-                .With<ActorIdentity>(identity =>
+            Receive<ClusterEvent.CurrentClusterState>(s => HandleInitial(s));
+            Receive<ClusterEvent.MemberUp>(m => Add(m.Member));
+            Receive<ClusterEvent.MemberExited>(m => Remove(m.Member));
+            Receive<ClusterEvent.MemberRemoved>(m => Remove(m.Member));
+            Receive<ClusterEvent.IMemberEvent>(m =>
+            {
+                /* do nothing */
+            });
+            Receive<ActorIdentity>(identity =>
                 {
                     if (identity.Subject != null)
                     {
@@ -105,26 +102,26 @@ namespace Akka.Cluster.Tools.Singleton
                         CancelTimer();
                         SendBuffered();
                     }
-                })
-                .With<TryToIdentifySingleton>(() =>
-                {
-                    var oldest = _membersByAge.FirstOrDefault();
-                    if (oldest != null && _identityTimer != null)
-                    {
-                        var singletonAddress = new RootActorPath(oldest.Address) / _singletonPath;
-                        Log.Debug("Trying to identify singleton at [{0}]", singletonAddress);
-                        Context.ActorSelection(singletonAddress).Tell(new Identify(_identityId));
-                    }
-                })
-                .With<Terminated>(terminated =>
+                });
+            Receive<TryToIdentifySingleton>(_ =>
+                 {
+                     var oldest = _membersByAge.FirstOrDefault();
+                     if (oldest != null && _identityTimer != null)
+                     {
+                         var singletonAddress = new RootActorPath(oldest.Address) / _singletonPath;
+                         Log.Debug("Trying to identify singleton at [{0}]", singletonAddress);
+                         Context.ActorSelection(singletonAddress).Tell(new Identify(_identityId));
+                     }
+                 });
+            Receive<Terminated>(terminated =>
                 {
                     if (Equals(_singleton, terminated.ActorRef))
                     {
                         // buffering mode, identification of new will start when old node is removed
                         _singleton = null;
                     }
-                })
-                .Default(msg =>
+                });
+            ReceiveAny(msg =>
                 {
                     if (_singleton != null)
                     {
@@ -136,6 +133,8 @@ namespace Akka.Cluster.Tools.Singleton
                         Buffer(msg);
                 });
         }
+
+        private ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
 
         protected override void PreStart()
         {
