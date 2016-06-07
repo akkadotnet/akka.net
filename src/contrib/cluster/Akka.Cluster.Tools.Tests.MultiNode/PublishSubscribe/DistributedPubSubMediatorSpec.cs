@@ -16,6 +16,7 @@ using Akka.Cluster.Tools.PublishSubscribe.Internal;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote.TestKit;
+using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
@@ -38,7 +39,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = 0s
                 akka.cluster.pub-sub.max-delta-elements = 500
-            ").WithFallback(MultiNodeClusterSpec.ClusterConfig());
+            ").WithFallback(DistributedPubSub.DefaultConfig());
         }
     }
 
@@ -192,6 +193,46 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             }
         }
 
+        public class Sender : UntypedActor
+        {
+            private readonly IActorRef _mediator;
+
+            public Sender()
+            {
+                _mediator = DistributedPubSub.Get(Context.System).Mediator;
+            }
+
+            protected override void OnReceive(object message)
+            {
+                var str = message as string;
+                if (str != null)
+                {
+                    _mediator.Tell(new Send("/user/destination", str.ToUpperInvariant(), true));
+                }
+            }
+        }
+
+        public class Destination : UntypedActor
+        {
+            private readonly IActorRef _mediator;
+            private readonly ILoggingAdapter _log;
+
+            public Destination()
+            {
+                _log = Context.GetLogger();
+                _mediator = DistributedPubSub.Get(Context.System).Mediator;
+                _mediator.Tell(new Put(Self));
+            }
+
+            protected override void OnReceive(object message)
+            {
+                if (message is string)
+                {
+                    _log.Info("Got {0}", message);
+                }
+            }
+        }
+
         private readonly RoleName _first;
         private readonly RoleName _second;
         private readonly RoleName _third;
@@ -250,8 +291,27 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
         #endregion
 
-        //[MultiNodeFact(Skip = "TODO")]
-        public void DistributedPubSubMediator_should_startup_2_nodes_cluster()
+        [MultiNodeFact]
+        public void DistributedPubSubMediatorSpecs()
+        {
+            DistributedPubSubMediator_must_startup_2_nodes_cluster();
+            DistributedPubSubMediator_must_keep_track_of_added_users();
+            DistributedPubSubMediator_must_replicate_users_to_new_node();
+            DistributedPubSubMediator_must_keep_track_of_removed_users();
+            DistributedPubSubMediator_must_remove_terminated_users();
+            DistributedPubSubMediator_must_publish();
+            DistributedPubSubMediator_must_publish_to_topic();
+            DistributedPubSubMediator_must_demonstrate_usageof_Publish();
+            DistributedPubSubMediator_must_demonstrate_usageof_Send();
+            DistributedPubSubMediator_must_SendAll_to_all_other_nodes();
+            DistributedPubSubMediator_must_send_one_message_to_each_group();
+            DistributedPubSubMediator_must_transfer_delta_correctly();
+            DistributedPubSubMediator_must_remove_entries_when_node_is_removed();
+            DistributedPubSubMediator_must_receive_proper_UnsubscribeAck_message();
+            DistributedPubSubMediator_must_get_topics_after_simple_publish();
+        }
+
+        public void DistributedPubSubMediator_must_startup_2_nodes_cluster()
         {
             Within(TimeSpan.FromSeconds(15), () =>
             {
@@ -261,17 +321,15 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             });
         }
 
-        //[MultiNodeFact(Skip = "TODO")]
-        public void DistributedPubSubMediator_should_keep_track_of_added_users()
+        public void DistributedPubSubMediator_must_keep_track_of_added_users()
         {
-            DistributedPubSubMediator_should_startup_2_nodes_cluster();
-
             Within(TimeSpan.FromSeconds(15), () =>
             {
                 RunOn(() =>
                 {
                     var u1 = CreateChatUser("u1");
                     Mediator.Tell(new Put(u1));
+
                     var u2 = CreateChatUser("u2");
                     Mediator.Tell(new Put(u2));
 
@@ -280,7 +338,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     // send to actor at the same node
                     u1.Tell(new Whisper("/user/u2", "hello"));
                     ExpectMsg("hello");
-                    Assert.Equal(u2, LastSender);
+                    LastSender.ShouldBe(u2);
                 }, _first);
 
                 RunOn(() =>
@@ -316,17 +374,14 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 RunOn(() =>
                 {
                     ExpectMsg("hi there");
-                    Assert.Equal("u4", LastSender.Path.Name);
+                    LastSender.Path.Name.ShouldBe("u4");
                 }, _second);
                 EnterBarrier("after-2");
             });
         }
 
-        //[MultiNodeFact(Skip = "TODO")]
-        public void DistributedPubSubMediator_should_replicate_users_to_new_node()
+        public void DistributedPubSubMediator_must_replicate_users_to_new_node()
         {
-            DistributedPubSubMediator_should_keep_track_of_added_users();
-
             Within(TimeSpan.FromSeconds(20), () =>
             {
                 Join(_third, _first);
@@ -347,38 +402,36 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 RunOn(() =>
                 {
                     ExpectMsg("go");
-                    Assert.Equal("u4", LastSender.Path.Name);
+                    LastSender.Path.Name.ShouldBe("u4");
                 }, _second);
                 EnterBarrier("after-3");
             });
         }
 
-        //[MultiNodeFact(Skip = "TODO")]
-        public void DistributedPubSubMediator_should_keep_track_of_removed_users()
+        public void DistributedPubSubMediator_must_keep_track_of_removed_users()
         {
-            DistributedPubSubMediator_should_replicate_users_to_new_node();
-
             Within(TimeSpan.FromSeconds(15), () =>
             {
-                var u6 = CreateChatUser("u6");
-                Mediator.Tell(new Put(u6));
-            });
-            AwaitCount(6);
-            EnterBarrier("6-registered");
+                RunOn(() =>
+                {
+                    var u6 = CreateChatUser("u6");
+                    Mediator.Tell(new Put(u6));
+                }, _first);
+                AwaitCount(6);
+                EnterBarrier("6-registered");
 
-            RunOn(() =>
-            {
-                Mediator.Tell(new Remove("/user/u6"));
-            }, _first);
-            AwaitCount(5);
-            EnterBarrier("after-4");
+                RunOn(() =>
+                {
+                    Mediator.Tell(new Remove("/user/u6"));
+                }, _first);
+                AwaitCount(5);
+
+                EnterBarrier("after-4");
+            });
         }
 
-        //[MultiNodeFact(Skip = "TODO")]
-        public void DistributedPubSubMediator_should_remove_terminated_users()
+        public void DistributedPubSubMediator_must_remove_terminated_users()
         {
-            DistributedPubSubMediator_should_keep_track_of_removed_users();
-
             Within(TimeSpan.FromSeconds(5), () =>
             {
                 RunOn(() =>
@@ -391,11 +444,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             });
         }
 
-        //[MultiNodeFact(Skip = "TODO")]
-        public void DistributedPubSubMediator_should_publish()
+        public void DistributedPubSubMediator_must_publish()
         {
-            DistributedPubSubMediator_should_remove_terminated_users();
-
             Within(TimeSpan.FromSeconds(15), () =>
             {
                 RunOn(() =>
@@ -414,22 +464,20 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 RunOn(() =>
                 {
                     ExpectMsg("hi");
-                    Assert.Equal("u7", LastSender.Path.Name);
+                    LastSender.Path.Name.ShouldBe("u7");
                 }, _first, _second);
 
                 RunOn(() =>
                 {
-                    ExpectNoMsg(TimeSpan.FromSeconds(3));
+                    ExpectNoMsg(TimeSpan.FromSeconds(2));
                 }, _third);
+
                 EnterBarrier("after-6");
             });
         }
 
-        //[MultiNodeFact(Skip = "TODO")]
-        public void DistributedPubSubMediator_should_publish_to_topic()
+        public void DistributedPubSubMediator_must_publish_to_topic()
         {
-            DistributedPubSubMediator_should_publish();
-
             Within(TimeSpan.FromSeconds(15), () =>
             {
                 RunOn(() =>
@@ -461,13 +509,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 RunOn(() =>
                 {
                     var names = ReceiveWhile(x => "hello all".Equals(x) ? LastSender.Path.Name : null, msgs: 2);
-                    Assert.True(names.All(x => x == "u8" || x == "u9"));
+                    names.All(x => x == "u8" || x == "u9").ShouldBeTrue();
                 }, _first);
 
                 RunOn(() =>
                 {
                     ExpectMsg("hello all");
-                    Assert.Equal("u10", LastSender.Path.Name);
+                    LastSender.Path.Name.ShouldBe("u10");
                 }, _second);
 
                 RunOn(() =>
@@ -478,11 +526,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             });
         }
 
-        //[MultiNodeFact(Skip = "TODO")]
-        public void DistributedPubSubMediator_should_demonstrate_usage()
+        public void DistributedPubSubMediator_must_demonstrate_usageof_Publish()
         {
-            DistributedPubSubMediator_should_publish_to_topic();
-
             Within(TimeSpan.FromSeconds(15), () =>
             {
                 RunOn(() =>
@@ -507,11 +552,34 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             });
         }
 
-        //[MultiNodeFact(Skip = "TODO")]
-        public void DistributedPubSubMediator_should_SendAll_to_all_other_nodes()
+        public void DistributedPubSubMediator_must_demonstrate_usageof_Send()
         {
-            DistributedPubSubMediator_should_demonstrate_usage();
+            Within(TimeSpan.FromSeconds(15), () =>
+            {
+                RunOn(() =>
+                {
+                    Sys.ActorOf(Props.Create<Destination>(), "destination");
+                }, _first);
 
+                RunOn(() =>
+                {
+                    Sys.ActorOf(Props.Create<Destination>(), "destination");
+                }, _second);
+
+                RunOn(() =>
+                {
+                    var sender = Sys.ActorOf(Props.Create<Sender>(), "sender");
+                    AwaitCount(12);
+                    // after a while the destinations are replicated
+                    sender.Tell("hello");
+                }, _third);
+
+                EnterBarrier("after-8");
+            });
+        }
+
+        public void DistributedPubSubMediator_must_SendAll_to_all_other_nodes()
+        {
             Within(TimeSpan.FromSeconds(15), () =>
             {
                 RunOn(() =>
@@ -519,7 +587,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     var u11 = CreateChatUser("u11");
                     Mediator.Tell(new Put(u11));
                 }, _first, _second, _third);
-                AwaitCount(13);
+                AwaitCount(15);
                 EnterBarrier("11-registered");
 
                 RunOn(() =>
@@ -530,7 +598,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 RunOn(() =>
                 {
                     ExpectMsg("hi");
-                    Assert.Equal("u1", LastSender.Path.Name);
+                    LastSender.Path.Name.ShouldBe("u11");
                 }, _first, _second);
 
                 RunOn(() =>
@@ -541,43 +609,43 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             });
         }
 
-        //[MultiNodeFact(Skip = "TODO")]
-        public void DistributedPubSubMediator_should_send_one_message_to_each_group()
+        public void DistributedPubSubMediator_must_send_one_message_to_each_group()
         {
-            DistributedPubSubMediator_should_SendAll_to_all_other_nodes();
-
             Within(TimeSpan.FromSeconds(20), () =>
             {
                 RunOn(() =>
                 {
                     var u12 = CreateChatUser("u12");
                     u12.Tell(new JoinGroup("topic2", "group1"));
-                    ExpectMsg<SubscribeAck>(s => s.Subscribe.Topic == "topic2"
-                                                                           && s.Subscribe.Group == "group1"
-                                                                           && s.Subscribe.Ref.Equals(u12));
+                    var message = ExpectMsg<SubscribeAck>();
+                    message.Subscribe.Topic.ShouldBe("topic2");
+                    message.Subscribe.Group.ShouldBe("group1");
+                    message.Subscribe.Ref.ShouldBe(u12);
                 }, _first);
 
                 RunOn(() =>
                 {
                     var u12 = CreateChatUser("u12");
                     u12.Tell(new JoinGroup("topic2", "group2"));
-                    ExpectMsg<SubscribeAck>(s => s.Subscribe.Topic == "topic2"
-                                                                           && s.Subscribe.Group == "group2"
-                                                                           && s.Subscribe.Ref.Equals(u12));
+                    var message1 = ExpectMsg<SubscribeAck>();
+                    message1.Subscribe.Topic.ShouldBe("topic2");
+                    message1.Subscribe.Group.ShouldBe("group2");
+                    message1.Subscribe.Ref.ShouldBe(u12);
 
                     var u13 = CreateChatUser("u13");
-                    u12.Tell(new JoinGroup("topic2", "group2"));
-                    ExpectMsg<SubscribeAck>(s => s.Subscribe.Topic == "topic2"
-                                                                           && s.Subscribe.Group == "group2"
-                                                                           && s.Subscribe.Ref.Equals(u13));
+                    u13.Tell(new JoinGroup("topic2", "group2"));
+                    var message2 = ExpectMsg<SubscribeAck>();
+                    message2.Subscribe.Topic.ShouldBe("topic2");
+                    message2.Subscribe.Group.ShouldBe("group2");
+                    message2.Subscribe.Ref.ShouldBe(u13);
                 }, _second);
 
-                AwaitCount(17);
+                AwaitCount(19);
                 EnterBarrier("12-registered");
 
                 RunOn(() =>
                 {
-                    ChatUser("u12").Tell(new ShoutToGroup("topic12", "hi"));
+                    ChatUser("u12").Tell(new ShoutToGroup("topic2", "hi"));
                 }, _first);
 
                 RunOn(() =>
@@ -600,24 +668,24 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 {
                     var u12 = ChatUser("u12");
                     u12.Tell(new ExitGroup("topic2", "group2"));
-                    ExpectMsg<UnsubscribeAck>(s => s.Unsubscribe.Topic == "topic2"
-                                                                           && s.Unsubscribe.Group == "group2"
-                                                                           && s.Unsubscribe.Ref.Equals(u12));
+                    var message1 = ExpectMsg<UnsubscribeAck>();
+                    message1.Unsubscribe.Topic.ShouldBe("topic2");
+                    message1.Unsubscribe.Group.ShouldBe("group2");
+                    message1.Unsubscribe.Ref.ShouldBe(u12);
+
                     var u13 = ChatUser("u13");
-                    u12.Tell(new ExitGroup("topic2", "group2"));
-                    ExpectMsg<UnsubscribeAck>(s => s.Unsubscribe.Topic == "topic2"
-                                                                           && s.Unsubscribe.Group == "group2"
-                                                                           && s.Unsubscribe.Ref.Equals(u13));
+                    u13.Tell(new ExitGroup("topic2", "group2"));
+                    var message2 = ExpectMsg<UnsubscribeAck>();
+                    message2.Unsubscribe.Topic.ShouldBe("topic2");
+                    message2.Unsubscribe.Group.ShouldBe("group2");
+                    message2.Unsubscribe.Ref.ShouldBe(u13);
                 }, _second);
                 EnterBarrier("after-12");
             });
         }
 
-        //[MultiNodeFact(Skip = "TODO")]
-        public void DistributedPubSubMediator_should_transfer_delta_correctly()
+        public void DistributedPubSubMediator_must_transfer_delta_correctly()
         {
-            DistributedPubSubMediator_should_send_one_message_to_each_group();
-
             var firstAddress = Node(_first).Address;
             var secondAddress = Node(_second).Address;
             var thirdAddress = Node(_third).Address;
@@ -626,10 +694,10 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             {
                 Mediator.Tell(new Tools.PublishSubscribe.Internal.Status(new Dictionary<Address, long>()));
                 var deltaBuckets = ExpectMsg<Delta>().Buckets;
-                Assert.Equal(3, deltaBuckets.Count());
-                Assert.Equal(9, deltaBuckets.First(x => x.Owner == firstAddress).Content.Count);
-                Assert.Equal(8, deltaBuckets.First(x => x.Owner == secondAddress).Content.Count);
-                Assert.Equal(2, deltaBuckets.First(x => x.Owner == thirdAddress).Content.Count);
+                deltaBuckets.Length.ShouldBe(3);
+                deltaBuckets.First(x => x.Owner == firstAddress).Content.Count.ShouldBe(10);
+                deltaBuckets.First(x => x.Owner == secondAddress).Content.Count.ShouldBe(9);
+                deltaBuckets.First(x => x.Owner == thirdAddress).Content.Count.ShouldBe(2);
             }, _first);
             EnterBarrier("verified-initial-delta");
 
@@ -639,36 +707,32 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             {
                 for (int i = 1; i <= many; i++)
                 {
-                    Mediator.Tell(new Put(CreateChatUser("u" + (i + 1000))));
+                    Mediator.Tell(new Put(CreateChatUser("u" + (1000 + i))));
                 }
 
                 Mediator.Tell(new Tools.PublishSubscribe.Internal.Status(new Dictionary<Address, long>()));
                 var deltaBuckets1 = ExpectMsg<Delta>().Buckets;
-                Assert.Equal(500, deltaBuckets1.Sum(x => x.Content.Count));
+                deltaBuckets1.Sum(x => x.Content.Count).ShouldBe(500);
 
                 Mediator.Tell(new Tools.PublishSubscribe.Internal.Status(deltaBuckets1.ToDictionary(b => b.Owner, b => b.Version)));
                 var deltaBuckets2 = ExpectMsg<Delta>().Buckets;
-                Assert.Equal(500, deltaBuckets2.Sum(x => x.Content.Count));
+                deltaBuckets2.Sum(x => x.Content.Count).ShouldBe(500);
 
                 Mediator.Tell(new Tools.PublishSubscribe.Internal.Status(deltaBuckets2.ToDictionary(b => b.Owner, b => b.Version)));
                 var deltaBuckets3 = ExpectMsg<Delta>().Buckets;
-                Assert.Equal(9 + 8 + 2 + many - 500 - 500, deltaBuckets3.Sum(x => x.Content.Count));
-
+                deltaBuckets3.Sum(x => x.Content.Count).ShouldBe(10 + 9 + 2 + many - 500 - 500);
             }, _first);
             EnterBarrier("verified-delta-with-many");
 
             Within(TimeSpan.FromSeconds(10), () =>
             {
-                AwaitCount(17 + many);
+                AwaitCount(19 + many);
             });
             EnterBarrier("after-13");
         }
 
-        //[MultiNodeFact(Skip = "TODO")]
-        public void DistributedPubSubMediator_should_remove_entries_when_node_is_removed()
+        public void DistributedPubSubMediator_must_remove_entries_when_node_is_removed()
         {
-            DistributedPubSubMediator_should_transfer_delta_correctly();
-
             Within(TimeSpan.FromSeconds(30), () =>
             {
                 Mediator.Tell(Count.Instance);
@@ -689,11 +753,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             });
         }
 
-        //[MultiNodeFact(Skip = "TODO")]
-        public void DistributedPubSubMediator_should_receive_proper_UnsubscribeAck_message()
+        public void DistributedPubSubMediator_must_receive_proper_UnsubscribeAck_message()
         {
-            DistributedPubSubMediator_should_remove_entries_when_node_is_removed();
-
             Within(TimeSpan.FromSeconds(15), () =>
             {
                 RunOn(() =>
@@ -711,11 +772,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             });
         }
 
-        //[MultiNodeFact(Skip = "TODO")]
-        public void DistributedPubSubMediator_should_get_topics_after_simple_publish()
+        public void DistributedPubSubMediator_must_get_topics_after_simple_publish()
         {
-            DistributedPubSubMediator_should_receive_proper_UnsubscribeAck_message();
-
             Within(TimeSpan.FromSeconds(15), () =>
             {
                 RunOn(() =>
@@ -758,8 +816,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                         Mediator.Tell(GetTopics.Instance);
                         var topics = ExpectMsg<CurrentTopics>().Topics;
 
-                        Assert.True(topics.Contains("topic_a1"));
-                        Assert.True(topics.Contains("topic_a2"));
+                        topics.Contains("topic_a1").ShouldBeTrue();
+                        topics.Contains("topic_a2").ShouldBeTrue();
                     });
                 }, _second);
                 EnterBarrier("after-get-topics");

@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -48,7 +49,6 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public DistributedPubSub(ExtendedActorSystem system)
         {
             _system = system;
-            _system.Settings.InjectTopLevelFallback(DefaultConfig());
             _settings = DistributedPubSubSettings.Create(system);
             _cluster = Cluster.Get(_system);
             _mediatorRef = CreateMediator();

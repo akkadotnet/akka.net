@@ -1,11 +1,14 @@
 ﻿using System;
+using Akka.Actor;
 using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Configuration;
+using Akka.Routing;
+using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Cluster.Tools.Tests.PublishSubscribe
 {
-    public class DistributedPubSubConfigSpec : TestKit.Xunit2.TestKit
+    public class DistributedPubSubConfigSpec : AkkaSpec
     {
         public DistributedPubSubConfigSpec() : base(GetConfig())
         {
@@ -17,19 +20,20 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
         }
 
         [Fact]
-        public void Should_distributed_pub_sub_settings_have_default_config()
+        public void DistributedPubSubSettings_must_have_default_config()
         {
-            DistributedPubSub.Get(Sys);
-            var config = Sys.Settings.Config.GetConfig("akka.cluster.pub-sub");
+            var distributedPubSubSettings = DistributedPubSubSettings.Create(Sys);
 
-            Assert.NotNull(config);
-            Assert.Equal("distributedPubSubMediator", config.GetString("name"));
-            Assert.Equal(string.Empty, config.GetString("role"));
-            Assert.Equal("random", config.GetString("routing-logic"));
-            Assert.Equal(TimeSpan.FromSeconds(1), config.GetTimeSpan("gossip-interval"));
-            Assert.Equal(TimeSpan.FromSeconds(120), config.GetTimeSpan("removed-time-to-live"));
-            Assert.Equal(3000, config.GetInt("max-delta-elements"));
-            Assert.Equal(string.Empty, config.GetString("use-dispatcher"));
+            distributedPubSubSettings.ShouldNotBe(null);
+            distributedPubSubSettings.Role.ShouldBe(null);
+            distributedPubSubSettings.RoutingLogic.GetType().ShouldBe(typeof(RandomLogic));
+            distributedPubSubSettings.GossipInterval.TotalSeconds.ShouldBe(1);
+            distributedPubSubSettings.RemovedTimeToLive.TotalSeconds.ShouldBe(120);
+            distributedPubSubSettings.MaxDeltaElements.ShouldBe(3000);
+
+            var config = Sys.Settings.Config.GetConfig("akka.cluster.pub-sub");
+            config.GetString("name").ShouldBe("distributedPubSubMediator");
+            config.GetString("use-dispatcher").ShouldBe(string.Empty);
         }
     }
 }
