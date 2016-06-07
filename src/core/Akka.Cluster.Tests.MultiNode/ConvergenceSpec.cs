@@ -176,7 +176,6 @@ namespace Akka.Cluster.Tests.MultiNode
                     MemberStatus(GetAddress(_config.First)).ShouldBe(Akka.Cluster.MemberStatus.Up);
                     MemberStatus(GetAddress(_config.Second)).ShouldBe(Akka.Cluster.MemberStatus.Up);
                     MemberStatus(GetAddress(_config.Fourth)).ShouldBe(Akka.Cluster.MemberStatus.Joining);
-                    Assert.True(MemberStatus(GetAddress(_config.Fourth)) == null);
                     // wait and then check again
                     Thread.Sleep(Dilated(TimeSpan.FromSeconds(1)));
                 }
