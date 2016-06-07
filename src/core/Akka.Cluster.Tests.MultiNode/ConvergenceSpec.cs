@@ -171,14 +171,14 @@ namespace Akka.Cluster.Tests.MultiNode
             {
                 for (var i = 0; i < 5; i++)
                 {
-                    AwaitAssert(() => ClusterView.Members.Count.ShouldBe(3));
+                    AwaitAssert(() => ClusterView.Members.Count.ShouldBe(4));
                     AwaitSeenSameState(GetAddress(_config.First), GetAddress(_config.Second), GetAddress(_config.Fourth));
                     MemberStatus(GetAddress(_config.First)).ShouldBe(Akka.Cluster.MemberStatus.Up);
                     MemberStatus(GetAddress(_config.Second)).ShouldBe(Akka.Cluster.MemberStatus.Up);
+                    MemberStatus(GetAddress(_config.Fourth)).ShouldBe(Akka.Cluster.MemberStatus.Joining);
                     Assert.True(MemberStatus(GetAddress(_config.Fourth)) == null);
                     // wait and then check again
-                    //TODO: Dilation?
-                    Thread.Sleep(TimeSpan.FromSeconds(1));
+                    Thread.Sleep(Dilated(TimeSpan.FromSeconds(1)));
                 }
             }, _config.First, _config.Second, _config.Fourth);
 

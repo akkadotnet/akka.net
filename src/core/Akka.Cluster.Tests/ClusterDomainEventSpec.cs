@@ -65,7 +65,7 @@ namespace Akka.Cluster.Tests
             var g2 = t2.Item1;
             var s2 = t2.Item2;
 
-            Assert.Equal(ImmutableList.Create(new ClusterEvent.MemberUp(bUp)), ClusterEvent.DiffMemberEvents(g1, g2));
+            Assert.Equal(ImmutableList.Create<ClusterEvent.IMemberEvent>(new ClusterEvent.MemberUp(bUp), new ClusterEvent.MemberJoined(eJoining)), ClusterEvent.DiffMemberEvents(g1, g2));
             Assert.Equal(ImmutableList.Create<ClusterEvent.UnreachableMember>(), ClusterEvent.DiffUnreachable(g1, g2));
 
             Assert.Equal(ImmutableList.Create(new ClusterEvent.SeenChanged(true, s2.Select(s => s.Address).ToImmutableHashSet())), ClusterEvent.DiffSeen(g1, g2, selfDummyAddress));
@@ -81,7 +81,7 @@ namespace Akka.Cluster.Tests
             var g2 = t2.Item1;
             var s2 = t2.Item2;
 
-            Assert.Equal(ImmutableList.Create(new ClusterEvent.MemberUp(aUp)), ClusterEvent.DiffMemberEvents(g1, g2));
+            Assert.Equal(ImmutableList.Create<ClusterEvent.IMemberEvent>(new ClusterEvent.MemberUp(aUp), new ClusterEvent.MemberLeft(cLeaving), new ClusterEvent.MemberJoined(eJoining)), ClusterEvent.DiffMemberEvents(g1, g2));
             Assert.Equal(ImmutableList.Create<ClusterEvent.UnreachableMember>(), ClusterEvent.DiffUnreachable(g1, g2));
             Assert.Equal(ImmutableList.Create(new ClusterEvent.SeenChanged(true, s2.Select(s => s.Address).ToImmutableHashSet())), ClusterEvent.DiffSeen(g1, g2, selfDummyAddress));
         }
