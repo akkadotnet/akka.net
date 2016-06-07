@@ -323,24 +323,21 @@ namespace Akka.Remote
             {
                 return _local.ResolveActorRef(RootGuardian, actorPath.Elements);
             }
-            else
+            try
             {
-                try
-                {
-                    return new RemoteActorRef(Transport,
-                        Transport.LocalAddressForRemote(actorPath.Address),
-                        actorPath,
-                        ActorRefs.Nobody,
-                        Props.None,
-                        Deploy.None);
-                }
-                catch (Exception ex)
-                {
-                    _log.Warning("Error while resolving address [{0}] due to [{1}]", actorPath.Address, ex.Message);
-                    return new EmptyLocalActorRef(this, RootPath, _local.EventStream);
-                }
+                var rootPath = new RootActorPath(actorPath.Address)/actorPath.Elements;
+                return new RemoteActorRef(Transport,
+                    Transport.LocalAddressForRemote(actorPath.Address),
+                    rootPath, 
+                    ActorRefs.Nobody,
+                    Props.None,
+                    Deploy.None);
             }
-
+            catch (Exception ex)
+            {
+                _log.Warning("Error while resolving address [{0}] due to [{1}]", actorPath.Address, ex.Message);
+                return new EmptyLocalActorRef(this, RootPath, _local.EventStream);
+            }
         }
 
         public Address GetExternalAddressFor(Address address)

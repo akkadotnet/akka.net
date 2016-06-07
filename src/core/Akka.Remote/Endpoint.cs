@@ -60,7 +60,7 @@ namespace Akka.Remote
             IActorRef senderOption = null)
         {
             var payload = MessageSerializer.Deserialize(system, message);
-            Type payloadClass = payload == null ? null : payload.GetType();
+            Type payloadClass = payload?.GetType();
             var sender = senderOption ?? system.DeadLetters;
             var originalReceiver = recipient.Path;
 
@@ -72,7 +72,7 @@ namespace Akka.Remote
                 {
                     if (settings.LogReceive)
                     {
-                        var msgLog = string.Format("RemoteMessage: {0} to {1}<+{2} from {3}", payload, recipient, originalReceiver,sender);
+                        var msgLog = $"RemoteMessage: {payload} to {recipient}<+{originalReceiver} from {sender}";
                         log.Debug("received daemon message [{0}]", msgLog);
                     }
                     remoteDaemon.Tell(payload);
@@ -84,7 +84,7 @@ namespace Akka.Remote
             {
                 if (settings.LogReceive)
                 {
-                    var msgLog = string.Format("RemoteMessage: {0} to {1}<+{2} from {3}", payload, recipient, originalReceiver,sender);
+                    var msgLog = $"RemoteMessage: {payload} to {recipient}<+{originalReceiver} from {sender}";
                     log.Debug("received local message [{0}]", msgLog);
                 }
                 if (payload is ActorSelectionMessage)
@@ -121,7 +121,6 @@ namespace Akka.Remote
                 {
                     recipient.Tell(payload, sender);
                 }
-
             }
 
             // message is intended for a remote-deployed recipient

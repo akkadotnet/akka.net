@@ -22,7 +22,8 @@ namespace Akka.Serialization
 
     public class Serialization
     {
-        [ThreadStatic] private static Information _currentTransportInformation;
+        [ThreadStatic]
+        private static Information _currentTransportInformation;
 
         public static T SerializeWithTransport<T>(ActorSystem system, Address address, Func<T> action)
         {
@@ -46,7 +47,7 @@ namespace Akka.Serialization
             System = system;
 
             _nullSerializer = new NullSerializer(system);
-            _serializers.Add(_nullSerializer.Identifier,_nullSerializer);
+            _serializers.Add(_nullSerializer.Identifier, _nullSerializer);
 
             var serializersConfig = system.Settings.Config.GetConfig("akka.actor.serializers").AsEnumerable().ToList();
             var serializerBindingConfig = system.Settings.Config.GetConfig("akka.actor.serialization-bindings").AsEnumerable().ToList();
@@ -57,13 +58,13 @@ namespace Akka.Serialization
                 var serializerType = Type.GetType(serializerTypeName);
                 if (serializerType == null)
                 {
-                    system.Log.Warning("The type name for serializer '{0}' did not resolve to an actual Type: '{1}'",kvp.Key, serializerTypeName);
+                    system.Log.Warning("The type name for serializer '{0}' did not resolve to an actual Type: '{1}'", kvp.Key, serializerTypeName);
                     continue;
                 }
 
-                var serializer = (Serializer)Activator.CreateInstance(serializerType,system);
+                var serializer = (Serializer)Activator.CreateInstance(serializerType, system);
                 _serializers.Add(serializer.Identifier, serializer);
-                namedSerializers.Add(kvp.Key,serializer);
+                namedSerializers.Add(kvp.Key, serializer);
             }
 
             foreach (var kvp in serializerBindingConfig)
@@ -75,7 +76,7 @@ namespace Akka.Serialization
                 if (messageType == null)
                 {
 
-                    system.Log.Warning("The type name for message/serializer binding '{0}' did not resolve to an actual Type: '{1}'",serializerName, typename);
+                    system.Log.Warning("The type name for message/serializer binding '{0}' did not resolve to an actual Type: '{1}'", serializerName, typename);
                     continue;
                 }
 
@@ -85,7 +86,7 @@ namespace Akka.Serialization
                     system.Log.Warning("Serialization binding to non existing serializer: '{0}'", serializerName);
                     continue;
                 }
-                _serializerMap.Add(messageType,serializer);
+                _serializerMap.Add(messageType, serializer);
             }
         }
 
@@ -146,7 +147,7 @@ namespace Akka.Serialization
         }
 
         //cache to eliminate lots of typeof operator calls
-        private readonly Type _objectType = typeof (object);
+        private readonly Type _objectType = typeof(object);
         public Serializer FindSerializerForType(Type objectType)
         {
             Type type = objectType;
@@ -167,7 +168,7 @@ namespace Akka.Serialization
 
         public static string SerializedActorPath(IActorRef actorRef)
         {
-            if (Equals(actorRef, ActorRefs.NoSender)) 
+            if (Equals(actorRef, ActorRefs.NoSender))
                 return String.Empty;
 
             var path = actorRef.Path;
@@ -187,7 +188,7 @@ namespace Akka.Serialization
                 else
                 {
                     var defaultAddress = originalSystem.Provider.DefaultAddress;
-                    var res = path.ToStringWithAddress(defaultAddress);
+                    var res = path.ToSerializationFormatWithAddress(defaultAddress);
                     return res;
                 }
             }
@@ -197,14 +198,14 @@ namespace Akka.Serialization
             var address = _currentTransportInformation.Address;
             if (originalSystem == null || originalSystem == system)
             {
-                var res = path.ToStringWithAddress(address);
+                var res = path.ToSerializationFormatWithAddress(address);
                 return res;
             }
             else
             {
                 var provider = originalSystem.Provider;
                 var res =
-                    path.ToStringWithAddress(provider.GetExternalAddressFor(address).GetOrElse(provider.DefaultAddress));
+                    path.ToSerializationFormatWithAddress(provider.GetExternalAddressFor(address).GetOrElse(provider.DefaultAddress));
                 return res;
             }
         }

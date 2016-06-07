@@ -86,7 +86,6 @@ namespace Akka.Remote.Tests
                     var ai =
                         Sys.ActorSelection(actorPath).Ask<ActorIdentity>(new Identify(null), TimeSpan.FromSeconds(3)).Result;
 
-                   
                     remoteActorRef.Tell(PoisonPill.Instance); // WATCH should be applied first
                     ExpectTerminated(remoteActorRef);
                 });
