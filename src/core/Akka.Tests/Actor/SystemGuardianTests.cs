@@ -22,7 +22,7 @@ namespace Akka.Tests.Actor
         {
             _userGuardian = Sys.ActorOf(Props.Create<GuardianActor>()).AsInstanceOf<IInternalActorRef>();
             _systemGuardian = Sys.ActorOf(Props.Create(() => new SystemGuardianActor(_userGuardian))).AsInstanceOf<IInternalActorRef>();
-            _systemGuardian.Tell(new Watch(_userGuardian, _systemGuardian));            
+            _systemGuardian.SendSystemMessage(new Watch(_userGuardian, _systemGuardian));            
         }
 
         [Fact]

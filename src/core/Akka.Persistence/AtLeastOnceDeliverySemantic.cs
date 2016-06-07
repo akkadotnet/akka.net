@@ -463,7 +463,8 @@ namespace Akka.Persistence
 
         public void Cancel()
         {
-            _redeliverScheduleCancelable.Cancel();
+            // need a null check here, in case actor is terminated before StartRedeliverTask() is called
+            _redeliverScheduleCancelable?.Cancel();
         }
 
 

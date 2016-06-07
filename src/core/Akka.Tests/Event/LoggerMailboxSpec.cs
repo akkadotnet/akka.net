@@ -8,6 +8,7 @@
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Tests.Event
@@ -17,16 +18,16 @@ namespace Akka.Tests.Event
         [Fact]
         public void CleanUp_drains_queue()
         {
-            using (var loggerMailbox = new LoggerMailbox())
-            {
-                loggerMailbox.Post(TestActor, new Envelope {Message = "foo", Sender = TestActor});
+            var loggerMailbox = new LoggerMailbox(ActorRefs.Nobody, Sys);
+            loggerMailbox.SetActor((ActorCell)TestActor.AsInstanceOf<ActorRefWithCell>().Underlying); // mailboxes won't cleanup without an actorcell set
+            loggerMailbox.Enqueue(TestActor, new Envelope { Message = "foo", Sender = TestActor });
 
-                loggerMailbox.NumberOfMessages.ShouldBe(1);
+            loggerMailbox.NumberOfMessages.ShouldBe(1);
 
-                loggerMailbox.CleanUp();
+            loggerMailbox.CleanUp();
 
-                loggerMailbox.NumberOfMessages.ShouldBe(0);
-            }
+            loggerMailbox.NumberOfMessages.ShouldBe(0);
+
         }
     }
 }

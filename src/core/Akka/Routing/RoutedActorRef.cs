@@ -12,25 +12,21 @@ using Akka.Dispatch;
 
 namespace Akka.Routing
 {
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// <see cref="IActorRef"/> implementation for <see cref="Router"/> instances.
+    /// </summary>
     public class RoutedActorRef : RepointableActorRef
     {
-        private readonly ActorSystemImpl _system;
-        private readonly Props _routerProps;
-        private readonly MessageDispatcher _routerDispatcher;
-        private readonly Func<Mailbox> _createMailbox;
         private readonly Props _routeeProps;
-        private readonly IInternalActorRef _supervisor;
 
         public RoutedActorRef(ActorSystemImpl system, Props routerProps, MessageDispatcher routerDispatcher,
-            Func<Mailbox> createMailbox, Props routeeProps, IInternalActorRef supervisor, ActorPath path)
-            : base(system, routerProps, routerDispatcher, createMailbox, supervisor, path)
+            MailboxType mailboxType, Props routeeProps, IInternalActorRef supervisor, ActorPath path)
+            : base(system, routerProps, routerDispatcher, mailboxType, supervisor, path)
         {
-            _system = system;
-            _routerProps = routerProps;
-            _routerDispatcher = routerDispatcher;
-            _createMailbox = createMailbox;
             _routeeProps = routeeProps;
-            _supervisor = supervisor;
+
             //TODO: Implement:
             // // verify that a BalancingDispatcher is not used with a Router
             // if (!(routerProps.RouterConfig is NoRouter) && routerDispatcher is BalancingDispatcher)
@@ -43,19 +39,19 @@ namespace Akka.Routing
 
         protected override ActorCell NewCell()
         {
-            var pool = _routerProps.RouterConfig as Pool;
+            var pool = Props.RouterConfig as Pool;
             ActorCell cell = null;
             if(pool != null)
             {
                 if(pool.Resizer != null)
                 {
                     //if there is a resizer, use ResizablePoolCell
-                    cell = new ResizablePoolCell(_system, this, _routerProps, _routerDispatcher, _routeeProps, _supervisor, pool);
+                    cell = new ResizablePoolCell(System, this, Props, Dispatcher, _routeeProps, Supervisor, pool);
                 }
             }
             if(cell == null)
-                cell = new RoutedActorCell(_system, this, _routerProps, _routerDispatcher, _routeeProps, _supervisor);
-            cell.Init(sendSupervise: false, createMailbox: _createMailbox);
+                cell = new RoutedActorCell(System, this, Props, Dispatcher, _routeeProps, Supervisor);
+            cell.Init(false,MailboxType);
             return cell;
         }
     }

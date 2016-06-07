@@ -31,8 +31,8 @@ namespace Akka.Actor.Internal
         protected AbstractStash(IActorContext context, int capacity = 100)
         {
             var actorCell = (ActorCell)context;
-            var mailbox = actorCell.Mailbox as IDequeBasedMailbox;
-            if(mailbox == null)
+            Mailbox = actorCell.Mailbox.MessageQueue as IDequeBasedMessageQueueSemantics;
+            if(Mailbox == null)
             {
                 string message = @"DequeBasedMailbox required, got: " + actorCell.Mailbox.GetType().Name + @"
 An (unbounded) deque-based mailbox can be configured as follows:
@@ -49,7 +49,7 @@ An (unbounded) deque-based mailbox can be configured as follows:
             _capacity = capacity;
         }
 
-        private IDequeBasedMailbox Mailbox { get { return (IDequeBasedMailbox)_actorCell.Mailbox; } }
+        private IDequeBasedMessageQueueSemantics Mailbox { get; }
 
         private int _currentEnvelopeId;
 

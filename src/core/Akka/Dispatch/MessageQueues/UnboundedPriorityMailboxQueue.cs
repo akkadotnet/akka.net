@@ -16,9 +16,19 @@ namespace Akka.Dispatch.MessageQueues
     /// </summary>
     public class UnboundedPriorityMessageQueue : BlockingMessageQueue
     {
-        private readonly ListPriorityQueue _prioQueue = new ListPriorityQueue();
+        private readonly ListPriorityQueue _prioQueue;
 
-        public UnboundedPriorityMessageQueue(Func<object, int> priorityGenerator)
+        public UnboundedPriorityMessageQueue(int initialCapacity)
+        {
+            _prioQueue = new ListPriorityQueue(initialCapacity);
+        }
+
+        public UnboundedPriorityMessageQueue(Func<object, int> priorityGenerator, int initialCapacity) : this(initialCapacity)
+        {
+            _prioQueue.SetPriorityCalculator(priorityGenerator);
+        }
+
+        internal void SetPriorityGenerator(Func<object, int> priorityGenerator)
         {
             _prioQueue.SetPriorityCalculator(priorityGenerator);
         }

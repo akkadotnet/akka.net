@@ -70,7 +70,7 @@ namespace Akka.Actor
 
         bool IsTerminated { get; }
 
-        void Post(IActorRef sender, object message);
+        void SendMessage(IActorRef sender, object message);
 
 
 

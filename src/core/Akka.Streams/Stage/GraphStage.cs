@@ -1733,14 +1733,16 @@ namespace Akka.Streams.Stage
 
         public void Watch(IActorRef actorRef)
         {
+            var iw = (IInternalActorRef) actorRef;
             _watching = _watching.Add(actorRef);
-            actorRef.Tell(new Watch((IInternalActorRef)actorRef, this), this);
+            iw.SendSystemMessage(new Watch(iw, this));
         }
 
         public void Unwatch(IActorRef actorRef)
         {
+            var iw = (IInternalActorRef)actorRef;
             _watching = _watching.Remove(actorRef);
-            actorRef.Tell(new Unwatch((IInternalActorRef)actorRef, this), this);
+            iw.SendSystemMessage(new Unwatch(iw, this));
         }
 
         public override void Stop() => SendTerminated();

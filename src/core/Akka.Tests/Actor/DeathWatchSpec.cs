@@ -15,6 +15,7 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.TestKit;
 using Akka.Tests.TestUtils;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Tests.Actor
@@ -55,7 +56,7 @@ namespace Akka.Tests.Actor
         [Fact]
         public void Bug209_any_user_messages_following_a_Terminate_message_should_be_forwarded_to_DeadLetterMailbox()
         {
-            var actor = (LocalActorRef) Sys.ActorOf(Props.Empty, "killed-actor");
+            var actor = (ActorRefWithCell) Sys.ActorOf(Props.Empty, "killed-actor");
             Watch(actor);
             Sys.EventStream.Subscribe(TestActor, typeof (DeadLetter));
 
@@ -67,7 +68,7 @@ namespace Akka.Tests.Actor
 
             //The actor should Terminate, exchange the mailbox to a DeadLetterMailbox and forward the user message to the DeadLetterMailbox
             
-            actor.Cell.Mailbox.ShouldBe(Sys.Mailboxes.DeadLetterMailbox);
+            actor.Underlying.AsInstanceOf<ActorCell>().Mailbox.ShouldBe(Sys.Mailboxes.DeadLetterMailbox);
         }
 
         [Fact]

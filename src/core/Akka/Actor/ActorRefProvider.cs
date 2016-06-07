@@ -134,7 +134,7 @@ namespace Akka.Actor
         private VirtualPathContainer _tempContainer;
         private RootGuardianActorRef _rootGuardian;
         private LocalActorRef _userGuardian;    //This is called guardian in Akka
-        private Func<Mailbox> _defaultMailbox;  //TODO: switch to MailboxType
+        private MailboxType _defaultMailbox; 
         private LocalActorRef _systemGuardian;
 
         public LocalActorRefProvider(string systemName, Settings settings, EventStream eventStream)
@@ -276,7 +276,7 @@ namespace Akka.Actor
             _system = system;
             //The following are the lazy val statements in Akka
             var defaultDispatcher = system.Dispatchers.DefaultGlobalDispatcher;
-            _defaultMailbox = () => new ConcurrentQueueMailbox(); //TODO:system.Mailboxes.FromConfig(Mailboxes.DefaultMailboxId)
+            _defaultMailbox = system.Mailboxes.Lookup(Mailboxes.DefaultMailboxId); 
             _rootGuardian = CreateRootGuardian(system);
             _tempContainer = new VirtualPathContainer(system.Provider, _tempNode, _rootGuardian, _log);
             _rootGuardian.SetTempContainer(_tempContainer);
@@ -383,14 +383,15 @@ namespace Akka.Actor
                 {
                     // for consistency we check configuration of dispatcher and mailbox locally
                     var dispatcher = _system.Dispatchers.Lookup(props2.Dispatcher);
+                    var mailboxType = _system.Mailboxes.GetMailboxType(props2, dispatcher.Configurator.Config);
 
                     if (async)
                         return
                             new RepointableActorRef(system, props2, dispatcher,
-                                () => _system.Mailboxes.CreateMailbox(props2, dispatcher.Configurator.Config), supervisor,
+                                mailboxType, supervisor,
                                 path).Initialize(async);
                     return new LocalActorRef(system, props2, dispatcher,
-                        () => _system.Mailboxes.CreateMailbox(props2, dispatcher.Configurator.Config), supervisor, path);
+                        mailboxType, supervisor, path);
                 }
                 catch (Exception ex)
                 {
@@ -419,13 +420,13 @@ namespace Akka.Actor
                 try
                 {
                     var routerDispatcher = system.Dispatchers.Lookup(p.RouterConfig.RouterDispatcher);
-                    var routerMailbox = system.Mailboxes.CreateMailbox(routerProps, routerDispatcher.Configurator.Config);
+                    var routerMailbox = system.Mailboxes.GetMailboxType(routerProps, routerDispatcher.Configurator.Config);
 
                     // routers use context.actorOf() to create the routees, which does not allow us to pass
                     // these through, but obtain them here for early verification
                     var routeeDispatcher = system.Dispatchers.Lookup(p.Dispatcher);
 
-                    var routedActorRef = new RoutedActorRef(system, routerProps, routerDispatcher, () => routerMailbox, routeeProps,
+                    var routedActorRef = new RoutedActorRef(system, routerProps, routerDispatcher, routerMailbox, routeeProps,
                         supervisor, path);
                     routedActorRef.Initialize(async);
                     return routedActorRef;

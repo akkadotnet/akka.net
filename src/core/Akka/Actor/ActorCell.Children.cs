@@ -17,8 +17,8 @@ namespace Akka.Actor
 {
     public partial class ActorCell
     {
-        private IChildrenContainer _childrenContainerDoNotCallMeDirectly = EmptyChildrenContainer.Instance;
-        private long _nextRandomNameDoNotCallMeDirectly;
+        private volatile IChildrenContainer _childrenContainerDoNotCallMeDirectly = EmptyChildrenContainer.Instance;
+        private long _nextRandomNameDoNotCallMeDirectly = -1; // Interlocked.Increment automatically adds 1 to this value. Allows us to start from 0.
 
         [Obsolete("Use ChildrenContainer instead", true)]
         private IChildrenContainer ChildrenRefs
@@ -28,7 +28,7 @@ namespace Akka.Actor
 
         private IChildrenContainer ChildrenContainer
         {
-            get { return _childrenContainerDoNotCallMeDirectly; }   //TODO: Hmm do we need memory barriers here???
+            get { return _childrenContainerDoNotCallMeDirectly; } 
         }
 
         private IReadOnlyCollection<IActorRef> Children
@@ -36,25 +36,9 @@ namespace Akka.Actor
             get { return ChildrenContainer.Children; }
         }
 
-        private bool TryGetChild(string name, out IActorRef child)
-        {
-            IChildStats stats;
-            if (ChildrenContainer.TryGetByName(name, out stats))
-            {
-                var restartStats = stats as ChildRestartStats;
-                if (restartStats != null)
-                {
-                    child = restartStats.Child;
-                    return true;
-                }
-            }
-            child = null;
-            return false;
-        }
-
         public virtual IActorRef AttachChild(Props props, bool isSystemService, string name = null)
         {
-            return ActorOf(props, name, true, isSystemService);
+            return MakeChild(props, name == null ? GetRandomActorName() : CheckName(name), true, isSystemService);
         }
         
         public virtual IActorRef ActorOf(Props props, string name = null)
@@ -80,7 +64,6 @@ namespace Akka.Actor
 
         /// <summary>
         ///     Stops the specified child.
-        /// BUGGY: see https://github.com/akkadotnet/akka.net/issues/2024
         /// </summary>
         /// <param name="child">The child.</param>
         public void Stop(IActorRef child)
@@ -97,10 +80,6 @@ namespace Akka.Actor
             ((IInternalActorRef)child).Stop();
         }
 
-        [Obsolete("Use UpdateChildrenRefs instead", true)]
-        private void SwapChildrenRefs() { }
-
-
         /// <summary>
         /// Swaps out the children container, by calling <paramref name="updater"/>  to produce the new container.
         /// If the underlying container has been updated while <paramref name="updater"/> was called,
@@ -115,7 +94,13 @@ namespace Akka.Actor
         /// <returns>The third value of the tuple that <paramref name="updater"/> returned.</returns>
         private TReturn UpdateChildrenRefs<TReturn>(Func<IChildrenContainer, Tuple<bool, IChildrenContainer, TReturn>> updater)
         {
-            return InterlockedSpin.ConditionallySwap(ref _childrenContainerDoNotCallMeDirectly, updater);
+            while (true)
+            {
+                var current = ChildrenContainer;
+                var t = updater(current);
+                if (!t.Item1) return t.Item3;
+                if (Interlocked.CompareExchange(ref _childrenContainerDoNotCallMeDirectly, t.Item2, current) == current) return t.Item3;
+            }
         }
 
         /// <summary>
@@ -233,7 +218,7 @@ namespace Akka.Actor
             foreach (var stats in ChildrenContainer.Stats)
             {
                 var child = stats.Child;
-                var cause = child.Equals(perpetrator) ? causedByFailure : null;
+                var cause = (perpetrator != null && child.Equals(perpetrator)) ? causedByFailure : null;
                 child.Resume(cause);
             }
         }
@@ -325,7 +310,7 @@ namespace Akka.Actor
             return null;
         }
 
-        private void CheckName(string name)
+        private static string CheckName(string name)
         {
             if (name == null) throw new InvalidActorNameException("Actor name must not be null.");
             if (name.Length == 0) throw new InvalidActorNameException("Actor name must not be empty.");
@@ -333,6 +318,7 @@ namespace Akka.Actor
             {
                 throw new InvalidActorNameException(string.Format("Illegal actor name [{0}]. Actor paths MUST: not start with `$`, include only ASCII letters and can only contain these special characters: ${1}.", name, new String(ActorPath.ValidSymbols)));
             }
+            return name;
         }
 
         private IInternalActorRef MakeChild(Props props, string name, bool async, bool systemService)
@@ -372,7 +358,7 @@ namespace Akka.Actor
 
             // In case we are currently terminating, fail external attachChild requests
             // (internal calls cannot happen anyway because we are suspended)
-            if (ChildrenContainer.IsTerminating)
+            if (IsFastTerminating() || ChildrenContainer.IsTerminating)
             {
                 throw new InvalidOperationException("Cannot create child while terminating or terminated");
             }
@@ -394,14 +380,11 @@ namespace Akka.Actor
                     throw;
                 }
 
-                // TODO: When Mailbox has SuspendCount implement it
-                //if (Mailbox != null)
-                //{
-                //    foreach (var _ in Mailbox.SuspendCound)
-                //    {
-                //        actor.Suspend();
-                //    }
-                //}
+                if (Mailbox != null)
+                {
+                    for(var i = 1; i <= Mailbox.SuspendCount(); i++)
+                        actor.Suspend();
+                }
 
                 //replace the reservation with the real actor
                 InitChild(actor);

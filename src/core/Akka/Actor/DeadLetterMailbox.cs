@@ -6,61 +6,75 @@
 //-----------------------------------------------------------------------
 
 using Akka.Dispatch;
+using Akka.Dispatch.MessageQueues;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 
 namespace Akka.Actor
 {
-    public class DeadLetterMailbox : Mailbox
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Message queue implementation used to funnel messages to <see cref="DeadLetterActorRef"/>
+    /// </summary>
+    internal sealed class DeadLetterMessageQueue : IMessageQueue
     {
         private readonly IActorRef _deadLetters;
 
-        public DeadLetterMailbox(IActorRef deadLetters)
+        public DeadLetterMessageQueue(IActorRef deadLetters)
         {
             _deadLetters = deadLetters;
         }
 
-        public override void Post(IActorRef receiver, Envelope envelope)
+        public bool HasMessages => false;
+        public int Count => 0;
+        public void Enqueue(IActorRef receiver, Envelope envelope)
         {
-            var message = envelope.Message;
-            if(message is ISystemMessage)
+            if (envelope.Message is DeadLetter)
             {
-                Mailbox.DebugPrint("DeadLetterMailbox forwarded system message " + envelope+ " as a DeadLetter");
-                _deadLetters.Tell(new DeadLetter(message, receiver, receiver), receiver);
+                // actor subscribing to DeadLetter. Drop it.
+                return;
             }
-            else if(message is DeadLetter)
-            {
-                //Just drop it like it's hot
-                Mailbox.DebugPrint("DeadLetterMailbox dropped DeadLetter " + envelope);
-            }
-            else
-            {
-                Mailbox.DebugPrint("DeadLetterMailbox forwarded message " + envelope + " as a DeadLetter");
-                var sender = envelope.Sender;
-                _deadLetters.Tell(new DeadLetter(message, sender, receiver),sender);
-            }
+
+            _deadLetters.Tell(new DeadLetter(envelope.Message, envelope.Sender, receiver), envelope.Sender);
         }
 
-        public override void BecomeClosed()
+        public bool TryDequeue(out Envelope envelope)
         {
-            
+            envelope = new Envelope() {Message = new NoMessage()};
+            return false;
         }
 
-        public override bool IsClosed{get { return true; }}
-
-        protected override int GetNumberOfMessages()
+        public void CleanUp(IActorRef owner, IMessageQueue deadletters)
         {
-            return 0;
+            // do nothing
+        }
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Mailbox for dead letters.
+    /// </summary>
+    public sealed class DeadLetterMailbox : Mailbox
+    {
+        private readonly IActorRef _deadLetters;
+
+        public DeadLetterMailbox(IActorRef deadLetters) : base(new DeadLetterMessageQueue(deadLetters))
+        {
+            _deadLetters = deadLetters;
+            BecomeClosed(); // always closed
         }
 
-        protected override void Schedule()
+        internal override bool HasSystemMessages => false;
+        internal override EarliestFirstSystemMessageList SystemDrain(LatestFirstSystemMessageList newContents)
         {
-            //Intentionally left blank
+            return SystemMessageList.ENil;
         }
 
-        public override void CleanUp()
+        internal override void SystemEnqueue(IActorRef receiver, SystemMessage message)
         {
-            //Intentionally left blank
+            _deadLetters.Tell(new DeadLetter(message, receiver, receiver));
         }
     }
 }

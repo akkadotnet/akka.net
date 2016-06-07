@@ -13,11 +13,10 @@ using Akka.Actor.Internal;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Extensions;
+using Akka.TestKit.TestActors;
 
 namespace Akka.Tests.Actor
 {
-    using Akka.TestKit.TestActors;
-
     public class LocalActorRefProviderSpec : AkkaSpec
     {
         [Fact]

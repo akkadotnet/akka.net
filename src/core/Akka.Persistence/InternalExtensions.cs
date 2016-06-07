@@ -20,7 +20,7 @@ namespace Akka.Persistence
         public static void EnqueueMessageFirst(this IActorContext context, object message)
         {
             var cell = (ActorCell)context;
-            var mailbox = (Mailbox<UnboundedMessageQueue, UnboundedDequeMessageQueue>)cell.Mailbox;
+            var mailbox = cell.Mailbox;
             var queue = (IUnboundedDequeBasedMessageQueueSemantics)mailbox.MessageQueue;
             queue.EnqueueFirst(new Envelope { Sender = context.Sender, Message = message });
         }
