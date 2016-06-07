@@ -337,8 +337,11 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             return versions.Any(entry =>
             {
                 Bucket bucket;
-                return (!_registry.TryGetValue(entry.Key, out bucket) && entry.Value > bucket.Version)
-                       || entry.Value > 0L;
+	            if (_registry.TryGetValue(entry.Key, out bucket))
+	            {
+		            return entry.Value > bucket.Version;
+	            }
+	            return entry.Value > 0L;
             });
         }
 
@@ -346,11 +349,12 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         {
             // missing entries are represented by version 0
             var filledOtherVersions = new Dictionary<Address, long>(versions);
-            foreach (var entry in OwnVersions)
-                if (filledOtherVersions.ContainsKey(entry.Key))
-                    filledOtherVersions[entry.Key] = 0L;
-                else
-                    filledOtherVersions.Add(entry.Key, 0L);
+	        foreach (var entry in OwnVersions)
+	        {
+				// don't override existing version values
+		        if (!filledOtherVersions.ContainsKey(entry.Key))
+			        filledOtherVersions.Add(entry.Key, 0L);
+	        }
 
             var count = 0;
             foreach (var entry in filledOtherVersions)
