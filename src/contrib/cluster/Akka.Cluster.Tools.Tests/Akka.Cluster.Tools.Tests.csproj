@@ -79,6 +79,8 @@
     <Compile Include="ClusterClient\ClusterClientConfigSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PublishSubscribe\DistributedPubSubConfigSpec.cs" />
+    <Compile Include="PublishSubscribe\DistributedPubSubMediatorRouterSpec.cs" />
+    <Compile Include="PublishSubscribe\DistributedPubSubMessageSerializerSpec.cs" />
     <Compile Include="Singleton\ClusterSingletonConfigSpec.cs" />
     <Compile Include="Singleton\ClusterSingletonMessageSerializerSpec.cs" />
   </ItemGroup>

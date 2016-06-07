@@ -15,6 +15,7 @@ using Akka.Event;
 using Akka.Pattern;
 using Akka.Routing;
 using Akka.Util;
+using Akka.Util.Internal;
 using Status = Akka.Cluster.Tools.PublishSubscribe.Internal.Status;
 
 namespace Akka.Cluster.Tools.PublishSubscribe
@@ -277,7 +278,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
                             if (bucket.Version > myBucket.Version)
                             {
-                                _registry.Add(bucket.Owner, new Bucket(myBucket.Owner, bucket.Version, myBucket.Content.AddRange(bucket.Content)));
+                                _registry[bucket.Owner] = new Bucket(myBucket.Owner, bucket.Version, myBucket.Content.SetItems(bucket.Content));
                             }
                         }
                     }
@@ -348,13 +349,11 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         private IEnumerable<Bucket> CollectDelta(IDictionary<Address, long> versions)
         {
             // missing entries are represented by version 0
-            var filledOtherVersions = new Dictionary<Address, long>(versions);
-	        foreach (var entry in OwnVersions)
-	        {
-				// don't override existing version values
-		        if (!filledOtherVersions.ContainsKey(entry.Key))
-			        filledOtherVersions.Add(entry.Key, 0L);
-	        }
+            var filledOtherVersions = OwnVersions.ToDictionary(c => c.Key, c => 0L);
+            foreach (var version in versions)
+            {
+                filledOtherVersions[version.Key] = version.Value;
+            }
 
             var count = 0;
             foreach (var entry in filledOtherVersions)
@@ -430,18 +429,18 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             }
             else
             {
-                _registry[_cluster.SelfAddress] = new Bucket(bucket.Owner, v, bucket.Content.Add(key, new ValueHolder(v, value)));
+                _registry[_cluster.SelfAddress] = new Bucket(bucket.Owner, v, bucket.Content.SetItem(key, new ValueHolder(v, value)));
             }
         }
 
-        private void PublishMessage(string path, object message, bool excludeSelf = false)
+        private void PublishMessage(string path, object message, bool allButSelf = false)
         {
             foreach (var entry in _registry)
             {
                 var address = entry.Key;
                 var bucket = entry.Value;
 
-                if (!(excludeSelf && address == _cluster.SelfAddress))
+                if (!(allButSelf && address == _cluster.SelfAddress) && bucket.Content.ContainsKey(path))
                 {
                     var valueHolder = bucket.Content[path];
                     if (valueHolder != null && !valueHolder.Ref.Equals(ActorRefs.Nobody))
