@@ -81,6 +81,7 @@
     <Compile Include="LeaderLeavingSpec.cs" />
     <Compile Include="NodeDowningAndBeingRemovedSpec.cs" />
     <Compile Include="NodeLeavingAndExitingAndBeingRemovedSpec.cs" />
+    <Compile Include="NodeLeavingAndExitingSpec.cs" />
     <Compile Include="NodeMembershipSpec.cs" />
     <Compile Include="MinMembersBeforeUpSpec.cs" />
     <Compile Include="NodeUpSpec.cs" />
