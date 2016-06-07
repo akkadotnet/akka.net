@@ -1162,8 +1162,15 @@ namespace Akka.Cluster
 
                     _log.Info("Node [{0}] is JOINING, roles [{1}]", node.Address, string.Join(",", roles));
 
-                    // TODO: add deterministic behavior in https://github.com/akkadotnet/akka.net/pull/2101
-                    if (!node.Equals(SelfUniqueAddress))
+                    if (node.Equals(SelfUniqueAddress))
+                    {
+                        if (localMembers.IsEmpty)
+                        {
+                            // important for deterministic oldest when bootstrapping
+                            LeaderActions();
+                        }
+                    }
+                    else 
                     {
                         Sender.Tell(new InternalClusterAction.Welcome(SelfUniqueAddress, _latestGossip));
                     }

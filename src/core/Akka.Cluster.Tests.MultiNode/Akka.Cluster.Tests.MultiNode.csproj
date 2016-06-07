@@ -74,6 +74,7 @@
     <Compile Include="ClusterAccrualFailureDetectorSpec.cs" />
     <Compile Include="ClusterDeathWatchSpec.cs" />
     <Compile Include="ConvergenceSpec.cs" />
+    <Compile Include="DeterministicOldestWhenJoiningSpec.cs" />
     <Compile Include="DisallowJoinOfTwoClustersSpec.cs" />
     <Compile Include="InitialHeartbeatSpec.cs" />
     <Compile Include="JoinInProgressSpec.cs" />

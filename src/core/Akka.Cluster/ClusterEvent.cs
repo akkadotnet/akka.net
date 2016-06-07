@@ -624,9 +624,8 @@ namespace Akka.Cluster
                 .Concat(oldGossip.Members)
                 .GroupBy(m => m.UniqueAddress);
 
-            // TODO: fix in https://github.com/akkadotnet/akka.net/pull/2101
             var changedMembers = membersGroupedByAddress
-                .Where(g => g.Count() == 2 && g.First().Status != g.Skip(1).First().Status)
+                .Where(g => g.Count() == 2 && (g.First().Status != g.Skip(1).First().Status || g.First().UpNumber != g.Skip(1).First().UpNumber))
                 .Select(g => g.First());
 
             var memberEvents = CollectMemberEvents(newMembers.Union(changedMembers));
