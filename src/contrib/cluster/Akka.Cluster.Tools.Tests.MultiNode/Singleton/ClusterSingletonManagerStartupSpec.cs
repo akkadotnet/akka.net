@@ -12,6 +12,7 @@ using Akka.Cluster.Tests.MultiNode;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 
