@@ -100,9 +100,8 @@ namespace Akka.Cluster
         {
             Receive<HeartbeatTick>(tick => DoHeartbeat());
             Receive<HeartbeatRsp>(rsp => DoHeartbeatRsp(rsp.From));
-            Receive<ClusterEvent.MemberUp>(up => AddMember(up.Member));
             Receive<ClusterEvent.MemberRemoved>(removed => RemoveMember(removed.Member));
-            Receive<ClusterEvent.IMemberEvent>(@event => { }); //we don't care about other member events
+            Receive<ClusterEvent.IMemberEvent>(evt => AddMember(evt.Member));
             Receive<ExpectedFirstHeartbeat>(heartbeat => TriggerFirstHeart(heartbeat.From));
         }
 
@@ -116,13 +115,13 @@ namespace Akka.Cluster
 
         private void Init(ClusterEvent.CurrentClusterState snapshot)
         {
-            var nodes = snapshot.Members.Where(x => x.Status == MemberStatus.Up).Select(x => x.UniqueAddress).ToImmutableHashSet();
+            var nodes = snapshot.Members.Select(x => x.UniqueAddress).ToImmutableHashSet();
             _state = _state.Init(nodes);
         }
 
         private void AddMember(Member m)
         {
-            if (m.UniqueAddress != _cluster.SelfUniqueAddress)
+            if (m.UniqueAddress != _cluster.SelfUniqueAddress && !_state.Contains(m.UniqueAddress))
                 _state = _state.AddMember(m.UniqueAddress);
         }
 
@@ -297,6 +296,11 @@ namespace Akka.Cluster
         public ClusterHeartbeatSenderState Init(ImmutableHashSet<UniqueAddress> nodes)
         {
             return Copy(ring: Ring.Copy(nodes: nodes.Add(SelfAddress)));
+        }
+
+        public bool Contains(UniqueAddress node)
+        {
+            return Ring.NodeRing.Contains(node);
         }
 
         public ClusterHeartbeatSenderState AddMember(UniqueAddress node)
