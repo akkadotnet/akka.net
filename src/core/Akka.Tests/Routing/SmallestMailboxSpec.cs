@@ -55,19 +55,19 @@ namespace Akka.Tests.Routing
             var busy = new TestLatch(1);
             var received0 = new TestLatch(1);
             router.Tell(Tuple.Create(busy, received0));
-            received0.Ready(TestKitSettings.DefaultTimeout);
+            received0.Ready(TestLatch.DefaultTimeout);
 
             var received1 = new TestLatch(1);
             router.Tell(Tuple.Create(1, received1));
-            received1.Ready(TestKitSettings.DefaultTimeout);
+            received1.Ready(TestLatch.DefaultTimeout);
 
             var received2 = new TestLatch(1);
             router.Tell(Tuple.Create(2, received2));
-            received2.Ready(TestKitSettings.DefaultTimeout);
+            received2.Ready(TestLatch.DefaultTimeout);
 
             var received3 = new TestLatch(1);
             router.Tell(Tuple.Create(3, received3));
-            received3.Ready(TestKitSettings.DefaultTimeout);
+            received3.Ready(TestLatch.DefaultTimeout);
 
             busy.CountDown();
 

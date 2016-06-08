@@ -141,39 +141,51 @@ namespace Akka.Routing
     {
         /// <summary>
         /// The id of the dispatcher that the router uses to pass messages to its routees.
+        /// 
+        /// <note>
+        /// THIS METHOD IS NOT IMPLEMENTED.
+        /// </note>
         /// </summary>
         /// <exception cref="NotSupportedException">NoRouter has no router</exception>
         public override string RouterDispatcher
         {
-            get { throw new NotSupportedException("NoRouter has no dispatcher"); }
+            get { throw new NotSupportedException("NoRouter has no router"); }
         }
 
         internal override RouterActor CreateRouterActor()
         {
-            throw new NotSupportedException("NoRouter must not create RouterActor");
+            throw new NotImplementedException();
         }
 
         /// <summary>
         /// Creates a router that is responsible for routing messages to routees within the provided <paramref name="system"/>.
+        ///
+        /// <note>
+        /// THIS METHOD IS NOT IMPLEMENTED.
+        /// </note>
         /// </summary>
         /// <param name="system">The actor system that owns this router.</param>
         /// <returns>
         /// The newly created router tied to the given system.
         /// </returns>
-        /// <exception cref="NotSupportedException"></exception>
+        /// <exception cref="NotImplementedException"></exception>
         public override Router CreateRouter(ActorSystem system)
         {
-            throw new NotSupportedException("NoRouter has no Router");
+            throw new NotImplementedException();
         }
 
         /// <summary>
         /// Retrieves an enumeration of <see cref="Routee">routees</see> that belong to the provided <paramref name="routedActorCell"/>.
+        /// 
+        /// <note>
+        /// THIS METHOD IS NOT IMPLEMENTED.
+        /// </note>
         /// </summary>
         /// <param name="routedActorCell">The router to query for a list of its routees.</param>
         /// <returns>
         /// The enumeration of routees that belong to the provided <paramref name="routedActorCell"/>.
         /// </returns>
-        /// <exception cref="NotSupportedException"></exception>
+        /// <exception cref="NotImplementedException"></exception>
         public override IEnumerable<Routee> GetRoutees(RoutedActorCell routedActorCell)
         {
             throw new NotImplementedException();
@@ -218,11 +230,6 @@ namespace Akka.Routing
         public override RouterConfig WithFallback(RouterConfig routerConfig)
         {
             return routerConfig;
-        }
-
-        public static Props Props(Props routeeProps)
-        {
-            return routeeProps.WithRouter(new NoRouter());
         }
     }
 
@@ -715,11 +722,6 @@ namespace Akka.Routing
         public static Props Props(Props props)
         {
             return props.WithRouter(Instance);
-        }
-
-        public static Props Props()
-        {
-            return Akka.Actor.Props.Empty.WithRouter(Instance);
         }
 
         /// <summary>

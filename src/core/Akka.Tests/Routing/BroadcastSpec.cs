@@ -17,6 +17,14 @@ namespace Akka.Tests.Routing
 {
     public class BroadcastSpec : AkkaSpec
     {
+        public new class TestActor : UntypedActor
+        {
+            protected override void OnReceive(object message)
+            {
+
+            }
+        }
+
         public class BroadcastTarget : UntypedActor
         {
             private AtomicCounter _counter;
@@ -53,11 +61,11 @@ namespace Akka.Tests.Routing
             var actor1 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter1)));
             var actor2 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter2)));
 
-            var routedActor = Sys.ActorOf(Props.Empty.WithRouter(new BroadcastGroup(actor1.Path.ToString(), actor2.Path.ToString())));
+            var routedActor = Sys.ActorOf(Props.Create<TestActor>().WithRouter(new BroadcastGroup(actor1.Path.ToString(), actor2.Path.ToString())));
             routedActor.Tell(new Broadcast(1));
             routedActor.Tell(new Broadcast("end"));
 
-            doneLatch.Ready(RemainingOrDefault);
+            doneLatch.Ready(TimeSpan.FromSeconds(1));
 
             counter1.Current.ShouldBe(1);
             counter2.Current.ShouldBe(1);
@@ -72,11 +80,11 @@ namespace Akka.Tests.Routing
             var actor1 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter1)));
             var actor2 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter2)));
 
-            var routedActor = Sys.ActorOf(Props.Empty.WithRouter(new BroadcastGroup(actor1.Path.ToString(), actor2.Path.ToString())));
+            var routedActor = Sys.ActorOf(Props.Create<TestActor>().WithRouter(new BroadcastGroup(actor1.Path.ToString(), actor2.Path.ToString())));
             routedActor.Ask(new Broadcast(1));
             routedActor.Tell(new Broadcast("end"));
 
-            doneLatch.Ready(RemainingOrDefault);
+            doneLatch.Ready(TimeSpan.FromSeconds(1));
 
             counter1.Current.ShouldBe(1);
             counter2.Current.ShouldBe(1);
