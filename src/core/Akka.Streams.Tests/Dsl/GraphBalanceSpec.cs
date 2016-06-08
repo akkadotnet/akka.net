@@ -97,7 +97,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy")]
         public void A_Balance_must_support_waiting_for_demand_from_all_non_cancelled_downstream_subscriptions()
         {
             this.AssertAllStagesStopped(() =>
@@ -139,7 +139,7 @@ namespace Akka.Streams.Tests.Dsl
                 sub3.Cancel();
 
                 s1.ExpectNext(1);
-                s2.ExpectNextN(2).ShouldAllBeEquivalentTo(new[] {2, 3});
+                s2.ExpectNext(2, 3);
                 s1.ExpectComplete();
                 s2.ExpectComplete();
             }, Materializer);
