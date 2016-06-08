@@ -70,6 +70,7 @@
     <Compile Include="RemoteNodeDeathWatchSpec.cs" />
     <Compile Include="RemoteNodeRestartDeathWatchSpec.cs" />
     <Compile Include="RemoteDeploymentDeathWatchSpec.cs" />
+    <Compile Include="RemoteNodeRestartGateSpec.cs" />
     <Compile Include="RemoteNodeShutdownAndComesBackSpec.cs" />
     <Compile Include="RemoteRestartedQuarantinedSpec.cs" />
     <Compile Include="Router\RemoteRoundRobinSpec.cs" />
