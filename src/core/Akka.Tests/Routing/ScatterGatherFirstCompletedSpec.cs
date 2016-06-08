@@ -20,14 +20,7 @@ namespace Akka.Tests.Routing
     public class ScatterGatherFirstCompletedSpec : AkkaSpec
     {
         [Fact]
-        public void Scatter_gather_router_must_be_started_when_constructed()
-        {
-            var routedActor = Sys.ActorOf(Props.Create<TestActor>().WithRouter(new ScatterGatherFirstCompletedPool(1)));
-            ((IInternalActorRef)routedActor).IsTerminated.ShouldBe(false);
-        }
-
-        [Fact]
-        public void Scatter_gather_router_must_deliver_a_broadcast_message_using_tell()
+        public void Scatter_gather_group_must_deliver_a_broadcast_message_using_tell()
         {
             var doneLatch = new TestLatch(2);
             var counter1 = new AtomicCounter(0);
@@ -35,18 +28,18 @@ namespace Akka.Tests.Routing
             var actor1 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter1)));
             var actor2 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter2)));
 
-            var routedActor = Sys.ActorOf(Props.Create<TestActor>().WithRouter(new ScatterGatherFirstCompletedGroup(TimeSpan.FromSeconds(1), actor1.Path.ToString(), actor2.Path.ToString())));
+            var routedActor = Sys.ActorOf(Props.Empty.WithRouter(new ScatterGatherFirstCompletedGroup(TimeSpan.FromSeconds(1), actor1.Path.ToString(), actor2.Path.ToString())));
             routedActor.Tell(new Broadcast(1));
             routedActor.Tell(new Broadcast("end"));
 
-            doneLatch.Ready(TimeSpan.FromSeconds(1));
+            doneLatch.Ready(TestKitSettings.DefaultTimeout);
 
             counter1.Current.ShouldBe(1);
             counter2.Current.ShouldBe(1);
         }
 
         [Fact]
-        public async Task Scatter_gather_router_must_return_response_even_if_one_of_the_actors_has_stopped()
+        public async Task Scatter_gather_group_must_return_response_even_if_one_of_the_actors_has_stopped()
         {
             var shutdownLatch = new TestLatch(1);
             var actor1 = Sys.ActorOf(Props.Create(() => new StopActor(1)));
@@ -62,7 +55,7 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public void Scatter_gather_router_should_only_return_one_response()
+        public void Scatter_gather_group_should_only_return_one_response()
         {
             var actor1 = Sys.ActorOf(Props.Create(() => new StopActor(1)));
             var actor2 = Sys.ActorOf(Props.Create(() => new StopActor(14)));
@@ -77,7 +70,7 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public async Task Scatter_gather_router_should_handle_failing_timeouts()
+        public async Task Scatter_gather_group_should_handle_failing_timeouts()
         {
             var actor1 = Sys.ActorOf(Props.Create(() => new StopActor(50)));
 
@@ -95,12 +88,22 @@ namespace Akka.Tests.Routing
                 .BeOfType<AskTimeoutException>();
         }
 
-        public new class TestActor : UntypedActor
+        [Fact]
+        public void Scatter_gather_pool_must_be_started_when_constructed()
         {
-            protected override void OnReceive(object message)
-            {
+            var routedActor = Sys.ActorOf(Props.Empty.WithRouter(new ScatterGatherFirstCompletedPool(1)));
+            ((IInternalActorRef)routedActor).IsTerminated.ShouldBe(false);
+        }
 
-            }
+        [Fact]
+        public void Scatter_gather_pool_must_without_routees_should_reply_immediately()
+        {
+            var probe = CreateTestProbe();
+            var routedActor = Sys.ActorOf(Props.Empty.WithRouter(new ScatterGatherFirstCompletedPool(0, TimeSpan.FromSeconds(5))));
+            routedActor.Tell("hello", probe.Ref);
+            var message = probe.ExpectMsg<Status.Failure>(TimeSpan.FromSeconds(2));
+
+            message.Cause.GetType().ShouldBe(typeof(AskTimeoutException));
         }
 
         public class BroadcastTarget : UntypedActor

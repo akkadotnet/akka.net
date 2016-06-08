@@ -75,14 +75,6 @@ namespace Akka.Tests.Routing
             }
         }
 
-        public new class TestActor : UntypedActor
-        {
-            protected override void OnReceive(object message)
-            {
-
-            }
-        }
-
         public Func<Func<IActorRef, int>, bool> OneOfShouldEqual(int what, IEnumerable<IActorRef> actors)
         {
             return func =>
@@ -111,14 +103,14 @@ namespace Akka.Tests.Routing
             var actor1 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter1)), "Actor1");
             var actor2 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter2)), "Actor2");
 
-            var routedActor = Sys.ActorOf(Props.Create<TestActor>()
+            var routedActor = Sys.ActorOf(Props.Empty
                 .WithRouter(new TailChoppingGroup(new[] { actor1.Path.ToString(), actor2.Path.ToString() }, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(100))
             ));
 
             routedActor.Tell(new Broadcast(1));
             routedActor.Tell(new Broadcast("end"));
 
-            doneLatch.Ready(TimeSpan.FromSeconds(1));
+            doneLatch.Ready(TestKitSettings.DefaultTimeout);
 
             counter1.Current.ShouldBe(1);
             counter2.Current.ShouldBe(1);
@@ -131,7 +123,7 @@ namespace Akka.Tests.Routing
             var actor2 = Sys.ActorOf(Props.Create(() => new TailChopTestActor(100)), "Actor4");
 
             var probe = CreateTestProbe();
-            var routedActor = Sys.ActorOf(Props.Create<TestActor>()
+            var routedActor = Sys.ActorOf(Props.Empty
                 .WithRouter(new TailChoppingGroup(new[] { actor1.Path.ToString(), actor2.Path.ToString() }, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(50))
             ));
 
@@ -152,7 +144,7 @@ namespace Akka.Tests.Routing
 
             var probe = CreateTestProbe();
 
-            var routedActor = Sys.ActorOf(Props.Create<TestActor>()
+            var routedActor = Sys.ActorOf(Props.Empty
                 .WithRouter(new TailChoppingGroup(
                     new[]
                     {
@@ -168,6 +160,24 @@ namespace Akka.Tests.Routing
 
             var actorList = new List<IActorRef> { actor1, actor2 };
             Assert.True(AllShouldEqual(1, actorList)(x => (int) x.Ask("times").Result));
+
+            routedActor.Tell(new Broadcast("stop"));
+        }
+
+        [Fact]
+        public void Tail_chopping_router_must_reply_ASAP()
+        {
+            var actor1 = Sys.ActorOf(Props.Create(() => new TailChopTestActor(1000)), "Actor7");
+            var actor2 = Sys.ActorOf(Props.Create(() => new TailChopTestActor(4000)), "Actor8");
+
+            var probe = CreateTestProbe();
+
+            var routedActor = Sys.ActorOf(Props.Empty
+                .WithRouter(new TailChoppingGroup(new[] { actor1.Path.ToString(), actor2.Path.ToString() }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(100))
+            ));
+
+            probe.Send(routedActor, "");
+            probe.ExpectMsg("ack");
 
             routedActor.Tell(new Broadcast("stop"));
         }
