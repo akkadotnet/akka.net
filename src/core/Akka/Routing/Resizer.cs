@@ -47,22 +47,6 @@ namespace Akka.Routing
         /// <param name="currentRoutees"></param>
         /// <returns></returns>
         public abstract int Resize(IEnumerable<Routee> currentRoutees);
-
-        public static Resizer FromConfig(Config parentConfig)
-        {
-            var defaultResizerConfig = parentConfig.GetConfig("resizer");
-
-            bool defaultResizerEnabled = defaultResizerConfig != null ? defaultResizerConfig.GetBoolean("enabled") : false;
-
-            if (defaultResizerEnabled)
-            {
-                return DefaultResizer.FromConfig(defaultResizerConfig);
-            }
-            else
-            {
-                return null;
-            }
-        }
     }
 
     /// <summary>

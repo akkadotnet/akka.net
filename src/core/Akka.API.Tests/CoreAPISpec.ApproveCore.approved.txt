@@ -3883,7 +3883,6 @@ namespace Akka.Routing
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
         public override System.Collections.Generic.IEnumerable<Akka.Routing.Routee> GetRoutees(Akka.Routing.RoutedActorCell routedActorCell) { }
         public static Akka.Actor.Props Props(Akka.Actor.Props props) { }
-        public static Akka.Actor.Props Props() { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
         public class FromConfigSurrogate : Akka.Util.ISurrogate
         {
@@ -3943,7 +3942,6 @@ namespace Akka.Routing
         public override string RouterDispatcher { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
         public override System.Collections.Generic.IEnumerable<Akka.Routing.Routee> GetRoutees(Akka.Routing.RoutedActorCell routedActorCell) { }
-        public static Akka.Actor.Props Props(Akka.Actor.Props routeeProps) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
         public override Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig routerConfig) { }
         public class NoRouterSurrogate : Akka.Util.ISurrogate
@@ -4029,7 +4027,6 @@ namespace Akka.Routing
     public abstract class Resizer
     {
         protected Resizer() { }
-        public static Akka.Routing.Resizer FromConfig(Akka.Configuration.Config parentConfig) { }
         public abstract bool IsTimeForResize(long messageCounter);
         public abstract int Resize(System.Collections.Generic.IEnumerable<Akka.Routing.Routee> currentRoutees);
     }

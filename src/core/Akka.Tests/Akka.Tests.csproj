@@ -174,13 +174,11 @@
     <Compile Include="Pattern\CircuitBreakerSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Routing\BroadcastSpec.cs" />
-    <Compile Include="Routing\ConfiguredLocalRoutingSpec.cs" />
     <Compile Include="Routing\ConsistentHashingRouterSpec.cs" />
     <Compile Include="Routing\ListenerSpec.cs" />
     <Compile Include="Routing\RandomSpec.cs" />
     <Compile Include="Routing\ResizerSpec.cs" />
     <Compile Include="Routing\RoundRobinSpec.cs" />
-    <Compile Include="Routing\RouteeCreationSpec.cs" />
     <Compile Include="Routing\RoutingSpec.cs" />
     <Compile Include="Routing\ScatterGatherFirstCompletedSpec.cs" />
     <Compile Include="Routing\SmallestMailboxSpec.cs" />
