@@ -79,6 +79,7 @@
     <Compile Include="JoinSeedNodeSpec.cs" />
     <Compile Include="LeaderElectionSpec.cs" />
     <Compile Include="LeaderLeavingSpec.cs" />
+    <Compile Include="MembershipChangeListenerExitingSpec.cs" />
     <Compile Include="NodeDowningAndBeingRemovedSpec.cs" />
     <Compile Include="NodeLeavingAndExitingAndBeingRemovedSpec.cs" />
     <Compile Include="NodeMembershipSpec.cs" />
