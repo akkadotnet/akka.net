@@ -1,6 +1,6 @@
 ﻿// --- auto generated: 19.05.2016 16:27:08 --- //
 //-----------------------------------------------------------------------
-// <copyright file="FanInShape.cs" company="Akka.NET Project">
+// <copyright file="GraphApply.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
