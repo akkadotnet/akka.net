@@ -11,7 +11,6 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Dispatch;
-using Akka.Dispatch.SysMsg;
 using Akka.Util;
 using Akka.Util.Internal;
 
@@ -20,29 +19,27 @@ namespace Akka.Routing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    public class RoutedActorCell : ActorCell
+    internal class RoutedActorCell : ActorCell
     {
-        private readonly RouterConfig _routerConfig;
-        private volatile Router _router;
-        private readonly Props _routeeProps;
-
-
-        public RoutedActorCell(ActorSystemImpl system, IInternalActorRef self, Props routerProps, MessageDispatcher dispatcher, Props routeeProps, IInternalActorRef supervisor)
+        public RoutedActorCell(
+            ActorSystemImpl system,
+            IInternalActorRef self,
+            Props routerProps,
+            MessageDispatcher dispatcher,
+            Props routeeProps,
+            IInternalActorRef supervisor)
             : base(system, self, routerProps, dispatcher, supervisor)
         {
-            _routeeProps = routeeProps;
-            _routerConfig = routerProps.RouterConfig;
+            RouteeProps = routeeProps;
+            RouterConfig = routerProps.RouterConfig;
+            Router = null;
         }
 
-        public Router Router { get { return _router; } }
+        public Router Router { get; private set; }
 
-        public Props RouteeProps { get { return _routeeProps; } }
+        public Props RouteeProps { get; }
 
-        public RouterConfig RouterConfig
-        {
-            get { return _routerConfig; }
-        }
-
+        public RouterConfig RouterConfig { get; }
 
         internal void AddRoutee(Routee routee)
         {
@@ -55,13 +52,13 @@ namespace Akka.Routing
             {
                 Watch(routee);
             }
-            _router = _router.WithRoutees(_router.Routees.Concat(routees).ToArray());
+            var r = Router;
+            Router = r.WithRoutees(r.Routees.Concat(routees).ToArray());
         }
 
-        protected override ActorBase CreateNewActorInstance()
+        internal void RemoveRoutee(Routee routee, bool stopChild)
         {
-            RouterActor instance = _routerConfig.CreateRouterActor();
-            return instance;
+            RemoveRoutees(new[] { routee }, stopChild);
         }
 
         /// <summary>
@@ -72,11 +69,12 @@ namespace Akka.Routing
         /// <param name="stopChild"></param>
         internal void RemoveRoutees(IList<Routee> affectedRoutees, bool stopChild)
         {
-            var routees = _router.Routees
+            var r = Router;
+            var routees = r.Routees
                 .Where(routee => !affectedRoutees.Contains(routee))
                 .ToArray();
 
-            _router = _router.WithRoutees(routees);
+            Router = r.WithRoutees(routees);
 
             foreach (var affectedRoutee in affectedRoutees)
             {
@@ -84,19 +82,18 @@ namespace Akka.Routing
                 if (stopChild)
                     StopIfChild(affectedRoutee);
             }
-
-        }
-
-        private void Unwatch(Routee routee)
-        {
-            var actorRef = routee as ActorRefRoutee;
-            if (actorRef != null) Unwatch(actorRef.Actor);
         }
 
         private void Watch(Routee routee)
         {
             var actorRef = routee as ActorRefRoutee;
             if (actorRef != null) Watch(actorRef.Actor);
+        }
+
+        private void Unwatch(Routee routee)
+        {
+            var actorRef = routee as ActorRefRoutee;
+            if (actorRef != null) Unwatch(actorRef.Actor);
         }
 
         /// <summary>
@@ -109,30 +106,51 @@ namespace Akka.Routing
             IChildStats childActorStats;
             if (actorRefRoutee != null && TryGetChildStatsByName(actorRefRoutee.Actor.Path.Name, out childActorStats))
             {
-                // The reason for the delay is to give concurrent
-                // messages a chance to be placed in mailbox before sending PoisonPill,
-                // best effort.
-                System.Scheduler.ScheduleTellOnce(TimeSpan.FromMilliseconds(100), actorRefRoutee.Actor, PoisonPill.Instance, Self);
+                var childRef = childActorStats as ChildRestartStats;
+                if (childRef != null && childRef.Child != null)
+                {
+                    // The reason for the delay is to give concurrent
+                    // messages a chance to be placed in mailbox before sending PoisonPill,
+                    // best effort.
+                    System.Scheduler.ScheduleTellOnce(TimeSpan.FromMilliseconds(100), actorRefRoutee.Actor,
+                        PoisonPill.Instance, Self);
+                }
             }
         }
 
+        // TODO: we could optimize performance here
         public override void Start()
         {
             // create the initial routees before scheduling the Router actor
-            _router = _routerConfig.CreateRouter(System);
-            _routerConfig.Match()
+            Router = RouterConfig.CreateRouter(System);
+            RouterConfig.Match()
                 .With<Pool>(pool =>
                 {
-                    var nrOfRoutees = pool.GetNrOfInstances(System);
+                    // must not use pool.GetNrOfInstances(system) for old (not re-compiled) custom routers
+                    // for binary backwards compatibility reasons
+                    var deprecatedNrOfInstances = pool.NrOfInstances;
+
+                    var nrOfRoutees = deprecatedNrOfInstances < 0 
+                        ? pool.GetNrOfInstances(System)
+                        : deprecatedNrOfInstances;
+
                     if (nrOfRoutees > 0)
-                        AddRoutees(Vector.Fill<Routee>(nrOfRoutees)(() => pool.NewRoutee(_routeeProps, this)));
+                        AddRoutees(Vector.Fill<Routee>(nrOfRoutees)(() => pool.NewRoutee(RouteeProps, this)));
                 })
                 .With<Group>(group =>
                 {
-                    var paths = group.Paths;
+                    // must not use group.paths(system) for old (not re-compiled) custom routers
+                    // for binary backwards compatibility reasons
+                    var deprecatedPaths = group.Paths;
+
+                    var paths = deprecatedPaths == null 
+                            ? group.GetPaths(System).ToArray()
+                            : deprecatedPaths.ToArray();
+
                     if (paths.NonEmpty())
                         AddRoutees(paths.Select(p => group.RouteeFor(p, this)).ToList());
                 });
+
             PreSuperStart();
             base.Start();
         }
@@ -143,17 +161,20 @@ namespace Akka.Routing
         /// </summary>
         protected virtual void PreSuperStart() { }
 
-        internal void RemoveRoutee(Routee routee, bool stopChild)
-        {
-            RemoveRoutees(new List<Routee> { routee }, stopChild);
-        }
-
         public override void SendMessage(IActorRef sender, object message)
         {
-            if (_routerConfig.IsManagementMessage(message))
+            if (RouterConfig.IsManagementMessage(message))
                 base.SendMessage(sender, message);
             else
-                _router.Route(message, sender);
+            {
+                Router.Route(message, sender);
+            }
+        }
+
+        protected override ActorBase CreateNewActorInstance()
+        {
+            RouterActor instance = RouterConfig.CreateRouterActor();
+            return instance;
         }
     }
 }

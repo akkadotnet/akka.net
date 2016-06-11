@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -19,150 +20,145 @@ namespace Akka.Tests.Routing
 {
     public class ScatterGatherFirstCompletedSpec : AkkaSpec
     {
-        [Fact]
-        public void Scatter_gather_router_must_be_started_when_constructed()
+        private class BroadcastTarget : ReceiveActor
         {
-            var routedActor = Sys.ActorOf(Props.Create<TestActor>().WithRouter(new ScatterGatherFirstCompletedPool(1)));
-            ((IInternalActorRef)routedActor).IsTerminated.ShouldBe(false);
-        }
+            private readonly AtomicCounter _counter;
+            private readonly TestLatch _doneLatch;
 
-        [Fact]
-        public void Scatter_gather_router_must_deliver_a_broadcast_message_using_tell()
-        {
-            var doneLatch = new TestLatch(2);
-            var counter1 = new AtomicCounter(0);
-            var counter2 = new AtomicCounter(0);
-            var actor1 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter1)));
-            var actor2 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter2)));
-
-            var routedActor = Sys.ActorOf(Props.Create<TestActor>().WithRouter(new ScatterGatherFirstCompletedGroup(TimeSpan.FromSeconds(1), actor1.Path.ToString(), actor2.Path.ToString())));
-            routedActor.Tell(new Broadcast(1));
-            routedActor.Tell(new Broadcast("end"));
-
-            doneLatch.Ready(TimeSpan.FromSeconds(1));
-
-            counter1.Current.ShouldBe(1);
-            counter2.Current.ShouldBe(1);
-        }
-
-        [Fact]
-        public async Task Scatter_gather_router_must_return_response_even_if_one_of_the_actors_has_stopped()
-        {
-            var shutdownLatch = new TestLatch(1);
-            var actor1 = Sys.ActorOf(Props.Create(() => new StopActor(1)));
-            var actor2 = Sys.ActorOf(Props.Create(() => new StopActor(14)));
-            var paths = new []{actor1,actor2};
-            var routedActor = Sys.ActorOf(new ScatterGatherFirstCompletedGroup(paths, TimeSpan.FromSeconds(3)).Props());
-
-            routedActor.Tell(new Broadcast(new Stop(1)));
-            shutdownLatch.Open();
-
-            var res = await routedActor.Ask<int>(0, TimeSpan.FromSeconds(10));
-            res.ShouldBe(14);
-        }
-
-        [Fact]
-        public void Scatter_gather_router_should_only_return_one_response()
-        {
-            var actor1 = Sys.ActorOf(Props.Create(() => new StopActor(1)));
-            var actor2 = Sys.ActorOf(Props.Create(() => new StopActor(14)));
-
-            var paths = new[] { actor1, actor2 };
-            var routedActor = Sys.ActorOf(new ScatterGatherFirstCompletedGroup(paths, TimeSpan.FromSeconds(3)).Props());
-
-            routedActor.Tell(0);
-
-            ExpectMsg<int>(TimeSpan.FromSeconds(3));
-            ExpectNoMsg(TimeSpan.FromSeconds(5));
-        }
-
-        [Fact]
-        public async Task Scatter_gather_router_should_handle_failing_timeouts()
-        {
-            var actor1 = Sys.ActorOf(Props.Create(() => new StopActor(50)));
-
-            var paths = new[] { actor1 };
-            var routedActor = Sys.ActorOf(new ScatterGatherFirstCompletedGroup(paths, TimeSpan.FromSeconds(3)).Props());
-
-            var exception = await routedActor.Ask<Status.Failure>(0, TimeSpan.FromSeconds(5));
-
-            exception
-                .Should()
-                .NotBeNull();
-
-            exception.Cause
-                .Should()
-                .BeOfType<AskTimeoutException>();
-        }
-
-        public new class TestActor : UntypedActor
-        {
-            protected override void OnReceive(object message)
+            public BroadcastTarget(TestLatch doneLatch, AtomicCounter counter)
             {
-
-            }
-        }
-
-        public class BroadcastTarget : UntypedActor
-        {
-            private AtomicCounter _counter;
-            private TestLatch _latch;
-            public BroadcastTarget(TestLatch latch, AtomicCounter counter)
-            {
-                _latch = latch;
+                _doneLatch = doneLatch;
                 _counter = counter;
-            }
-            protected override void OnReceive(object message)
-            {
-                if (message is string)
-                {
-                    var s = (string)message;
-                    if (s == "end")
-                    {
-                        _latch.CountDown();
-                    }
-                }
-                if (message is int)
-                {
-                    var i = (int)message;
-                    _counter.GetAndAdd(i);
-                }
+
+                Receive<string>(s => s == "end", c => _doneLatch.CountDown());
+                Receive<int>(msg => _counter.AddAndGet(msg));
             }
         }
 
-        public class Stop
+        private class Stop
         {
             public Stop(int? id = null)
             {
                 Id = id;
             }
 
-            public int? Id { get; private set; }
+            public int? Id { get; }
         }
 
-        public class StopActor : UntypedActor
+        private class StopActor : ReceiveActor
         {
-            private int _id;
-            public StopActor(int id)
+            private readonly int _id;
+            private readonly TestLatch _shutdownLatch;
+
+            public StopActor(int id, TestLatch shutdownLatch)
             {
                 _id = id;
-            }
-            protected override void OnReceive(object message)
-            {
-                if (message is Stop)
+                _shutdownLatch = shutdownLatch;
+
+                Receive<Stop>(s =>
                 {
-                    var s = (Stop)message;
                     if (s.Id == null || s.Id == _id)
                     {
                         Context.Stop(Self);
                     }
-                }
-                else
+                });
+
+                Receive<int>(n => n == _id, _ =>
+                {
+
+                });
+
+                ReceiveAny(x =>
                 {
                     Thread.Sleep(100 * _id);
                     Sender.Tell(_id);
-                }
+                });
             }
+
+            protected override void PostStop()
+            {
+                _shutdownLatch.CountDown();
+            }
+        }
+
+        [Fact]
+        public void Scatter_gather_group_must_deliver_a_broadcast_message_using_tell()
+        {
+            var doneLatch = new TestLatch(2);
+
+            var counter1 = new AtomicCounter(0);
+            var actor1 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter1)));
+
+            var counter2 = new AtomicCounter(0);
+            var actor2 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter2)));
+
+            var paths = new List<string> { actor1.Path.ToString(), actor2.Path.ToString() };
+            var routedActor = Sys.ActorOf(new ScatterGatherFirstCompletedGroup(paths, TimeSpan.FromSeconds(1)).Props());
+            routedActor.Tell(new Broadcast(1));
+            routedActor.Tell(new Broadcast("end"));
+
+            doneLatch.Ready(TestKitSettings.DefaultTimeout);
+
+            counter1.Current.Should().Be(1);
+            counter2.Current.Should().Be(1);
+        }
+
+        [Fact]
+        public async Task Scatter_gather_group_must_return_response_even_if_one_of_the_actors_has_stopped()
+        {
+            var shutdownLatch = new TestLatch(1);
+
+            var actor1 = Sys.ActorOf(Props.Create(() => new StopActor(1, shutdownLatch)));
+            var actor2 = Sys.ActorOf(Props.Create(() => new StopActor(14, shutdownLatch)));
+
+            var paths = new List<string> { actor1.Path.ToString(), actor2.Path.ToString() };
+            var routedActor = Sys.ActorOf(new ScatterGatherFirstCompletedGroup(paths, TimeSpan.FromSeconds(3)).Props());
+
+            routedActor.Tell(new Broadcast(new Stop(1)));
+            shutdownLatch.Ready(TestKitSettings.DefaultTimeout);
+            var res = await routedActor.Ask<int>(0, TimeSpan.FromSeconds(10));
+            res.Should().Be(14);
+        }
+
+        [Fact]
+        public void Scatter_gather_pool_must_without_routees_should_reply_immediately()
+        {
+            var probe = CreateTestProbe();
+            var routedActor = Sys.ActorOf(new ScatterGatherFirstCompletedPool(0, TimeSpan.FromSeconds(5)).Props(Props.Empty));
+            routedActor.Tell("hello", probe.Ref);
+            var message = probe.ExpectMsg<Status.Failure>(2.Seconds());
+            message.Should().NotBeNull();
+            message.Cause.Should().BeOfType<AskTimeoutException>();
+        }
+
+        // Resolved https://github.com/akkadotnet/akka.net/issues/1718
+        [Fact]
+        public void Scatter_gather_group_must_only_return_one_response()
+        {
+            var actor1 = Sys.ActorOf(Props.Create(() => new StopActor(1, null)));
+            var actor2 = Sys.ActorOf(Props.Create(() => new StopActor(14, null)));
+
+            var paths = new List<string> { actor1.Path.ToString(), actor2.Path.ToString() };
+            var routedActor = Sys.ActorOf(new ScatterGatherFirstCompletedGroup(paths, TimeSpan.FromSeconds(3)).Props());
+
+            routedActor.Tell(0);
+
+            ExpectMsg<int>();
+            ExpectNoMsg();
+        }
+
+        // Resolved https://github.com/akkadotnet/akka.net/issues/1718
+        [Fact]
+        public async Task Scatter_gather_group_must_handle_failing_timeouts()
+        {
+            var actor1 = Sys.ActorOf(Props.Create(() => new StopActor(50, null)));
+
+            var paths = new List<string> { actor1.Path.ToString() };
+            var routedActor = Sys.ActorOf(new ScatterGatherFirstCompletedGroup(paths, TimeSpan.FromSeconds(3)).Props());
+
+            var exception = await routedActor.Ask<Status.Failure>(0, TimeSpan.FromSeconds(5));
+            exception.Should().NotBeNull();
+            exception.Cause.Should().BeOfType<AskTimeoutException>();
         }
     }
 }
