@@ -52,7 +52,7 @@ namespace Akka.Remote
         private static Deploy CheckRemoteRouterConfig(Deploy deploy)
         {
             var nodes = deploy.Config.GetStringList("target.nodes").Select(Address.Parse).ToList();
-            if (nodes.Any() && deploy.RouterConfig != RouterConfig.NoRouter)
+            if (nodes.Any() && deploy.RouterConfig != null)
             {
                 if (deploy.RouterConfig is Pool)
                     return

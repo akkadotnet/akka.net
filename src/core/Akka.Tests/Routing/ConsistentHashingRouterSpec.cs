@@ -6,12 +6,14 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
 using Xunit;
+using FluentAssertions;
 
 namespace Akka.Tests.Routing
 {
@@ -109,14 +111,14 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public async Task Consistent_hashing_router_must_create_routees_from_configuration()
+        public async Task Consistent_hashing_pool_router_must_create_routees_from_configuration()
         {
             var currentRoutees = await _router1.Ask<Routees>(new GetRoutees(), GetTimeoutOrDefault(null));
-            currentRoutees.Members.Count().ShouldBe(3);
+            currentRoutees.Members.Count().Should().Be(3);
         }
 
         [Fact]
-        public void Consistent_hashing_router_must_select_destination_based_on_consistent_hash_key_of_message()
+        public void Consistent_hashing_pool_router_must_select_destination_based_on_consistent_hash_key_of_message()
         {
             _router1.Tell(new Msg("a", "A"));
             var destinationA = ExpectMsg<IActorRef>();
@@ -135,7 +137,7 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public void Consistent_hashing_router_must_select_destination_with_defined_hash_mapping()
+        public void Consistent_hashing_pool_router_must_select_destination_with_defined_hash_mapping()
         {
             ConsistentHashMapping hashMapping = msg =>
             {
@@ -147,8 +149,7 @@ namespace Akka.Tests.Routing
 
                 return null;
             };
-            var router2 =
-                Sys.ActorOf(new ConsistentHashingPool(1, null, null, null, hashMapping: hashMapping).Props(Props.Create<Echo>()), "router2");
+            var router2 = Sys.ActorOf(new ConsistentHashingPool(1, hashMapping).Props(Props.Create<Echo>()), "router2");
 
             router2.Tell(new Msg2("a", "A"));
             var destinationA = ExpectMsg<IActorRef>();
@@ -205,8 +206,9 @@ namespace Akka.Tests.Routing
 
                 return null;
             };
-            var router4 =
-                Sys.ActorOf(Props.Empty.WithRouter(new ConsistentHashingGroup(new[]{c},hashMapping: hashMapping)), "router4");
+
+            var paths = new List<string> { c.Path.ToString() };
+            var router4 = Sys.ActorOf(new ConsistentHashingGroup(paths, hashMapping).Props(), "router4");
 
             router4.Tell(new Msg2("a", "A"));
             var destinationA = ExpectMsg<IActorRef>();
@@ -223,32 +225,6 @@ namespace Akka.Tests.Routing
             router4.Tell(new ConsistentHashableEnvelope("CC", new MsgKey("c")));
             ExpectMsg(destinationC);
         }
-
-        [Fact]
-        public void Consistent_hashing_router_must_adjust_node_ring_when_routee_dies()
-        {
-            //create pool router with two routees
-            var router5 =
-                Sys.ActorOf(Props.Create<Echo>().WithRouter(new ConsistentHashingPool(2, null, null, null)), "router5");
-
             AwaitCondition(() => ((RepointableActorRef)router5).IsStarted); //verify that the underlying cell has started
-            ((RoutedActorRef)router5).Children.Count().ShouldBe(2);
-
-            router5.Tell(new Msg("a", "A"), TestActor);
-            var actorWhoDies = ExpectMsg<IActorRef>();
-
-            //kill off the actor
-            actorWhoDies.Tell(PoisonPill.Instance);
-
-            //might take some time for the deathwatch to get processed
-            AwaitAssert(() =>
-            {
-                router5.Tell(new Msg("a", "A"), TestActor);
-                //verify that a different actor now owns this hash range
-                var actorWhoDidntDie = ExpectMsg<IActorRef>(TimeSpan.FromMilliseconds(50));
-                actorWhoDidntDie.ShouldNotBe(actorWhoDies);
-            }, TimeSpan.FromSeconds(5));
-        }
     }
 }
-

@@ -96,7 +96,7 @@ namespace Akka.Actor
         private RouterConfig CreateRouterConfig(string routerTypeAlias, Config deployment)
         {
             if (routerTypeAlias == "from-code")
-                return RouterConfig.NoRouter;
+                return NoRouter.Instance;
 
             var path = string.Format("akka.actor.router.type-mapping.{0}", routerTypeAlias);
             var routerTypeName = _settings.Config.GetString(path);

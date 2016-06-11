@@ -14,6 +14,7 @@ using Akka.Remote.TestKit;
 using Akka.Routing;
 using Akka.TestKit;
 using Akka.Util.Internal;
+using FluentAssertions;
 using Xunit;
 
 namespace Akka.Remote.Tests.MultiNode.Router
@@ -35,41 +36,30 @@ namespace Akka.Remote.Tests.MultiNode.Router
             CommonConfig = DebugConfig(true);
 
             DeployOnAll(@"
-      /service-hello {
-        router = round-robin-pool
-        nr-of-instances = 3
-        target.nodes = [""@first@"", ""@second@"", ""@third@""]
-      }
-      /service-hello2 {
-        router = round-robin-pool
-        target.nodes = [""@first@"", ""@second@"", ""@third@""]
-      }
-      /service-hello3 {
-        router = round-robin-group
-        routees.paths = [
-          ""@first@/user/target-first"",
-          ""@second@/user/target-second"",
-          ""@third@/user/target-third""]
-      }
+              /service-hello {
+                router = round-robin-pool
+                nr-of-instances = 3
+                target.nodes = [""@first@"", ""@second@"", ""@third@""]
+              }
+              /service-hello2 {
+                router = round-robin-pool
+                target.nodes = [""@first@"", ""@second@"", ""@third@""]
+              }
+              /service-hello3 {
+                router = round-robin-group
+                routees.paths = [
+                  ""@first@/user/target-first"",
+                  ""@second@/user/target-second"",
+                  ""@third@/user/target-third""]
+              }
            ");
         }
     }
 
-    public class RemoteRoundRobinMultiNode1 : RemoteRoundRobinSpec
-    {
-    }
-
-    public class RemoteRoundRobinMultiNode2 : RemoteRoundRobinSpec
-    {
-    }
-
-    public class RemoteRoundRobinMultiNode3 : RemoteRoundRobinSpec
-    {
-    }
-
-    public class RemoteRoundRobinMultiNode4 : RemoteRoundRobinSpec
-    {
-    }
+    public class RemoteRoundRobinMultiNode1 : RemoteRoundRobinSpec { }
+    public class RemoteRoundRobinMultiNode2 : RemoteRoundRobinSpec { }
+    public class RemoteRoundRobinMultiNode3 : RemoteRoundRobinSpec { }
+    public class RemoteRoundRobinMultiNode4 : RemoteRoundRobinSpec { }
 
     public abstract class RemoteRoundRobinSpec : MultiNodeSpec
     {
@@ -89,7 +79,7 @@ namespace Akka.Remote.Tests.MultiNode.Router
             get { return Roles.Count; }
         }
 
-        public class SomeActor : UntypedActor
+        private class SomeActor : UntypedActor
         {
             protected override void OnReceive(object message)
             {
@@ -113,32 +103,27 @@ namespace Akka.Remote.Tests.MultiNode.Router
             }
         }
 
-        //[MultiNodeFact()]
+        [MultiNodeFact]
         public void RemoteRoundRobinSpecs()
         {
-            A_remote_round_robin_must_be_locally_instantiated_on_a_remote_node_and_be_able_to_communicate_through_its_remote_actor_ref();
-
-            /*
-            Test is commented out until it is no longer flaky (issue1311 https://github.com/akkadotnet/akka.net/issues/1311).
-            */
-            //ARemoteRoundRobinPoolWithResizerMustBeLocallyInstantiatedOnARemoteNodeAfterSeveralResizeRounds();
-
+            A_remote_round_robin_pool_must_be_locally_instantiated_on_a_remote_node_and_be_able_to_communicate_through_its_remote_actor_ref();
+            A_remote_round_robin_pool_with_resizer_must_be_locally_instantiated_on_a_remote_node_after_several_resize_rounds();
             A_remote_round_robin_group_must_send_messages_with_actor_selection_to_remote_paths();
         }
 
-        public void
-            A_remote_round_robin_must_be_locally_instantiated_on_a_remote_node_and_be_able_to_communicate_through_its_remote_actor_ref()
+        public void A_remote_round_robin_pool_must_be_locally_instantiated_on_a_remote_node_and_be_able_to_communicate_through_its_remote_actor_ref()
         {
-            RunOn(() => { EnterBarrier("start", "broadcast-end", "end"); },
-                _config.First, _config.Second, _config.Third);
+            RunOn(() =>
+            {
+                EnterBarrier("start", "broadcast-end", "end");
+            }, _config.First, _config.Second, _config.Third);
 
-            var runOnFourth = new Action(() =>
+            RunOn(() =>
             {
                 EnterBarrier("start");
                 var actor = Sys.ActorOf(new RoundRobinPool(nrOfInstances: 0)
                     .Props(Props.Create<SomeActor>()), "service-hello");
-
-                Assert.IsType<RoutedActorRef>(actor);
+                actor.Should().BeOfType<RoutedActorRef>();
 
                 var connectionCount = 3;
                 var iterationCount = 10;
@@ -151,7 +136,7 @@ namespace Akka.Remote.Tests.MultiNode.Router
                 {
                     if (x is IActorRef) return x.AsInstanceOf<IActorRef>().Path.Address;
                     return null;
-                }, connectionCount*iterationCount)
+                }, connectionCount * iterationCount)
                     .Aggregate(ImmutableDictionary<Address, int>.Empty
                         .Add(Node(_config.First).Address, 0)
                         .Add(Node(_config.Second).Address, 0)
@@ -167,69 +152,64 @@ namespace Akka.Remote.Tests.MultiNode.Router
                 actor.Tell(new Broadcast(PoisonPill.Instance));
 
                 EnterBarrier("end");
-                Log.Debug("Counts for RemoteRoundRobinSpec nodes. First: {0}, Second: {1}, Third: {2}", replies[Node(_config.First).Address],
-                   replies[Node(_config.Second).Address], replies[Node(_config.Third).Address]);
-                replies.Values.ForEach(x => Assert.Equal(x, iterationCount));
-                Assert.False(replies.ContainsKey(Node(_config.Fourth).Address));
+                replies.Values.ForEach(x => x.Should().Be(iterationCount));
+                replies.ContainsKey(Node(_config.Fourth).Address).Should().BeFalse();
 
+                // shut down the actor before we let the other node(s) shut down so we don't try to send
+                // "Terminate" to a shut down node
                 Sys.Stop(actor);
-            });
-
-            RunOn(runOnFourth, _config.Fourth);
+            }, _config.Fourth);
             EnterBarrier("done");
         }
 
         public void A_remote_round_robin_pool_with_resizer_must_be_locally_instantiated_on_a_remote_node_after_several_resize_rounds()
         {
-            Within(TimeSpan.FromSeconds(10), () =>
+            Within(TimeSpan.FromSeconds(5), () =>
             {
-                RunOn(() => { EnterBarrier("start", "broadcast-end", "end"); },
-                    _config.First, _config.Second, _config.Third);
+                RunOn(() =>
+                {
+                    EnterBarrier("start", "broadcast-end", "end");
+                }, _config.First, _config.Second, _config.Third);
 
-                var runOnFourth = new Action(() =>
+                RunOn(() =>
                 {
                     EnterBarrier("start");
                     var actor = Sys.ActorOf(new RoundRobinPool(
                         nrOfInstances: 1,
                         resizer: new TestResizer()
                         ).Props(Props.Create<SomeActor>()), "service-hello2");
-
-                    Assert.IsType<RoutedActorRef>(actor);
+                    actor.Should().BeOfType<RoutedActorRef>();
 
                     actor.Tell(RouterMessage.GetRoutees);
-                    ExpectMsg<Routees>().Members.Count().ShouldBe(2);
+                    // initial nrOfInstances 1 + initial resize => 2
+                    ExpectMsg<Routees>().Members.Count().Should().Be(2);
 
-                    var repliesFrom = Enumerable.Range(3, 7).Select(n =>
+                    ImmutableHashSet<IActorRef> repliesFrom = ImmutableHashSet.Create<IActorRef>();
+
+                    for (int i = 3; i <= 9; i++)
                     {
                         //each message triggers a resize, incrementing number of routees with 1
                         actor.Tell("hit");
-                        var routees = actor.AskAndWait<Routees>(RouterMessage.GetRoutees, TimeSpan.FromSeconds(5));
-                        routees.Members.Count().ShouldBe(n);
-                        return ExpectMsg<IActorRef>();
-                    }).ToImmutableHashSet();
+                        var routees = actor.AskAndWait<Routees>(new GetRoutees(), GetTimeoutOrDefault(null));
+                        routees.Members.Count().Should().Be(i);
+                        repliesFrom = repliesFrom.Add(ExpectMsg<IActorRef>());
+                    }
 
                     EnterBarrier("broadcast-end");
                     actor.Tell(new Broadcast(PoisonPill.Instance));
 
                     EnterBarrier("end");
-                    Assert.Equal(repliesFrom.Count, 7);
-                    var repliesFromAddresses = repliesFrom.Select(x => x.Path.Address).Distinct();
-                    var expectedAddresses = new List<ActorPath>
+                    repliesFrom.Count.Should().Be(7);
+                    var repliesFromAddresses = repliesFrom.Select(x => x.Path.Address).ToImmutableHashSet();
+                    repliesFromAddresses.Should().BeEquivalentTo(new List<Address>
                     {
-                        Node(_config.First),
-                        Node(_config.Second),
-                        Node(_config.Third)
-                    }
-                        .Select(x => x.Address);
-
-                    // check if they have same elements (ignoring order)
-                    Assert.All(repliesFromAddresses, x => Assert.Contains(x, expectedAddresses));
-                    Assert.True(repliesFromAddresses.Count() == expectedAddresses.Count());
+                        Node(_config.First).Address,
+                        Node(_config.Second).Address,
+                        Node(_config.Third).Address
+                    });
 
                     Sys.Stop(actor);
-                });
-
-                RunOn(runOnFourth, _config.Fourth);
+                }, _config.Fourth);
                 EnterBarrier("done");
             });
         }
@@ -242,12 +222,11 @@ namespace Akka.Remote.Tests.MultiNode.Router
                 EnterBarrier("start", "end");
             }, _config.First, _config.Second, _config.Third);
 
-            var runOnFourth = new Action(() =>
+            RunOn(() =>
             {
                 EnterBarrier("start");
-                var actor = Sys.ActorOf(Props.Empty.WithRouter(FromConfig.Instance), "service-hello3");
-
-                Assert.IsType<RoutedActorRef>(actor);
+                var actor = Sys.ActorOf(FromConfig.Instance.Props(), "service-hello3");
+                actor.Should().BeOfType<RoutedActorRef>();
 
                 var connectionCount = 3;
                 var iterationCount = 10;
@@ -260,7 +239,7 @@ namespace Akka.Remote.Tests.MultiNode.Router
                 {
                     if (x is IActorRef) return x.AsInstanceOf<IActorRef>().Path.Address;
                     return null;
-                }, connectionCount*iterationCount)
+                }, connectionCount * iterationCount)
                     .Aggregate(ImmutableDictionary<Address, int>.Empty
                         .Add(Node(_config.First).Address, 0)
                         .Add(Node(_config.Second).Address, 0)
@@ -272,13 +251,9 @@ namespace Akka.Remote.Tests.MultiNode.Router
                         });
 
                 EnterBarrier("end");
-                Log.Debug("Counts for RemoteRoundRobinSpec nodes. First: {0}, Second: {1}, Third: {2}", replies[Node(_config.First).Address],
-                    replies[Node(_config.Second).Address], replies[Node(_config.Third).Address]);
-                replies.ForEach(x => Assert.True(x.Value == iterationCount, $"Expected {x.Key} to have {iterationCount} replies but instead had {x.Value}"));
-                Assert.False(replies.ContainsKey(Node(_config.Fourth).Address));
-            });
-
-            RunOn(runOnFourth, _config.Fourth);
+                replies.Values.ForEach(x => x.Should().Be(iterationCount));
+                replies.ContainsKey(Node(_config.Fourth).Address).Should().BeFalse();
+            }, _config.Fourth);
             EnterBarrier("done");
         }
     }

@@ -5,6 +5,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.MultiNodeTestRunner.Shared.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests.MultiNode")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.TestKit.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Tests")]
@@ -405,7 +406,7 @@ namespace Akka.Actor
         protected AkkaException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
         protected System.Exception Cause { get; }
     }
-    public class AllForOneStrategy : Akka.Actor.SupervisorStrategy
+    public class AllForOneStrategy : Akka.Actor.SupervisorStrategy, System.IEquatable<Akka.Actor.AllForOneStrategy>
     {
         public AllForOneStrategy(System.Nullable<int> maxNrOfRetries, System.Nullable<System.TimeSpan> withinTimeRange, System.Func<System.Exception, Akka.Actor.Directive> localOnlyDecider) { }
         public AllForOneStrategy(System.Nullable<int> maxNrOfRetries, System.Nullable<System.TimeSpan> withinTimeRange, Akka.Actor.IDecider decider) { }
@@ -417,6 +418,9 @@ namespace Akka.Actor
         public Akka.Actor.IDecider Decider { get; }
         public int MaxNumberOfRetries { get; }
         public int WithinTimeRangeMilliseconds { get; }
+        public bool Equals(Akka.Actor.AllForOneStrategy other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
         protected override Akka.Actor.Directive Handle(Akka.Actor.IActorRef child, System.Exception x) { }
         public override void HandleChildTerminated(Akka.Actor.IActorContext actorContext, Akka.Actor.IActorRef child, System.Collections.Generic.IEnumerable<Akka.Actor.IInternalActorRef> children) { }
         protected override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, System.Exception cause, Akka.Actor.Internal.ChildRestartStats failedChildStats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> allChildren) { }
@@ -559,7 +563,7 @@ namespace Akka.Actor
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
-    public class DeployableDecider : Akka.Actor.IDecider
+    public class DeployableDecider : Akka.Actor.IDecider, System.IEquatable<Akka.Actor.DeployableDecider>
     {
         protected DeployableDecider() { }
         public DeployableDecider(Akka.Actor.Directive defaultDirective, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<System.Type, Akka.Actor.Directive>> pairs) { }
@@ -567,6 +571,9 @@ namespace Akka.Actor
         public Akka.Actor.Directive DefaultDirective { get; }
         public System.Collections.Generic.KeyValuePair<, >[] Pairs { get; }
         public Akka.Actor.Directive Decide(System.Exception cause) { }
+        public bool Equals(Akka.Actor.DeployableDecider other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
     }
     public class Deployer
     {
@@ -1235,7 +1242,7 @@ namespace Akka.Actor
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
-    public class OneForOneStrategy : Akka.Actor.SupervisorStrategy
+    public class OneForOneStrategy : Akka.Actor.SupervisorStrategy, System.IEquatable<Akka.Actor.OneForOneStrategy>
     {
         public OneForOneStrategy(System.Nullable<int> maxNrOfRetries, System.Nullable<System.TimeSpan> withinTimeRange, System.Func<System.Exception, Akka.Actor.Directive> localOnlyDecider) { }
         public OneForOneStrategy(System.Nullable<int> maxNrOfRetries, System.Nullable<System.TimeSpan> withinTimeRange, Akka.Actor.IDecider decider) { }
@@ -1247,6 +1254,9 @@ namespace Akka.Actor
         public Akka.Actor.IDecider Decider { get; }
         public int MaxNumberOfRetries { get; }
         public int WithinTimeRangeMilliseconds { get; }
+        public bool Equals(Akka.Actor.OneForOneStrategy other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
         protected override Akka.Actor.Directive Handle(Akka.Actor.IActorRef child, System.Exception x) { }
         public override void HandleChildTerminated(Akka.Actor.IActorContext actorContext, Akka.Actor.IActorRef child, System.Collections.Generic.IEnumerable<Akka.Actor.IInternalActorRef> children) { }
         protected override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, System.Exception cause, Akka.Actor.Internal.ChildRestartStats failedChildStats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> allChildren) { }
@@ -3719,33 +3729,38 @@ namespace Akka.Routing
     {
         public Broadcast(object message) { }
     }
-    public class BroadcastGroup : Akka.Routing.Group
+    public sealed class BroadcastGroup : Akka.Routing.Group
     {
         public BroadcastGroup(Akka.Configuration.Config config) { }
         public BroadcastGroup(params string[] paths) { }
         public BroadcastGroup(System.Collections.Generic.IEnumerable<string> paths) { }
+        [System.ObsoleteAttribute("Use new BroadcastGroup(actorRefs.Select(c => c.Path.ToString())) instead")]
         public BroadcastGroup(System.Collections.Generic.IEnumerable<Akka.Actor.IActorRef> routees) { }
+        public BroadcastGroup(System.Collections.Generic.IEnumerable<string> paths, string routerDispatcher) { }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override System.Collections.Generic.IEnumerable<string> GetPaths(Akka.Actor.ActorSystem system) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
-        public override Akka.Routing.Group WithDispatcher(string dispatcher) { }
+        public Akka.Routing.Group WithDispatcher(string dispatcher) { }
         public class BroadcastGroupSurrogate : Akka.Util.ISurrogate
         {
             public BroadcastGroupSurrogate() { }
-            public string[] Paths { get; set; }
+            public System.Collections.Generic.IEnumerable<string> Paths { get; set; }
+            public string RouterDispatcher { get; set; }
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
-    public class BroadcastPool : Akka.Routing.Pool
+    public sealed class BroadcastPool : Akka.Routing.Pool
     {
+        public BroadcastPool(int nrOfInstances) { }
         public BroadcastPool(Akka.Configuration.Config config) { }
         public BroadcastPool(int nrOfInstances, Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = False) { }
-        public BroadcastPool(int nrOfInstances) { }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override int GetNrOfInstances(Akka.Actor.ActorSystem system) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
-        public override Akka.Routing.Pool WithDispatcher(string dispatcher) { }
+        public Akka.Routing.BroadcastPool WithDispatcher(string dispatcher) { }
         public override Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig routerConfig) { }
-        public override Akka.Routing.Pool WithResizer(Akka.Routing.Resizer resizer) { }
-        public override Akka.Routing.Pool WithSupervisorStrategy(Akka.Actor.SupervisorStrategy strategy) { }
+        public Akka.Routing.BroadcastPool WithResizer(Akka.Routing.Resizer resizer) { }
+        public Akka.Routing.BroadcastPool WithSupervisorStrategy(Akka.Actor.SupervisorStrategy strategy) { }
         public class BroadcastPoolSurrogate : Akka.Util.ISurrogate
         {
             public BroadcastPoolSurrogate() { }
@@ -3757,7 +3772,7 @@ namespace Akka.Routing
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
-    public class BroadcastRoutingLogic : Akka.Routing.RoutingLogic
+    public sealed class BroadcastRoutingLogic : Akka.Routing.RoutingLogic
     {
         public BroadcastRoutingLogic() { }
         public override Akka.Routing.Routee Select(object message, Akka.Routing.Routee[] routees) { }
@@ -3791,46 +3806,52 @@ namespace Akka.Routing
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
-    public class ConsistentHashableEnvelope : Akka.Routing.RouterEnvelope, Akka.Routing.IConsistentHashable
+    public sealed class ConsistentHashableEnvelope : Akka.Routing.RouterEnvelope, Akka.Routing.IConsistentHashable
     {
         public ConsistentHashableEnvelope(object message, object hashKey) { }
         public object ConsistentHashKey { get; }
         public object HashKey { get; }
     }
-    public class ConsistentHashingGroup : Akka.Routing.Group
+    public sealed class ConsistentHashingGroup : Akka.Routing.Group
     {
-        protected Akka.Routing.ConsistentHashMapping HashMapping;
         public ConsistentHashingGroup(Akka.Configuration.Config config) { }
         public ConsistentHashingGroup(params string[] paths) { }
-        public ConsistentHashingGroup(System.Collections.Generic.IEnumerable<string> paths, int virtualNodesFactor = 0, Akka.Routing.ConsistentHashMapping hashMapping = null) { }
-        public ConsistentHashingGroup(System.Collections.Generic.IEnumerable<Akka.Actor.IActorRef> routees, int virtualNodesFactor = 0, Akka.Routing.ConsistentHashMapping hashMapping = null) { }
+        public ConsistentHashingGroup(System.Collections.Generic.IEnumerable<string> paths) { }
+        [System.ObsoleteAttribute("Use new ConsistentHashingGroup(actorRefs.Select(c => c.Path.ToString())) instead")]
+        public ConsistentHashingGroup(System.Collections.Generic.IEnumerable<Akka.Actor.IActorRef> routees) { }
+        public ConsistentHashingGroup(System.Collections.Generic.IEnumerable<string> paths, Akka.Routing.ConsistentHashMapping hashMapping) { }
+        public ConsistentHashingGroup(System.Collections.Generic.IEnumerable<string> paths, int virtualNodesFactor, Akka.Routing.ConsistentHashMapping hashMapping, string routerDispatcher) { }
         public int VirtualNodesFactor { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override System.Collections.Generic.IEnumerable<string> GetPaths(Akka.Actor.ActorSystem system) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
-        public override Akka.Routing.Group WithDispatcher(string dispatcher) { }
+        public Akka.Routing.ConsistentHashingGroup WithDispatcher(string dispatcher) { }
         public override Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig routerConfig) { }
         public Akka.Routing.ConsistentHashingGroup WithHashMapping(Akka.Routing.ConsistentHashMapping mapping) { }
         public Akka.Routing.ConsistentHashingGroup WithVirtualNodesFactor(int vnodes) { }
         public class ConsistentHashingGroupSurrogate : Akka.Util.ISurrogate
         {
             public ConsistentHashingGroupSurrogate() { }
-            public string[] Paths { get; set; }
+            public System.Collections.Generic.IEnumerable<string> Paths { get; set; }
+            public string RouterDispatcher { get; set; }
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
-    public class ConsistentHashingPool : Akka.Routing.Pool
+    public sealed class ConsistentHashingPool : Akka.Routing.Pool
     {
-        public ConsistentHashingPool(Akka.Configuration.Config config) { }
-        public ConsistentHashingPool(int nrOfInstances, Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = False, int virtualNodesFactor = 0, Akka.Routing.ConsistentHashMapping hashMapping = null) { }
         public ConsistentHashingPool(int nrOfInstances) { }
+        public ConsistentHashingPool(Akka.Configuration.Config config) { }
+        public ConsistentHashingPool(int nrOfInstances, Akka.Routing.ConsistentHashMapping hashMapping) { }
+        public ConsistentHashingPool(int nrOfInstances, Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = False, int virtualNodesFactor = 0, Akka.Routing.ConsistentHashMapping hashMapping = null) { }
         public int VirtualNodesFactor { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override int GetNrOfInstances(Akka.Actor.ActorSystem system) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
-        public override Akka.Routing.Pool WithDispatcher(string dispatcher) { }
+        public Akka.Routing.ConsistentHashingPool WithDispatcher(string dispatcher) { }
         public override Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig routerConfig) { }
         public Akka.Routing.ConsistentHashingPool WithHashMapping(Akka.Routing.ConsistentHashMapping mapping) { }
-        public override Akka.Routing.Pool WithResizer(Akka.Routing.Resizer resizer) { }
-        public override Akka.Routing.Pool WithSupervisorStrategy(Akka.Actor.SupervisorStrategy strategy) { }
+        public Akka.Routing.ConsistentHashingPool WithResizer(Akka.Routing.Resizer resizer) { }
+        public Akka.Routing.ConsistentHashingPool WithSupervisorStrategy(Akka.Actor.SupervisorStrategy strategy) { }
         public Akka.Routing.ConsistentHashingPool WithVirtualNodesFactor(int vnodes) { }
         public class ConsistentHashingPoolSurrogate : Akka.Util.ISurrogate
         {
@@ -3843,7 +3864,7 @@ namespace Akka.Routing
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
-    public class ConsistentHashingRoutingLogic : Akka.Routing.RoutingLogic
+    public sealed class ConsistentHashingRoutingLogic : Akka.Routing.RoutingLogic
     {
         public ConsistentHashingRoutingLogic(Akka.Actor.ActorSystem system) { }
         public ConsistentHashingRoutingLogic(Akka.Actor.ActorSystem system, int virtualNodesFactor, Akka.Routing.ConsistentHashMapping hashMapping) { }
@@ -3851,6 +3872,11 @@ namespace Akka.Routing
         public Akka.Routing.ConsistentHashingRoutingLogic WithHashMapping(Akka.Routing.ConsistentHashMapping mapping) { }
     }
     public delegate object ConsistentHashMapping(object msg);
+    public abstract class CustomRouterConfig : Akka.Routing.RouterConfig
+    {
+        protected CustomRouterConfig() { }
+        protected CustomRouterConfig(string routerDispatcher) { }
+    }
     public class Deafen : Akka.Routing.ListenerMessage
     {
         public Deafen(Akka.Actor.IActorRef listener) { }
@@ -3878,13 +3904,19 @@ namespace Akka.Routing
         public int Rampup(int pressure, int capacity) { }
         public override int Resize(System.Collections.Generic.IEnumerable<Akka.Routing.Routee> currentRoutees) { }
     }
-    public class FromConfig : Akka.Routing.RouterConfig
+    public class FromConfig : Akka.Routing.Pool
     {
+        protected FromConfig() { }
+        protected FromConfig(Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher) { }
         public static Akka.Routing.FromConfig Instance { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
-        public override System.Collections.Generic.IEnumerable<Akka.Routing.Routee> GetRoutees(Akka.Routing.RoutedActorCell routedActorCell) { }
-        public static Akka.Actor.Props Props(Akka.Actor.Props props) { }
+        public override int GetNrOfInstances(Akka.Actor.ActorSystem sys) { }
+        public Akka.Actor.Props Props() { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
+        public override void VerifyConfig(Akka.Actor.ActorPath path) { }
+        public Akka.Routing.FromConfig WithDispatcher(string dispatcherId) { }
+        public Akka.Routing.FromConfig WithResizer(Akka.Routing.Resizer resizer) { }
+        public Akka.Routing.FromConfig WithSupervisorStrategy(Akka.Actor.SupervisorStrategy strategy) { }
         public class FromConfigSurrogate : Akka.Util.ISurrogate
         {
             public FromConfigSurrogate() { }
@@ -3897,18 +3929,13 @@ namespace Akka.Routing
     }
     public abstract class Group : Akka.Routing.RouterConfig, System.IEquatable<Akka.Routing.Group>
     {
-        protected Group(System.Collections.Generic.IEnumerable<string> paths) { }
         protected Group(System.Collections.Generic.IEnumerable<string> paths, string routerDispatcher) { }
-        protected Group(System.Collections.Generic.IEnumerable<Akka.Actor.IActorRef> routees) { }
-        public string[] Paths { get; }
-        public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public System.Collections.Generic.IEnumerable<string> Paths { get; }
         public bool Equals(Akka.Routing.Group other) { }
         public override bool Equals(object obj) { }
-        public override bool Equals(Akka.Routing.RouterConfig other) { }
         public override int GetHashCode() { }
-        public override System.Collections.Generic.IEnumerable<Akka.Routing.Routee> GetRoutees(Akka.Routing.RoutedActorCell routedActorCell) { }
+        public abstract System.Collections.Generic.IEnumerable<string> GetPaths(Akka.Actor.ActorSystem system);
         public Akka.Actor.Props Props() { }
-        public abstract Akka.Routing.Group WithDispatcher(string dispatcher);
     }
     public interface IConsistentHashable
     {
@@ -3939,10 +3966,11 @@ namespace Akka.Routing
     }
     public class NoRouter : Akka.Routing.RouterConfig
     {
-        public NoRouter() { }
+        protected NoRouter() { }
+        public static Akka.Routing.NoRouter Instance { get; }
         public override string RouterDispatcher { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
-        public override System.Collections.Generic.IEnumerable<Akka.Routing.Routee> GetRoutees(Akka.Routing.RoutedActorCell routedActorCell) { }
+        public Akka.Actor.Props Props(Akka.Actor.Props routeeProps) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
         public override Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig routerConfig) { }
         public class NoRouterSurrogate : Akka.Util.ISurrogate
@@ -3953,58 +3981,54 @@ namespace Akka.Routing
     }
     public abstract class Pool : Akka.Routing.RouterConfig, System.IEquatable<Akka.Routing.Pool>
     {
-        protected Pool(int nrOfInstances, Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = False) { }
-        protected Pool(Akka.Configuration.Config config) { }
-        public static Akka.Actor.SupervisorStrategy DefaultStrategy { get; }
-        public virtual int NrOfInstances { get; }
+        protected Pool(int nrOfInstances, Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher) { }
+        public static Akka.Actor.SupervisorStrategy DefaultSupervisorStrategy { get; }
+        public int NrOfInstances { get; }
         public virtual Akka.Routing.Resizer Resizer { get; }
+        public override bool StopRouterWhenAllRouteesRemoved { get; }
         public virtual Akka.Actor.SupervisorStrategy SupervisorStrategy { get; }
         public virtual bool UsePoolDispatcher { get; }
         public bool Equals(Akka.Routing.Pool other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
-        public virtual int GetNrOfInstances(Akka.Actor.ActorSystem system) { }
-        [System.Runtime.CompilerServices.IteratorStateMachineAttribute(typeof(Akka.Routing.Pool.<GetRoutees>d__22))]
-        public override System.Collections.Generic.IEnumerable<Akka.Routing.Routee> GetRoutees(Akka.Routing.RoutedActorCell routedActorCell) { }
-        public virtual Akka.Routing.Routee NewRoutee(Akka.Actor.Props routeeProps, Akka.Actor.IActorContext context) { }
-        protected Akka.Routing.RouterConfig OverrideUnsetConfig(Akka.Routing.RouterConfig other) { }
+        public abstract int GetNrOfInstances(Akka.Actor.ActorSystem system);
         public Akka.Actor.Props Props(Akka.Actor.Props routeeProps) { }
-        public abstract Akka.Routing.Pool WithDispatcher(string dispatcher);
-        public abstract Akka.Routing.Pool WithResizer(Akka.Routing.Resizer resizer);
-        public abstract Akka.Routing.Pool WithSupervisorStrategy(Akka.Actor.SupervisorStrategy strategy);
     }
-    public class RandomGroup : Akka.Routing.Group
+    public sealed class RandomGroup : Akka.Routing.Group
     {
         public RandomGroup(Akka.Configuration.Config config) { }
         public RandomGroup(params string[] paths) { }
         public RandomGroup(System.Collections.Generic.IEnumerable<string> paths) { }
+        public RandomGroup(System.Collections.Generic.IEnumerable<string> paths, string routerDispatcher) { }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override System.Collections.Generic.IEnumerable<string> GetPaths(Akka.Actor.ActorSystem system) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
-        public override Akka.Routing.Group WithDispatcher(string dispatcher) { }
+        public Akka.Routing.RandomGroup WithDispatcher(string dispatcher) { }
         public class RandomGroupSurrogate : Akka.Util.ISurrogate
         {
             public RandomGroupSurrogate() { }
-            public string[] Paths { get; set; }
+            public System.Collections.Generic.IEnumerable<string> Paths { get; set; }
+            public string RouterDispatcher { get; set; }
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
-    public class RandomLogic : Akka.Routing.RoutingLogic
+    public sealed class RandomLogic : Akka.Routing.RoutingLogic
     {
         public RandomLogic() { }
         public override Akka.Routing.Routee Select(object message, Akka.Routing.Routee[] routees) { }
     }
-    public class RandomPool : Akka.Routing.Pool
+    public sealed class RandomPool : Akka.Routing.Pool
     {
-        public RandomPool(int nrOfInstances, Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = False) { }
         public RandomPool(Akka.Configuration.Config config) { }
         public RandomPool(int nrOfInstances) { }
-        public RandomPool(int nrOfInstances, Akka.Routing.Resizer resizer) { }
+        public RandomPool(int nrOfInstances, Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = False) { }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override int GetNrOfInstances(Akka.Actor.ActorSystem system) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
-        public override Akka.Routing.Pool WithDispatcher(string dispatcher) { }
+        public Akka.Routing.RandomPool WithDispatcher(string dispatcher) { }
         public override Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig routerConfig) { }
-        public override Akka.Routing.Pool WithResizer(Akka.Routing.Resizer resizer) { }
-        public override Akka.Routing.Pool WithSupervisorStrategy(Akka.Actor.SupervisorStrategy strategy) { }
+        public Akka.Routing.RandomPool WithResizer(Akka.Routing.Resizer resizer) { }
+        public Akka.Routing.RandomPool WithSupervisorStrategy(Akka.Actor.SupervisorStrategy strategy) { }
         public class RandomPoolSurrogate : Akka.Util.ISurrogate
         {
             public RandomPoolSurrogate() { }
@@ -4028,37 +4052,43 @@ namespace Akka.Routing
     public abstract class Resizer
     {
         protected Resizer() { }
+        public static Akka.Routing.Resizer FromConfig(Akka.Configuration.Config parentConfig) { }
         public abstract bool IsTimeForResize(long messageCounter);
         public abstract int Resize(System.Collections.Generic.IEnumerable<Akka.Routing.Routee> currentRoutees);
     }
-    public class RoundRobinGroup : Akka.Routing.Group
+    public sealed class RoundRobinGroup : Akka.Routing.Group
     {
         public RoundRobinGroup(Akka.Configuration.Config config) { }
         public RoundRobinGroup(params string[] paths) { }
         public RoundRobinGroup(System.Collections.Generic.IEnumerable<string> paths) { }
+        [System.ObsoleteAttribute("Use RoundRobinGroup constructor with IEnumerable<string> parameter")]
         public RoundRobinGroup(System.Collections.Generic.IEnumerable<Akka.Actor.IActorRef> routees) { }
+        public RoundRobinGroup(System.Collections.Generic.IEnumerable<string> paths, string routerDispatcher) { }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override System.Collections.Generic.IEnumerable<string> GetPaths(Akka.Actor.ActorSystem system) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
-        public override Akka.Routing.Group WithDispatcher(string dispatcher) { }
+        public Akka.Routing.Group WithDispatcher(string dispatcherId) { }
         public class RoundRobinGroupSurrogate : Akka.Util.ISurrogate
         {
             public RoundRobinGroupSurrogate() { }
-            public string[] Paths { get; set; }
+            public System.Collections.Generic.IEnumerable<string> Paths { get; set; }
+            public string RouterDispatcher { get; set; }
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
-    public class RoundRobinPool : Akka.Routing.Pool
+    public sealed class RoundRobinPool : Akka.Routing.Pool
     {
-        public RoundRobinPool(int nrOfInstances, Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = False) { }
         public RoundRobinPool(Akka.Configuration.Config config) { }
         public RoundRobinPool(int nrOfInstances) { }
         public RoundRobinPool(int nrOfInstances, Akka.Routing.Resizer resizer) { }
+        public RoundRobinPool(int nrOfInstances, Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = False) { }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override int GetNrOfInstances(Akka.Actor.ActorSystem sys) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
-        public override Akka.Routing.Pool WithDispatcher(string dispatcher) { }
+        public Akka.Routing.RoundRobinPool WithDispatcher(string dispatcher) { }
         public override Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig routerConfig) { }
-        public override Akka.Routing.Pool WithResizer(Akka.Routing.Resizer resizer) { }
-        public override Akka.Routing.Pool WithSupervisorStrategy(Akka.Actor.SupervisorStrategy strategy) { }
+        public Akka.Routing.RoundRobinPool WithResizer(Akka.Routing.Resizer resizer) { }
+        public Akka.Routing.RoundRobinPool WithSupervisorStrategy(Akka.Actor.SupervisorStrategy strategy) { }
         public class RoundRobinPoolSurrogate : Akka.Util.ISurrogate
         {
             public RoundRobinPoolSurrogate() { }
@@ -4070,27 +4100,11 @@ namespace Akka.Routing
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
-    public class RoundRobinRoutingLogic : Akka.Routing.RoutingLogic
+    public sealed class RoundRobinRoutingLogic : Akka.Routing.RoutingLogic
     {
         public RoundRobinRoutingLogic() { }
         public RoundRobinRoutingLogic(int next) { }
         public override Akka.Routing.Routee Select(object message, Akka.Routing.Routee[] routees) { }
-    }
-    public class RoutedActorCell : Akka.Actor.ActorCell
-    {
-        public RoutedActorCell(Akka.Actor.Internal.ActorSystemImpl system, Akka.Actor.IInternalActorRef self, Akka.Actor.Props routerProps, Akka.Dispatch.MessageDispatcher dispatcher, Akka.Actor.Props routeeProps, Akka.Actor.IInternalActorRef supervisor) { }
-        public Akka.Actor.Props RouteeProps { get; }
-        public Akka.Routing.Router Router { get; }
-        public Akka.Routing.RouterConfig RouterConfig { get; }
-        protected override Akka.Actor.ActorBase CreateNewActorInstance() { }
-        protected virtual void PreSuperStart() { }
-        public override void SendMessage(Akka.Actor.IActorRef sender, object message) { }
-        public override void Start() { }
-    }
-    public class RoutedActorRef : Akka.Actor.RepointableActorRef
-    {
-        public RoutedActorRef(Akka.Actor.Internal.ActorSystemImpl system, Akka.Actor.Props routerProps, Akka.Dispatch.MessageDispatcher routerDispatcher, Akka.Dispatch.MailboxType mailboxType, Akka.Actor.Props routeeProps, Akka.Actor.IInternalActorRef supervisor, Akka.Actor.ActorPath path) { }
-        protected override Akka.Actor.ActorCell NewCell() { }
     }
     public class Routee
     {
@@ -4123,20 +4137,18 @@ namespace Akka.Routing
     }
     public abstract class RouterConfig : Akka.Util.ISurrogated, System.IEquatable<Akka.Routing.RouterConfig>
     {
-        public static readonly Akka.Routing.RouterConfig NoRouter;
         protected RouterConfig() { }
         protected RouterConfig(string routerDispatcher) { }
-        public virtual string RouterDispatcher { get; set; }
+        public virtual string RouterDispatcher { get; }
+        public virtual bool StopRouterWhenAllRouteesRemoved { get; }
         public abstract Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system);
-        public virtual bool Equals(Akka.Routing.RouterConfig other) { }
-        public abstract System.Collections.Generic.IEnumerable<Akka.Routing.Routee> GetRoutees(Akka.Routing.RoutedActorCell routedActorCell);
+        public bool Equals(Akka.Routing.RouterConfig other) { }
+        public override bool Equals(object obj) { }
         public virtual bool IsManagementMessage(object message) { }
+        public virtual Akka.Actor.Props RoutingLogicController(Akka.Routing.RoutingLogic routingLogic) { }
         public abstract Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system);
+        public virtual void VerifyConfig(Akka.Actor.ActorPath path) { }
         public virtual Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig routerConfig) { }
-    }
-    public class static RouterConfigExtensions
-    {
-        public static bool NoRouter(this Akka.Routing.RouterConfig config) { }
     }
     public class RouterEnvelope
     {
@@ -4156,36 +4168,43 @@ namespace Akka.Routing
         protected RoutingLogic() { }
         public abstract Akka.Routing.Routee Select(object message, Akka.Routing.Routee[] routees);
     }
-    public class ScatterGatherFirstCompletedGroup : Akka.Routing.Group
+    public sealed class ScatterGatherFirstCompletedGroup : Akka.Routing.Group
     {
         public ScatterGatherFirstCompletedGroup(Akka.Configuration.Config config) { }
         public ScatterGatherFirstCompletedGroup(System.TimeSpan within, params string[] paths) { }
         public ScatterGatherFirstCompletedGroup(System.Collections.Generic.IEnumerable<string> paths, System.TimeSpan within) { }
+        [System.ObsoleteAttribute("Use new ScatterGatherFirstCompletedGroup(actorRefs.Select(c => c.Path.ToString())" +
+            ", within) instead")]
         public ScatterGatherFirstCompletedGroup(System.Collections.Generic.IEnumerable<Akka.Actor.IActorRef> routees, System.TimeSpan within) { }
+        public ScatterGatherFirstCompletedGroup(System.Collections.Generic.IEnumerable<string> paths, System.TimeSpan within, string routerDispatcher) { }
         public System.TimeSpan Within { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override System.Collections.Generic.IEnumerable<string> GetPaths(Akka.Actor.ActorSystem system) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
-        public override Akka.Routing.Group WithDispatcher(string dispatcher) { }
+        public Akka.Routing.ScatterGatherFirstCompletedGroup WithDispatcher(string dispatcher) { }
         public class ScatterGatherFirstCompletedGroupSurrogate : Akka.Util.ISurrogate
         {
             public ScatterGatherFirstCompletedGroupSurrogate() { }
-            public string[] Paths { get; set; }
+            public System.Collections.Generic.IEnumerable<string> Paths { get; set; }
+            public string RouterDispatcher { get; set; }
             public System.TimeSpan Within { get; set; }
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
-    public class ScatterGatherFirstCompletedPool : Akka.Routing.Pool
+    public sealed class ScatterGatherFirstCompletedPool : Akka.Routing.Pool
     {
-        public ScatterGatherFirstCompletedPool(int nrOfInstances, Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, System.TimeSpan within, bool usePoolDispatcher = False) { }
-        public ScatterGatherFirstCompletedPool(int nrOfInstances, System.TimeSpan within) { }
         public ScatterGatherFirstCompletedPool(Akka.Configuration.Config config) { }
         public ScatterGatherFirstCompletedPool(int nrOfInstances) { }
+        public ScatterGatherFirstCompletedPool(int nrOfInstances, System.TimeSpan within) { }
+        public ScatterGatherFirstCompletedPool(int nrOfInstances, Akka.Routing.Resizer resizer, System.TimeSpan within, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = False) { }
+        public System.TimeSpan Within { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override int GetNrOfInstances(Akka.Actor.ActorSystem system) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
-        public override Akka.Routing.Pool WithDispatcher(string dispatcher) { }
+        public Akka.Routing.ScatterGatherFirstCompletedPool WithDispatcher(string dispatcher) { }
         public override Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig routerConfig) { }
-        public override Akka.Routing.Pool WithResizer(Akka.Routing.Resizer resizer) { }
-        public override Akka.Routing.Pool WithSupervisorStrategy(Akka.Actor.SupervisorStrategy strategy) { }
+        public Akka.Routing.ScatterGatherFirstCompletedPool WithResizer(Akka.Routing.Resizer resizer) { }
+        public Akka.Routing.ScatterGatherFirstCompletedPool WithSupervisorStrategy(Akka.Actor.SupervisorStrategy strategy) { }
         public class ScatterGatherFirstCompletedPoolSurrogate : Akka.Util.ISurrogate
         {
             public ScatterGatherFirstCompletedPoolSurrogate() { }
@@ -4198,12 +4217,7 @@ namespace Akka.Routing
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
-    public class ScatterGatherFirstCompletedRoutees : Akka.Routing.Routee
-    {
-        public ScatterGatherFirstCompletedRoutees(Akka.Routing.Routee[] routees, System.TimeSpan within) { }
-        public override void Send(object message, Akka.Actor.IActorRef sender) { }
-    }
-    public class ScatterGatherFirstCompletedRoutingLogic : Akka.Routing.RoutingLogic
+    public sealed class ScatterGatherFirstCompletedRoutingLogic : Akka.Routing.RoutingLogic
     {
         public ScatterGatherFirstCompletedRoutingLogic(System.TimeSpan within) { }
         public override Akka.Routing.Routee Select(object message, Akka.Routing.Routee[] routees) { }
@@ -4213,17 +4227,18 @@ namespace Akka.Routing
         public SeveralRoutees(Akka.Routing.Routee[] routees) { }
         public override void Send(object message, Akka.Actor.IActorRef sender) { }
     }
-    public class SmallestMailboxPool : Akka.Routing.Pool
+    public sealed class SmallestMailboxPool : Akka.Routing.Pool
     {
-        public SmallestMailboxPool(int nrOfInstances, Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = False) { }
         public SmallestMailboxPool(Akka.Configuration.Config config) { }
         public SmallestMailboxPool(int nrOfInstances) { }
+        public SmallestMailboxPool(int nrOfInstances, Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = False) { }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override int GetNrOfInstances(Akka.Actor.ActorSystem system) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
-        public override Akka.Routing.Pool WithDispatcher(string dispatcher) { }
+        public Akka.Routing.SmallestMailboxPool WithDispatcher(string dispatcher) { }
         public override Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig routerConfig) { }
-        public override Akka.Routing.Pool WithResizer(Akka.Routing.Resizer resizer) { }
-        public override Akka.Routing.Pool WithSupervisorStrategy(Akka.Actor.SupervisorStrategy strategy) { }
+        public Akka.Routing.SmallestMailboxPool WithResizer(Akka.Routing.Resizer resizer) { }
+        public Akka.Routing.SmallestMailboxPool WithSupervisorStrategy(Akka.Actor.SupervisorStrategy strategy) { }
         public class SmallestMailboxPoolSurrogate : Akka.Util.ISurrogate
         {
             public SmallestMailboxPoolSurrogate() { }
@@ -4235,39 +4250,52 @@ namespace Akka.Routing
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
-    public class SmallestMailboxRoutingLogic : Akka.Routing.RoutingLogic
+    public sealed class SmallestMailboxRoutingLogic : Akka.Routing.RoutingLogic
     {
         public SmallestMailboxRoutingLogic() { }
         public SmallestMailboxRoutingLogic(int next) { }
         public override Akka.Routing.Routee Select(object message, Akka.Routing.Routee[] routees) { }
     }
+    public sealed class TailChopping : Akka.Routing.RoutingLogic
+    {
+        public TailChopping(Akka.Actor.IScheduler scheduler, System.TimeSpan within, System.TimeSpan interval) { }
+        public override Akka.Routing.Routee Select(object message, Akka.Routing.Routee[] routees) { }
+    }
     public sealed class TailChoppingGroup : Akka.Routing.Group
     {
         public TailChoppingGroup(Akka.Configuration.Config config) { }
-        public TailChoppingGroup(string[] routeePaths, System.TimeSpan within, System.TimeSpan interval) { }
+        public TailChoppingGroup(System.Collections.Generic.IEnumerable<string> routeePaths, System.TimeSpan within, System.TimeSpan interval) { }
+        public TailChoppingGroup(System.Collections.Generic.IEnumerable<string> routeePaths, System.TimeSpan within, System.TimeSpan interval, string routerDispatcher) { }
+        public System.TimeSpan Interval { get; }
+        public System.TimeSpan Within { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override System.Collections.Generic.IEnumerable<string> GetPaths(Akka.Actor.ActorSystem system) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
-        public override Akka.Routing.Group WithDispatcher(string dispatcher) { }
+        public Akka.Routing.TailChoppingGroup WithDispatcher(string dispatcher) { }
         public class TailChoppingGroupSurrogate : Akka.Util.ISurrogate
         {
             public TailChoppingGroupSurrogate() { }
             public System.TimeSpan Interval { get; set; }
-            public string[] Paths { get; set; }
+            public System.Collections.Generic.IEnumerable<string> Paths { get; set; }
+            public string RouterDispatcher { get; set; }
             public System.TimeSpan Within { get; set; }
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
     public sealed class TailChoppingPool : Akka.Routing.Pool
     {
-        public TailChoppingPool(int nrOfInstances, Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, System.TimeSpan within, System.TimeSpan interval, bool usePoolDispatcher = False) { }
         public TailChoppingPool(Akka.Configuration.Config config) { }
         public TailChoppingPool(int nrOfInstances, System.TimeSpan within, System.TimeSpan interval) { }
+        public TailChoppingPool(int nrOfInstances, Akka.Routing.Resizer resizer, System.TimeSpan within, System.TimeSpan interval, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = False) { }
+        public System.TimeSpan Interval { get; }
+        public System.TimeSpan Within { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override int GetNrOfInstances(Akka.Actor.ActorSystem system) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
-        public override Akka.Routing.Pool WithDispatcher(string dispatcher) { }
+        public Akka.Routing.TailChoppingPool WithDispatcher(string dispatcher) { }
         public override Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig routerConfig) { }
-        public override Akka.Routing.Pool WithResizer(Akka.Routing.Resizer resizer) { }
-        public override Akka.Routing.Pool WithSupervisorStrategy(Akka.Actor.SupervisorStrategy strategy) { }
+        public Akka.Routing.TailChoppingPool WithResizer(Akka.Routing.Resizer resizer) { }
+        public Akka.Routing.TailChoppingPool WithSupervisorStrategy(Akka.Actor.SupervisorStrategy strategy) { }
         public class TailChoppingPoolSurrogate : Akka.Util.ISurrogate
         {
             public TailChoppingPoolSurrogate() { }
@@ -4280,11 +4308,6 @@ namespace Akka.Routing
             public System.TimeSpan Within { get; set; }
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
-    }
-    public sealed class TailChoppingRoutingLogic : Akka.Routing.RoutingLogic
-    {
-        public TailChoppingRoutingLogic(System.TimeSpan within, System.TimeSpan interval, Akka.Actor.IScheduler scheduler) { }
-        public override Akka.Routing.Routee Select(object message, Akka.Routing.Routee[] routees) { }
     }
     public class WithListeners : Akka.Routing.ListenerMessage
     {

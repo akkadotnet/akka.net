@@ -7,6 +7,7 @@
 
 using System.Linq;
 using Akka.Actor;
+using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.Routing
@@ -20,21 +21,7 @@ namespace Akka.Routing
     {
         private readonly SupervisorStrategy _supervisorStrategy;
 
-        protected Pool Pool
-        {
-            get
-            {
-                if (Cell.RouterConfig is Pool)
-                {
-                    return Cell.RouterConfig as Pool;
-                }
-                else
-                {
-                    throw new ActorInitializationException("RouterPoolActor can only be used with Pool, not " +
-                                                           Cell.RouterConfig.GetType());
-                }
-            }
-        }
+        protected Pool Pool;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RouterPoolActor"/> class.
@@ -43,6 +30,17 @@ namespace Akka.Routing
         public RouterPoolActor(SupervisorStrategy supervisorStrategy)
         {
             _supervisorStrategy = supervisorStrategy;
+
+            var pool = Cell.RouterConfig as Pool;
+            if (pool != null)
+            {
+                Pool = pool;
+            }
+            else
+            {
+                throw new ActorInitializationException("RouterPoolActor can only be used with Pool, not " +
+                                                       Cell.RouterConfig.GetType());
+            }
         }
 
         protected override SupervisorStrategy SupervisorStrategy()
@@ -56,19 +54,12 @@ namespace Akka.Routing
         /// <param name="message">The message.</param>
         protected override void OnReceive(object message)
         {
-            var terminated = message as Terminated;
-            if (terminated != null)
+            var poolSize = message as AdjustPoolSize;
+            if (poolSize != null)
             {
-                var t = terminated;
-                Cell.RemoveRoutee(new ActorRefRoutee(t.ActorRef), false);
-                StopIfAllRouteesRemoved();
-            }
-            else if (message is AdjustPoolSize)
-            {
-                var poolSize = message as AdjustPoolSize;
                 if (poolSize.Change > 0)
                 {
-                    var newRoutees = Enumerable.Repeat(Pool.NewRoutee(Cell.RouteeProps, Context), poolSize.Change).ToArray();
+                    var newRoutees = Vector.Fill<Routee>(poolSize.Change)(() => Pool.NewRoutee(Cell.RouteeProps, Context));
                     Cell.AddRoutees(newRoutees);
                 }
                 else if (poolSize.Change < 0)
@@ -76,7 +67,7 @@ namespace Akka.Routing
                     var currentRoutees = Cell.Router.Routees.ToArray();
 
                     var abandon = currentRoutees
-                        .Drop(currentRoutees.Length + poolSize.Change)
+                        .Skip(currentRoutees.Length + poolSize.Change)
                         .ToList();
 
                     Cell.RemoveRoutees(abandon, true);

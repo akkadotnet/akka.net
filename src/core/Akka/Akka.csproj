@@ -293,7 +293,7 @@
     <Compile Include="Util\Internal\Extensions.cs" />
     <Compile Include="Dispatch\IRequiresMessageQueue.cs" />
     <Compile Include="Routing\SmallestMailbox.cs" />
-    <Compile Include="Routing\TailChoppingRoutingLogic.cs" />
+    <Compile Include="Routing\TailChopping.cs" />
     <Compile Include="Serialization\ByteArraySerializer.cs" />
     <Compile Include="Serialization\NewtonSoftJsonSerializer.cs" />
     <Compile Include="Serialization\NullSerializer.cs" />

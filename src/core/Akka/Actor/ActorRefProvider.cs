@@ -352,12 +352,12 @@ namespace Akka.Actor
 
         public IInternalActorRef ActorOf(ActorSystemImpl system, Props props, IInternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
         {
-            if (props.Deploy.RouterConfig.NoRouter())
+            if (props.Deploy.RouterConfig is NoRouter)
             {
                 if (Settings.DebugRouterMisconfiguration)
                 {
                     var d = Deployer.Lookup(path);
-                    if (d != null && d.RouterConfig != RouterConfig.NoRouter)
+                    if (d != null && !(d.RouterConfig is NoRouter))
                         Log.Warning("Configuration says that [{0}] should be a router, but code disagrees. Remove the config or add a RouterConfig to its Props.",
                                 	path);
                 }
@@ -415,7 +415,7 @@ namespace Akka.Actor
                     throw new ConfigurationException(string.Format("Dispatcher [{0}] not configured for router of path {1}", p.RouterConfig.RouterDispatcher, path));
 
                 var routerProps = Props.Empty.WithRouter(p.Deploy.RouterConfig).WithDispatcher(p.RouterConfig.RouterDispatcher);
-                var routeeProps = props.WithRouter(RouterConfig.NoRouter);
+                var routeeProps = props.WithRouter(NoRouter.Instance);
 
                 try
                 {

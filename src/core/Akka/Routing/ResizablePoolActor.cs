@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
-using Akka.Util.Internal;
 
 namespace Akka.Routing
 {
@@ -18,22 +17,26 @@ namespace Akka.Routing
     /// </summary>
     internal class ResizablePoolActor : RouterPoolActor
     {
-        //     private SupervisorStrategy supervisorStrategy;
-
         public ResizablePoolActor(SupervisorStrategy supervisorStrategy) : base(supervisorStrategy)
         {
         }
 
         protected ResizablePoolCell ResizerCell
         {
-            get { return Context.AsInstanceOf<ResizablePoolCell>(); }
+            get
+            {
+                var resizablePoolCell = Context as ResizablePoolCell;
+                if (resizablePoolCell != null)
+                    return resizablePoolCell;
+                else 
+                    throw new ActorInitializationException("Resizable router actor can only be used when resizer is defined, not in " + Context.GetType());
+            }
         }
 
         protected override void OnReceive(object message)
         {
             if (message is Resize && ResizerCell != null)
             {
-
                 ResizerCell.Resize(false);
             }
             else
@@ -52,7 +55,8 @@ namespace Akka.Routing
     /// Command used to resize a <see cref="ResizablePoolActor"/>
     /// </summary>
     public class Resize : RouterManagementMessage
-    { }
-
+    {
+        
+    }
 }
 
