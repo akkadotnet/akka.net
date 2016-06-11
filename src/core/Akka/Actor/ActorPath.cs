@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Util;
 using Newtonsoft.Json;
+using static System.String;
 
 namespace Akka.Actor
 {
@@ -37,7 +38,7 @@ namespace Akka.Actor
                 Path = path;
             }
 
-            public string Path { get; private set; }
+            public string Path { get; }
 
             public ISurrogated FromSurrogate(ActorSystem system)
             {
@@ -49,22 +50,6 @@ namespace Akka.Actor
 
                 return null;
             }
-
-            #region Implicit conversion operators
-
-            public static implicit operator ActorPath(Surrogate surrogate)
-            {
-                ActorPath parse;
-                TryParse(surrogate.Path, out parse);
-                return parse;
-            }
-
-            public static implicit operator Surrogate(ActorPath path)
-            {
-                return (Surrogate)path.ToSurrogate(null);
-            }
-
-            #endregion
 
             #region Equality
 
@@ -78,7 +63,7 @@ namespace Akka.Actor
             public bool Equals(ActorPath other)
             {
                 if (other == null) return false;
-                return Equals(other.ToSurrogate(null));
+                return Equals(other.ToSurrogate(null)); //TODO: not so sure if this is OK
             }
 
             public override bool Equals(object obj)
@@ -86,8 +71,8 @@ namespace Akka.Actor
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
                 var actorPath = obj as ActorPath;
-
-                return Equals(actorPath);
+                if (actorPath != null) return Equals(actorPath);
+                return Equals(obj as Surrogate);
             }
 
             public override int GetHashCode()
@@ -98,7 +83,7 @@ namespace Akka.Actor
             #endregion
         }
 
-         /** INTERNAL API */
+        /** INTERNAL API */
         internal static char[] ValidSymbols = @"""-_.*$+:@&=,!~';""()".ToCharArray();
 
         /// <summary> 
@@ -108,7 +93,7 @@ namespace Akka.Actor
         /// </summary>
         public static bool IsValidPathElement(string s)
         {
-            if (String.IsNullOrEmpty(s))
+            if (IsNullOrEmpty(s))
             {
                 return false;
             }
@@ -139,8 +124,6 @@ namespace Akka.Actor
             return true;
         }
 
-        private readonly string _name;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="ActorPath" /> class.
         /// </summary>
@@ -148,7 +131,7 @@ namespace Akka.Actor
         /// <param name="name"> The name. </param>
         protected ActorPath(Address address, string name)
         {
-            _name = name;
+            Name = name;
             Address = address;
         }
 
@@ -162,14 +145,14 @@ namespace Akka.Actor
         {
             Address = parentPath.Address;
             Uid = uid;
-            _name = name;
+            Name = name;
         }
 
         /// <summary>
         /// Gets the uid.
         /// </summary>
         /// <value> The uid. </value>
-        public long Uid { get; private set; }
+        public long Uid { get; }
 
         /// <summary>
         /// Gets the elements.
@@ -195,17 +178,14 @@ namespace Akka.Actor
         /// Gets the name.
         /// </summary>
         /// <value> The name. </value>
-        public string Name
-        {
-            get { return _name; }
-        }
+        public string Name { get; }
 
         /// <summary>
         /// The Address under which this path can be reached; walks up the tree to
         /// the RootActorPath.
         /// </summary>
         /// <value> The address. </value>
-        public Address Address { get; private set; }
+        public Address Address { get; }
 
         public abstract ActorPath Root { get; }
         public abstract ActorPath Parent { get; }
@@ -254,7 +234,7 @@ namespace Akka.Actor
             var a = path;
             foreach (string element in name)
             {
-                if(!string.IsNullOrEmpty(element))
+                if (!string.IsNullOrEmpty(element))
                     a = a / element;
             }
             return a;
@@ -284,6 +264,11 @@ namespace Akka.Actor
             if (!TryParseAddress(path, out address, out uri)) return false;
             var pathElements = uri.AbsolutePath.Split('/');
             actorPath = new RootActorPath(address) / pathElements.Skip(1);
+            if (uri.Fragment.StartsWith("#"))
+            {
+                var uid = int.Parse(uri.Fragment.Substring(1));
+                actorPath = actorPath.WithUid(uid);
+            }
             return true;
         }
 
@@ -296,12 +281,9 @@ namespace Akka.Actor
         private static bool TryParseAddress(string path, out Address address, out Uri uri)
         {
             //This code corresponds to AddressFromURIString.unapply
-            uri = null;
             address = null;
-
             if (!Uri.TryCreate(path, UriKind.Absolute, out uri))
                 return false;
-
             var protocol = uri.Scheme; //Typically "akka"
             if (!protocol.StartsWith("akka", StringComparison.OrdinalIgnoreCase))
             {
@@ -313,7 +295,7 @@ namespace Akka.Actor
             string systemName;
             string host = null;
             int? port = null;
-            if (string.IsNullOrEmpty(uri.UserInfo))
+            if (IsNullOrEmpty(uri.UserInfo))
             {
                 //  protocol://SystemName/Path1/Path2
                 if (uri.Port > 0)
@@ -347,7 +329,7 @@ namespace Akka.Actor
         /// <returns> System.String. </returns>
         private string Join()
         {
-            var joined = string.Join("/", Elements);
+            var joined = String.Join("/", Elements);
             return "/" + joined;
         }
 
@@ -416,12 +398,6 @@ namespace Akka.Actor
             return Equals(other);
         }
 
-        //public bool Equals(Surrogate other)
-        //{
-        //    if (other == null) return false;
-        //    return other.Equals(ToSurrogate(null));
-        //}
-
         public static bool operator ==(ActorPath left, ActorPath right)
         {
             return Equals(left, right);
@@ -446,6 +422,20 @@ namespace Akka.Actor
             return ToStringWithAddress();
         }
 
+        public string ToSerializationFormatWithAddress(Address address)
+        {
+            var withAddress = ToStringWithAddress(address);
+            var result = AppendUidFragment(withAddress);
+            return result;
+        }
+
+        private string AppendUidFragment(string withAddress)
+        {
+            if (Uid == ActorCell.UndefinedUid)
+                return withAddress;
+
+            return withAddress + "#" + Uid;
+        }
         /// <summary>
         /// Generate String representation, replacing the Address in the RootActorPath
         /// with the given one unless this path’s address includes host and port
@@ -456,9 +446,9 @@ namespace Akka.Actor
         public string ToStringWithAddress(Address address)
         {
             if (Address.Host != null && Address.Port.HasValue)
-                return string.Format("{0}{1}", Address, Join());
+                return $"{Address}{Join()}";
 
-            return string.Format("{0}{1}", address, Join());
+            return $"{address}{Join()}";
         }
 
         public static string FormatPathElements(IEnumerable<string> pathElements)
@@ -468,7 +458,7 @@ namespace Akka.Actor
 
         public ISurrogate ToSurrogate(ActorSystem system)
         {
-            return new Surrogate(ToSerializationFormat());
+            return new Surrogate(AppendUidFragment(ToSerializationFormat()));
         }
     }
 
@@ -487,16 +477,10 @@ namespace Akka.Actor
         {
         }
 
-        public override ActorPath Parent
-        {
-            get { return null; }
-        }
+        public override ActorPath Parent => null;
 
         [JsonIgnore]
-        public override ActorPath Root
-        {
-            get { return this; }
-        }
+        public override ActorPath Root => this;
 
         /// <summary>
         /// Withes the uid.
@@ -514,7 +498,7 @@ namespace Akka.Actor
         public override int CompareTo(ActorPath other)
         {
             if (other is ChildActorPath) return 1;
-            return String.Compare(ToString(), other.ToString(), StringComparison.Ordinal);
+            return Compare(ToString(), other.ToString(), StringComparison.Ordinal);
         }
     }
 
@@ -539,10 +523,7 @@ namespace Akka.Actor
             _parent = parentPath;
         }
 
-        public override ActorPath Parent
-        {
-            get { return _parent; }
-        }
+        public override ActorPath Parent => _parent;
 
         public override ActorPath Root
         {
@@ -583,11 +564,10 @@ namespace Akka.Actor
             var rightRoot = right as RootActorPath;
             if (rightRoot != null)
                 return -rightRoot.CompareTo(left);
-            var nameCompareResult = String.Compare(left.Name, right.Name, StringComparison.Ordinal);
+            var nameCompareResult = Compare(left.Name, right.Name, StringComparison.Ordinal);
             if (nameCompareResult != 0)
                 return nameCompareResult;
             return InternalCompareTo(left.Parent, right.Parent);
         }
     }
 }
-

@@ -353,6 +353,15 @@ akka.actor {
         }
 
         [Fact]
+        public void CanSerializeActorRefWithUID()
+        {
+            var aref = ActorOf<BlackHoleActor>();
+            var surrogate = aref.ToSurrogate(Sys) as ActorRefBase.Surrogate;
+            var uid = aref.Path.Uid;
+            Assert.True(surrogate.Path.Contains("#" + uid));
+        }
+
+        [Fact]
         public void CanSerializeDecider()
         {
             var decider = Decider.From(
