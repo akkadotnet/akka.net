@@ -56,7 +56,9 @@ namespace Akka.Persistence
                         base.AroundReceive(receive, new SnapshotOffer(selectedSnapshot.Metadata, selectedSnapshot.Snapshot));
                     }
                     ChangeState(ReplayStarted(true));
-                    Journal.Tell(new ReplayMessages(LastSequenceNr + 1, loadResult.ToSequenceNr, replayMax, PersistenceId, Self));
+
+                    long fromSequenceNumber = loadResult.ToSequenceNr == 0 ? 0 : LastSequenceNr + 1;
+                    Journal.Tell(new ReplayMessages(fromSequenceNumber, loadResult.ToSequenceNr, replayMax, PersistenceId, Self));
                 }
                 else _internalStash.Stash();
             });
