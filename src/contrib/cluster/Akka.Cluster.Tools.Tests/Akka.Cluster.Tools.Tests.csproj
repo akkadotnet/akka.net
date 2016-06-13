@@ -88,10 +88,6 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\core\Akka.Cluster.TestKit\Akka.Cluster.TestKit.csproj">
-      <Project>{b32850d2-e9cb-4638-83a4-164907595e56}</Project>
-      <Name>Akka.Cluster.TestKit</Name>
-    </ProjectReference>
     <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj">
       <Project>{6ab00f61-269a-4501-b06a-026707f000a7}</Project>
       <Name>Akka.Cluster</Name>

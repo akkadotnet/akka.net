@@ -113,10 +113,6 @@
       <Project>{0D3CBAD0-BBDB-43E5-AFC4-ED1D3ECDC224}</Project>
       <Name>Akka.TestKit</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\core\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj">
-      <Project>{e636d23c-3432-4aa9-9a5d-5f29d33d3399}</Project>
-      <Name>Akka.Tests.Shared.Internals</Name>
-    </ProjectReference>
     <ProjectReference Include="..\..\..\core\Akka\Akka.csproj">
       <Project>{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}</Project>
       <Name>Akka</Name>

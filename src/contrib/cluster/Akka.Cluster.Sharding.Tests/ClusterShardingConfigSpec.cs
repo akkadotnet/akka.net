@@ -11,7 +11,7 @@ using Xunit;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public class ClusterShardingConfigSpec : TestKit.Xunit2.TestKit
+    public class ClusterShardingConfigSpec : Akka.TestKit.Xunit2.TestKit
     {
         public ClusterShardingConfigSpec() : base(GetConfig())
         {

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Linq;
+using Akka.Cluster.TestKit;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 

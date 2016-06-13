@@ -62,6 +62,9 @@
     <Compile Include="..\..\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="..\Akka.Tests.Shared.Internals\AkkaSpecExtensions.cs">
+      <Link>AkkaSpecExtensions.cs</Link>
+    </Compile>
     <Compile Include="FailureDetectorPuppet.cs" />
     <Compile Include="MultiNodeClusterSpec.cs" />
     <Compile Include="MultiNodeLoggingConfig.cs" />
@@ -88,16 +91,13 @@
       <Project>{0d3cbad0-bbdb-43e5-afc4-ed1d3ecdc224}</Project>
       <Name>Akka.TestKit</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj">
-      <Project>{e636d23c-3432-4aa9-9a5d-5f29d33d3399}</Project>
-      <Name>Akka.Tests.Shared.Internals</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Akka\Akka.csproj">
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Name>Akka</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Akka.Cluster.TestKit.nuspec" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
