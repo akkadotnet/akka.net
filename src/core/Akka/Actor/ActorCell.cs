@@ -31,7 +31,6 @@ namespace Akka.Actor
         private const int SuspendedWaitForChildrenState = 2;
         // todo: might need a special state for AsyncAwait
 
-        private long _uid;
         private ActorBase _actor;
         private bool _actorHasBeenCleared;
         private volatile Mailbox _mailboxDoNotCallMeDirectly;
@@ -241,8 +240,12 @@ namespace Akka.Actor
 
         private long NewUid()
         {
-            var auid = Interlocked.Increment(ref _uid);
-            return auid;
+            // Note that this uid is also used as hashCode in ActorRef, so be careful
+            // to not break hashing if you change the way uid is generated
+            var uid = ThreadLocalRandom.Current.Next();
+            while (uid == UndefinedUid)
+                uid = ThreadLocalRandom.Current.Next();
+            return uid;
         }
 
         private ActorBase NewActor()

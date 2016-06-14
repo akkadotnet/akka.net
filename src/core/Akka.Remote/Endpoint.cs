@@ -500,9 +500,12 @@ namespace Akka.Remote
                 {
                     if (earlyUngateRequested)
                         Self.Tell(new Ungate());
+                    else
+                    {
+                        Context.System.Scheduler.ScheduleTellOnce(_settings.RetryGateClosedFor, Self, new Ungate(), Self);
+                    }
                 }
-                else
-                    Context.System.Scheduler.ScheduleTellOnce(_settings.RetryGateClosedFor, Self, new Ungate(), Self);
+                
                 Become(() => Gated(true, earlyUngateRequested));
             });
             Receive<IsIdle>(idle => Sender.Tell(Idle.Instance));

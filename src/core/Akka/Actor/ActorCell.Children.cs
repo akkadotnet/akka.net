@@ -20,13 +20,7 @@ namespace Akka.Actor
         private volatile IChildrenContainer _childrenContainerDoNotCallMeDirectly = EmptyChildrenContainer.Instance;
         private long _nextRandomNameDoNotCallMeDirectly = -1; // Interlocked.Increment automatically adds 1 to this value. Allows us to start from 0.
 
-        [Obsolete("Use ChildrenContainer instead", true)]
-        private IChildrenContainer ChildrenRefs
-        {
-            get { return ChildrenContainer; }
-        }
-
-        private IChildrenContainer ChildrenContainer
+        public IChildrenContainer ChildrenContainer
         {
             get { return _childrenContainerDoNotCallMeDirectly; } 
         }

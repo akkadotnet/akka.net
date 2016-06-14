@@ -73,8 +73,10 @@ namespace Akka.Actor
         void SendMessage(IActorRef sender, object message);
 
 
-
+        [Obsolete("Used ChildrenRefs instead")]
         IEnumerable<IInternalActorRef> GetChildren();    //TODO: Should be replaced by childrenRefs: ChildrenContainer
+
+        IChildrenContainer ChildrenContainer { get; }
 
         /// <summary>
         /// Method for looking up a single child beneath this actor.

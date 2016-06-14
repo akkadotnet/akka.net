@@ -49,6 +49,7 @@ namespace Akka.Actor
         public const int UndefinedUid = 0;
         public ActorCell(Akka.Actor.Internal.ActorSystemImpl system, Akka.Actor.IInternalActorRef self, Akka.Actor.Props props, Akka.Dispatch.MessageDispatcher dispatcher, Akka.Actor.IInternalActorRef parent) { }
         protected Akka.Actor.ActorBase Actor { get; }
+        public Akka.Actor.Internal.IChildrenContainer ChildrenContainer { get; }
         public int CurrentEnvelopeId { get; }
         public object CurrentMessage { get; }
         public Akka.Dispatch.MessageDispatcher Dispatcher { get; }
@@ -158,6 +159,7 @@ namespace Akka.Actor
         protected ActorPath(Akka.Actor.ActorPath parentPath, string name, long uid) { }
         public Akka.Actor.Address Address { get; }
         public System.Collections.Generic.IReadOnlyList<string> Elements { get; }
+        public System.Collections.Generic.IReadOnlyList<string> ElementsWithUid { get; }
         public string Name { get; }
         public abstract Akka.Actor.ActorPath Parent { get; }
         public abstract Akka.Actor.ActorPath Root { get; }
@@ -644,6 +646,7 @@ namespace Akka.Actor
         protected ExtendedActorSystem() { }
         public abstract Akka.Actor.ActorProducerPipelineResolver ActorPipelineResolver { get; }
         public abstract Akka.Actor.IInternalActorRef Guardian { get; }
+        public abstract Akka.Actor.IInternalActorRef LookupRoot { get; }
         public abstract Akka.Actor.IActorRefProvider Provider { get; }
         public abstract Akka.Actor.IInternalActorRef SystemGuardian { get; }
         public abstract Akka.Actor.IActorRef SystemActorOf(Akka.Actor.Props props, string name = null);
@@ -921,6 +924,7 @@ namespace Akka.Actor
     }
     public interface ICell
     {
+        Akka.Actor.Internal.IChildrenContainer ChildrenContainer { get; }
         bool HasMessages { get; }
         bool IsLocal { get; }
         bool IsTerminated { get; }
@@ -931,6 +935,7 @@ namespace Akka.Actor
         Akka.Actor.ActorSystem System { get; }
         Akka.Actor.Internal.ActorSystemImpl SystemImpl { get; }
         Akka.Actor.IInternalActorRef GetChildByName(string name);
+        [System.ObsoleteAttribute("Used ChildrenRefs instead")]
         System.Collections.Generic.IEnumerable<Akka.Actor.IInternalActorRef> GetChildren();
         Akka.Actor.IInternalActorRef GetSingleChild(string name);
         void Restart(System.Exception cause);
@@ -1608,6 +1613,7 @@ namespace Akka.Actor
     public class UnstartedCell : Akka.Actor.ICell
     {
         public UnstartedCell(Akka.Actor.Internal.ActorSystemImpl system, Akka.Actor.RepointableActorRef self, Akka.Actor.Props props, Akka.Actor.IInternalActorRef supervisor) { }
+        public Akka.Actor.Internal.IChildrenContainer ChildrenContainer { get; }
         public bool HasMessages { get; }
         public bool IsLocal { get; }
         public bool IsTerminated { get; }
@@ -1748,6 +1754,7 @@ namespace Akka.Actor.Internal
         public override Akka.Event.EventStream EventStream { get; }
         public override Akka.Actor.IInternalActorRef Guardian { get; }
         public override Akka.Event.ILoggingAdapter Log { get; }
+        public override Akka.Actor.IInternalActorRef LookupRoot { get; }
         public override Akka.Dispatch.Mailboxes Mailboxes { get; }
         public override string Name { get; }
         public override Akka.Actor.IActorRefProvider Provider { get; }

@@ -67,6 +67,7 @@ namespace Akka.Actor.Internal
         }
 
         public override IActorRefProvider Provider { get { return _provider; } }
+        
         public override Settings Settings { get { return _settings; } }
         public override string Name { get { return _name; } }
         public override Serialization.Serialization Serialization { get { return _serialization; } }
@@ -81,6 +82,7 @@ namespace Akka.Actor.Internal
 
 
         public override IInternalActorRef Guardian { get { return _provider.Guardian; } }
+        public override IInternalActorRef LookupRoot => _provider.RootGuardian;
         public override IInternalActorRef SystemGuardian { get { return _provider.SystemGuardian; } }
 
 

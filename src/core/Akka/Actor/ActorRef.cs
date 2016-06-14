@@ -186,7 +186,8 @@ namespace Akka.Actor
 
         public override string ToString()
         {
-            return string.Format("[{0}]", Path);
+            if(Path.Uid == ActorCell.UndefinedUid) return $"[{Path}]";
+            return $"[{Path}#{Path.Uid}]";
         }
 
         public override bool Equals(object obj)

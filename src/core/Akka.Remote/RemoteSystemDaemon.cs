@@ -217,15 +217,18 @@ namespace Akka.Remote
             ActorPath childPath;
             if(ActorPath.TryParse(message.Path, out childPath))
             {
-                IEnumerable<string> subPath = childPath.Elements.Drop(1); //drop the /remote
-                ActorPath path = Path/subPath;
+                IEnumerable<string> subPath = childPath.ElementsWithUid.Drop(1); //drop the /remote
+                ActorPath p = Path/subPath;
+                var s = subPath.Join("/");
+                var i = s.IndexOf("#", StringComparison.Ordinal);
+                var childName = i < 0 ? s : s.Substring(0, i); // extract the name without the UID
                 var localProps = props; //.WithDeploy(new Deploy(Scope.Local));
 
                 bool isTerminating = !_terminating.WhileOff(() =>
                 {
-                    IInternalActorRef actor = _system.Provider.ActorOf(_system, localProps, supervisor, path, false,
+                    IInternalActorRef actor = _system.Provider.ActorOf(_system, localProps, supervisor, p, false,
                     message.Deploy, true, false);
-                    string childName = subPath.Join("/");
+                   
                     AddChild(childName, actor);
                     actor.SendSystemMessage(new Watch(actor, this));
                     actor.Start();
@@ -237,7 +240,7 @@ namespace Akka.Remote
                 });
                 if (isTerminating)
                 {
-                    Log.Error("Skipping [{0}] to RemoteSystemDaemon on [{1}] while terminating", message, path.Address);
+                    Log.Error("Skipping [{0}] to RemoteSystemDaemon on [{1}] while terminating", message, p.Address);
                 }
                 
             }
@@ -291,26 +294,16 @@ namespace Akka.Remote
 
         private IInternalActorRef GetChild(string name)
         {
+            var nameAndUid = ActorCell.SplitNameAndUid(name);
             IInternalActorRef child;
-            if (TryGetChild(name, out child))
+            if (TryGetChild(nameAndUid.Name, out child))
             {
-                var uid = GetdUid(name);
-                if (uid != ActorCell.UndefinedUid && uid != child.Path.Uid)
+                if (nameAndUid.Uid != ActorCell.UndefinedUid && nameAndUid.Uid != child.Path.Uid)
                 {
                     return ActorRefs.Nobody;
                 }
             }
             return child;
-        }
-
-        private int GetdUid(string name)
-        {
-            var i = name.IndexOf("#", StringComparison.Ordinal);
-            if (i < 0)
-            {
-                return ActorCell.UndefinedUid;
-            }
-            return int.Parse(name.Substring(i + 1));
         }
 
 
