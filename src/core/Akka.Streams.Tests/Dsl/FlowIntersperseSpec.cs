@@ -69,8 +69,9 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Intersperse_must_demonstrate_how_to_prepend_only()
         {
             var probe =
-                Source.Combine(Source.Single(">> "), Source.From(new[] {"1", "2", "3"}).Intersperse(","),
-                    i => new Merge<string, string>(i)).RunWith(this.SinkProbe<string>(), Materializer);
+                Source.Single(">> ").Concat(Source.From(new[] {"1", "2", "3"}).Intersperse(","))
+                   .RunWith(this.SinkProbe<string>(), Materializer);
+
 
             probe.ExpectSubscription();
             probe.ToStrict(TimeSpan.FromSeconds(1)).Aggregate((s, s1) => s + s1).Should().Be(">> 1,2,3");
