@@ -120,7 +120,6 @@
       <Name>Akka</Name>
     </ProjectReference>
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <EmbeddedResource Include="Internals\Reference.conf" />
   </ItemGroup>
