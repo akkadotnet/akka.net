@@ -41,18 +41,16 @@ namespace Akka.TestKit.Internal
             //So it adds one $. The second is added by akka.util.Helpers.base64(l) which by default 
             //creates a StringBuilder and adds adds $. Hence, 2 $$
         }
-        private InternalTestActorRef(ActorSystem system, Props props, MessageDispatcher dispatcher, Func<Mailbox> createMailbox, IInternalActorRef supervisor, ActorPath path) //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType      
-            : base(system, props, dispatcher, createMailbox, supervisor, path, actorRef => NewActorCell(system, actorRef, props, dispatcher, supervisor, createMailbox))
+        private InternalTestActorRef(ActorSystemImpl system, Props props, MessageDispatcher dispatcher, MailboxType mailboxType, IInternalActorRef supervisor, ActorPath path)
+            : base(system, props, dispatcher, mailboxType, supervisor, path)
         {
         }
 
-        protected static ActorCell NewActorCell(ActorSystem system, LocalActorRef actorRef, Props props, MessageDispatcher dispatcher, IInternalActorRef supervisor, Func<Mailbox> createMailbox)
+        protected override ActorCell NewActorCell(ActorSystemImpl system, IInternalActorRef self, Props props, MessageDispatcher dispatcher,
+            IInternalActorRef supervisor)
         {
-            var cell = new TestActorCell((ActorSystemImpl)system, actorRef, props, dispatcher, supervisor);
-            cell.Init(sendSupervise: true, createMailbox: createMailbox);
-            return cell;
+            return new TestActorCell((ActorSystemImpl)system, self, props, dispatcher, supervisor);
         }
-
 
 
         protected TestActorCell GetTestActorCell()
@@ -80,10 +78,10 @@ namespace Akka.TestKit.Internal
         {
             get
             {
-                if(IsTerminated)
+                if (IsTerminated)
                     throw new IllegalActorStateException("Underlying actor is terminated");
                 var actor = GetTestActorCell().Actor;
-                if(actor == null)
+                if (actor == null)
                 {
                     var timeout = TestKitExtension.For(System).DefaultTimeout;
                     actor = this.Ask(InternalGetActor.Instance, timeout).Result;
@@ -128,17 +126,17 @@ namespace Akka.TestKit.Internal
         /// </summary>
         public static InternalTestActorRef Create(ActorSystem system, Props props, IActorRef supervisor = null, string name = null)
         {
-            if(name == null)
+            if (name == null)
                 name = CreateUniqueName();
 
-            if(supervisor == null)
+            if (supervisor == null)
             {
                 var systemImpl = (ActorSystemImpl)system;
                 supervisor = systemImpl.Guardian;
             }
 
 
-            if(props.Deploy.Dispatcher == Deploy.NoDispatcherGiven)
+            if (props.Deploy.Dispatcher == Deploy.NoDispatcherGiven)
             {
                 props = props.WithDispatcher(CallingThreadDispatcher.Id);
             }
@@ -146,20 +144,20 @@ namespace Akka.TestKit.Internal
             var dispatcher = system.Dispatchers.Lookup(props.Deploy.Dispatcher);
 
             var supervisorLocal = supervisor as LocalActorRef;
-            if(supervisorLocal != null)
+            if (supervisorLocal != null)
             {
                 supervisorLocal.Cell.ReserveChild(name);
             }
             else
             {
                 var supervisorRep = supervisor as RepointableActorRef;
-                if(supervisorRep != null)
+                if (supervisorRep != null)
                 {
                     var repUnderlying = supervisorRep.Underlying;
-                    if(repUnderlying is UnstartedCell)
+                    if (repUnderlying is UnstartedCell)
                         throw new IllegalStateException("Cannot attach a TestActor to an unstarted top-level actor, ensure that it is started by sending a message and observing the reply");
                     var cellUnderlying = repUnderlying as ActorCell;
-                    if(cellUnderlying != null)
+                    if (cellUnderlying != null)
                     {
                         cellUnderlying.ReserveChild(name);
                     }
@@ -169,9 +167,9 @@ namespace Akka.TestKit.Internal
                     }
                 }
             }
-            //TODO: Should be: Func<Mailbox> mailbox = () => system.Mailboxes.FromConfig(dispatcher.Configurator.Config);
-            Func<Mailbox> mailbox = () => system.Mailboxes.CreateMailbox(props, null);
-            var testActorRef = new InternalTestActorRef(system, props, dispatcher, mailbox, (IInternalActorRef)supervisor, supervisor.Path / name);
+
+            MailboxType mailbox = system.Mailboxes.GetMailboxType(props, dispatcher.Configurator.Config);
+            var testActorRef = new InternalTestActorRef((ActorSystemImpl)system, props, dispatcher, mailbox, (IInternalActorRef)supervisor, supervisor.Path / name);
 
             // we need to start ourselves since the creation of an actor has been split into initialization and starting
             testActorRef.Underlying.Start();
@@ -188,7 +186,7 @@ namespace Akka.TestKit.Internal
 
             protected override void AutoReceiveMessage(Envelope envelope)
             {
-                if(envelope.Message is InternalGetActor)
+                if (envelope.Message is InternalGetActor)
                     Sender.Tell(Actor, Self);
                 else
                     base.AutoReceiveMessage(envelope);

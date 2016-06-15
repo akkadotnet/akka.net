@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
+using Akka.Util.Internal;
 
 namespace Akka.Dispatch
 {
@@ -60,7 +61,7 @@ namespace Akka.Dispatch
         private void ScheduleTask(Task task)
         {            
             //we are in a max concurrency level 1 scheduler. reading CurrentMessage should be OK
-            _actorCell.Self.Tell(new ActorTaskSchedulerMessage(this, task, CurrentMessage), ActorRefs.NoSender);
+            _actorCell.SendSystemMessage(new ActorTaskSchedulerMessage(this, task, CurrentMessage));
         }
 
         internal void ExecuteTask(Task task)
@@ -91,15 +92,15 @@ namespace Akka.Dispatch
             if (context == null)
                 throw new InvalidOperationException("RunTask must be call from an actor context.");
 
-            var mailbox = context.Mailbox;
+            var dispatcher = context.Dispatcher;
 
             //suspend the mailbox
-            mailbox.Suspend(MailboxSuspendStatus.AwaitingTask);
+            dispatcher.Suspend(context);
 
             ActorTaskScheduler actorScheduler = context.TaskScheduler;
             actorScheduler.CurrentMessage = context.CurrentMessage;
 
-            Task<Task>.Factory.StartNew(() => asyncAction(), CancellationToken.None, TaskCreationOptions.None, actorScheduler)
+            Task<Task>.Factory.StartNew(asyncAction, CancellationToken.None, TaskCreationOptions.None, actorScheduler)
                               .Unwrap()
                               .ContinueWith(parent =>
                               {
@@ -107,12 +108,12 @@ namespace Akka.Dispatch
 
                                   if (exception == null)
                                   {
-                                      mailbox.Resume(MailboxSuspendStatus.AwaitingTask);
+                                      dispatcher.Resume(context);
                                       context.CheckReceiveTimeout();
                                   }
                                   else
                                   {
-                                      context.Self.Tell(new ActorTaskSchedulerMessage(exception, actorScheduler.CurrentMessage), ActorRefs.NoSender);
+                                      context.Self.AsInstanceOf<IInternalActorRef>().SendSystemMessage(new ActorTaskSchedulerMessage(exception, actorScheduler.CurrentMessage));
                                   }
                                   //clear the current message field of the scheduler
                                   actorScheduler.CurrentMessage = null;

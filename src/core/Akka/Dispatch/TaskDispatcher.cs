@@ -21,10 +21,18 @@ namespace Akka.Dispatch
         public TaskDispatcher(MessageDispatcherConfigurator configurator) : base(configurator)
         {
         }
+        // cache the delegate used for execution to prevent allocations
+        protected static readonly Action<object> Executor = t => { ((IRunnable)t).Run(); };
 
-        public override void Schedule(Action run)
+        public override void Schedule(IRunnable run)
         {
-            Task.Run(run);
+            var t = new Task(Executor, run);
+            t.Start(TaskScheduler.Default);
+        }
+
+        protected override void Shutdown()
+        {
+            // do nothing
         }
     }    
 }

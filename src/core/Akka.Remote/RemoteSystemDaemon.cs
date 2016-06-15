@@ -100,12 +100,23 @@ namespace Akka.Remote
         }
 
        
+        private void TerminationHookDoneWhenNoChildren()
+        {
+            _terminating.WhileOn(() =>
+            {
+                if (!HasChildren)
+                {
+                    _terminator.Tell(TerminationHookDone.Instance, this);
+                }
+            });
+        }
+
         /// <summary>
-        ///     Called when [receive].
+        ///     Tells the internal.
         /// </summary>
-        /// <param name="message">The message that was received.</param>
-        /// <param name="sender">The actor that sent the message.</param>
-        protected void OnReceive(object message, IActorRef sender)
+        /// <param name="message">The message.</param>
+        /// <param name="sender">The sender.</param>
+        protected override void TellInternal(object message, IActorRef sender)
         {
             //note: RemoteDaemon does not handle ActorSelection messages - those are handled directly by the RemoteActorRefProvider.
             if (message is IDaemonMsg)
@@ -118,11 +129,11 @@ namespace Akka.Remote
             //Need to clean up any references to remote deployments here.
             else if (message is AddressTerminated)
             {
-                var addressTerminated = (AddressTerminated) message;
+                var addressTerminated = (AddressTerminated)message;
                 //stop any remote actors that belong to this address
                 ForEachChild(@ref =>
                 {
-                    if(@ref.Parent.Path.Address == addressTerminated.Address) _system.Stop(@ref);
+                    if (@ref.Parent.Path.Address == addressTerminated.Address) _system.Stop(@ref);
                 });
             }
             else if (message is Identify)
@@ -138,7 +149,11 @@ namespace Akka.Remote
                     ForEachChild(c => _system.Stop(c));
                 });
             }
-            else if (message is DeathWatchNotification)
+        }
+
+        public override void SendSystemMessage(ISystemMessage message)
+        {
+            if (message is DeathWatchNotification)
             {
                 var deathWatchNotification = message as DeathWatchNotification;
                 var child = deathWatchNotification.Actor as ActorRefWithCell;
@@ -146,19 +161,15 @@ namespace Akka.Remote
                 {
                     if (child.IsLocal)
                     {
-                        //    removeChild(child.path.elements.drop(1).mkString("/"), child)
-                        //    val parent = child.getParent
-                        //    if (removeChildParentNeedsUnwatch(parent, child)) parent.sendSystemMessage(Unwatch(parent, this))
-                        //    terminationHookDoneWhenNoChildren()
 
                         _terminating.Locked(() =>
                         {
                             var name = child.Path.Elements.Drop(1).Join("/");
-                            RemoveChild(name,child);
+                            RemoveChild(name, child);
                             var parent = child.Parent;
                             if (RemoveChildParentNeedsUnwatch(parent, child))
                             {
-                                parent.Tell(new Unwatch(parent, this));
+                                parent.SendSystemMessage(new Unwatch(parent, this));
                             }
                             TerminationHookDoneWhenNoChildren();
 
@@ -167,64 +178,31 @@ namespace Akka.Remote
                 }
                 else
                 {
-                    //case DeathWatchNotification(parent: ActorRef with ActorRefScope, _, _) if !parent.isLocal ⇒
-                    //  terminating.locked {
-                    //    parent2children.remove(parent) match {
-                    //      case null ⇒
-                    //      case children ⇒
-                    //        for (c ← children) {
-                    //          system.stop(c)
-                    //          removeChild(c.path.elements.drop(1).mkString("/"), c)
-                    //        }
-                    //        terminationHookDoneWhenNoChildren()
-                    //    }
-                    //  }
                     var parent = deathWatchNotification.Actor;
                     var parentWithScope = parent as IActorRefScope;
                     if (parentWithScope != null && !parentWithScope.IsLocal)
                     {
                         _terminating.Locked(() =>
                         {
-                           IImmutableSet<IActorRef> children;
-                            if (_parent2Children.TryRemove(parent,out children))
+                            IImmutableSet<IActorRef> children;
+                            if (_parent2Children.TryRemove(parent, out children))
                             {
                                 foreach (var c in children)
                                 {
                                     _system.Stop(c);
                                     var name = c.Path.Elements.Drop(1).Join("/");
-                                    RemoveChild(name,c);
+                                    RemoveChild(name, c);
                                 }
                                 TerminationHookDoneWhenNoChildren();
                             }
                         });
                     }
-                }               
-            }
-        }
-
-        private void TerminationHookDoneWhenNoChildren()
-        {
-            _terminating.WhileOn(() =>
-            {
-                if (!HasChildren)
-                {
-                    _terminator.Tell(TerminationHookDone.Instance, this);
                 }
-            });
-        }
-
-  //      def terminationHookDoneWhenNoChildren(): Unit = terminating.whileOn {
-  //  if (!hasChildren) terminator.tell(TerminationHookDone, this)
-  //}
-
-        /// <summary>
-        ///     Tells the internal.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="sender">The sender.</param>
-        protected override void TellInternal(object message, IActorRef sender)
-        {
-            OnReceive(message, sender);
+            }
+            else
+            {
+                base.SendSystemMessage(message);
+            }
         }
 
         /// <summary>

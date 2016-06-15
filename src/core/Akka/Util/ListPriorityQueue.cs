@@ -22,9 +22,9 @@ namespace Akka.Util
         private readonly List<Envelope> _data;
         private Func<object, int> _priorityCalculator = message => 1;
 
-        public ListPriorityQueue()
+        public ListPriorityQueue(int initialCapacity)
         {
-            _data = new List<Envelope>();
+            _data = new List<Envelope>(initialCapacity);
         }
 
         public void SetPriorityCalculator(Func<object, int> priorityCalculator)

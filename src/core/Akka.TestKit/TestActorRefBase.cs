@@ -128,8 +128,6 @@ namespace Akka.TestKit
             return _internalRef.ToString();
         }
 
-        protected delegate TActorRef CreateTestActorRef<out TActorRef>(ActorSystem system, Props props, MessageDispatcher dispatcher, Func<Mailbox> mailbox, IInternalActorRef supervisor, ActorPath path) where TActorRef : TestActorRefBase<TActor>;
-
         public override bool Equals(object obj)
         {
             return _internalRef.Equals(obj);
@@ -242,7 +240,7 @@ namespace Akka.TestKit
 
         public void SendSystemMessage(ISystemMessage message, IActorRef sender)
         {
-            _internalRef .SendSystemMessage(message);
+            _internalRef.SendSystemMessage(message);
         }
 
         public void SendSystemMessage(ISystemMessage message)

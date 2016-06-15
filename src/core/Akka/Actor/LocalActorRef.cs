@@ -17,10 +17,9 @@ namespace Akka.Actor
 {
     public class LocalActorRef : ActorRefWithCell, ILocalRef
     {
-        private readonly ActorSystem _system;
+        private readonly ActorSystemImpl _system;
         private readonly Props _props;
         private readonly MessageDispatcher _dispatcher;
-        private readonly Func<Mailbox> _createMailbox;
         private readonly IInternalActorRef _supervisor;
         private readonly ActorPath _path;
         private ActorCell _cell;
@@ -41,30 +40,34 @@ namespace Akka.Actor
         //      actorCell.init(sendSupervise = true, _mailboxType)
         //      ...
         //    }
-        public LocalActorRef(ActorSystemImpl system, Props props, MessageDispatcher dispatcher, Func<Mailbox> createMailbox, IInternalActorRef supervisor, ActorPath path) //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType      
-            : this(system, props, dispatcher, createMailbox, supervisor, path, self =>
-            {
-                var cell= new ActorCell(system, self, props, dispatcher, supervisor);
-                cell.Init(sendSupervise: true, createMailbox: createMailbox);
-                return cell;
-            })
-        {
-            //Intentionally left blank
-
-        }
-
-        /// <summary>
-        /// Inheritors should only call this constructor
-        /// </summary>
-        internal protected  LocalActorRef(ActorSystem system, Props props, MessageDispatcher dispatcher, Func<Mailbox> createMailbox, IInternalActorRef supervisor, ActorPath path, Func<LocalActorRef, ActorCell> createActorCell) //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType      
+        public LocalActorRef(ActorSystemImpl system, Props props, MessageDispatcher dispatcher, MailboxType mailboxType, IInternalActorRef supervisor, ActorPath path) 
         {
             _system = system;
             _props = props;
             _dispatcher = dispatcher;
-            _createMailbox = createMailbox;
+            MailboxType = mailboxType;
             _supervisor = supervisor;
             _path = path;
-            _cell = createActorCell(this);
+
+           /*
+            * Safe publication of this class’s fields is guaranteed by Mailbox.SetActor()
+            * which is called indirectly from ActorCell.init() (if you’re wondering why
+            * this is at all important, remember that under the CLR readonly fields are only
+            * frozen at the _end_ of the constructor, but we are publishing “this” before
+            * that is reached).
+            * This means that the result of NewActorCell needs to be written to the field
+            * _cell before we call init and start, since we can start using "this"
+            * object from another thread as soon as we run init.
+            */
+            // ReSharper disable once VirtualMemberCallInContructor 
+            _cell = NewActorCell(_system, this, _props, _dispatcher, _supervisor); // _cell needs to be assigned before Init is called. 
+            _cell.Init(true, MailboxType);
+        }
+
+        protected virtual ActorCell NewActorCell(ActorSystemImpl system, IInternalActorRef self, Props props,
+            MessageDispatcher dispatcher, IInternalActorRef supervisor)
+        {
+            return new ActorCell(system, self, props, dispatcher, supervisor);
         }
 
 
@@ -123,20 +126,17 @@ namespace Akka.Actor
             get { return _path; }
         }
 
-        protected ActorSystem System{get { return _system; }}
+        protected ActorSystem System => _system;
 
-        protected Props Props{get { return _props; }}
+        protected Props Props => _props;
 
-        protected MessageDispatcher Dispatcher{get { return _dispatcher; }}
+        protected MessageDispatcher Dispatcher => _dispatcher;
 
-        protected IInternalActorRef Supervisor{get { return _supervisor; }}
+        protected IInternalActorRef Supervisor => _supervisor;
 
-        public override bool IsTerminated { get { return _cell.IsTerminated; } }
+        public override bool IsTerminated => _cell.IsTerminated;
 
-        protected Func<Mailbox> CreateMailbox
-        {
-            get { return _createMailbox; }
-        }
+        protected MailboxType MailboxType { get; }
 
         public override void Resume(Exception causedByFailure = null)
         {
@@ -150,7 +150,7 @@ namespace Akka.Actor
 
         protected override void TellInternal(object message, IActorRef sender)
         {
-            _cell.Post(sender, message);
+            _cell.SendMessage(sender, message);
         }
 
         public override IInternalActorRef GetSingleChild(string name)

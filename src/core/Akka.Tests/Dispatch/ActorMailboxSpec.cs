@@ -80,7 +80,7 @@ akka.actor.deployment {
         {
             public MailboxReportingActor()
             {
-                ReceiveAny(x => Sender.Tell(((ActorCell)Context).Mailbox));
+                ReceiveAny(x => Sender.Tell(((ActorCell)Context).Mailbox.MessageQueue));
             }
         }
 
@@ -104,12 +104,12 @@ akka.actor.deployment {
 
         }
 
-        private Mailbox CheckMailBoxType(Props props, string name, IEnumerable<Type> expectedMailboxTypes)
+        private IMessageQueue CheckMailBoxType(Props props, string name, IEnumerable<Type> expectedMailboxTypes)
         {
             var actor = Sys.ActorOf(props, name);
             actor.Tell("ping");
 
-            var mailbox = ExpectMsg<Mailbox>(msg =>
+            var mailbox = ExpectMsg<IMessageQueue>(msg =>
             {
                 expectedMailboxTypes.ForEach(type => Assert.True(type.IsAssignableFrom(msg.GetType()),
                     String.Format(CultureInfo.InvariantCulture, "Type [{0}] is not assignable to [{1}]", msg.GetType(), type)));
@@ -125,51 +125,51 @@ akka.actor.deployment {
         [Fact(DisplayName = @"Actors get an unbounded mailbox by default")]
         public void Actors_get_unbounded_mailbox_by_default()
         {
-            CheckMailBoxType(Props.Create<MailboxReportingActor>(), "default-default", new[] { typeof(UnboundedMailbox) });
+            CheckMailBoxType(Props.Create<MailboxReportingActor>(), "default-default", new[] { typeof(UnboundedMessageQueue) });
         }
 
         [Fact(DisplayName = @"Actors get an unbounded deque message queue when it is only configured on the props")]
         public void Actors_get_unbounded_dequeue_mailbox_when_configured_in_properties()
         {
             CheckMailBoxType(Props.Create<MailboxReportingActor>().WithMailbox("unbounded-mailbox"),
-                "default-override-from-props", new[] { typeof(UnboundedDequeBasedMailbox) });
+                "default-override-from-props", new[] { typeof(UnboundedDequeMessageQueue) });
         }
 
         [Fact(DisplayName = @"Actors get an unbounded deque message queue when it's only mixed with Stash")]
         public void Actors_get_unbounded_mailbox_when_configured_with_stash_only()
         {
             CheckMailBoxType(Props.Create<StashMailboxReportingActor>(),
-                "default-override-from-stash", new[] { typeof(UnboundedDequeBasedMailbox) });
+                "default-override-from-stash", new[] { typeof(UnboundedDequeMessageQueue) });
 
             CheckMailBoxType(Props.Create(() => new StashMailboxReportingActor()),
-                "default-override-from-stash2", new[] { typeof(UnboundedDequeBasedMailbox) });
+                "default-override-from-stash2", new[] { typeof(UnboundedDequeMessageQueue) });
 
             CheckMailBoxType(Props.Create<StashMailboxWithParamsReportingActor>(10, "foo"),
-                "default-override-from-stash3", new[] { typeof(UnboundedDequeBasedMailbox) });
+                "default-override-from-stash3", new[] { typeof(UnboundedDequeMessageQueue) });
 
             CheckMailBoxType(Props.Create(() => new StashMailboxWithParamsReportingActor(10, "foo")),
-                "default-override-from-stash4", new[] { typeof(UnboundedDequeBasedMailbox) });
+                "default-override-from-stash4", new[] { typeof(UnboundedDequeMessageQueue) });
         }
 
         [Fact(DisplayName = "Actors get an unbounded deque message queue when it's configured as mailbox")]
         public void Actors_get_unbounded_dequeue_message_queue_when_configured_as_mailbox()
         {
             CheckMailBoxType(Props.Create<MailboxReportingActor>(), "default-unboundeded-deque",
-                new[] { typeof(UnboundedDequeBasedMailbox) });
+                new[] { typeof(UnboundedDequeMessageQueue) });
         }
 
         [Fact(DisplayName = "Actor get an unbounded message queue when defined in dispatcher")]
         public void Actor_gets_configured_mailbox_from_dispatcher()
         {
             CheckMailBoxType(Props.Create<MailboxReportingActor>(), "unbounded-default",
-                new[] { typeof(UnboundedDequeBasedMailbox) });
+                new[] { typeof(UnboundedDequeMessageQueue) });
         }
 
         [Fact(DisplayName = "get an unbounded message queue with a balancing dispatcher")]
         public void Actors_gets_unbounded_mailbox_with_task_dispatcher()
         {
             CheckMailBoxType(Props.Create<MailboxReportingActor>().WithDispatcher("task-dispatcher"),
-                "unbounded-tasks", new[] { typeof(UnboundedMailbox) });
+                "unbounded-tasks", new[] { typeof(UnboundedMessageQueue) });
         }
         
         #endregion

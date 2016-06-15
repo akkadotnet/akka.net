@@ -12,15 +12,20 @@ using Akka.Dispatch;
 
 namespace Akka.Actor
 {
+    /// <summary>
+    /// INTERNAL API.
+    /// 
+    /// Used by <see cref="GuardianActor"/>
+    /// </summary>
     public class RootGuardianActorRef : LocalActorRef
     {
         private IInternalActorRef _tempContainer;
         private readonly IInternalActorRef _deadLetters;
         private readonly IReadOnlyDictionary<string, IInternalActorRef> _extraNames;
 
-        public RootGuardianActorRef(ActorSystemImpl system, Props props, MessageDispatcher dispatcher, Func<Mailbox> createMailbox, //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType
+        public RootGuardianActorRef(ActorSystemImpl system, Props props, MessageDispatcher dispatcher, MailboxType mailboxType, 
             IInternalActorRef supervisor, ActorPath path, IInternalActorRef deadLetters, IReadOnlyDictionary<string, IInternalActorRef> extraNames)
-            : base(system,props,dispatcher,createMailbox,supervisor,path)
+            : base(system,props,dispatcher,mailboxType,supervisor,path)
         {
             _deadLetters = deadLetters;
             _extraNames = extraNames;

@@ -221,7 +221,7 @@ namespace Akka.Tests.Actor
             {
                 //Let boss crash, this means any child under boss should be suspended, so we wait for worker to become suspended.                
                 boss.Tell("fail");
-                AwaitCondition(() => ((LocalActorRef)worker).Cell.Mailbox.IsSuspended);
+                AwaitCondition(() => ((LocalActorRef)worker).Cell.Mailbox.IsSuspended());
 
                 //At this time slowresumer is currently handling the failure, in supervisestrategy, waiting for latch to be opened
                 //We verify that no message is handled by worker, by sending it a ping
@@ -234,7 +234,7 @@ namespace Akka.Tests.Actor
             });
 
             //Check that all children, and especially worker is resumed. It should receive the ping and respond with a pong
-            ExpectMsg("pong");
+            ExpectMsg("pong", TimeSpan.FromMinutes(10));
         }
 
         [Fact]

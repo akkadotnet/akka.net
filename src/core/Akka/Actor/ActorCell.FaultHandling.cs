@@ -8,7 +8,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
+using System.Threading;
 using Akka.Actor.Internal;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -20,12 +22,12 @@ namespace Akka.Actor
     {
         private void SuspendNonRecursive()
         {
-            Mailbox.Suspend();
+            Dispatcher.Suspend(this);
         }
 
         private void ResumeNonRecursive()
         {
-            UseThreadContext(() => Mailbox.Resume());
+            Dispatcher.Resume(this);
         }
 
         // ReSharper disable once InconsistentNaming
@@ -84,7 +86,7 @@ namespace Akka.Actor
                     }
                 }
 
-                global::System.Diagnostics.Debug.Assert(Mailbox.IsSuspended, "Mailbox must be suspended during restart, status=" + Mailbox.Status);
+                global::System.Diagnostics.Debug.Assert(Mailbox.IsSuspended(), "Mailbox must be suspended during restart, status=" + Mailbox.CurrentStatus());
                 if (!SetChildrenTerminationReason(new SuspendReason.Recreation(cause)))
                 {
                     FinishRecreate(cause, failedActor);
@@ -147,7 +149,7 @@ namespace Akka.Actor
         /// </summary>
         private void FaultCreate()
         {
-            global::System.Diagnostics.Debug.Assert(Mailbox.IsSuspended, "Mailbox must be suspended during failed creation, status=" + Mailbox.Status);
+            global::System.Diagnostics.Debug.Assert(Mailbox.IsSuspended(), "Mailbox must be suspended during failed creation, status=" + Mailbox.CurrentStatus());
             global::System.Diagnostics.Debug.Assert(_self.Equals(Perpetrator), "Perpetrator should be self");
 
             SetReceiveTimeout(null);
@@ -180,16 +182,39 @@ namespace Akka.Actor
             }
         }
 
+        /*
+         * Used to resolve the racy shutdown issue reported here: https://github.com/akkadotnet/akka.net/issues/2024
+         * Fundamentally the issue was that the ImmutableDictionary operations executed in the IChildContainer's constructor
+         * are so slow that several hundred `ChildContainer.IsTerminated` operations could pass even in the middle of signaling
+         * termination. So we signal shutdown using a byte flag instead so Termination can be signaled independently of the speed
+         * of the child container.
+         */
+        private volatile byte _fastTerminatingDoNotCallMeDirectly = 0;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void SetFastTerminate()
+        {
+            Volatile.Write(ref _fastTerminatingDoNotCallMeDirectly, 1);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool IsFastTerminating() { return _fastTerminatingDoNotCallMeDirectly == 1; }
+        
+
         /// <summary>Terminates this instance.</summary>
         private void Terminate()
         {
+            SetFastTerminate();
+
             SetReceiveTimeout(null);
             CancelReceiveTimeout();
 
             // prevent Deadletter(Terminated) messages
             UnwatchWatchedActors(_actor);
 
+            // stop all children, which will turn childrenRefs into TerminatingChildrenContainer (if there are children)
             StopChildren();
+
             //TODO: Implement when we have ActorSystem.Abort
             //    if (systemImpl.aborting) {
             //      // separate iteration because this is a very rare case that should not penalize normal operation
@@ -240,7 +265,7 @@ namespace Akka.Actor
                     SuspendChildren(childrenNotToSuspend == null ? null : childrenNotToSuspend.ToList());
 
                     //Tell supervisor
-                    Parent.Tell(new Failed(_self, cause, _self.Path.Uid));
+                    Parent.SendSystemMessage(new Failed(_self, cause, _self.Path.Uid));
                 }
                 catch (Exception e)
                 {
@@ -265,10 +290,7 @@ namespace Akka.Actor
         {
             foreach (var child in ChildrenContainer.Children)
             {
-                child.Stop();
-
-                //ActorCell.Children line 84 https://github.com/akkadotnet/akka.net/issues/2024
-                //Stop(child); // TODO: need to call this, but only after ActorCell.AttachChild and proper child creation semantics have been added
+                Stop(child); 
             }
         }
 
@@ -298,20 +320,7 @@ namespace Akka.Actor
             }
             finally
             {
-                try
-                //TODO: Akka Jvm: this is done in a call to dispatcher.detach()
-                {
-
-                    //TODO: Akka Jvm: this is done in a call to MessageDispatcher.detach()
-                    {
-                        var mailbox = Mailbox;
-                        var deadLetterMailbox = System.Mailboxes.DeadLetterMailbox;
-                        SwapMailbox(deadLetterMailbox);
-                        mailbox.BecomeClosed();
-                        mailbox.CleanUp();
-                        Dispatcher.Detach(this);
-                    }
-                }
+                try{ Dispatcher.Detach(this); }
                 finally
                 {
                     try { Parent.SendSystemMessage(new DeathWatchNotification(_self, existenceConfirmed: true, addressTerminated: false)); }
@@ -320,7 +329,7 @@ namespace Akka.Actor
                         try { TellWatchersWeDied(); }
                         finally
                         {
-                            try { UnwatchWatchedActors(a); }
+                            try { UnwatchWatchedActors(a); } // stay here as we expect an emergency stop from HandleInvokeFailure
                             finally
                             {
                                 if (System.Settings.DebugLifecycle)
@@ -328,9 +337,9 @@ namespace Akka.Actor
 
                                 ClearActor(a);
                                 ClearActorCell();
-                                
+
                                 _actor = null;
-                                
+
                             }
                         }
                     }
@@ -379,7 +388,7 @@ namespace Akka.Actor
 
         }
 
-      
+
         private void HandleFailed(Failed f) //Called handleFailure in Akka JVM
         {
             CurrentMessage = f;
@@ -440,7 +449,7 @@ namespace Akka.Actor
             var recreation = status as SuspendReason.Recreation;
             if (recreation != null)
             {
-                FinishRecreate(recreation.Cause,_actor);
+                FinishRecreate(recreation.Cause, _actor);
             }
             else if (status is SuspendReason.Creation)
             {

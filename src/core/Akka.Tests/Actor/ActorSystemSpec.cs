@@ -160,7 +160,7 @@ namespace Akka.Tests.Actor
             Assert.Equal(typeof(LocalActorRef), ExpectMsg<Type>());
         }
 
-        [Fact(Skip = "Context.AttachChild still needs to be implemented")]
+        [Fact()]
         public void Reliable_deny_creation_of_actors_while_shutting_down()
         {
             var sys = ActorSystem.Create("DenyCreationWhileShuttingDown");
@@ -463,10 +463,15 @@ namespace Akka.Tests.Actor
             {
             }
 
-            public override void Schedule(Action run)
+            public override void Schedule(IRunnable run)
             {
-                Task.Run(run);
+                run.Run();
                 _latch.Ready(TimeSpan.FromSeconds(1));
+            }
+
+            protected override void Shutdown()
+            {
+                // do nothing
             }
 
             public override void Attach(ActorCell cell)

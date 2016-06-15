@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading;
+using Akka.Actor;
 using Akka.Dispatch;
 using NBench;
 
@@ -80,7 +81,7 @@ namespace Akka.Tests.Performance.Dispatch
         [PerfCleanup]
         public void Teardown()
         {
-            _dispatcher.Detach(null); //forces disposal of per-actor dispatchers
+            // TODO: add safe way to dispose dispatchers (need to use an ActorSystem)
             EventBlock.Dispose();
         }
     }

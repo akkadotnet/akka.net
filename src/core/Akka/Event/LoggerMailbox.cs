@@ -4,14 +4,60 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Dispatch.MessageQueues;
 
 namespace Akka.Event
 {
-    public class LoggerMailbox : UnboundedMailbox
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal sealed class LoggerMailboxType : MailboxType, IProducesMessageQueue<LoggerMailbox> {
+        public LoggerMailboxType(Settings settings, Config config) : base(settings, config)
+        {
+        }
+
+        public override IMessageQueue Create(IActorRef owner, ActorSystem system)
+        {
+            if(owner != null && system != null) return new LoggerMailbox(owner, system);
+            throw new ArgumentNullException(nameof(owner), "no mailbox owner or system given");
+        }
+    }
+
+    /// <summary>
+    /// Mailbox type used by loggers
+    /// </summary>
+    public class LoggerMailbox : Mailbox, ILoggerMessageQueueSemantics, IUnboundedMessageQueueSemantics, IMessageQueue
     {
-        public override void CleanUp()
+        private readonly IActorRef _owner;
+        private readonly ActorSystem _system;
+
+        public LoggerMailbox(IActorRef owner, ActorSystem system) : base(new UnboundedMessageQueue())
+        {
+            _owner = owner;
+            _system = system;
+        }
+
+        /* Explicit IMessageQueue implementation; needed for MessageType support. */
+
+        bool IMessageQueue.HasMessages => MessageQueue.HasMessages;
+
+        int IMessageQueue.Count => MessageQueue.Count;
+
+        void IMessageQueue.Enqueue(IActorRef receiver, Envelope envelope)
+        {
+            MessageQueue.Enqueue(receiver, envelope);
+        }
+
+        bool IMessageQueue.TryDequeue(out Envelope envelope)
+        {
+            return MessageQueue.TryDequeue(out envelope);
+        }
+
+        void IMessageQueue.CleanUp(IActorRef owner, IMessageQueue deadletters)
         {
             if (HasMessages)
             {
@@ -26,7 +72,7 @@ namespace Akka.Event
                     Logging.StandardOutLogger.Tell(envelope.Message, envelope.Sender);
                 }
             }
-            base.CleanUp();
+            MessageQueue.CleanUp(owner, deadletters);
         }
     }
 }

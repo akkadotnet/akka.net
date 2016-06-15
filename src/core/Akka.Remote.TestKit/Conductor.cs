@@ -67,7 +67,7 @@ namespace Akka.Remote.TestKit
             if(_controller != null) throw new IllegalStateException("TestConductorServer was already started");
             _controller = _system.ActorOf(Props.Create(() => new Controller(participants, controllerPort)),
                "controller");
-            //TODO: Need to review this async stuff
+
             var node = await _controller.Ask<IPEndPoint>(TestKit.Controller.GetSockAddr.Instance, Settings.QueryTimeout).ConfigureAwait(false);
             await StartClient(name, node).ConfigureAwait(false);
             return node;

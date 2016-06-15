@@ -247,7 +247,7 @@ namespace Akka.Tests.Routing
                 Sys.ActorOf(
                     Props.Create<BlackHoleActor>()
                         .WithRouter(new RoundRobinPool(0, resizer, SupervisorStrategy.DefaultStrategy, null)));
-            latch.Open();
+
             router.Tell(new GetRoutees(),TestActor);
             ExpectMsg<Routees>().Members.Count().ShouldBe(2);
             Sys.Stop(router);

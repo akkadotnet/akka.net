@@ -31,7 +31,7 @@ namespace Akka.Cluster.Tests
 
         readonly Address _selfAddress;
         readonly Cluster _cluster;
-        
+
         public ClusterReadView ClusterView { get { return _cluster.ReadView; } }
 
         public ClusterSpec()
@@ -69,7 +69,7 @@ namespace Akka.Cluster.Tests
         {
             try
             {
-                _cluster.Subscribe(TestActor, ClusterEvent.InitialStateAsSnapshot, new []{typeof(ClusterEvent.IMemberEvent)});
+                _cluster.Subscribe(TestActor, ClusterEvent.InitialStateAsSnapshot, new[] { typeof(ClusterEvent.IMemberEvent) });
                 ExpectMsg<ClusterEvent.CurrentClusterState>();
             }
             finally
@@ -114,7 +114,7 @@ namespace Akka.Cluster.Tests
                 callbackProbe.Tell("OnMemberRemoved");
             });
 
-            _cluster.Subscribe(TestActor, new []{typeof(ClusterEvent.MemberRemoved)});
+            _cluster.Subscribe(TestActor, new[] { typeof(ClusterEvent.MemberRemoved) });
             // first, is in response to the subscription
             ExpectMsg<ClusterEvent.CurrentClusterState>();
 
@@ -123,6 +123,17 @@ namespace Akka.Cluster.Tests
             Assert.Equal(_selfAddress, memberRemoved.Member.Address);
 
             callbackProbe.ExpectMsg("OnMemberRemoved");
+        }
+
+        [Fact]
+        public void A_ActorSystem_with_Cluster_must_be_able_to_terminate()
+        {
+            _cluster.Join(_selfAddress);
+            LeaderActions(); // Joining -> Up
+            AwaitCondition(() => ClusterView.IsSingletonCluster);
+
+            var remainingTime = RemainingOrDefault;
+            Assert.True(Sys.Terminate().Wait(RemainingOrDefault), $"Expected actor system to terminate in {RemainingOrDefault}, but did not");
         }
 
         // TODO: https://github.com/akkadotnet/akka.net/issues/1983

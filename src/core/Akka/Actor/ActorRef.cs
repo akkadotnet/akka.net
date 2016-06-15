@@ -216,7 +216,8 @@ namespace Akka.Actor
 
         public bool Equals(IActorRef other)
         {
-            return Path.Uid == other.Path.Uid && Path.Equals(other.Path);
+            return Path.Uid == other.Path.Uid 
+                && Path.Equals(other.Path);
         }
 
         public int CompareTo(IActorRef other)

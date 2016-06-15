@@ -14,35 +14,8 @@ using Akka.Configuration;
 
 namespace Akka.Dispatch
 {
-
-
-    public static class DispatcherExtensions
-    {
-        /// <summary>
-        /// Schedules the specified run and returns a continuation task.
-        /// </summary>
-        public static Task<T> ScheduleAsync<T>(this MessageDispatcher dispatcher, Func<T> fn)
-        {
-            var promise = new TaskCompletionSource<T>();
-            dispatcher.Schedule(() =>
-            {
-                try
-                {
-                    var result = fn();
-                    promise.SetResult(result);
-                }
-                catch (Exception e)
-                {
-                    promise.SetException(e);
-                }
-            });
-
-            return promise.Task;
-        }
-    }
-
     /// <summary>
-    ///     Class ThreadPoolDispatcher.
+    ///  The default dispatcher. Uses the <see cref="ThreadPool"/>
     /// </summary>
     public class ThreadPoolDispatcher : MessageDispatcher
     {
@@ -56,18 +29,21 @@ namespace Akka.Dispatch
         {
         }
 
-        /// <summary>
-        ///     Schedules the specified run.
-        /// </summary>
-        /// <param name="run">The run.</param>
-        public override void Schedule(Action run)
+        // cache the delegate used for execution to prevent allocations
+        protected static readonly WaitCallback Executor = t => { ((IRunnable)t).Run();};
+
+        public override void Schedule(IRunnable run)
         {
-            var wc = new WaitCallback(_ => run());
             // we use unsafe version if current application domain is FullTrusted
             if (_isFullTrusted)
-                ThreadPool.UnsafeQueueUserWorkItem(wc, null);
+                ThreadPool.UnsafeQueueUserWorkItem(Executor, run);
             else
-                ThreadPool.QueueUserWorkItem(wc, null);
+                ThreadPool.QueueUserWorkItem(Executor, run);
+        }
+
+        protected override void Shutdown()
+        {
+            // do nothing. No cleanup required.
         }
     }
 
@@ -79,7 +55,7 @@ namespace Akka.Dispatch
         /// <summary>
         ///     The scheduler
         /// </summary>
-        private readonly TaskScheduler _scheduler;
+        private TaskScheduler _scheduler;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="CurrentSynchronizationContextDispatcher" /> class.
@@ -90,14 +66,19 @@ namespace Akka.Dispatch
             _scheduler = TaskScheduler.FromCurrentSynchronizationContext();
         }
 
-        /// <summary>
-        ///     Schedules the specified run.
-        /// </summary>
-        /// <param name="run">The run.</param>
-        public override void Schedule(Action run)
+        // cache the delegate used for execution to prevent allocations
+        protected static readonly Action<object> Executor = t => { ((IRunnable)t).Run(); };
+
+        public override void Schedule(IRunnable run)
         {
-            var t = new Task(run);
+            var t = new Task(Executor, run);
             t.Start(_scheduler);
+        }
+
+        protected override void Shutdown()
+        {
+            // clear the scheduler
+            _scheduler = null;
         }
     }
 
@@ -109,8 +90,8 @@ namespace Akka.Dispatch
         /// <summary>
         ///     The default dispatcher identifier, also the full key of the configuration of the default dispatcher.
         /// </summary>
-        public readonly static string DefaultDispatcherId = "akka.actor.default-dispatcher";
-        public readonly static string SynchronizedDispatcherId = "akka.actor.synchronized-dispatcher";
+        public static readonly string DefaultDispatcherId = "akka.actor.default-dispatcher";
+        public static readonly string SynchronizedDispatcherId = "akka.actor.synchronized-dispatcher";
 
         private readonly ActorSystem _system;
         private CachingConfig _cachingConfig;
@@ -282,6 +263,7 @@ namespace Akka.Dispatch
             var type = cfg.GetString("type");
             var throughput = cfg.GetInt("throughput");
             var throughputDeadlineTime = cfg.GetTimeSpan("throughput-deadline-time").Ticks;
+            var shutdownTimeout = cfg.GetTimeSpan("shutdown-timeout");
 
 
             MessageDispatcherConfigurator dispatcher;
@@ -314,7 +296,7 @@ namespace Akka.Dispatch
                     break;
             }
 
-            return new DispatcherConfigurator(dispatcher, id, throughput, throughputDeadlineTime);
+            return new DispatcherConfigurator(dispatcher, id, throughput, throughputDeadlineTime, shutdownTimeout);
         }
     }
 
@@ -328,24 +310,29 @@ namespace Akka.Dispatch
 
         private readonly MessageDispatcherConfigurator _configurator;
 
-        public DispatcherConfigurator(MessageDispatcherConfigurator configurator, string id, int throughput, long? throughputDeadlineTime)
+        public DispatcherConfigurator(MessageDispatcherConfigurator configurator, string id, int throughput, long? throughputDeadlineTime, TimeSpan shutdownTimeout)
             : base(configurator.Config, configurator.Prerequisites)
         {
             _configurator = configurator;
             ThroughputDeadlineTime = throughputDeadlineTime;
             Id = id;
             Throughput = throughput;
+            ShutdownTimeout = shutdownTimeout;
         }
 
         public int Throughput { get; private set; }
 
         public long? ThroughputDeadlineTime { get; private set; }
+
+        public TimeSpan ShutdownTimeout { get; private set; }
+
         public override MessageDispatcher Dispatcher()
         {
             var dispatcher = _configurator.Dispatcher();
             dispatcher.Id = Id;
             dispatcher.Throughput = Throughput;
             dispatcher.ThroughputDeadlineTime = ThroughputDeadlineTime > 0 ? ThroughputDeadlineTime : null;
+            dispatcher.ShutdownTimeout = ShutdownTimeout;
             return dispatcher;
         }
     }

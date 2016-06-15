@@ -336,11 +336,11 @@ akka.actor {
         [Fact]
         public void CanSerializeSingletonMessages()
         {
-            var message = Terminate.Instance;
+            var message = PoisonPill.Instance;
 
             var serializer = Sys.Serialization.FindSerializerFor(message);
             var serialized = serializer.ToBinary(message);
-            var deserialized = (Terminate)serializer.FromBinary(serialized, typeof(Terminate));
+            var deserialized = (PoisonPill)serializer.FromBinary(serialized, typeof(PoisonPill));
 
             Assert.NotNull(deserialized);
         }

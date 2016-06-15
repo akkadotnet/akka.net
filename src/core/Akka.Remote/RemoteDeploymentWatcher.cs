@@ -5,7 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Collections.Immutable;
+using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
@@ -19,8 +19,8 @@ namespace Akka.Remote
     internal class RemoteDeploymentWatcher : ReceiveActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
 
-        private readonly IImmutableDictionary<IActorRef, IInternalActorRef> _supervisors =
-            ImmutableDictionary<IActorRef, IInternalActorRef>.Empty;
+        private readonly IDictionary<IActorRef, IInternalActorRef> _supervisors =
+            new Dictionary<IActorRef, IInternalActorRef>();
 
         public RemoteDeploymentWatcher()
         {

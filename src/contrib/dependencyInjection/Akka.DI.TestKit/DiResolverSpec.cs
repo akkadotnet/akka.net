@@ -11,6 +11,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.DI.Core;
 using Akka.Dispatch;
+using Akka.Dispatch.MessageQueues;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.TestKit.Xunit2;
@@ -335,7 +336,7 @@ namespace Akka.DI.TestKit
 
             var internalRef = (LocalActorRef)stashActor;
 
-            Assert.IsType<UnboundedMailbox>(internalRef.Cell.Mailbox);
+            Assert.IsType<UnboundedMessageQueue>(internalRef.Cell.Mailbox.MessageQueue);
         }
 
         [Fact]
@@ -346,7 +347,7 @@ namespace Akka.DI.TestKit
 
             var internalRef = (LocalActorRef) stashActor;
 
-            Assert.IsType<UnboundedDequeBasedMailbox>(internalRef.Cell.Mailbox);
+            Assert.IsType<UnboundedDequeMessageQueue>(internalRef.Cell.Mailbox.MessageQueue);
         }
 
         [Fact]
@@ -357,7 +358,7 @@ namespace Akka.DI.TestKit
 
             var internalRef = (LocalActorRef)stashActor;
 
-            Assert.IsType<BoundedDequeBasedMailbox>(internalRef.Cell.Mailbox);
+            Assert.IsType<BoundedDequeMessageQueue>(internalRef.Cell.Mailbox.MessageQueue);
         }
 
         [Fact]

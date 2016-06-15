@@ -83,7 +83,7 @@ namespace Akka.Dispatch
     /// </summary>
     public class SingleThreadDispatcher : MessageDispatcher
     {
-        private readonly DedicatedThreadPool _dedicatedThreadPool;
+        private DedicatedThreadPool _dedicatedThreadPool;
 
         internal SingleThreadDispatcher(MessageDispatcherConfigurator configurator, DedicatedThreadPoolSettings settings)
             : base(configurator)
@@ -91,19 +91,25 @@ namespace Akka.Dispatch
             _dedicatedThreadPool = new DedicatedThreadPool(settings);
         }
 
-        /// <summary>
-        ///     Schedules the specified run.
-        /// </summary>
-        /// <param name="run">The run.</param>
-        public override void Schedule(Action run)
+        public override void Schedule(IRunnable run)
         {
-            _dedicatedThreadPool.QueueUserWorkItem(run);
+            // TODO: need to add support for delegates with state on DedicatedThreadPool
+            _dedicatedThreadPool.QueueUserWorkItem(run.Run);
         }
 
-        public override void Detach(ActorCell cell)
+        protected override void Shutdown()
         {
-            //shut down the dedicated thread pool
-            _dedicatedThreadPool.Dispose();
+            try
+            {
+                // shut down the dedicated threadpool and null it out
+                // TODO: need graceful stop mechanism for dedicated threadpool so work in progress doesn't get abruptly terminated
+                _dedicatedThreadPool?.Dispose();
+                _dedicatedThreadPool = null;
+            }
+            catch (Exception ex)
+            {
+                ReportFailure(ex);
+            }
         }
     }
 }
