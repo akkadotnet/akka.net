@@ -1082,7 +1082,7 @@ namespace Akka.Cluster
                 {
                     _log.Info("New incarnation of existing member [{0}] is trying to join. " +
                         "Existing will be removed from the cluster and then new member will be allowed to join.", node);
-                    if (localMember.Status != MemberStatus.Down && localMember.Status != MemberStatus.Leaving && localMember.Status != MemberStatus.Exiting)
+                    if (localMember.Status != MemberStatus.Down)
                         Downing(localMember.Address);
                 }
                 else
