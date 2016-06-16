@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
+using Akka.Cluster.TestKit;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using FluentAssertions;
