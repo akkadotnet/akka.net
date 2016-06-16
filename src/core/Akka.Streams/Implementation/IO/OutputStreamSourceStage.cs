@@ -9,6 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Threading.Tasks;
+using Akka.Dispatch;
 using Akka.IO;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
@@ -81,6 +82,7 @@ namespace Akka.Streams.Implementation.IO
             private TaskCompletionSource<NotUsed> _close;
             private Action<Either<ByteString, Exception>> _downstreamCallback;
             private Action<Tuple<IAdapterToStageMessage, TaskCompletionSource<NotUsed>>> _upstreamCallback;
+            private readonly OnPullRunnable _pullTask;
 
             public Logic(OutputStreamSourceStage stage) : base(stage.Shape)
             {
@@ -93,6 +95,7 @@ namespace Akka.Streams.Implementation.IO
                         FailStage(result.Value as Exception);
                 });
                 _upstreamCallback = GetAsyncCallback<Tuple<IAdapterToStageMessage, TaskCompletionSource<NotUsed>>>(OnAsyncMessage);
+                _pullTask = new OnPullRunnable(_downstreamCallback, stage._dataQueue);
                 SetHandler(_stage._out, onPull: OnPull, onDownstreamFinish: OnDownstreamFinish);
             }
 
@@ -104,19 +107,33 @@ namespace Akka.Streams.Implementation.IO
                 CompleteStage();
             }
 
-            private void OnPull()
+            private sealed class OnPullRunnable : IRunnable
             {
-                Interpreter.Materializer.ExecutionContext.Schedule(() =>
+                private readonly Action<Either<ByteString, Exception>> _callback;
+                private readonly BlockingCollection<ByteString> _dataQueue;
+
+                public OnPullRunnable(Action<Either<ByteString, Exception>> callback, BlockingCollection<ByteString> dataQueue)
+                {
+                    _callback = callback;
+                    _dataQueue = dataQueue;
+                }
+
+                public void Run()
                 {
                     try
                     {
-                        _downstreamCallback(new Left<ByteString, Exception>(_stage._dataQueue.Take()));
+                        _callback(new Left<ByteString, Exception>(_dataQueue.Take()));
                     }
                     catch (Exception ex)
                     {
-                        _downstreamCallback(new Right<ByteString, Exception>(ex));
+                        _callback(new Right<ByteString, Exception>(ex));
                     }
-                });
+                }
+            }
+
+            private void OnPull()
+            {
+                Interpreter.Materializer.ExecutionContext.Schedule(_pullTask);                  
             }
 
             private void OnPush(ByteString data)

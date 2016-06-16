@@ -143,6 +143,10 @@ namespace Akka.Actor
         public Akka.Actor.IActorRef Actor { get; }
         public override string ToString() { }
     }
+    public class ActorInterruptedException : Akka.Actor.AkkaException
+    {
+        public ActorInterruptedException(string message = null, System.Exception cause = null) { }
+    }
     public class ActorKilledException : Akka.Actor.AkkaException
     {
         public ActorKilledException(string message) { }
@@ -841,6 +845,7 @@ namespace Akka.Actor
     }
     public interface IActorContext : Akka.Actor.IActorRefFactory, Akka.Actor.ICanWatch
     {
+        Akka.Dispatch.MessageDispatcher Dispatcher { get; }
         Akka.Actor.IActorRef Parent { get; }
         Akka.Actor.Props Props { get; }
         System.Nullable<System.TimeSpan> ReceiveTimeout { get; }
@@ -2303,13 +2308,6 @@ namespace Akka.Dispatch
         public System.TimeSpan PushTimeout { get; }
         public override Akka.Dispatch.MessageQueues.IMessageQueue Create(Akka.Actor.IActorRef owner, Akka.Actor.ActorSystem system) { }
     }
-    public class CurrentSynchronizationContextDispatcher : Akka.Dispatch.MessageDispatcher
-    {
-        protected static readonly System.Action<object> Executor;
-        public CurrentSynchronizationContextDispatcher(Akka.Dispatch.MessageDispatcherConfigurator configurator) { }
-        public override void Schedule(Akka.Dispatch.IRunnable run) { }
-        protected override void Shutdown() { }
-    }
     public sealed class DefaultDispatcherPrerequisites : Akka.Dispatch.IDispatcherPrerequisites
     {
         public DefaultDispatcherPrerequisites(Akka.Event.EventStream eventStream, Akka.Actor.IScheduler scheduler, Akka.Actor.Settings settings, Akka.Dispatch.Mailboxes mailboxes) { }
@@ -2318,7 +2316,18 @@ namespace Akka.Dispatch
         public Akka.Actor.IScheduler Scheduler { get; }
         public Akka.Actor.Settings Settings { get; }
     }
-    public class Dispatchers
+    public class Dispatcher : Akka.Dispatch.MessageDispatcher
+    {
+        public Dispatcher(Akka.Dispatch.MessageDispatcherConfigurator configurator, string id, int throughput, System.Nullable<long> throughputDeadlineTime, Akka.Dispatch.ExecutorServiceFactory executorServiceFactory, System.TimeSpan shutdownTimeout) { }
+        protected override void ExecuteTask(Akka.Dispatch.IRunnable run) { }
+        protected override void Shutdown() { }
+    }
+    public sealed class DispatcherConfigurator : Akka.Dispatch.MessageDispatcherConfigurator
+    {
+        public DispatcherConfigurator(Akka.Configuration.Config config, Akka.Dispatch.IDispatcherPrerequisites prerequisites) { }
+        public override Akka.Dispatch.MessageDispatcher Dispatcher() { }
+    }
+    public sealed class Dispatchers
     {
         public static readonly string DefaultDispatcherId;
         public static readonly string SynchronizedDispatcherId;
@@ -2330,15 +2339,23 @@ namespace Akka.Dispatch
         public Akka.Dispatch.MessageDispatcher Lookup(string dispatcherName) { }
         public bool RegisterConfigurator(string id, Akka.Dispatch.MessageDispatcherConfigurator configurator) { }
     }
-    public class ForkJoinDispatcher : Akka.Dispatch.MessageDispatcher
+    public abstract class ExecutorService
     {
-        public override void Schedule(Akka.Dispatch.IRunnable run) { }
-        protected override void Shutdown() { }
+        protected ExecutorService(string id) { }
+        public string Id { get; }
+        public abstract void Execute(Akka.Dispatch.IRunnable run);
+        public abstract void Shutdown();
     }
-    public class ForkJoinDispatcherConfigurator : Akka.Dispatch.MessageDispatcherConfigurator
+    public abstract class ExecutorServiceConfigurator : Akka.Dispatch.ExecutorServiceFactory
     {
-        public ForkJoinDispatcherConfigurator(Akka.Configuration.Config config, Akka.Dispatch.IDispatcherPrerequisites prerequisites) { }
-        public override Akka.Dispatch.MessageDispatcher Dispatcher() { }
+        protected ExecutorServiceConfigurator(Akka.Configuration.Config config, Akka.Dispatch.IDispatcherPrerequisites prerequisites) { }
+        public Akka.Configuration.Config Config { get; }
+        public Akka.Dispatch.IDispatcherPrerequisites Prerequisites { get; }
+    }
+    public abstract class ExecutorServiceFactory
+    {
+        protected ExecutorServiceFactory() { }
+        public abstract Akka.Dispatch.ExecutorService Produce(string id);
     }
     public class FutureActor : Akka.Actor.ActorBase
     {
@@ -2378,7 +2395,7 @@ namespace Akka.Dispatch
     public interface ISemantics { }
     public interface IUnboundedDequeBasedMessageQueueSemantics : Akka.Dispatch.IDequeBasedMessageQueueSemantics, Akka.Dispatch.ISemantics, Akka.Dispatch.IUnboundedMessageQueueSemantics { }
     public interface IUnboundedMessageQueueSemantics : Akka.Dispatch.ISemantics { }
-    public class Mailbox
+    public class Mailbox : Akka.Dispatch.IRunnable
     {
         public Mailbox(Akka.Dispatch.MessageQueues.IMessageQueue messageQueue) { }
         public Akka.Dispatch.MessageDispatcher Dispatcher { get; }
@@ -2388,8 +2405,6 @@ namespace Akka.Dispatch
         public static void DebugPrint(string message, params object[] args) { }
         public void Run() { }
         public virtual void SetActor(Akka.Actor.ActorCell actorCell) { }
-        protected void SetStatus(int newStatus) { }
-        protected bool UpdateStatus(int oldStatus, int newStatus) { }
     }
     public class Mailboxes
     {
@@ -2417,20 +2432,20 @@ namespace Akka.Dispatch
         public const int DefaultThroughput = 100;
         protected MessageDispatcher(Akka.Dispatch.MessageDispatcherConfigurator configurator) { }
         public Akka.Dispatch.MessageDispatcherConfigurator Configurator { get; }
-        public static bool DebugDispatcher { get; }
         public Akka.Event.EventStream EventStream { get; }
-        public string Id { get; }
+        public string Id { get; set; }
         protected long Inhabitants { get; }
         public Akka.Dispatch.Mailboxes Mailboxes { get; }
-        public System.TimeSpan ShutdownTimeout { get; }
+        public System.TimeSpan ShutdownTimeout { get; set; }
         public int Throughput { get; set; }
-        public System.Nullable<long> ThroughputDeadlineTime { get; }
+        public System.Nullable<long> ThroughputDeadlineTime { get; set; }
         public virtual void Attach(Akka.Actor.ActorCell cell) { }
         public virtual void Detach(Akka.Actor.ActorCell cell) { }
         public virtual void Dispatch(Akka.Actor.ActorCell cell, Akka.Actor.Envelope envelope) { }
+        protected abstract void ExecuteTask(Akka.Dispatch.IRunnable run);
         protected void ReportFailure(System.Exception ex) { }
         public void Schedule(System.Action run) { }
-        public abstract void Schedule(Akka.Dispatch.IRunnable run);
+        public void Schedule(Akka.Dispatch.IRunnable run) { }
         protected abstract void Shutdown();
         public virtual void SystemDispatch(Akka.Actor.ActorCell cell, Akka.Dispatch.SysMsg.SystemMessage message) { }
     }
@@ -2439,19 +2454,16 @@ namespace Akka.Dispatch
         protected MessageDispatcherConfigurator(Akka.Configuration.Config config, Akka.Dispatch.IDispatcherPrerequisites prerequisites) { }
         public Akka.Configuration.Config Config { get; }
         public Akka.Dispatch.IDispatcherPrerequisites Prerequisites { get; }
+        protected Akka.Dispatch.ExecutorServiceConfigurator ConfigureExecutor() { }
         public abstract Akka.Dispatch.MessageDispatcher Dispatcher();
     }
-    public class SingleThreadDispatcher : Akka.Dispatch.MessageDispatcher
+    public sealed class PinnedDispatcher : Akka.Dispatch.Dispatcher
     {
-        public override void Schedule(Akka.Dispatch.IRunnable run) { }
-        protected override void Shutdown() { }
+        public PinnedDispatcher(Akka.Dispatch.MessageDispatcherConfigurator configurator, string id, int throughput, System.Nullable<long> throughputDeadlineTime, Akka.Dispatch.ExecutorServiceFactory executorServiceFactory, System.TimeSpan shutdownTimeout) { }
     }
-    public class TaskDispatcher : Akka.Dispatch.MessageDispatcher
+    public class RejectedExecutionException : Akka.Actor.AkkaException
     {
-        protected static readonly System.Action<object> Executor;
-        public TaskDispatcher(Akka.Dispatch.MessageDispatcherConfigurator configurator) { }
-        public override void Schedule(Akka.Dispatch.IRunnable run) { }
-        protected override void Shutdown() { }
+        public RejectedExecutionException(string message = null, System.Exception inner = null) { }
     }
     public class ThreadPoolConfig
     {
@@ -2460,13 +2472,6 @@ namespace Akka.Dispatch
         public int PoolSizeMax { get; }
         public int PoolSizeMin { get; }
         public static int ScaledPoolSize(int floor, double scalar, int ceiling) { }
-    }
-    public class ThreadPoolDispatcher : Akka.Dispatch.MessageDispatcher
-    {
-        protected static readonly System.Threading.WaitCallback Executor;
-        public ThreadPoolDispatcher(Akka.Dispatch.MessageDispatcherConfigurator configurator) { }
-        public override void Schedule(Akka.Dispatch.IRunnable run) { }
-        protected override void Shutdown() { }
     }
     public sealed class UnboundedDequeBasedMailbox : Akka.Dispatch.MailboxType, Akka.Dispatch.IProducesMessageQueue<Akka.Dispatch.MessageQueues.UnboundedDequeMessageQueue>
     {
@@ -4728,6 +4733,12 @@ namespace Akka.Util
         public Akka.Util.Left<TA, TB> ToLeft() { }
         public Akka.Util.Right<TA, TB> ToRight() { }
     }
+    public sealed class FastLazy<T>
+    {
+        public FastLazy(System.Func<T> producer) { }
+        public bool IsValueCreated { get; }
+        public T Value { get; }
+    }
     public interface ILinearSeq<out T> : System.Collections.Generic.IEnumerable<T>, System.Collections.IEnumerable
     {
         T Head { get; }
@@ -4953,6 +4964,7 @@ namespace Akka.Util.Internal
         public long IncrementAndGet() { }
         public long Next() { }
         public void Reset() { }
+        public override string ToString() { }
     }
     public class static DictionaryExtensions
     {

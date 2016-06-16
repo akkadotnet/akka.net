@@ -175,8 +175,8 @@
     <Compile Include="Dispatch\AbstractDispatcher.cs" />
     <Compile Include="Dispatch\ActorTaskScheduler.cs" />
     <Compile Include="Dispatch\CachingConfig.cs" />
-    <Compile Include="Dispatch\DispatcherConfigurator.cs" />
-    <Compile Include="Dispatch\ForkJoinDispatcher.cs" />
+    <Compile Include="Dispatch\Dispatcher.cs" />
+    <Compile Include="Dispatch\ExecutorService.cs" />
     <Compile Include="Dispatch\Dispatchers.cs" />
     <Compile Include="Actor\Exceptions.cs" />
     <Compile Include="Dispatch\IDispatcherPrerequisites.cs" />
@@ -200,9 +200,8 @@
     <Compile Include="Actor\UntypedReceive.cs" />
     <Compile Include="Dispatch\Mailboxes.cs" />
     <Compile Include="Dispatch\MessageQueues\IMessageQueue.cs" />
-    <Compile Include="Dispatch\SingleThreadDispatcher.cs" />
+    <Compile Include="Dispatch\PinnedDispatcher.cs" />
     <Compile Include="Dispatch\SysMsg\ISystemMessage.cs" />
-    <Compile Include="Dispatch\TaskDispatcher.cs" />
     <Compile Include="Dispatch\ThreadPoolBuilder.cs" />
     <Compile Include="Event\ActorEventBus.cs" />
     <Compile Include="Event\AddressTerminatedTopic.cs" />
@@ -270,6 +269,7 @@
     <Compile Include="Util\ByteIterator.cs" />
     <Compile Include="Util\ByteString.cs" />
     <Compile Include="Util\ContinuousEnumerator.cs" />
+    <Compile Include="Util\FastLazy.cs" />
     <Compile Include="Util\Index.cs" />
     <Compile Include="Util\Internal\AtomicState.cs" />
     <Compile Include="Util\Internal\Collections\EnumeratorExtensions.cs" />

@@ -31,7 +31,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
 
         private static Config GetConfig()
         {
-            return (@"test-dispatcher1.type=""" + typeof(TaskDispatcherConfigurator).FullName);
+            return (@"test-dispatcher1.type=""" + typeof(PinnedDispatcherConfigurator).FullName);
             //return (@"test-dispatcher1.type=""" + typeof(TaskDispatcher).FullName) + FullDebugConfig;
         }
 
@@ -163,7 +163,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         {
             var a = new TestActorRef<WorkerActor>(Sys, Props.Create<WorkerActor>().WithDispatcher("test-dispatcher1"));
             var actorRef = (InternalTestActorRef)a.Ref;
-            Assert.IsType<TaskDispatcher>(actorRef.Cell.Dispatcher);
+            Assert.IsType<PinnedDispatcher>(actorRef.Cell.Dispatcher);
         }
 
         [Fact]

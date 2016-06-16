@@ -31,7 +31,7 @@ namespace Akka.TestKit
         {
         }
 
-        public override void Schedule(IRunnable run)
+        protected override void ExecuteTask(IRunnable run)
         {
             run.Run();
         }

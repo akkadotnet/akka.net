@@ -7,6 +7,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Akka.Util
@@ -30,23 +31,26 @@ namespace Akka.Util
 			}
 		}
 
-		public static TimeSpan ElapsedHighRes
+        public static TimeSpan ElapsedHighRes
 		{
 			get { return Stopwatch.Elapsed; }
 		}
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
 	    public static long GetMilliseconds()
 	    {
-	        return IsMono
-	            ? Stopwatch.ElapsedMilliseconds
-	            : (long) GetTickCount64();
-	    }
+            return IsMono
+                ? Stopwatch.ElapsedMilliseconds
+                : (long)GetTickCount64();
+        }
 
-	    public static long GetNanos()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static long GetNanos()
 	    {
 	        return GetTicks() * NanosPerTick;
 	    }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
 	    public static long GetTicks()
 	    {
 	        return GetMilliseconds() * TicksInMillisecond;
