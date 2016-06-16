@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading;
+using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote;
 using Akka.Remote.TestKit;

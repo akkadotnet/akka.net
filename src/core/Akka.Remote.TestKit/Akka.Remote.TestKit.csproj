@@ -124,6 +124,7 @@
     <EmbeddedResource Include="Internals\Reference.conf" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Akka.Remote.TestKit.nuspec" />
     <None Include="app.config" />
     <None Include="packages.config" />
   </ItemGroup>

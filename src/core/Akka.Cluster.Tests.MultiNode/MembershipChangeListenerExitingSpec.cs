@@ -7,6 +7,7 @@
 
 using System.Linq;
 using Akka.Actor;
+using Akka.Cluster.TestKit;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 
