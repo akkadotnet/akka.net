@@ -118,38 +118,39 @@ namespace Akka.Routing
             }
         }
 
-        // TODO: we could optimize performance here
         public override void Start()
         {
             // create the initial routees before scheduling the Router actor
             Router = RouterConfig.CreateRouter(System);
-            RouterConfig.Match()
-                .With<Pool>(pool =>
-                {
-                    // must not use pool.GetNrOfInstances(system) for old (not re-compiled) custom routers
-                    // for binary backwards compatibility reasons
-                    var deprecatedNrOfInstances = pool.NrOfInstances;
 
-                    var nrOfRoutees = deprecatedNrOfInstances < 0 
-                        ? pool.GetNrOfInstances(System)
-                        : deprecatedNrOfInstances;
+            if (RouterConfig is Pool)
+            {
+                var pool = (Pool)RouterConfig;
+                // must not use pool.GetNrOfInstances(system) for old (not re-compiled) custom routers
+                // for binary backwards compatibility reasons
+                var deprecatedNrOfInstances = pool.NrOfInstances;
 
-                    if (nrOfRoutees > 0)
-                        AddRoutees(Vector.Fill<Routee>(nrOfRoutees)(() => pool.NewRoutee(RouteeProps, this)));
-                })
-                .With<Group>(group =>
-                {
-                    // must not use group.paths(system) for old (not re-compiled) custom routers
-                    // for binary backwards compatibility reasons
-                    var deprecatedPaths = group.Paths;
+                var nrOfRoutees = deprecatedNrOfInstances < 0
+                    ? pool.GetNrOfInstances(System)
+                    : deprecatedNrOfInstances;
 
-                    var paths = deprecatedPaths == null 
-                            ? group.GetPaths(System).ToArray()
-                            : deprecatedPaths.ToArray();
+                if (nrOfRoutees > 0)
+                    AddRoutees(Vector.Fill<Routee>(nrOfRoutees)(() => pool.NewRoutee(RouteeProps, this)));
+            }
+            else if (RouterConfig is Group)
+            {
+                var group = (Group)RouterConfig;
+                // must not use group.paths(system) for old (not re-compiled) custom routers
+                // for binary backwards compatibility reasons
+                var deprecatedPaths = group.Paths;
 
-                    if (paths.NonEmpty())
-                        AddRoutees(paths.Select(p => group.RouteeFor(p, this)).ToList());
-                });
+                var paths = deprecatedPaths == null
+                        ? group.GetPaths(System).ToArray()
+                        : deprecatedPaths.ToArray();
+
+                if (paths.NonEmpty())
+                    AddRoutees(paths.Select(p => group.RouteeFor(p, this)).ToList());
+            }
 
             PreSuperStart();
             base.Start();
