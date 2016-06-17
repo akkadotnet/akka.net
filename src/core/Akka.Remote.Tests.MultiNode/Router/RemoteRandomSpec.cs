@@ -11,18 +11,17 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Remote.TestKit;
 using Akka.Routing;
-using Akka.TestKit;
 using Akka.Util.Internal;
-using Xunit;
+using FluentAssertions;
 
 namespace Akka.Remote.Tests.MultiNode.Router
 {
     public class RemoteRandomMultiNodeConfig : MultiNodeConfig
     {
-        public RoleName First { get; private set; }
-        public RoleName Second { get; private set; }
-        public RoleName Third { get; private set; }
-        public RoleName Fourth { get; private set; }
+        public RoleName First { get; }
+        public RoleName Second { get; }
+        public RoleName Third { get; }
+        public RoleName Fourth { get; }
 
         public RemoteRandomMultiNodeConfig()
         {
@@ -43,21 +42,10 @@ namespace Akka.Remote.Tests.MultiNode.Router
         }
     }
 
-    public class RemoteRandomMultiNode1 : RemoteRandomSpec
-    {
-    }
-
-    public class RemoteRandomMultiNode2 : RemoteRandomSpec
-    {
-    }
-
-    public class RemoteRandomMultiNode3 : RemoteRandomSpec
-    {
-    }
-
-    public class RemoteRandomMultiNode4 : RemoteRandomSpec
-    {
-    }
+    public class RemoteRandomMultiNode1 : RemoteRandomSpec { }
+    public class RemoteRandomMultiNode2 : RemoteRandomSpec { }
+    public class RemoteRandomMultiNode3 : RemoteRandomSpec { }
+    public class RemoteRandomMultiNode4 : RemoteRandomSpec { }
 
     public abstract class RemoteRandomSpec : MultiNodeSpec
     {
@@ -77,7 +65,7 @@ namespace Akka.Remote.Tests.MultiNode.Router
             get { return Roles.Count; }
         }
 
-        public class SomeActor : UntypedActor
+        private class SomeActor : UntypedActor
         {
             protected override void OnReceive(object message)
             {
@@ -88,25 +76,24 @@ namespace Akka.Remote.Tests.MultiNode.Router
             }
         }
 
-        [MultiNodeFact()]
+        [MultiNodeFact]
         public void RemoteRandomSpecs()
         {
-            A_remote_random_pool_must_be_locally_instantiated_on_a_remote_node_and_be_able_to_communicate_through_its_remote_actor_ref();
+            A_remote_random_pool_must_be_locally_instantiated_on_a_remote_node_and_be_able_to_communicate_through_its_RemoteActorRef();
         }
 
-        public void
-            A_remote_random_pool_must_be_locally_instantiated_on_a_remote_node_and_be_able_to_communicate_through_its_remote_actor_ref()
+        public void A_remote_random_pool_must_be_locally_instantiated_on_a_remote_node_and_be_able_to_communicate_through_its_RemoteActorRef()
         {
-            RunOn(() => { EnterBarrier("start", "broadcast-end", "end", "done"); },
-               _config.First, _config.Second, _config.Third);
+            RunOn(() =>
+            {
+                EnterBarrier("start", "broadcast-end", "end", "done");
+            }, _config.First, _config.Second, _config.Third);
 
-            var runOnFourth = new Action(() =>
+            RunOn(() =>
             {
                 EnterBarrier("start");
-                var actor = Sys.ActorOf(new RandomPool(nrOfInstances: 0)
-                    .Props(Props.Create<SomeActor>()), "service-hello");
-
-                Assert.IsType<RoutedActorRef>(actor);
+                var actor = Sys.ActorOf(new RandomPool(0).Props(Props.Create<SomeActor>()), "service-hello");
+                actor.Should().BeOfType<RoutedActorRef>();
 
                 var connectionCount = 3;
                 var iterationCount = 100;
@@ -135,13 +122,14 @@ namespace Akka.Remote.Tests.MultiNode.Router
 
                 EnterBarrier("end");
                 // since it's random we can't be too strict in the assert
-                replies.Values.Count(x => x > 0).ShouldBeGreaterThan(connectionCount - 2);
-                Assert.False(replies.ContainsKey(Node(_config.Fourth).Address));
+                replies.Values.Count(x => x > 0).Should().BeGreaterThan(connectionCount - 2);
+                replies.ContainsKey(Node(_config.Fourth).Address).Should().BeFalse();
 
+                // shut down the actor before we let the other node(s) shut down so we don't try to send
+                // "Terminate" to a shut down node
                 Sys.Stop(actor);
                 EnterBarrier("done");
-            });
-            RunOn(runOnFourth, _config.Fourth);
+            }, _config.Fourth);
         }
     }
 }

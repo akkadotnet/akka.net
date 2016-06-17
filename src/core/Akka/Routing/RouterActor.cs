@@ -8,7 +8,6 @@
 using System;
 using System.Linq;
 using Akka.Actor;
-using Akka.Util.Internal;
 
 namespace Akka.Routing
 {
@@ -17,22 +16,25 @@ namespace Akka.Routing
     /// </summary>
     internal class RouterActor : UntypedActor
     {
-        public RouterActor()
+        protected RoutedActorCell Cell
         {
-            if (!(Context is RoutedActorCell))
+            get
             {
-                throw new NotSupportedException("Current Context must be of type RouterActorContext");
+                var routedActorCell = Context as RoutedActorCell;
+                if (routedActorCell != null)
+                    return routedActorCell;
+                else
+                    throw new ActorInitializationException("Router actor can only be used in RoutedActorRef, not in " + Context.GetType());
             }
         }
 
-        protected RoutedActorCell Cell
+        private IActorRef RoutingLogicController
         {
-            get { return Context.AsInstanceOf<RoutedActorCell>(); }
-        }
-
-        protected override void PreRestart(Exception cause, object message)
-        {
-            //do not scrap children
+            get
+            {
+                return Context.ActorOf(Cell.RouterConfig.RoutingLogicController(Cell.Router.RoutingLogic).
+                    WithDispatcher(Context.Props.Dispatcher), "routingLogicController");
+            }
         }
 
         protected override void OnReceive(object message)
@@ -49,17 +51,32 @@ namespace Akka.Routing
             else if (message is RemoveRoutee)
             {
                 var removeRoutee = message as RemoveRoutee;
-                Cell.RemoveRoutee(removeRoutee.Routee, true);
+                Cell.RemoveRoutee(removeRoutee.Routee, stopChild: true);
                 StopIfAllRouteesRemoved();
+            }
+            else if (message is Terminated)
+            {
+                var terminated = message as Terminated;
+                Cell.RemoveRoutee(new ActorRefRoutee(terminated.ActorRef), stopChild: false);
+                StopIfAllRouteesRemoved();
+            }
+            else
+            {
+                RoutingLogicController?.Forward(message);
             }
         }
 
         protected virtual void StopIfAllRouteesRemoved()
         {
-            if (!Cell.Router.Routees.Any())
+            if (!Cell.Router.Routees.Any() && Cell.RouterConfig.StopRouterWhenAllRouteesRemoved)
             {
                 Context.Stop(Self);
             }
+        }
+
+        protected override void PreRestart(Exception cause, object message)
+        {
+            //do not scrap children
         }
     }
 }

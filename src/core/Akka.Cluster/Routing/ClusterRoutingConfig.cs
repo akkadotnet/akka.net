@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
@@ -21,28 +22,47 @@ namespace Akka.Cluster.Routing
     /// </summary>
     public sealed class ClusterRouterGroupSettings : ClusterRouterSettingsBase
     {
-        public ClusterRouterGroupSettings(int totalInstances, bool allowLocalRoutees, ImmutableHashSet<string> routeesPaths) : this(totalInstances, allowLocalRoutees, null, routeesPaths)
+        [Obsolete]
+        public ClusterRouterGroupSettings(int totalInstances, bool allowLocalRoutees, ImmutableHashSet<string> routeesPaths)
+            : this(totalInstances, routeesPaths, allowLocalRoutees, null)
         {
+
         }
 
-        public ClusterRouterGroupSettings(int totalInstances, bool allowLocalRoutees, string useRole, ImmutableHashSet<string> routeesPaths) : base(totalInstances, allowLocalRoutees, useRole)
+        [Obsolete]
+        public ClusterRouterGroupSettings(int totalInstances, bool allowLocalRoutees, string useRole, ImmutableHashSet<string> routeesPaths)
+            : this(totalInstances, routeesPaths, allowLocalRoutees, useRole)
         {
-            RouteesPaths = routeesPaths;
-            if(routeesPaths == null || routeesPaths.IsEmpty || string.IsNullOrEmpty(routeesPaths.First())) throw new ArgumentException("routeesPaths must be defined", "routeesPaths");
 
-            //validate that all routeesPaths are relative
+        }
+
+        public ClusterRouterGroupSettings(int totalInstances, ImmutableHashSet<string> routeesPaths, bool allowLocalRoutees, string useRole = null) 
+            : base(totalInstances, allowLocalRoutees, useRole)
+        {
+            if (routeesPaths == null || routeesPaths.IsEmpty || string.IsNullOrEmpty(routeesPaths.First()))
+            {
+                throw new ArgumentException("RouteesPaths must be defined", nameof(routeesPaths));
+            }
+
+            RouteesPaths = routeesPaths;
+
+            // validate that all RouteesPaths are relative
             foreach (var path in routeesPaths)
             {
-                if(RelativeActorPath.Unapply(path) == null)
-                    throw new ArgumentException(string.Format("routeesPaths [{0}] is not a valid relative actor path.", path), "routeesPaths");
+                if (RelativeActorPath.Unapply(path) == null)
+                    throw new ArgumentException($"routeesPaths [{path}] is not a valid relative actor path.", nameof(routeesPaths));
             }
         }
 
-        public ImmutableHashSet<string> RouteesPaths { get; private set; }
+        public ImmutableHashSet<string> RouteesPaths { get; }
 
         public static ClusterRouterGroupSettings FromConfig(Config config)
         {
-            return new ClusterRouterGroupSettings(config.GetInt("nr-of-instances"), config.GetBoolean("cluster.allow-local-routees"), config.GetString("cluster.use-role"), ImmutableHashSet.Create(config.GetStringList("routees.paths").ToArray()));
+            return new ClusterRouterGroupSettings(
+                GetMaxTotalNrOfInstances(config),
+                ImmutableHashSet.Create(config.GetStringList("routees.paths").ToArray()),
+                config.GetBoolean("cluster.allow-local-routees"),
+                UseRoleOption(config.GetString("cluster.use-role")));
         }
     }
 
@@ -53,21 +73,35 @@ namespace Akka.Cluster.Routing
     /// </summary>
     public sealed class ClusterRouterPoolSettings : ClusterRouterSettingsBase
     {
-        public ClusterRouterPoolSettings(int totalInstances, bool allowLocalRoutees, int maxInstancesPerNode) : this(totalInstances, allowLocalRoutees, null, maxInstancesPerNode)
+        [Obsolete]
+        public ClusterRouterPoolSettings(int totalInstances, bool allowLocalRoutees, int maxInstancesPerNode)
+            : this(totalInstances, maxInstancesPerNode, allowLocalRoutees)
         {
         }
 
-        public ClusterRouterPoolSettings(int totalInstances, bool allowLocalRoutees, string useRole, int maxInstancesPerNode) : base(totalInstances, allowLocalRoutees, useRole)
+        [Obsolete]
+        public ClusterRouterPoolSettings(int totalInstances, bool allowLocalRoutees, string useRole, int maxInstancesPerNode) 
+            : this(totalInstances, maxInstancesPerNode, allowLocalRoutees, useRole)
+        {
+        }
+
+        public ClusterRouterPoolSettings(int totalInstances, int maxInstancesPerNode, bool allowLocalRoutees, string useRole = null)
+            : base(totalInstances, allowLocalRoutees, useRole)
         {
             MaxInstancesPerNode = maxInstancesPerNode;
-            if(MaxInstancesPerNode <= 0) throw new ArgumentOutOfRangeException("maxInstancesPerNode", "maxInstancesPerNode of cluster pool router must be > 0");
+
+            if (MaxInstancesPerNode <= 0) throw new ArgumentOutOfRangeException(nameof(maxInstancesPerNode), "maxInstancesPerNode of cluster pool router must be > 0");
         }
 
         public int MaxInstancesPerNode { get; private set; }
 
         public static ClusterRouterPoolSettings FromConfig(Config config)
         {
-            return new ClusterRouterPoolSettings(config.GetInt("nr-of-instances"), config.GetBoolean("cluster.allow-local-routees"), config.GetString("cluster.use-role"), config.GetInt("cluster.max-nr-of-instances-per-node"));
+            return new ClusterRouterPoolSettings(
+                GetMaxTotalNrOfInstances(config),
+                config.GetInt("cluster.max-nr-of-instances-per-node"),
+                config.GetBoolean("cluster.allow-local-routees"),
+                UseRoleOption(config.GetString("cluster.use-role")));
         }
     }
 
@@ -76,25 +110,44 @@ namespace Akka.Cluster.Routing
     /// </summary>
     public abstract class ClusterRouterSettingsBase
     {
-        protected ClusterRouterSettingsBase(int totalInstances, bool allowLocalRoutees) : this(totalInstances, allowLocalRoutees, null)
-        {
-        }
-
         protected ClusterRouterSettingsBase(int totalInstances, bool allowLocalRoutees, string useRole)
         {
             UseRole = useRole;
             AllowLocalRoutees = allowLocalRoutees;
             TotalInstances = totalInstances;
 
-            if(TotalInstances <= 0) throw new ArgumentOutOfRangeException("totalInstances", "totalInstances of cluster router must be > 0");
+            if (useRole == string.Empty) throw new ArgumentOutOfRangeException(nameof(useRole), "useRole must be either null or non-empty");
+            if (totalInstances <= 0) throw new ArgumentOutOfRangeException(nameof(totalInstances), "totalInstances of cluster router must be > 0");
         }
 
-        public int TotalInstances { get; private set; }
+        public int TotalInstances { get; }
 
-        public bool AllowLocalRoutees { get; private set; }
+        public bool AllowLocalRoutees { get; }
 
-        public string UseRole { get; private set; }
+        public string UseRole { get; }
+
+        protected static string UseRoleOption(string role)
+        {
+            if (string.IsNullOrEmpty(role))
+                return null;
+
+            return role;
+        }
+
+        protected static int GetMaxTotalNrOfInstances(Config config)
+        {
+            int number = config.GetInt("nr-of-instances");
+            if (number == 0 || number == 1)
+            {
+                return config.GetInt("cluster.max-nr-of-instances-per-node");
+            }
+            else
+            {
+                return number; ;
+            }
+        }
     }
+
 
     /// <summary>
     /// <see cref="RouterConfig"/> implementation for deployment on cluster nodes.
@@ -102,109 +155,33 @@ namespace Akka.Cluster.Routing
     /// possible to mix this with built-in routers such as <see cref="RoundRobinGroup"/> or
     /// custom routers.
     /// </summary>
-    public sealed class ClusterRouterGroup : Group, IClusterRouterConfigBase<Group, ClusterRouterGroupSettings>
+    public sealed class ClusterRouterPool : Pool
     {
-        private readonly Group _local;
-        private readonly ClusterRouterGroupSettings _settings;
+        private readonly AtomicCounter _childNameCounter = new AtomicCounter(0);
 
-        public ClusterRouterGroup(Group local, ClusterRouterGroupSettings settings)
-            : base(settings.AllowLocalRoutees ? settings.RouteesPaths.ToArray() : Enumerable.Empty<string>(),local.RouterDispatcher)
-        {
-            _settings = settings;
-            _local = local;
-        }
-
-        public Group Local
-        {
-            get { return _local; }
-        }
-
-        public ClusterRouterGroupSettings Settings
-        {
-            get { return _settings; }
-        }
-
-        public override Router CreateRouter(ActorSystem system)
-        {
-            return Local.CreateRouter(system);
-        }
-
-        public override Group WithDispatcher(string dispatcher)
-        {
-            return new ClusterRouterGroup(Local.WithDispatcher(dispatcher), Settings);
-        }
-
-        internal override RouterActor CreateRouterActor()
-        {
-            return new ClusterRouterGroupActor(Settings);
-        }
-
-        public override bool IsManagementMessage(object message)
-        {
-            return message is ClusterEvent.IClusterDomainEvent || message is ClusterEvent.CurrentClusterState || base.IsManagementMessage(message);
-        }
-
-        public override ISurrogate ToSurrogate(ActorSystem system)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override RouterConfig WithFallback(RouterConfig routerConfig)
-        {
-            var localFallback = routerConfig as ClusterRouterGroup;
-            if (localFallback != null && (localFallback.Local is ClusterRouterGroup)) throw new ConfigurationException("ClusterRouterGroup is not allowed to wrap a ClusterRouterGroup");
-            if (localFallback != null) return Copy(Local.WithFallback(localFallback.Local).AsInstanceOf<Group>());
-            return Copy(Local.WithFallback(routerConfig).AsInstanceOf<Group>());
-        }
-
-        public RouterConfig Copy(Group local = null, ClusterRouterGroupSettings settings = null)
-        {
-            return new ClusterRouterGroup(local ?? Local, settings ?? Settings);
-        }
-    }
-
-    /// <summary>
-    /// <see cref="RouterConfig"/> implementation for deployment on cluster nodes.
-    /// Delegates other duties to the local <see cref="RouterConfig"/>, which makes it
-    /// possible to mix this with built-in routers such as <see cref="RoundRobinGroup"/> or
-    /// custom routers.
-    /// </summary>
-    public sealed class ClusterRouterPool : Pool, IClusterRouterConfigBase<Pool, ClusterRouterPoolSettings>
-    {
         public ClusterRouterPool(Pool local, ClusterRouterPoolSettings settings)
             : base(settings.AllowLocalRoutees ? settings.MaxInstancesPerNode : 0,
             local.Resizer,
             local.SupervisorStrategy,
-             local.RouterDispatcher,false
-            )
+            local.RouterDispatcher,
+            false)
         {
-            if (local.Resizer != null) 
+            if (local.Resizer != null)
                 throw new ConfigurationException("Resizer can't be used together with cluster router.");
-            _settings = settings;
-            _local = local;
+            Settings = settings;
+            Local = local;
         }
 
-        private readonly AtomicCounter _childNameCounter = new AtomicCounter(0);
-        private readonly Pool _local;
-        private readonly ClusterRouterPoolSettings _settings;
+        public ClusterRouterPoolSettings Settings { get; }
 
-        public Pool Local
+        public Pool Local { get; }
+
+        internal override Routee NewRoutee(Props routeeProps, IActorContext context)
         {
-            get { return _local; }
+            var name = "c" + _childNameCounter.IncrementAndGet();
+            var actorRef = ((ActorCell)context).AttachChild(Local.EnrichWithPoolDispatcher(routeeProps, context), false, name);
+            return new ActorRefRoutee(actorRef);
         }
-
-        public ClusterRouterPoolSettings Settings
-        {
-            get { return _settings; }
-        }
-
-        public override SupervisorStrategy SupervisorStrategy
-        {
-            get { return _local.SupervisorStrategy; }
-        }
-
-        public override Resizer Resizer { get { return Local.Resizer; } }
-
 
         public override int GetNrOfInstances(ActorSystem system)
         {
@@ -222,17 +199,34 @@ namespace Akka.Cluster.Routing
             }
         }
 
-        public override int NrOfInstances
+        internal override RouterActor CreateRouterActor()
+        {
+            return new ClusterRouterPoolActor(Local.SupervisorStrategy, Settings);
+        }
+
+        public override SupervisorStrategy SupervisorStrategy
         {
             get
             {
-                return Local.NrOfInstances;
+                return Local.SupervisorStrategy;
             }
         }
 
-        public override string RouterDispatcher
+        public override RouterConfig WithFallback(RouterConfig routerConfig)
         {
-            get { return Local.RouterDispatcher; }
+            var otherClusterRouterPool = routerConfig as ClusterRouterPool;
+
+            if (otherClusterRouterPool != null && otherClusterRouterPool.Local is ClusterRouterPool)
+            {
+                throw new ConfigurationException("ClusterRouterPool is not allowed to wrap a ClusterRouterPool");
+            }
+
+            if (otherClusterRouterPool != null)
+            {
+                return Copy(Local.WithFallback(otherClusterRouterPool.Local).AsInstanceOf<Pool>());
+            }
+
+            return Copy(Local.WithFallback(routerConfig).AsInstanceOf<Pool>());
         }
 
         public override Router CreateRouter(ActorSystem system)
@@ -240,32 +234,32 @@ namespace Akka.Cluster.Routing
             return Local.CreateRouter(system);
         }
 
-        internal override RouterActor CreateRouterActor()
+        public override string RouterDispatcher
         {
-            return new ClusterRouterPoolActor(Local.SupervisorStrategy, Settings);
+            get
+            {
+                return Local.RouterDispatcher;
+            }
         }
 
-        
-
-        public override Pool WithSupervisorStrategy(SupervisorStrategy strategy)
+        public override bool StopRouterWhenAllRouteesRemoved
         {
-            return new ClusterRouterPool(Local.WithSupervisorStrategy(strategy), Settings);
+            get
+            {
+                return false;
+            }
         }
 
-        public override Pool WithResizer(Resizer resizer)
+        public override Props RoutingLogicController(RoutingLogic routingLogic)
         {
-            return new ClusterRouterPool(Local.WithResizer(resizer), Settings);
+            return Local.RoutingLogicController(routingLogic);
         }
-
-        public override Pool WithDispatcher(string dispatcher)
-        {
-            return new ClusterRouterPool(Local.WithDispatcher(dispatcher), Settings);
-        }
-
 
         public override bool IsManagementMessage(object message)
         {
-            return message is ClusterEvent.IClusterDomainEvent || message is ClusterEvent.CurrentClusterState || base.IsManagementMessage(message);
+            return message is ClusterEvent.IClusterDomainEvent
+                || message is ClusterEvent.CurrentClusterState
+                || base.IsManagementMessage(message);
         }
 
         public override ISurrogate ToSurrogate(ActorSystem system)
@@ -273,42 +267,114 @@ namespace Akka.Cluster.Routing
             throw new NotImplementedException();
         }
 
-        public override Routee NewRoutee(Props routeeProps, IActorContext context)
-        {
-            var name = "c" + _childNameCounter.GetAndIncrement();
-            var actorRef = context.ActorOf(EnrichWithPoolDispatcher(routeeProps, context), name);
-            return new ActorRefRoutee(actorRef);
-        }
-
-        public override RouterConfig WithFallback(RouterConfig routerConfig)
-        {
-            var otherClusterRouterPool = routerConfig as ClusterRouterPool;
-            if(otherClusterRouterPool != null && otherClusterRouterPool.Local is ClusterRouterPool) throw new ConfigurationException("ClusterRouterPool is not allowed to wrap a ClusterRouterPool");
-            if (otherClusterRouterPool != null)
-                return Copy(Local.WithFallback(otherClusterRouterPool.Local).AsInstanceOf<Pool>());
-            return Copy(Local.WithFallback(routerConfig).AsInstanceOf<Pool>());
-        }
-
         public RouterConfig Copy(Pool local = null, ClusterRouterPoolSettings settings = null)
         {
             return new ClusterRouterPool(local ?? Local, settings ?? Settings);
         }
-       
     }
 
-
     /// <summary>
-    /// INTERNAL API
-    /// 
-    /// Have to implement this as an interface rather than a base class, so we can continue to inherit from <see cref="Group"/> and <see cref="Pool"/>
-    /// on the concrete cluster router implementations.
+    /// <see cref="RouterConfig"/> implementation for deployment on cluster nodes.
+    /// Delegates other duties to the local <see cref="RouterConfig"/>, which makes it
+    /// possible to mix this with built-in routers such as <see cref="RoundRobinGroup"/> or
+    /// custom routers.
     /// </summary>
-    public interface IClusterRouterConfigBase<out TR, out TC> where TR:RouterConfig
-                                                        where TC:ClusterRouterSettingsBase
+    public sealed class ClusterRouterGroup : Group
     {
-        TR Local { get; }
+        public ClusterRouterGroup(Group local, ClusterRouterGroupSettings settings)
+            : base(settings.AllowLocalRoutees ? settings.RouteesPaths.ToArray() : Enumerable.Empty<string>(), local.RouterDispatcher)
+        {
+            Settings = settings;
+            Local = local;
+        }
 
-        TC Settings { get; }
+        public ClusterRouterGroupSettings Settings { get; }
+
+        public Group Local { get; }
+
+        public override IEnumerable<string> GetPaths(ActorSystem system)
+        {
+            if (Settings.AllowLocalRoutees && !string.IsNullOrEmpty(Settings.UseRole))
+            {
+                if (Cluster.Get(system).SelfRoles.Contains(Settings.UseRole))
+                {
+                    return Settings.RouteesPaths;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            else if (Settings.AllowLocalRoutees && string.IsNullOrEmpty(Settings.UseRole))
+            {
+                return Settings.RouteesPaths;
+            }
+            else return null;
+        }
+
+        internal override RouterActor CreateRouterActor()
+        {
+            return new ClusterRouterGroupActor(Settings);
+        }
+
+        public override Router CreateRouter(ActorSystem system)
+        {
+            return Local.CreateRouter(system);
+        }
+
+        public override string RouterDispatcher
+        {
+            get
+            {
+                return Local.RouterDispatcher;
+            }
+        }
+
+        public override bool StopRouterWhenAllRouteesRemoved
+        {
+            get
+            {
+                return false;
+            }
+        }
+
+        public override Props RoutingLogicController(RoutingLogic routingLogic)
+        {
+            return Local.RoutingLogicController(routingLogic);
+        }
+
+        public override bool IsManagementMessage(object message)
+        {
+            return message is ClusterEvent.IClusterDomainEvent
+                || message is ClusterEvent.CurrentClusterState
+                || base.IsManagementMessage(message);
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return Local.ToSurrogate(system);
+        }
+
+        public override RouterConfig WithFallback(RouterConfig other)
+        {
+            var localFallback = other as ClusterRouterGroup;
+            if (localFallback != null && (localFallback.Local is ClusterRouterGroup))
+            {
+                throw new ConfigurationException("ClusterRouterGroup is not allowed to wrap a ClusterRouterGroup");
+            }
+
+            if (localFallback != null)
+            {
+                return Copy(Local.WithFallback(localFallback.Local).AsInstanceOf<Group>());
+            }
+
+            return Copy(Local.WithFallback(other).AsInstanceOf<Group>());
+        }
+
+        public RouterConfig Copy(Group local = null, ClusterRouterGroupSettings settings = null)
+        {
+            return new ClusterRouterGroup(local ?? Local, settings ?? Settings);
+        }
     }
 
     /// <summary>
@@ -321,43 +387,39 @@ namespace Akka.Cluster.Routing
         protected ClusterRouterActor(ClusterRouterSettingsBase settings)
         {
             Settings = settings;
-            var routedActorCell = (RoutedActorCell) Context;
-            if (routedActorCell == null)
-            {
-                throw new NotSupportedException("Current Context must be of type RouterActorContext");
-            }
-            
-            if(!(routedActorCell.RouterConfig is Pool) && !(routedActorCell.RouterConfig is Group))
-                throw new NotSupportedException(string.Format("Cluster router actor can only be used with Pool or Group, now with {0}", routedActorCell.RouterConfig.GetType()));
 
+            if (!(Cell.RouterConfig is Pool) && !(Cell.RouterConfig is Group))
+            {
+                throw new ActorInitializationException(string.Format("Cluster router actor can only be used with Pool or Group, not with {0}", Cell.RouterConfig.GetType()));
+            }
+
+            Cluster = Cluster.Get(Context.System);
             Nodes = ImmutableSortedSet.Create(Member.AddressOrdering, Cluster.ReadView.Members.Where(IsAvailable).Select(x => x.Address).ToArray());
         }
 
-        private readonly Cluster _cluster = Cluster.Get(Context.System);
-        public Cluster Cluster { get { return _cluster; } }
-
         public ClusterRouterSettingsBase Settings { get; protected set; }
+
+        public Cluster Cluster { get; }
+
+        protected override void PreStart()
+        {
+            Cluster.Subscribe(Self, new[]
+            {
+                typeof(ClusterEvent.IMemberEvent),
+                typeof(ClusterEvent.IReachabilityEvent)
+            });
+        }
+
+        protected override void PostStop()
+        {
+            Cluster.Unsubscribe(Self);
+        }
 
         public ImmutableSortedSet<Address> Nodes { get; private set; }
 
-        public ImmutableSortedSet<Address> AvailableNodes
-        {
-            get
-            {
-                var currentNodes = Nodes;
-                if (currentNodes.IsEmpty && Settings.AllowLocalRoutees && SatisfiesRole(Cluster.SelfRoles))
-                {
-                    //use my own node, cluster information not updated yet
-                    return ImmutableSortedSet.Create(Cluster.SelfAddress);
-                }
-                return currentNodes;
-            }
-        }
-
         public bool IsAvailable(Member m)
         {
-            return m.Status == MemberStatus.Up &&
-                   SatisfiesRole(m.Roles) &&
+            return m.Status == MemberStatus.Up && SatisfiesRole(m.Roles) &&
                    (Settings.AllowLocalRoutees || m.Address != Cluster.SelfAddress);
         }
 
@@ -367,16 +429,39 @@ namespace Akka.Cluster.Routing
             return memberRoles.Contains(Settings.UseRole);
         }
 
+        public ImmutableSortedSet<Address> AvailableNodes
+        {
+            get
+            {
+                if (Nodes.IsEmpty && Settings.AllowLocalRoutees && SatisfiesRole(Cluster.SelfRoles))
+                {
+                    //use my own node, cluster information not updated yet
+                    return ImmutableSortedSet.Create(Cluster.SelfAddress);
+                }
+                return Nodes;
+            }
+        }
+
         /// <summary>
         /// Fills in self address for local <see cref="IActorRef"/>
         /// </summary>
         public Address FullAddress(Routee routee)
         {
             Address a = null;
-            if (routee is ActorRefRoutee) { a = ((ActorRefRoutee)routee).Actor.Path.Address; }
-            else if (routee is ActorSelectionRoutee) { a = ((ActorSelectionRoutee)routee).Selection.Anchor.Path.Address; }
+            if (routee is ActorRefRoutee)
+            {
+                a = ((ActorRefRoutee)routee).Actor.Path.Address;
+            }
+            else if (routee is ActorSelectionRoutee)
+            {
+                a = ((ActorSelectionRoutee)routee).Selection.Anchor.Path.Address;
+            }
 
-            if (a == null || string.IsNullOrEmpty(a.Host) || !a.Port.HasValue) return Cluster.SelfAddress; //local address
+            if (a == null || string.IsNullOrEmpty(a.Host) || !a.Port.HasValue)
+            {
+                return Cluster.SelfAddress; //local address
+            }
+
             return a;
         }
 
@@ -398,52 +483,43 @@ namespace Akka.Cluster.Routing
 
             // unregister routees that live on that node
             var affectedRoutees = Cell.Router.Routees.Where(x => FullAddress(x) == address).ToList();
-            Cell.RemoveRoutees(affectedRoutees, true);
+            Cell.RemoveRoutees(affectedRoutees, stopChild: true);
 
             // addRoutees will not create more than createRoutees and maxInstancesPerNode
             // this is useful when totalInstances < upNodes.size
             AddRoutees();
         }
 
-        protected override void PreStart()
-        {
-            Cluster.Subscribe(Self, new []{ typeof(ClusterEvent.IMemberEvent), typeof(ClusterEvent.IReachabilityEvent) });
-        }
-
-        protected override void PostStop()
-        {
-            Cluster.Unsubscribe(Self);
-        }
-
         protected override void OnReceive(object message)
         {
             if (message is ClusterEvent.CurrentClusterState)
             {
-                var state = message as ClusterEvent.CurrentClusterState;
-                Nodes = ImmutableSortedSet.Create(Member.AddressOrdering,
-                      state.Members.Where(IsAvailable).Select(x => x.Address).ToArray());
+                var state = (ClusterEvent.CurrentClusterState)message;
+                Nodes = ImmutableSortedSet.Create(Member.AddressOrdering, state.Members.Where(IsAvailable).Select(x => x.Address).ToArray());
                 AddRoutees();
             }
             else if (message is ClusterEvent.IMemberEvent)
             {
-                var @event = message as ClusterEvent.IMemberEvent;
-                if (IsAvailable(@event.Member))
-                    AddMember(@event.Member);
+                var memberEvent = (ClusterEvent.IMemberEvent)message;
+                if (IsAvailable(memberEvent.Member))
+                {
+                    AddMember(memberEvent.Member);
+                }
                 else
                 {
                     // other events means that it is no onger interesting, such as
                     // MemberExited, MemberRemoved
-                    RemoveMember(@event.Member);
+                    RemoveMember(memberEvent.Member);
                 }
             }
             else if (message is ClusterEvent.UnreachableMember)
             {
-                var member = message as ClusterEvent.UnreachableMember;
+                var member = (ClusterEvent.UnreachableMember)message;
                 RemoveMember(member.Member);
             }
             else if (message is ClusterEvent.ReachableMember)
             {
-                var member = message as ClusterEvent.ReachableMember;
+                var member =(ClusterEvent.ReachableMember)message;
                 if (IsAvailable(member.Member)) AddMember(member.Member);
             }
             else
@@ -458,6 +534,8 @@ namespace Akka.Cluster.Routing
     /// </summary>
     internal class ClusterRouterGroupActor : ClusterRouterActor
     {
+        private readonly Group _group;
+
         public ClusterRouterGroupActor(ClusterRouterGroupSettings settings) : base(settings)
         {
             Settings = settings;
@@ -470,15 +548,13 @@ namespace Akka.Cluster.Routing
             {
                 throw new ActorInitializationException(string.Format("ClusterRouterGroupActor can only be used with group, not {0}", Cell.RouterConfig.GetType()));
             }
+
             UsedRouteePaths = Settings.AllowLocalRoutees
-                ? ImmutableDictionary<Address, ImmutableHashSet<string>>.Empty.Add(Cluster.SelfAddress,
-                    settings.RouteesPaths)
+                ? ImmutableDictionary<Address, ImmutableHashSet<string>>.Empty.Add(Cluster.SelfAddress, settings.RouteesPaths)
                 : ImmutableDictionary<Address, ImmutableHashSet<string>>.Empty;
         }
 
         public new ClusterRouterGroupSettings Settings { get; private set; }
-
-        private readonly Group _group;
 
         public ImmutableDictionary<Address, ImmutableHashSet<string>> UsedRouteePaths { get; private set; }
 
@@ -487,7 +563,6 @@ namespace Akka.Cluster.Routing
         /// </summary>
         public override void AddRoutees()
         {
-
             Action doAddRoutees = null;
             doAddRoutees = () =>
             {
@@ -497,10 +572,9 @@ namespace Akka.Cluster.Routing
                     var address = deploymentTarget.Item1;
                     var path = deploymentTarget.Item2;
                     var routee = _group.RouteeFor(address + path, Context);
-                    UsedRouteePaths = UsedRouteePaths.SetItem(address,
+                    UsedRouteePaths = UsedRouteePaths.SetItem(
+                        address,
                         UsedRouteePaths.GetOrElse(address, ImmutableHashSet<string>.Empty).Add(path));
-
-                    var currentRoutees = Cell.Router.Routees.ToList();
 
                     //must register each one, since registered routees are used in SelectDeploymentTarget
                     Cell.AddRoutee(routee);
@@ -510,7 +584,6 @@ namespace Akka.Cluster.Routing
             };
 
             doAddRoutees();
-           
         }
 
         public Tuple<Address, string> SelectDeploymentTarget()
@@ -528,8 +601,10 @@ namespace Akka.Cluster.Routing
             else
             {
                 //find the node with the fewest routees
-                var minNode =
-                    UsedRouteePaths.Select(x => new{ Address = x.Key, Used = x.Value }).OrderBy(x => x.Used.Count).First();
+                var minNode = UsedRouteePaths
+                    .Select(x => new { Address = x.Key, Used = x.Value })
+                    .OrderBy(x => x.Used.Count)
+                    .First();
 
                 // pick next of unused paths
                 var minPath = Settings.RouteesPaths.FirstOrDefault(p => !minNode.Used.Contains(p));
@@ -549,17 +624,25 @@ namespace Akka.Cluster.Routing
     /// </summary>
     internal class ClusterRouterPoolActor : ClusterRouterActor
     {
+        protected Pool Pool;
+        private readonly SupervisorStrategy _supervisorStrategy;
+
         public ClusterRouterPoolActor(SupervisorStrategy supervisorStrategy, ClusterRouterPoolSettings settings) : base(settings)
         {
-            Settings = settings;
             _supervisorStrategy = supervisorStrategy;
-            if (_supervisorStrategy == null) throw new ArgumentNullException("supervisorStrategy");
-            _pool = (Pool)Cell.RouterConfig;
+            Settings = settings;
+
+            var pool = Cell.RouterConfig as Pool;
+            if (pool != null)
+            {
+                Pool = pool;
+            }
+            else
+            {
+                throw new ActorInitializationException("RouterPoolActor can only be used with Pool, not " +
+                                                       Cell.RouterConfig.GetType());
+            }
         }
-
-        private readonly Pool _pool;
-
-        private readonly SupervisorStrategy _supervisorStrategy;
 
         protected override SupervisorStrategy SupervisorStrategy()
         {
@@ -574,9 +657,14 @@ namespace Akka.Cluster.Routing
             while (deploymentTarget != null)
             {
                 var routeeProps = Cell.RouteeProps;
-                var deploy = new Deploy(routeeProps.RouterConfig, new RemoteScope(deploymentTarget));
-                
-                var routee = _pool.NewRoutee(routeeProps.WithDeploy(deploy), Context);
+                var deploy = new Deploy(
+                    path: string.Empty,
+                    config: ConfigurationFactory.Empty,
+                    routerConfig: routeeProps.RouterConfig,
+                    scope: new RemoteScope(deploymentTarget),
+                    dispatcher: Deploy.NoDispatcherGiven);
+
+                var routee = Pool.NewRoutee(routeeProps.WithDeploy(deploy), Context);
 
                 //must register each one, since registered routees are used in SelectDeploymentTarget
                 Cell.AddRoutee(routee);
@@ -603,7 +691,33 @@ namespace Akka.Cluster.Routing
             if (target.Value < Settings.MaxInstancesPerNode) return target.Key;
             return null;
         }
+
+        protected override void OnReceive(object message)
+        {
+            // Moved from RouterPoolActor
+            var poolSize = message as AdjustPoolSize;
+            if (poolSize != null)
+            {
+                if (poolSize.Change > 0)
+                {
+                    var newRoutees = Vector.Fill<Routee>(poolSize.Change)(() => Pool.NewRoutee(Cell.RouteeProps, Context));
+                    Cell.AddRoutees(newRoutees);
+                }
+                else if (poolSize.Change < 0)
+                {
+                    var currentRoutees = Cell.Router.Routees.ToArray();
+
+                    var abandon = currentRoutees
+                        .Skip(currentRoutees.Length + poolSize.Change)
+                        .ToList();
+
+                    Cell.RemoveRoutees(abandon, true);
+                }
+            }
+            else
+            {
+                base.OnReceive(message);
+            }
+        }
     }
-
 }
-

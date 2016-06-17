@@ -14,7 +14,7 @@ using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.Routing;
-using Akka.TestKit;
+using FluentAssertions;
 
 namespace Akka.Cluster.Tests.MultiNode.Routing
 {
@@ -22,6 +22,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
     {
         #region Test classes
         public sealed class Get { }
+
         public sealed class Collected
         {
             public Collected(HashSet<object> messages)
@@ -35,9 +36,13 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         public class Destination : UntypedActor
         {
             private readonly HashSet<object> _receivedMessages = new HashSet<object>();
+
             protected override void OnReceive(object message)
             {
-                if (message is Get) Sender.Tell(new Collected(_receivedMessages));
+                if (message is Get)
+                {
+                    Sender.Tell(new Collected(_receivedMessages));
+                }
                 else
                 {
                     _receivedMessages.Add(message);
@@ -47,26 +52,17 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
 
         #endregion
 
-        private readonly RoleName _first;
-        public RoleName First { get { return _first; } }
-
-        private readonly RoleName _second;
-        public RoleName Second { get { return _second; } }
-
-        private readonly RoleName _third;
-
-        public RoleName Third { get { return _third; } }
+        public RoleName First { get; }
+        public RoleName Second { get; }
+        public RoleName Third { get; }
 
         public ClusterConsistentHashingGroupSpecConfig()
         {
-            _first = Role("first");
-            _second = Role("second");
-            _third = Role("third");
+            First = Role("first");
+            Second = Role("second");
+            Third = Role("third");
 
-            CommonConfig = MultiNodeLoggingConfig.LoggingConfig.WithFallback(DebugConfig(false))
-                .WithFallback(ConfigurationFactory.ParseString(@"
-                    akka.cluster.publish-stats-interval = 5s
-                "))
+            CommonConfig = DebugConfig(false)
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
     }
@@ -74,7 +70,6 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
     public class ClusterConsistentHashingGroupMultiNode1 : ClusterConsistentHashingGroupSpec { }
     public class ClusterConsistentHashingGroupMultiNode2 : ClusterConsistentHashingGroupSpec { }
     public class ClusterConsistentHashingGroupMultiNode3 : ClusterConsistentHashingGroupSpec { }
-
 
     public abstract class ClusterConsistentHashingGroupSpec : MultiNodeClusterSpec
     {
@@ -92,29 +87,28 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
             _config = config;
         }
 
-        protected Routees CurrentRoutees(IActorRef router)
+        private Routees CurrentRoutees(IActorRef router)
         {
             var routerAsk = router.Ask<Routees>(new GetRoutees(), GetTimeoutOrDefault(null));
             return routerAsk.Result;
         }
 
-        /// <summary>
-        /// Fills in the self address for local ActorRef
-        /// </summary>
-        protected Address FullAddress(IActorRef actorRef)
+        [MultiNodeFact]
+        public void ClusterConsistentHashingGroupSpecs()
         {
-            if (string.IsNullOrEmpty(actorRef.Path.Address.Host) || !actorRef.Path.Address.Port.HasValue)
-                return Cluster.SelfAddress;
-            return actorRef.Path.Address;
+            A_cluster_router_with_consistent_hashing_group_must_start_cluster_with_3_nodes();
+            A_cluster_router_with_consistent_hashing_group_must_send_to_same_destinations_from_different_nodes();
         }
 
-        //[MultiNodeFact(Skip = "Race conditions - needs debugging")]
-        public void A_cluster_router_with_consistent_hashing_group_must_send_to_same_destinations_from_different_nodes()
+        public void A_cluster_router_with_consistent_hashing_group_must_start_cluster_with_3_nodes()
         {
             Sys.ActorOf(Props.Create<ClusterConsistentHashingGroupSpecConfig.Destination>(), "dest");
             AwaitClusterUp(_config.First, _config.Second, _config.Third);
             EnterBarrier("after-1");
+        }
 
+        public void A_cluster_router_with_consistent_hashing_group_must_send_to_same_destinations_from_different_nodes()
+        {
             ConsistentHashMapping hashMapping = msg =>
             {
                 if (msg is string) return msg;
@@ -124,15 +118,19 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
             var paths = new List<string> { "/user/dest" };
             var router =
                 Sys.ActorOf(
-                    new ClusterRouterGroup(new ConsistentHashingGroup(paths).WithHashMapping(hashMapping),
-                        new ClusterRouterGroupSettings(10, true, null, ImmutableHashSet.Create(paths.ToArray())))
+                    new ClusterRouterGroup(
+                        local: new ConsistentHashingGroup(paths).WithHashMapping(hashMapping),
+                        settings: new ClusterRouterGroupSettings(
+                            10,
+                            ImmutableHashSet.Create(paths.ToArray()),
+                            allowLocalRoutees: true,
+                            useRole: null))
                         .Props(), "router");
 
             // it may take some time until router receives cluster member events
             AwaitAssert(() =>
             {
-                var members = CurrentRoutees(router).Members;
-                members.Count().ShouldBe(3);
+                CurrentRoutees(router).Members.Should().HaveCount(3);
             });
             var keys = new[] { "A", "B", "C", "D", "E", "F", "G" };
             foreach (var key in Enumerable.Range(1, 10).SelectMany(i => keys))
@@ -145,13 +143,12 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
             var b = ExpectMsg<ClusterConsistentHashingGroupSpecConfig.Collected>().Messages;
             var c = ExpectMsg<ClusterConsistentHashingGroupSpecConfig.Collected>().Messages;
 
-            a.Intersect(b).Count().ShouldBe(0);
-            a.Intersect(c).Count().ShouldBe(0);
-            b.Intersect(c).Count().ShouldBe(0);
+            a.Intersect(b).Count().Should().Be(0);
+            a.Intersect(c).Count().Should().Be(0);
+            b.Intersect(c).Count().Should().Be(0);
 
-            (a.Count + b.Count + c.Count).ShouldBe(keys.Length);
+            (a.Count + b.Count + c.Count).Should().Be(keys.Length);
             EnterBarrier("after-2");
         }
     }
 }
-
