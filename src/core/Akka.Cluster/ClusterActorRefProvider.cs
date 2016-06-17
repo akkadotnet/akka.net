@@ -115,38 +115,55 @@ namespace Akka.Cluster
 
         public override Deploy ParseConfig(string key, Config config)
         {
-            var deploy = base.ParseConfig(key, config);
-            if (deploy == null) return null;
-
-            if (deploy.Config.GetBoolean("cluster.enabled"))
+            Config config2 = config;
+            if (config.HasPath("cluster.enabled")
+                && config.GetBoolean("cluster.enabled")
+                && !config.HasPath("nr-of-instances"))
             {
-                if(deploy.Scope != Deploy.NoScopeGiven)
-                    throw new ConfigurationException(string.Format("Cluster deployment can't be combined with scope [{0}]", deploy.Scope));
-                if(deploy.RouterConfig is RemoteRouterConfig)
-                    throw new ConfigurationException(string.Format("Cluster deployment can't be combined with [{0}]", deploy.Config));
+                var maxTotalNrOfInstances = config
+                    .WithFallback(ClusterConfigFactory.Default())
+                    .GetInt("cluster.max-total-nr-of-instances");
+                config2 = ConfigurationFactory.ParseString("nr-of-instances=" + maxTotalNrOfInstances)
+                    .WithFallback(config);
+            }
 
-                if (deploy.RouterConfig is Pool)
+            var deploy = base.ParseConfig(key, config2);
+            if (deploy != null)
+            {
+                if (deploy.Config.GetBoolean("cluster.enabled"))
                 {
-                    return
-                        deploy.WithScope(scope: ClusterScope.Instance)
-                            .WithRouterConfig(new ClusterRouterPool(deploy.RouterConfig as Pool,
-                                ClusterRouterPoolSettings.FromConfig(deploy.Config)));
-                }
-                else if (deploy.RouterConfig is Group)
-                {
-                    return
-                        deploy.WithScope(scope: ClusterScope.Instance)
-                            .WithRouterConfig(new ClusterRouterGroup(deploy.RouterConfig as Group,
-                                ClusterRouterGroupSettings.FromConfig(deploy.Config)));
+                    if (deploy.Scope != Deploy.NoScopeGiven)
+                        throw new ConfigurationException(string.Format("Cluster deployment can't be combined with scope [{0}]", deploy.Scope));
+                    if (deploy.RouterConfig is RemoteRouterConfig)
+                        throw new ConfigurationException(string.Format("Cluster deployment can't be combined with [{0}]", deploy.Config));
+
+                    if (deploy.RouterConfig is Pool)
+                    {
+                        return
+                            deploy.WithScope(scope: ClusterScope.Instance)
+                                .WithRouterConfig(new ClusterRouterPool(deploy.RouterConfig as Pool,
+                                    ClusterRouterPoolSettings.FromConfig(deploy.Config)));
+                    }
+                    else if (deploy.RouterConfig is Group)
+                    {
+                        return
+                            deploy.WithScope(scope: ClusterScope.Instance)
+                                .WithRouterConfig(new ClusterRouterGroup(deploy.RouterConfig as Group,
+                                    ClusterRouterGroupSettings.FromConfig(deploy.Config)));
+                    }
+                    else
+                    {
+                        throw new ArgumentException(string.Format("Cluster-aware router can only wrap Pool or Group, got [{0}]", deploy.RouterConfig.GetType()));
+                    }
                 }
                 else
                 {
-                    throw new ArgumentException(string.Format("Cluster-aware router can only wrap Pool or Group, got [{0}]", deploy.RouterConfig.GetType()));
+                    return deploy;
                 }
             }
             else
             {
-                return deploy;
+                return null;
             }
         }
     }

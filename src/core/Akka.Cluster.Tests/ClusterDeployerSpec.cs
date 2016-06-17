@@ -26,6 +26,7 @@ namespace Akka.Cluster.Tests
           nr-of-instances = 20
           cluster.enabled = on
           cluster.max-nr-of-instances-per-node = 3
+          cluster.max-total-nr-of-instances = 20
           cluster.allow-local-routees = off
         }
         /user/service2 {
@@ -35,6 +36,7 @@ namespace Akka.Cluster.Tests
           nr-of-instances = 20
           routees.paths = [""/user/myservice""]
           cluster.enabled = on
+          cluster.max-total-nr-of-instances = 20
           cluster.allow-local-routees = off
           cluster.use-role = backend
         }

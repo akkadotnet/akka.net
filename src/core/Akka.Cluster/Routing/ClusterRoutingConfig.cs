@@ -42,7 +42,11 @@ namespace Akka.Cluster.Routing
 
         public static ClusterRouterGroupSettings FromConfig(Config config)
         {
-            return new ClusterRouterGroupSettings(config.GetInt("nr-of-instances"), config.GetBoolean("cluster.allow-local-routees"), config.GetString("cluster.use-role"), ImmutableHashSet.Create(config.GetStringList("routees.paths").ToArray()));
+            return new ClusterRouterGroupSettings(
+                GetMaxTotalNrOfInstances(config),
+                config.GetBoolean("cluster.allow-local-routees"),
+                config.GetString("cluster.use-role"),
+                ImmutableHashSet.Create(config.GetStringList("routees.paths").ToArray()));
         }
     }
 
@@ -67,7 +71,11 @@ namespace Akka.Cluster.Routing
 
         public static ClusterRouterPoolSettings FromConfig(Config config)
         {
-            return new ClusterRouterPoolSettings(config.GetInt("nr-of-instances"), config.GetBoolean("cluster.allow-local-routees"), config.GetString("cluster.use-role"), config.GetInt("cluster.max-nr-of-instances-per-node"));
+            return new ClusterRouterPoolSettings(
+                GetMaxTotalNrOfInstances(config),
+                config.GetBoolean("cluster.allow-local-routees"),
+                config.GetString("cluster.use-role"),
+                config.GetInt("cluster.max-nr-of-instances-per-node"));
         }
     }
 
@@ -94,6 +102,19 @@ namespace Akka.Cluster.Routing
         public bool AllowLocalRoutees { get; private set; }
 
         public string UseRole { get; private set; }
+
+        protected static int GetMaxTotalNrOfInstances(Config config)
+        {
+            int number = config.GetInt("nr-of-instances");
+            if (number == 0 || number == 1)
+            {
+                return config.GetInt("cluster.max-nr-of-instances-per-node");
+            }
+            else
+            {
+                return number;
+            }
+        }
     }
 
     /// <summary>

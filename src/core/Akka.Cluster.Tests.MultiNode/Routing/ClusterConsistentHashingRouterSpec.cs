@@ -52,6 +52,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                         cluster {
                             enabled = on
                             max-nr-of-instances-per-node = 2
+                            max-total-nr-of-instances = 10
                         }
                     }
                     akka.actor.deployment {
