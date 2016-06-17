@@ -390,7 +390,7 @@ namespace Akka.Cluster.Routing
 
             if (!(Cell.RouterConfig is Pool) && !(Cell.RouterConfig is Group))
             {
-                throw new NotSupportedException(string.Format("Cluster router actor can only be used with Pool or Group, not with {0}", Cell.RouterConfig.GetType()));
+                throw new ActorInitializationException(string.Format("Cluster router actor can only be used with Pool or Group, not with {0}", Cell.RouterConfig.GetType()));
             }
 
             Cluster = Cluster.Get(Context.System);

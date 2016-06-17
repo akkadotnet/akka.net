@@ -51,7 +51,7 @@ namespace Akka.Remote.Routing
 
         internal override Routee NewRoutee(Props routeeProps, IActorContext context)
         {
-            var name = "c" + _childNameCounter.GetAndIncrement();
+            var name = "c" + _childNameCounter.IncrementAndGet();
             _nodeAddrEnumerator.MoveNext();
 
             var deploy = new Deploy(routeeProps.RouterConfig, new RemoteScope(_nodeAddrEnumerator.Current));
