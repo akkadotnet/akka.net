@@ -1211,8 +1211,8 @@ namespace Akka.Cluster
                 var newOverview = localGossip.Overview.Copy(reachability: newReachability);
                 var newGossip = localGossip.Copy(overview: newOverview);
                 UpdateLatestGossip(newGossip);
-                _log.Warning("Cluster Node [{0}] - Marking node as TERMINATED [{1}], due to quarantine",
-                    Self, node.Address);
+                _log.Warning("Cluster Node [{0}] - Marking node as TERMINATED [{1}], due to quarantine. Node roles [{2}]",
+                    Self, node.Address, string.Join(",", _cluster.SelfRoles));
                 Publish(_latestGossip);
                 Downing(node.Address);
             }
@@ -1494,7 +1494,7 @@ namespace Akka.Cluster
                 else
                 {
                     _leaderActionCounter += 1;
-                    if (_leaderActionCounter == firstNotice || _leaderActionCounter%periodicNotice == 0)
+                    if (_leaderActionCounter == firstNotice || _leaderActionCounter % periodicNotice == 0)
                     {
                         _log.Info(
                             "Leader can currently not perform its duties, reachability status: [{0}], member status: [{1}]",
@@ -1674,15 +1674,15 @@ namespace Akka.Cluster
                         var nonExiting = partitioned.Item2;
 
                         if (nonExiting.Any())
-                            _log.Warning("Cluster Node [{0}] - Marking node(s) as UNREACHABLE [{1}]",
-                                _cluster.SelfAddress, nonExiting.Select(m => m.ToString()).Aggregate((a, b) => a + ", " + b));
+                            _log.Warning("Cluster Node [{0}] - Marking node(s) as UNREACHABLE [{1}]. Node roles [{2}]",
+                                _cluster.SelfAddress, nonExiting.Select(m => m.ToString()).Aggregate((a, b) => a + ", " + b), string.Join(",", _cluster.SelfRoles));
 
                         if (exiting.Any())
                             _log.Warning("Marking exiting node(s) as UNREACHABLE [{0}]. This is expected and they will be removed.",
                                 _cluster.SelfAddress, exiting.Select(m => m.ToString()).Aggregate((a, b) => a + ", " + b));
 
                         if (newlyDetectedReachableMembers.Any())
-                            _log.Info("Marking node(s) as REACHABLE [{0}]", newlyDetectedReachableMembers.Select(m => m.ToString()).Aggregate((a, b) => a + ", " + b));
+                            _log.Info("Marking node(s) as REACHABLE [{0}]. Node roles [{1}]", newlyDetectedReachableMembers.Select(m => m.ToString()).Aggregate((a, b) => a + ", " + b), string.Join(",", _cluster.SelfRoles));
 
                         Publish(_latestGossip);
                     }

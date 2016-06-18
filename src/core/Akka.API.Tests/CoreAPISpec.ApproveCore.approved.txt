@@ -368,6 +368,8 @@ namespace Akka.Actor
     {
         public static readonly Akka.Actor.Address AllSystems;
         public Address(string protocol, string system, string host = null, System.Nullable<int> port = null) { }
+        public bool HasGlobalScope { get; }
+        public bool HasLocalScope { get; }
         public string Host { get; }
         public System.Nullable<int> Port { get; }
         public string Protocol { get; }

@@ -268,11 +268,38 @@ namespace Akka.Cluster
 
         public Reachability Remove(IEnumerable<UniqueAddress> nodes)
         {
-            var newRecords = _records.FindAll(r => !nodes.Contains(r.Observer) && !nodes.Contains(r.Subject));
-            if (newRecords.Count == _records.Count) return this;
- 
-            var newVersions = _versions.RemoveRange(nodes);
-            return new Reachability(newRecords, newVersions);
+            var nodesSet = nodes.ToImmutableHashSet();
+            var newRecords = _records.FindAll(r => !nodesSet.Contains(r.Observer) && !nodesSet.Contains(r.Subject));
+            if (newRecords.Count == _records.Count)
+            {
+                return this;
+            }
+            else
+            {
+                var newVersions = _versions.RemoveRange(nodes);
+                return new Reachability(newRecords, newVersions);
+            }
+        }
+
+        public Reachability RemoveObservers(ImmutableHashSet<UniqueAddress> nodes)
+        {
+            if (nodes.Count == 0)
+            {
+                return this;
+            }
+            else
+            {
+                var newRecords = _records.FindAll(r => !nodes.Contains(r.Observer));
+                if (newRecords.Count == _records.Count)
+                {
+                    return this;
+                }
+                else
+                {
+                    var newVersions = _versions.RemoveRange(nodes);
+                    return new Reachability(newRecords, newVersions);
+                }
+            }
         }
 
         public ReachabilityStatus Status(UniqueAddress observer, UniqueAddress subject)

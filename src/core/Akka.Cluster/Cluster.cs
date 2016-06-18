@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
@@ -168,7 +169,20 @@ namespace Akka.Cluster
         /// </summary>
         public void Join(Address address)
         {
-            ClusterCore.Tell(new ClusterUserAction.JoinTo(address));
+            ClusterCore.Tell(new ClusterUserAction.JoinTo(FillLocal(address)));
+        }
+
+        private Address FillLocal(Address address)
+        {
+            // local address might be used if grabbed from IActorRef.Path.Address
+            if (address.HasLocalScope && address.System == SelfAddress.System)
+            {
+                return SelfAddress;
+            }
+            else
+            {
+                return address;
+            }
         }
 
         /// <summary>
@@ -181,7 +195,8 @@ namespace Akka.Cluster
         /// </summary>
         public void JoinSeedNodes(ImmutableList<Address> seedNodes)
         {
-            ClusterCore.Tell(new InternalClusterAction.JoinSeedNodes(seedNodes));
+            ClusterCore.Tell(
+                new InternalClusterAction.JoinSeedNodes(seedNodes.Select(FillLocal).ToImmutableList()));
         }
 
         /// <summary>
@@ -199,7 +214,7 @@ namespace Akka.Cluster
         /// <param name="address"></param>
         public void Leave(Address address)
         {
-            ClusterCore.Tell(new ClusterUserAction.Leave(address));
+            ClusterCore.Tell(new ClusterUserAction.Leave(FillLocal(address)));
         }
 
         /// <summary>
@@ -212,7 +227,7 @@ namespace Akka.Cluster
         /// </summary>
         public void Down(Address address)
         {
-            ClusterCore.Tell(new ClusterUserAction.Down(address));
+            ClusterCore.Tell(new ClusterUserAction.Down(FillLocal(address)));
         }
 
         /// <summary>
@@ -238,6 +253,28 @@ namespace Akka.Cluster
                 callback();
             else
                 _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberRemovedListener(callback));
+        }
+
+        /// <summary>
+        /// Generate the remote actor path by replacing the Address in the RootActor Path for the given
+        /// ActorRef with the cluster's `SelfAddress`, unless address' host is already defined
+        /// </summary>
+        /// <param name="actorRef"></param>
+        public ActorPath RemotePathOf(IActorRef actorRef)
+        {
+            var path = actorRef.Path;
+            if (!string.IsNullOrEmpty(path.Address.Host))
+            {
+                return path;
+            }
+            else
+            {
+                return (new RootActorPath(path.Root.Address
+                    .WithProtocol(SelfAddress.Protocol)
+                    .WithSystem(SelfAddress.System)
+                    .WithHost(SelfAddress.Host)
+                    .WithPort(SelfAddress.Port)) / string.Join("/", path.Elements)).WithUid(path.Uid);
+            }
         }
 
         /// <summary>

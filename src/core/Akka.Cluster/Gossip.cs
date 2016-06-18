@@ -75,7 +75,15 @@ namespace Akka.Cluster
         public ImmutableSortedSet<Member> Members { get { return _members; } }
         public GossipOverview Overview { get { return _overview; } }
         public VectorClock Version { get { return _version; } }
-        public Reachability ReachabilityExcludingDownedObservers { get { return _reachability.Value; } }
+
+        public Reachability ReachabilityExcludingDownedObservers
+        {
+            get
+            {
+                var downed = _members.Where(m => m.Status == MemberStatus.Down).ToList();
+                return Overview.Reachability.RemoveObservers(downed.Select(m => m.UniqueAddress).ToImmutableHashSet());
+            }
+        }
 
         public Gossip(ImmutableSortedSet<Member> members) : this(members, new GossipOverview(), VectorClock.Create() ) {}
 
@@ -214,17 +222,12 @@ namespace Akka.Cluster
         // version
         public bool Convergence(UniqueAddress selfUniqueAddress)
         {
-            var unreachable = _overview.Reachability.AllUnreachableOrTerminated
+            var unreachable = ReachabilityExcludingDownedObservers.AllUnreachableOrTerminated
                 .Where(node => node != selfUniqueAddress)
                 .Select(GetMember);
 
-            var convergedUnreachable = unreachable
-                .All(m => ConvergenceSkipUnreachableWithMemberStatus.Contains(m.Status));
-
-            var convergedSeen =
-                !_members.Any(m => ConvergenceMemberStatus.Contains(m.Status) && !SeenByNode(m.UniqueAddress));
-
-            return convergedUnreachable && convergedSeen;
+            return unreachable.All(m => ConvergenceSkipUnreachableWithMemberStatus.Contains(m.Status))
+                && !_members.Any(m => ConvergenceMemberStatus.Contains(m.Status) && !SeenByNode(m.UniqueAddress));
         }
 
         public bool IsLeader(UniqueAddress node, UniqueAddress selfUniqueAddress)
