@@ -8,6 +8,7 @@
 using System;
 using Akka.Actor;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
 
 namespace Akka.Cluster.Tests
@@ -113,7 +114,7 @@ namespace Akka.Cluster.Tests
             var a = AutoDownActor(TimeSpan.FromSeconds(2));
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
             a.Tell(new ClusterEvent.UnreachableMember(MemberB));
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            ExpectNoMsg(1.Seconds());
             ExpectMsg(new DownCalled(MemberB.Address));
         }
 
@@ -124,7 +125,7 @@ namespace Akka.Cluster.Tests
             a.Tell(new ClusterEvent.LeaderChanged(MemberB.Address));
             a.Tell(new ClusterEvent.UnreachableMember(MemberC));
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            ExpectNoMsg(1.Seconds());
             ExpectMsg(new DownCalled(MemberC.Address));
         }
 
@@ -135,7 +136,7 @@ namespace Akka.Cluster.Tests
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
             a.Tell(new ClusterEvent.UnreachableMember(MemberC));
             a.Tell(new ClusterEvent.LeaderChanged(MemberB.Address));
-            ExpectNoMsg(TimeSpan.FromSeconds(3));
+            ExpectNoMsg(3.Seconds());
         }
 
         [Fact]
@@ -145,9 +146,8 @@ namespace Akka.Cluster.Tests
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
             a.Tell(new ClusterEvent.UnreachableMember(MemberB));
             a.Tell(new ClusterEvent.ReachableMember(MemberB));
-            ExpectNoMsg(TimeSpan.FromSeconds(3));
+            ExpectNoMsg(3.Seconds());
         }
-
 
         [Fact]
         public void AutoDown_must_not_down_unreachable_is_removed_inbetween_detection_and_specified_duration()
@@ -156,7 +156,7 @@ namespace Akka.Cluster.Tests
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
             a.Tell(new ClusterEvent.UnreachableMember(MemberB));
             a.Tell(new ClusterEvent.MemberRemoved(MemberB.Copy(MemberStatus.Removed), MemberStatus.Exiting));
-            ExpectNoMsg(TimeSpan.FromSeconds(3));
+            ExpectNoMsg(3.Seconds());
         }
 
         [Fact]
@@ -165,9 +165,7 @@ namespace Akka.Cluster.Tests
             var a = AutoDownActor(TimeSpan.Zero);
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
             a.Tell(new ClusterEvent.UnreachableMember(MemberB.Copy(MemberStatus.Down)));
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            ExpectNoMsg(1.Seconds());
         }
-
     }
 }
-

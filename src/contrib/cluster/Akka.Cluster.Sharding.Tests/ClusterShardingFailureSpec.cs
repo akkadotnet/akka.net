@@ -31,7 +31,6 @@ namespace Akka.Cluster.Sharding.Tests
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider""
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = 0s
-                akka.cluster.down-removal-margin = 5s
                 akka.cluster.roles = [""backend""]
                 akka.persistence.journal.plugin = ""akka.persistence.journal.in-mem""
                 akka.persistence.journal.in-mem {

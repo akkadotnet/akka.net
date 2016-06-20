@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util.Internal;
 
@@ -263,7 +264,6 @@ namespace Akka.Cluster
             public MemberRemoved(Member member, MemberStatus previousStatus)
                 : base(member, MemberStatus.Removed)
             {
-                //TODO: Akka exception?
                 if(member.Status != MemberStatus.Removed) throw new ArgumentException(String.Format("Expected Removed status, got {0}", member));
                 _previousStatus = previousStatus;
             }
@@ -570,23 +570,29 @@ namespace Akka.Cluster
             }
         }
 
-        internal static ImmutableList<UnreachableMember> DiffUnreachable(Gossip oldGossip, Gossip newGossip)
+        internal static ImmutableList<UnreachableMember> DiffUnreachable(Gossip oldGossip, Gossip newGossip, UniqueAddress selfUniqueAddress)
         {
-            if (newGossip.Equals(oldGossip)) return ImmutableList.Create<UnreachableMember>();
+            if (newGossip.Equals(oldGossip))
+            {
+                return ImmutableList.Create<UnreachableMember>();
+            }
+
             var oldUnreachableNodes = oldGossip.Overview.Reachability.AllUnreachableOrTerminated;
-            return
-                newGossip.Overview.Reachability.AllUnreachableOrTerminated
-                    .Where(a => !oldUnreachableNodes.Contains(a))
-                    .Select(a => new UnreachableMember(newGossip.GetMember(a)))
+            return newGossip.Overview.Reachability.AllUnreachableOrTerminated
+                    .Where(node => !oldUnreachableNodes.Contains(node) && node != selfUniqueAddress)
+                    .Select(node => new UnreachableMember(newGossip.GetMember(node)))
                     .ToImmutableList();
         }
 
-        internal static ImmutableList<ReachableMember> DiffReachable(Gossip oldGossip, Gossip newGossip)
+        internal static ImmutableList<ReachableMember> DiffReachable(Gossip oldGossip, Gossip newGossip, UniqueAddress selfUniqueAddress)
         {
-            if (newGossip.Equals(oldGossip)) return ImmutableList.Create<ReachableMember>();
-            return
-                oldGossip.Overview.Reachability.AllUnreachable
-                    .Where(a => newGossip.HasMember(a) && newGossip.Overview.Reachability.IsReachable(a))
+            if (newGossip.Equals(oldGossip))
+            {
+                return ImmutableList.Create<ReachableMember>();
+            }
+
+            return oldGossip.Overview.Reachability.AllUnreachable
+                    .Where(node => newGossip.HasMember(node) && newGossip.Overview.Reachability.IsReachable(node) && node != selfUniqueAddress)
                     .Select(a => new ReachableMember(newGossip.GetMember(a)))
                     .ToImmutableList();
         }
@@ -651,16 +657,20 @@ namespace Akka.Cluster
             }
         }
 
-        internal static ImmutableList<SeenChanged> DiffSeen(Gossip oldGossip, Gossip newGossip, UniqueAddress selfUniqueAddres)
+        internal static ImmutableList<SeenChanged> DiffSeen(Gossip oldGossip, Gossip newGossip, UniqueAddress selfUniqueAddress)
         {
-            if (newGossip.Equals(oldGossip)) 
+            if (newGossip.Equals(oldGossip))
+            {
                 return ImmutableList.Create<SeenChanged>();
+            }
 
-            var newConvergence = newGossip.Convergence(selfUniqueAddres);
+            var newConvergence = newGossip.Convergence(selfUniqueAddress);
             var newSeenBy = newGossip.SeenBy;
-            if (newConvergence != oldGossip.Convergence(selfUniqueAddres) || newSeenBy != oldGossip.SeenBy)
-                return ImmutableList.Create(new SeenChanged(newConvergence,
-                        newSeenBy.Select(s => s.Address).ToImmutableHashSet()));
+            if (newConvergence != oldGossip.Convergence(selfUniqueAddress) || newSeenBy != oldGossip.SeenBy)
+            {
+                return ImmutableList.Create(new SeenChanged(newConvergence, newSeenBy.Select(s => s.Address).ToImmutableHashSet()));
+            }
+
             return ImmutableList.Create<SeenChanged>();
         }
 
@@ -672,7 +682,6 @@ namespace Akka.Cluster
             return ImmutableList.Create(new ReachabilityChanged(newGossip.Overview.Reachability));
         }
     }
-
 
     //TODO: IRequiresMessageQueue? 
     sealed class ClusterDomainEventPublisher : UntypedActor
@@ -750,11 +759,11 @@ namespace Akka.Cluster
                 .ToImmutableHashSet();
 
             var state = new ClusterEvent.CurrentClusterState(
-                _latestGossip.Members,
-                unreachable,
-                _latestGossip.SeenBy.Select(s => s.Address).ToImmutableHashSet(),
-                _latestGossip.Leader(_selfUniqueAddress) == null ? null : _latestGossip.Leader(_selfUniqueAddress).Address,
-                _latestGossip.AllRoles.ToImmutableDictionary(r => r, r =>
+                members: _latestGossip.Members,
+                unreachable: unreachable,
+                seenBy: _latestGossip.SeenBy.Select(s => s.Address).ToImmutableHashSet(),
+                leader: _latestGossip.Leader(_selfUniqueAddress) == null ? null : _latestGossip.Leader(_selfUniqueAddress).Address,
+                roleLeaderMap: _latestGossip.AllRoles.ToImmutableDictionary(r => r, r =>
                 {
                     var leader = _latestGossip.RoleLeader(r, _selfUniqueAddress);
                     return leader == null ? null : leader.Address;
@@ -800,8 +809,8 @@ namespace Akka.Cluster
         private void PublishDiff(Gossip oldGossip, Gossip newGossip, Action<object> pub)
         {
             foreach (var @event in ClusterEvent.DiffMemberEvents(oldGossip, newGossip)) pub(@event);
-            foreach (var @event in ClusterEvent.DiffUnreachable(oldGossip, newGossip)) pub(@event);
-            foreach (var @event in ClusterEvent.DiffReachable(oldGossip, newGossip)) pub(@event);
+            foreach (var @event in ClusterEvent.DiffUnreachable(oldGossip, newGossip, _selfUniqueAddress)) pub(@event);
+            foreach (var @event in ClusterEvent.DiffReachable(oldGossip, newGossip, _selfUniqueAddress)) pub(@event);
             foreach (var @event in ClusterEvent.DiffLeader(oldGossip, newGossip, _selfUniqueAddress)) pub(@event);
             foreach (var @event in ClusterEvent.DiffRolesLeader(oldGossip, newGossip, _selfUniqueAddress)) pub(@event);
             // publish internal SeenState for testing purposes

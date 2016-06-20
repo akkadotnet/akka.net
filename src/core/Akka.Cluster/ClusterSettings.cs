@@ -68,7 +68,11 @@ namespace Akka.Cluster
             _leaderActionsInterval = cc.GetTimeSpan("leader-actions-interval");
             _unreachableNodesReaperInterval = cc.GetTimeSpan("unreachable-nodes-reaper-interval");
             _publishStatsInterval = cc.GetTimeSpanWithOffSwitch("publish-stats-interval");
-            _downRemovalMargin = cc.GetTimeSpan("down-removal-margin");
+
+            var key = "down-removal-margin";
+            _downRemovalMargin = cc.GetString(key).ToLowerInvariant().Equals("off") 
+                ? TimeSpan.Zero
+                : cc.GetTimeSpan("down-removal-margin");
 
             _autoDownUnreachableAfter = cc.GetTimeSpanWithOffSwitch("auto-down-unreachable-after");
 
@@ -76,7 +80,6 @@ namespace Akka.Cluster
             _minNrOfMembers = cc.GetInt("min-nr-of-members");
             //TODO:
             //_minNrOfMembersOfRole = cc.GetConfig("role").Root.GetArray().ToImmutableDictionary(o => o. )
-            //TODO: Ignored jmx
             _useDispatcher = cc.GetString("use-dispatcher");
             if (String.IsNullOrEmpty(_useDispatcher)) _useDispatcher = Dispatchers.DefaultDispatcherId;
             _gossipDifferentViewProbability = cc.GetDouble("gossip-different-view-probability");

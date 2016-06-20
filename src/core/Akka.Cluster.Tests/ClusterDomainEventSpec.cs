@@ -10,6 +10,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Xunit;
+using FluentAssertions;
 
 namespace Akka.Cluster.Tests
 {
@@ -20,10 +21,8 @@ namespace Akka.Cluster.Tests
         static readonly Member aUp = TestMember.Create(new Address("akka.tcp", "sys", "a", 2552), MemberStatus.Up, aRoles);
         static readonly Member aRemoved = TestMember.Create(new Address("akka.tcp", "sys", "a", 2552), MemberStatus.Removed, aRoles);
         static readonly ImmutableHashSet<string> bRoles = ImmutableHashSet.Create("AB", "BB");
-        static readonly Member bJoining = TestMember.Create(new Address("akka.tcp", "sys", "b", 2552), MemberStatus.Joining, bRoles);
         static readonly Member bUp = TestMember.Create(new Address("akka.tcp", "sys", "b", 2552), MemberStatus.Up, bRoles);
         static readonly Member bDown = TestMember.Create(new Address("akka.tcp", "sys", "b", 2552), MemberStatus.Down, bRoles);
-        static readonly Member bRemoved = TestMember.Create(new Address("akka.tcp", "sys", "b", 2552), MemberStatus.Removed, bRoles);
         static readonly ImmutableHashSet<string> cRoles = ImmutableHashSet.Create<string>();
         static readonly Member cUp = TestMember.Create(new Address("akka.tcp", "sys", "c", 2552), MemberStatus.Up, cRoles);
         static readonly Member cLeaving = TestMember.Create(new Address("akka.tcp", "sys", "c", 2552), MemberStatus.Leaving, cRoles);
@@ -36,8 +35,7 @@ namespace Akka.Cluster.Tests
         static readonly Member eUp = TestMember.Create(new Address("akka.tcp", "sys", "e", 2552), MemberStatus.Up, eRoles);
         static readonly Member eDown = TestMember.Create(new Address("akka.tcp", "sys", "e", 2552), MemberStatus.Down, eRoles);
 
-        private static readonly UniqueAddress selfDummyAddress =
-            new UniqueAddress(new Address("akka.tcp", "sys", "selfDummy", 2552), 17);
+        static readonly UniqueAddress selfDummyAddress = new UniqueAddress(new Address("akka.tcp", "sys", "selfDummy", 2552), 17);
 
         private static Tuple<Gossip, ImmutableHashSet<UniqueAddress>> Converge(Gossip gossip)
         {
@@ -52,7 +50,9 @@ namespace Akka.Cluster.Tests
         {
             var g1 = new Gossip(ImmutableSortedSet.Create(aUp));
 
-            Assert.Equal(ImmutableSortedSet.Create<object>(), ClusterEvent.DiffUnreachable(g1, g1));
+            ClusterEvent.DiffUnreachable(g1, g1, selfDummyAddress)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create<ClusterEvent.UnreachableMember>());
         }
 
         [Fact]
@@ -65,10 +65,17 @@ namespace Akka.Cluster.Tests
             var g2 = t2.Item1;
             var s2 = t2.Item2;
 
-            Assert.Equal(ImmutableList.Create<ClusterEvent.IMemberEvent>(new ClusterEvent.MemberUp(bUp), new ClusterEvent.MemberJoined(eJoining)), ClusterEvent.DiffMemberEvents(g1, g2));
-            Assert.Equal(ImmutableList.Create<ClusterEvent.UnreachableMember>(), ClusterEvent.DiffUnreachable(g1, g2));
+            ClusterEvent.DiffMemberEvents(g1, g2)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create<ClusterEvent.IMemberEvent>(new ClusterEvent.MemberUp(bUp), new ClusterEvent.MemberJoined(eJoining)));
 
-            Assert.Equal(ImmutableList.Create(new ClusterEvent.SeenChanged(true, s2.Select(s => s.Address).ToImmutableHashSet())), ClusterEvent.DiffSeen(g1, g2, selfDummyAddress));
+            ClusterEvent.DiffUnreachable(g1, g2, selfDummyAddress)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create<ClusterEvent.UnreachableMember>());
+
+            ClusterEvent.DiffSeen(g1, g2, selfDummyAddress)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create(new ClusterEvent.SeenChanged(true, s2.Select(s => s.Address).ToImmutableHashSet())));
         }
 
         [Fact]
@@ -81,9 +88,17 @@ namespace Akka.Cluster.Tests
             var g2 = t2.Item1;
             var s2 = t2.Item2;
 
-            Assert.Equal(ImmutableList.Create<ClusterEvent.IMemberEvent>(new ClusterEvent.MemberUp(aUp), new ClusterEvent.MemberLeft(cLeaving), new ClusterEvent.MemberJoined(eJoining)), ClusterEvent.DiffMemberEvents(g1, g2));
-            Assert.Equal(ImmutableList.Create<ClusterEvent.UnreachableMember>(), ClusterEvent.DiffUnreachable(g1, g2));
-            Assert.Equal(ImmutableList.Create(new ClusterEvent.SeenChanged(true, s2.Select(s => s.Address).ToImmutableHashSet())), ClusterEvent.DiffSeen(g1, g2, selfDummyAddress));
+            ClusterEvent.DiffMemberEvents(g1, g2)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create<ClusterEvent.IMemberEvent>(new ClusterEvent.MemberUp(aUp), new ClusterEvent.MemberLeft(cLeaving), new ClusterEvent.MemberJoined(eJoining)));
+
+            ClusterEvent.DiffUnreachable(g1, g2, selfDummyAddress)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create<ClusterEvent.UnreachableMember>());
+
+            ClusterEvent.DiffSeen(g1, g2, selfDummyAddress)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create(new ClusterEvent.SeenChanged(true, s2.Select(s => s.Address).ToImmutableHashSet())));
         }
 
         [Fact]
@@ -97,15 +112,26 @@ namespace Akka.Cluster.Tests
                 Unreachable(aUp.UniqueAddress, bDown.UniqueAddress);
             var g2 = new Gossip(ImmutableSortedSet.Create(aUp, cUp, bDown, eDown), new GossipOverview(reachability2));
 
-            Assert.Equal(ImmutableList.Create(new ClusterEvent.UnreachableMember(bDown)), ClusterEvent.DiffUnreachable(g1, g2));
-            Assert.Equal(ImmutableList.Create<ClusterEvent.SeenChanged>(), ClusterEvent.DiffSeen(g1, g2, selfDummyAddress));
-        }
+            ClusterEvent.DiffUnreachable(g1, g2, selfDummyAddress)
+                 .Should()
+                 .BeEquivalentTo(ImmutableList.Create(new ClusterEvent.UnreachableMember(bDown)));
+
+            // never include self member in unreachable
+            ClusterEvent.DiffUnreachable(g1, g2, bDown.UniqueAddress)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create<ClusterEvent.UnreachableMember>());
+
+            ClusterEvent.DiffSeen(g1, g2, selfDummyAddress)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create<ClusterEvent.SeenChanged>());
+       }
 
         [Fact]
         public void DomainEvents_must_be_produced_for_members_becoming_reachable_after_unreachable()
         {
             var reachability1 = Reachability.Empty.
-                Unreachable(aUp.UniqueAddress, cUp.UniqueAddress).Reachable(aUp.UniqueAddress, cUp.UniqueAddress).
+                Unreachable(aUp.UniqueAddress, cUp.UniqueAddress).
+                Reachable(aUp.UniqueAddress, cUp.UniqueAddress).
                 Unreachable(aUp.UniqueAddress, eUp.UniqueAddress).
                 Unreachable(aUp.UniqueAddress, bUp.UniqueAddress);
             var g1 = new Gossip(ImmutableSortedSet.Create(aUp, bUp, cUp, eUp), new GossipOverview(reachability1));
@@ -114,25 +140,75 @@ namespace Akka.Cluster.Tests
                 Reachable(aUp.UniqueAddress, bUp.UniqueAddress);
             var g2 = new Gossip(ImmutableSortedSet.Create(aUp, cUp, bUp, eUp), new GossipOverview(reachability2));
 
-            Assert.Equal(ImmutableList.Create(new ClusterEvent.UnreachableMember(cUp)), ClusterEvent.DiffUnreachable(g1, g2));
-            Assert.Equal(ImmutableList.Create(new ClusterEvent.ReachableMember(bUp)), ClusterEvent.DiffReachable(g1,g2));
+            ClusterEvent.DiffUnreachable(g1, g2, selfDummyAddress)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create(new ClusterEvent.UnreachableMember(cUp)));
+            // never include self member in unreachable
+            ClusterEvent.DiffUnreachable(g1, g2, cUp.UniqueAddress)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create<ClusterEvent.UnreachableMember>());
+
+            ClusterEvent.DiffReachable(g1, g2, selfDummyAddress)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create(new ClusterEvent.ReachableMember(bUp)));
+            // never include self member in reachable
+            ClusterEvent.DiffReachable(g1, g2, bUp.UniqueAddress)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create<ClusterEvent.ReachableMember>());
+        }
+
+        [Fact]
+        public void DomainEvents_must_be_produced_for_removed_members()
+        {
+            var t1 = Converge(new Gossip(ImmutableSortedSet.Create(aUp, dExiting)));
+            var t2 = Converge(new Gossip(ImmutableSortedSet.Create(aUp)));
+
+            var g1 = t1.Item1;
+            var g2 = t2.Item1;
+            var s2 = t2.Item2;
+
+            ClusterEvent.DiffMemberEvents(g1, g2)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create<ClusterEvent.IMemberEvent>(new ClusterEvent.MemberRemoved(dRemoved, MemberStatus.Exiting)));
+
+            ClusterEvent.DiffUnreachable(g1, g2, selfDummyAddress)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create<ClusterEvent.UnreachableMember>());
+
+            ClusterEvent.DiffSeen(g1, g2, selfDummyAddress)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create(new ClusterEvent.SeenChanged(true, s2.Select(s => s.Address).ToImmutableHashSet())));
         }
 
         [Fact]
         public void DomainEvents_must_be_produced_for_convergence_changes()
         {
-            var g1 =
-                new Gossip(ImmutableSortedSet.Create(aUp, bUp, eJoining)).Seen(aUp.UniqueAddress)
-                    .Seen(bUp.UniqueAddress)
-                    .Seen(eJoining.UniqueAddress);
-            var g2 = new Gossip(ImmutableSortedSet.Create(aUp, bUp, eJoining)).Seen(aUp.UniqueAddress).Seen(bUp.UniqueAddress);
+            var g1 = new Gossip(ImmutableSortedSet.Create(aUp, bUp, eJoining))
+                .Seen(aUp.UniqueAddress)
+                .Seen(bUp.UniqueAddress)
+                .Seen(eJoining.UniqueAddress);
+            var g2 = new Gossip(ImmutableSortedSet.Create(aUp, bUp, eJoining))
+                .Seen(aUp.UniqueAddress)
+                .Seen(bUp.UniqueAddress);
 
-            Assert.Equal(ImmutableList.Create<ClusterEvent.IMemberEvent>(), ClusterEvent.DiffMemberEvents(g1, g2));
-            Assert.Equal(ImmutableList.Create<ClusterEvent.UnreachableMember>(), ClusterEvent.DiffUnreachable(g1, g2));
-            Assert.Equal(ImmutableList.Create(new ClusterEvent.SeenChanged(true, ImmutableHashSet.Create(aUp.Address, bUp.Address))), ClusterEvent.DiffSeen(g1, g2, selfDummyAddress));
-            Assert.Equal(ImmutableList.Create<ClusterEvent.IMemberEvent>(), ClusterEvent.DiffMemberEvents(g2, g1));
-            Assert.Equal(ImmutableList.Create<ClusterEvent.UnreachableMember>(), ClusterEvent.DiffUnreachable(g2, g1));
-            Assert.Equal(ImmutableList.Create(new ClusterEvent.SeenChanged(true, ImmutableHashSet.Create(aUp.Address, bUp.Address, eJoining.Address))), ClusterEvent.DiffSeen(g2, g1, selfDummyAddress));
+            ClusterEvent.DiffMemberEvents(g1, g2)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create<ClusterEvent.IMemberEvent>());
+            ClusterEvent.DiffUnreachable(g1, g2, selfDummyAddress)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create<ClusterEvent.UnreachableMember>());
+            ClusterEvent.DiffSeen(g1, g2, selfDummyAddress)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create(new ClusterEvent.SeenChanged(true, ImmutableHashSet.Create(aUp.Address, bUp.Address))));
+            ClusterEvent.DiffMemberEvents(g2, g1)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create<ClusterEvent.IMemberEvent>());
+            ClusterEvent.DiffUnreachable(g1, g1, selfDummyAddress)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create<ClusterEvent.UnreachableMember>());
+            ClusterEvent.DiffSeen(g2, g1, selfDummyAddress)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create(new ClusterEvent.SeenChanged(true, ImmutableHashSet.Create(aUp.Address, bUp.Address, eJoining.Address))));
         }
 
         [Fact]
@@ -145,10 +221,18 @@ namespace Akka.Cluster.Tests
             var g2 = t2.Item1;
             var s2 = t2.Item2;
 
-            Assert.Equal(ImmutableList.Create(new ClusterEvent.MemberRemoved(aRemoved, MemberStatus.Up)), ClusterEvent.DiffMemberEvents(g1, g2));
-            Assert.Equal(ImmutableList.Create<ClusterEvent.UnreachableMember>(), ClusterEvent.DiffUnreachable(g1, g2));
-            Assert.Equal(ImmutableList.Create(new ClusterEvent.SeenChanged(true, s2.Select(a => a.Address).ToImmutableHashSet())), ClusterEvent.DiffSeen(g1, g2, selfDummyAddress));
-            Assert.Equal(ImmutableList.Create(new ClusterEvent.LeaderChanged(bUp.Address)), ClusterEvent.DiffLeader(g1, g2, selfDummyAddress));
+            ClusterEvent.DiffMemberEvents(g1, g2)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create(new ClusterEvent.MemberRemoved(aRemoved, MemberStatus.Up)));
+            ClusterEvent.DiffUnreachable(g1, g2, selfDummyAddress)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create<ClusterEvent.UnreachableMember>());
+            ClusterEvent.DiffSeen(g1, g2, selfDummyAddress)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create(new ClusterEvent.SeenChanged(true, s2.Select(a => a.Address).ToImmutableHashSet())));
+            ClusterEvent.DiffLeader(g1, g2, selfDummyAddress)
+                .Should()
+                .BeEquivalentTo(ImmutableList.Create(new ClusterEvent.LeaderChanged(bUp.Address)));
         }
 
         [Fact]
@@ -157,21 +241,21 @@ namespace Akka.Cluster.Tests
             var g0 = Gossip.Empty;
             var g1 = new Gossip(ImmutableSortedSet.Create(aUp, bUp, cUp, dLeaving, eJoining));
             var g2 = new Gossip(ImmutableSortedSet.Create(bUp, cUp, dExiting, eJoining));
+
             var expected = ImmutableHashSet.Create(
                 new ClusterEvent.RoleLeaderChanged("AA", aUp.Address),
                 new ClusterEvent.RoleLeaderChanged("AB", aUp.Address),
                 new ClusterEvent.RoleLeaderChanged("BB", bUp.Address),
                 new ClusterEvent.RoleLeaderChanged("DD", dLeaving.Address),
                 new ClusterEvent.RoleLeaderChanged("DE", dLeaving.Address),
-                new ClusterEvent.RoleLeaderChanged("EE", eUp.Address)
-                );
-            Assert.Equal(expected, ClusterEvent.DiffRolesLeader(g0, g1, selfDummyAddress));
+                new ClusterEvent.RoleLeaderChanged("EE", eUp.Address));
+            ClusterEvent.DiffRolesLeader(g0, g1, selfDummyAddress).Should().BeEquivalentTo(expected);
+
             var expected2 = ImmutableHashSet.Create(
                 new ClusterEvent.RoleLeaderChanged("AA", null),
                 new ClusterEvent.RoleLeaderChanged("AB", bUp.Address),
-                new ClusterEvent.RoleLeaderChanged("DE", eJoining.Address)
-                );
-            Assert.Equal(expected2, ClusterEvent.DiffRolesLeader(g1, g2, selfDummyAddress));
+                new ClusterEvent.RoleLeaderChanged("DE", eJoining.Address));
+            ClusterEvent.DiffRolesLeader(g1, g2, selfDummyAddress).Should().BeEquivalentTo(expected2);
         }
     }
 }
