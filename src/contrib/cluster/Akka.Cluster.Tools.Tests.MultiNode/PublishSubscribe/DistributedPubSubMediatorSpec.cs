@@ -11,7 +11,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
-using Akka.Cluster.Tests.MultiNode;
 using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Cluster.Tools.PublishSubscribe.Internal;
 using Akka.Configuration;
@@ -19,6 +18,7 @@ using Akka.Event;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Xunit;
+using FluentAssertions;
 
 namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 {
@@ -339,7 +339,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     // send to actor at the same node
                     u1.Tell(new Whisper("/user/u2", "hello"));
                     ExpectMsg("hello");
-                    LastSender.ShouldBe(u2);
+                    LastSender.Should().Be(u2);
                 }, _first);
 
                 RunOn(() =>
@@ -375,7 +375,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 RunOn(() =>
                 {
                     ExpectMsg("hi there");
-                    LastSender.Path.Name.ShouldBe("u4");
+                    LastSender.Path.Name.Should().Be("u4");
                 }, _second);
                 EnterBarrier("after-2");
             });
@@ -403,7 +403,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 RunOn(() =>
                 {
                     ExpectMsg("go");
-                    LastSender.Path.Name.ShouldBe("u4");
+                    LastSender.Path.Name.Should().Be("u4");
                 }, _second);
                 EnterBarrier("after-3");
             });
@@ -465,7 +465,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 RunOn(() =>
                 {
                     ExpectMsg("hi");
-                    LastSender.Path.Name.ShouldBe("u7");
+                    LastSender.Path.Name.Should().Be("u7");
                 }, _first, _second);
 
                 RunOn(() =>
@@ -510,13 +510,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 RunOn(() =>
                 {
                     var names = ReceiveWhile(x => "hello all".Equals(x) ? LastSender.Path.Name : null, msgs: 2);
-                    names.All(x => x == "u8" || x == "u9").ShouldBeTrue();
+                    names.All(x => x == "u8" || x == "u9").Should().BeTrue();
                 }, _first);
 
                 RunOn(() =>
                 {
                     ExpectMsg("hello all");
-                    LastSender.Path.Name.ShouldBe("u10");
+                    LastSender.Path.Name.Should().Be("u10");
                 }, _second);
 
                 RunOn(() =>
@@ -599,7 +599,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 RunOn(() =>
                 {
                     ExpectMsg("hi");
-                    LastSender.Path.Name.ShouldBe("u11");
+                    LastSender.Path.Name.Should().Be("u11");
                 }, _first, _second);
 
                 RunOn(() =>
@@ -619,9 +619,9 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     var u12 = CreateChatUser("u12");
                     u12.Tell(new JoinGroup("topic2", "group1"));
                     var message = ExpectMsg<SubscribeAck>();
-                    message.Subscribe.Topic.ShouldBe("topic2");
-                    message.Subscribe.Group.ShouldBe("group1");
-                    message.Subscribe.Ref.ShouldBe(u12);
+                    message.Subscribe.Topic.Should().Be("topic2");
+                    message.Subscribe.Group.Should().Be("group1");
+                    message.Subscribe.Ref.Should().Be(u12);
                 }, _first);
 
                 RunOn(() =>

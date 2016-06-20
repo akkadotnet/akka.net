@@ -9,13 +9,10 @@ using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
-using Akka.Cluster.Tests.MultiNode;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
-using Akka.TestKit;
 using FluentAssertions;
-using Xunit;
 
 namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 {
@@ -93,7 +90,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 AwaitAssert(() =>
                 {
                     var members = Cluster.ReadView.State.Members;
-                    members.Count.ShouldBe(3);
+                    members.Count.Should().Be(3);
                     members.All(c => c.Status == MemberStatus.Up).Should().BeTrue();
                 });
             });
