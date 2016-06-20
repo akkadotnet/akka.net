@@ -124,7 +124,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 {
                     Echo(_config.Fourth).Tell("hello");
                     var address = ExpectMsg<IActorRef>(TimeSpan.FromSeconds(3)).Path.Address;
-                    Assert.Equal(address, GetAddress(_config.Fourth));
+                    GetAddress(_config.Fourth).Should().Be(address);
                 }, _config.Controller);
                 EnterBarrier("_config.Fourth-verified");
             });
