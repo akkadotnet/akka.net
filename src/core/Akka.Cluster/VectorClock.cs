@@ -26,7 +26,7 @@ namespace Akka.Cluster
     /// 
     /// Based on code from the 'vlock' VectorClock library by Coda Hale.
     /// </summary>
-    class VectorClock
+    internal class VectorClock
     {
         /**
          * Hash representation of a versioned node name.
@@ -172,6 +172,32 @@ namespace Akka.Cluster
             return CompareOnlyTo(that, Ordering.Same) == Ordering.Same;
         }
 
+        public static bool operator >(VectorClock left, VectorClock right)
+        {
+            return left.IsAfter(right);
+        }
+
+        public static bool operator <(VectorClock left, VectorClock right)
+        {
+            return left.IsBefore(right);
+        }
+
+        public static bool operator ==(VectorClock left, VectorClock right)
+        {
+            if (ReferenceEquals(left, null))
+                return false;
+
+            return left.IsSameAs(right);
+        }
+
+        public static bool operator !=(VectorClock left, VectorClock right)
+        {
+            if (ReferenceEquals(left, null))
+                return false;
+
+            return left.IsConcurrentWith(right);
+        }
+
         private readonly static KeyValuePair<Node, long> CmpEndMarker = new KeyValuePair<Node, long>(Node.Create("endmarker"), long.MinValue);
 
         /**
@@ -185,7 +211,7 @@ namespace Akka.Cluster
          *
          * If you send in the ordering FullOrder, you will get a full comparison.
          */
-        private Ordering CompareOnlyTo(VectorClock that, Ordering order)
+        internal Ordering CompareOnlyTo(VectorClock that, Ordering order)
         {
             if (Equals(that) || Versions.Equals(that.Versions)) return Ordering.Same;
 
@@ -261,9 +287,9 @@ namespace Akka.Cluster
             return CompareOnlyTo(that, Ordering.FullOrder);
         }
 
-        /**
-         * Merges this VectorClock with another VectorClock. E.g. merges its versioned history.
-         */
+        /// <summary>
+        /// Merges this VectorClock with another VectorClock. E.g. merges its versioned history.
+        /// </summary>
         public VectorClock Merge(VectorClock that)
         {
             var mergedVersions = that.Versions;
@@ -276,6 +302,19 @@ namespace Akka.Cluster
                 }
             }
             return new VectorClock(mergedVersions);
+        }
+
+        /// <summary>
+        /// Prunes the specified removed node.
+        /// </summary>
+        /// <param name="removedNode">The removed node.</param>
+        public VectorClock Prune(Node removedNode)
+        {
+            if (Versions.ContainsKey(removedNode))
+            {
+                return Create(Versions.Remove(removedNode));
+            }
+            return this;
         }
 
         public override string ToString()

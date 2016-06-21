@@ -297,7 +297,16 @@ namespace Akka.Cluster
             }
         }
 
-        public override string ToString()
+        public Gossip Prune(VectorClock.Node removedNode)
+        {
+            var newVersion = Version.Prune(removedNode);
+            if (newVersion.Equals(Version))
+                return this;
+            else
+                return new Gossip(Members, Overview, newVersion);
+        }
+
+    public override string ToString()
         {
             return String.Format("Gossip(members = [{0}], overview = {1}, version = {2}",
                 _members.Select(m => m.ToString()).Aggregate((a, b) => a + ", " + b), _overview, _version);

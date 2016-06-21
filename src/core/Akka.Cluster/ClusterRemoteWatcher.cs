@@ -73,52 +73,56 @@ namespace Akka.Cluster
             {
                 _clusterNodes =
                     state.Members.Select(m => m.Address).Where(a => a != _cluster.SelfAddress).ToImmutableHashSet();
-                foreach(var node in _clusterNodes) TakeOverResponsibility(node);
+                foreach (var node in _clusterNodes) TakeOverResponsibility(node);
                 Unreachable.ExceptWith(_clusterNodes);
                 return;
             }
+
             var memberUp = message as ClusterEvent.MemberUp;
             if (memberUp != null)
             {
-                MemberUp(memberUp);
+                MemberUp(memberUp.Member);
                 return;
             }
+
             var memberRemoved = message as ClusterEvent.MemberRemoved;
             if (memberRemoved != null)
             {
-                MemberRemoved(memberRemoved);
+                MemberRemoved(memberRemoved.Member, memberRemoved.PreviousStatus);
                 return;
             }
+
             if (message is ClusterEvent.IMemberEvent) return; // not interesting
+
             base.OnReceive(message);
         }
 
-        private void MemberUp(ClusterEvent.MemberUp memberUp)
+        private void MemberUp(Member member)
         {
-            if (memberUp.Member.Address != _cluster.SelfAddress)
+            if (!member.Address.Equals(_cluster.SelfAddress))
             {
-                _clusterNodes = _clusterNodes.Add(memberUp.Member.Address);
-                TakeOverResponsibility(memberUp.Member.Address);
-                Unreachable.Remove(memberUp.Member.Address);
+                _clusterNodes = _clusterNodes.Add(member.Address);
+                TakeOverResponsibility(member.Address);
+                Unreachable.Remove(member.Address);
             }
         }
 
-        private void MemberRemoved(ClusterEvent.MemberRemoved memberRemoved)
+        private void MemberRemoved(Member member, MemberStatus previousStatus)
         {
-            if (memberRemoved.Member.Address != _cluster.SelfAddress)
+            if (!member.Address.Equals(_cluster.SelfAddress))
             {
-                _clusterNodes = _clusterNodes.Remove(memberRemoved.Member.Address);
-                if (memberRemoved.PreviousStatus == MemberStatus.Down)
+                _clusterNodes = _clusterNodes.Remove(member.Address);
+                if (previousStatus == MemberStatus.Down)
                 {
-                    Quarantine(memberRemoved.Member.Address, memberRemoved.Member.UniqueAddress.Uid);
+                    Quarantine(member.Address, member.UniqueAddress.Uid);
                 }
-                PublishAddressTerminated(memberRemoved.Member.Address);
+                PublishAddressTerminated(member.Address);
             }
         }
 
         protected override void WatchNode(IInternalActorRef watchee)
         {
-            if(!_clusterNodes.Contains(watchee.Path.Address)) base.WatchNode(watchee);
+            if (!_clusterNodes.Contains(watchee.Path.Address)) base.WatchNode(watchee);
         }
 
         /// <summary>
