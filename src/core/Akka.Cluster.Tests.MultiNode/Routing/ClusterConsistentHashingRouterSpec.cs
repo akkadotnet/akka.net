@@ -107,8 +107,9 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 CurrentRoutees(router).Count().ShouldBe(6);
             });
             var routees = CurrentRoutees(router);
-            var routerMembers = routees.Select(x => FullAddress(((ActorRefRoutee)x).Actor)).Distinct().ToList();
-            routerMembers.ShouldBe(Roles.Select(GetAddress).ToList());
+            var routerMembers = new HashSet<Address>(routees.Select(x => FullAddress(((ActorRefRoutee)x).Actor)));
+            var expected = new HashSet<Address>(Roles.Select(GetAddress).ToList());
+            routerMembers.SetEquals(expected).Should().BeTrue($"Expected [{string.Join(",", expected)}] but was [{string.Join(",", routerMembers)}]");
 
             router.Tell("a", TestActor);
             var destinationA = ExpectMsg<IActorRef>();
@@ -120,15 +121,15 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         public void ClusterConsistentHashingRouterSpecs()
         {
             A_cluster_router_with_consistent_hashing_pool_must_start_cluster_with2_nodes();
-            // A_cluster_router_with_consistent_hashing_pool_must_create_routees_from_configuration();
-            // A_cluster_router_with_consistent_hashing_pool_must_select_destination_based_on_hash_key();
-            // A_cluster_router_with_consistent_hashing_pool_must_deploy_routees_to_new_member_nodes_in_the_cluster();
-            // A_cluster_router_with_consistent_hashing_pool_must_deploy_programatically_defined_routees_to_the_member_nodes_in_the_cluster();
-            // A_cluster_router_with_consistent_hashing_pool_must_handle_combination_of_configured_router_and_programatically_defined_hash_mapping();
-            // A_cluster_router_with_consistent_hashing_pool_must_handle_combination_of_configured_router_and_programatically_defined_hash_mapping_and_cluster_config();
+            A_cluster_router_with_consistent_hashing_pool_must_create_routees_from_configuration();
+            A_cluster_router_with_consistent_hashing_pool_must_select_destination_based_on_hash_key();
+            A_cluster_router_with_consistent_hashing_pool_must_deploy_routees_to_new_member_nodes_in_the_cluster();
+            A_cluster_router_with_consistent_hashing_pool_must_deploy_programatically_defined_routees_to_the_member_nodes_in_the_cluster();
+            A_cluster_router_with_consistent_hashing_pool_must_handle_combination_of_configured_router_and_programatically_defined_hash_mapping();
+            A_cluster_router_with_consistent_hashing_pool_must_handle_combination_of_configured_router_and_programatically_defined_hash_mapping_and_cluster_config();
 
-            // Custom specs
-            // A_cluster_router_with_consistent_hashing_pool_must_remove_routees_from_downed_node();
+            //Custom specs
+             A_cluster_router_with_consistent_hashing_pool_must_remove_routees_from_downed_node();
         }
 
         protected void A_cluster_router_with_consistent_hashing_pool_must_start_cluster_with2_nodes()

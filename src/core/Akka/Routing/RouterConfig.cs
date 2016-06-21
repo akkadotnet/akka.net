@@ -43,6 +43,12 @@ namespace Akka.Routing
         }
 
         /// <summary>
+        /// A configuration that specifies that no router is to be used.
+        /// </summary>
+        [Obsolete("Use NoRouter.Instance instead")]
+        public static RouterConfig NoRouter => Routing.NoRouter.Instance;
+
+        /// <summary>
         /// Creates a router that is responsible for routing messages to routees within the provided <paramref name="system"/>.
         /// </summary>
         /// <param name="system">The ActorSystem this router belongs to.</param>

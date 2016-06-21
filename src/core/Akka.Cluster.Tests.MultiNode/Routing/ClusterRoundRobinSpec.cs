@@ -184,15 +184,15 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         public void ClusterRoundRobinSpecs()
         {
             A_cluster_router_with_a_RoundRobin_router_must_start_cluster_with_2_nodes();
-            //A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_the_member_nodes_in_the_cluster();
-            //A_cluster_router_with_a_RoundRobin_router_must_lookup_routees_on_the_member_nodes_in_the_cluster();
-            //A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_new_nodes_in_the_cluster();
-            //A_cluster_router_with_a_RoundRobin_router_must_lookup_routees_on_new_nodes_in_the_cluster();
-            //A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_only_remote_nodes_when_allowlocalrouteesoff();
-            //A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_specified_node_role();
-            //A_cluster_router_with_a_RoundRobin_router_must_deploy_programatically_defined_routees_to_the_member_nodes_in_the_cluster();
-            //A_cluster_router_with_a_RoundRobin_router_must_remove_routees_for_unreachable_nodes_and_add_when_reachable_again();
-            //A_cluster_router_with_a_RoundRobin_router_must_deploy_programatically_defined_routees_to_other_node_when_a_node_becomes_down();
+            A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_the_member_nodes_in_the_cluster();
+            A_cluster_router_with_a_RoundRobin_router_must_lookup_routees_on_the_member_nodes_in_the_cluster();
+            A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_new_nodes_in_the_cluster();
+            A_cluster_router_with_a_RoundRobin_router_must_lookup_routees_on_new_nodes_in_the_cluster();
+            A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_only_remote_nodes_when_allowlocalrouteesoff();
+            A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_specified_node_role();
+            A_cluster_router_with_a_RoundRobin_router_must_deploy_programatically_defined_routees_to_the_member_nodes_in_the_cluster();
+            A_cluster_router_with_a_RoundRobin_router_must_remove_routees_for_unreachable_nodes_and_add_when_reachable_again();
+            A_cluster_router_with_a_RoundRobin_router_must_deploy_programatically_defined_routees_to_other_node_when_a_node_becomes_down();
         }
 
         private void A_cluster_router_with_a_RoundRobin_router_must_start_cluster_with_2_nodes()
@@ -394,8 +394,8 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
             {
                 // myservice is already running
 
-                var routees = CurrentRoutees(router4.Value).ToList();
-                var routeeAddresses = routees
+                Func<List<Routee>> routees = () => CurrentRoutees(router4.Value).ToList();
+                Func<List<Address>> routeeAddresses = () => routees()
                         .Where(c => c is ActorSelectionRoutee)
                         .Select(c => FullAddress(((ActorSelectionRoutee)c).Selection.Anchor))
                         .ToList();
@@ -407,12 +407,12 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
 
                     TestConductor.Blackhole(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
 
-                    AwaitAssert(() => routees.Count.Should().Be(6));
-                    routeeAddresses.Should().NotContain(GetAddress(_config.Second));
+                    AwaitAssert(() => routees().Count.Should().Be(6));
+                    routeeAddresses().Should().NotContain(GetAddress(_config.Second));
 
                     TestConductor.PassThrough(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both);
-                    AwaitAssert(() => routees.Count.Should().Be(8));
-                    routeeAddresses.Should().Contain(GetAddress(_config.Second));
+                    AwaitAssert(() => routees().Count.Should().Be(8));
+                    routeeAddresses().Should().Contain(GetAddress(_config.Second));
                 }, _config.First);
             });
 
@@ -425,12 +425,12 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
 
             RunOn(() =>
             {
-                var routees = CurrentRoutees(router2.Value).ToList();
-                var routeeAddresses = routees
+                Func<List<Routee>> routees = () => CurrentRoutees(router2.Value).ToList();
+                Func<List<Address>> routeeAddresses = () => routees()
                     .Where(c => c is ActorRefRoutee)
                     .Select(c => FullAddress(((ActorRefRoutee)c).Actor)).ToList();
 
-                routees.ForEach(actorRef =>
+                routees().ForEach(actorRef =>
                 {
                     var actorRefRoutee = actorRef as ActorRefRoutee;
                     if (actorRefRoutee != null)
@@ -439,9 +439,9 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                     }
                 });
 
-                var notUsedAddress = Roles.Select(c => GetAddress(c)).Except(routeeAddresses).First();
-                var downAddress = routeeAddresses.Find(c => c != GetAddress(_config.First));
-                var downRouteeRef = routees
+                var notUsedAddress = Roles.Select(c => GetAddress(c)).Except(routeeAddresses()).First();
+                var downAddress = routeeAddresses().Find(c => c != GetAddress(_config.First));
+                var downRouteeRef = routees()
                     .Where(c => c is ActorRefRoutee && ((ActorRefRoutee)c).Actor.Path.Address == downAddress)
                     .Select(c => ((ActorRefRoutee)c).Actor).First();
 
@@ -449,8 +449,8 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 ExpectMsg<Terminated>(15.Seconds()).ActorRef.Should().Be(downRouteeRef);
                 AwaitAssert(() =>
                 {
-                    routeeAddresses.Should().Contain(notUsedAddress);
-                    routeeAddresses.Should().NotContain(downAddress);
+                    routeeAddresses().Should().Contain(notUsedAddress);
+                    routeeAddresses().Should().NotContain(downAddress);
                 });
 
                 var iterationCount = 10;
@@ -460,7 +460,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 }
 
                 var replays = ReceiveReplays(new ClusterRoundRobinSpecConfig.PoolRoutee(), iterationCount);
-                routeeAddresses.Count.Should().Be(3);
+                routeeAddresses().Count.Should().Be(3);
                 replays.Values.Sum().Should().Be(iterationCount);
 
             }, _config.First);

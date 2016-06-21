@@ -158,12 +158,9 @@ namespace Akka.Routing
             : this(
                   config.GetInt("nr-of-instances"),
                   Resizer.FromConfig(config),
-                  config.GetTimeSpan("within"),
-                  config.GetTimeSpan("tail-chopping-router.interval"),
                   Pool.DefaultSupervisorStrategy,
                   Dispatchers.DefaultDispatcherId,
-                  config.HasPath("pool-dispatcher")
-                )
+                  config.GetTimeSpan("within"), config.GetTimeSpan("tail-chopping-router.interval"), config.HasPath("pool-dispatcher"))
         {
         }
 
@@ -174,7 +171,7 @@ namespace Akka.Routing
         /// <param name="within">The amount of time to wait for a response.</param>
         /// <param name="interval">The interval to wait before sending to the next routee.</param>
         public TailChoppingPool(int nrOfInstances, TimeSpan within, TimeSpan interval)
-            : this(nrOfInstances, null, within, interval, Pool.DefaultSupervisorStrategy, Dispatchers.DefaultDispatcherId)
+            : this(nrOfInstances, null, Pool.DefaultSupervisorStrategy, Dispatchers.DefaultDispatcherId, within, interval)
         {
 
         }
@@ -189,14 +186,7 @@ namespace Akka.Routing
         /// <param name="within">The amount of time to wait for a response.</param>
         /// <param name="interval">The interval to wait before sending to the next routee.</param>
         /// <param name="usePoolDispatcher"><c>true</c> to use the pool dispatcher; otherwise <c>false</c>.</param>
-        public TailChoppingPool(
-            int nrOfInstances,
-            Resizer resizer,
-            TimeSpan within,
-            TimeSpan interval,
-            SupervisorStrategy supervisorStrategy,
-            string routerDispatcher,
-            bool usePoolDispatcher = false)
+        public TailChoppingPool(int nrOfInstances, Resizer resizer, SupervisorStrategy supervisorStrategy, string routerDispatcher, TimeSpan within, TimeSpan interval, bool usePoolDispatcher = false)
             : base(nrOfInstances, resizer, supervisorStrategy, routerDispatcher, usePoolDispatcher)
         {
             Within = within;
@@ -236,7 +226,7 @@ namespace Akka.Routing
         /// <returns>A new router with the provided <paramref name="strategy"/>.</returns>
         public TailChoppingPool WithSupervisorStrategy(SupervisorStrategy strategy)
         {
-            return new TailChoppingPool(NrOfInstances, Resizer, Within, Interval, strategy, RouterDispatcher, UsePoolDispatcher);
+            return new TailChoppingPool(NrOfInstances, Resizer, strategy, RouterDispatcher, Within, Interval, UsePoolDispatcher);
         }
 
         /// <summary>
@@ -250,7 +240,7 @@ namespace Akka.Routing
         /// <returns>A new router with the provided <paramref name="resizer"/>.</returns>
         public TailChoppingPool WithResizer(Resizer resizer)
         {
-            return new TailChoppingPool(NrOfInstances, resizer, Within, Interval, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+            return new TailChoppingPool(NrOfInstances, resizer, SupervisorStrategy, RouterDispatcher, Within, Interval, UsePoolDispatcher);
         }
 
         /// <summary>
@@ -264,7 +254,7 @@ namespace Akka.Routing
         /// <returns>A new router with the provided dispatcher id.</returns>
         public TailChoppingPool WithDispatcher(string dispatcher)
         {
-            return new TailChoppingPool(NrOfInstances, Resizer, Within, Interval, SupervisorStrategy, dispatcher, UsePoolDispatcher);
+            return new TailChoppingPool(NrOfInstances, Resizer, SupervisorStrategy, dispatcher, Within, Interval, UsePoolDispatcher);
         }
 
         /// <summary>
@@ -345,7 +335,7 @@ namespace Akka.Routing
             /// <returns>The <see cref="TailChoppingPool"/> encapsulated by this surrogate.</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
-                return new TailChoppingPool(NrOfInstances, Resizer, Within, Interval, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+                return new TailChoppingPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, Within, Interval, UsePoolDispatcher);
             }
 
             /// The interval to wait before sending to the next routee.

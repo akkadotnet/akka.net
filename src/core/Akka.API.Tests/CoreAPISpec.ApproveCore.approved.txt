@@ -4139,6 +4139,8 @@ namespace Akka.Routing
     {
         protected RouterConfig() { }
         protected RouterConfig(string routerDispatcher) { }
+        [System.ObsoleteAttribute("Use NoRouter.Instance instead")]
+        public static Akka.Routing.RouterConfig NoRouter { get; }
         public virtual string RouterDispatcher { get; }
         public virtual bool StopRouterWhenAllRouteesRemoved { get; }
         public abstract Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system);
@@ -4286,7 +4288,7 @@ namespace Akka.Routing
     {
         public TailChoppingPool(Akka.Configuration.Config config) { }
         public TailChoppingPool(int nrOfInstances, System.TimeSpan within, System.TimeSpan interval) { }
-        public TailChoppingPool(int nrOfInstances, Akka.Routing.Resizer resizer, System.TimeSpan within, System.TimeSpan interval, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = False) { }
+        public TailChoppingPool(int nrOfInstances, Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, System.TimeSpan within, System.TimeSpan interval, bool usePoolDispatcher = False) { }
         public System.TimeSpan Interval { get; }
         public System.TimeSpan Within { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }

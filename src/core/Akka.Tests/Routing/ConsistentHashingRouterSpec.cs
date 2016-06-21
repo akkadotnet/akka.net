@@ -225,6 +225,5 @@ namespace Akka.Tests.Routing
             router4.Tell(new ConsistentHashableEnvelope("CC", new MsgKey("c")));
             ExpectMsg(destinationC);
         }
-            AwaitCondition(() => ((RepointableActorRef)router5).IsStarted); //verify that the underlying cell has started
     }
 }

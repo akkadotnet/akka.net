@@ -38,6 +38,7 @@ namespace Akka.Cluster.Tests
               cluster.enabled = on
               cluster.max-total-nr-of-instances = 20
               cluster.allow-local-routees = off
+              cluster.use-role = backend
             }
           }
           akka.remote.helios.tcp.port = 0");
@@ -57,7 +58,7 @@ namespace Akka.Cluster.Tests
             deployment.RouterConfig.AsInstanceOf<ClusterRouterPool>().Local.AsInstanceOf<RoundRobinPool>().NrOfInstances.ShouldBe(20);
             deployment.RouterConfig.AsInstanceOf<ClusterRouterPool>().Settings.TotalInstances.ShouldBe(20);
             deployment.RouterConfig.AsInstanceOf<ClusterRouterPool>().Settings.AllowLocalRoutees.ShouldBe(false);
-            deployment.RouterConfig.AsInstanceOf<ClusterRouterPool>().Settings.UseRole.ShouldBe(string.Empty);
+            deployment.RouterConfig.AsInstanceOf<ClusterRouterPool>().Settings.UseRole.ShouldBe(null);
             deployment.RouterConfig.AsInstanceOf<ClusterRouterPool>().Settings.AsInstanceOf<ClusterRouterPoolSettings>().MaxInstancesPerNode.ShouldBe(3);
             deployment.Scope.ShouldBe(ClusterScope.Instance);
             deployment.Mailbox.ShouldBe(Deploy.NoMailboxGiven);

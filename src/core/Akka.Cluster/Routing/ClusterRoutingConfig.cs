@@ -183,6 +183,11 @@ namespace Akka.Cluster.Routing
             return new ActorRefRoutee(actorRef);
         }
 
+        /// <summary>
+        /// Returns the initial number of routees
+        /// </summary>
+        /// <param name="system">The actor system to which this router belongs.</param>
+        /// <returns>The initial number of routees</returns>
         public override int GetNrOfInstances(ActorSystem system)
         {
             if (Settings.AllowLocalRoutees && !string.IsNullOrEmpty(Settings.UseRole))

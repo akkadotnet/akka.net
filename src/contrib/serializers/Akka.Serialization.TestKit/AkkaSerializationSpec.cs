@@ -230,7 +230,7 @@ akka.actor {
 
             var supervisor = new OneForOneStrategy(decider);
 
-            var message = new TailChoppingPool(10, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(2), supervisor, "abc");
+            var message = new TailChoppingPool(10, null, supervisor, "abc", TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(2));
             AssertEqual(message);
         }
 
