@@ -326,6 +326,9 @@ namespace Akka.Actor
             return Enumerable.Empty<IInternalActorRef>();
         }
 
+        public IChildrenContainer ChildrenContainer => EmptyChildrenContainer.Instance;
+
+
         public IInternalActorRef GetSingleChild(string name)
         {
             return Nobody.Instance;

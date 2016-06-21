@@ -294,10 +294,10 @@ namespace Akka.Remote
                     // HACK: needed to make ActorSelections work
                     if (actorPath.ToStringWithoutAddress().Equals("/"))
                         return RootGuardian;
-                    return _local.ResolveActorRef(RootGuardian, actorPath.Elements);
+                    return _local.ResolveActorRef(RootGuardian, actorPath.ElementsWithUid);
                 }
                     
-                return new RemoteActorRef(Transport, localAddress, new RootActorPath(actorPath.Address) / actorPath.Elements, ActorRefs.Nobody, Props.None, Deploy.None);
+                return new RemoteActorRef(Transport, localAddress, new RootActorPath(actorPath.Address) / actorPath.ElementsWithUid, ActorRefs.Nobody, Props.None, Deploy.None);
             }
             _log.Debug("resolve of unknown path [{0}] failed", path);
             return InternalDeadLetters;
@@ -321,14 +321,13 @@ namespace Akka.Remote
         {
             if (HasAddress(actorPath.Address))
             {
-                return _local.ResolveActorRef(RootGuardian, actorPath.Elements);
+                return _local.ResolveActorRef(RootGuardian, actorPath.ElementsWithUid);
             }
             try
             {
-                var rootPath = new RootActorPath(actorPath.Address)/actorPath.Elements;
                 return new RemoteActorRef(Transport,
                     Transport.LocalAddressForRemote(actorPath.Address),
-                    rootPath, 
+                    actorPath, 
                     ActorRefs.Nobody,
                     Props.None,
                     Deploy.None);

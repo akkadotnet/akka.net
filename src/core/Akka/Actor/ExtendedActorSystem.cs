@@ -27,6 +27,10 @@ namespace Akka.Actor
         /// </summary>
         public abstract IInternalActorRef Guardian { get; }
 
+        /// <summary>
+        /// The <see cref="RootGuardianActorRef"/>, used as the lookup for <see cref="IActorRef"/> resolutions.
+        /// </summary>
+        public abstract IInternalActorRef LookupRoot { get; }
 
         /// <summary>
         /// Gets the top-level supervisor of all system-internal services like logging.

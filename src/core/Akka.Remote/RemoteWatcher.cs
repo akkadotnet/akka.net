@@ -498,7 +498,7 @@ namespace Akka.Remote
 
         private void TriggerFirstHeartbeat(Address address)
         {
-            if (WatchingNodes.Contains(address) && !_failureDetector.IsMonitoring(address))
+            if (WatcheeByNodes.ContainsKey(address) && !_failureDetector.IsMonitoring(address))
             {
                 Log.Debug("Trigger extra expected heartbeat from [{0}]", address);
                 _failureDetector.Heartbeat(address);

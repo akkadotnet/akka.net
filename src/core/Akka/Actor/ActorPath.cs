@@ -175,6 +175,31 @@ namespace Akka.Actor
         }
 
         /// <summary>
+        /// INTERNAL API.
+        /// 
+        /// Used in Akka.Remote - when resolving deserialized local actor references
+        /// we need to be able to include the UID at the tail end of the elements.
+        /// 
+        /// It's implemented in this class because we don't have an ActorPathExtractor equivalent.
+        /// </summary>
+        public IReadOnlyList<string> ElementsWithUid
+        {
+            get
+            {
+                var current = this;
+                var elements = new List<string>() { AppendUidFragment(current.Name) };
+                current = current.Parent;
+                while (!(current is RootActorPath))
+                {
+                    elements.Add(current.Name);
+                    current = current.Parent;
+                }
+                elements.Reverse();
+                return elements.AsReadOnly();
+            }
+        }
+
+        /// <summary>
         /// Gets the name.
         /// </summary>
         /// <value> The name. </value>
@@ -220,7 +245,8 @@ namespace Akka.Actor
         /// <returns> The result of the operator. </returns>
         public static ActorPath operator /(ActorPath path, string name)
         {
-            return new ChildActorPath(path, name, 0);
+            var nameAndUid = ActorCell.SplitNameAndUid(name);
+            return new ChildActorPath(path, nameAndUid.Name, nameAndUid.Uid);
         }
 
         /// <summary>
@@ -419,7 +445,7 @@ namespace Akka.Actor
 
         public string ToSerializationFormat()
         {
-            return ToStringWithAddress();
+            return AppendUidFragment(ToStringWithAddress());
         }
 
         public string ToSerializationFormatWithAddress(Address address)
@@ -458,7 +484,7 @@ namespace Akka.Actor
 
         public ISurrogate ToSurrogate(ActorSystem system)
         {
-            return new Surrogate(AppendUidFragment(ToSerializationFormat()));
+            return new Surrogate(ToSerializationFormat());
         }
     }
 

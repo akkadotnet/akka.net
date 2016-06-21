@@ -56,6 +56,19 @@ namespace Akka.Remote
             }
         }
 
+        public void RegisterWritableEndpointRefuseUid(Address remoteAddress, int refuseUid)
+        {
+            EndpointManager.EndpointPolicy existing;
+            if (_addressToWritable.TryGetValue(remoteAddress, out existing))
+            {
+                var pass = existing as EndpointManager.Pass;
+                if (pass != null)
+                {
+                    _addressToWritable[remoteAddress] = new EndpointManager.Pass(pass.Endpoint, pass.Uid, refuseUid);
+                }
+            }
+        }
+
         public IActorRef RegisterReadOnlyEndpoint(Address address, IActorRef endpoint, int uid)
         {
             _addressToReadonly[address] = Tuple.Create(endpoint, uid);

@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Dispatch;
 using Akka.Event;
 using Akka.Remote.Transport;
 using Akka.Util.Internal;
@@ -22,7 +23,7 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class EndpointManager : ReceiveActor
+    internal class EndpointManager : ReceiveActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
 
         #region Policy definitions
@@ -404,7 +405,7 @@ namespace Akka.Remote
                     {
                         if (hopeless.Uid.HasValue)
                         {
-                            _log.Error("Association to [{0}] with UID [{1}] is irrecoverably failed. Quarantining address.",
+                            _log.Error(hopeless.InnerException, "Association to [{0}] with UID [{1}] is irrecoverably failed. Quarantining address.",
                                 hopeless.RemoteAddress, hopeless.Uid);
                             if (_settings.QuarantineDuration.HasValue)
                             {
@@ -551,9 +552,9 @@ namespace Akka.Remote
 
             Receive<Quarantine>(quarantine =>
             {
-                    //Stop writers
-                    var policy =
-                    Tuple.Create(_endpoints.WritableEndpointWithPolicyFor(quarantine.RemoteAddress), quarantine.Uid);
+                //Stop writers
+                var policy =
+                Tuple.Create(_endpoints.WritableEndpointWithPolicyFor(quarantine.RemoteAddress), quarantine.Uid);
                 if (policy.Item1 is Pass && policy.Item2 == null)
                 {
                     var endpoint = policy.Item1.AsInstanceOf<Pass>().Endpoint;
@@ -564,33 +565,58 @@ namespace Akka.Remote
                 }
                 else if (policy.Item1 is Pass && policy.Item2 != null)
                 {
-                    var pass = policy.Item1 as Pass;
-                    if (pass.Uid == quarantine.Uid)
+                    var pass = (Pass) policy.Item1;
+                    var uidOption = pass.Uid;
+                    var quarantineUid = policy.Item2;
+                    if (uidOption == quarantineUid)
+                    {
+                        _endpoints.MarkAsQuarantined(quarantine.RemoteAddress, quarantineUid.Value, Deadline.Now + _settings.QuarantineDuration);
+                        _eventPublisher.NotifyListeners(new QuarantinedEvent(quarantine.RemoteAddress, quarantineUid.Value));
                         Context.Stop(pass.Endpoint);
+                    }
+                    // or it does not match with the UID to be quarantined
+                    else if (!uidOption.HasValue && pass.RefuseUid != quarantineUid)
+                    {
+                        // the quarantine uid may be got fresh by cluster gossip, so update refuseUid for late handle when the writer got uid
+                        _endpoints.RegisterWritableEndpointRefuseUid(quarantine.RemoteAddress, quarantineUid.Value);
+                    }
+                    else
+                    {
+                        //the quarantine uid has lost the race with some failure, do nothing
+                    }
+
+                }
+                else if (policy.Item1 is Quarantined && policy.Item2 != null && policy.Item1.AsInstanceOf<Quarantined>().Uid == policy.Item2.Value)
+                {
+                    // the UID to be quarantined already exists, do nothing
+                }
+                else if (policy.Item2 != null)
+                {
+                    // the current state is gated or quarantined, and we know the UID, update
+                    _endpoints.MarkAsQuarantined(quarantine.RemoteAddress, policy.Item2.Value, Deadline.Now + _settings.QuarantineDuration);
+                    _eventPublisher.NotifyListeners(new QuarantinedEvent(quarantine.RemoteAddress, policy.Item2.Value));
                 }
                 else
                 {
-                        // Do nothing, because either:
-                        // A: we don't know yet the UID of the writer, it will be checked against current quarantine state later
-                        // B: we know the UID, but it does not match with the UID to be quarantined
-                    }
+                    // the current state is gated or quarantined, and we don't know the UID, do nothing.
+                }
 
-                    // Stop inbound read-only associations
-                    var readPolicy = Tuple.Create(_endpoints.ReadOnlyEndpointFor(quarantine.RemoteAddress), quarantine.Uid);
+                // Stop inbound read-only associations
+                var readPolicy = Tuple.Create(_endpoints.ReadOnlyEndpointFor(quarantine.RemoteAddress), quarantine.Uid);
                 if (readPolicy.Item1?.Item1 != null && quarantine.Uid == null)
                     Context.Stop(readPolicy.Item1.Item1);
                 else if (readPolicy.Item1?.Item1 != null && quarantine.Uid != null && readPolicy.Item1?.Item2 == quarantine.Uid) { Context.Stop(readPolicy.Item1.Item1); }
                 else { } // nothing to stop
 
-                    Func<AkkaProtocolHandle, bool> matchesQuarantine = handle => handle.RemoteAddress.Equals(quarantine.RemoteAddress) &&
-                                                                             quarantine.Uid == handle.HandshakeInfo.Uid;
+                Func<AkkaProtocolHandle, bool> matchesQuarantine = handle => handle.RemoteAddress.Equals(quarantine.RemoteAddress) &&
+                                                                         quarantine.Uid == handle.HandshakeInfo.Uid;
 
-                    // Stop all matching pending read handoffs
-                    _pendingReadHandoffs = _pendingReadHandoffs.Where(x =>
+                // Stop all matching pending read handoffs
+                _pendingReadHandoffs = _pendingReadHandoffs.Where(x =>
                 {
                     var drop = matchesQuarantine(x.Value);
-                        // Side-effecting here
-                        if (drop)
+                    // Side-effecting here
+                    if (drop)
                     {
                         x.Value.Disassociate();
                         Context.Stop(x.Key);
@@ -598,8 +624,8 @@ namespace Akka.Remote
                     return !drop;
                 }).ToDictionary(key => key.Key, value => value.Value);
 
-                    // Stop all matching stashed connections
-                    _stashedInbound = _stashedInbound.Select(x =>
+                // Stop all matching stashed connections
+                _stashedInbound = _stashedInbound.Select(x =>
                 {
                     var associations = x.Value.Where(assoc =>
                     {
@@ -612,11 +638,6 @@ namespace Akka.Remote
                     return new KeyValuePair<IActorRef, List<InboundAssociation>>(x.Key, associations);
                 }).ToDictionary(k => k.Key, v => v.Value);
 
-                if (quarantine.Uid.HasValue)
-                {
-                    _endpoints.MarkAsQuarantined(quarantine.RemoteAddress, quarantine.Uid.Value, Deadline.Now + _settings.QuarantineDuration);
-                    _eventPublisher.NotifyListeners(new QuarantinedEvent(quarantine.RemoteAddress, quarantine.Uid.Value));
-                }
             });
 
             Receive<Send>(send =>
@@ -641,9 +662,9 @@ namespace Akka.Remote
                     })
                     .With<Quarantined>(quarantined =>
                     {
-                            // timeOfRelease is only used for garbage collection reasons, therefore it is ignored here. We still have
-                            // the Quarantined tombstone and we know what UID we don't want to accept, so use it.
-                            createAndRegisterWritingEndpoint(quarantined.Uid).Tell(send);
+                        // timeOfRelease is only used for garbage collection reasons, therefore it is ignored here. We still have
+                        // the Quarantined tombstone and we know what UID we don't want to accept, so use it.
+                        createAndRegisterWritingEndpoint(quarantined.Uid).Tell(send);
                     })
                     .Default(msg => createAndRegisterWritingEndpoint(null).Tell(send));
             });
@@ -658,8 +679,29 @@ namespace Akka.Remote
             Receive<EndpointWriter.TookOver>(tookover => RemovePendingReader(tookover.Writer, tookover.ProtocolHandle));
             Receive<ReliableDeliverySupervisor.GotUid>(gotuid =>
             {
-                _endpoints.RegisterWritableEndpointUid(gotuid.RemoteAddress, gotuid.Uid);
-                HandleStashedInbound(Sender, writerIsIdle: false);
+                
+                var policy = _endpoints.WritableEndpointWithPolicyFor(gotuid.RemoteAddress);
+                var pass = policy as Pass;
+                if (pass != null)
+                {
+                    if (pass.RefuseUid == gotuid.Uid)
+                    {
+                        _endpoints.MarkAsQuarantined(gotuid.RemoteAddress, gotuid.Uid,
+                            Deadline.Now + _settings.QuarantineDuration);
+                        _eventPublisher.NotifyListeners(new QuarantinedEvent(gotuid.RemoteAddress, gotuid.Uid));
+                        Context.Stop(pass.Endpoint);
+                    }
+                    else
+                    {
+                        _endpoints.RegisterWritableEndpointUid(gotuid.RemoteAddress, gotuid.Uid);
+                    }
+                    HandleStashedInbound(Sender, writerIsIdle: false);
+                }
+                else
+                {
+                    // the GotUid might have lost the race with some failure
+                }
+              
             });
             Receive<ReliableDeliverySupervisor.Idle>(idle =>
             {
@@ -668,23 +710,23 @@ namespace Akka.Remote
             Receive<Prune>(prune => _endpoints.Prune());
             Receive<ShutdownAndFlush>(shutdown =>
             {
-                    //Shutdown all endpoints and signal to Sender when ready (and whether all endpoints were shutdown gracefully)
-                    var sender = Sender;
+                //Shutdown all endpoints and signal to Sender when ready (and whether all endpoints were shutdown gracefully)
+                var sender = Sender;
 
-                    // The construction of the Task for shutdownStatus has to happen after the flushStatus future has been finished
-                    // so that endpoints are shut down before transports.
-                    var shutdownStatus = Task.WhenAll(_endpoints.AllEndpoints.Select(
-                        x => x.GracefulStop(_settings.FlushWait, EndpointWriter.FlushAndStop.Instance))).ContinueWith(
-                            result =>
+                // The construction of the Task for shutdownStatus has to happen after the flushStatus future has been finished
+                // so that endpoints are shut down before transports.
+                var shutdownStatus = Task.WhenAll(_endpoints.AllEndpoints.Select(
+                    x => x.GracefulStop(_settings.FlushWait, EndpointWriter.FlushAndStop.Instance))).ContinueWith(
+                        result =>
+                        {
+                            if (result.IsFaulted || result.IsCanceled)
                             {
-                                if (result.IsFaulted || result.IsCanceled)
-                                {
-                                    if (result.Exception != null)
-                                        result.Exception.Handle(e => true);
-                                    return false;
-                                }
-                                return result.Result.All(x => x);
-                            }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                                if (result.Exception != null)
+                                    result.Exception.Handle(e => true);
+                                return false;
+                            }
+                            return result.Result.All(x => x);
+                        }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
 
                 shutdownStatus.ContinueWith(tr => Task.WhenAll(_transportMapping.Values.Select(x => x.Shutdown())).ContinueWith(
                           result =>
@@ -704,8 +746,8 @@ namespace Akka.Remote
                     handoff.Disassociate(DisassociateInfo.Shutdown);
                 }
 
-                    //Ignore all other writes
-                    _normalShutdown = true;
+                //Ignore all other writes
+                _normalShutdown = true;
                 Become(Flushing);
             });
         }
@@ -907,7 +949,7 @@ namespace Akka.Remote
             else
             {
                 _endpoints.RegisterReadOnlyEndpoint(handle.RemoteAddress, endpoint, handle.HandshakeInfo.Uid);
-                if(!_endpoints.HasWriteableEndpointFor(handle.RemoteAddress))
+                if (!_endpoints.HasWriteableEndpointFor(handle.RemoteAddress))
                     _endpoints.RemovePolicy(handle.RemoteAddress);
             }
         }
@@ -922,7 +964,8 @@ namespace Akka.Remote
             int? refuseUid = null)
         {
             System.Diagnostics.Debug.Assert(_transportMapping.ContainsKey(localAddress));
-            System.Diagnostics.Debug.Assert(writing || refuseUid == null);
+            // refuseUid is ignored for read-only endpoints since the UID of the remote system is already known and has passed
+            // quarantine checks
 
             IActorRef endpointActor;
 

@@ -87,8 +87,7 @@ namespace Akka.Actor
 
         private bool WatchingContains(IActorRef subject)
         {
-            return _state.ContainsWatching(subject) ||
-                   (subject.Path.Uid != UndefinedUid && _state.ContainsWatching(new UndefinedUidActorRef(subject)));
+            return _state.ContainsWatching(subject);
         }
 
         protected void TellWatchersWeDied()
@@ -278,29 +277,6 @@ namespace Akka.Actor
         private void SubscribeAddressTerminated()
         {
             AddressTerminatedTopic.Get(System).Subscribe(Self);
-        }
-    }
-
-    class UndefinedUidActorRef : MinimalActorRef
-    {
-        readonly IActorRef _ref;
-
-        public UndefinedUidActorRef(IActorRef @ref)
-        {
-            _ref = @ref;
-        }
-
-        public override ActorPath Path
-        {
-            get { return _ref.Path.WithUid(ActorCell.UndefinedUid); }
-        }
-
-        public override IActorRefProvider Provider
-        {
-            get
-            {
-                throw new NotImplementedException("UndefinedUidActorRef does not provide");
-            }
         }
     }
 }

@@ -90,6 +90,7 @@
     <Compile Include="MinMembersBeforeUpSpec.cs" />
     <Compile Include="NodeUpSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="QuickRestartSpec.cs" />
     <Compile Include="RestartFirstSeedNodeSpec.cs" />
     <Compile Include="RestartNode2Spec.cs" />
     <Compile Include="RestartNode3Spec.cs" />
