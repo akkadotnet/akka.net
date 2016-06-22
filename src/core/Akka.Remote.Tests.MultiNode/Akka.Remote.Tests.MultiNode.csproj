@@ -66,6 +66,7 @@
     <Compile Include="PiercingShouldKeepQuarantineSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RemoteDeliverySpec.cs" />
+    <Compile Include="RemoteReDeploymentSpec.cs" />
     <Compile Include="RemoteGatePiercingSpec.cs" />
     <Compile Include="RemoteNodeDeathWatchSpec.cs" />
     <Compile Include="RemoteNodeRestartDeathWatchSpec.cs" />
