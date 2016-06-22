@@ -202,30 +202,34 @@ namespace Akka.Remote.Tests
                     ctx.ActorSelection(s).ResolveOne(TimeSpan.FromSeconds(3)).PipeTo(sender);
                 });
             };
-            var l = Sys.ActorOf(Props.Create(() => new Act(act)), "looker");
+            Within(TimeSpan.FromSeconds(20), () =>
+            {
+                var l = Sys.ActorOf(Props.Create(() => new Act(act)), "looker");
 
-            // child is configured to be deployed on remote-sys (remoteSystem)
-            l.Tell(Tuple.Create(Props.Create<Echo1>(), "child"));
-            var child = ExpectMsg<IActorRef>();
+                // child is configured to be deployed on remote-sys (remoteSystem)
+                l.Tell(Tuple.Create(Props.Create<Echo1>(), "child"));
+                var child = ExpectMsg<IActorRef>();
 
-            // grandchild is condfigured to be deployed on RemotingSpec (Sys)
-            child.Tell(Tuple.Create(Props.Create<Echo1>(), "grandchild"));
-            var grandchild = ExpectMsg<IActorRef>();
-            grandchild.AsInstanceOf<IActorRefScope>().IsLocal.ShouldBeTrue();
-            grandchild.Tell(43);
-            ExpectMsg(43);
-            var myRef = Sys.ActorSelection("/user/looker/child/grandchild").ResolveOne(TimeSpan.FromSeconds(3)).Result;
-            (myRef is LocalActorRef).ShouldBeTrue(); // due to a difference in how ActorFor and ActorSelection are implemented, this will return a LocalActorRef
-            myRef.Tell(44);
-            ExpectMsg(44);
-            LastSender.ShouldBe(grandchild);
-            LastSender.ShouldBeSame(grandchild);
-            child.AsInstanceOf<RemoteActorRef>().Parent.ShouldBe(l);
-            var cRef = Sys.ActorSelection("/user/looker/child").ResolveOne(TimeSpan.FromSeconds(3)).Result;
-            cRef.ShouldBe(child);
-            l.Ask<IActorRef>("child/..", RemainingOrDefault).Result.ShouldBe(l);
-            Sys.ActorSelection("/user/looker/child").Ask<ActorSelection>(new ActorSelReq(".."), RemainingOrDefault)
-                .ContinueWith(ts => ts.Result.ResolveOne(RemainingOrDefault)).Unwrap().Result.ShouldBe(l);
+                // grandchild is condfigured to be deployed on RemotingSpec (Sys)
+                child.Tell(Tuple.Create(Props.Create<Echo1>(), "grandchild"));
+                var grandchild = ExpectMsg<IActorRef>();
+                grandchild.AsInstanceOf<IActorRefScope>().IsLocal.ShouldBeTrue();
+                grandchild.Tell(43);
+                ExpectMsg(43);
+                var myRef = Sys.ActorSelection("/user/looker/child/grandchild").ResolveOne(RemainingOrDefault).Result;
+                (myRef is LocalActorRef).ShouldBeTrue(); // due to a difference in how ActorFor and ActorSelection are implemented, this will return a LocalActorRef
+                myRef.Tell(44);
+                ExpectMsg(44);
+                LastSender.ShouldBe(grandchild);
+                LastSender.ShouldBeSame(grandchild);
+                child.AsInstanceOf<RemoteActorRef>().Parent.ShouldBe(l);
+
+                var cRef = Sys.ActorSelection("/user/looker/child").ResolveOne(RemainingOrDefault).Result;
+                cRef.ShouldBe(child);
+                l.Ask<IActorRef>("child/..", RemainingOrDefault).Result.ShouldBe(l);
+                Sys.ActorSelection("/user/looker/child").Ask<ActorSelection>(new ActorSelReq(".."), RemainingOrDefault)
+                    .ContinueWith(ts => ts.Result.ResolveOne(RemainingOrDefault)).Unwrap().Result.ShouldBe(l);
+            });
         }
 
         [Fact]
