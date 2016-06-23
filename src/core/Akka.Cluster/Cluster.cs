@@ -15,6 +15,7 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Cluster
 {
@@ -29,7 +30,7 @@ namespace Akka.Cluster
     //TODO: xmldoc
     /// <summary>
     /// This module is responsible for cluster membership information. Changes to the cluster
-    /// information is retrieved through <see cref="Akka.Cluster.Cluster.Subscribe"/>. Commands to operate the cluster is
+    /// information is retrieved through <see cref="InternalClusterAction.Subscribe"/>. Commands to operate the cluster is
     /// available through methods in this class, such as <see cref="Akka.Cluster.Cluster.Join"/>, <see cref="Akka.Cluster.Cluster.Down"/> and <see cref="Akka.Cluster.Cluster.Leave"/>.
     /// 
     /// Each cluster <see cref="Akka.Cluster.Member"/> is identified by its <see cref="Akka.Actor.Address"/>, and
@@ -85,6 +86,10 @@ namespace Akka.Cluster
 
             // force the underlying system to start
             _clusterCore = GetClusterCoreRef().Result;
+
+            system.RegisterOnTermination(Shutdown);
+
+            LogInfo("Started up successfully");
         }
 
         /// <summary>
@@ -130,7 +135,12 @@ namespace Akka.Cluster
         /// <param name="to"><see cref="ClusterEvent.IClusterDomainEvent"/> subclasses</param>
         public void Subscribe(IActorRef subscriber, ClusterEvent.SubscriptionInitialStateMode initialStateMode, Type[] to)
         {
-            ClusterCore.Tell(new InternalClusterAction.Subscribe(subscriber, initialStateMode, ImmutableHashSet.Create<Type>(to)));
+            if (to.Length == 0)
+                throw new ArgumentException("At least one `IClusterDomainEvent` class is required");
+            if (!to.All(t => typeof(ClusterEvent.IClusterDomainEvent).IsAssignableFrom(t)))
+                throw new ArgumentException($"Subscribe to `IClusterDomainEvent` or subclasses, was [{string.Join(", ", to.Select(c => c.Name))}]");
+
+            ClusterCore.Tell(new InternalClusterAction.Subscribe(subscriber, initialStateMode, ImmutableHashSet.Create(to)));
         }
 
         /// <summary>
@@ -293,19 +303,25 @@ namespace Akka.Cluster
             get { return _settings.Roles; }
         }
 
-        internal ClusterEvent.CurrentClusterState State { get { return _readView._state; } }
+        /// <summary>
+        /// Current snapshot state of the cluster.
+        /// </summary>
+        public ClusterEvent.CurrentClusterState State { get { return _readView._state; } }
 
-        readonly AtomicBoolean _isTerminated = new AtomicBoolean(false);
+        private readonly AtomicBoolean _isTerminated = new AtomicBoolean(false);
 
+        /// <summary>
+        /// Returns true if this cluster instance has be shutdown.
+        /// </summary>
         public bool IsTerminated { get { return _isTerminated.Value; } }
 
         internal ActorSystemImpl System { get; private set; }
 
-        readonly ILoggingAdapter _log;
-        readonly ClusterReadView _readView;
+        private readonly ILoggingAdapter _log;
+        private readonly ClusterReadView _readView;
         public ClusterReadView ReadView { get { return _readView; } }
 
-        readonly DefaultFailureDetectorRegistry<Address> _failureDetector;
+        private readonly DefaultFailureDetectorRegistry<Address> _failureDetector;
         public DefaultFailureDetectorRegistry<Address> FailureDetector { get { return _failureDetector; } }
 
         // ========================================================
@@ -346,8 +362,8 @@ namespace Akka.Cluster
             }
         }
 
-        readonly IActorRef _clusterDaemons;
-        IActorRef _clusterCore;
+        private readonly IActorRef _clusterDaemons;
+        private IActorRef _clusterCore;
 
         public IActorRef ClusterCore
         {
