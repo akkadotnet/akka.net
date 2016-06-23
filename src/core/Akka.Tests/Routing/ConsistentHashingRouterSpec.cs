@@ -231,6 +231,7 @@ namespace Akka.Tests.Routing
             var router5 =
                 Sys.ActorOf(Props.Create<Echo>().WithRouter(new ConsistentHashingPool(2, null, null, null)), "router5");
 
+            AwaitCondition(() => ((RepointableActorRef)router5).IsStarted); //verify that the underlying cell has started
             ((RoutedActorRef)router5).Children.Count().ShouldBe(2);
 
             router5.Tell(new Msg("a", "A"), TestActor);
