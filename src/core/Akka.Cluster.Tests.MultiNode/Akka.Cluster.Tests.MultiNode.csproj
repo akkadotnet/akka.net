@@ -106,6 +106,7 @@
     <Compile Include="SplitBrainSpec.cs" />
     <Compile Include="SunnyWeatherSpec.cs" />
     <Compile Include="TransitionSpec.cs" />
+    <Compile Include="SurviveNetworkInstabilitySpec.cs" />
     <Compile Include="UnreachableNodeJoinsAgainSpec.cs" />
   </ItemGroup>
   <ItemGroup>
