@@ -44,7 +44,7 @@ namespace Akka.Remote
         /// <summary>
         /// We will always accept a connection from this remote node.
         /// </summary>
-        public class Pass : EndpointPolicy
+        public sealed class Pass : EndpointPolicy
         {
             public Pass(IActorRef endpoint, int? uid, int? refuseUid)
                 : base(false)
@@ -65,21 +65,37 @@ namespace Akka.Remote
         /// A Gated node can't be connected to from this process for <see cref="TimeOfRelease"/>,
         /// but we may accept an inbound connection from it if the remote node recovers on its own.
         /// </summary>
-        public class Gated : EndpointPolicy
+        public sealed class Gated : EndpointPolicy
         {
-            public Gated(Deadline deadline)
+            public Gated(Deadline deadline, int? refuseUid)
                 : base(true)
             {
                 TimeOfRelease = deadline;
+                RefuseUid = refuseUid;
             }
 
             public Deadline TimeOfRelease { get; private set; }
+
+            public int? RefuseUid { get; private set; }
+        }
+
+        /// <summary>
+        /// Used to indicated that a node was <see cref="Gated"/> previously.
+        /// </summary>
+        public sealed class WasGated : EndpointPolicy
+        {
+            public WasGated(int? refuseUid) : base(false)
+            {
+                RefuseUid = refuseUid;
+            }
+
+            public int? RefuseUid { get; private set; }
         }
 
         /// <summary>
         /// We do not accept connection attempts for a quarantined node until it restarts and resets its UID.
         /// </summary>
-        public class Quarantined : EndpointPolicy
+        public sealed class Quarantined : EndpointPolicy
         {
             public Quarantined(int uid, Deadline deadline)
                 : base(true)
@@ -565,7 +581,7 @@ namespace Akka.Remote
                 }
                 else if (policy.Item1 is Pass && policy.Item2 != null)
                 {
-                    var pass = (Pass) policy.Item1;
+                    var pass = (Pass)policy.Item1;
                     var uidOption = pass.Uid;
                     var quarantineUid = policy.Item2;
                     if (uidOption == quarantineUid)
@@ -584,7 +600,12 @@ namespace Akka.Remote
                     {
                         //the quarantine uid has lost the race with some failure, do nothing
                     }
-
+                }
+                else if (policy.Item1 is WasGated && policy.Item2 != null)
+                {
+                    var wg = (WasGated)policy.Item1;
+                    if (wg.RefuseUid == policy.Item2)
+                        _endpoints.RegisterWritableEndpointRefuseUid(quarantine.RemoteAddress, policy.Item2.Value);
                 }
                 else if (policy.Item1 is Quarantined && policy.Item2 != null && policy.Item1.AsInstanceOf<Quarantined>().Uid == policy.Item2.Value)
                 {
@@ -598,7 +619,7 @@ namespace Akka.Remote
                 }
                 else
                 {
-                    // the current state is gated or quarantined, and we don't know the UID, do nothing.
+                    // the current state is Gated, WasGated, or Quarantined and we don't know the UID, do nothing.
                 }
 
                 // Stop inbound read-only associations
@@ -657,8 +678,12 @@ namespace Akka.Remote
                         })
                     .With<Gated>(gated =>
                     {
-                        if (gated.TimeOfRelease.IsOverdue) createAndRegisterWritingEndpoint(null).Tell(send);
+                        if (gated.TimeOfRelease.IsOverdue) createAndRegisterWritingEndpoint(gated.RefuseUid).Tell(send);
                         else Context.System.DeadLetters.Tell(send);
+                    })
+                    .With<WasGated>(wasGated =>
+                    {
+                        createAndRegisterWritingEndpoint(wasGated.RefuseUid).Tell(send);
                     })
                     .With<Quarantined>(quarantined =>
                     {
@@ -679,7 +704,7 @@ namespace Akka.Remote
             Receive<EndpointWriter.TookOver>(tookover => RemovePendingReader(tookover.Writer, tookover.ProtocolHandle));
             Receive<ReliableDeliverySupervisor.GotUid>(gotuid =>
             {
-                
+
                 var policy = _endpoints.WritableEndpointWithPolicyFor(gotuid.RemoteAddress);
                 var pass = policy as Pass;
                 if (pass != null)
@@ -697,11 +722,27 @@ namespace Akka.Remote
                     }
                     HandleStashedInbound(Sender, writerIsIdle: false);
                 }
+                else if (policy is WasGated)
+                {
+                    var wg = (WasGated) policy;
+                    if (wg.RefuseUid == gotuid.Uid)
+                    {
+                        _endpoints.MarkAsQuarantined(gotuid.RemoteAddress, gotuid.Uid,
+                            Deadline.Now + _settings.QuarantineDuration);
+                        _eventPublisher.NotifyListeners(new QuarantinedEvent(gotuid.RemoteAddress, gotuid.Uid));
+                        Context.Stop(pass.Endpoint);
+                    }
+                    else
+                    {
+                        _endpoints.RegisterWritableEndpointUid(gotuid.RemoteAddress, gotuid.Uid);
+                    }
+                    HandleStashedInbound(Sender, writerIsIdle: false);
+                }
                 else
                 {
                     // the GotUid might have lost the race with some failure
                 }
-              
+
             });
             Receive<ReliableDeliverySupervisor.Idle>(idle =>
             {
