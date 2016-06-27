@@ -12,6 +12,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
+using Akka.TestKit;
 using Akka.Util.Internal;
 
 namespace Akka.Remote.Tests.MultiNode
@@ -75,7 +76,7 @@ namespace Akka.Remote.Tests.MultiNode
                                 {
                                     Sys.ActorSelection(new RootActorPath(secondAddress) / "user" / "subject")
                                         .Tell(new Identify("subject"));
-                                    ExpectMsg<ActorIdentity>();
+                                    ExpectMsg<ActorIdentity>().Subject.ShouldNotBe(null);
                                 });
                     });
                 Sys.ActorSelection(new RootActorPath(secondAddress)/"user"/"subject").Tell("shutdown");
@@ -116,7 +117,7 @@ namespace Akka.Remote.Tests.MultiNode
 
                 // Now the other system will be able to pass, too
                 freshSystem.ActorOf(Props.Create(() => new Subject()), "subject");
-                Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(30));
+                freshSystem.WhenTerminated.Wait(TimeSpan.FromSeconds(30));
             }, _specConfig.Second);
         }
 
@@ -161,8 +162,8 @@ namespace Akka.Remote.Tests.MultiNode
             First = Role("first");
             Second = Role("second");
 
-            CommonConfig = new Config(DebugConfig(false), ConfigurationFactory.ParseString(
-                @"akka.loglevel = DEBUG
+            CommonConfig = DebugConfig(false).WithFallback(ConfigurationFactory.ParseString(
+                @"akka.loglevel = INFO
                    akka.remote.log-remote-lifecycle-events = INFO
                    akka.remote.retry-gate-closed-for  = 1d"
                 ));
