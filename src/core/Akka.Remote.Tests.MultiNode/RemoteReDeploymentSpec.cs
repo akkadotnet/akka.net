@@ -21,7 +21,7 @@ namespace Akka.Remote.Tests.MultiNode
             First = Role("first");
             Second = Role("second");
 
-            CommonConfig = ConfigurationFactory.ParseString(@"
+            CommonConfig = DebugConfig(false).WithFallback(ConfigurationFactory.ParseString(@"
     akka.remote.transport-failure-detector {
          threshold=0.1
          heartbeat-interval=0.1s
@@ -31,7 +31,7 @@ namespace Akka.Remote.Tests.MultiNode
          threshold=0.1
          heartbeat-interval=0.1s
          acceptable-heartbeat-pause=2.5s
-       }").WithFallback(DebugConfig(false));
+       }"));
 
             DeployOn(Second, "/parent/hello.remote = \"@first@\"");
 
@@ -94,10 +94,12 @@ namespace Akka.Remote.Tests.MultiNode
                 TestConductor.Shutdown(_config.Second, true).Wait();
                 if (ExpectQuarantine)
                 {
-                    Within(SleepAfterKill, () =>
+                    
+                    Within(SleepAfterKill, () => 
                     {
                         ExpectMsg("PostStop");
-                        ExpectNoMsg();
+                        //need to pad the timing here, since `ExpectNoMsg` will wait until exactly SleepAfterKill and fail the spec
+                        ExpectNoMsg(Remaining - TimeSpan.FromSeconds(0.2));
                     });
                 }
                 else
@@ -121,7 +123,7 @@ namespace Akka.Remote.Tests.MultiNode
             RunOn(() =>
             {
                 var p = CreateTestProbe(tempSys);
-                tempSys.ActorOf(EchoProps(p), "echo");
+                tempSys.ActorOf(EchoProps(p.Ref), "echo");
                 p.Send(tempSys.ActorOf(Props.Create(() => new Parent()), "parent"),
                     new ParentMessage(Props.Create(() => new Hello()), "hello"));
                 p.ExpectMsg("HelloParent", TimeSpan.FromSeconds(15));

@@ -588,7 +588,7 @@ namespace Akka.Remote.TestKit
 
         protected void InjectDeployments(ActorSystem system, RoleName role)
         {
-            var deployer = Sys.AsInstanceOf<ExtendedActorSystem>().Provider.Deployer;
+            var deployer = system.AsInstanceOf<ExtendedActorSystem>().Provider.Deployer;
             foreach (var str in _deployments(role))
             {
                 var deployString = _replacements.Values.Aggregate(str, (@base, r) =>
@@ -631,7 +631,7 @@ namespace Akka.Remote.TestKit
         protected ActorSystem StartNewSystem()
         {
             var sb =
-                new StringBuilder("helios.tcp{").AppendLine()
+                new StringBuilder("akka.remote.helios.tcp{").AppendLine()
                     .AppendFormat("port={0}", _myAddress.Port)
                     .AppendLine()
                     .AppendFormat(@"hostname=""{0}""", _myAddress.Host)
