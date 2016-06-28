@@ -262,7 +262,7 @@ namespace Akka.Tests.Serialization
         [Fact]
         public void Can_serialize_Deploy()
         {
-            var message = new Deploy(RouterConfig.NoRouter).WithMailbox("abc");
+            var message = new Deploy(NoRouter.Instance).WithMailbox("abc");
             AssertEqual(message);
         }
 
@@ -347,7 +347,7 @@ namespace Akka.Tests.Serialization
 
             var supervisor = new OneForOneStrategy(decider);
 
-            var message = new TailChoppingPool(10,null,supervisor,"abc",TimeSpan.FromSeconds(10),TimeSpan.FromSeconds(2));
+            var message = new TailChoppingPool(10, null, supervisor, "abc", TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(2));
             AssertEqual(message);
         }
 
@@ -361,7 +361,7 @@ namespace Akka.Tests.Serialization
 
             var supervisor = new OneForOneStrategy(decider);
 
-            var message = new ScatterGatherFirstCompletedPool(10,null,supervisor,"abc",TimeSpan.MaxValue);
+            var message = new ScatterGatherFirstCompletedPool(10, null, TimeSpan.MaxValue, supervisor, "abc");
             AssertEqual(message);
         }
 

@@ -604,7 +604,7 @@ namespace Akka.Cluster
             Receive<InternalClusterAction.PublisherCreated>(msg =>
             {
                 if (_settings.MetricsEnabled)
-                    Context.ActorOf(Props.Create<ClusterMetricsCollector>().WithDispatcher(_settings.UseDispatcher), "metrics");
+                    Context.ActorOf(Props.Create(() => new ClusterMetricsCollector(msg.Publisher)).WithDispatcher(_settings.UseDispatcher), "metrics");
             });
         }
 

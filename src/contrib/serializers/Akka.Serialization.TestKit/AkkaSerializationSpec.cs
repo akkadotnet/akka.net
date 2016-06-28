@@ -145,7 +145,7 @@ akka.actor {
         [Fact]
         public void CanSerializeDeploy()
         {
-            var message = new Deploy(RouterConfig.NoRouter).WithMailbox("abc");
+            var message = new Deploy(NoRouter.Instance).WithMailbox("abc");
             AssertEqual(message);
         }
 
@@ -244,7 +244,7 @@ akka.actor {
 
             var supervisor = new OneForOneStrategy(decider);
 
-            var message = new ScatterGatherFirstCompletedPool(10, null, supervisor, "abc", TimeSpan.MaxValue);
+            var message = new ScatterGatherFirstCompletedPool(10, null, TimeSpan.MaxValue, supervisor, "abc");
             AssertEqual(message);
         }
 

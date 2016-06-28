@@ -51,11 +51,7 @@ namespace ClusterToolsExample.Shared
         {
             return Context.ActorOf(new ClusterRouterPool(
                 local: new RoundRobinPool(10),
-                settings: new ClusterRouterPoolSettings(
-                    totalInstances: 30,
-                    allowLocalRoutees: true,
-                    useRole: null,
-                    maxInstancesPerNode: 10))
+                settings: new ClusterRouterPoolSettings(30, 10, true, null))
                 .Props(Props.Create(() => new Worker(counter))));
         }
 

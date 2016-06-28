@@ -51,7 +51,7 @@ namespace Akka.Actor
         {
             _path = "";
             _config = ConfigurationFactory.Empty;
-            _routerConfig = RouterConfig.NoRouter;
+            _routerConfig = NoRouter.Instance;
             _scope = NoScopeGiven;
             _dispatcher = NoDispatcherGiven;
             _mailbox = NoMailboxGiven;
