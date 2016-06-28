@@ -22,18 +22,18 @@ namespace Akka.Persistence.Sql.Common.TestKit
     {
         class TestTimestampProvider : ITimestampProvider
         {
-            private static IDictionary<Tuple<string, long>, DateTime> KnownEventTimestampMappings = new Dictionary<Tuple<string, long>, DateTime>
+            private static IDictionary<Tuple<string, long>, long> KnownEventTimestampMappings = new Dictionary<Tuple<string, long>, long>
             {
-                {Tuple.Create("p-1", 1L), new DateTime(2001, 1, 1) },
-                {Tuple.Create("p-1", 2L), new DateTime(2001, 1, 2) },
-                {Tuple.Create("p-1", 3L), new DateTime(2001, 1, 3) },
-                {Tuple.Create("p-2", 1L), new DateTime(2001, 1, 1) },
-                {Tuple.Create("p-2", 2L), new DateTime(2001, 2, 1) },
-                {Tuple.Create("p-3", 1L), new DateTime(2001, 1, 1) },
-                {Tuple.Create("p-3", 2L), new DateTime(2003, 1, 1) },
+                {Tuple.Create("p-1", 1L), 111 },
+                {Tuple.Create("p-1", 2L), 112 },
+                {Tuple.Create("p-1", 3L), 113 },
+                {Tuple.Create("p-2", 1L), 111 },
+                {Tuple.Create("p-2", 2L), 121 },
+                {Tuple.Create("p-3", 1L), 111 },
+                {Tuple.Create("p-3", 2L), 311 },
             };
 
-            public DateTime GenerateTimestamp(IPersistentRepresentation message)
+            public long GenerateTimestamp(IPersistentRepresentation message)
             {
                 return KnownEventTimestampMappings[Tuple.Create(message.PersistenceId, message.SequenceNr)];
             }
@@ -80,21 +80,21 @@ namespace Akka.Persistence.Sql.Common.TestKit
         [Fact]
         public void Journal_queried_on_Timestamp_returns_events_occurred_after_or_equal_From_value()
         {
-            var query = new Query(3, Hints.TimestampAfter(new DateTime(2001, 1, 3)));
+            var query = new Query(3, Hints.TimestampAfter(113));
             QueryAndExpectSuccess(query, Events[2], Events[4], Events[6]);
         }
 
         [Fact]
         public void Journal_queried_on_Timestamp_returns_events_occurred_before_To_value()
         {
-            var query = new Query(4, Hints.TimestampBefore(new DateTime(2001, 2, 1)));
+            var query = new Query(4, Hints.TimestampBefore(121));
             QueryAndExpectSuccess(query, Events[0], Events[1], Events[2], Events[3], Events[5]);
         }
 
         [Fact]
         public void Journal_queried_on_Timestamp_returns_events_occurred_between_both_range_values()
         {
-            var query = new Query(5, Hints.TimestampBetween(new DateTime(2001, 1, 3), new DateTime(2003, 1, 1)));
+            var query = new Query(5, Hints.TimestampBetween(113, 311));
             QueryAndExpectSuccess(query, Events[2], Events[4]);
         }
 
@@ -102,7 +102,7 @@ namespace Akka.Persistence.Sql.Common.TestKit
         public void Journal_queried_using_multiple_hints_should_apply_all_of_them()
         {
             var query = new Query(6,
-                Hints.TimestampBefore(new DateTime(2001, 1, 3)),
+                Hints.TimestampBefore(113),
                 Hints.PersistenceIds(new[] { "p-1", "p-2" }),
                 Hints.Manifest("System.String"));
 

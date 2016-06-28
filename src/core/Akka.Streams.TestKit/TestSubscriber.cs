@@ -28,6 +28,8 @@ namespace Akka.Streams.TestKit
             {
                 Subscription = subscription;
             }
+
+            public override string ToString() => $"TestSubscriber.OnSubscribe({Subscription})";
         }
 
         public struct OnNext<T> : ISubscriberEvent
@@ -38,12 +40,16 @@ namespace Akka.Streams.TestKit
             {
                 Element = element;
             }
+
+            public override string ToString() => $"TestSubscriber.OnNext({Element})";
         }
 
         public sealed class OnComplete: ISubscriberEvent
         {
             public static readonly OnComplete Instance = new OnComplete();
             private OnComplete() { }
+
+            public override string ToString() => $"TestSubscriber.OnComplete";
         }
 
         public struct OnError : ISubscriberEvent
@@ -54,6 +60,7 @@ namespace Akka.Streams.TestKit
             {
                 Cause = cause;
             }
+            public override string ToString() => $"TestSubscriber.OnError({Cause.Message})";
         }
 
         #endregion
@@ -196,13 +203,13 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public IEnumerable<T> ExpectNextN(long n)
             {
-                var i = 0;
-                while (i < n)
+                var res = new List<T>((int)n);
+                for (int i = 0; i < n; i++)
                 {
                     var next = _probe.ExpectMsg<OnNext<T>>();
-                    yield return next.Element;
-                    i++;
+                    res.Add(next.Element);
                 }
+                return res;
             }
 
             /// <summary>

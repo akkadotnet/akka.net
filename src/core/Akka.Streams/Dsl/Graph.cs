@@ -1041,7 +1041,7 @@ namespace Akka.Streams.Dsl
 
         private readonly int _inputPorts;
 
-        internal Concat(int inputPorts = 2)
+        public Concat(int inputPorts = 2)
         {
             if (inputPorts <= 1) throw new ArgumentException("A Concat must have more than 1 input port");
             _inputPorts = inputPorts;

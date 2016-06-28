@@ -390,5 +390,11 @@ namespace Akka.Persistence
         /// </summary>
         IStashOverflowStrategy InternalStashOverflowStrategy { get; }
     }
+
+    public interface IJournalPlugin
+    {
+        string JournalPath { get; }
+        Config DefaultConfig { get; }
+    }
 }
 
