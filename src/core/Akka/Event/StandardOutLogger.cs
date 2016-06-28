@@ -12,13 +12,20 @@ using Akka.Util;
 namespace Akka.Event
 {
     /// <summary>
-    /// Represents a logger that logs using the StandardOutWriter.
-    /// The logger can also be configured to use colors for the various log event types.
+    /// This class represents an event logger that logs its messages to standard output (e.g. the console).
+    /// 
+    /// <remarks>
+    /// This logger is always attached first in order to be able to log failures during application start-up,
+    /// even before normal logging is started.
+    /// </remarks>
     /// </summary>
     public class StandardOutLogger : MinimalActorRef
     {
         private readonly ActorPath _path = new RootActorPath(Address.AllSystems, "/StandardOutLogger");
 
+        /// <summary>
+        /// Initializes the <see cref="StandardOutLogger"/> class.
+        /// </summary>
         static StandardOutLogger()
         {
             DebugColor = ConsoleColor.Gray;
@@ -29,16 +36,16 @@ namespace Akka.Event
         }
         
         /// <summary>
-        /// Gets the provider.
+        /// N/A
         /// </summary>
-        /// <exception cref="System.NotSupportedException">StandardOutLogger does not provide</exception>
+        /// <exception cref="System.NotSupportedException">This logger does not provide.</exception>
         public override IActorRefProvider Provider
         {
-            get { throw new NotSupportedException("StandardOutLogger does not provide"); }
+            get { throw new NotSupportedException("This logger does not provide."); }
         }
 
         /// <summary>
-        /// Gets the path of this actor.
+        /// The path where this logger currently resides.
         /// </summary>
         public override ActorPath Path
         {
@@ -46,15 +53,15 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Handles log events printing them to the Console.
+        /// Handles incoming log events by printing them to the console.
         /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="sender">The sender.</param>
-        /// <exception cref="System.ArgumentNullException">message</exception>
+        /// <param name="message">The message to print</param>
+        /// <param name="sender">The actor that sent the message.</param>
+        /// <exception cref="System.ArgumentNullException">The message to log must not be null.</exception>
         protected override void TellInternal(object message, IActorRef sender)
         {
             if(message == null)
-                throw new ArgumentNullException("message");
+                throw new ArgumentNullException("message", "The message to log must not be null.");
 
             var logEvent = message as LogEvent;
             if (logEvent != null)
@@ -68,34 +75,34 @@ namespace Akka.Event
         }
         
         /// <summary>
-        /// Gets or Sets the color of Debug events.
+        /// The foreground color to use when printing Debug events to the console.
         /// </summary>
         public static ConsoleColor DebugColor { get; set; }
 
         /// <summary>
-        /// Gets or Sets the color of Info events.
+        /// The foreground color to use when printing Info events to the console.
         /// </summary>
         public static ConsoleColor InfoColor { get; set; }
 
         /// <summary>
-        /// Gets or Sets the color of Warning events.
+        /// The foreground color to use when printing Warning events to the console.
         /// </summary>
         public static ConsoleColor WarningColor { get; set; }
 
         /// <summary>
-        /// Gets or Sets the color of Error events. 
+        /// The foreground color to use when printing Error events to the console.
         /// </summary>
         public static ConsoleColor ErrorColor { get; set; }
 
         /// <summary>
-        /// Gets or Sets whether or not to use colors when printing events.
+        /// Determines whether colors are used when printing events to the console. 
         /// </summary>
         public static bool UseColors { get; set; }
 
         /// <summary>
-        /// Prints the LogEvent using the StandardOutWriter.
+        /// Prints a specified event to the console.
         /// </summary>
-        /// <param name="logEvent"></param>
+        /// <param name="logEvent">The event to print</param>
         public static void PrintLogEvent(LogEvent logEvent)
         {
             ConsoleColor? color = null;

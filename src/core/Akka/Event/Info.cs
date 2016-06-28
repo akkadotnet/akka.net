@@ -10,16 +10,16 @@ using System;
 namespace Akka.Event
 {
     /// <summary>
-    /// Represents an Info log event.
+    /// This class represents an Info log event.
     /// </summary>
     public class Info : LogEvent
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Info" /> class.
         /// </summary>
-        /// <param name="logSource">The log source.</param>
-        /// <param name="logClass">The log class.</param>
-        /// <param name="message">The message.</param>
+        /// <param name="logSource">The source that generated the log event.</param>
+        /// <param name="logClass">The type of logger used to log the event.</param>
+        /// <param name="message">The message that is being logged.</param>
         public Info(string logSource, Type logClass, object message)
         {
             LogSource = logSource;
@@ -27,10 +27,15 @@ namespace Akka.Event
             Message = message;
         }
 
+        /// <summary>
+        /// Retrieves the <see cref="Akka.Event.LogLevel" /> used to classify this event.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="Akka.Event.LogLevel" /> used to classify this event.
+        /// </returns>
         public override LogLevel LogLevel()
         {
             return Event.LogLevel.InfoLevel;
         }
     }
 }
-
