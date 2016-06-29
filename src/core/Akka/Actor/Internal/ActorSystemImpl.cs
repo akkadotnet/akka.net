@@ -98,6 +98,14 @@ namespace Akka.Actor.Internal
             return _provider.SystemGuardian.Cell.AttachChild(Props.Create<TActor>(), true, name);
         }
 
+        internal volatile bool Aborting = false;
+
+        public override void Abort()
+        {
+            Aborting = true;
+            Terminate();
+        }
+
         /// <summary>Starts this system</summary>
         public void Start()
         {

@@ -194,14 +194,15 @@ namespace Akka.Actor
             // stop all children, which will turn childrenRefs into TerminatingChildrenContainer (if there are children)
             StopChildren();
 
-            //TODO: Implement when we have ActorSystem.Abort
-            //    if (systemImpl.aborting) {
-            //      // separate iteration because this is a very rare case that should not penalize normal operation
-            //      children foreach {
-            //        case ref: ActorRefScope if !ref.isLocal ⇒ self.sendSystemMessage(DeathWatchNotification(ref, true, false))
-            //        case _                                  ⇒
-            //      }
-            //    }
+            if (SystemImpl.Aborting)
+            {
+                // separate iteration because this is a very rare case that should not penalize normal operation
+                foreach (var child in Children)
+                {
+                    if(!child.AsInstanceOf<IActorRefScope>().IsLocal) // send ourselves a deathwatch notification pre-emptively for non-local children
+                        Self.AsInstanceOf<IInternalActorRef>().SendSystemMessage(new DeathWatchNotification(child, true, false));
+                }
+            }
             var wasTerminating = IsTerminating;
             if (SetChildrenTerminationReason(SuspendReason.Termination.Instance))
             {

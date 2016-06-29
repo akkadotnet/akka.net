@@ -662,6 +662,7 @@ namespace Akka.Actor
         public abstract Akka.Actor.IInternalActorRef LookupRoot { get; }
         public abstract Akka.Actor.IActorRefProvider Provider { get; }
         public abstract Akka.Actor.IInternalActorRef SystemGuardian { get; }
+        public abstract void Abort();
         public abstract Akka.Actor.IActorRef SystemActorOf(Akka.Actor.Props props, string name = null);
         public abstract Akka.Actor.IActorRef SystemActorOf<TActor>(string name = null)
             where TActor : Akka.Actor.ActorBase, new ();
@@ -1782,6 +1783,7 @@ namespace Akka.Actor.Internal
         [System.ObsoleteAttribute("Use WhenTerminated instead. This property will be removed in future versions")]
         public override System.Threading.Tasks.Task TerminationTask { get; }
         public override System.Threading.Tasks.Task WhenTerminated { get; }
+        public override void Abort() { }
         public override Akka.Actor.IActorRef ActorOf(Akka.Actor.Props props, string name = null) { }
         public override Akka.Actor.ActorSelection ActorSelection(Akka.Actor.ActorPath actorPath) { }
         public override Akka.Actor.ActorSelection ActorSelection(string actorPath) { }

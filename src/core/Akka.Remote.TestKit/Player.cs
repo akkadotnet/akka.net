@@ -13,11 +13,13 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Transport;
 using Akka.Util;
+using Akka.Util.Internal;
 using Helios.Channels;
 
 namespace Akka.Remote.TestKit
@@ -474,9 +476,7 @@ namespace Akka.Remote.TestKit
                         }
                         if (terminateMsg.ShutdownOrExit.IsLeft && terminateMsg.ShutdownOrExit.ToLeft().Value == true)
                         {
-                            //TODO: terminate more aggressively with Abort
-                            //Context.System.AsInstanceOf<ActorSystemImpl>().Abort();
-                            Context.System.Terminate();
+                            Context.System.AsInstanceOf<ActorSystemImpl>().Abort();
                             return Stay();
                         }
                         if (terminateMsg.ShutdownOrExit.IsRight)
