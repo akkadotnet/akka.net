@@ -37,7 +37,6 @@ namespace Akka.Util
         /// <param name="message">The <see cref="string"/> value to write</param>
         /// <param name="foregroundColor">Optional: The foreground color</param>
         /// <param name="backgroundColor">Optional: The background color</param>
-
         public static void WriteLine(string message, ConsoleColor? foregroundColor = null,
             ConsoleColor? backgroundColor = null)
         {

@@ -11,7 +11,7 @@ using Akka.Actor;
 namespace Akka.Event
 {
     /// <summary>
-    /// Actor responsible for listening to DeadLetter messages and logging them using the EventStream.
+    /// This class represents an actor responsible for listening to <see cref="DeadLetter"/> messages and logging them using the <see cref="EventStream"/>.
     /// </summary>
     public class DeadLetterListener : ActorBase
     {

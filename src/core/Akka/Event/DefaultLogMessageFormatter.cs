@@ -8,20 +8,19 @@
 namespace Akka.Event
 {
     /// <summary>
-    /// Default implementation of the ILogMessageFormatter that uses string.Format to format a log message.
+    /// This class represents an <see cref="ILoggingAdapter"/> implementation that uses <see cref="string.Format(string,object[])"/> to format log messages.
     /// </summary>
     public class DefaultLogMessageFormatter : ILogMessageFormatter
     {
         /// <summary>
-        /// Formats the log message using string.Format providing the format and specified args.
+        /// Formats a specified composite string using an optional list of item substitutions.
         /// </summary>
-        /// <param name="format">The format string of the message.</param>
-        /// <param name="args">The arguments used to format the message.</param>
-        /// <returns></returns>
+        /// <param name="format">The string that is being formatted.</param>
+        /// <param name="args">An optional list of items used to format the string.</param>
+        /// <returns>The given string that has been correctly formatted.</returns>
         public string Format(string format, params object[] args)
         {
             return string.Format(format, args);
         }
     }
 }
-

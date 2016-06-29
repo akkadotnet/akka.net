@@ -17,7 +17,7 @@ using Akka.Configuration;
 namespace Akka.Event
 {
     /// <summary>
-    /// Represents a logging bus which subscribes loggers to the system LogEvents for the desired minimum level.
+    /// This class represents an event bus which subscribes loggers to system <see cref="LogEvent">LogEvents</see>.
     /// </summary>
     public class LoggingBus : ActorEventBus<object, Type>
     {
@@ -27,58 +27,57 @@ namespace Akka.Event
         private readonly List<IActorRef> _loggers = new List<IActorRef>();
 
         /// <summary>
-        /// Gets the minimum log level that this LoggingBus will subscribe to, any LogEvents with a log level below will not be subscribed to.
+        /// The minimum log level that this bus will subscribe to, any <see cref="LogEvent">LogEvents</see> with a log level below will not be subscribed to.
         /// </summary>
-        /// <value>The log level.</value>
         public LogLevel LogLevel { get; private set; }
 
         /// <summary>
-        /// Determines whether [is sub classification] [the specified parent].
+        /// Determines whether a specified classifier, <paramref name="child" />, is a subclass of another classifier, <paramref name="parent" />.
         /// </summary>
-        /// <param name="parent">The parent.</param>
-        /// <param name="child">The child.</param>
-        /// <returns><c>true</c> if [is sub classification] [the specified parent]; otherwise, <c>false</c>.</returns>
+        /// <param name="parent">The potential parent of the classifier that is being checked.</param>
+        /// <param name="child">The classifier that is being checked.</param>
+        /// <returns><c>true</c> if the <paramref name="child" /> classifier is a subclass of <paramref name="parent" />; otherwise <c>false</c>.</returns>
         protected override bool IsSubClassification(Type parent, Type child)
         {
             return parent.IsAssignableFrom(child);
         }
 
         /// <summary>
-        /// Publishes the specified event.
+        /// Publishes the specified event directly to the specified subscriber.
         /// </summary>
-        /// <param name="event">The event.</param>
-        /// <param name="subscriber">The subscriber.</param>
+        /// <param name="event">The event that is being published.</param>
+        /// <param name="subscriber">The subscriber that receives the event.</param>
         protected override void Publish(object @event, IActorRef subscriber)
         {
             subscriber.Tell(@event);
         }
 
         /// <summary>
-        /// Classifies the specified event.
+        /// Classifies the specified event using the specified classifier.
         /// </summary>
-        /// <param name="event">The event.</param>
-        /// <param name="classifier">The classifier.</param>
-        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
+        /// <param name="event">The event that is being classified.</param>
+        /// <param name="classifier">The classifier used to classify the event.</param>
+        /// <returns><c>true</c> if the classification succeeds; otherwise <c>false</c>.</returns>
         protected override bool Classify(object @event, Type classifier)
         {
             return classifier.IsAssignableFrom(GetClassifier(@event));
         }
 
         /// <summary>
-        /// Gets the classifier for the LogEvent.
+        /// Retrieves the classifier used to classify the specified event.
         /// </summary>
-        /// <param name="event">The event.</param>
-        /// <returns>Type.</returns>
+        /// <param name="event">The event for which to retrieve the classifier.</param>
+        /// <returns>The classifier used to classify the event.</returns>
         protected override Type GetClassifier(object @event)
         {
             return @event.GetType();
         }
 
         /// <summary>
-        /// Starts the default loggers.
+        /// Starts the loggers defined in the system configuration.
         /// </summary>
-        /// <param name="system">The system.</param>
-        /// <exception cref="System.Exception">Can not use logger of type: + loggerType</exception>
+        /// <param name="system">The system that the loggers need to start monitoring.</param>
+        /// <exception cref="Akka.Configuration.ConfigurationException">The logger specified in the system configuration could not be found or loaded.</exception>
         internal void StartDefaultLoggers(ActorSystemImpl system)
         {
             var logName = SimpleName(this) + "(" + system.Name + ")";
@@ -128,6 +127,10 @@ namespace Akka.Event
             Publish(new Debug(logName, GetType(), "Default Loggers started"));
         }
 
+        /// <summary>
+        /// Stops the loggers defined in the system configuration.
+        /// </summary>
+        /// <param name="system">The system that the loggers need to stop monitoring.</param>
         internal void StopDefaultLoggers(ActorSystem system)
         {
             var level = LogLevel; // volatile access before reading loggers
@@ -186,19 +189,15 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Starts the StandardOutLogger logger.
+        /// Starts the <see cref="StandardOutLogger"/> logger.
         /// </summary>
-        /// <param name="config">The configuration.</param>
+        /// <param name="config">The configuration used to configure the <see cref="StandardOutLogger"/>.</param>
         public void StartStdoutLogger(Settings config)
         {
             SetUpStdoutLogger(config);
             Publish(new Debug(SimpleName(this), GetType(), "StandardOutLogger started"));
         }
 
-        /// <summary>
-        /// Sets up StandardOutLogger logger.
-        /// </summary>
-        /// <param name="config">The configuration.</param>
         private void SetUpStdoutLogger(Settings config)
         {
             var logLevel = Logging.LogLevelFor(config.StdoutLogLevel);
@@ -206,9 +205,9 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Sets the minimum log level for the LoggingBus, any LogEvents below this level will not be listened to.
+        /// Sets the minimum log level for this bus, any <see cref="LogEvent">LogEvents</see> below this level are ignored.
         /// </summary>
-        /// <param name="logLevel">The log level.</param>
+        /// <param name="logLevel">The new log level in which to listen.</param>
         public void SetLogLevel(LogLevel logLevel)
         {
             LogLevel = logLevel;
@@ -218,7 +217,7 @@ namespace Akka.Event
                 //subscribe to given log level and above
                 SubscribeLogLevelAndAbove(logLevel, logger);
 
-                //unsubscribe to all levels below loglevel
+                //unsubscribe to all levels below log level
                 foreach (var level in AllLogLevels.Where(l => l < logLevel))
                 {
                     Unsubscribe(logger, level.ClassFor());

@@ -27,14 +27,11 @@ namespace Akka.Event
     /// </summary>
     public class EventStream : LoggingBus
     {
-        /// <summary>
-        /// Determines if subscription logging is enabled.
-        /// </summary>
         private readonly bool _debug;
-
 
         private readonly AtomicReference<Either<IImmutableSet<IActorRef>, IActorRef>> _initiallySubscribedOrUnsubscriber =
             new AtomicReference<Either<IImmutableSet<IActorRef>, IActorRef>>();
+
         /// <summary>
         /// Initializes a new instance of the <see cref="EventStream"/> class.
         /// </summary>
@@ -179,4 +176,3 @@ namespace Akka.Event
         }
     }
 }
-
