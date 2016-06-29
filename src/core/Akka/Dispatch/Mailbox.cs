@@ -25,7 +25,7 @@ namespace Akka.Dispatch
     /// <summary>
     /// Mailbox base class
     /// </summary>
-    public class Mailbox
+    public class Mailbox : IRunnable
     {
         /// <summary>
         ///  Status codes for the state of the mailbox
@@ -66,8 +66,15 @@ namespace Akka.Dispatch
         private volatile SystemMessage _systemQueueDoNotCallMeDirectly = null; // null by default
         private volatile int _statusDotNotCallMeDirectly; //0 by default
 
+        /// <summary>
+        /// The queue used for user-defined messages inside this mailbox
+        /// </summary>
         public IMessageQueue MessageQueue { get; }
 
+        /// <summary>
+        /// Creates a new mailbox
+        /// </summary>
+        /// <param name="messageQueue">The <see cref="IMessageQueue"/> used by this mailbox.</param>
         public Mailbox(IMessageQueue messageQueue)
         {
             MessageQueue = messageQueue;
@@ -167,13 +174,13 @@ namespace Akka.Dispatch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected bool UpdateStatus(int oldStatus, int newStatus)
+        private bool UpdateStatus(int oldStatus, int newStatus)
         {
             return Interlocked.CompareExchange(ref _statusDotNotCallMeDirectly, newStatus, oldStatus) == oldStatus;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected void SetStatus(int newStatus)
+        private void SetStatus(int newStatus)
         {
             Volatile.Write(ref _statusDotNotCallMeDirectly, newStatus);
         }
@@ -238,13 +245,17 @@ namespace Akka.Dispatch
         /// </summary>
         internal bool SetAsScheduled()
         {
-            var s = CurrentStatus();
-            /*
-             * Only try to add Scheduled bit if pure Open/Suspended, not Closed or with
-             * Scheduled bit already set.
-             */
-            if ((s & MailboxStatus.ShouldScheduleMask) != MailboxStatus.Open) return false;
-            return UpdateStatus(s, s | MailboxStatus.Scheduled) || SetAsScheduled();
+            while (true)
+            {
+                var s = CurrentStatus();
+                /*
+                 * Only try to add Scheduled bit if pure Open/Suspended, not Closed or with
+                 * Scheduled bit already set.
+                 */
+                if ((s & MailboxStatus.ShouldScheduleMask) != MailboxStatus.Open) return false;
+                if (UpdateStatus(s, s | MailboxStatus.Scheduled))
+                    return true;
+            }
         }
 
         /// <summary>
@@ -252,10 +263,17 @@ namespace Akka.Dispatch
         /// </summary>
         internal bool SetAsIdle()
         {
-            var s = CurrentStatus();
-            return UpdateStatus(s, s & ~MailboxStatus.Scheduled) || SetAsIdle();
+            while (true)
+            {
+                var s = CurrentStatus();
+                if (UpdateStatus(s, s & ~MailboxStatus.Scheduled))
+                    return true;
+            }
         }
 
+        /// <summary>
+        /// Processes the contents of the mailbox
+        /// </summary>
         public void Run()
         {
             try
@@ -267,7 +285,6 @@ namespace Akka.Dispatch
                         ProcessAllSystemMessages(); // First, deal with any system messages
                         ProcessMailbox(); // Then deal with messages
                     });
-                    
                 }
             }
             finally
@@ -284,19 +301,22 @@ namespace Akka.Dispatch
 
         private void ProcessMailbox(int left, long deadlineTicks)
         {
-            if (ShouldProcessMessage())
+            while (ShouldProcessMessage())
             {
                 Envelope next;
-                if (TryDequeue(out next))
-                {
-                    DebugPrint("{0} processing message {1}", Actor.Self, next);
+                if (!TryDequeue(out next)) return;
 
-                    // not going to bother catching ThreadAbortExceptions here, since they'll get rethrown anyway
-                    Actor.Invoke(next);
-                    ProcessAllSystemMessages();
-                    if (left > 1 && (Dispatcher.ThroughputDeadlineTime.HasValue == false || (MonotonicClock.GetTicks() - deadlineTicks) < 0))
-                        ProcessMailbox(left - 1, deadlineTicks);
+                DebugPrint("{0} processing message {1}", Actor.Self, next);
+
+                // not going to bother catching ThreadAbortExceptions here, since they'll get rethrown anyway
+                Actor.Invoke(next);
+                ProcessAllSystemMessages();
+                if (left > 1 && (Dispatcher.ThroughputDeadlineTime.HasValue == false || (MonotonicClock.GetTicks() - deadlineTicks) < 0))
+                {
+                    left = left - 1;
+                    continue;
                 }
+                break;
             }
         }
 

@@ -589,7 +589,6 @@ namespace Akka.Cluster
             {
                 Context.ActorOf(
                     Props.Create(() => new OnMemberStatusChangedListener(msg.Callback, MemberStatus.Up))
-                        .WithDispatcher(_settings.UseDispatcher)
                         .WithDeploy(Deploy.Local));
             });
 
@@ -597,22 +596,21 @@ namespace Akka.Cluster
             {
                 Context.ActorOf(
                     Props.Create(() => new OnMemberStatusChangedListener(msg.Callback, MemberStatus.Removed))
-                        .WithDispatcher(_settings.UseDispatcher)
                         .WithDeploy(Deploy.Local));
             });
 
             Receive<InternalClusterAction.PublisherCreated>(msg =>
             {
                 if (_settings.MetricsEnabled)
-                    Context.ActorOf(Props.Create(() => new ClusterMetricsCollector(msg.Publisher)).WithDispatcher(_settings.UseDispatcher), "metrics");
+                    Context.ActorOf(Props.Create(() => new ClusterMetricsCollector(msg.Publisher)), "metrics");
             });
         }
 
         private void CreateChildren()
         {
-            _coreSupervisor = Context.ActorOf(Props.Create<ClusterCoreSupervisor>().WithDispatcher(_settings.UseDispatcher), "core");
+            _coreSupervisor = Context.ActorOf(Props.Create<ClusterCoreSupervisor>(), "core");
 
-            Context.ActorOf(Props.Create<ClusterHeartbeatReceiver>().WithDispatcher(_settings.UseDispatcher), "heartbeatReceiver");
+            Context.ActorOf(Props.Create<ClusterHeartbeatReceiver>(), "heartbeatReceiver");
         }
     }
 
@@ -772,7 +770,7 @@ namespace Akka.Cluster
             // TODO: replace to DowningProvider
             if (_cluster.Settings.AutoDownUnreachableAfter != null)
                 Context.ActorOf(
-                    AutoDown.Props(_cluster.Settings.AutoDownUnreachableAfter.Value).WithDispatcher(_cluster.Settings.UseDispatcher),
+                    AutoDown.Props(_cluster.Settings.AutoDownUnreachableAfter.Value),
                     "autoDown");
 
             if (_seedNodes.IsEmpty)

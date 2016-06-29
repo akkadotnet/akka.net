@@ -180,32 +180,11 @@ namespace Akka.Actor
             {
                 HandleNonFatalOrInterruptedException(() => HandleInvokeFailure(e));
             }
-        }
-
-        /*
-         * Used to resolve the racy shutdown issue reported here: https://github.com/akkadotnet/akka.net/issues/2024
-         * Fundamentally the issue was that the ImmutableDictionary operations executed in the IChildContainer's constructor
-         * are so slow that several hundred `ChildContainer.IsTerminated` operations could pass even in the middle of signaling
-         * termination. So we signal shutdown using a byte flag instead so Termination can be signaled independently of the speed
-         * of the child container.
-         */
-        private volatile byte _fastTerminatingDoNotCallMeDirectly = 0;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void SetFastTerminate()
-        {
-            Volatile.Write(ref _fastTerminatingDoNotCallMeDirectly, 1);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool IsFastTerminating() { return _fastTerminatingDoNotCallMeDirectly == 1; }
-        
+        }      
 
         /// <summary>Terminates this instance.</summary>
         private void Terminate()
         {
-            SetFastTerminate();
-
             SetReceiveTimeout(null);
             CancelReceiveTimeout();
 

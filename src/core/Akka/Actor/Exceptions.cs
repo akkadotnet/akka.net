@@ -109,6 +109,16 @@ namespace Akka.Actor
     }
 
     /// <summary>
+    /// This exception is thrown when an actor is interrupted in the midst of processing messages.
+    /// 
+    /// This is an exception typically thrown when the underlying dispatcher's threads are aborted.
+    /// </summary>
+    public class ActorInterruptedException : AkkaException
+    {
+        public ActorInterruptedException(string message = null, Exception cause = null) : base(message, cause) { }
+    }
+
+    /// <summary>
     /// This exception is thrown when the initialization logic for an Actor fails.
     /// </summary>
     public class ActorInitializationException : AkkaException

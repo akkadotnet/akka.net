@@ -352,7 +352,7 @@ namespace Akka.Actor
 
             // In case we are currently terminating, fail external attachChild requests
             // (internal calls cannot happen anyway because we are suspended)
-            if (IsFastTerminating() || ChildrenContainer.IsTerminating)
+            if (ChildrenContainer.IsTerminating)
             {
                 throw new InvalidOperationException("Cannot create child while terminating or terminated");
             }

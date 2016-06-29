@@ -127,6 +127,11 @@ namespace Akka.Util.Internal
         {
              return Interlocked.CompareExchange(ref _value, newValue, expected) != _value;
         }
+
+        public override string ToString()
+        {
+            return Current.ToString();
+        }
     }
 }
 

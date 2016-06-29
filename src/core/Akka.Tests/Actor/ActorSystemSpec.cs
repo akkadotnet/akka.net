@@ -463,7 +463,7 @@ namespace Akka.Tests.Actor
             {
             }
 
-            public override void Schedule(IRunnable run)
+            protected override void ExecuteTask(IRunnable run)
             {
                 run.Run();
                 _latch.Ready(TimeSpan.FromSeconds(1));

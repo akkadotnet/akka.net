@@ -40,7 +40,7 @@ unbounded-dispatcher {
 }
 
 task-dispatcher {
-    type = """ + typeof(TaskDispatcherConfigurator).AssemblyQualifiedName + @"""
+    executor = """ + typeof(DefaultTaskSchedulerExecutorConfigurator).AssemblyQualifiedName + @"""
 }
 
 unbounded-mailbox {
@@ -165,7 +165,7 @@ akka.actor.deployment {
                 new[] { typeof(UnboundedDequeMessageQueue) });
         }
 
-        [Fact(DisplayName = "get an unbounded message queue with a balancing dispatcher")]
+        [Fact(DisplayName = "get an unbounded message queue with a task dispatcher")]
         public void Actors_gets_unbounded_mailbox_with_task_dispatcher()
         {
             CheckMailBoxType(Props.Create<MailboxReportingActor>().WithDispatcher("task-dispatcher"),

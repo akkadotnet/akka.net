@@ -13,6 +13,8 @@ namespace Akka.Tests.Performance.Dispatch
     public class ForkJoinDispatcherColdThroughputSpec : ColdDispatcherThroughputSpecBase
     {
         public static Config DispatcherConfiguration => ConfigurationFactory.ParseString(@"
+                    id = PerfTest
+                    executor = fork-join-executor
                     dedicated-thread-pool{ #settings for Helios.DedicatedThreadPool
                         thread-count = 3 
                         #deadlock-timeout = 3s 
@@ -22,13 +24,15 @@ namespace Akka.Tests.Performance.Dispatch
 
         protected override MessageDispatcherConfigurator Configurator()
         {
-            return new ForkJoinDispatcherConfigurator(DispatcherConfiguration,null);
+            return new DispatcherConfigurator(DispatcherConfiguration, Prereqs);
         }
     }
 
     public class ForkJoinDispatcherWarmThroughputSpec : WarmDispatcherThroughputSpecBase
     {
-        public static Config DispatcherConfiguration => ConfigurationFactory.ParseString(@"
+       public static Config DispatcherConfiguration => ConfigurationFactory.ParseString(@"
+                    id = PerfTest
+                    executor = fork-join-executor
                     dedicated-thread-pool{ #settings for Helios.DedicatedThreadPool
                         thread-count = 3 
                         #deadlock-timeout = 3s 
@@ -38,7 +42,7 @@ namespace Akka.Tests.Performance.Dispatch
 
         protected override MessageDispatcherConfigurator Configurator()
         {
-            return new ForkJoinDispatcherConfigurator(DispatcherConfiguration, null);
+            return new DispatcherConfigurator(DispatcherConfiguration, Prereqs);
         }
     }
 }

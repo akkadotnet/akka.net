@@ -44,7 +44,7 @@ namespace Akka.Cluster.Tests
             settings.MinNrOfMembers.Should().Be(1);
             settings.MinNrOfMembersOfRole.Should().Equal(ImmutableDictionary<string, int>.Empty);
             settings.Roles.Should().BeEquivalentTo(ImmutableHashSet<string>.Empty);
-            // settings.UseDispatcher.Should().Be(Dispatchers.DefaultDispatcherId);
+            settings.UseDispatcher.Should().Be(Dispatchers.DefaultDispatcherId);
             settings.GossipDifferentViewProbability.Should().Be(0.8);
             settings.ReduceGossipDifferentViewProbability.Should().Be(400);
 
@@ -68,19 +68,6 @@ namespace Akka.Cluster.Tests
             settings.SchedulerTicksPerWheel.Should().Be(512);
 
             settings.VerboseHeartbeatLogging.Should().BeFalse();
-        }
-
-        [Fact]
-        public void Clustering_should_have_correct_default_fork_join_dispatcher()
-        {
-            var dispatchConfig = Sys.Settings.Config.GetConfig("akka.cluster.default-cluster-dispatcher");
-            var dispatcherThreadPoolSettings = dispatchConfig.GetConfig("dedicated-thread-pool");
-
-            var dispatcherType = dispatchConfig.GetString("type");
-            var threadCount = dispatcherThreadPoolSettings.GetInt("thread-count");
-
-            Assert.Equal("ForkJoinDispatcher", dispatcherType);
-            Assert.Equal(4, threadCount);
         }
     }
 }

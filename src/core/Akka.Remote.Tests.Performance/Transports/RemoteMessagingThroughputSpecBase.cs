@@ -21,7 +21,7 @@ namespace Akka.Remote.Tests.Performance.Transports
     public abstract class RemoteMessagingThroughputSpecBase
     {
         private const string RemoteMessageCounterName = "RemoteMessageReceived";
-        private const long RemoteMessageCount = 50000;
+        private const int RemoteMessageCount = 50000;
         private Counter _remoteMessageThroughput;
         private readonly ManualResetEventSlim _resetEvent = new ManualResetEventSlim(false);
         private IActorRef _receiver;
@@ -121,11 +121,7 @@ namespace Akka.Remote.Tests.Performance.Transports
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
         public void OneWay(BenchmarkContext context)
         {
-            for (var i = 0; i < RemoteMessageCount;)
-            {
-                _remoteReceiver.Tell("foo"); // send a remote message
-                ++i;
-            }
+            Parallel.For(0, RemoteMessageCount, _ => _remoteReceiver.Tell("foo")); // send a remote message
 
             if (!_resetEvent.Wait(WaitTimeout))
             {
@@ -142,11 +138,8 @@ namespace Akka.Remote.Tests.Performance.Transports
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
         public void TwoWay(BenchmarkContext context)
         {
-            for (var i = 0; i < RemoteMessageCount;)
-            {
-                _remoteEcho.Tell("foo", _receiver); // send a remote message
-                ++i;
-            }
+
+            Parallel.For(0, RemoteMessageCount, _ => _remoteEcho.Tell("foo", _receiver)); // send a remote message
 
             if (!_resetEvent.Wait(WaitTimeout))
             {
