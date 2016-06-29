@@ -57,6 +57,7 @@
     <Compile Include="SqlReadJournalProvider.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Akka.Persistence.Query.Sql.nuspec" />
     <None Include="packages.config" />
     <EmbeddedResource Include="reference.conf" />
   </ItemGroup>
