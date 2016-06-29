@@ -34,7 +34,7 @@ namespace Akka.Util
         private readonly ConcurrentSet<TValue> _emptySet = new ConcurrentSet<TValue>();
 
         /// <summary>
-        /// Associates the value of <typeparam name="TValue"></typeparam> with key of type <typeparam name="TKey"></typeparam>.
+        /// Associates the value of <typeparamref name="TValue"/> with key of type <typeparamref name="TKey"/>.
         /// </summary>
         /// <param name="key">The key to add.</param>
         /// <param name="value">The value to add.</param>
@@ -84,12 +84,12 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// Find some <typeparam name="TValue"></typeparam> for the first matching value where the supplied
-        /// <see cref="predicate"/> returns <c>true</c> for the given key.
+        /// Find some <typeparamref name="TValue"/> for the first matching value where the supplied
+        /// <paramref name="predicate"/> returns <c>true</c> for the given key.
         ///  </summary>
         /// <param name="key">The key to use.</param>
-        /// <param name="predicate">The predicate to filter values associated with <see cref="key"/>.</param>
-        /// <returns>The first <typeparam name="TValue"></typeparam> matching <see cref="predicate"/>. <c>default(TValue)</c> otherwise.</returns>
+        /// <param name="predicate">The predicate to filter values associated with <paramref name="key"/>.</param>
+        /// <returns>The first <typeparamref name="TValue"/> matching <paramref name="predicate"/>. <c>default(TValue)</c> otherwise.</returns>
         public TValue FindValue(TKey key, Func<TValue, bool> predicate)
         {
             ConcurrentSet<TValue> set;
@@ -117,7 +117,7 @@ namespace Akka.Util
         } 
 
         /// <summary>
-        /// Applies the supplied <see cref="fun"/> to all keys and their values.
+        /// Applies the supplied <paramref name="fun"/> to all keys and their values.
         /// </summary>
         /// <param name="fun">The function to apply.</param>
         public void ForEach(Action<TKey, TValue> fun)
@@ -143,12 +143,12 @@ namespace Akka.Util
         public ICollection<TKey> Keys => _container.Keys;
 
         /// <summary>
-        /// Disassociates the value of <typeparam name="TValue"></typeparam> from
-        /// the key of <typeparam name="TKey"></typeparam>.
+        /// Disassociates the value of <typeparamref name="TValue"/> from
+        /// the key of <typeparamref name="TKey"/>.
         /// </summary>
         /// <param name="key">The key.</param>
         /// <param name="value">The value.</param>
-        /// <returns><c>true</c> if <see cref="value"/> was removed. <c>false</c> otherwise.</returns>
+        /// <returns><c>true</c> if <paramref name="value"/> was removed. <c>false</c> otherwise.</returns>
         public bool Remove(TKey key, TValue value)
         {
             ConcurrentSet<TValue> set;
@@ -166,7 +166,7 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// Remove the given <see cref="value"/> from all keys.
+        /// Remove the given <paramref name="value"/> from all keys.
         /// </summary>
         /// <param name="value">The value we're going to remove, if it exists for any key.</param>
         public void RemoveValue(TValue value)
@@ -195,7 +195,7 @@ namespace Akka.Util
         /// Disassociates all values for the specified key.
         /// </summary>
         /// <param name="key">The key we're going to remove.</param>
-        /// <returns>An enumerable collection of <typeparam name="TValue"></typeparam> if the key exists. An empty collection otherwise.</returns>
+        /// <returns>An enumerable collection of <typeparamref name="TValue"/> if the key exists. An empty collection otherwise.</returns>
         public IEnumerable<TValue> Remove(TKey key)
         {
             ConcurrentSet<TValue> set;

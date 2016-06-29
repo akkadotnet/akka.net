@@ -32,6 +32,7 @@ namespace Akka.Persistence.Journal
         /// is completed with success or failure within reasonable time. It is not allowed to
         /// ignore completing the <see cref="Task"/>.
         /// </summary>
+        /// <param name="context">The contextual information about the actor processing replayed messages.</param>
         /// <param name="persistenceId">Persistent actor identifier</param>
         /// <param name="fromSequenceNr">Inclusive sequence number where replay should start</param>
         /// <param name="toSequenceNr">Inclusive sequence number where replay should end</param>

@@ -197,7 +197,7 @@ namespace Akka.Actor
         /// <summary>
         /// Higher-level providers (or extensions) might want to register new synthetic
         /// top-level paths for doing special stuff. This is the way to do just that.
-        /// Just be careful to complete all this before <see cref="ActorSystem.Start"/> finishes,
+        /// Just be careful to complete all this before <see cref="ActorSystemImpl.Start"/> finishes,
         /// or before you start your own auto-spawned actors.
         /// </summary>
         public void RegisterExtraName(string name, IInternalActorRef actor)

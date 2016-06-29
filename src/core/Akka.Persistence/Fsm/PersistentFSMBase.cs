@@ -552,10 +552,10 @@ namespace Akka.Persistence.Fsm
         }
 
         /// <summary>
-        ///     Call the <see cref="PersistentFSMBase.OnTermination" /> hook if you want to retain this behavior.
+        ///     Call the <see cref="OnTermination" /> hook if you want to retain this behavior.
         ///     When overriding make sure to call base.PostStop();
         ///     Please note that this method is called by default from <see cref="ActorBase.PreRestart" /> so
-        ///     override that one if <see cref="PersistentFSMBase.OnTermination" /> shall not be called during restart.
+        ///     override that one if <see cref="OnTermination" /> shall not be called during restart.
         /// </summary>
         protected override void PostStop()
         {

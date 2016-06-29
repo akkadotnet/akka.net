@@ -35,8 +35,8 @@ namespace Akka.Cluster.Tools.Client
     /// <para>
     /// Response messages from the destination actor are tunneled via the receptionist
     /// to avoid inbound connections from other cluster nodes to the client, i.e.
-    /// the <see cref="Sender"/>, as seen by the destination actor, is not the client itself.
-    /// The <see cref="Sender"/> of the response messages, as seen by the client, is preserved
+    /// the <see cref="ActorBase.Sender"/>, as seen by the destination actor, is not the client itself.
+    /// The <see cref="ActorBase.Sender"/> of the response messages, as seen by the client, is preserved
     /// as the original sender, so the client can choose to send subsequent messages
     /// directly to the actor in the cluster.
     /// </para>
