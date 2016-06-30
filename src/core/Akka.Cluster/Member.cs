@@ -102,6 +102,11 @@ namespace Akka.Cluster
         /// </summary>
         public bool IsOlderThan(Member other)
         {
+            if (UpNumber.Equals(other.UpNumber))
+            {
+                return Member.AddressOrdering.Compare(Address, other.Address) < 0;
+            }
+
             return UpNumber < other.UpNumber;
         }
 
@@ -134,6 +139,17 @@ namespace Akka.Cluster
                 if (!x.Host.Equals(y.Host)) return String.Compare(x.Host.GetOrElse(""), y.Host.GetOrElse(""), StringComparison.Ordinal);
                 if (!x.Port.Equals(y.Port)) return Nullable.Compare(x.Port.GetOrElse(0), (y.Port.GetOrElse(0)));
                 return 0;
+            }
+        }
+
+        internal static readonly AgeComparer AgeOrdering = new AgeComparer();
+        internal class AgeComparer : IComparer<Member>
+        {
+            public int Compare(Member a, Member b)
+            {
+                if (a.Equals(b)) return 0;
+                if (a.IsOlderThan(b)) return -1;
+                return 1;
             }
         }
 
@@ -195,6 +211,11 @@ namespace Akka.Cluster
         /// </summary>
         public static Member HighestPriorityOf(Member m1, Member m2)
         {
+            if (m1.Status.Equals(m2.Status))
+            {
+                return m1.IsOlderThan(m2) ? m1 : m2;
+            }
+
             var m1Status = m1.Status;
             var m2Status = m2.Status;
             if (m1Status == MemberStatus.Removed) return m1;
@@ -207,7 +228,7 @@ namespace Akka.Cluster
             if (m2Status == MemberStatus.Leaving) return m2;
             if (m1Status == MemberStatus.Joining) return m2;
             if (m2Status == MemberStatus.Joining) return m1;
-            return m1; //case (Up, Up)     ⇒ m1
+            return m1;
         }
 
         public static readonly ImmutableDictionary<MemberStatus, ImmutableHashSet<MemberStatus>> AllowedTransitions =
@@ -221,6 +242,7 @@ namespace Akka.Cluster
                 {MemberStatus.Removed, ImmutableHashSet.Create<MemberStatus>()}
             }.ToImmutableDictionary();
     }
+
 
     /// <summary>
     /// Defines the current status of a cluster member node
