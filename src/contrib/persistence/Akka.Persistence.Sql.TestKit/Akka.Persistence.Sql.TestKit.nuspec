@@ -6,14 +6,14 @@
     <version>@build.number@</version>
     <authors>@authors@</authors>
     <owners>@authors@</owners>
-    <description>Akka.NET streams support for ADO.NET Persistence middleware.</description>
+    <description>Akka.NET TestKit for SQL-based ADO.NET Persistence middleware.</description>
     <licenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</licenseUrl>
     <projectUrl>https://github.com/akkadotnet/akka.net</projectUrl>
     <iconUrl>http://getakka.net/images/AkkaNetLogo.Normal.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <releaseNotes>@releaseNotes@</releaseNotes>
     <copyright>@copyright@</copyright>
-    <tags>@tags@ persistence eventsource sql reactive streams</tags>
+    <tags>@tags@ persistence testkit eventsource sql reactive streams</tags>
     @dependencies@
     @references@
   </metadata>

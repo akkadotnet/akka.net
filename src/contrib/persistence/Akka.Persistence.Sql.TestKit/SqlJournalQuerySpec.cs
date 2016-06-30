@@ -15,8 +15,9 @@ using Akka.Persistence.Sql.Common.Queries;
 using Akka.Persistence.TestKit;
 using Xunit;
 using Xunit.Abstractions;
+using Query = Akka.Persistence.Sql.Common.Queries.Query;
 
-namespace Akka.Persistence.Sql.Common.TestKit
+namespace Akka.Persistence.Sql.TestKit
 {
     public abstract class SqlJournalQuerySpec : PluginSpec
     {
@@ -41,7 +42,7 @@ namespace Akka.Persistence.Sql.Common.TestKit
 
         public static string TimestampConfig(string plugin)
         {
-            return plugin + ".timestamp-provider =\"" + typeof(TestTimestampProvider).FullName + ", Akka.Persistence.Sql.Common.TestKit\"";
+            return plugin + ".timestamp-provider =\"" + typeof(TestTimestampProvider).FullName + ", Akka.Persistence.Sql.TestKit\"";
         }
 
         private static readonly IPersistentRepresentation[] Events =
@@ -66,42 +67,42 @@ namespace Akka.Persistence.Sql.Common.TestKit
         [Fact]
         public void Journal_queried_on_PersistenceIdRange_returns_events_for_particular_persistent_ids()
         {
-            var query = new Query(1, Hints.PersistenceIds(new[] { "p-1", "p-2" }));
+            var query = new Common.Queries.Query(1, Hints.PersistenceIds(new[] { "p-1", "p-2" }));
             QueryAndExpectSuccess(query, Events[0], Events[1], Events[2], Events[3], Events[4]);
         }
 
         [Fact]
         public void Journal_queried_on_Manifest_returns_events_with_particular_manifest()
         {
-            var query = new Query(2, Hints.Manifest("System.Int32"));
+            var query = new Common.Queries.Query(2, Hints.Manifest("System.Int32"));
             QueryAndExpectSuccess(query, Events[4], Events[5]);
         }
 
         [Fact]
         public void Journal_queried_on_Timestamp_returns_events_occurred_after_or_equal_From_value()
         {
-            var query = new Query(3, Hints.TimestampAfter(113));
+            var query = new Common.Queries.Query(3, Hints.TimestampAfter(113));
             QueryAndExpectSuccess(query, Events[2], Events[4], Events[6]);
         }
 
         [Fact]
         public void Journal_queried_on_Timestamp_returns_events_occurred_before_To_value()
         {
-            var query = new Query(4, Hints.TimestampBefore(121));
+            var query = new Common.Queries.Query(4, Hints.TimestampBefore(121));
             QueryAndExpectSuccess(query, Events[0], Events[1], Events[2], Events[3], Events[5]);
         }
 
         [Fact]
         public void Journal_queried_on_Timestamp_returns_events_occurred_between_both_range_values()
         {
-            var query = new Query(5, Hints.TimestampBetween(113, 311));
+            var query = new Common.Queries.Query(5, Hints.TimestampBetween(113, 311));
             QueryAndExpectSuccess(query, Events[2], Events[4]);
         }
 
         [Fact]
         public void Journal_queried_using_multiple_hints_should_apply_all_of_them()
         {
-            var query = new Query(6,
+            var query = new Common.Queries.Query(6,
                 Hints.TimestampBefore(113),
                 Hints.PersistenceIds(new[] { "p-1", "p-2" }),
                 Hints.Manifest("System.String"));
@@ -127,7 +128,7 @@ namespace Akka.Persistence.Sql.Common.TestKit
             }
         }
 
-        private void QueryAndExpectSuccess(Query query, params IPersistentRepresentation[] events)
+        private void QueryAndExpectSuccess(Common.Queries.Query query, params IPersistentRepresentation[] events)
         {
             JournalRef.Tell(query, TestActor);
 

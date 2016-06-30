@@ -8,7 +8,7 @@
 using System;
 using Akka.Actor;
 
-namespace Akka.Persistence.Query.Sql.Tests
+namespace Akka.Persistence.Sql.TestKit
 {
     public class TestActor: PersistentActor
     {

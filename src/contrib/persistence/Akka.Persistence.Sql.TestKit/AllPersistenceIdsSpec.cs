@@ -9,15 +9,17 @@ using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Persistence.Query;
+using Akka.Persistence.Query.Sql;
 using Akka.Streams;
 using Akka.Streams.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.Query.Sql.Tests
+namespace Akka.Persistence.Sql.TestKit
 {
-    public abstract class AllPersistenceIdsSpec : TestKit.Xunit2.TestKit
+    public abstract class AllPersistenceIdsSpec : Akka.TestKit.Xunit2.TestKit
     {
 
         private readonly ActorMaterializer _materializer;
@@ -38,11 +40,11 @@ namespace Akka.Persistence.Query.Sql.Tests
         [Fact]
         public void Sql_query_AllPersistenceIds_should_find_existing_persistence_ids()
         {
-            Sys.ActorOf(Tests.TestActor.Props("a")).Tell("a1");
+            Sys.ActorOf(TestKit.TestActor.Props("a")).Tell("a1");
             ExpectMsg("a1-done");
-            Sys.ActorOf(Tests.TestActor.Props("b")).Tell("b1");
+            Sys.ActorOf(TestKit.TestActor.Props("b")).Tell("b1");
             ExpectMsg("b1-done");
-            Sys.ActorOf(Tests.TestActor.Props("c")).Tell("c1");
+            Sys.ActorOf(TestKit.TestActor.Props("c")).Tell("c1");
             ExpectMsg("c1-done");
 
             var source = _queries.CurrentPersistenceIds();
@@ -59,7 +61,7 @@ namespace Akka.Persistence.Query.Sql.Tests
             Sql_query_AllPersistenceIds_should_find_existing_persistence_ids();
             // a, b, c created by previous step
 
-            Sys.ActorOf(Tests.TestActor.Props("d")).Tell("d1");
+            Sys.ActorOf(TestKit.TestActor.Props("d")).Tell("d1");
             ExpectMsg("d1-done");
 
             var source = _queries.AllPersistenceIds();
@@ -68,12 +70,12 @@ namespace Akka.Persistence.Query.Sql.Tests
             {
                 probe.Request(5).ExpectNextUnordered("a", "b", "c", "d");
 
-                Sys.ActorOf(Tests.TestActor.Props("e")).Tell("e1");
+                Sys.ActorOf(TestKit.TestActor.Props("e")).Tell("e1");
                 probe.ExpectNext("e");
 
                 var more = Enumerable.Range(1, 100).Select(i => "f" + i).ToArray();
                 foreach (var x in more)
-                    Sys.ActorOf(Tests.TestActor.Props(x)).Tell(x);
+                    Sys.ActorOf(TestKit.TestActor.Props(x)).Tell(x);
 
                 probe.Request(100);
                 return probe.ExpectNextUnorderedN(more);

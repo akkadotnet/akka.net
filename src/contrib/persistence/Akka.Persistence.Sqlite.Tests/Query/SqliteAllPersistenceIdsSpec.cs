@@ -7,7 +7,7 @@
 
 using Akka.Configuration;
 using Akka.Persistence.Query.Sql;
-using Akka.Persistence.Query.Sql.Tests;
+using Akka.Persistence.Sql.TestKit;
 using Akka.Util.Internal;
 using Xunit.Abstractions;
 
