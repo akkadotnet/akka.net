@@ -1,0 +1,1820 @@
+﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.TestKit")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests.MultiNode")]
+[assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
+[assembly: System.Runtime.InteropServices.GuidAttribute("0e3e691b-0c31-4718-9b1a-d749b93208c9")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5", FrameworkDisplayName=".NET Framework 4.5")]
+namespace Akka.Cluster
+{
+    public class AutoDown : Akka.Cluster.AutoDownBase
+    {
+        public AutoDown(System.TimeSpan autoDownUnreachableAfter) { }
+        public override Akka.Actor.IScheduler Scheduler { get; }
+        public override Akka.Actor.Address SelfAddress { get; }
+        public override void Down(Akka.Actor.Address node) { }
+        protected override void PostStop() { }
+        protected override void PreStart() { }
+        public static Akka.Actor.Props Props(System.TimeSpan autoDownUnreachableAfter) { }
+        public sealed class UnreachableTimeout
+        {
+            public UnreachableTimeout(Akka.Cluster.UniqueAddress node) { }
+            public Akka.Cluster.UniqueAddress Node { get; }
+        }
+    }
+    public abstract class AutoDownBase : Akka.Actor.UntypedActor
+    {
+        protected bool _leader;
+        protected AutoDownBase(System.TimeSpan autoDownUnreachableAfter) { }
+        public Akka.Event.ILoggingAdapter Log { get; }
+        public abstract Akka.Actor.IScheduler Scheduler { get; }
+        public abstract Akka.Actor.Address SelfAddress { get; }
+        public abstract void Down(Akka.Actor.Address node);
+        protected override void OnReceive(object message) { }
+        protected override void PostStop() { }
+    }
+    public class Cluster : Akka.Actor.IExtension
+    {
+        public Cluster(Akka.Actor.Internal.ActorSystemImpl system) { }
+        public Akka.Actor.IActorRef ClusterCore { get; }
+        public Akka.Remote.DefaultFailureDetectorRegistry<Akka.Actor.Address> FailureDetector { get; }
+        public static bool IsAssertInvariantsEnabled { get; }
+        public bool IsTerminated { get; }
+        public Akka.Cluster.ClusterReadView ReadView { get; }
+        public Akka.Actor.Address SelfAddress { get; }
+        public System.Collections.Immutable.ImmutableHashSet<string> SelfRoles { get; }
+        public Akka.Cluster.UniqueAddress SelfUniqueAddress { get; }
+        public Akka.Cluster.ClusterSettings Settings { get; }
+        public Akka.Cluster.ClusterEvent.CurrentClusterState State { get; }
+        public void Down(Akka.Actor.Address address) { }
+        public static Akka.Cluster.Cluster Get(Akka.Actor.ActorSystem system) { }
+        public void Join(Akka.Actor.Address address) { }
+        public void JoinSeedNodes(System.Collections.Immutable.ImmutableList<Akka.Actor.Address> seedNodes) { }
+        public void Leave(Akka.Actor.Address address) { }
+        public void LogInfo(string message) { }
+        public void LogInfo(string template, object arg1) { }
+        public void LogInfo(string template, object arg1, object arg2) { }
+        public void RegisterOnMemberRemoved(System.Action callback) { }
+        public void RegisterOnMemberUp(System.Action callback) { }
+        public Akka.Actor.ActorPath RemotePathOf(Akka.Actor.IActorRef actorRef) { }
+        public void SendCurrentClusterState(Akka.Actor.IActorRef receiver) { }
+        public void Subscribe(Akka.Actor.IActorRef subscriber, System.Type[] to) { }
+        public void Subscribe(Akka.Actor.IActorRef subscriber, Akka.Cluster.ClusterEvent.SubscriptionInitialStateMode initialStateMode, System.Type[] to) { }
+        public void Unsubscribe(Akka.Actor.IActorRef subscriber) { }
+        public void Unsubscribe(Akka.Actor.IActorRef subscriber, System.Type to) { }
+    }
+    public class ClusterActorRefProvider : Akka.Remote.RemoteActorRefProvider
+    {
+        public ClusterActorRefProvider(string systemName, Akka.Actor.Settings settings, Akka.Event.EventStream eventStream) { }
+        protected override Akka.Actor.IActorRef CreateRemoteWatcher(Akka.Actor.Internal.ActorSystemImpl system) { }
+        public override void Init(Akka.Actor.Internal.ActorSystemImpl system) { }
+    }
+    public class ClusterEvent
+    {
+        public static readonly Akka.Cluster.ClusterEvent.SubscriptionInitialStateMode InitialStateAsEvents;
+        public static readonly Akka.Cluster.ClusterEvent.SubscriptionInitialStateMode InitialStateAsSnapshot;
+        public ClusterEvent() { }
+        [System.ObsoleteAttribute("Superseded by akka.cluster.metrics package")]
+        public class ClusterMetricsChanged : Akka.Cluster.ClusterEvent.IClusterDomainEvent
+        {
+            public ClusterMetricsChanged(System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.NodeMetrics> nodeMetrics) { }
+            public System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.NodeMetrics> NodeMetrics { get; }
+        }
+        public sealed class ClusterShuttingDown : Akka.Cluster.ClusterEvent.IClusterDomainEvent
+        {
+            public static readonly Akka.Cluster.ClusterEvent.IClusterDomainEvent Instance;
+        }
+        public sealed class CurrentClusterState
+        {
+            public CurrentClusterState() { }
+            public CurrentClusterState(System.Collections.Immutable.ImmutableSortedSet<Akka.Cluster.Member> members, System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Member> unreachable, System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> seenBy, Akka.Actor.Address leader, System.Collections.Immutable.ImmutableDictionary<string, Akka.Actor.Address> roleLeaderMap) { }
+            public System.Collections.Immutable.ImmutableHashSet<string> AllRoles { get; }
+            public Akka.Actor.Address Leader { get; }
+            public System.Collections.Immutable.ImmutableSortedSet<Akka.Cluster.Member> Members { get; }
+            public System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> SeenBy { get; }
+            public System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Member> Unreachable { get; }
+            public Akka.Cluster.ClusterEvent.CurrentClusterState Copy(System.Collections.Immutable.ImmutableSortedSet<Akka.Cluster.Member> members = null, System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Member> unreachable = null, System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> seenBy = null, Akka.Actor.Address leader = null, System.Collections.Immutable.ImmutableDictionary<string, Akka.Actor.Address> roleLeaderMap = null) { }
+            public Akka.Actor.Address RoleLeader(string role) { }
+        }
+        public interface IClusterDomainEvent { }
+        public interface IMemberEvent : Akka.Cluster.ClusterEvent.IClusterDomainEvent
+        {
+            Akka.Cluster.Member Member { get; }
+        }
+        public interface IReachabilityEvent : Akka.Cluster.ClusterEvent.IClusterDomainEvent { }
+        public sealed class LeaderChanged : Akka.Cluster.ClusterEvent.IClusterDomainEvent
+        {
+            public LeaderChanged(Akka.Actor.Address leader) { }
+            public Akka.Actor.Address Leader { get; }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+        }
+        public sealed class MemberExited : Akka.Cluster.ClusterEvent.MemberStatusChange
+        {
+            public MemberExited(Akka.Cluster.Member member) { }
+        }
+        public sealed class MemberJoined : Akka.Cluster.ClusterEvent.MemberStatusChange
+        {
+            public MemberJoined(Akka.Cluster.Member member) { }
+        }
+        public sealed class MemberLeft : Akka.Cluster.ClusterEvent.MemberStatusChange
+        {
+            public MemberLeft(Akka.Cluster.Member member) { }
+        }
+        public sealed class MemberRemoved : Akka.Cluster.ClusterEvent.MemberStatusChange
+        {
+            public MemberRemoved(Akka.Cluster.Member member, Akka.Cluster.MemberStatus previousStatus) { }
+            public Akka.Cluster.MemberStatus PreviousStatus { get; }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+        }
+        public abstract class MemberStatusChange : Akka.Cluster.ClusterEvent.IClusterDomainEvent, Akka.Cluster.ClusterEvent.IMemberEvent
+        {
+            protected readonly Akka.Cluster.Member _member;
+            protected MemberStatusChange(Akka.Cluster.Member member, Akka.Cluster.MemberStatus validStatus) { }
+            public Akka.Cluster.Member Member { get; }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+        }
+        public sealed class MemberUp : Akka.Cluster.ClusterEvent.MemberStatusChange
+        {
+            public MemberUp(Akka.Cluster.Member member) { }
+        }
+        public abstract class ReachabilityEvent : Akka.Cluster.ClusterEvent.IClusterDomainEvent, Akka.Cluster.ClusterEvent.IReachabilityEvent
+        {
+            protected ReachabilityEvent(Akka.Cluster.Member member) { }
+            public Akka.Cluster.Member Member { get; }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+        }
+        public sealed class ReachableMember : Akka.Cluster.ClusterEvent.ReachabilityEvent
+        {
+            public ReachableMember(Akka.Cluster.Member member) { }
+        }
+        public sealed class RoleLeaderChanged : Akka.Cluster.ClusterEvent.IClusterDomainEvent
+        {
+            public RoleLeaderChanged(string role, Akka.Actor.Address leader) { }
+            public Akka.Actor.Address Leader { get; }
+            public string Role { get; }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+        }
+        public enum SubscriptionInitialStateMode
+        {
+            InitialStateAsSnapshot = 0,
+            InitialStateAsEvents = 1,
+        }
+        public sealed class UnreachableMember : Akka.Cluster.ClusterEvent.ReachabilityEvent
+        {
+            public UnreachableMember(Akka.Cluster.Member member) { }
+        }
+    }
+    public class ClusterExtension : Akka.Actor.ExtensionIdProvider<Akka.Cluster.Cluster>
+    {
+        public ClusterExtension() { }
+        public override Akka.Cluster.Cluster CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
+    }
+    public class ClusterReadView : System.IDisposable
+    {
+        public ClusterReadView(Akka.Cluster.Cluster cluster) { }
+        public System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.NodeMetrics> ClusterMetrics { get; }
+        public bool IsAvailable { get; }
+        public bool IsLeader { get; }
+        public bool IsSingletonCluster { get; }
+        public bool IsTerminated { get; }
+        public Akka.Actor.Address Leader { get; }
+        public System.Collections.Immutable.ImmutableSortedSet<Akka.Cluster.Member> Members { get; }
+        public Akka.Cluster.Reachability Reachability { get; }
+        public Akka.Cluster.Member Self { get; }
+        public Akka.Actor.Address SelfAddress { get; }
+        public Akka.Cluster.ClusterEvent.CurrentClusterState State { get; }
+        public Akka.Cluster.MemberStatus Status { get; }
+        public System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Member> UnreachableMembers { get; }
+        public void Dispose() { }
+        protected virtual void Dispose(bool disposing) { }
+    }
+    public class ClusterScope : Akka.Actor.Scope
+    {
+        public static readonly Akka.Cluster.ClusterScope Instance;
+        public override Akka.Actor.Scope Copy() { }
+        public override Akka.Actor.Scope WithFallback(Akka.Actor.Scope other) { }
+    }
+    public sealed class ClusterSettings
+    {
+        public ClusterSettings(Akka.Configuration.Config config, string systemName) { }
+        public System.Nullable<System.TimeSpan> AutoDownUnreachableAfter { get; }
+        public System.TimeSpan DownRemovalMargin { get; }
+        public Akka.Configuration.Config FailureDetectorConfig { get; }
+        public string FailureDetectorImplementationClass { get; }
+        public double GossipDifferentViewProbability { get; }
+        public System.TimeSpan GossipInterval { get; }
+        public System.TimeSpan GossipTimeToLive { get; }
+        public System.TimeSpan HeartbeatExpectedResponseAfter { get; }
+        public System.TimeSpan HeartbeatInterval { get; }
+        public System.TimeSpan LeaderActionsInterval { get; }
+        public bool LogInfo { get; }
+        public string MetricsCollectorClass { get; }
+        public bool MetricsEnabled { get; }
+        public System.TimeSpan MetricsGossipInterval { get; }
+        public System.TimeSpan MetricsInterval { get; }
+        public System.TimeSpan MetricsMovingAverageHalfLife { get; }
+        public int MinNrOfMembers { get; }
+        public System.Collections.Immutable.ImmutableDictionary<string, int> MinNrOfMembersOfRole { get; }
+        public int MonitoredByNrOfMembers { get; }
+        public System.TimeSpan PeriodicTasksInitialDelay { get; }
+        public System.Nullable<System.TimeSpan> PublishStatsInterval { get; }
+        public int ReduceGossipDifferentViewProbability { get; }
+        public System.Nullable<System.TimeSpan> RetryUnsuccessfulJoinAfter { get; }
+        public System.Collections.Immutable.ImmutableHashSet<string> Roles { get; }
+        public System.TimeSpan SchedulerTickDuration { get; }
+        public int SchedulerTicksPerWheel { get; }
+        public System.Collections.Immutable.ImmutableList<Akka.Actor.Address> SeedNodes { get; }
+        public System.TimeSpan SeedNodeTimeout { get; }
+        public System.TimeSpan UnreachableNodesReaperInterval { get; }
+        public string UseDispatcher { get; }
+        public bool VerboseHeartbeatLogging { get; }
+    }
+    public sealed class EWMA
+    {
+        public const double LogOf2 = 0.69315D;
+        public EWMA(double value, double alpha) { }
+        public double Alpha { get; }
+        public double Value { get; }
+        public static double CalculateAlpha(System.TimeSpan halfLife, System.TimeSpan collectInterval) { }
+    }
+    public interface IClusterMessage { }
+    public interface IMetricsCollector : System.IDisposable
+    {
+        Akka.Cluster.NodeMetrics Sample();
+    }
+    public class Member : System.IComparable<Akka.Cluster.Member>
+    {
+        public static readonly Akka.Cluster.Member.AddressComparer AddressOrdering;
+        public static readonly System.Collections.Immutable.ImmutableDictionary<Akka.Cluster.MemberStatus, System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.MemberStatus>> AllowedTransitions;
+        public static readonly Akka.Cluster.Member.LeaderStatusMemberComparer LeaderStatusOrdering;
+        public static readonly System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Member> None;
+        public static readonly Akka.Cluster.Member.MemberComparer Ordering;
+        public Akka.Actor.Address Address { get; }
+        public System.Collections.Immutable.ImmutableHashSet<string> Roles { get; }
+        public Akka.Cluster.MemberStatus Status { get; }
+        public Akka.Cluster.UniqueAddress UniqueAddress { get; }
+        public int CompareTo(Akka.Cluster.Member other) { }
+        public Akka.Cluster.Member Copy(Akka.Cluster.MemberStatus status) { }
+        public Akka.Cluster.Member CopyUp(int upNumber) { }
+        public static Akka.Cluster.Member Create(Akka.Cluster.UniqueAddress uniqueAddress, System.Collections.Immutable.ImmutableHashSet<string> roles) { }
+        public static Akka.Cluster.Member Create(Akka.Cluster.UniqueAddress uniqueAddress, int upNumber, Akka.Cluster.MemberStatus status, System.Collections.Immutable.ImmutableHashSet<string> roles) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public bool HasRole(string role) { }
+        public static Akka.Cluster.Member HighestPriorityOf(Akka.Cluster.Member m1, Akka.Cluster.Member m2) { }
+        public bool IsOlderThan(Akka.Cluster.Member other) { }
+        public static System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Member> PickHighestPriority(System.Collections.Generic.IEnumerable<Akka.Cluster.Member> a, System.Collections.Generic.IEnumerable<Akka.Cluster.Member> b) { }
+        public static Akka.Cluster.Member Removed(Akka.Cluster.UniqueAddress node) { }
+        public override string ToString() { }
+        public class AddressComparer : System.Collections.Generic.IComparer<Akka.Actor.Address>
+        {
+            public AddressComparer() { }
+            public int Compare(Akka.Actor.Address x, Akka.Actor.Address y) { }
+        }
+        public class LeaderStatusMemberComparer : System.Collections.Generic.IComparer<Akka.Cluster.Member>
+        {
+            public LeaderStatusMemberComparer() { }
+            public int Compare(Akka.Cluster.Member a, Akka.Cluster.Member b) { }
+        }
+        public class MemberComparer : System.Collections.Generic.IComparer<Akka.Cluster.Member>
+        {
+            public MemberComparer() { }
+            public int Compare(Akka.Cluster.Member x, Akka.Cluster.Member y) { }
+        }
+    }
+    public enum MemberStatus
+    {
+        Joining = 0,
+        Up = 1,
+        Leaving = 2,
+        Exiting = 3,
+        Down = 4,
+        Removed = 5,
+    }
+    public sealed class Metric : Akka.Cluster.MetricNumericConverter
+    {
+        public Metric(string name, double value, Akka.Cluster.EWMA average = null) { }
+        public Akka.Cluster.EWMA Average { get; }
+        public bool IsSmooth { get; }
+        public string Name { get; }
+        public double SmoothValue { get; }
+        public double Value { get; }
+        public static Akka.Cluster.Metric Create(string name, double value, System.Nullable<double> decayFactor = null) { }
+        public static Akka.Cluster.EWMA CreateEWMA(double value, System.Nullable<double> decayFactor = null) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+    }
+    public abstract class MetricNumericConverter
+    {
+        protected MetricNumericConverter() { }
+        public static double ConvertNumber(object from) { }
+        public static bool Defined(double value) { }
+    }
+    public class NodeMetrics
+    {
+        public NodeMetrics(Akka.Actor.Address address, long timestamp, System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Metric> metrics) { }
+        public NodeMetrics(Akka.Actor.Address address, long timestamp) { }
+        public Akka.Actor.Address Address { get; }
+        public System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Metric> Metrics { get; }
+        public long Timestamp { get; }
+        public Akka.Cluster.NodeMetrics Copy(Akka.Actor.Address address = null, System.Nullable<long> timestamp = null, System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Metric> metrics = null) { }
+        public override bool Equals(object obj) { }
+        protected bool Equals(Akka.Cluster.NodeMetrics other) { }
+        public override int GetHashCode() { }
+        public Akka.Cluster.NodeMetrics Merge(Akka.Cluster.NodeMetrics that) { }
+        public Akka.Cluster.Metric Metric(string key) { }
+    }
+    public class Reachability
+    {
+        public static readonly Akka.Cluster.Reachability Empty;
+        public Reachability(System.Collections.Immutable.ImmutableList<Akka.Cluster.Reachability.Record> records, System.Collections.Immutable.ImmutableDictionary<Akka.Cluster.UniqueAddress, long> versions) { }
+        public System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.UniqueAddress> AllObservers { get; }
+        public System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.UniqueAddress> AllUnreachable { get; }
+        public System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.UniqueAddress> AllUnreachableOrTerminated { get; }
+        public bool IsAllReachable { get; }
+        public System.Collections.Immutable.ImmutableDictionary<Akka.Cluster.UniqueAddress, System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.UniqueAddress>> ObserversGroupedByUnreachable { get; }
+        public System.Collections.Immutable.ImmutableList<Akka.Cluster.Reachability.Record> Records { get; }
+        public System.Collections.Immutable.ImmutableDictionary<Akka.Cluster.UniqueAddress, long> Versions { get; }
+        public System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.UniqueAddress> AllUnreachableFrom(Akka.Cluster.UniqueAddress observer) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public bool IsReachable(Akka.Cluster.UniqueAddress node) { }
+        public bool IsReachable(Akka.Cluster.UniqueAddress observer, Akka.Cluster.UniqueAddress subject) { }
+        public Akka.Cluster.Reachability Merge(System.Collections.Generic.IEnumerable<Akka.Cluster.UniqueAddress> allowed, Akka.Cluster.Reachability other) { }
+        public Akka.Cluster.Reachability Reachable(Akka.Cluster.UniqueAddress observer, Akka.Cluster.UniqueAddress subject) { }
+        public System.Collections.Immutable.ImmutableList<Akka.Cluster.Reachability.Record> RecordsFrom(Akka.Cluster.UniqueAddress observer) { }
+        public Akka.Cluster.Reachability Remove(System.Collections.Generic.IEnumerable<Akka.Cluster.UniqueAddress> nodes) { }
+        public Akka.Cluster.Reachability RemoveObservers(System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.UniqueAddress> nodes) { }
+        public Akka.Cluster.Reachability.ReachabilityStatus Status(Akka.Cluster.UniqueAddress observer, Akka.Cluster.UniqueAddress subject) { }
+        public Akka.Cluster.Reachability.ReachabilityStatus Status(Akka.Cluster.UniqueAddress node) { }
+        public Akka.Cluster.Reachability Terminated(Akka.Cluster.UniqueAddress observer, Akka.Cluster.UniqueAddress subject) { }
+        public override string ToString() { }
+        public Akka.Cluster.Reachability Unreachable(Akka.Cluster.UniqueAddress observer, Akka.Cluster.UniqueAddress subject) { }
+        public enum ReachabilityStatus
+        {
+            Reachable = 0,
+            Unreachable = 1,
+            Terminated = 2,
+        }
+        public sealed class Record
+        {
+            public Record(Akka.Cluster.UniqueAddress observer, Akka.Cluster.UniqueAddress subject, Akka.Cluster.Reachability.ReachabilityStatus status, long version) { }
+            public Akka.Cluster.UniqueAddress Observer { get; }
+            public Akka.Cluster.Reachability.ReachabilityStatus Status { get; }
+            public Akka.Cluster.UniqueAddress Subject { get; }
+            public long Version { get; }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+        }
+    }
+    public class UniqueAddress : System.IComparable<Akka.Cluster.UniqueAddress>
+    {
+        public UniqueAddress(Akka.Actor.Address address, int uid) { }
+        public Akka.Actor.Address Address { get; }
+        public int Uid { get; }
+        public int CompareTo(Akka.Cluster.UniqueAddress that) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public class VectorClockStats
+    {
+        public VectorClockStats(int versionSize = 0, int seenLatest = 0) { }
+        public int SeenLatest { get; }
+        public int VersionSize { get; }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+    }
+}
+namespace Akka.Cluster.Proto.Msg
+{
+    public sealed class Address : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.Proto.Msg.Address, Akka.Cluster.Proto.Msg.Address.Builder>
+    {
+        public const int HostnameFieldNumber = 2;
+        public const int PortFieldNumber = 3;
+        public const int ProtocolFieldNumber = 4;
+        public const int SystemFieldNumber = 1;
+        public static Akka.Cluster.Proto.Msg.Address DefaultInstance { get; }
+        public override Akka.Cluster.Proto.Msg.Address DefaultInstanceForType { get; }
+        public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        public bool HasHostname { get; }
+        public bool HasPort { get; }
+        public bool HasProtocol { get; }
+        public bool HasSystem { get; }
+        public string Hostname { get; }
+        protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.Proto.Msg.Address, Akka.Cluster.Proto.Msg.Address.Builder> InternalFieldAccessors { get; }
+        public override bool IsInitialized { get; }
+        [System.CLSCompliantAttribute(false)]
+        public uint Port { get; }
+        public string Protocol { get; }
+        public override int SerializedSize { get; }
+        public string System { get; }
+        protected override Akka.Cluster.Proto.Msg.Address ThisMessage { get; }
+        public static Akka.Cluster.Proto.Msg.Address.Builder CreateBuilder() { }
+        public static Akka.Cluster.Proto.Msg.Address.Builder CreateBuilder(Akka.Cluster.Proto.Msg.Address prototype) { }
+        public override Akka.Cluster.Proto.Msg.Address.Builder CreateBuilderForType() { }
+        public static Akka.Cluster.Proto.Msg.Address ParseDelimitedFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.Address ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Address ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+        public static Akka.Cluster.Proto.Msg.Address ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Address ParseFrom(byte[] data) { }
+        public static Akka.Cluster.Proto.Msg.Address ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Address ParseFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.Address ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Address ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public static Akka.Cluster.Proto.Msg.Address ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public override Akka.Cluster.Proto.Msg.Address.Builder ToBuilder() { }
+        public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+        public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.Proto.Msg.Address, Akka.Cluster.Proto.Msg.Address.Builder>
+        {
+            public Builder() { }
+            public override Akka.Cluster.Proto.Msg.Address DefaultInstanceForType { get; }
+            public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public bool HasHostname { get; }
+            public bool HasPort { get; }
+            public bool HasProtocol { get; }
+            public bool HasSystem { get; }
+            public string Hostname { get; set; }
+            public override bool IsInitialized { get; }
+            protected override Akka.Cluster.Proto.Msg.Address MessageBeingBuilt { get; }
+            [System.CLSCompliantAttribute(false)]
+            public uint Port { get; set; }
+            public string Protocol { get; set; }
+            public string System { get; set; }
+            protected override Akka.Cluster.Proto.Msg.Address.Builder ThisBuilder { get; }
+            public override Akka.Cluster.Proto.Msg.Address BuildPartial() { }
+            public override Akka.Cluster.Proto.Msg.Address.Builder Clear() { }
+            public Akka.Cluster.Proto.Msg.Address.Builder ClearHostname() { }
+            public Akka.Cluster.Proto.Msg.Address.Builder ClearPort() { }
+            public Akka.Cluster.Proto.Msg.Address.Builder ClearProtocol() { }
+            public Akka.Cluster.Proto.Msg.Address.Builder ClearSystem() { }
+            public override Akka.Cluster.Proto.Msg.Address.Builder Clone() { }
+            public override Akka.Cluster.Proto.Msg.Address.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+            public override Akka.Cluster.Proto.Msg.Address.Builder MergeFrom(Akka.Cluster.Proto.Msg.Address other) { }
+            public override Akka.Cluster.Proto.Msg.Address.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+            public override Akka.Cluster.Proto.Msg.Address.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+            public Akka.Cluster.Proto.Msg.Address.Builder SetHostname(string value) { }
+            [System.CLSCompliantAttribute(false)]
+            public Akka.Cluster.Proto.Msg.Address.Builder SetPort(uint value) { }
+            public Akka.Cluster.Proto.Msg.Address.Builder SetProtocol(string value) { }
+            public Akka.Cluster.Proto.Msg.Address.Builder SetSystem(string value) { }
+        }
+    }
+    public class static ClusterMessages
+    {
+        public static Google.ProtocolBuffers.Descriptors.FileDescriptor Descriptor { get; }
+        public static void RegisterAllExtensions(Google.ProtocolBuffers.ExtensionRegistry registry) { }
+    }
+    public sealed class Empty : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.Proto.Msg.Empty, Akka.Cluster.Proto.Msg.Empty.Builder>
+    {
+        public static Akka.Cluster.Proto.Msg.Empty DefaultInstance { get; }
+        public override Akka.Cluster.Proto.Msg.Empty DefaultInstanceForType { get; }
+        public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.Proto.Msg.Empty, Akka.Cluster.Proto.Msg.Empty.Builder> InternalFieldAccessors { get; }
+        public override bool IsInitialized { get; }
+        public override int SerializedSize { get; }
+        protected override Akka.Cluster.Proto.Msg.Empty ThisMessage { get; }
+        public static Akka.Cluster.Proto.Msg.Empty.Builder CreateBuilder() { }
+        public static Akka.Cluster.Proto.Msg.Empty.Builder CreateBuilder(Akka.Cluster.Proto.Msg.Empty prototype) { }
+        public override Akka.Cluster.Proto.Msg.Empty.Builder CreateBuilderForType() { }
+        public static Akka.Cluster.Proto.Msg.Empty ParseDelimitedFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.Empty ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Empty ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+        public static Akka.Cluster.Proto.Msg.Empty ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Empty ParseFrom(byte[] data) { }
+        public static Akka.Cluster.Proto.Msg.Empty ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Empty ParseFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.Empty ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Empty ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public static Akka.Cluster.Proto.Msg.Empty ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public override Akka.Cluster.Proto.Msg.Empty.Builder ToBuilder() { }
+        public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+        public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.Proto.Msg.Empty, Akka.Cluster.Proto.Msg.Empty.Builder>
+        {
+            public Builder() { }
+            public override Akka.Cluster.Proto.Msg.Empty DefaultInstanceForType { get; }
+            public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public override bool IsInitialized { get; }
+            protected override Akka.Cluster.Proto.Msg.Empty MessageBeingBuilt { get; }
+            protected override Akka.Cluster.Proto.Msg.Empty.Builder ThisBuilder { get; }
+            public override Akka.Cluster.Proto.Msg.Empty BuildPartial() { }
+            public override Akka.Cluster.Proto.Msg.Empty.Builder Clear() { }
+            public override Akka.Cluster.Proto.Msg.Empty.Builder Clone() { }
+            public override Akka.Cluster.Proto.Msg.Empty.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+            public override Akka.Cluster.Proto.Msg.Empty.Builder MergeFrom(Akka.Cluster.Proto.Msg.Empty other) { }
+            public override Akka.Cluster.Proto.Msg.Empty.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+            public override Akka.Cluster.Proto.Msg.Empty.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        }
+    }
+    public sealed class Gossip : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.Proto.Msg.Gossip, Akka.Cluster.Proto.Msg.Gossip.Builder>
+    {
+        public const int AllAddressesFieldNumber = 1;
+        public const int AllHashesFieldNumber = 3;
+        public const int AllRolesFieldNumber = 2;
+        public const int MembersFieldNumber = 4;
+        public const int OverviewFieldNumber = 5;
+        public const int VersionFieldNumber = 6;
+        public int AllAddressesCount { get; }
+        public System.Collections.Generic.IList<Akka.Cluster.Proto.Msg.UniqueAddress> AllAddressesList { get; }
+        public int AllHashesCount { get; }
+        public System.Collections.Generic.IList<string> AllHashesList { get; }
+        public int AllRolesCount { get; }
+        public System.Collections.Generic.IList<string> AllRolesList { get; }
+        public static Akka.Cluster.Proto.Msg.Gossip DefaultInstance { get; }
+        public override Akka.Cluster.Proto.Msg.Gossip DefaultInstanceForType { get; }
+        public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        public bool HasOverview { get; }
+        public bool HasVersion { get; }
+        protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.Proto.Msg.Gossip, Akka.Cluster.Proto.Msg.Gossip.Builder> InternalFieldAccessors { get; }
+        public override bool IsInitialized { get; }
+        public int MembersCount { get; }
+        public System.Collections.Generic.IList<Akka.Cluster.Proto.Msg.Member> MembersList { get; }
+        public Akka.Cluster.Proto.Msg.GossipOverview Overview { get; }
+        public override int SerializedSize { get; }
+        protected override Akka.Cluster.Proto.Msg.Gossip ThisMessage { get; }
+        public Akka.Cluster.Proto.Msg.VectorClock Version { get; }
+        public static Akka.Cluster.Proto.Msg.Gossip.Builder CreateBuilder() { }
+        public static Akka.Cluster.Proto.Msg.Gossip.Builder CreateBuilder(Akka.Cluster.Proto.Msg.Gossip prototype) { }
+        public override Akka.Cluster.Proto.Msg.Gossip.Builder CreateBuilderForType() { }
+        public Akka.Cluster.Proto.Msg.UniqueAddress GetAllAddresses(int index) { }
+        public string GetAllHashes(int index) { }
+        public string GetAllRoles(int index) { }
+        public Akka.Cluster.Proto.Msg.Member GetMembers(int index) { }
+        public static Akka.Cluster.Proto.Msg.Gossip ParseDelimitedFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.Gossip ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Gossip ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+        public static Akka.Cluster.Proto.Msg.Gossip ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Gossip ParseFrom(byte[] data) { }
+        public static Akka.Cluster.Proto.Msg.Gossip ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Gossip ParseFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.Gossip ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Gossip ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public static Akka.Cluster.Proto.Msg.Gossip ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public override Akka.Cluster.Proto.Msg.Gossip.Builder ToBuilder() { }
+        public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+        public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.Proto.Msg.Gossip, Akka.Cluster.Proto.Msg.Gossip.Builder>
+        {
+            public Builder() { }
+            public int AllAddressesCount { get; }
+            public Google.ProtocolBuffers.Collections.IPopsicleList<Akka.Cluster.Proto.Msg.UniqueAddress> AllAddressesList { get; }
+            public int AllHashesCount { get; }
+            public Google.ProtocolBuffers.Collections.IPopsicleList<string> AllHashesList { get; }
+            public int AllRolesCount { get; }
+            public Google.ProtocolBuffers.Collections.IPopsicleList<string> AllRolesList { get; }
+            public override Akka.Cluster.Proto.Msg.Gossip DefaultInstanceForType { get; }
+            public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public bool HasOverview { get; }
+            public bool HasVersion { get; }
+            public override bool IsInitialized { get; }
+            public int MembersCount { get; }
+            public Google.ProtocolBuffers.Collections.IPopsicleList<Akka.Cluster.Proto.Msg.Member> MembersList { get; }
+            protected override Akka.Cluster.Proto.Msg.Gossip MessageBeingBuilt { get; }
+            public Akka.Cluster.Proto.Msg.GossipOverview Overview { get; set; }
+            protected override Akka.Cluster.Proto.Msg.Gossip.Builder ThisBuilder { get; }
+            public Akka.Cluster.Proto.Msg.VectorClock Version { get; set; }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder AddAllAddresses(Akka.Cluster.Proto.Msg.UniqueAddress value) { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder AddAllAddresses(Akka.Cluster.Proto.Msg.UniqueAddress.Builder builderForValue) { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder AddAllHashes(string value) { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder AddAllRoles(string value) { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder AddMembers(Akka.Cluster.Proto.Msg.Member value) { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder AddMembers(Akka.Cluster.Proto.Msg.Member.Builder builderForValue) { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder AddRangeAllAddresses(System.Collections.Generic.IEnumerable<Akka.Cluster.Proto.Msg.UniqueAddress> values) { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder AddRangeAllHashes(System.Collections.Generic.IEnumerable<string> values) { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder AddRangeAllRoles(System.Collections.Generic.IEnumerable<string> values) { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder AddRangeMembers(System.Collections.Generic.IEnumerable<Akka.Cluster.Proto.Msg.Member> values) { }
+            public override Akka.Cluster.Proto.Msg.Gossip BuildPartial() { }
+            public override Akka.Cluster.Proto.Msg.Gossip.Builder Clear() { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder ClearAllAddresses() { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder ClearAllHashes() { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder ClearAllRoles() { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder ClearMembers() { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder ClearOverview() { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder ClearVersion() { }
+            public override Akka.Cluster.Proto.Msg.Gossip.Builder Clone() { }
+            public Akka.Cluster.Proto.Msg.UniqueAddress GetAllAddresses(int index) { }
+            public string GetAllHashes(int index) { }
+            public string GetAllRoles(int index) { }
+            public Akka.Cluster.Proto.Msg.Member GetMembers(int index) { }
+            public override Akka.Cluster.Proto.Msg.Gossip.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+            public override Akka.Cluster.Proto.Msg.Gossip.Builder MergeFrom(Akka.Cluster.Proto.Msg.Gossip other) { }
+            public override Akka.Cluster.Proto.Msg.Gossip.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+            public override Akka.Cluster.Proto.Msg.Gossip.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder MergeOverview(Akka.Cluster.Proto.Msg.GossipOverview value) { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder MergeVersion(Akka.Cluster.Proto.Msg.VectorClock value) { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder SetAllAddresses(int index, Akka.Cluster.Proto.Msg.UniqueAddress value) { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder SetAllAddresses(int index, Akka.Cluster.Proto.Msg.UniqueAddress.Builder builderForValue) { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder SetAllHashes(int index, string value) { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder SetAllRoles(int index, string value) { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder SetMembers(int index, Akka.Cluster.Proto.Msg.Member value) { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder SetMembers(int index, Akka.Cluster.Proto.Msg.Member.Builder builderForValue) { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder SetOverview(Akka.Cluster.Proto.Msg.GossipOverview value) { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder SetOverview(Akka.Cluster.Proto.Msg.GossipOverview.Builder builderForValue) { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder SetVersion(Akka.Cluster.Proto.Msg.VectorClock value) { }
+            public Akka.Cluster.Proto.Msg.Gossip.Builder SetVersion(Akka.Cluster.Proto.Msg.VectorClock.Builder builderForValue) { }
+        }
+    }
+    public sealed class GossipEnvelope : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.Proto.Msg.GossipEnvelope, Akka.Cluster.Proto.Msg.GossipEnvelope.Builder>
+    {
+        public const int FromFieldNumber = 1;
+        public const int SerializedGossipFieldNumber = 3;
+        public const int ToFieldNumber = 2;
+        public static Akka.Cluster.Proto.Msg.GossipEnvelope DefaultInstance { get; }
+        public override Akka.Cluster.Proto.Msg.GossipEnvelope DefaultInstanceForType { get; }
+        public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        public Akka.Cluster.Proto.Msg.UniqueAddress From { get; }
+        public bool HasFrom { get; }
+        public bool HasSerializedGossip { get; }
+        public bool HasTo { get; }
+        protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.Proto.Msg.GossipEnvelope, Akka.Cluster.Proto.Msg.GossipEnvelope.Builder> InternalFieldAccessors { get; }
+        public override bool IsInitialized { get; }
+        public Google.ProtocolBuffers.ByteString SerializedGossip { get; }
+        public override int SerializedSize { get; }
+        protected override Akka.Cluster.Proto.Msg.GossipEnvelope ThisMessage { get; }
+        public Akka.Cluster.Proto.Msg.UniqueAddress To { get; }
+        public static Akka.Cluster.Proto.Msg.GossipEnvelope.Builder CreateBuilder() { }
+        public static Akka.Cluster.Proto.Msg.GossipEnvelope.Builder CreateBuilder(Akka.Cluster.Proto.Msg.GossipEnvelope prototype) { }
+        public override Akka.Cluster.Proto.Msg.GossipEnvelope.Builder CreateBuilderForType() { }
+        public static Akka.Cluster.Proto.Msg.GossipEnvelope ParseDelimitedFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.GossipEnvelope ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.GossipEnvelope ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+        public static Akka.Cluster.Proto.Msg.GossipEnvelope ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.GossipEnvelope ParseFrom(byte[] data) { }
+        public static Akka.Cluster.Proto.Msg.GossipEnvelope ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.GossipEnvelope ParseFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.GossipEnvelope ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.GossipEnvelope ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public static Akka.Cluster.Proto.Msg.GossipEnvelope ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public override Akka.Cluster.Proto.Msg.GossipEnvelope.Builder ToBuilder() { }
+        public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+        public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.Proto.Msg.GossipEnvelope, Akka.Cluster.Proto.Msg.GossipEnvelope.Builder>
+        {
+            public Builder() { }
+            public override Akka.Cluster.Proto.Msg.GossipEnvelope DefaultInstanceForType { get; }
+            public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public Akka.Cluster.Proto.Msg.UniqueAddress From { get; set; }
+            public bool HasFrom { get; }
+            public bool HasSerializedGossip { get; }
+            public bool HasTo { get; }
+            public override bool IsInitialized { get; }
+            protected override Akka.Cluster.Proto.Msg.GossipEnvelope MessageBeingBuilt { get; }
+            public Google.ProtocolBuffers.ByteString SerializedGossip { get; set; }
+            protected override Akka.Cluster.Proto.Msg.GossipEnvelope.Builder ThisBuilder { get; }
+            public Akka.Cluster.Proto.Msg.UniqueAddress To { get; set; }
+            public override Akka.Cluster.Proto.Msg.GossipEnvelope BuildPartial() { }
+            public override Akka.Cluster.Proto.Msg.GossipEnvelope.Builder Clear() { }
+            public Akka.Cluster.Proto.Msg.GossipEnvelope.Builder ClearFrom() { }
+            public Akka.Cluster.Proto.Msg.GossipEnvelope.Builder ClearSerializedGossip() { }
+            public Akka.Cluster.Proto.Msg.GossipEnvelope.Builder ClearTo() { }
+            public override Akka.Cluster.Proto.Msg.GossipEnvelope.Builder Clone() { }
+            public override Akka.Cluster.Proto.Msg.GossipEnvelope.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+            public override Akka.Cluster.Proto.Msg.GossipEnvelope.Builder MergeFrom(Akka.Cluster.Proto.Msg.GossipEnvelope other) { }
+            public override Akka.Cluster.Proto.Msg.GossipEnvelope.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+            public override Akka.Cluster.Proto.Msg.GossipEnvelope.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+            public Akka.Cluster.Proto.Msg.GossipEnvelope.Builder MergeFrom(Akka.Cluster.Proto.Msg.UniqueAddress value) { }
+            public Akka.Cluster.Proto.Msg.GossipEnvelope.Builder MergeTo(Akka.Cluster.Proto.Msg.UniqueAddress value) { }
+            public Akka.Cluster.Proto.Msg.GossipEnvelope.Builder SetFrom(Akka.Cluster.Proto.Msg.UniqueAddress value) { }
+            public Akka.Cluster.Proto.Msg.GossipEnvelope.Builder SetFrom(Akka.Cluster.Proto.Msg.UniqueAddress.Builder builderForValue) { }
+            public Akka.Cluster.Proto.Msg.GossipEnvelope.Builder SetSerializedGossip(Google.ProtocolBuffers.ByteString value) { }
+            public Akka.Cluster.Proto.Msg.GossipEnvelope.Builder SetTo(Akka.Cluster.Proto.Msg.UniqueAddress value) { }
+            public Akka.Cluster.Proto.Msg.GossipEnvelope.Builder SetTo(Akka.Cluster.Proto.Msg.UniqueAddress.Builder builderForValue) { }
+        }
+    }
+    public sealed class GossipOverview : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.Proto.Msg.GossipOverview, Akka.Cluster.Proto.Msg.GossipOverview.Builder>
+    {
+        public const int ObserverReachabilityFieldNumber = 2;
+        public const int SeenFieldNumber = 1;
+        public static Akka.Cluster.Proto.Msg.GossipOverview DefaultInstance { get; }
+        public override Akka.Cluster.Proto.Msg.GossipOverview DefaultInstanceForType { get; }
+        public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.Proto.Msg.GossipOverview, Akka.Cluster.Proto.Msg.GossipOverview.Builder> InternalFieldAccessors { get; }
+        public override bool IsInitialized { get; }
+        public int ObserverReachabilityCount { get; }
+        public System.Collections.Generic.IList<Akka.Cluster.Proto.Msg.ObserverReachability> ObserverReachabilityList { get; }
+        public int SeenCount { get; }
+        public System.Collections.Generic.IList<int> SeenList { get; }
+        public override int SerializedSize { get; }
+        protected override Akka.Cluster.Proto.Msg.GossipOverview ThisMessage { get; }
+        public static Akka.Cluster.Proto.Msg.GossipOverview.Builder CreateBuilder() { }
+        public static Akka.Cluster.Proto.Msg.GossipOverview.Builder CreateBuilder(Akka.Cluster.Proto.Msg.GossipOverview prototype) { }
+        public override Akka.Cluster.Proto.Msg.GossipOverview.Builder CreateBuilderForType() { }
+        public Akka.Cluster.Proto.Msg.ObserverReachability GetObserverReachability(int index) { }
+        public int GetSeen(int index) { }
+        public static Akka.Cluster.Proto.Msg.GossipOverview ParseDelimitedFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.GossipOverview ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.GossipOverview ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+        public static Akka.Cluster.Proto.Msg.GossipOverview ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.GossipOverview ParseFrom(byte[] data) { }
+        public static Akka.Cluster.Proto.Msg.GossipOverview ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.GossipOverview ParseFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.GossipOverview ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.GossipOverview ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public static Akka.Cluster.Proto.Msg.GossipOverview ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public override Akka.Cluster.Proto.Msg.GossipOverview.Builder ToBuilder() { }
+        public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+        public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.Proto.Msg.GossipOverview, Akka.Cluster.Proto.Msg.GossipOverview.Builder>
+        {
+            public Builder() { }
+            public override Akka.Cluster.Proto.Msg.GossipOverview DefaultInstanceForType { get; }
+            public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public override bool IsInitialized { get; }
+            protected override Akka.Cluster.Proto.Msg.GossipOverview MessageBeingBuilt { get; }
+            public int ObserverReachabilityCount { get; }
+            public Google.ProtocolBuffers.Collections.IPopsicleList<Akka.Cluster.Proto.Msg.ObserverReachability> ObserverReachabilityList { get; }
+            public int SeenCount { get; }
+            public Google.ProtocolBuffers.Collections.IPopsicleList<int> SeenList { get; }
+            protected override Akka.Cluster.Proto.Msg.GossipOverview.Builder ThisBuilder { get; }
+            public Akka.Cluster.Proto.Msg.GossipOverview.Builder AddObserverReachability(Akka.Cluster.Proto.Msg.ObserverReachability value) { }
+            public Akka.Cluster.Proto.Msg.GossipOverview.Builder AddObserverReachability(Akka.Cluster.Proto.Msg.ObserverReachability.Builder builderForValue) { }
+            public Akka.Cluster.Proto.Msg.GossipOverview.Builder AddRangeObserverReachability(System.Collections.Generic.IEnumerable<Akka.Cluster.Proto.Msg.ObserverReachability> values) { }
+            public Akka.Cluster.Proto.Msg.GossipOverview.Builder AddRangeSeen(System.Collections.Generic.IEnumerable<int> values) { }
+            public Akka.Cluster.Proto.Msg.GossipOverview.Builder AddSeen(int value) { }
+            public override Akka.Cluster.Proto.Msg.GossipOverview BuildPartial() { }
+            public override Akka.Cluster.Proto.Msg.GossipOverview.Builder Clear() { }
+            public Akka.Cluster.Proto.Msg.GossipOverview.Builder ClearObserverReachability() { }
+            public Akka.Cluster.Proto.Msg.GossipOverview.Builder ClearSeen() { }
+            public override Akka.Cluster.Proto.Msg.GossipOverview.Builder Clone() { }
+            public Akka.Cluster.Proto.Msg.ObserverReachability GetObserverReachability(int index) { }
+            public int GetSeen(int index) { }
+            public override Akka.Cluster.Proto.Msg.GossipOverview.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+            public override Akka.Cluster.Proto.Msg.GossipOverview.Builder MergeFrom(Akka.Cluster.Proto.Msg.GossipOverview other) { }
+            public override Akka.Cluster.Proto.Msg.GossipOverview.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+            public override Akka.Cluster.Proto.Msg.GossipOverview.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+            public Akka.Cluster.Proto.Msg.GossipOverview.Builder SetObserverReachability(int index, Akka.Cluster.Proto.Msg.ObserverReachability value) { }
+            public Akka.Cluster.Proto.Msg.GossipOverview.Builder SetObserverReachability(int index, Akka.Cluster.Proto.Msg.ObserverReachability.Builder builderForValue) { }
+            public Akka.Cluster.Proto.Msg.GossipOverview.Builder SetSeen(int index, int value) { }
+        }
+    }
+    public sealed class GossipStatus : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.Proto.Msg.GossipStatus, Akka.Cluster.Proto.Msg.GossipStatus.Builder>
+    {
+        public const int AllHashesFieldNumber = 2;
+        public const int FromFieldNumber = 1;
+        public const int VersionFieldNumber = 3;
+        public int AllHashesCount { get; }
+        public System.Collections.Generic.IList<string> AllHashesList { get; }
+        public static Akka.Cluster.Proto.Msg.GossipStatus DefaultInstance { get; }
+        public override Akka.Cluster.Proto.Msg.GossipStatus DefaultInstanceForType { get; }
+        public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        public Akka.Cluster.Proto.Msg.UniqueAddress From { get; }
+        public bool HasFrom { get; }
+        public bool HasVersion { get; }
+        protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.Proto.Msg.GossipStatus, Akka.Cluster.Proto.Msg.GossipStatus.Builder> InternalFieldAccessors { get; }
+        public override bool IsInitialized { get; }
+        public override int SerializedSize { get; }
+        protected override Akka.Cluster.Proto.Msg.GossipStatus ThisMessage { get; }
+        public Akka.Cluster.Proto.Msg.VectorClock Version { get; }
+        public static Akka.Cluster.Proto.Msg.GossipStatus.Builder CreateBuilder() { }
+        public static Akka.Cluster.Proto.Msg.GossipStatus.Builder CreateBuilder(Akka.Cluster.Proto.Msg.GossipStatus prototype) { }
+        public override Akka.Cluster.Proto.Msg.GossipStatus.Builder CreateBuilderForType() { }
+        public string GetAllHashes(int index) { }
+        public static Akka.Cluster.Proto.Msg.GossipStatus ParseDelimitedFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.GossipStatus ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.GossipStatus ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+        public static Akka.Cluster.Proto.Msg.GossipStatus ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.GossipStatus ParseFrom(byte[] data) { }
+        public static Akka.Cluster.Proto.Msg.GossipStatus ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.GossipStatus ParseFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.GossipStatus ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.GossipStatus ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public static Akka.Cluster.Proto.Msg.GossipStatus ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public override Akka.Cluster.Proto.Msg.GossipStatus.Builder ToBuilder() { }
+        public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+        public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.Proto.Msg.GossipStatus, Akka.Cluster.Proto.Msg.GossipStatus.Builder>
+        {
+            public Builder() { }
+            public int AllHashesCount { get; }
+            public Google.ProtocolBuffers.Collections.IPopsicleList<string> AllHashesList { get; }
+            public override Akka.Cluster.Proto.Msg.GossipStatus DefaultInstanceForType { get; }
+            public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public Akka.Cluster.Proto.Msg.UniqueAddress From { get; set; }
+            public bool HasFrom { get; }
+            public bool HasVersion { get; }
+            public override bool IsInitialized { get; }
+            protected override Akka.Cluster.Proto.Msg.GossipStatus MessageBeingBuilt { get; }
+            protected override Akka.Cluster.Proto.Msg.GossipStatus.Builder ThisBuilder { get; }
+            public Akka.Cluster.Proto.Msg.VectorClock Version { get; set; }
+            public Akka.Cluster.Proto.Msg.GossipStatus.Builder AddAllHashes(string value) { }
+            public Akka.Cluster.Proto.Msg.GossipStatus.Builder AddRangeAllHashes(System.Collections.Generic.IEnumerable<string> values) { }
+            public override Akka.Cluster.Proto.Msg.GossipStatus BuildPartial() { }
+            public override Akka.Cluster.Proto.Msg.GossipStatus.Builder Clear() { }
+            public Akka.Cluster.Proto.Msg.GossipStatus.Builder ClearAllHashes() { }
+            public Akka.Cluster.Proto.Msg.GossipStatus.Builder ClearFrom() { }
+            public Akka.Cluster.Proto.Msg.GossipStatus.Builder ClearVersion() { }
+            public override Akka.Cluster.Proto.Msg.GossipStatus.Builder Clone() { }
+            public string GetAllHashes(int index) { }
+            public override Akka.Cluster.Proto.Msg.GossipStatus.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+            public override Akka.Cluster.Proto.Msg.GossipStatus.Builder MergeFrom(Akka.Cluster.Proto.Msg.GossipStatus other) { }
+            public override Akka.Cluster.Proto.Msg.GossipStatus.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+            public override Akka.Cluster.Proto.Msg.GossipStatus.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+            public Akka.Cluster.Proto.Msg.GossipStatus.Builder MergeFrom(Akka.Cluster.Proto.Msg.UniqueAddress value) { }
+            public Akka.Cluster.Proto.Msg.GossipStatus.Builder MergeVersion(Akka.Cluster.Proto.Msg.VectorClock value) { }
+            public Akka.Cluster.Proto.Msg.GossipStatus.Builder SetAllHashes(int index, string value) { }
+            public Akka.Cluster.Proto.Msg.GossipStatus.Builder SetFrom(Akka.Cluster.Proto.Msg.UniqueAddress value) { }
+            public Akka.Cluster.Proto.Msg.GossipStatus.Builder SetFrom(Akka.Cluster.Proto.Msg.UniqueAddress.Builder builderForValue) { }
+            public Akka.Cluster.Proto.Msg.GossipStatus.Builder SetVersion(Akka.Cluster.Proto.Msg.VectorClock value) { }
+            public Akka.Cluster.Proto.Msg.GossipStatus.Builder SetVersion(Akka.Cluster.Proto.Msg.VectorClock.Builder builderForValue) { }
+        }
+    }
+    public sealed class Join : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.Proto.Msg.Join, Akka.Cluster.Proto.Msg.Join.Builder>
+    {
+        public const int NodeFieldNumber = 1;
+        public const int RolesFieldNumber = 2;
+        public static Akka.Cluster.Proto.Msg.Join DefaultInstance { get; }
+        public override Akka.Cluster.Proto.Msg.Join DefaultInstanceForType { get; }
+        public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        public bool HasNode { get; }
+        protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.Proto.Msg.Join, Akka.Cluster.Proto.Msg.Join.Builder> InternalFieldAccessors { get; }
+        public override bool IsInitialized { get; }
+        public Akka.Cluster.Proto.Msg.UniqueAddress Node { get; }
+        public int RolesCount { get; }
+        public System.Collections.Generic.IList<string> RolesList { get; }
+        public override int SerializedSize { get; }
+        protected override Akka.Cluster.Proto.Msg.Join ThisMessage { get; }
+        public static Akka.Cluster.Proto.Msg.Join.Builder CreateBuilder() { }
+        public static Akka.Cluster.Proto.Msg.Join.Builder CreateBuilder(Akka.Cluster.Proto.Msg.Join prototype) { }
+        public override Akka.Cluster.Proto.Msg.Join.Builder CreateBuilderForType() { }
+        public string GetRoles(int index) { }
+        public static Akka.Cluster.Proto.Msg.Join ParseDelimitedFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.Join ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Join ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+        public static Akka.Cluster.Proto.Msg.Join ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Join ParseFrom(byte[] data) { }
+        public static Akka.Cluster.Proto.Msg.Join ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Join ParseFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.Join ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Join ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public static Akka.Cluster.Proto.Msg.Join ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public override Akka.Cluster.Proto.Msg.Join.Builder ToBuilder() { }
+        public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+        public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.Proto.Msg.Join, Akka.Cluster.Proto.Msg.Join.Builder>
+        {
+            public Builder() { }
+            public override Akka.Cluster.Proto.Msg.Join DefaultInstanceForType { get; }
+            public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public bool HasNode { get; }
+            public override bool IsInitialized { get; }
+            protected override Akka.Cluster.Proto.Msg.Join MessageBeingBuilt { get; }
+            public Akka.Cluster.Proto.Msg.UniqueAddress Node { get; set; }
+            public int RolesCount { get; }
+            public Google.ProtocolBuffers.Collections.IPopsicleList<string> RolesList { get; }
+            protected override Akka.Cluster.Proto.Msg.Join.Builder ThisBuilder { get; }
+            public Akka.Cluster.Proto.Msg.Join.Builder AddRangeRoles(System.Collections.Generic.IEnumerable<string> values) { }
+            public Akka.Cluster.Proto.Msg.Join.Builder AddRoles(string value) { }
+            public override Akka.Cluster.Proto.Msg.Join BuildPartial() { }
+            public override Akka.Cluster.Proto.Msg.Join.Builder Clear() { }
+            public Akka.Cluster.Proto.Msg.Join.Builder ClearNode() { }
+            public Akka.Cluster.Proto.Msg.Join.Builder ClearRoles() { }
+            public override Akka.Cluster.Proto.Msg.Join.Builder Clone() { }
+            public string GetRoles(int index) { }
+            public override Akka.Cluster.Proto.Msg.Join.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+            public override Akka.Cluster.Proto.Msg.Join.Builder MergeFrom(Akka.Cluster.Proto.Msg.Join other) { }
+            public override Akka.Cluster.Proto.Msg.Join.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+            public override Akka.Cluster.Proto.Msg.Join.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+            public Akka.Cluster.Proto.Msg.Join.Builder MergeNode(Akka.Cluster.Proto.Msg.UniqueAddress value) { }
+            public Akka.Cluster.Proto.Msg.Join.Builder SetNode(Akka.Cluster.Proto.Msg.UniqueAddress value) { }
+            public Akka.Cluster.Proto.Msg.Join.Builder SetNode(Akka.Cluster.Proto.Msg.UniqueAddress.Builder builderForValue) { }
+            public Akka.Cluster.Proto.Msg.Join.Builder SetRoles(int index, string value) { }
+        }
+    }
+    public sealed class Member : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.Proto.Msg.Member, Akka.Cluster.Proto.Msg.Member.Builder>
+    {
+        public const int AddressIndexFieldNumber = 1;
+        public const int RolesIndexesFieldNumber = 4;
+        public const int StatusFieldNumber = 3;
+        public const int UpNumberFieldNumber = 2;
+        public int AddressIndex { get; }
+        public static Akka.Cluster.Proto.Msg.Member DefaultInstance { get; }
+        public override Akka.Cluster.Proto.Msg.Member DefaultInstanceForType { get; }
+        public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        public bool HasAddressIndex { get; }
+        public bool HasStatus { get; }
+        public bool HasUpNumber { get; }
+        protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.Proto.Msg.Member, Akka.Cluster.Proto.Msg.Member.Builder> InternalFieldAccessors { get; }
+        public override bool IsInitialized { get; }
+        public int RolesIndexesCount { get; }
+        public System.Collections.Generic.IList<int> RolesIndexesList { get; }
+        public override int SerializedSize { get; }
+        public Akka.Cluster.Proto.Msg.MemberStatus Status { get; }
+        protected override Akka.Cluster.Proto.Msg.Member ThisMessage { get; }
+        public int UpNumber { get; }
+        public static Akka.Cluster.Proto.Msg.Member.Builder CreateBuilder() { }
+        public static Akka.Cluster.Proto.Msg.Member.Builder CreateBuilder(Akka.Cluster.Proto.Msg.Member prototype) { }
+        public override Akka.Cluster.Proto.Msg.Member.Builder CreateBuilderForType() { }
+        public int GetRolesIndexes(int index) { }
+        public static Akka.Cluster.Proto.Msg.Member ParseDelimitedFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.Member ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Member ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+        public static Akka.Cluster.Proto.Msg.Member ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Member ParseFrom(byte[] data) { }
+        public static Akka.Cluster.Proto.Msg.Member ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Member ParseFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.Member ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Member ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public static Akka.Cluster.Proto.Msg.Member ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public override Akka.Cluster.Proto.Msg.Member.Builder ToBuilder() { }
+        public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+        public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.Proto.Msg.Member, Akka.Cluster.Proto.Msg.Member.Builder>
+        {
+            public Builder() { }
+            public int AddressIndex { get; set; }
+            public override Akka.Cluster.Proto.Msg.Member DefaultInstanceForType { get; }
+            public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public bool HasAddressIndex { get; }
+            public bool HasStatus { get; }
+            public bool HasUpNumber { get; }
+            public override bool IsInitialized { get; }
+            protected override Akka.Cluster.Proto.Msg.Member MessageBeingBuilt { get; }
+            public int RolesIndexesCount { get; }
+            public Google.ProtocolBuffers.Collections.IPopsicleList<int> RolesIndexesList { get; }
+            public Akka.Cluster.Proto.Msg.MemberStatus Status { get; set; }
+            protected override Akka.Cluster.Proto.Msg.Member.Builder ThisBuilder { get; }
+            public int UpNumber { get; set; }
+            public Akka.Cluster.Proto.Msg.Member.Builder AddRangeRolesIndexes(System.Collections.Generic.IEnumerable<int> values) { }
+            public Akka.Cluster.Proto.Msg.Member.Builder AddRolesIndexes(int value) { }
+            public override Akka.Cluster.Proto.Msg.Member BuildPartial() { }
+            public override Akka.Cluster.Proto.Msg.Member.Builder Clear() { }
+            public Akka.Cluster.Proto.Msg.Member.Builder ClearAddressIndex() { }
+            public Akka.Cluster.Proto.Msg.Member.Builder ClearRolesIndexes() { }
+            public Akka.Cluster.Proto.Msg.Member.Builder ClearStatus() { }
+            public Akka.Cluster.Proto.Msg.Member.Builder ClearUpNumber() { }
+            public override Akka.Cluster.Proto.Msg.Member.Builder Clone() { }
+            public int GetRolesIndexes(int index) { }
+            public override Akka.Cluster.Proto.Msg.Member.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+            public override Akka.Cluster.Proto.Msg.Member.Builder MergeFrom(Akka.Cluster.Proto.Msg.Member other) { }
+            public override Akka.Cluster.Proto.Msg.Member.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+            public override Akka.Cluster.Proto.Msg.Member.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+            public Akka.Cluster.Proto.Msg.Member.Builder SetAddressIndex(int value) { }
+            public Akka.Cluster.Proto.Msg.Member.Builder SetRolesIndexes(int index, int value) { }
+            public Akka.Cluster.Proto.Msg.Member.Builder SetStatus(Akka.Cluster.Proto.Msg.MemberStatus value) { }
+            public Akka.Cluster.Proto.Msg.Member.Builder SetUpNumber(int value) { }
+        }
+    }
+    public enum MemberStatus
+    {
+        Joining = 0,
+        Up = 1,
+        Leaving = 2,
+        Exiting = 3,
+        Down = 4,
+        Removed = 5,
+    }
+    public sealed class MetricsGossip : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.Proto.Msg.MetricsGossip, Akka.Cluster.Proto.Msg.MetricsGossip.Builder>
+    {
+        public const int AllAddressesFieldNumber = 1;
+        public const int AllMetricNamesFieldNumber = 2;
+        public const int NodeMetricsFieldNumber = 3;
+        public int AllAddressesCount { get; }
+        public System.Collections.Generic.IList<Akka.Cluster.Proto.Msg.Address> AllAddressesList { get; }
+        public int AllMetricNamesCount { get; }
+        public System.Collections.Generic.IList<string> AllMetricNamesList { get; }
+        public static Akka.Cluster.Proto.Msg.MetricsGossip DefaultInstance { get; }
+        public override Akka.Cluster.Proto.Msg.MetricsGossip DefaultInstanceForType { get; }
+        public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.Proto.Msg.MetricsGossip, Akka.Cluster.Proto.Msg.MetricsGossip.Builder> InternalFieldAccessors { get; }
+        public override bool IsInitialized { get; }
+        public int NodeMetricsCount { get; }
+        public System.Collections.Generic.IList<Akka.Cluster.Proto.Msg.NodeMetrics> NodeMetricsList { get; }
+        public override int SerializedSize { get; }
+        protected override Akka.Cluster.Proto.Msg.MetricsGossip ThisMessage { get; }
+        public static Akka.Cluster.Proto.Msg.MetricsGossip.Builder CreateBuilder() { }
+        public static Akka.Cluster.Proto.Msg.MetricsGossip.Builder CreateBuilder(Akka.Cluster.Proto.Msg.MetricsGossip prototype) { }
+        public override Akka.Cluster.Proto.Msg.MetricsGossip.Builder CreateBuilderForType() { }
+        public Akka.Cluster.Proto.Msg.Address GetAllAddresses(int index) { }
+        public string GetAllMetricNames(int index) { }
+        public Akka.Cluster.Proto.Msg.NodeMetrics GetNodeMetrics(int index) { }
+        public static Akka.Cluster.Proto.Msg.MetricsGossip ParseDelimitedFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.MetricsGossip ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.MetricsGossip ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+        public static Akka.Cluster.Proto.Msg.MetricsGossip ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.MetricsGossip ParseFrom(byte[] data) { }
+        public static Akka.Cluster.Proto.Msg.MetricsGossip ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.MetricsGossip ParseFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.MetricsGossip ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.MetricsGossip ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public static Akka.Cluster.Proto.Msg.MetricsGossip ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public override Akka.Cluster.Proto.Msg.MetricsGossip.Builder ToBuilder() { }
+        public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+        public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.Proto.Msg.MetricsGossip, Akka.Cluster.Proto.Msg.MetricsGossip.Builder>
+        {
+            public Builder() { }
+            public int AllAddressesCount { get; }
+            public Google.ProtocolBuffers.Collections.IPopsicleList<Akka.Cluster.Proto.Msg.Address> AllAddressesList { get; }
+            public int AllMetricNamesCount { get; }
+            public Google.ProtocolBuffers.Collections.IPopsicleList<string> AllMetricNamesList { get; }
+            public override Akka.Cluster.Proto.Msg.MetricsGossip DefaultInstanceForType { get; }
+            public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public override bool IsInitialized { get; }
+            protected override Akka.Cluster.Proto.Msg.MetricsGossip MessageBeingBuilt { get; }
+            public int NodeMetricsCount { get; }
+            public Google.ProtocolBuffers.Collections.IPopsicleList<Akka.Cluster.Proto.Msg.NodeMetrics> NodeMetricsList { get; }
+            protected override Akka.Cluster.Proto.Msg.MetricsGossip.Builder ThisBuilder { get; }
+            public Akka.Cluster.Proto.Msg.MetricsGossip.Builder AddAllAddresses(Akka.Cluster.Proto.Msg.Address value) { }
+            public Akka.Cluster.Proto.Msg.MetricsGossip.Builder AddAllAddresses(Akka.Cluster.Proto.Msg.Address.Builder builderForValue) { }
+            public Akka.Cluster.Proto.Msg.MetricsGossip.Builder AddAllMetricNames(string value) { }
+            public Akka.Cluster.Proto.Msg.MetricsGossip.Builder AddNodeMetrics(Akka.Cluster.Proto.Msg.NodeMetrics value) { }
+            public Akka.Cluster.Proto.Msg.MetricsGossip.Builder AddNodeMetrics(Akka.Cluster.Proto.Msg.NodeMetrics.Builder builderForValue) { }
+            public Akka.Cluster.Proto.Msg.MetricsGossip.Builder AddRangeAllAddresses(System.Collections.Generic.IEnumerable<Akka.Cluster.Proto.Msg.Address> values) { }
+            public Akka.Cluster.Proto.Msg.MetricsGossip.Builder AddRangeAllMetricNames(System.Collections.Generic.IEnumerable<string> values) { }
+            public Akka.Cluster.Proto.Msg.MetricsGossip.Builder AddRangeNodeMetrics(System.Collections.Generic.IEnumerable<Akka.Cluster.Proto.Msg.NodeMetrics> values) { }
+            public override Akka.Cluster.Proto.Msg.MetricsGossip BuildPartial() { }
+            public override Akka.Cluster.Proto.Msg.MetricsGossip.Builder Clear() { }
+            public Akka.Cluster.Proto.Msg.MetricsGossip.Builder ClearAllAddresses() { }
+            public Akka.Cluster.Proto.Msg.MetricsGossip.Builder ClearAllMetricNames() { }
+            public Akka.Cluster.Proto.Msg.MetricsGossip.Builder ClearNodeMetrics() { }
+            public override Akka.Cluster.Proto.Msg.MetricsGossip.Builder Clone() { }
+            public Akka.Cluster.Proto.Msg.Address GetAllAddresses(int index) { }
+            public string GetAllMetricNames(int index) { }
+            public Akka.Cluster.Proto.Msg.NodeMetrics GetNodeMetrics(int index) { }
+            public override Akka.Cluster.Proto.Msg.MetricsGossip.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+            public override Akka.Cluster.Proto.Msg.MetricsGossip.Builder MergeFrom(Akka.Cluster.Proto.Msg.MetricsGossip other) { }
+            public override Akka.Cluster.Proto.Msg.MetricsGossip.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+            public override Akka.Cluster.Proto.Msg.MetricsGossip.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+            public Akka.Cluster.Proto.Msg.MetricsGossip.Builder SetAllAddresses(int index, Akka.Cluster.Proto.Msg.Address value) { }
+            public Akka.Cluster.Proto.Msg.MetricsGossip.Builder SetAllAddresses(int index, Akka.Cluster.Proto.Msg.Address.Builder builderForValue) { }
+            public Akka.Cluster.Proto.Msg.MetricsGossip.Builder SetAllMetricNames(int index, string value) { }
+            public Akka.Cluster.Proto.Msg.MetricsGossip.Builder SetNodeMetrics(int index, Akka.Cluster.Proto.Msg.NodeMetrics value) { }
+            public Akka.Cluster.Proto.Msg.MetricsGossip.Builder SetNodeMetrics(int index, Akka.Cluster.Proto.Msg.NodeMetrics.Builder builderForValue) { }
+        }
+    }
+    public sealed class MetricsGossipEnvelope : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.Proto.Msg.MetricsGossipEnvelope, Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder>
+    {
+        public const int FromFieldNumber = 1;
+        public const int GossipFieldNumber = 2;
+        public const int ReplyFieldNumber = 3;
+        public static Akka.Cluster.Proto.Msg.MetricsGossipEnvelope DefaultInstance { get; }
+        public override Akka.Cluster.Proto.Msg.MetricsGossipEnvelope DefaultInstanceForType { get; }
+        public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        public Akka.Cluster.Proto.Msg.Address From { get; }
+        public Akka.Cluster.Proto.Msg.MetricsGossip Gossip { get; }
+        public bool HasFrom { get; }
+        public bool HasGossip { get; }
+        public bool HasReply { get; }
+        protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.Proto.Msg.MetricsGossipEnvelope, Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder> InternalFieldAccessors { get; }
+        public override bool IsInitialized { get; }
+        public bool Reply { get; }
+        public override int SerializedSize { get; }
+        protected override Akka.Cluster.Proto.Msg.MetricsGossipEnvelope ThisMessage { get; }
+        public static Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder CreateBuilder() { }
+        public static Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder CreateBuilder(Akka.Cluster.Proto.Msg.MetricsGossipEnvelope prototype) { }
+        public override Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder CreateBuilderForType() { }
+        public static Akka.Cluster.Proto.Msg.MetricsGossipEnvelope ParseDelimitedFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.MetricsGossipEnvelope ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.MetricsGossipEnvelope ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+        public static Akka.Cluster.Proto.Msg.MetricsGossipEnvelope ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.MetricsGossipEnvelope ParseFrom(byte[] data) { }
+        public static Akka.Cluster.Proto.Msg.MetricsGossipEnvelope ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.MetricsGossipEnvelope ParseFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.MetricsGossipEnvelope ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.MetricsGossipEnvelope ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public static Akka.Cluster.Proto.Msg.MetricsGossipEnvelope ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public override Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder ToBuilder() { }
+        public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+        public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.Proto.Msg.MetricsGossipEnvelope, Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder>
+        {
+            public Builder() { }
+            public override Akka.Cluster.Proto.Msg.MetricsGossipEnvelope DefaultInstanceForType { get; }
+            public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public Akka.Cluster.Proto.Msg.Address From { get; set; }
+            public Akka.Cluster.Proto.Msg.MetricsGossip Gossip { get; set; }
+            public bool HasFrom { get; }
+            public bool HasGossip { get; }
+            public bool HasReply { get; }
+            public override bool IsInitialized { get; }
+            protected override Akka.Cluster.Proto.Msg.MetricsGossipEnvelope MessageBeingBuilt { get; }
+            public bool Reply { get; set; }
+            protected override Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder ThisBuilder { get; }
+            public override Akka.Cluster.Proto.Msg.MetricsGossipEnvelope BuildPartial() { }
+            public override Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder Clear() { }
+            public Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder ClearFrom() { }
+            public Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder ClearGossip() { }
+            public Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder ClearReply() { }
+            public override Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder Clone() { }
+            public override Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+            public override Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder MergeFrom(Akka.Cluster.Proto.Msg.MetricsGossipEnvelope other) { }
+            public override Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+            public override Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+            public Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder MergeFrom(Akka.Cluster.Proto.Msg.Address value) { }
+            public Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder MergeGossip(Akka.Cluster.Proto.Msg.MetricsGossip value) { }
+            public Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder SetFrom(Akka.Cluster.Proto.Msg.Address value) { }
+            public Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder SetFrom(Akka.Cluster.Proto.Msg.Address.Builder builderForValue) { }
+            public Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder SetGossip(Akka.Cluster.Proto.Msg.MetricsGossip value) { }
+            public Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder SetGossip(Akka.Cluster.Proto.Msg.MetricsGossip.Builder builderForValue) { }
+            public Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder SetReply(bool value) { }
+        }
+    }
+    public sealed class NodeMetrics : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.Proto.Msg.NodeMetrics, Akka.Cluster.Proto.Msg.NodeMetrics.Builder>
+    {
+        public const int AddressIndexFieldNumber = 1;
+        public const int MetricsFieldNumber = 3;
+        public const int TimestampFieldNumber = 2;
+        public int AddressIndex { get; }
+        public static Akka.Cluster.Proto.Msg.NodeMetrics DefaultInstance { get; }
+        public override Akka.Cluster.Proto.Msg.NodeMetrics DefaultInstanceForType { get; }
+        public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        public bool HasAddressIndex { get; }
+        public bool HasTimestamp { get; }
+        protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.Proto.Msg.NodeMetrics, Akka.Cluster.Proto.Msg.NodeMetrics.Builder> InternalFieldAccessors { get; }
+        public override bool IsInitialized { get; }
+        public int MetricsCount { get; }
+        public System.Collections.Generic.IList<Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric> MetricsList { get; }
+        public override int SerializedSize { get; }
+        protected override Akka.Cluster.Proto.Msg.NodeMetrics ThisMessage { get; }
+        public long Timestamp { get; }
+        public static Akka.Cluster.Proto.Msg.NodeMetrics.Builder CreateBuilder() { }
+        public static Akka.Cluster.Proto.Msg.NodeMetrics.Builder CreateBuilder(Akka.Cluster.Proto.Msg.NodeMetrics prototype) { }
+        public override Akka.Cluster.Proto.Msg.NodeMetrics.Builder CreateBuilderForType() { }
+        public Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric GetMetrics(int index) { }
+        public static Akka.Cluster.Proto.Msg.NodeMetrics ParseDelimitedFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.NodeMetrics ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.NodeMetrics ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+        public static Akka.Cluster.Proto.Msg.NodeMetrics ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.NodeMetrics ParseFrom(byte[] data) { }
+        public static Akka.Cluster.Proto.Msg.NodeMetrics ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.NodeMetrics ParseFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.NodeMetrics ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.NodeMetrics ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public static Akka.Cluster.Proto.Msg.NodeMetrics ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public override Akka.Cluster.Proto.Msg.NodeMetrics.Builder ToBuilder() { }
+        public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+        public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.Proto.Msg.NodeMetrics, Akka.Cluster.Proto.Msg.NodeMetrics.Builder>
+        {
+            public Builder() { }
+            public int AddressIndex { get; set; }
+            public override Akka.Cluster.Proto.Msg.NodeMetrics DefaultInstanceForType { get; }
+            public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public bool HasAddressIndex { get; }
+            public bool HasTimestamp { get; }
+            public override bool IsInitialized { get; }
+            protected override Akka.Cluster.Proto.Msg.NodeMetrics MessageBeingBuilt { get; }
+            public int MetricsCount { get; }
+            public Google.ProtocolBuffers.Collections.IPopsicleList<Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric> MetricsList { get; }
+            protected override Akka.Cluster.Proto.Msg.NodeMetrics.Builder ThisBuilder { get; }
+            public long Timestamp { get; set; }
+            public Akka.Cluster.Proto.Msg.NodeMetrics.Builder AddMetrics(Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric value) { }
+            public Akka.Cluster.Proto.Msg.NodeMetrics.Builder AddMetrics(Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder builderForValue) { }
+            public Akka.Cluster.Proto.Msg.NodeMetrics.Builder AddRangeMetrics(System.Collections.Generic.IEnumerable<Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric> values) { }
+            public override Akka.Cluster.Proto.Msg.NodeMetrics BuildPartial() { }
+            public override Akka.Cluster.Proto.Msg.NodeMetrics.Builder Clear() { }
+            public Akka.Cluster.Proto.Msg.NodeMetrics.Builder ClearAddressIndex() { }
+            public Akka.Cluster.Proto.Msg.NodeMetrics.Builder ClearMetrics() { }
+            public Akka.Cluster.Proto.Msg.NodeMetrics.Builder ClearTimestamp() { }
+            public override Akka.Cluster.Proto.Msg.NodeMetrics.Builder Clone() { }
+            public Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric GetMetrics(int index) { }
+            public override Akka.Cluster.Proto.Msg.NodeMetrics.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+            public override Akka.Cluster.Proto.Msg.NodeMetrics.Builder MergeFrom(Akka.Cluster.Proto.Msg.NodeMetrics other) { }
+            public override Akka.Cluster.Proto.Msg.NodeMetrics.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+            public override Akka.Cluster.Proto.Msg.NodeMetrics.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+            public Akka.Cluster.Proto.Msg.NodeMetrics.Builder SetAddressIndex(int value) { }
+            public Akka.Cluster.Proto.Msg.NodeMetrics.Builder SetMetrics(int index, Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric value) { }
+            public Akka.Cluster.Proto.Msg.NodeMetrics.Builder SetMetrics(int index, Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder builderForValue) { }
+            public Akka.Cluster.Proto.Msg.NodeMetrics.Builder SetTimestamp(long value) { }
+        }
+        public class static Types
+        {
+            public sealed class EWMA : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA, Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Builder>
+            {
+                public const int AlphaFieldNumber = 2;
+                public const int ValueFieldNumber = 1;
+                public double Alpha { get; }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA DefaultInstance { get; }
+                public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA DefaultInstanceForType { get; }
+                public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+                public bool HasAlpha { get; }
+                public bool HasValue { get; }
+                protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA, Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Builder> InternalFieldAccessors { get; }
+                public override bool IsInitialized { get; }
+                public override int SerializedSize { get; }
+                protected override Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA ThisMessage { get; }
+                public double Value { get; }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Builder CreateBuilder() { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Builder CreateBuilder(Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA prototype) { }
+                public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Builder CreateBuilderForType() { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA ParseDelimitedFrom(System.IO.Stream input) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA ParseFrom(byte[] data) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA ParseFrom(System.IO.Stream input) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Builder ToBuilder() { }
+                public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+                public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA, Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Builder>
+                {
+                    public Builder() { }
+                    public double Alpha { get; set; }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA DefaultInstanceForType { get; }
+                    public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+                    public bool HasAlpha { get; }
+                    public bool HasValue { get; }
+                    public override bool IsInitialized { get; }
+                    protected override Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA MessageBeingBuilt { get; }
+                    protected override Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Builder ThisBuilder { get; }
+                    public double Value { get; set; }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA BuildPartial() { }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Builder Clear() { }
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Builder ClearAlpha() { }
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Builder ClearValue() { }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Builder Clone() { }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Builder MergeFrom(Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA other) { }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Builder SetAlpha(double value) { }
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Builder SetValue(double value) { }
+                }
+            }
+            public sealed class Metric : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric, Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder>
+            {
+                public const int EwmaFieldNumber = 3;
+                public const int NameIndexFieldNumber = 1;
+                public const int NumberFieldNumber = 2;
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric DefaultInstance { get; }
+                public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric DefaultInstanceForType { get; }
+                public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+                public Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA Ewma { get; }
+                public bool HasEwma { get; }
+                public bool HasNameIndex { get; }
+                public bool HasNumber { get; }
+                protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric, Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder> InternalFieldAccessors { get; }
+                public override bool IsInitialized { get; }
+                public int NameIndex { get; }
+                public Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number Number { get; }
+                public override int SerializedSize { get; }
+                protected override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric ThisMessage { get; }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder CreateBuilder() { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder CreateBuilder(Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric prototype) { }
+                public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder CreateBuilderForType() { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric ParseDelimitedFrom(System.IO.Stream input) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric ParseFrom(byte[] data) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric ParseFrom(System.IO.Stream input) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder ToBuilder() { }
+                public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+                public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric, Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder>
+                {
+                    public Builder() { }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric DefaultInstanceForType { get; }
+                    public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA Ewma { get; set; }
+                    public bool HasEwma { get; }
+                    public bool HasNameIndex { get; }
+                    public bool HasNumber { get; }
+                    public override bool IsInitialized { get; }
+                    protected override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric MessageBeingBuilt { get; }
+                    public int NameIndex { get; set; }
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number Number { get; set; }
+                    protected override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder ThisBuilder { get; }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric BuildPartial() { }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder Clear() { }
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder ClearEwma() { }
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder ClearNameIndex() { }
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder ClearNumber() { }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder Clone() { }
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder MergeEwma(Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA value) { }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder MergeFrom(Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric other) { }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder MergeNumber(Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number value) { }
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder SetEwma(Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA value) { }
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder SetEwma(Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Builder builderForValue) { }
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder SetNameIndex(int value) { }
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder SetNumber(Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number value) { }
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder SetNumber(Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder builderForValue) { }
+                }
+            }
+            public sealed class Number : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number, Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder>
+            {
+                public const int SerializedFieldNumber = 4;
+                public const int TypeFieldNumber = 1;
+                public const int Value32FieldNumber = 2;
+                public const int Value64FieldNumber = 3;
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number DefaultInstance { get; }
+                public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number DefaultInstanceForType { get; }
+                public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+                public bool HasSerialized { get; }
+                public bool HasType { get; }
+                public bool HasValue32 { get; }
+                public bool HasValue64 { get; }
+                protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number, Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder> InternalFieldAccessors { get; }
+                public override bool IsInitialized { get; }
+                public Google.ProtocolBuffers.ByteString Serialized { get; }
+                public override int SerializedSize { get; }
+                protected override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number ThisMessage { get; }
+                public Akka.Cluster.Proto.Msg.NodeMetrics.Types.NumberType Type { get; }
+                [System.CLSCompliantAttribute(false)]
+                public uint Value32 { get; }
+                [System.CLSCompliantAttribute(false)]
+                public ulong Value64 { get; }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder CreateBuilder() { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder CreateBuilder(Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number prototype) { }
+                public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder CreateBuilderForType() { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number ParseDelimitedFrom(System.IO.Stream input) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number ParseFrom(byte[] data) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number ParseFrom(System.IO.Stream input) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+                public static Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder ToBuilder() { }
+                public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+                public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number, Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder>
+                {
+                    public Builder() { }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number DefaultInstanceForType { get; }
+                    public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+                    public bool HasSerialized { get; }
+                    public bool HasType { get; }
+                    public bool HasValue32 { get; }
+                    public bool HasValue64 { get; }
+                    public override bool IsInitialized { get; }
+                    protected override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number MessageBeingBuilt { get; }
+                    public Google.ProtocolBuffers.ByteString Serialized { get; set; }
+                    protected override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder ThisBuilder { get; }
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.NumberType Type { get; set; }
+                    [System.CLSCompliantAttribute(false)]
+                    public uint Value32 { get; set; }
+                    [System.CLSCompliantAttribute(false)]
+                    public ulong Value64 { get; set; }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number BuildPartial() { }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder Clear() { }
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder ClearSerialized() { }
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder ClearType() { }
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder ClearValue32() { }
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder ClearValue64() { }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder Clone() { }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder MergeFrom(Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number other) { }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+                    public override Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder SetSerialized(Google.ProtocolBuffers.ByteString value) { }
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder SetType(Akka.Cluster.Proto.Msg.NodeMetrics.Types.NumberType value) { }
+                    [System.CLSCompliantAttribute(false)]
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder SetValue32(uint value) { }
+                    [System.CLSCompliantAttribute(false)]
+                    public Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder SetValue64(ulong value) { }
+                }
+            }
+            public enum NumberType
+            {
+                Serialized = 0,
+                Double = 1,
+                Float = 2,
+                Integer = 3,
+                Long = 4,
+            }
+        }
+    }
+    public sealed class ObserverReachability : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.Proto.Msg.ObserverReachability, Akka.Cluster.Proto.Msg.ObserverReachability.Builder>
+    {
+        public const int AddressIndexFieldNumber = 1;
+        public const int SubjectReachabilityFieldNumber = 2;
+        public const int VersionFieldNumber = 4;
+        public int AddressIndex { get; }
+        public static Akka.Cluster.Proto.Msg.ObserverReachability DefaultInstance { get; }
+        public override Akka.Cluster.Proto.Msg.ObserverReachability DefaultInstanceForType { get; }
+        public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        public bool HasAddressIndex { get; }
+        public bool HasVersion { get; }
+        protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.Proto.Msg.ObserverReachability, Akka.Cluster.Proto.Msg.ObserverReachability.Builder> InternalFieldAccessors { get; }
+        public override bool IsInitialized { get; }
+        public override int SerializedSize { get; }
+        public int SubjectReachabilityCount { get; }
+        public System.Collections.Generic.IList<Akka.Cluster.Proto.Msg.SubjectReachability> SubjectReachabilityList { get; }
+        protected override Akka.Cluster.Proto.Msg.ObserverReachability ThisMessage { get; }
+        public long Version { get; }
+        public static Akka.Cluster.Proto.Msg.ObserverReachability.Builder CreateBuilder() { }
+        public static Akka.Cluster.Proto.Msg.ObserverReachability.Builder CreateBuilder(Akka.Cluster.Proto.Msg.ObserverReachability prototype) { }
+        public override Akka.Cluster.Proto.Msg.ObserverReachability.Builder CreateBuilderForType() { }
+        public Akka.Cluster.Proto.Msg.SubjectReachability GetSubjectReachability(int index) { }
+        public static Akka.Cluster.Proto.Msg.ObserverReachability ParseDelimitedFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.ObserverReachability ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.ObserverReachability ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+        public static Akka.Cluster.Proto.Msg.ObserverReachability ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.ObserverReachability ParseFrom(byte[] data) { }
+        public static Akka.Cluster.Proto.Msg.ObserverReachability ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.ObserverReachability ParseFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.ObserverReachability ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.ObserverReachability ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public static Akka.Cluster.Proto.Msg.ObserverReachability ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public override Akka.Cluster.Proto.Msg.ObserverReachability.Builder ToBuilder() { }
+        public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+        public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.Proto.Msg.ObserverReachability, Akka.Cluster.Proto.Msg.ObserverReachability.Builder>
+        {
+            public Builder() { }
+            public int AddressIndex { get; set; }
+            public override Akka.Cluster.Proto.Msg.ObserverReachability DefaultInstanceForType { get; }
+            public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public bool HasAddressIndex { get; }
+            public bool HasVersion { get; }
+            public override bool IsInitialized { get; }
+            protected override Akka.Cluster.Proto.Msg.ObserverReachability MessageBeingBuilt { get; }
+            public int SubjectReachabilityCount { get; }
+            public Google.ProtocolBuffers.Collections.IPopsicleList<Akka.Cluster.Proto.Msg.SubjectReachability> SubjectReachabilityList { get; }
+            protected override Akka.Cluster.Proto.Msg.ObserverReachability.Builder ThisBuilder { get; }
+            public long Version { get; set; }
+            public Akka.Cluster.Proto.Msg.ObserverReachability.Builder AddRangeSubjectReachability(System.Collections.Generic.IEnumerable<Akka.Cluster.Proto.Msg.SubjectReachability> values) { }
+            public Akka.Cluster.Proto.Msg.ObserverReachability.Builder AddSubjectReachability(Akka.Cluster.Proto.Msg.SubjectReachability value) { }
+            public Akka.Cluster.Proto.Msg.ObserverReachability.Builder AddSubjectReachability(Akka.Cluster.Proto.Msg.SubjectReachability.Builder builderForValue) { }
+            public override Akka.Cluster.Proto.Msg.ObserverReachability BuildPartial() { }
+            public override Akka.Cluster.Proto.Msg.ObserverReachability.Builder Clear() { }
+            public Akka.Cluster.Proto.Msg.ObserverReachability.Builder ClearAddressIndex() { }
+            public Akka.Cluster.Proto.Msg.ObserverReachability.Builder ClearSubjectReachability() { }
+            public Akka.Cluster.Proto.Msg.ObserverReachability.Builder ClearVersion() { }
+            public override Akka.Cluster.Proto.Msg.ObserverReachability.Builder Clone() { }
+            public Akka.Cluster.Proto.Msg.SubjectReachability GetSubjectReachability(int index) { }
+            public override Akka.Cluster.Proto.Msg.ObserverReachability.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+            public override Akka.Cluster.Proto.Msg.ObserverReachability.Builder MergeFrom(Akka.Cluster.Proto.Msg.ObserverReachability other) { }
+            public override Akka.Cluster.Proto.Msg.ObserverReachability.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+            public override Akka.Cluster.Proto.Msg.ObserverReachability.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+            public Akka.Cluster.Proto.Msg.ObserverReachability.Builder SetAddressIndex(int value) { }
+            public Akka.Cluster.Proto.Msg.ObserverReachability.Builder SetSubjectReachability(int index, Akka.Cluster.Proto.Msg.SubjectReachability value) { }
+            public Akka.Cluster.Proto.Msg.ObserverReachability.Builder SetSubjectReachability(int index, Akka.Cluster.Proto.Msg.SubjectReachability.Builder builderForValue) { }
+            public Akka.Cluster.Proto.Msg.ObserverReachability.Builder SetVersion(long value) { }
+        }
+    }
+    public enum ReachabilityStatus
+    {
+        Reachable = 0,
+        Unreachable = 1,
+        Terminated = 2,
+    }
+    public sealed class SubjectReachability : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.Proto.Msg.SubjectReachability, Akka.Cluster.Proto.Msg.SubjectReachability.Builder>
+    {
+        public const int AddressIndexFieldNumber = 1;
+        public const int StatusFieldNumber = 3;
+        public const int VersionFieldNumber = 4;
+        public int AddressIndex { get; }
+        public static Akka.Cluster.Proto.Msg.SubjectReachability DefaultInstance { get; }
+        public override Akka.Cluster.Proto.Msg.SubjectReachability DefaultInstanceForType { get; }
+        public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        public bool HasAddressIndex { get; }
+        public bool HasStatus { get; }
+        public bool HasVersion { get; }
+        protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.Proto.Msg.SubjectReachability, Akka.Cluster.Proto.Msg.SubjectReachability.Builder> InternalFieldAccessors { get; }
+        public override bool IsInitialized { get; }
+        public override int SerializedSize { get; }
+        public Akka.Cluster.Proto.Msg.ReachabilityStatus Status { get; }
+        protected override Akka.Cluster.Proto.Msg.SubjectReachability ThisMessage { get; }
+        public long Version { get; }
+        public static Akka.Cluster.Proto.Msg.SubjectReachability.Builder CreateBuilder() { }
+        public static Akka.Cluster.Proto.Msg.SubjectReachability.Builder CreateBuilder(Akka.Cluster.Proto.Msg.SubjectReachability prototype) { }
+        public override Akka.Cluster.Proto.Msg.SubjectReachability.Builder CreateBuilderForType() { }
+        public static Akka.Cluster.Proto.Msg.SubjectReachability ParseDelimitedFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.SubjectReachability ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.SubjectReachability ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+        public static Akka.Cluster.Proto.Msg.SubjectReachability ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.SubjectReachability ParseFrom(byte[] data) { }
+        public static Akka.Cluster.Proto.Msg.SubjectReachability ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.SubjectReachability ParseFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.SubjectReachability ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.SubjectReachability ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public static Akka.Cluster.Proto.Msg.SubjectReachability ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public override Akka.Cluster.Proto.Msg.SubjectReachability.Builder ToBuilder() { }
+        public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+        public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.Proto.Msg.SubjectReachability, Akka.Cluster.Proto.Msg.SubjectReachability.Builder>
+        {
+            public Builder() { }
+            public int AddressIndex { get; set; }
+            public override Akka.Cluster.Proto.Msg.SubjectReachability DefaultInstanceForType { get; }
+            public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public bool HasAddressIndex { get; }
+            public bool HasStatus { get; }
+            public bool HasVersion { get; }
+            public override bool IsInitialized { get; }
+            protected override Akka.Cluster.Proto.Msg.SubjectReachability MessageBeingBuilt { get; }
+            public Akka.Cluster.Proto.Msg.ReachabilityStatus Status { get; set; }
+            protected override Akka.Cluster.Proto.Msg.SubjectReachability.Builder ThisBuilder { get; }
+            public long Version { get; set; }
+            public override Akka.Cluster.Proto.Msg.SubjectReachability BuildPartial() { }
+            public override Akka.Cluster.Proto.Msg.SubjectReachability.Builder Clear() { }
+            public Akka.Cluster.Proto.Msg.SubjectReachability.Builder ClearAddressIndex() { }
+            public Akka.Cluster.Proto.Msg.SubjectReachability.Builder ClearStatus() { }
+            public Akka.Cluster.Proto.Msg.SubjectReachability.Builder ClearVersion() { }
+            public override Akka.Cluster.Proto.Msg.SubjectReachability.Builder Clone() { }
+            public override Akka.Cluster.Proto.Msg.SubjectReachability.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+            public override Akka.Cluster.Proto.Msg.SubjectReachability.Builder MergeFrom(Akka.Cluster.Proto.Msg.SubjectReachability other) { }
+            public override Akka.Cluster.Proto.Msg.SubjectReachability.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+            public override Akka.Cluster.Proto.Msg.SubjectReachability.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+            public Akka.Cluster.Proto.Msg.SubjectReachability.Builder SetAddressIndex(int value) { }
+            public Akka.Cluster.Proto.Msg.SubjectReachability.Builder SetStatus(Akka.Cluster.Proto.Msg.ReachabilityStatus value) { }
+            public Akka.Cluster.Proto.Msg.SubjectReachability.Builder SetVersion(long value) { }
+        }
+    }
+    public sealed class UniqueAddress : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.Proto.Msg.UniqueAddress, Akka.Cluster.Proto.Msg.UniqueAddress.Builder>
+    {
+        public const int AddressFieldNumber = 1;
+        public const int UidFieldNumber = 2;
+        public Akka.Cluster.Proto.Msg.Address Address { get; }
+        public static Akka.Cluster.Proto.Msg.UniqueAddress DefaultInstance { get; }
+        public override Akka.Cluster.Proto.Msg.UniqueAddress DefaultInstanceForType { get; }
+        public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        public bool HasAddress { get; }
+        public bool HasUid { get; }
+        protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.Proto.Msg.UniqueAddress, Akka.Cluster.Proto.Msg.UniqueAddress.Builder> InternalFieldAccessors { get; }
+        public override bool IsInitialized { get; }
+        public override int SerializedSize { get; }
+        protected override Akka.Cluster.Proto.Msg.UniqueAddress ThisMessage { get; }
+        [System.CLSCompliantAttribute(false)]
+        public uint Uid { get; }
+        public static Akka.Cluster.Proto.Msg.UniqueAddress.Builder CreateBuilder() { }
+        public static Akka.Cluster.Proto.Msg.UniqueAddress.Builder CreateBuilder(Akka.Cluster.Proto.Msg.UniqueAddress prototype) { }
+        public override Akka.Cluster.Proto.Msg.UniqueAddress.Builder CreateBuilderForType() { }
+        public static Akka.Cluster.Proto.Msg.UniqueAddress ParseDelimitedFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.UniqueAddress ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.UniqueAddress ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+        public static Akka.Cluster.Proto.Msg.UniqueAddress ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.UniqueAddress ParseFrom(byte[] data) { }
+        public static Akka.Cluster.Proto.Msg.UniqueAddress ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.UniqueAddress ParseFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.UniqueAddress ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.UniqueAddress ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public static Akka.Cluster.Proto.Msg.UniqueAddress ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public override Akka.Cluster.Proto.Msg.UniqueAddress.Builder ToBuilder() { }
+        public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+        public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.Proto.Msg.UniqueAddress, Akka.Cluster.Proto.Msg.UniqueAddress.Builder>
+        {
+            public Builder() { }
+            public Akka.Cluster.Proto.Msg.Address Address { get; set; }
+            public override Akka.Cluster.Proto.Msg.UniqueAddress DefaultInstanceForType { get; }
+            public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public bool HasAddress { get; }
+            public bool HasUid { get; }
+            public override bool IsInitialized { get; }
+            protected override Akka.Cluster.Proto.Msg.UniqueAddress MessageBeingBuilt { get; }
+            protected override Akka.Cluster.Proto.Msg.UniqueAddress.Builder ThisBuilder { get; }
+            [System.CLSCompliantAttribute(false)]
+            public uint Uid { get; set; }
+            public override Akka.Cluster.Proto.Msg.UniqueAddress BuildPartial() { }
+            public override Akka.Cluster.Proto.Msg.UniqueAddress.Builder Clear() { }
+            public Akka.Cluster.Proto.Msg.UniqueAddress.Builder ClearAddress() { }
+            public Akka.Cluster.Proto.Msg.UniqueAddress.Builder ClearUid() { }
+            public override Akka.Cluster.Proto.Msg.UniqueAddress.Builder Clone() { }
+            public Akka.Cluster.Proto.Msg.UniqueAddress.Builder MergeAddress(Akka.Cluster.Proto.Msg.Address value) { }
+            public override Akka.Cluster.Proto.Msg.UniqueAddress.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+            public override Akka.Cluster.Proto.Msg.UniqueAddress.Builder MergeFrom(Akka.Cluster.Proto.Msg.UniqueAddress other) { }
+            public override Akka.Cluster.Proto.Msg.UniqueAddress.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+            public override Akka.Cluster.Proto.Msg.UniqueAddress.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+            public Akka.Cluster.Proto.Msg.UniqueAddress.Builder SetAddress(Akka.Cluster.Proto.Msg.Address value) { }
+            public Akka.Cluster.Proto.Msg.UniqueAddress.Builder SetAddress(Akka.Cluster.Proto.Msg.Address.Builder builderForValue) { }
+            [System.CLSCompliantAttribute(false)]
+            public Akka.Cluster.Proto.Msg.UniqueAddress.Builder SetUid(uint value) { }
+        }
+    }
+    public sealed class VectorClock : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.Proto.Msg.VectorClock, Akka.Cluster.Proto.Msg.VectorClock.Builder>
+    {
+        public const int TimestampFieldNumber = 1;
+        public const int VersionsFieldNumber = 2;
+        public static Akka.Cluster.Proto.Msg.VectorClock DefaultInstance { get; }
+        public override Akka.Cluster.Proto.Msg.VectorClock DefaultInstanceForType { get; }
+        public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        public bool HasTimestamp { get; }
+        protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.Proto.Msg.VectorClock, Akka.Cluster.Proto.Msg.VectorClock.Builder> InternalFieldAccessors { get; }
+        public override bool IsInitialized { get; }
+        public override int SerializedSize { get; }
+        protected override Akka.Cluster.Proto.Msg.VectorClock ThisMessage { get; }
+        public long Timestamp { get; }
+        public int VersionsCount { get; }
+        public System.Collections.Generic.IList<Akka.Cluster.Proto.Msg.VectorClock.Types.Version> VersionsList { get; }
+        public static Akka.Cluster.Proto.Msg.VectorClock.Builder CreateBuilder() { }
+        public static Akka.Cluster.Proto.Msg.VectorClock.Builder CreateBuilder(Akka.Cluster.Proto.Msg.VectorClock prototype) { }
+        public override Akka.Cluster.Proto.Msg.VectorClock.Builder CreateBuilderForType() { }
+        public Akka.Cluster.Proto.Msg.VectorClock.Types.Version GetVersions(int index) { }
+        public static Akka.Cluster.Proto.Msg.VectorClock ParseDelimitedFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.VectorClock ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.VectorClock ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+        public static Akka.Cluster.Proto.Msg.VectorClock ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.VectorClock ParseFrom(byte[] data) { }
+        public static Akka.Cluster.Proto.Msg.VectorClock ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.VectorClock ParseFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.VectorClock ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.VectorClock ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public static Akka.Cluster.Proto.Msg.VectorClock ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public override Akka.Cluster.Proto.Msg.VectorClock.Builder ToBuilder() { }
+        public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+        public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.Proto.Msg.VectorClock, Akka.Cluster.Proto.Msg.VectorClock.Builder>
+        {
+            public Builder() { }
+            public override Akka.Cluster.Proto.Msg.VectorClock DefaultInstanceForType { get; }
+            public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public bool HasTimestamp { get; }
+            public override bool IsInitialized { get; }
+            protected override Akka.Cluster.Proto.Msg.VectorClock MessageBeingBuilt { get; }
+            protected override Akka.Cluster.Proto.Msg.VectorClock.Builder ThisBuilder { get; }
+            public long Timestamp { get; set; }
+            public int VersionsCount { get; }
+            public Google.ProtocolBuffers.Collections.IPopsicleList<Akka.Cluster.Proto.Msg.VectorClock.Types.Version> VersionsList { get; }
+            public Akka.Cluster.Proto.Msg.VectorClock.Builder AddRangeVersions(System.Collections.Generic.IEnumerable<Akka.Cluster.Proto.Msg.VectorClock.Types.Version> values) { }
+            public Akka.Cluster.Proto.Msg.VectorClock.Builder AddVersions(Akka.Cluster.Proto.Msg.VectorClock.Types.Version value) { }
+            public Akka.Cluster.Proto.Msg.VectorClock.Builder AddVersions(Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder builderForValue) { }
+            public override Akka.Cluster.Proto.Msg.VectorClock BuildPartial() { }
+            public override Akka.Cluster.Proto.Msg.VectorClock.Builder Clear() { }
+            public Akka.Cluster.Proto.Msg.VectorClock.Builder ClearTimestamp() { }
+            public Akka.Cluster.Proto.Msg.VectorClock.Builder ClearVersions() { }
+            public override Akka.Cluster.Proto.Msg.VectorClock.Builder Clone() { }
+            public Akka.Cluster.Proto.Msg.VectorClock.Types.Version GetVersions(int index) { }
+            public override Akka.Cluster.Proto.Msg.VectorClock.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+            public override Akka.Cluster.Proto.Msg.VectorClock.Builder MergeFrom(Akka.Cluster.Proto.Msg.VectorClock other) { }
+            public override Akka.Cluster.Proto.Msg.VectorClock.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+            public override Akka.Cluster.Proto.Msg.VectorClock.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+            public Akka.Cluster.Proto.Msg.VectorClock.Builder SetTimestamp(long value) { }
+            public Akka.Cluster.Proto.Msg.VectorClock.Builder SetVersions(int index, Akka.Cluster.Proto.Msg.VectorClock.Types.Version value) { }
+            public Akka.Cluster.Proto.Msg.VectorClock.Builder SetVersions(int index, Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder builderForValue) { }
+        }
+        public class static Types
+        {
+            public sealed class Version : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.Proto.Msg.VectorClock.Types.Version, Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder>
+            {
+                public const int HashIndexFieldNumber = 1;
+                public const int TimestampFieldNumber = 2;
+                public static Akka.Cluster.Proto.Msg.VectorClock.Types.Version DefaultInstance { get; }
+                public override Akka.Cluster.Proto.Msg.VectorClock.Types.Version DefaultInstanceForType { get; }
+                public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+                public bool HasHashIndex { get; }
+                public int HashIndex { get; }
+                public bool HasTimestamp { get; }
+                protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.Proto.Msg.VectorClock.Types.Version, Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder> InternalFieldAccessors { get; }
+                public override bool IsInitialized { get; }
+                public override int SerializedSize { get; }
+                protected override Akka.Cluster.Proto.Msg.VectorClock.Types.Version ThisMessage { get; }
+                public long Timestamp { get; }
+                public static Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder CreateBuilder() { }
+                public static Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder CreateBuilder(Akka.Cluster.Proto.Msg.VectorClock.Types.Version prototype) { }
+                public override Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder CreateBuilderForType() { }
+                public static Akka.Cluster.Proto.Msg.VectorClock.Types.Version ParseDelimitedFrom(System.IO.Stream input) { }
+                public static Akka.Cluster.Proto.Msg.VectorClock.Types.Version ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.Proto.Msg.VectorClock.Types.Version ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+                public static Akka.Cluster.Proto.Msg.VectorClock.Types.Version ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.Proto.Msg.VectorClock.Types.Version ParseFrom(byte[] data) { }
+                public static Akka.Cluster.Proto.Msg.VectorClock.Types.Version ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.Proto.Msg.VectorClock.Types.Version ParseFrom(System.IO.Stream input) { }
+                public static Akka.Cluster.Proto.Msg.VectorClock.Types.Version ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.Proto.Msg.VectorClock.Types.Version ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+                public static Akka.Cluster.Proto.Msg.VectorClock.Types.Version ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public override Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder ToBuilder() { }
+                public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+                public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.Proto.Msg.VectorClock.Types.Version, Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder>
+                {
+                    public Builder() { }
+                    public override Akka.Cluster.Proto.Msg.VectorClock.Types.Version DefaultInstanceForType { get; }
+                    public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+                    public bool HasHashIndex { get; }
+                    public int HashIndex { get; set; }
+                    public bool HasTimestamp { get; }
+                    public override bool IsInitialized { get; }
+                    protected override Akka.Cluster.Proto.Msg.VectorClock.Types.Version MessageBeingBuilt { get; }
+                    protected override Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder ThisBuilder { get; }
+                    public long Timestamp { get; set; }
+                    public override Akka.Cluster.Proto.Msg.VectorClock.Types.Version BuildPartial() { }
+                    public override Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder Clear() { }
+                    public Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder ClearHashIndex() { }
+                    public Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder ClearTimestamp() { }
+                    public override Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder Clone() { }
+                    public override Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+                    public override Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder MergeFrom(Akka.Cluster.Proto.Msg.VectorClock.Types.Version other) { }
+                    public override Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+                    public override Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                    public Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder SetHashIndex(int value) { }
+                    public Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder SetTimestamp(long value) { }
+                }
+            }
+        }
+    }
+    public sealed class Welcome : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.Proto.Msg.Welcome, Akka.Cluster.Proto.Msg.Welcome.Builder>
+    {
+        public const int FromFieldNumber = 1;
+        public const int GossipFieldNumber = 2;
+        public static Akka.Cluster.Proto.Msg.Welcome DefaultInstance { get; }
+        public override Akka.Cluster.Proto.Msg.Welcome DefaultInstanceForType { get; }
+        public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        public Akka.Cluster.Proto.Msg.UniqueAddress From { get; }
+        public Akka.Cluster.Proto.Msg.Gossip Gossip { get; }
+        public bool HasFrom { get; }
+        public bool HasGossip { get; }
+        protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.Proto.Msg.Welcome, Akka.Cluster.Proto.Msg.Welcome.Builder> InternalFieldAccessors { get; }
+        public override bool IsInitialized { get; }
+        public override int SerializedSize { get; }
+        protected override Akka.Cluster.Proto.Msg.Welcome ThisMessage { get; }
+        public static Akka.Cluster.Proto.Msg.Welcome.Builder CreateBuilder() { }
+        public static Akka.Cluster.Proto.Msg.Welcome.Builder CreateBuilder(Akka.Cluster.Proto.Msg.Welcome prototype) { }
+        public override Akka.Cluster.Proto.Msg.Welcome.Builder CreateBuilderForType() { }
+        public static Akka.Cluster.Proto.Msg.Welcome ParseDelimitedFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.Welcome ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Welcome ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+        public static Akka.Cluster.Proto.Msg.Welcome ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Welcome ParseFrom(byte[] data) { }
+        public static Akka.Cluster.Proto.Msg.Welcome ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Welcome ParseFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.Proto.Msg.Welcome ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.Proto.Msg.Welcome ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public static Akka.Cluster.Proto.Msg.Welcome ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public override Akka.Cluster.Proto.Msg.Welcome.Builder ToBuilder() { }
+        public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+        public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.Proto.Msg.Welcome, Akka.Cluster.Proto.Msg.Welcome.Builder>
+        {
+            public Builder() { }
+            public override Akka.Cluster.Proto.Msg.Welcome DefaultInstanceForType { get; }
+            public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public Akka.Cluster.Proto.Msg.UniqueAddress From { get; set; }
+            public Akka.Cluster.Proto.Msg.Gossip Gossip { get; set; }
+            public bool HasFrom { get; }
+            public bool HasGossip { get; }
+            public override bool IsInitialized { get; }
+            protected override Akka.Cluster.Proto.Msg.Welcome MessageBeingBuilt { get; }
+            protected override Akka.Cluster.Proto.Msg.Welcome.Builder ThisBuilder { get; }
+            public override Akka.Cluster.Proto.Msg.Welcome BuildPartial() { }
+            public override Akka.Cluster.Proto.Msg.Welcome.Builder Clear() { }
+            public Akka.Cluster.Proto.Msg.Welcome.Builder ClearFrom() { }
+            public Akka.Cluster.Proto.Msg.Welcome.Builder ClearGossip() { }
+            public override Akka.Cluster.Proto.Msg.Welcome.Builder Clone() { }
+            public override Akka.Cluster.Proto.Msg.Welcome.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+            public override Akka.Cluster.Proto.Msg.Welcome.Builder MergeFrom(Akka.Cluster.Proto.Msg.Welcome other) { }
+            public override Akka.Cluster.Proto.Msg.Welcome.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+            public override Akka.Cluster.Proto.Msg.Welcome.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+            public Akka.Cluster.Proto.Msg.Welcome.Builder MergeFrom(Akka.Cluster.Proto.Msg.UniqueAddress value) { }
+            public Akka.Cluster.Proto.Msg.Welcome.Builder MergeGossip(Akka.Cluster.Proto.Msg.Gossip value) { }
+            public Akka.Cluster.Proto.Msg.Welcome.Builder SetFrom(Akka.Cluster.Proto.Msg.UniqueAddress value) { }
+            public Akka.Cluster.Proto.Msg.Welcome.Builder SetFrom(Akka.Cluster.Proto.Msg.UniqueAddress.Builder builderForValue) { }
+            public Akka.Cluster.Proto.Msg.Welcome.Builder SetGossip(Akka.Cluster.Proto.Msg.Gossip value) { }
+            public Akka.Cluster.Proto.Msg.Welcome.Builder SetGossip(Akka.Cluster.Proto.Msg.Gossip.Builder builderForValue) { }
+        }
+    }
+}
+namespace Akka.Cluster.Routing
+{
+    public sealed class ClusterRouterGroup : Akka.Routing.Group
+    {
+        public ClusterRouterGroup(Akka.Routing.Group local, Akka.Cluster.Routing.ClusterRouterGroupSettings settings) { }
+        public Akka.Routing.Group Local { get; }
+        public override string RouterDispatcher { get; }
+        public Akka.Cluster.Routing.ClusterRouterGroupSettings Settings { get; }
+        public override bool StopRouterWhenAllRouteesRemoved { get; }
+        public Akka.Routing.RouterConfig Copy(Akka.Routing.Group local = null, Akka.Cluster.Routing.ClusterRouterGroupSettings settings = null) { }
+        public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override System.Collections.Generic.IEnumerable<string> GetPaths(Akka.Actor.ActorSystem system) { }
+        public override bool IsManagementMessage(object message) { }
+        public override Akka.Actor.Props RoutingLogicController(Akka.Routing.RoutingLogic routingLogic) { }
+        public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
+        public override Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig other) { }
+    }
+    public sealed class ClusterRouterGroupSettings : Akka.Cluster.Routing.ClusterRouterSettingsBase
+    {
+        [System.ObsoleteAttribute()]
+        public ClusterRouterGroupSettings(int totalInstances, bool allowLocalRoutees, System.Collections.Immutable.ImmutableHashSet<string> routeesPaths) { }
+        [System.ObsoleteAttribute()]
+        public ClusterRouterGroupSettings(int totalInstances, bool allowLocalRoutees, string useRole, System.Collections.Immutable.ImmutableHashSet<string> routeesPaths) { }
+        public ClusterRouterGroupSettings(int totalInstances, System.Collections.Immutable.ImmutableHashSet<string> routeesPaths, bool allowLocalRoutees, string useRole = null) { }
+        public System.Collections.Immutable.ImmutableHashSet<string> RouteesPaths { get; }
+        public static Akka.Cluster.Routing.ClusterRouterGroupSettings FromConfig(Akka.Configuration.Config config) { }
+    }
+    public sealed class ClusterRouterPool : Akka.Routing.Pool
+    {
+        public ClusterRouterPool(Akka.Routing.Pool local, Akka.Cluster.Routing.ClusterRouterPoolSettings settings) { }
+        public Akka.Routing.Pool Local { get; }
+        public override string RouterDispatcher { get; }
+        public Akka.Cluster.Routing.ClusterRouterPoolSettings Settings { get; }
+        public override bool StopRouterWhenAllRouteesRemoved { get; }
+        public override Akka.Actor.SupervisorStrategy SupervisorStrategy { get; }
+        public Akka.Routing.RouterConfig Copy(Akka.Routing.Pool local = null, Akka.Cluster.Routing.ClusterRouterPoolSettings settings = null) { }
+        public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override int GetNrOfInstances(Akka.Actor.ActorSystem system) { }
+        public override bool IsManagementMessage(object message) { }
+        public override Akka.Actor.Props RoutingLogicController(Akka.Routing.RoutingLogic routingLogic) { }
+        public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
+        public override Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig routerConfig) { }
+    }
+    public sealed class ClusterRouterPoolSettings : Akka.Cluster.Routing.ClusterRouterSettingsBase
+    {
+        [System.ObsoleteAttribute()]
+        public ClusterRouterPoolSettings(int totalInstances, bool allowLocalRoutees, int maxInstancesPerNode) { }
+        [System.ObsoleteAttribute()]
+        public ClusterRouterPoolSettings(int totalInstances, bool allowLocalRoutees, string useRole, int maxInstancesPerNode) { }
+        public ClusterRouterPoolSettings(int totalInstances, int maxInstancesPerNode, bool allowLocalRoutees, string useRole = null) { }
+        public int MaxInstancesPerNode { get; }
+        public static Akka.Cluster.Routing.ClusterRouterPoolSettings FromConfig(Akka.Configuration.Config config) { }
+    }
+    public abstract class ClusterRouterSettingsBase
+    {
+        protected ClusterRouterSettingsBase(int totalInstances, bool allowLocalRoutees, string useRole) { }
+        public bool AllowLocalRoutees { get; }
+        public int TotalInstances { get; }
+        public string UseRole { get; }
+        protected static int GetMaxTotalNrOfInstances(Akka.Configuration.Config config) { }
+        protected static string UseRoleOption(string role) { }
+    }
+}
