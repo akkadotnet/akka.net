@@ -1,0 +1,1635 @@
+﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.TestKit")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.TestKit")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests.MultiNode")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests.Performance")]
+[assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
+[assembly: System.Runtime.InteropServices.GuidAttribute("78986bdb-73f7-4532-8e03-1c9ccbe8148e")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5", FrameworkDisplayName=".NET Framework 4.5")]
+public sealed class AckAndEnvelopeContainer : Google.ProtocolBuffers.GeneratedMessage<AckAndEnvelopeContainer, AckAndEnvelopeContainer.Builder>
+{
+    public const int AckFieldNumber = 1;
+    public const int EnvelopeFieldNumber = 2;
+    public AcknowledgementInfo Ack { get; }
+    public static AckAndEnvelopeContainer DefaultInstance { get; }
+    public override AckAndEnvelopeContainer DefaultInstanceForType { get; }
+    public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+    public RemoteEnvelope Envelope { get; }
+    public bool HasAck { get; }
+    public bool HasEnvelope { get; }
+    protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<AckAndEnvelopeContainer, AckAndEnvelopeContainer.Builder> InternalFieldAccessors { get; }
+    public override bool IsInitialized { get; }
+    public override int SerializedSize { get; }
+    protected override AckAndEnvelopeContainer ThisMessage { get; }
+    public static AckAndEnvelopeContainer.Builder CreateBuilder() { }
+    public static AckAndEnvelopeContainer.Builder CreateBuilder(AckAndEnvelopeContainer prototype) { }
+    public override AckAndEnvelopeContainer.Builder CreateBuilderForType() { }
+    public static AckAndEnvelopeContainer ParseDelimitedFrom(System.IO.Stream input) { }
+    public static AckAndEnvelopeContainer ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AckAndEnvelopeContainer ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+    public static AckAndEnvelopeContainer ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AckAndEnvelopeContainer ParseFrom(byte[] data) { }
+    public static AckAndEnvelopeContainer ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AckAndEnvelopeContainer ParseFrom(System.IO.Stream input) { }
+    public static AckAndEnvelopeContainer ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AckAndEnvelopeContainer ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+    public static AckAndEnvelopeContainer ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public override AckAndEnvelopeContainer.Builder ToBuilder() { }
+    public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+    public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<AckAndEnvelopeContainer, AckAndEnvelopeContainer.Builder>
+    {
+        public Builder() { }
+        public AcknowledgementInfo Ack { get; set; }
+        public override AckAndEnvelopeContainer DefaultInstanceForType { get; }
+        public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+        public RemoteEnvelope Envelope { get; set; }
+        public bool HasAck { get; }
+        public bool HasEnvelope { get; }
+        public override bool IsInitialized { get; }
+        protected override AckAndEnvelopeContainer MessageBeingBuilt { get; }
+        protected override AckAndEnvelopeContainer.Builder ThisBuilder { get; }
+        public override AckAndEnvelopeContainer BuildPartial() { }
+        public override AckAndEnvelopeContainer.Builder Clear() { }
+        public AckAndEnvelopeContainer.Builder ClearAck() { }
+        public AckAndEnvelopeContainer.Builder ClearEnvelope() { }
+        public override AckAndEnvelopeContainer.Builder Clone() { }
+        public AckAndEnvelopeContainer.Builder MergeAck(AcknowledgementInfo value) { }
+        public AckAndEnvelopeContainer.Builder MergeEnvelope(RemoteEnvelope value) { }
+        public override AckAndEnvelopeContainer.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+        public override AckAndEnvelopeContainer.Builder MergeFrom(AckAndEnvelopeContainer other) { }
+        public override AckAndEnvelopeContainer.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public override AckAndEnvelopeContainer.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public AckAndEnvelopeContainer.Builder SetAck(AcknowledgementInfo value) { }
+        public AckAndEnvelopeContainer.Builder SetAck(AcknowledgementInfo.Builder builderForValue) { }
+        public AckAndEnvelopeContainer.Builder SetEnvelope(RemoteEnvelope value) { }
+        public AckAndEnvelopeContainer.Builder SetEnvelope(RemoteEnvelope.Builder builderForValue) { }
+    }
+}
+public sealed class AcknowledgementInfo : Google.ProtocolBuffers.GeneratedMessage<AcknowledgementInfo, AcknowledgementInfo.Builder>
+{
+    public const int CumulativeAckFieldNumber = 1;
+    public const int NacksFieldNumber = 2;
+    [System.CLSCompliantAttribute(false)]
+    public ulong CumulativeAck { get; }
+    public static AcknowledgementInfo DefaultInstance { get; }
+    public override AcknowledgementInfo DefaultInstanceForType { get; }
+    public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+    public bool HasCumulativeAck { get; }
+    protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<AcknowledgementInfo, AcknowledgementInfo.Builder> InternalFieldAccessors { get; }
+    public override bool IsInitialized { get; }
+    public int NacksCount { get; }
+    [System.CLSCompliantAttribute(false)]
+    public System.Collections.Generic.IList<ulong> NacksList { get; }
+    public override int SerializedSize { get; }
+    protected override AcknowledgementInfo ThisMessage { get; }
+    public static AcknowledgementInfo.Builder CreateBuilder() { }
+    public static AcknowledgementInfo.Builder CreateBuilder(AcknowledgementInfo prototype) { }
+    public override AcknowledgementInfo.Builder CreateBuilderForType() { }
+    [System.CLSCompliantAttribute(false)]
+    public ulong GetNacks(int index) { }
+    public static AcknowledgementInfo ParseDelimitedFrom(System.IO.Stream input) { }
+    public static AcknowledgementInfo ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AcknowledgementInfo ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+    public static AcknowledgementInfo ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AcknowledgementInfo ParseFrom(byte[] data) { }
+    public static AcknowledgementInfo ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AcknowledgementInfo ParseFrom(System.IO.Stream input) { }
+    public static AcknowledgementInfo ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AcknowledgementInfo ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+    public static AcknowledgementInfo ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public override AcknowledgementInfo.Builder ToBuilder() { }
+    public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+    public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<AcknowledgementInfo, AcknowledgementInfo.Builder>
+    {
+        public Builder() { }
+        [System.CLSCompliantAttribute(false)]
+        public ulong CumulativeAck { get; set; }
+        public override AcknowledgementInfo DefaultInstanceForType { get; }
+        public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+        public bool HasCumulativeAck { get; }
+        public override bool IsInitialized { get; }
+        protected override AcknowledgementInfo MessageBeingBuilt { get; }
+        public int NacksCount { get; }
+        [System.CLSCompliantAttribute(false)]
+        public Google.ProtocolBuffers.Collections.IPopsicleList<ulong> NacksList { get; }
+        protected override AcknowledgementInfo.Builder ThisBuilder { get; }
+        [System.CLSCompliantAttribute(false)]
+        public AcknowledgementInfo.Builder AddNacks(ulong value) { }
+        [System.CLSCompliantAttribute(false)]
+        public AcknowledgementInfo.Builder AddRangeNacks(System.Collections.Generic.IEnumerable<ulong> values) { }
+        public override AcknowledgementInfo BuildPartial() { }
+        public override AcknowledgementInfo.Builder Clear() { }
+        public AcknowledgementInfo.Builder ClearCumulativeAck() { }
+        public AcknowledgementInfo.Builder ClearNacks() { }
+        public override AcknowledgementInfo.Builder Clone() { }
+        [System.CLSCompliantAttribute(false)]
+        public ulong GetNacks(int index) { }
+        public override AcknowledgementInfo.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+        public override AcknowledgementInfo.Builder MergeFrom(AcknowledgementInfo other) { }
+        public override AcknowledgementInfo.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public override AcknowledgementInfo.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        [System.CLSCompliantAttribute(false)]
+        public AcknowledgementInfo.Builder SetCumulativeAck(ulong value) { }
+        [System.CLSCompliantAttribute(false)]
+        public AcknowledgementInfo.Builder SetNacks(int index, ulong value) { }
+    }
+}
+public sealed class ActorRefData : Google.ProtocolBuffers.GeneratedMessage<ActorRefData, ActorRefData.Builder>
+{
+    public const int PathFieldNumber = 1;
+    public static ActorRefData DefaultInstance { get; }
+    public override ActorRefData DefaultInstanceForType { get; }
+    public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+    public bool HasPath { get; }
+    protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<ActorRefData, ActorRefData.Builder> InternalFieldAccessors { get; }
+    public override bool IsInitialized { get; }
+    public string Path { get; }
+    public override int SerializedSize { get; }
+    protected override ActorRefData ThisMessage { get; }
+    public static ActorRefData.Builder CreateBuilder() { }
+    public static ActorRefData.Builder CreateBuilder(ActorRefData prototype) { }
+    public override ActorRefData.Builder CreateBuilderForType() { }
+    public static ActorRefData ParseDelimitedFrom(System.IO.Stream input) { }
+    public static ActorRefData ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static ActorRefData ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+    public static ActorRefData ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static ActorRefData ParseFrom(byte[] data) { }
+    public static ActorRefData ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static ActorRefData ParseFrom(System.IO.Stream input) { }
+    public static ActorRefData ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static ActorRefData ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+    public static ActorRefData ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public override ActorRefData.Builder ToBuilder() { }
+    public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+    public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<ActorRefData, ActorRefData.Builder>
+    {
+        public Builder() { }
+        public override ActorRefData DefaultInstanceForType { get; }
+        public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+        public bool HasPath { get; }
+        public override bool IsInitialized { get; }
+        protected override ActorRefData MessageBeingBuilt { get; }
+        public string Path { get; set; }
+        protected override ActorRefData.Builder ThisBuilder { get; }
+        public override ActorRefData BuildPartial() { }
+        public override ActorRefData.Builder Clear() { }
+        public ActorRefData.Builder ClearPath() { }
+        public override ActorRefData.Builder Clone() { }
+        public override ActorRefData.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+        public override ActorRefData.Builder MergeFrom(ActorRefData other) { }
+        public override ActorRefData.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public override ActorRefData.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public ActorRefData.Builder SetPath(string value) { }
+    }
+}
+public sealed class AddressData : Google.ProtocolBuffers.GeneratedMessage<AddressData, AddressData.Builder>
+{
+    public const int HostnameFieldNumber = 2;
+    public const int PortFieldNumber = 3;
+    public const int ProtocolFieldNumber = 4;
+    public const int SystemFieldNumber = 1;
+    public static AddressData DefaultInstance { get; }
+    public override AddressData DefaultInstanceForType { get; }
+    public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+    public bool HasHostname { get; }
+    public bool HasPort { get; }
+    public bool HasProtocol { get; }
+    public bool HasSystem { get; }
+    public string Hostname { get; }
+    protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<AddressData, AddressData.Builder> InternalFieldAccessors { get; }
+    public override bool IsInitialized { get; }
+    [System.CLSCompliantAttribute(false)]
+    public uint Port { get; }
+    public string Protocol { get; }
+    public override int SerializedSize { get; }
+    public string System { get; }
+    protected override AddressData ThisMessage { get; }
+    public static AddressData.Builder CreateBuilder() { }
+    public static AddressData.Builder CreateBuilder(AddressData prototype) { }
+    public override AddressData.Builder CreateBuilderForType() { }
+    public static AddressData ParseDelimitedFrom(System.IO.Stream input) { }
+    public static AddressData ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AddressData ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+    public static AddressData ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AddressData ParseFrom(byte[] data) { }
+    public static AddressData ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AddressData ParseFrom(System.IO.Stream input) { }
+    public static AddressData ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AddressData ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+    public static AddressData ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public override AddressData.Builder ToBuilder() { }
+    public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+    public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<AddressData, AddressData.Builder>
+    {
+        public Builder() { }
+        public override AddressData DefaultInstanceForType { get; }
+        public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+        public bool HasHostname { get; }
+        public bool HasPort { get; }
+        public bool HasProtocol { get; }
+        public bool HasSystem { get; }
+        public string Hostname { get; set; }
+        public override bool IsInitialized { get; }
+        protected override AddressData MessageBeingBuilt { get; }
+        [System.CLSCompliantAttribute(false)]
+        public uint Port { get; set; }
+        public string Protocol { get; set; }
+        public string System { get; set; }
+        protected override AddressData.Builder ThisBuilder { get; }
+        public override AddressData BuildPartial() { }
+        public override AddressData.Builder Clear() { }
+        public AddressData.Builder ClearHostname() { }
+        public AddressData.Builder ClearPort() { }
+        public AddressData.Builder ClearProtocol() { }
+        public AddressData.Builder ClearSystem() { }
+        public override AddressData.Builder Clone() { }
+        public override AddressData.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+        public override AddressData.Builder MergeFrom(AddressData other) { }
+        public override AddressData.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public override AddressData.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public AddressData.Builder SetHostname(string value) { }
+        [System.CLSCompliantAttribute(false)]
+        public AddressData.Builder SetPort(uint value) { }
+        public AddressData.Builder SetProtocol(string value) { }
+        public AddressData.Builder SetSystem(string value) { }
+    }
+}
+public sealed class AkkaControlMessage : Google.ProtocolBuffers.GeneratedMessage<AkkaControlMessage, AkkaControlMessage.Builder>
+{
+    public const int CommandTypeFieldNumber = 1;
+    public const int HandshakeInfoFieldNumber = 2;
+    public CommandType CommandType { get; }
+    public static AkkaControlMessage DefaultInstance { get; }
+    public override AkkaControlMessage DefaultInstanceForType { get; }
+    public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+    public AkkaHandshakeInfo HandshakeInfo { get; }
+    public bool HasCommandType { get; }
+    public bool HasHandshakeInfo { get; }
+    protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<AkkaControlMessage, AkkaControlMessage.Builder> InternalFieldAccessors { get; }
+    public override bool IsInitialized { get; }
+    public override int SerializedSize { get; }
+    protected override AkkaControlMessage ThisMessage { get; }
+    public static AkkaControlMessage.Builder CreateBuilder() { }
+    public static AkkaControlMessage.Builder CreateBuilder(AkkaControlMessage prototype) { }
+    public override AkkaControlMessage.Builder CreateBuilderForType() { }
+    public static AkkaControlMessage ParseDelimitedFrom(System.IO.Stream input) { }
+    public static AkkaControlMessage ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AkkaControlMessage ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+    public static AkkaControlMessage ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AkkaControlMessage ParseFrom(byte[] data) { }
+    public static AkkaControlMessage ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AkkaControlMessage ParseFrom(System.IO.Stream input) { }
+    public static AkkaControlMessage ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AkkaControlMessage ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+    public static AkkaControlMessage ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public override AkkaControlMessage.Builder ToBuilder() { }
+    public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+    public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<AkkaControlMessage, AkkaControlMessage.Builder>
+    {
+        public Builder() { }
+        public CommandType CommandType { get; set; }
+        public override AkkaControlMessage DefaultInstanceForType { get; }
+        public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+        public AkkaHandshakeInfo HandshakeInfo { get; set; }
+        public bool HasCommandType { get; }
+        public bool HasHandshakeInfo { get; }
+        public override bool IsInitialized { get; }
+        protected override AkkaControlMessage MessageBeingBuilt { get; }
+        protected override AkkaControlMessage.Builder ThisBuilder { get; }
+        public override AkkaControlMessage BuildPartial() { }
+        public override AkkaControlMessage.Builder Clear() { }
+        public AkkaControlMessage.Builder ClearCommandType() { }
+        public AkkaControlMessage.Builder ClearHandshakeInfo() { }
+        public override AkkaControlMessage.Builder Clone() { }
+        public override AkkaControlMessage.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+        public override AkkaControlMessage.Builder MergeFrom(AkkaControlMessage other) { }
+        public override AkkaControlMessage.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public override AkkaControlMessage.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public AkkaControlMessage.Builder MergeHandshakeInfo(AkkaHandshakeInfo value) { }
+        public AkkaControlMessage.Builder SetCommandType(CommandType value) { }
+        public AkkaControlMessage.Builder SetHandshakeInfo(AkkaHandshakeInfo value) { }
+        public AkkaControlMessage.Builder SetHandshakeInfo(AkkaHandshakeInfo.Builder builderForValue) { }
+    }
+}
+public sealed class AkkaHandshakeInfo : Google.ProtocolBuffers.GeneratedMessage<AkkaHandshakeInfo, AkkaHandshakeInfo.Builder>
+{
+    public const int CookieFieldNumber = 3;
+    public const int OriginFieldNumber = 1;
+    public const int UidFieldNumber = 2;
+    public string Cookie { get; }
+    public static AkkaHandshakeInfo DefaultInstance { get; }
+    public override AkkaHandshakeInfo DefaultInstanceForType { get; }
+    public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+    public bool HasCookie { get; }
+    public bool HasOrigin { get; }
+    public bool HasUid { get; }
+    protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<AkkaHandshakeInfo, AkkaHandshakeInfo.Builder> InternalFieldAccessors { get; }
+    public override bool IsInitialized { get; }
+    public AddressData Origin { get; }
+    public override int SerializedSize { get; }
+    protected override AkkaHandshakeInfo ThisMessage { get; }
+    [System.CLSCompliantAttribute(false)]
+    public ulong Uid { get; }
+    public static AkkaHandshakeInfo.Builder CreateBuilder() { }
+    public static AkkaHandshakeInfo.Builder CreateBuilder(AkkaHandshakeInfo prototype) { }
+    public override AkkaHandshakeInfo.Builder CreateBuilderForType() { }
+    public static AkkaHandshakeInfo ParseDelimitedFrom(System.IO.Stream input) { }
+    public static AkkaHandshakeInfo ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AkkaHandshakeInfo ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+    public static AkkaHandshakeInfo ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AkkaHandshakeInfo ParseFrom(byte[] data) { }
+    public static AkkaHandshakeInfo ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AkkaHandshakeInfo ParseFrom(System.IO.Stream input) { }
+    public static AkkaHandshakeInfo ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AkkaHandshakeInfo ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+    public static AkkaHandshakeInfo ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public override AkkaHandshakeInfo.Builder ToBuilder() { }
+    public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+    public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<AkkaHandshakeInfo, AkkaHandshakeInfo.Builder>
+    {
+        public Builder() { }
+        public string Cookie { get; set; }
+        public override AkkaHandshakeInfo DefaultInstanceForType { get; }
+        public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+        public bool HasCookie { get; }
+        public bool HasOrigin { get; }
+        public bool HasUid { get; }
+        public override bool IsInitialized { get; }
+        protected override AkkaHandshakeInfo MessageBeingBuilt { get; }
+        public AddressData Origin { get; set; }
+        protected override AkkaHandshakeInfo.Builder ThisBuilder { get; }
+        [System.CLSCompliantAttribute(false)]
+        public ulong Uid { get; set; }
+        public override AkkaHandshakeInfo BuildPartial() { }
+        public override AkkaHandshakeInfo.Builder Clear() { }
+        public AkkaHandshakeInfo.Builder ClearCookie() { }
+        public AkkaHandshakeInfo.Builder ClearOrigin() { }
+        public AkkaHandshakeInfo.Builder ClearUid() { }
+        public override AkkaHandshakeInfo.Builder Clone() { }
+        public override AkkaHandshakeInfo.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+        public override AkkaHandshakeInfo.Builder MergeFrom(AkkaHandshakeInfo other) { }
+        public override AkkaHandshakeInfo.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public override AkkaHandshakeInfo.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public AkkaHandshakeInfo.Builder MergeOrigin(AddressData value) { }
+        public AkkaHandshakeInfo.Builder SetCookie(string value) { }
+        public AkkaHandshakeInfo.Builder SetOrigin(AddressData value) { }
+        public AkkaHandshakeInfo.Builder SetOrigin(AddressData.Builder builderForValue) { }
+        [System.CLSCompliantAttribute(false)]
+        public AkkaHandshakeInfo.Builder SetUid(ulong value) { }
+    }
+}
+public sealed class AkkaProtocolMessage : Google.ProtocolBuffers.GeneratedMessage<AkkaProtocolMessage, AkkaProtocolMessage.Builder>
+{
+    public const int InstructionFieldNumber = 2;
+    public const int PayloadFieldNumber = 1;
+    public static AkkaProtocolMessage DefaultInstance { get; }
+    public override AkkaProtocolMessage DefaultInstanceForType { get; }
+    public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+    public bool HasInstruction { get; }
+    public bool HasPayload { get; }
+    public AkkaControlMessage Instruction { get; }
+    protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<AkkaProtocolMessage, AkkaProtocolMessage.Builder> InternalFieldAccessors { get; }
+    public override bool IsInitialized { get; }
+    public Google.ProtocolBuffers.ByteString Payload { get; }
+    public override int SerializedSize { get; }
+    protected override AkkaProtocolMessage ThisMessage { get; }
+    public static AkkaProtocolMessage.Builder CreateBuilder() { }
+    public static AkkaProtocolMessage.Builder CreateBuilder(AkkaProtocolMessage prototype) { }
+    public override AkkaProtocolMessage.Builder CreateBuilderForType() { }
+    public static AkkaProtocolMessage ParseDelimitedFrom(System.IO.Stream input) { }
+    public static AkkaProtocolMessage ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AkkaProtocolMessage ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+    public static AkkaProtocolMessage ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AkkaProtocolMessage ParseFrom(byte[] data) { }
+    public static AkkaProtocolMessage ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AkkaProtocolMessage ParseFrom(System.IO.Stream input) { }
+    public static AkkaProtocolMessage ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static AkkaProtocolMessage ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+    public static AkkaProtocolMessage ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public override AkkaProtocolMessage.Builder ToBuilder() { }
+    public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+    public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<AkkaProtocolMessage, AkkaProtocolMessage.Builder>
+    {
+        public Builder() { }
+        public override AkkaProtocolMessage DefaultInstanceForType { get; }
+        public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+        public bool HasInstruction { get; }
+        public bool HasPayload { get; }
+        public AkkaControlMessage Instruction { get; set; }
+        public override bool IsInitialized { get; }
+        protected override AkkaProtocolMessage MessageBeingBuilt { get; }
+        public Google.ProtocolBuffers.ByteString Payload { get; set; }
+        protected override AkkaProtocolMessage.Builder ThisBuilder { get; }
+        public override AkkaProtocolMessage BuildPartial() { }
+        public override AkkaProtocolMessage.Builder Clear() { }
+        public AkkaProtocolMessage.Builder ClearInstruction() { }
+        public AkkaProtocolMessage.Builder ClearPayload() { }
+        public override AkkaProtocolMessage.Builder Clone() { }
+        public override AkkaProtocolMessage.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+        public override AkkaProtocolMessage.Builder MergeFrom(AkkaProtocolMessage other) { }
+        public override AkkaProtocolMessage.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public override AkkaProtocolMessage.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public AkkaProtocolMessage.Builder MergeInstruction(AkkaControlMessage value) { }
+        public AkkaProtocolMessage.Builder SetInstruction(AkkaControlMessage value) { }
+        public AkkaProtocolMessage.Builder SetInstruction(AkkaControlMessage.Builder builderForValue) { }
+        public AkkaProtocolMessage.Builder SetPayload(Google.ProtocolBuffers.ByteString value) { }
+    }
+}
+public enum CommandType
+{
+    ASSOCIATE = 1,
+    DISASSOCIATE = 2,
+    HEARTBEAT = 3,
+    DISASSOCIATE_SHUTTING_DOWN = 4,
+    DISASSOCIATE_QUARANTINED = 5,
+}
+public class static Containerformats
+{
+    public static Google.ProtocolBuffers.Descriptors.FileDescriptor Descriptor { get; }
+    public static void RegisterAllExtensions(Google.ProtocolBuffers.ExtensionRegistry registry) { }
+}
+public sealed class DaemonMsgCreateData : Google.ProtocolBuffers.GeneratedMessage<DaemonMsgCreateData, DaemonMsgCreateData.Builder>
+{
+    public const int DeployFieldNumber = 2;
+    public const int PathFieldNumber = 3;
+    public const int PropsFieldNumber = 1;
+    public const int SupervisorFieldNumber = 4;
+    public static DaemonMsgCreateData DefaultInstance { get; }
+    public override DaemonMsgCreateData DefaultInstanceForType { get; }
+    public DeployData Deploy { get; }
+    public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+    public bool HasDeploy { get; }
+    public bool HasPath { get; }
+    public bool HasProps { get; }
+    public bool HasSupervisor { get; }
+    protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<DaemonMsgCreateData, DaemonMsgCreateData.Builder> InternalFieldAccessors { get; }
+    public override bool IsInitialized { get; }
+    public string Path { get; }
+    public PropsData Props { get; }
+    public override int SerializedSize { get; }
+    public ActorRefData Supervisor { get; }
+    protected override DaemonMsgCreateData ThisMessage { get; }
+    public static DaemonMsgCreateData.Builder CreateBuilder() { }
+    public static DaemonMsgCreateData.Builder CreateBuilder(DaemonMsgCreateData prototype) { }
+    public override DaemonMsgCreateData.Builder CreateBuilderForType() { }
+    public static DaemonMsgCreateData ParseDelimitedFrom(System.IO.Stream input) { }
+    public static DaemonMsgCreateData ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static DaemonMsgCreateData ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+    public static DaemonMsgCreateData ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static DaemonMsgCreateData ParseFrom(byte[] data) { }
+    public static DaemonMsgCreateData ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static DaemonMsgCreateData ParseFrom(System.IO.Stream input) { }
+    public static DaemonMsgCreateData ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static DaemonMsgCreateData ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+    public static DaemonMsgCreateData ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public override DaemonMsgCreateData.Builder ToBuilder() { }
+    public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+    public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<DaemonMsgCreateData, DaemonMsgCreateData.Builder>
+    {
+        public Builder() { }
+        public override DaemonMsgCreateData DefaultInstanceForType { get; }
+        public DeployData Deploy { get; set; }
+        public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+        public bool HasDeploy { get; }
+        public bool HasPath { get; }
+        public bool HasProps { get; }
+        public bool HasSupervisor { get; }
+        public override bool IsInitialized { get; }
+        protected override DaemonMsgCreateData MessageBeingBuilt { get; }
+        public string Path { get; set; }
+        public PropsData Props { get; set; }
+        public ActorRefData Supervisor { get; set; }
+        protected override DaemonMsgCreateData.Builder ThisBuilder { get; }
+        public override DaemonMsgCreateData BuildPartial() { }
+        public override DaemonMsgCreateData.Builder Clear() { }
+        public DaemonMsgCreateData.Builder ClearDeploy() { }
+        public DaemonMsgCreateData.Builder ClearPath() { }
+        public DaemonMsgCreateData.Builder ClearProps() { }
+        public DaemonMsgCreateData.Builder ClearSupervisor() { }
+        public override DaemonMsgCreateData.Builder Clone() { }
+        public DaemonMsgCreateData.Builder MergeDeploy(DeployData value) { }
+        public override DaemonMsgCreateData.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+        public override DaemonMsgCreateData.Builder MergeFrom(DaemonMsgCreateData other) { }
+        public override DaemonMsgCreateData.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public override DaemonMsgCreateData.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public DaemonMsgCreateData.Builder MergeProps(PropsData value) { }
+        public DaemonMsgCreateData.Builder MergeSupervisor(ActorRefData value) { }
+        public DaemonMsgCreateData.Builder SetDeploy(DeployData value) { }
+        public DaemonMsgCreateData.Builder SetDeploy(DeployData.Builder builderForValue) { }
+        public DaemonMsgCreateData.Builder SetPath(string value) { }
+        public DaemonMsgCreateData.Builder SetProps(PropsData value) { }
+        public DaemonMsgCreateData.Builder SetProps(PropsData.Builder builderForValue) { }
+        public DaemonMsgCreateData.Builder SetSupervisor(ActorRefData value) { }
+        public DaemonMsgCreateData.Builder SetSupervisor(ActorRefData.Builder builderForValue) { }
+    }
+}
+public sealed class DeployData : Google.ProtocolBuffers.GeneratedMessage<DeployData, DeployData.Builder>
+{
+    public const int ConfigFieldNumber = 2;
+    public const int DispatcherFieldNumber = 5;
+    public const int PathFieldNumber = 1;
+    public const int RouterConfigFieldNumber = 3;
+    public const int ScopeFieldNumber = 4;
+    public Google.ProtocolBuffers.ByteString Config { get; }
+    public static DeployData DefaultInstance { get; }
+    public override DeployData DefaultInstanceForType { get; }
+    public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+    public string Dispatcher { get; }
+    public bool HasConfig { get; }
+    public bool HasDispatcher { get; }
+    public bool HasPath { get; }
+    public bool HasRouterConfig { get; }
+    public bool HasScope { get; }
+    protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<DeployData, DeployData.Builder> InternalFieldAccessors { get; }
+    public override bool IsInitialized { get; }
+    public string Path { get; }
+    public Google.ProtocolBuffers.ByteString RouterConfig { get; }
+    public Google.ProtocolBuffers.ByteString Scope { get; }
+    public override int SerializedSize { get; }
+    protected override DeployData ThisMessage { get; }
+    public static DeployData.Builder CreateBuilder() { }
+    public static DeployData.Builder CreateBuilder(DeployData prototype) { }
+    public override DeployData.Builder CreateBuilderForType() { }
+    public static DeployData ParseDelimitedFrom(System.IO.Stream input) { }
+    public static DeployData ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static DeployData ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+    public static DeployData ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static DeployData ParseFrom(byte[] data) { }
+    public static DeployData ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static DeployData ParseFrom(System.IO.Stream input) { }
+    public static DeployData ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static DeployData ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+    public static DeployData ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public override DeployData.Builder ToBuilder() { }
+    public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+    public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<DeployData, DeployData.Builder>
+    {
+        public Builder() { }
+        public Google.ProtocolBuffers.ByteString Config { get; set; }
+        public override DeployData DefaultInstanceForType { get; }
+        public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+        public string Dispatcher { get; set; }
+        public bool HasConfig { get; }
+        public bool HasDispatcher { get; }
+        public bool HasPath { get; }
+        public bool HasRouterConfig { get; }
+        public bool HasScope { get; }
+        public override bool IsInitialized { get; }
+        protected override DeployData MessageBeingBuilt { get; }
+        public string Path { get; set; }
+        public Google.ProtocolBuffers.ByteString RouterConfig { get; set; }
+        public Google.ProtocolBuffers.ByteString Scope { get; set; }
+        protected override DeployData.Builder ThisBuilder { get; }
+        public override DeployData BuildPartial() { }
+        public override DeployData.Builder Clear() { }
+        public DeployData.Builder ClearConfig() { }
+        public DeployData.Builder ClearDispatcher() { }
+        public DeployData.Builder ClearPath() { }
+        public DeployData.Builder ClearRouterConfig() { }
+        public DeployData.Builder ClearScope() { }
+        public override DeployData.Builder Clone() { }
+        public override DeployData.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+        public override DeployData.Builder MergeFrom(DeployData other) { }
+        public override DeployData.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public override DeployData.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public DeployData.Builder SetConfig(Google.ProtocolBuffers.ByteString value) { }
+        public DeployData.Builder SetDispatcher(string value) { }
+        public DeployData.Builder SetPath(string value) { }
+        public DeployData.Builder SetRouterConfig(Google.ProtocolBuffers.ByteString value) { }
+        public DeployData.Builder SetScope(Google.ProtocolBuffers.ByteString value) { }
+    }
+}
+public enum PatternType
+{
+    PARENT = 0,
+    CHILD_NAME = 1,
+    CHILD_PATTERN = 2,
+}
+public sealed class PropsData : Google.ProtocolBuffers.GeneratedMessage<PropsData, PropsData.Builder>
+{
+    public const int ArgsFieldNumber = 4;
+    public const int ClassesFieldNumber = 5;
+    public const int ClazzFieldNumber = 3;
+    public const int DeployFieldNumber = 2;
+    public int ArgsCount { get; }
+    public System.Collections.Generic.IList<Google.ProtocolBuffers.ByteString> ArgsList { get; }
+    public int ClassesCount { get; }
+    public System.Collections.Generic.IList<string> ClassesList { get; }
+    public string Clazz { get; }
+    public static PropsData DefaultInstance { get; }
+    public override PropsData DefaultInstanceForType { get; }
+    public DeployData Deploy { get; }
+    public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+    public bool HasClazz { get; }
+    public bool HasDeploy { get; }
+    protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<PropsData, PropsData.Builder> InternalFieldAccessors { get; }
+    public override bool IsInitialized { get; }
+    public override int SerializedSize { get; }
+    protected override PropsData ThisMessage { get; }
+    public static PropsData.Builder CreateBuilder() { }
+    public static PropsData.Builder CreateBuilder(PropsData prototype) { }
+    public override PropsData.Builder CreateBuilderForType() { }
+    public Google.ProtocolBuffers.ByteString GetArgs(int index) { }
+    public string GetClasses(int index) { }
+    public static PropsData ParseDelimitedFrom(System.IO.Stream input) { }
+    public static PropsData ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static PropsData ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+    public static PropsData ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static PropsData ParseFrom(byte[] data) { }
+    public static PropsData ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static PropsData ParseFrom(System.IO.Stream input) { }
+    public static PropsData ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static PropsData ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+    public static PropsData ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public override PropsData.Builder ToBuilder() { }
+    public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+    public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<PropsData, PropsData.Builder>
+    {
+        public Builder() { }
+        public int ArgsCount { get; }
+        public Google.ProtocolBuffers.Collections.IPopsicleList<Google.ProtocolBuffers.ByteString> ArgsList { get; }
+        public int ClassesCount { get; }
+        public Google.ProtocolBuffers.Collections.IPopsicleList<string> ClassesList { get; }
+        public string Clazz { get; set; }
+        public override PropsData DefaultInstanceForType { get; }
+        public DeployData Deploy { get; set; }
+        public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+        public bool HasClazz { get; }
+        public bool HasDeploy { get; }
+        public override bool IsInitialized { get; }
+        protected override PropsData MessageBeingBuilt { get; }
+        protected override PropsData.Builder ThisBuilder { get; }
+        public PropsData.Builder AddArgs(Google.ProtocolBuffers.ByteString value) { }
+        public PropsData.Builder AddClasses(string value) { }
+        public PropsData.Builder AddRangeArgs(System.Collections.Generic.IEnumerable<Google.ProtocolBuffers.ByteString> values) { }
+        public PropsData.Builder AddRangeClasses(System.Collections.Generic.IEnumerable<string> values) { }
+        public override PropsData BuildPartial() { }
+        public override PropsData.Builder Clear() { }
+        public PropsData.Builder ClearArgs() { }
+        public PropsData.Builder ClearClasses() { }
+        public PropsData.Builder ClearClazz() { }
+        public PropsData.Builder ClearDeploy() { }
+        public override PropsData.Builder Clone() { }
+        public Google.ProtocolBuffers.ByteString GetArgs(int index) { }
+        public string GetClasses(int index) { }
+        public PropsData.Builder MergeDeploy(DeployData value) { }
+        public override PropsData.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+        public override PropsData.Builder MergeFrom(PropsData other) { }
+        public override PropsData.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public override PropsData.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public PropsData.Builder SetArgs(int index, Google.ProtocolBuffers.ByteString value) { }
+        public PropsData.Builder SetClasses(int index, string value) { }
+        public PropsData.Builder SetClazz(string value) { }
+        public PropsData.Builder SetDeploy(DeployData value) { }
+        public PropsData.Builder SetDeploy(DeployData.Builder builderForValue) { }
+    }
+}
+public sealed class RemoteEnvelope : Google.ProtocolBuffers.GeneratedMessage<RemoteEnvelope, RemoteEnvelope.Builder>
+{
+    public const int MessageFieldNumber = 2;
+    public const int RecipientFieldNumber = 1;
+    public const int SenderFieldNumber = 4;
+    public const int SeqFieldNumber = 5;
+    public static RemoteEnvelope DefaultInstance { get; }
+    public override RemoteEnvelope DefaultInstanceForType { get; }
+    public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+    public bool HasMessage { get; }
+    public bool HasRecipient { get; }
+    public bool HasSender { get; }
+    public bool HasSeq { get; }
+    protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<RemoteEnvelope, RemoteEnvelope.Builder> InternalFieldAccessors { get; }
+    public override bool IsInitialized { get; }
+    public SerializedMessage Message { get; }
+    public ActorRefData Recipient { get; }
+    public ActorRefData Sender { get; }
+    [System.CLSCompliantAttribute(false)]
+    public ulong Seq { get; }
+    public override int SerializedSize { get; }
+    protected override RemoteEnvelope ThisMessage { get; }
+    public static RemoteEnvelope.Builder CreateBuilder() { }
+    public static RemoteEnvelope.Builder CreateBuilder(RemoteEnvelope prototype) { }
+    public override RemoteEnvelope.Builder CreateBuilderForType() { }
+    public static RemoteEnvelope ParseDelimitedFrom(System.IO.Stream input) { }
+    public static RemoteEnvelope ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static RemoteEnvelope ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+    public static RemoteEnvelope ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static RemoteEnvelope ParseFrom(byte[] data) { }
+    public static RemoteEnvelope ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static RemoteEnvelope ParseFrom(System.IO.Stream input) { }
+    public static RemoteEnvelope ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static RemoteEnvelope ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+    public static RemoteEnvelope ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public override RemoteEnvelope.Builder ToBuilder() { }
+    public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+    public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<RemoteEnvelope, RemoteEnvelope.Builder>
+    {
+        public Builder() { }
+        public override RemoteEnvelope DefaultInstanceForType { get; }
+        public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+        public bool HasMessage { get; }
+        public bool HasRecipient { get; }
+        public bool HasSender { get; }
+        public bool HasSeq { get; }
+        public override bool IsInitialized { get; }
+        public SerializedMessage Message { get; set; }
+        protected override RemoteEnvelope MessageBeingBuilt { get; }
+        public ActorRefData Recipient { get; set; }
+        public ActorRefData Sender { get; set; }
+        [System.CLSCompliantAttribute(false)]
+        public ulong Seq { get; set; }
+        protected override RemoteEnvelope.Builder ThisBuilder { get; }
+        public override RemoteEnvelope BuildPartial() { }
+        public override RemoteEnvelope.Builder Clear() { }
+        public RemoteEnvelope.Builder ClearMessage() { }
+        public RemoteEnvelope.Builder ClearRecipient() { }
+        public RemoteEnvelope.Builder ClearSender() { }
+        public RemoteEnvelope.Builder ClearSeq() { }
+        public override RemoteEnvelope.Builder Clone() { }
+        public override RemoteEnvelope.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+        public override RemoteEnvelope.Builder MergeFrom(RemoteEnvelope other) { }
+        public override RemoteEnvelope.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public override RemoteEnvelope.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public RemoteEnvelope.Builder MergeMessage(SerializedMessage value) { }
+        public RemoteEnvelope.Builder MergeRecipient(ActorRefData value) { }
+        public RemoteEnvelope.Builder MergeSender(ActorRefData value) { }
+        public RemoteEnvelope.Builder SetMessage(SerializedMessage value) { }
+        public RemoteEnvelope.Builder SetMessage(SerializedMessage.Builder builderForValue) { }
+        public RemoteEnvelope.Builder SetRecipient(ActorRefData value) { }
+        public RemoteEnvelope.Builder SetRecipient(ActorRefData.Builder builderForValue) { }
+        public RemoteEnvelope.Builder SetSender(ActorRefData value) { }
+        public RemoteEnvelope.Builder SetSender(ActorRefData.Builder builderForValue) { }
+        [System.CLSCompliantAttribute(false)]
+        public RemoteEnvelope.Builder SetSeq(ulong value) { }
+    }
+}
+public sealed class Selection : Google.ProtocolBuffers.GeneratedMessage<Selection, Selection.Builder>
+{
+    public const int MatcherFieldNumber = 2;
+    public const int TypeFieldNumber = 1;
+    public static Selection DefaultInstance { get; }
+    public override Selection DefaultInstanceForType { get; }
+    public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+    public bool HasMatcher { get; }
+    public bool HasType { get; }
+    protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Selection, Selection.Builder> InternalFieldAccessors { get; }
+    public override bool IsInitialized { get; }
+    public string Matcher { get; }
+    public override int SerializedSize { get; }
+    protected override Selection ThisMessage { get; }
+    public PatternType Type { get; }
+    public static Selection.Builder CreateBuilder() { }
+    public static Selection.Builder CreateBuilder(Selection prototype) { }
+    public override Selection.Builder CreateBuilderForType() { }
+    public static Selection ParseDelimitedFrom(System.IO.Stream input) { }
+    public static Selection ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static Selection ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+    public static Selection ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static Selection ParseFrom(byte[] data) { }
+    public static Selection ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static Selection ParseFrom(System.IO.Stream input) { }
+    public static Selection ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static Selection ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+    public static Selection ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public override Selection.Builder ToBuilder() { }
+    public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+    public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Selection, Selection.Builder>
+    {
+        public Builder() { }
+        public override Selection DefaultInstanceForType { get; }
+        public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+        public bool HasMatcher { get; }
+        public bool HasType { get; }
+        public override bool IsInitialized { get; }
+        public string Matcher { get; set; }
+        protected override Selection MessageBeingBuilt { get; }
+        protected override Selection.Builder ThisBuilder { get; }
+        public PatternType Type { get; set; }
+        public override Selection BuildPartial() { }
+        public override Selection.Builder Clear() { }
+        public Selection.Builder ClearMatcher() { }
+        public Selection.Builder ClearType() { }
+        public override Selection.Builder Clone() { }
+        public override Selection.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+        public override Selection.Builder MergeFrom(Selection other) { }
+        public override Selection.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public override Selection.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public Selection.Builder SetMatcher(string value) { }
+        public Selection.Builder SetType(PatternType value) { }
+    }
+}
+public sealed class SelectionEnvelope : Google.ProtocolBuffers.GeneratedMessage<SelectionEnvelope, SelectionEnvelope.Builder>
+{
+    public const int EnclosedMessageFieldNumber = 1;
+    public const int MessageManifestFieldNumber = 4;
+    public const int PatternFieldNumber = 3;
+    public const int SerializerIdFieldNumber = 2;
+    public static SelectionEnvelope DefaultInstance { get; }
+    public override SelectionEnvelope DefaultInstanceForType { get; }
+    public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+    public Google.ProtocolBuffers.ByteString EnclosedMessage { get; }
+    public bool HasEnclosedMessage { get; }
+    public bool HasMessageManifest { get; }
+    public bool HasSerializerId { get; }
+    protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<SelectionEnvelope, SelectionEnvelope.Builder> InternalFieldAccessors { get; }
+    public override bool IsInitialized { get; }
+    public Google.ProtocolBuffers.ByteString MessageManifest { get; }
+    public int PatternCount { get; }
+    public System.Collections.Generic.IList<Selection> PatternList { get; }
+    public override int SerializedSize { get; }
+    public int SerializerId { get; }
+    protected override SelectionEnvelope ThisMessage { get; }
+    public static SelectionEnvelope.Builder CreateBuilder() { }
+    public static SelectionEnvelope.Builder CreateBuilder(SelectionEnvelope prototype) { }
+    public override SelectionEnvelope.Builder CreateBuilderForType() { }
+    public Selection GetPattern(int index) { }
+    public static SelectionEnvelope ParseDelimitedFrom(System.IO.Stream input) { }
+    public static SelectionEnvelope ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static SelectionEnvelope ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+    public static SelectionEnvelope ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static SelectionEnvelope ParseFrom(byte[] data) { }
+    public static SelectionEnvelope ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static SelectionEnvelope ParseFrom(System.IO.Stream input) { }
+    public static SelectionEnvelope ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static SelectionEnvelope ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+    public static SelectionEnvelope ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public override SelectionEnvelope.Builder ToBuilder() { }
+    public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+    public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<SelectionEnvelope, SelectionEnvelope.Builder>
+    {
+        public Builder() { }
+        public override SelectionEnvelope DefaultInstanceForType { get; }
+        public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+        public Google.ProtocolBuffers.ByteString EnclosedMessage { get; set; }
+        public bool HasEnclosedMessage { get; }
+        public bool HasMessageManifest { get; }
+        public bool HasSerializerId { get; }
+        public override bool IsInitialized { get; }
+        protected override SelectionEnvelope MessageBeingBuilt { get; }
+        public Google.ProtocolBuffers.ByteString MessageManifest { get; set; }
+        public int PatternCount { get; }
+        public Google.ProtocolBuffers.Collections.IPopsicleList<Selection> PatternList { get; }
+        public int SerializerId { get; set; }
+        protected override SelectionEnvelope.Builder ThisBuilder { get; }
+        public SelectionEnvelope.Builder AddPattern(Selection value) { }
+        public SelectionEnvelope.Builder AddPattern(Selection.Builder builderForValue) { }
+        public SelectionEnvelope.Builder AddRangePattern(System.Collections.Generic.IEnumerable<Selection> values) { }
+        public override SelectionEnvelope BuildPartial() { }
+        public override SelectionEnvelope.Builder Clear() { }
+        public SelectionEnvelope.Builder ClearEnclosedMessage() { }
+        public SelectionEnvelope.Builder ClearMessageManifest() { }
+        public SelectionEnvelope.Builder ClearPattern() { }
+        public SelectionEnvelope.Builder ClearSerializerId() { }
+        public override SelectionEnvelope.Builder Clone() { }
+        public Selection GetPattern(int index) { }
+        public override SelectionEnvelope.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+        public override SelectionEnvelope.Builder MergeFrom(SelectionEnvelope other) { }
+        public override SelectionEnvelope.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public override SelectionEnvelope.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public SelectionEnvelope.Builder SetEnclosedMessage(Google.ProtocolBuffers.ByteString value) { }
+        public SelectionEnvelope.Builder SetMessageManifest(Google.ProtocolBuffers.ByteString value) { }
+        public SelectionEnvelope.Builder SetPattern(int index, Selection value) { }
+        public SelectionEnvelope.Builder SetPattern(int index, Selection.Builder builderForValue) { }
+        public SelectionEnvelope.Builder SetSerializerId(int value) { }
+    }
+}
+public sealed class SerializedMessage : Google.ProtocolBuffers.GeneratedMessage<SerializedMessage, SerializedMessage.Builder>
+{
+    public const int MessageFieldNumber = 1;
+    public const int MessageManifestFieldNumber = 3;
+    public const int SerializerIdFieldNumber = 2;
+    public static SerializedMessage DefaultInstance { get; }
+    public override SerializedMessage DefaultInstanceForType { get; }
+    public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+    public bool HasMessage { get; }
+    public bool HasMessageManifest { get; }
+    public bool HasSerializerId { get; }
+    protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<SerializedMessage, SerializedMessage.Builder> InternalFieldAccessors { get; }
+    public override bool IsInitialized { get; }
+    public Google.ProtocolBuffers.ByteString Message { get; }
+    public Google.ProtocolBuffers.ByteString MessageManifest { get; }
+    public override int SerializedSize { get; }
+    public int SerializerId { get; }
+    protected override SerializedMessage ThisMessage { get; }
+    public static SerializedMessage.Builder CreateBuilder() { }
+    public static SerializedMessage.Builder CreateBuilder(SerializedMessage prototype) { }
+    public override SerializedMessage.Builder CreateBuilderForType() { }
+    public static SerializedMessage ParseDelimitedFrom(System.IO.Stream input) { }
+    public static SerializedMessage ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static SerializedMessage ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+    public static SerializedMessage ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static SerializedMessage ParseFrom(byte[] data) { }
+    public static SerializedMessage ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static SerializedMessage ParseFrom(System.IO.Stream input) { }
+    public static SerializedMessage ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static SerializedMessage ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+    public static SerializedMessage ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public override SerializedMessage.Builder ToBuilder() { }
+    public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+    public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<SerializedMessage, SerializedMessage.Builder>
+    {
+        public Builder() { }
+        public override SerializedMessage DefaultInstanceForType { get; }
+        public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+        public bool HasMessage { get; }
+        public bool HasMessageManifest { get; }
+        public bool HasSerializerId { get; }
+        public override bool IsInitialized { get; }
+        public Google.ProtocolBuffers.ByteString Message { get; set; }
+        protected override SerializedMessage MessageBeingBuilt { get; }
+        public Google.ProtocolBuffers.ByteString MessageManifest { get; set; }
+        public int SerializerId { get; set; }
+        protected override SerializedMessage.Builder ThisBuilder { get; }
+        public override SerializedMessage BuildPartial() { }
+        public override SerializedMessage.Builder Clear() { }
+        public SerializedMessage.Builder ClearMessage() { }
+        public SerializedMessage.Builder ClearMessageManifest() { }
+        public SerializedMessage.Builder ClearSerializerId() { }
+        public override SerializedMessage.Builder Clone() { }
+        public override SerializedMessage.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+        public override SerializedMessage.Builder MergeFrom(SerializedMessage other) { }
+        public override SerializedMessage.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public override SerializedMessage.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public SerializedMessage.Builder SetMessage(Google.ProtocolBuffers.ByteString value) { }
+        public SerializedMessage.Builder SetMessageManifest(Google.ProtocolBuffers.ByteString value) { }
+        public SerializedMessage.Builder SetSerializerId(int value) { }
+    }
+}
+public class static Wireformats
+{
+    public static Google.ProtocolBuffers.Descriptors.FileDescriptor Descriptor { get; }
+    public static void RegisterAllExtensions(Google.ProtocolBuffers.ExtensionRegistry registry) { }
+}
+namespace Akka.Remote
+{
+    public class AddressUid : Akka.Actor.IExtension
+    {
+        public readonly int Uid;
+        public AddressUid() { }
+    }
+    public class AddressUidExtension : Akka.Actor.ExtensionIdProvider<Akka.Remote.AddressUid>
+    {
+        public AddressUidExtension() { }
+        public override Akka.Remote.AddressUid CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
+        public static int Uid(Akka.Actor.ActorSystem system) { }
+    }
+    public class AkkaProtocolSettings
+    {
+        public AkkaProtocolSettings(Akka.Configuration.Config config) { }
+        public Akka.Configuration.Config TransportFailureDetectorConfig { get; }
+        public string TransportFailureDetectorImplementationClass { get; }
+        public System.TimeSpan TransportHeartBeatInterval { get; }
+    }
+    public sealed class AssociatedEvent : Akka.Remote.AssociationEvent
+    {
+        public AssociatedEvent(Akka.Actor.Address localAddress, Akka.Actor.Address remoteAddress, bool inbound) { }
+        public override bool IsInbound { get; set; }
+        public override Akka.Actor.Address LocalAddress { get; set; }
+        public override Akka.Actor.Address RemoteAddress { get; set; }
+        public override Akka.Event.LogLevel LogLevel() { }
+    }
+    public sealed class AssociationErrorEvent : Akka.Remote.AssociationEvent
+    {
+        public AssociationErrorEvent(System.Exception cause, Akka.Actor.Address localAddress, Akka.Actor.Address remoteAddress, bool inbound, Akka.Event.LogLevel level) { }
+        public System.Exception Cause { get; }
+        public override bool IsInbound { get; set; }
+        public override Akka.Actor.Address LocalAddress { get; set; }
+        public override Akka.Actor.Address RemoteAddress { get; set; }
+        public override Akka.Event.LogLevel LogLevel() { }
+        public override string ToString() { }
+    }
+    public abstract class AssociationEvent : Akka.Remote.RemotingLifecycleEvent
+    {
+        protected string EventName;
+        protected AssociationEvent() { }
+        public abstract bool IsInbound { get; set; }
+        public abstract Akka.Actor.Address LocalAddress { get; set; }
+        public abstract Akka.Actor.Address RemoteAddress { get; set; }
+        public override string ToString() { }
+    }
+    public delegate long Clock();
+    public class Deadline
+    {
+        public Deadline(System.DateTime when) { }
+        public bool HasTimeLeft { get; }
+        public bool IsOverdue { get; }
+        public static Akka.Remote.Deadline Now { get; }
+        public System.TimeSpan TimeLeft { get; }
+        public System.DateTime When { get; }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+    }
+    public class DeadlineFailureDetector : Akka.Remote.FailureDetector
+    {
+        public DeadlineFailureDetector(System.TimeSpan acceptableHeartbeatPause, Akka.Remote.Clock clock = null) { }
+        public DeadlineFailureDetector(Akka.Configuration.Config config, Akka.Event.EventStream ev) { }
+        protected DeadlineFailureDetector(Akka.Remote.Clock clock) { }
+        public override bool IsAvailable { get; }
+        public override bool IsMonitoring { get; }
+        public override void HeartBeat() { }
+    }
+    public class DefaultFailureDetectorRegistry<T> : Akka.Remote.IFailureDetectorRegistry<T>
+    {
+        public DefaultFailureDetectorRegistry(System.Func<Akka.Remote.FailureDetector> factory) { }
+        public void Heartbeat(T resource) { }
+        public bool IsAvailable(T resource) { }
+        public bool IsMonitoring(T resource) { }
+        public void Remove(T resource) { }
+        public void Reset() { }
+    }
+    public sealed class DisassociatedEvent : Akka.Remote.AssociationEvent
+    {
+        public DisassociatedEvent(Akka.Actor.Address localAddress, Akka.Actor.Address remoteAddress, bool inbound) { }
+        public override bool IsInbound { get; set; }
+        public override Akka.Actor.Address LocalAddress { get; set; }
+        public override Akka.Actor.Address RemoteAddress { get; set; }
+        public override Akka.Event.LogLevel LogLevel() { }
+    }
+    public abstract class FailureDetector
+    {
+        public static readonly Akka.Remote.Clock DefaultClock;
+        protected FailureDetector() { }
+        public abstract bool IsAvailable { get; }
+        public abstract bool IsMonitoring { get; }
+        public abstract void HeartBeat();
+    }
+    public class static FailureDetectorLoader
+    {
+        public static Akka.Remote.FailureDetector Load(string fqcn, Akka.Configuration.Config config, Akka.Actor.ActorSystem system) { }
+        public static Akka.Remote.FailureDetector LoadFailureDetector(this Akka.Actor.IActorContext context, string fqcn, Akka.Configuration.Config config) { }
+    }
+    public interface IFailureDetectorRegistry<in T>
+    {
+        void Heartbeat(T resource);
+        bool IsAvailable(T resource);
+        bool IsMonitoring(T resource);
+        void Remove(T resource);
+        void Reset();
+    }
+    public class static MessageSerializer
+    {
+        public static object Deserialize(Akka.Actor.ActorSystem system, SerializedMessage messageProtocol) { }
+        public static SerializedMessage Serialize(Akka.Actor.ActorSystem system, Akka.Actor.Address address, object message) { }
+    }
+    public class PhiAccrualFailureDetector : Akka.Remote.FailureDetector
+    {
+        public PhiAccrualFailureDetector(double threshold, int maxSampleSize, System.TimeSpan minStdDeviation, System.TimeSpan acceptableHeartbeatPause, System.TimeSpan firstHeartbeatEstimate, Akka.Remote.Clock clock = null) { }
+        public PhiAccrualFailureDetector(Akka.Configuration.Config config, Akka.Event.EventStream ev) { }
+        protected PhiAccrualFailureDetector(Akka.Remote.Clock clock) { }
+        public override bool IsAvailable { get; }
+        public override bool IsMonitoring { get; }
+        public override void HeartBeat() { }
+    }
+    public sealed class QuarantinedEvent : Akka.Remote.RemotingLifecycleEvent
+    {
+        public QuarantinedEvent(Akka.Actor.Address address, int uid) { }
+        public Akka.Actor.Address Address { get; }
+        public int Uid { get; }
+        public override Akka.Event.LogLevel LogLevel() { }
+        public override string ToString() { }
+    }
+    public class RemoteActorRef : Akka.Actor.InternalActorRefBase, Akka.Actor.IActorRefScope, Akka.Remote.IRemoteRef
+    {
+        public override bool IsLocal { get; }
+        [System.ObsoleteAttribute("Use Context.Watch and Receive<Terminated>")]
+        public override bool IsTerminated { get; }
+        public Akka.Actor.Address LocalAddressToUse { get; }
+        public override Akka.Actor.IInternalActorRef Parent { get; }
+        public override Akka.Actor.ActorPath Path { get; }
+        public override Akka.Actor.IActorRefProvider Provider { get; }
+        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name) { }
+        public bool IsWatchIntercepted(Akka.Actor.IActorRef watchee, Akka.Actor.IActorRef watcher) { }
+        public override void Restart(System.Exception cause) { }
+        public override void Resume(System.Exception causedByFailure = null) { }
+        public override void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message) { }
+        public override void Start() { }
+        public override void Stop() { }
+        public override void Suspend() { }
+        protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
+    }
+    public class RemoteActorRefProvider : Akka.Actor.IActorRefProvider
+    {
+        public RemoteActorRefProvider(string systemName, Akka.Actor.Settings settings, Akka.Event.EventStream eventStream) { }
+        public Akka.Actor.IActorRef DeadLetters { get; }
+        public Akka.Actor.Address DefaultAddress { get; }
+        public Akka.Actor.Deployer Deployer { get; set; }
+        public Akka.Actor.LocalActorRef Guardian { get; }
+        public Akka.Actor.IInternalActorRef RemoteDaemon { get; }
+        public Akka.Actor.IInternalActorRef RootGuardian { get; }
+        public Akka.Actor.ActorPath RootPath { get; }
+        public Akka.Actor.Settings Settings { get; }
+        public Akka.Actor.LocalActorRef SystemGuardian { get; }
+        public Akka.Actor.IInternalActorRef TempContainer { get; }
+        public System.Threading.Tasks.Task TerminationTask { get; }
+        public Akka.Remote.RemoteTransport Transport { get; }
+        public Akka.Actor.IInternalActorRef ActorOf(Akka.Actor.Internal.ActorSystemImpl system, Akka.Actor.Props props, Akka.Actor.IInternalActorRef supervisor, Akka.Actor.ActorPath path, bool systemService, Akka.Actor.Deploy deploy, bool lookupDeploy, bool async) { }
+        protected virtual Akka.Actor.IActorRef CreateRemoteDeploymentWatcher(Akka.Actor.Internal.ActorSystemImpl system) { }
+        protected virtual Akka.Actor.IActorRef CreateRemoteWatcher(Akka.Actor.Internal.ActorSystemImpl system) { }
+        protected Akka.Remote.DefaultFailureDetectorRegistry<Akka.Actor.Address> CreateRemoteWatcherFailureDetector(Akka.Actor.ActorSystem system) { }
+        public Akka.Actor.Address GetExternalAddressFor(Akka.Actor.Address address) { }
+        public virtual void Init(Akka.Actor.Internal.ActorSystemImpl system) { }
+        public void Quarantine(Akka.Actor.Address address, System.Nullable<int> uid) { }
+        public void RegisterTempActor(Akka.Actor.IInternalActorRef actorRef, Akka.Actor.ActorPath path) { }
+        public Akka.Actor.IActorRef ResolveActorRef(string path) { }
+        public Akka.Actor.IActorRef ResolveActorRef(Akka.Actor.ActorPath actorPath) { }
+        public Akka.Actor.IActorRef RootGuardianAt(Akka.Actor.Address address) { }
+        public Akka.Actor.ActorPath TempPath() { }
+        public void UnregisterTempActor(Akka.Actor.ActorPath path) { }
+        public void UseActorOnNode(Akka.Remote.RemoteActorRef actor, Akka.Actor.Props props, Akka.Actor.Deploy deploy, Akka.Actor.IInternalActorRef supervisor) { }
+    }
+    public class RemoteSettings
+    {
+        public static readonly string AkkaScheme;
+        public RemoteSettings(Akka.Configuration.Config config) { }
+        public System.Collections.Generic.IDictionary<string, string> Adapters { get; set; }
+        public System.TimeSpan BackoffPeriod { get; set; }
+        public System.TimeSpan CommandAckTimeout { get; set; }
+        public Akka.Configuration.Config Config { get; }
+        public string Dispatcher { get; set; }
+        public System.TimeSpan FlushWait { get; set; }
+        public System.TimeSpan InitialSysMsgDeliveryTimeout { get; set; }
+        public int LogBufferSizeExceeding { get; set; }
+        public bool LogReceive { get; set; }
+        public bool LogSend { get; set; }
+        public System.Nullable<System.TimeSpan> QuarantineDuration { get; set; }
+        public System.TimeSpan QuarantineSilentSystemTimeout { get; set; }
+        public string RemoteLifecycleEventsLogLevel { get; set; }
+        public System.TimeSpan RetryGateClosedFor { get; set; }
+        public System.TimeSpan ShutdownTimeout { get; set; }
+        public System.TimeSpan StartupTimeout { get; set; }
+        public System.TimeSpan SysMsgAckTimeout { get; set; }
+        public int SysMsgBufferSize { get; set; }
+        public int SysResendLimit { get; set; }
+        public System.TimeSpan SysResendTimeout { get; set; }
+        public System.Collections.Generic.IList<string> TransportNames { get; set; }
+        public TransportSettings[] Transports { get; set; }
+        public System.Collections.Generic.HashSet<string> TrustedSelectionPaths { get; set; }
+        public bool UntrustedMode { get; set; }
+        public bool UsePassiveConnections { get; set; }
+        public Akka.Configuration.Config WatchFailureDetectorConfig { get; set; }
+        public string WatchFailureDetectorImplementationClass { get; set; }
+        public System.TimeSpan WatchHeartbeatExpectedResponseAfter { get; set; }
+        public System.TimeSpan WatchHeartBeatInterval { get; set; }
+        public System.TimeSpan WatchUnreachableReaperInterval { get; set; }
+        public Akka.Actor.Props ConfigureDispatcher(Akka.Actor.Props props) { }
+        public class TransportSettings
+        {
+            public TransportSettings(Akka.Configuration.Config config) { }
+            public System.Collections.Generic.IList<string> Adapters { get; set; }
+            public Akka.Configuration.Config Config { get; set; }
+            public string TransportClass { get; set; }
+        }
+    }
+    public abstract class RemoteTransport
+    {
+        protected RemoteTransport(Akka.Actor.ExtendedActorSystem system, Akka.Remote.RemoteActorRefProvider provider) { }
+        public abstract System.Collections.Generic.ISet<Akka.Actor.Address> Addresses { get; }
+        public abstract Akka.Actor.Address DefaultAddress { get; }
+        public Akka.Event.ILoggingAdapter Log { get; set; }
+        public bool logRemoteLifeCycleEvents { get; set; }
+        public Akka.Remote.RemoteActorRefProvider Provider { get; }
+        public Akka.Actor.ExtendedActorSystem System { get; }
+        protected bool UseUntrustedMode { get; set; }
+        public abstract Akka.Actor.Address LocalAddressForRemote(Akka.Actor.Address remote);
+        public abstract System.Threading.Tasks.Task<bool> ManagementCommand(object cmd);
+        public abstract void Quarantine(Akka.Actor.Address address, System.Nullable<int> uid);
+        public abstract void Send(object message, Akka.Actor.IActorRef sender, Akka.Remote.RemoteActorRef recipient);
+        public abstract System.Threading.Tasks.Task Shutdown();
+        public abstract void Start();
+    }
+    public class RemoteTransportException : Akka.Actor.AkkaException
+    {
+        public RemoteTransportException(string message, System.Exception cause = null) { }
+        protected RemoteTransportException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+    }
+    public class RemoteWatcher : Akka.Actor.UntypedActor, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedMessageQueueSemantics>
+    {
+        protected readonly Akka.Event.ILoggingAdapter Log;
+        protected readonly System.Collections.Generic.Dictionary<Akka.Actor.Address, System.Collections.Generic.HashSet<Akka.Actor.IInternalActorRef>> WatcheeByNodes;
+        protected readonly System.Collections.Generic.Dictionary<Akka.Actor.IInternalActorRef, System.Collections.Generic.HashSet<Akka.Actor.IInternalActorRef>> Watching;
+        public RemoteWatcher(Akka.Remote.IFailureDetectorRegistry<Akka.Actor.Address> failureDetector, System.TimeSpan heartbeatInterval, System.TimeSpan unreachableReaperInterval, System.TimeSpan heartbeatExpectedResponseAfter) { }
+        protected System.Collections.Generic.HashSet<Akka.Actor.Address> Unreachable { get; }
+        protected System.Collections.Generic.ICollection<Akka.Actor.Address> WatchingNodes { get; }
+        protected void AddWatching(Akka.Actor.IInternalActorRef watchee, Akka.Actor.IInternalActorRef watcher) { }
+        protected override void OnReceive(object message) { }
+        protected override void PostStop() { }
+        public static Akka.Actor.Props Props(Akka.Remote.IFailureDetectorRegistry<Akka.Actor.Address> failureDetector, System.TimeSpan heartbeatInterval, System.TimeSpan unreachableReaperInterval, System.TimeSpan heartbeatExpectedResponseAfter) { }
+        protected virtual void PublishAddressTerminated(Akka.Actor.Address address) { }
+        protected virtual void Quarantine(Akka.Actor.Address address, System.Nullable<int> addressUid) { }
+        protected void RemoveWatch(Akka.Actor.IInternalActorRef watchee, Akka.Actor.IInternalActorRef watcher) { }
+        protected void RemoveWatchee(Akka.Actor.IInternalActorRef watchee) { }
+        protected void UnwatchNode(Akka.Actor.Address watcheeAddress) { }
+        protected virtual void WatchNode(Akka.Actor.IInternalActorRef watchee) { }
+        public sealed class ExpectedFirstHeartbeat
+        {
+            public ExpectedFirstHeartbeat(Akka.Actor.Address from) { }
+            public Akka.Actor.Address From { get; }
+        }
+        public sealed class Heartbeat : Akka.Remote.IPriorityMessage
+        {
+            public static Akka.Remote.RemoteWatcher.Heartbeat Instance { get; }
+        }
+        public class HeartbeatRsp : Akka.Remote.IPriorityMessage
+        {
+            public HeartbeatRsp(int addressUid) { }
+            public int AddressUid { get; }
+        }
+        public class HeartbeatTick
+        {
+            public static Akka.Remote.RemoteWatcher.HeartbeatTick Instance { get; }
+        }
+        public class ReapUnreachableTick
+        {
+            public static Akka.Remote.RemoteWatcher.ReapUnreachableTick Instance { get; }
+        }
+        public sealed class Stats
+        {
+            public static Akka.Remote.RemoteWatcher.Stats Empty;
+            public Stats(int watching, int watchingNodes) { }
+            public Stats(int watching, int watchingNodes, System.Collections.Immutable.ImmutableHashSet<System.Tuple<Akka.Actor.IActorRef, Akka.Actor.IActorRef>> watchingRefs, System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> watchingAddresses) { }
+            public int Watching { get; }
+            public System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> WatchingAddresses { get; }
+            public int WatchingNodes { get; }
+            public System.Collections.Immutable.ImmutableHashSet<System.Tuple<Akka.Actor.IActorRef, Akka.Actor.IActorRef>> WatchingRefs { get; }
+            public Akka.Remote.RemoteWatcher.Stats Copy(int watching, int watchingNodes, System.Collections.Immutable.ImmutableHashSet<System.Tuple<Akka.Actor.IActorRef, Akka.Actor.IActorRef>> watchingRefs = null, System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> watchingAddresses = null) { }
+            public static Akka.Remote.RemoteWatcher.Stats Counts(int watching, int watchingNodes) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+        }
+        public sealed class UnwatchRemote : Akka.Remote.RemoteWatcher.WatchCommand
+        {
+            public UnwatchRemote(Akka.Actor.IInternalActorRef watchee, Akka.Actor.IInternalActorRef watcher) { }
+        }
+        public abstract class WatchCommand
+        {
+            protected WatchCommand(Akka.Actor.IInternalActorRef watchee, Akka.Actor.IInternalActorRef watcher) { }
+            public Akka.Actor.IInternalActorRef Watchee { get; }
+            public Akka.Actor.IInternalActorRef Watcher { get; }
+        }
+        public sealed class WatchRemote : Akka.Remote.RemoteWatcher.WatchCommand
+        {
+            public WatchRemote(Akka.Actor.IInternalActorRef watchee, Akka.Actor.IInternalActorRef watcher) { }
+        }
+    }
+    public sealed class RemotingErrorEvent : Akka.Remote.RemotingLifecycleEvent
+    {
+        public RemotingErrorEvent(System.Exception cause) { }
+        public System.Exception Cause { get; }
+        public override Akka.Event.LogLevel LogLevel() { }
+        public override string ToString() { }
+    }
+    public abstract class RemotingLifecycleEvent
+    {
+        protected RemotingLifecycleEvent() { }
+        public abstract Akka.Event.LogLevel LogLevel();
+    }
+    public sealed class RemotingListenEvent : Akka.Remote.RemotingLifecycleEvent
+    {
+        public RemotingListenEvent(System.Collections.Generic.IList<Akka.Actor.Address> listenAddresses) { }
+        public System.Collections.Generic.IList<Akka.Actor.Address> ListenAddresses { get; }
+        public override Akka.Event.LogLevel LogLevel() { }
+        public override string ToString() { }
+    }
+    public sealed class RemotingShutdownEvent : Akka.Remote.RemotingLifecycleEvent
+    {
+        public RemotingShutdownEvent() { }
+        public override Akka.Event.LogLevel LogLevel() { }
+        public override string ToString() { }
+    }
+    public sealed class ThisActorSystemQuarantinedEvent : Akka.Remote.RemotingLifecycleEvent
+    {
+        public ThisActorSystemQuarantinedEvent(Akka.Actor.Address localAddress, Akka.Actor.Address remoteAddress) { }
+        public Akka.Actor.Address LocalAddress { get; }
+        public Akka.Actor.Address RemoteAddress { get; }
+        public override Akka.Event.LogLevel LogLevel() { }
+        public override string ToString() { }
+    }
+}
+namespace Akka.Remote.Routing
+{
+    public sealed class RemoteRouterConfig : Akka.Routing.Pool, System.IEquatable<Akka.Routing.RouterConfig>
+    {
+        public RemoteRouterConfig(Akka.Routing.Pool local, System.Collections.Generic.IEnumerable<Akka.Actor.Address> nodes) { }
+        public override Akka.Routing.Resizer Resizer { get; }
+        public override string RouterDispatcher { get; }
+        public override Akka.Actor.SupervisorStrategy SupervisorStrategy { get; }
+        public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public bool Equals(Akka.Routing.RouterConfig other) { }
+        public override int GetNrOfInstances(Akka.Actor.ActorSystem system) { }
+        public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
+        public override Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig routerConfig) { }
+        public class RemoteRouterConfigSurrogate : Akka.Util.ISurrogate
+        {
+            public RemoteRouterConfigSurrogate() { }
+            public Akka.Routing.Pool Local { get; set; }
+            public Akka.Actor.Address[] Nodes { get; set; }
+            public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
+        }
+    }
+}
+namespace Akka.Remote.Serialization
+{
+    public class DaemonMsgCreateSerializer : Akka.Serialization.Serializer
+    {
+        public DaemonMsgCreateSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override int Identifier { get; }
+        public override bool IncludeManifest { get; }
+        public override object FromBinary(byte[] bytes, System.Type type) { }
+        public override byte[] ToBinary(object obj) { }
+    }
+    public class MessageContainerSerializer : Akka.Serialization.Serializer
+    {
+        public MessageContainerSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override int Identifier { get; }
+        public override bool IncludeManifest { get; }
+        public override object FromBinary(byte[] bytes, System.Type type) { }
+        public override byte[] ToBinary(object obj) { }
+    }
+    public class ProtobufSerializer : Akka.Serialization.Serializer
+    {
+        public ProtobufSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override int Identifier { get; }
+        public override bool IncludeManifest { get; }
+        public override object FromBinary(byte[] bytes, System.Type type) { }
+        public override byte[] ToBinary(object obj) { }
+    }
+}
+namespace Akka.Remote.Transport
+{
+    public abstract class AbstractTransportAdapter : Akka.Remote.Transport.Transport
+    {
+        protected Akka.Remote.Transport.Transport WrappedTransport;
+        protected AbstractTransportAdapter(Akka.Remote.Transport.Transport wrappedTransport) { }
+        public override long MaximumPayloadBytes { get; }
+        protected abstract Akka.Remote.Transport.SchemeAugmenter SchemeAugmenter { get; }
+        public override string SchemeIdentifier { get; }
+        public override System.Threading.Tasks.Task<Akka.Remote.Transport.AssociationHandle> Associate(Akka.Actor.Address remoteAddress) { }
+        protected abstract void InterceptAssociate(Akka.Actor.Address remoteAddress, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.AssociationHandle> statusPromise);
+        protected abstract System.Threading.Tasks.Task<Akka.Remote.Transport.IAssociationEventListener> InterceptListen(Akka.Actor.Address listenAddress, System.Threading.Tasks.Task<Akka.Remote.Transport.IAssociationEventListener> listenerTask);
+        public override bool IsResponsibleFor(Akka.Actor.Address remote) { }
+        public override System.Threading.Tasks.Task<System.Tuple<Akka.Actor.Address, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IAssociationEventListener>>> Listen() { }
+        public override System.Threading.Tasks.Task<bool> Shutdown() { }
+    }
+    public abstract class Activity
+    {
+        protected Activity() { }
+    }
+    public sealed class ActorAssociationEventListener : Akka.Remote.Transport.IAssociationEventListener
+    {
+        public ActorAssociationEventListener(Akka.Actor.IActorRef actor) { }
+        public Akka.Actor.IActorRef Actor { get; }
+        public void Notify(Akka.Remote.Transport.IAssociationEvent ev) { }
+    }
+    public sealed class ActorHandleEventListener : Akka.Remote.Transport.IHandleEventListener
+    {
+        public readonly Akka.Actor.IActorRef Actor;
+        public ActorHandleEventListener(Akka.Actor.IActorRef actor) { }
+        public void Notify(Akka.Remote.Transport.IHandleEvent ev) { }
+    }
+    public abstract class ActorTransportAdapter : Akka.Remote.Transport.AbstractTransportAdapter
+    {
+        public static readonly System.TimeSpan AskTimeout;
+        protected Akka.Actor.IActorRef modreq(System.Runtime.CompilerServices.IsVolatile) manager;
+        protected ActorTransportAdapter(Akka.Remote.Transport.Transport wrappedTransport, Akka.Actor.ActorSystem system) { }
+        protected abstract string ManagerName { get; }
+        protected abstract Akka.Actor.Props ManagerProps { get; }
+        protected override void InterceptAssociate(Akka.Actor.Address remoteAddress, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.AssociationHandle> statusPromise) { }
+        protected override System.Threading.Tasks.Task<Akka.Remote.Transport.IAssociationEventListener> InterceptListen(Akka.Actor.Address listenAddress, System.Threading.Tasks.Task<Akka.Remote.Transport.IAssociationEventListener> listenerTask) { }
+        public override System.Threading.Tasks.Task<bool> Shutdown() { }
+    }
+    public class AkkaProtocolException : Akka.Actor.AkkaException
+    {
+        public AkkaProtocolException(string message, System.Exception cause = null) { }
+        protected AkkaProtocolException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+    }
+    public sealed class AssociateAttempt : Akka.Remote.Transport.Activity
+    {
+        public AssociateAttempt(Akka.Actor.Address localAddress, Akka.Actor.Address remoteAddress) { }
+        public Akka.Actor.Address LocalAddress { get; }
+        public Akka.Actor.Address RemoteAddress { get; }
+    }
+    public abstract class AssociationHandle
+    {
+        protected AssociationHandle(Akka.Actor.Address localAddress, Akka.Actor.Address remoteAddress) { }
+        public Akka.Actor.Address LocalAddress { get; set; }
+        public System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IHandleEventListener> ReadHandlerSource { get; set; }
+        public Akka.Actor.Address RemoteAddress { get; set; }
+        public abstract void Disassociate();
+        public override bool Equals(object obj) { }
+        protected bool Equals(Akka.Remote.Transport.AssociationHandle other) { }
+        public override int GetHashCode() { }
+        public abstract bool Write(Google.ProtocolBuffers.ByteString payload);
+    }
+    public class AssociationRegistry
+    {
+        public AssociationRegistry() { }
+        public static void Clear() { }
+        public void ClearLog() { }
+        public System.Tuple<Akka.Remote.Transport.IHandleEventListener, Akka.Remote.Transport.IHandleEventListener> DeregisterAssociation(System.Tuple<Akka.Actor.Address, Akka.Actor.Address> key) { }
+        public bool ExistsAssociation(Akka.Actor.Address initiatorAddress, Akka.Actor.Address remoteAddress) { }
+        public static Akka.Remote.Transport.AssociationRegistry Get(string key) { }
+        public Akka.Remote.Transport.IHandleEventListener GetRemoteReadHandlerFor(Akka.Remote.Transport.TestAssociationHandle localHandle) { }
+        public void LogActivity(Akka.Remote.Transport.Activity activity) { }
+        public System.Collections.Generic.IList<Akka.Remote.Transport.Activity> LogSnapshot() { }
+        public void RegisterListenerPair(System.Tuple<Akka.Actor.Address, Akka.Actor.Address> key, System.Tuple<Akka.Remote.Transport.IHandleEventListener, Akka.Remote.Transport.IHandleEventListener> listeners) { }
+        public void RegisterTransport(Akka.Remote.Transport.TestTransport transport, System.Threading.Tasks.Task<Akka.Remote.Transport.IAssociationEventListener> associationEventListenerTask) { }
+        public Akka.Remote.Transport.IHandleEventListener RemoteListenerRelativeTo(Akka.Remote.Transport.TestAssociationHandle handle, System.Tuple<Akka.Remote.Transport.IHandleEventListener, Akka.Remote.Transport.IHandleEventListener> listenerPair) { }
+        public void Reset() { }
+        public System.Tuple<Akka.Remote.Transport.TestTransport, System.Threading.Tasks.Task<Akka.Remote.Transport.IAssociationEventListener>> TransportFor(Akka.Actor.Address address) { }
+        public bool TransportsReady(params Akka.Actor.Address[] addresses) { }
+    }
+    public class Blackhole : Akka.Remote.Transport.ThrottleMode
+    {
+        public static Akka.Remote.Transport.Blackhole Instance { get; }
+        public override System.TimeSpan TimeToAvailable(long currentNanoTime, int tokens) { }
+        public override System.Tuple<Akka.Remote.Transport.ThrottleMode, bool> TryConsumeTokens(long nanoTimeOfSend, int tokens) { }
+    }
+    public sealed class DisassociateAttempt : Akka.Remote.Transport.Activity
+    {
+        public DisassociateAttempt(Akka.Actor.Address requestor, Akka.Actor.Address remote) { }
+        public Akka.Actor.Address Remote { get; }
+        public Akka.Actor.Address Requestor { get; }
+    }
+    public sealed class Disassociated : Akka.Actor.INoSerializationVerificationNeeded, Akka.Remote.Transport.IHandleEvent
+    {
+        public Disassociated(Akka.Remote.Transport.DisassociateInfo info) { }
+    }
+    public enum DisassociateInfo
+    {
+        Unknown = 0,
+        Shutdown = 1,
+        Quarantined = 2,
+    }
+    public sealed class FailureInjectorException : Akka.Actor.AkkaException
+    {
+        public FailureInjectorException(string msg) { }
+        public string Msg { get; }
+    }
+    public class FailureInjectorProvider : Akka.Remote.Transport.ITransportAdapterProvider
+    {
+        public FailureInjectorProvider() { }
+        public Akka.Remote.Transport.Transport Create(Akka.Remote.Transport.Transport wrappedTransport, Akka.Actor.ExtendedActorSystem system) { }
+    }
+    public interface IAssociationEvent : Akka.Actor.INoSerializationVerificationNeeded { }
+    public interface IAssociationEventListener
+    {
+        void Notify(Akka.Remote.Transport.IAssociationEvent ev);
+    }
+    public interface IHandleEvent : Akka.Actor.INoSerializationVerificationNeeded { }
+    public interface IHandleEventListener
+    {
+        void Notify(Akka.Remote.Transport.IHandleEvent ev);
+    }
+    public sealed class InboundAssociation : Akka.Actor.INoSerializationVerificationNeeded, Akka.Remote.Transport.IAssociationEvent
+    {
+        public InboundAssociation(Akka.Remote.Transport.AssociationHandle association) { }
+        public Akka.Remote.Transport.AssociationHandle Association { get; }
+    }
+    public sealed class InboundPayload : Akka.Actor.INoSerializationVerificationNeeded, Akka.Remote.Transport.IHandleEvent
+    {
+        public InboundPayload(Google.ProtocolBuffers.ByteString payload) { }
+        public Google.ProtocolBuffers.ByteString Payload { get; }
+        public override string ToString() { }
+    }
+    public class InvalidAssociationException : Akka.Actor.AkkaException
+    {
+        public InvalidAssociationException(string message, System.Exception cause = null) { }
+        protected InvalidAssociationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+    }
+    public interface ITransportAdapterProvider
+    {
+        Akka.Remote.Transport.Transport Create(Akka.Remote.Transport.Transport wrappedTransport, Akka.Actor.ExtendedActorSystem system);
+    }
+    public sealed class ListenAttempt : Akka.Remote.Transport.Activity
+    {
+        public ListenAttempt(Akka.Actor.Address boundAddress) { }
+        public Akka.Actor.Address BoundAddress { get; }
+    }
+    public class SchemeAugmenter
+    {
+        public readonly string AddedSchemeIdentifier;
+        public SchemeAugmenter(string addedSchemeIdentifier) { }
+        public string AugmentScheme(string originalScheme) { }
+        public Akka.Actor.Address AugmentScheme(Akka.Actor.Address address) { }
+        public string RemoveScheme(string scheme) { }
+        public Akka.Actor.Address RemoveScheme(Akka.Actor.Address address) { }
+    }
+    public sealed class ShutdownAttempt : Akka.Remote.Transport.Activity
+    {
+        public ShutdownAttempt(Akka.Actor.Address boundAddress) { }
+        public Akka.Actor.Address BoundAddress { get; }
+    }
+    public class SwitchableLoggedBehavior<TIn, TOut>
+    {
+        public SwitchableLoggedBehavior(System.Func<TIn, System.Threading.Tasks.Task<TOut>> defaultBehavior, System.Action<TIn> logCallback) { }
+        public System.Func<TIn, System.Threading.Tasks.Task<TOut>> CurrentBehavior { get; }
+        public System.Func<TIn, System.Threading.Tasks.Task<TOut>> DefaultBehavior { get; }
+        public System.Action<TIn> LogCallback { get; }
+        public System.Threading.Tasks.Task<TOut> Apply(TIn param) { }
+        public void Pop() { }
+        public void Push(System.Func<TIn, System.Threading.Tasks.Task<TOut>> behavior) { }
+        public void PushConstant(TOut result) { }
+        public System.Threading.Tasks.TaskCompletionSource<bool> PushDelayed() { }
+        public void PushError(System.Exception e) { }
+    }
+    public sealed class TestAssociationHandle : Akka.Remote.Transport.AssociationHandle
+    {
+        public readonly bool Inbound;
+        public TestAssociationHandle(Akka.Actor.Address localAddress, Akka.Actor.Address remoteAddress, Akka.Remote.Transport.TestTransport transport, bool inbound) { }
+        public System.Tuple<Akka.Actor.Address, Akka.Actor.Address> Key { get; }
+        public override void Disassociate() { }
+        public override bool Write(Google.ProtocolBuffers.ByteString payload) { }
+    }
+    public class TestTransport : Akka.Remote.Transport.Transport
+    {
+        public readonly Akka.Remote.Transport.SwitchableLoggedBehavior<Akka.Actor.Address, Akka.Remote.Transport.AssociationHandle> AssociateBehavior;
+        public readonly Akka.Remote.Transport.SwitchableLoggedBehavior<Akka.Remote.Transport.TestAssociationHandle, bool> DisassociateBehavior;
+        public readonly Akka.Remote.Transport.SwitchableLoggedBehavior<bool, System.Tuple<Akka.Actor.Address, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IAssociationEventListener>>> ListenBehavior;
+        public readonly Akka.Actor.Address LocalAddress;
+        public readonly Akka.Remote.Transport.SwitchableLoggedBehavior<bool, bool> ShutdownBehavior;
+        public readonly Akka.Remote.Transport.SwitchableLoggedBehavior<System.Tuple<Akka.Remote.Transport.TestAssociationHandle, Google.ProtocolBuffers.ByteString>, bool> WriteBehavior;
+        public TestTransport(Akka.Actor.ActorSystem system, Akka.Configuration.Config conf) { }
+        public TestTransport(Akka.Actor.Address localAddress, Akka.Remote.Transport.AssociationRegistry registry, long maximumPayloadBytes = 32000, string schemeIdentifier = "test") { }
+        public override System.Threading.Tasks.Task<Akka.Remote.Transport.AssociationHandle> Associate(Akka.Actor.Address remoteAddress) { }
+        public System.Threading.Tasks.Task<bool> DefaultDisassociate(Akka.Remote.Transport.TestAssociationHandle handle) { }
+        public System.Threading.Tasks.Task<System.Tuple<Akka.Actor.Address, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IAssociationEventListener>>> DefaultListen() { }
+        public System.Threading.Tasks.Task Disassociate(Akka.Remote.Transport.TestAssociationHandle handle) { }
+        public override bool IsResponsibleFor(Akka.Actor.Address remote) { }
+        public override System.Threading.Tasks.Task<System.Tuple<Akka.Actor.Address, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IAssociationEventListener>>> Listen() { }
+        public override System.Threading.Tasks.Task<bool> Shutdown() { }
+        public System.Threading.Tasks.Task<bool> Write(Akka.Remote.Transport.TestAssociationHandle handle, Google.ProtocolBuffers.ByteString payload) { }
+    }
+    public abstract class ThrottleMode : Akka.Actor.INoSerializationVerificationNeeded
+    {
+        protected ThrottleMode() { }
+        public abstract System.TimeSpan TimeToAvailable(long currentNanoTime, int tokens);
+        public abstract System.Tuple<Akka.Remote.Transport.ThrottleMode, bool> TryConsumeTokens(long nanoTimeOfSend, int tokens);
+    }
+    public class ThrottlerProvider : Akka.Remote.Transport.ITransportAdapterProvider
+    {
+        public ThrottlerProvider() { }
+        public Akka.Remote.Transport.Transport Create(Akka.Remote.Transport.Transport wrappedTransport, Akka.Actor.ExtendedActorSystem system) { }
+    }
+    public class ThrottleTransportAdapter : Akka.Remote.Transport.ActorTransportAdapter
+    {
+        public const string Scheme = "trttl";
+        public static readonly Akka.Util.Internal.AtomicCounter UniqueId;
+        public ThrottleTransportAdapter(Akka.Remote.Transport.Transport wrappedTransport, Akka.Actor.ActorSystem system) { }
+        protected override string ManagerName { get; }
+        protected override Akka.Actor.Props ManagerProps { get; }
+        protected override Akka.Remote.Transport.SchemeAugmenter SchemeAugmenter { get; }
+        public override System.Threading.Tasks.Task<bool> ManagementCommand(object message) { }
+        public enum Direction
+        {
+            Send = 0,
+            Receive = 1,
+            Both = 2,
+        }
+    }
+    public abstract class Transport
+    {
+        protected Transport() { }
+        public Akka.Configuration.Config Config { get; set; }
+        public virtual long MaximumPayloadBytes { get; set; }
+        public virtual string SchemeIdentifier { get; set; }
+        public Akka.Actor.ActorSystem System { get; set; }
+        public abstract System.Threading.Tasks.Task<Akka.Remote.Transport.AssociationHandle> Associate(Akka.Actor.Address remoteAddress);
+        public abstract bool IsResponsibleFor(Akka.Actor.Address remote);
+        public abstract System.Threading.Tasks.Task<System.Tuple<Akka.Actor.Address, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IAssociationEventListener>>> Listen();
+        public virtual System.Threading.Tasks.Task<bool> ManagementCommand(object message) { }
+        public abstract System.Threading.Tasks.Task<bool> Shutdown();
+    }
+    public sealed class UnderlyingTransportError : Akka.Actor.INoSerializationVerificationNeeded, Akka.Remote.Transport.IHandleEvent
+    {
+        public UnderlyingTransportError(System.Exception cause, string message) { }
+    }
+    public class Unthrottled : Akka.Remote.Transport.ThrottleMode
+    {
+        public static Akka.Remote.Transport.Unthrottled Instance { get; }
+        public override System.TimeSpan TimeToAvailable(long currentNanoTime, int tokens) { }
+        public override System.Tuple<Akka.Remote.Transport.ThrottleMode, bool> TryConsumeTokens(long nanoTimeOfSend, int tokens) { }
+    }
+    public sealed class WriteAttempt : Akka.Remote.Transport.Activity
+    {
+        public WriteAttempt(Akka.Actor.Address sender, Akka.Actor.Address recipient, Google.ProtocolBuffers.ByteString payload) { }
+        public Google.ProtocolBuffers.ByteString Payload { get; }
+        public Akka.Actor.Address Recipient { get; }
+        public Akka.Actor.Address Sender { get; }
+    }
+}
+namespace Akka.Remote.Transport.AkkaIO
+{
+    public class AkkaIOTransport : Akka.Remote.Transport.Transport
+    {
+        public static readonly string Protocal;
+        public AkkaIOTransport(Akka.Actor.ActorSystem system, Akka.Configuration.Config config) { }
+        public override long MaximumPayloadBytes { get; }
+        public override string SchemeIdentifier { get; }
+        public override System.Threading.Tasks.Task<Akka.Remote.Transport.AssociationHandle> Associate(Akka.Actor.Address remoteAddress) { }
+        public override bool IsResponsibleFor(Akka.Actor.Address remote) { }
+        public override System.Threading.Tasks.Task<System.Tuple<Akka.Actor.Address, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IAssociationEventListener>>> Listen() { }
+        public override System.Threading.Tasks.Task<bool> Shutdown() { }
+    }
+}

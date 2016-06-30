@@ -1,0 +1,1034 @@
+﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools.Tests.MultiNode")]
+[assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
+[assembly: System.Runtime.InteropServices.GuidAttribute("5cf8a8be-b634-473f-bb01-eba878746bd4")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5", FrameworkDisplayName=".NET Framework 4.5")]
+namespace Akka.Cluster.PubSub.Serializers.Proto
+{
+    public sealed class Address : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.PubSub.Serializers.Proto.Address, Akka.Cluster.PubSub.Serializers.Proto.Address.Builder>
+    {
+        public const int HostnameFieldNumber = 2;
+        public const int PortFieldNumber = 3;
+        public const int ProtocolFieldNumber = 4;
+        public const int SystemFieldNumber = 1;
+        public static Akka.Cluster.PubSub.Serializers.Proto.Address DefaultInstance { get; }
+        public override Akka.Cluster.PubSub.Serializers.Proto.Address DefaultInstanceForType { get; }
+        public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        public bool HasHostname { get; }
+        public bool HasPort { get; }
+        public bool HasProtocol { get; }
+        public bool HasSystem { get; }
+        public string Hostname { get; }
+        protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.PubSub.Serializers.Proto.Address, Akka.Cluster.PubSub.Serializers.Proto.Address.Builder> InternalFieldAccessors { get; }
+        public override bool IsInitialized { get; }
+        [System.CLSCompliantAttribute(false)]
+        public uint Port { get; }
+        public string Protocol { get; }
+        public override int SerializedSize { get; }
+        public string System { get; }
+        protected override Akka.Cluster.PubSub.Serializers.Proto.Address ThisMessage { get; }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Address.Builder CreateBuilder() { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Address.Builder CreateBuilder(Akka.Cluster.PubSub.Serializers.Proto.Address prototype) { }
+        public override Akka.Cluster.PubSub.Serializers.Proto.Address.Builder CreateBuilderForType() { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Address ParseDelimitedFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Address ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Address ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Address ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Address ParseFrom(byte[] data) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Address ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Address ParseFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Address ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Address ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Address ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public override Akka.Cluster.PubSub.Serializers.Proto.Address.Builder ToBuilder() { }
+        public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+        public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.PubSub.Serializers.Proto.Address, Akka.Cluster.PubSub.Serializers.Proto.Address.Builder>
+        {
+            public Builder() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Address DefaultInstanceForType { get; }
+            public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public bool HasHostname { get; }
+            public bool HasPort { get; }
+            public bool HasProtocol { get; }
+            public bool HasSystem { get; }
+            public string Hostname { get; set; }
+            public override bool IsInitialized { get; }
+            protected override Akka.Cluster.PubSub.Serializers.Proto.Address MessageBeingBuilt { get; }
+            [System.CLSCompliantAttribute(false)]
+            public uint Port { get; set; }
+            public string Protocol { get; set; }
+            public string System { get; set; }
+            protected override Akka.Cluster.PubSub.Serializers.Proto.Address.Builder ThisBuilder { get; }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Address BuildPartial() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Address.Builder Clear() { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Address.Builder ClearHostname() { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Address.Builder ClearPort() { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Address.Builder ClearProtocol() { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Address.Builder ClearSystem() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Address.Builder Clone() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Address.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Address.Builder MergeFrom(Akka.Cluster.PubSub.Serializers.Proto.Address other) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Address.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Address.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Address.Builder SetHostname(string value) { }
+            [System.CLSCompliantAttribute(false)]
+            public Akka.Cluster.PubSub.Serializers.Proto.Address.Builder SetPort(uint value) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Address.Builder SetProtocol(string value) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Address.Builder SetSystem(string value) { }
+        }
+    }
+    public sealed class Delta : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.PubSub.Serializers.Proto.Delta, Akka.Cluster.PubSub.Serializers.Proto.Delta.Builder>
+    {
+        public const int BucketsFieldNumber = 1;
+        public int BucketsCount { get; }
+        public System.Collections.Generic.IList<Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket> BucketsList { get; }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Delta DefaultInstance { get; }
+        public override Akka.Cluster.PubSub.Serializers.Proto.Delta DefaultInstanceForType { get; }
+        public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.PubSub.Serializers.Proto.Delta, Akka.Cluster.PubSub.Serializers.Proto.Delta.Builder> InternalFieldAccessors { get; }
+        public override bool IsInitialized { get; }
+        public override int SerializedSize { get; }
+        protected override Akka.Cluster.PubSub.Serializers.Proto.Delta ThisMessage { get; }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Builder CreateBuilder() { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Builder CreateBuilder(Akka.Cluster.PubSub.Serializers.Proto.Delta prototype) { }
+        public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Builder CreateBuilderForType() { }
+        public Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket GetBuckets(int index) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Delta ParseDelimitedFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Delta ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Delta ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Delta ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Delta ParseFrom(byte[] data) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Delta ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Delta ParseFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Delta ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Delta ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Delta ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Builder ToBuilder() { }
+        public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+        public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.PubSub.Serializers.Proto.Delta, Akka.Cluster.PubSub.Serializers.Proto.Delta.Builder>
+        {
+            public Builder() { }
+            public int BucketsCount { get; }
+            public Google.ProtocolBuffers.Collections.IPopsicleList<Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket> BucketsList { get; }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Delta DefaultInstanceForType { get; }
+            public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public override bool IsInitialized { get; }
+            protected override Akka.Cluster.PubSub.Serializers.Proto.Delta MessageBeingBuilt { get; }
+            protected override Akka.Cluster.PubSub.Serializers.Proto.Delta.Builder ThisBuilder { get; }
+            public Akka.Cluster.PubSub.Serializers.Proto.Delta.Builder AddBuckets(Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket value) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Delta.Builder AddBuckets(Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder builderForValue) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Delta.Builder AddRangeBuckets(System.Collections.Generic.IEnumerable<Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket> values) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Delta BuildPartial() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Builder Clear() { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Delta.Builder ClearBuckets() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Builder Clone() { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket GetBuckets(int index) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Builder MergeFrom(Akka.Cluster.PubSub.Serializers.Proto.Delta other) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Delta.Builder SetBuckets(int index, Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket value) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Delta.Builder SetBuckets(int index, Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder builderForValue) { }
+        }
+        public class static Types
+        {
+            public sealed class Bucket : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket, Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder>
+            {
+                public const int ContentFieldNumber = 3;
+                public const int OwnerFieldNumber = 1;
+                public const int VersionFieldNumber = 2;
+                public int ContentCount { get; }
+                public System.Collections.Generic.IList<Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry> ContentList { get; }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket DefaultInstance { get; }
+                public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket DefaultInstanceForType { get; }
+                public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+                public bool HasOwner { get; }
+                public bool HasVersion { get; }
+                protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket, Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder> InternalFieldAccessors { get; }
+                public override bool IsInitialized { get; }
+                public Akka.Cluster.PubSub.Serializers.Proto.Address Owner { get; }
+                public override int SerializedSize { get; }
+                protected override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket ThisMessage { get; }
+                public long Version { get; }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder CreateBuilder() { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder CreateBuilder(Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket prototype) { }
+                public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder CreateBuilderForType() { }
+                public Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry GetContent(int index) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket ParseDelimitedFrom(System.IO.Stream input) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket ParseFrom(byte[] data) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket ParseFrom(System.IO.Stream input) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder ToBuilder() { }
+                public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+                public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket, Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder>
+                {
+                    public Builder() { }
+                    public int ContentCount { get; }
+                    public Google.ProtocolBuffers.Collections.IPopsicleList<Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry> ContentList { get; }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket DefaultInstanceForType { get; }
+                    public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+                    public bool HasOwner { get; }
+                    public bool HasVersion { get; }
+                    public override bool IsInitialized { get; }
+                    protected override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket MessageBeingBuilt { get; }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Address Owner { get; set; }
+                    protected override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder ThisBuilder { get; }
+                    public long Version { get; set; }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder AddContent(Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry value) { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder AddContent(Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry.Builder builderForValue) { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder AddRangeContent(System.Collections.Generic.IEnumerable<Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry> values) { }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket BuildPartial() { }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder Clear() { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder ClearContent() { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder ClearOwner() { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder ClearVersion() { }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder Clone() { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry GetContent(int index) { }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder MergeFrom(Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket other) { }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder MergeOwner(Akka.Cluster.PubSub.Serializers.Proto.Address value) { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder SetContent(int index, Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry value) { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder SetContent(int index, Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry.Builder builderForValue) { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder SetOwner(Akka.Cluster.PubSub.Serializers.Proto.Address value) { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder SetOwner(Akka.Cluster.PubSub.Serializers.Proto.Address.Builder builderForValue) { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Bucket.Builder SetVersion(long value) { }
+                }
+            }
+            public sealed class Entry : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry, Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry.Builder>
+            {
+                public const int KeyFieldNumber = 1;
+                public const int RefFieldNumber = 3;
+                public const int VersionFieldNumber = 2;
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry DefaultInstance { get; }
+                public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry DefaultInstanceForType { get; }
+                public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+                public bool HasKey { get; }
+                public bool HasRef { get; }
+                public bool HasVersion { get; }
+                protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry, Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry.Builder> InternalFieldAccessors { get; }
+                public override bool IsInitialized { get; }
+                public string Key { get; }
+                public string Ref { get; }
+                public override int SerializedSize { get; }
+                protected override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry ThisMessage { get; }
+                public long Version { get; }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry.Builder CreateBuilder() { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry.Builder CreateBuilder(Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry prototype) { }
+                public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry.Builder CreateBuilderForType() { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry ParseDelimitedFrom(System.IO.Stream input) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry ParseFrom(byte[] data) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry ParseFrom(System.IO.Stream input) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry.Builder ToBuilder() { }
+                public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+                public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry, Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry.Builder>
+                {
+                    public Builder() { }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry DefaultInstanceForType { get; }
+                    public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+                    public bool HasKey { get; }
+                    public bool HasRef { get; }
+                    public bool HasVersion { get; }
+                    public override bool IsInitialized { get; }
+                    public string Key { get; set; }
+                    protected override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry MessageBeingBuilt { get; }
+                    public string Ref { get; set; }
+                    protected override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry.Builder ThisBuilder { get; }
+                    public long Version { get; set; }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry BuildPartial() { }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry.Builder Clear() { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry.Builder ClearKey() { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry.Builder ClearRef() { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry.Builder ClearVersion() { }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry.Builder Clone() { }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry.Builder MergeFrom(Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry other) { }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry.Builder SetKey(string value) { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry.Builder SetRef(string value) { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Delta.Types.Entry.Builder SetVersion(long value) { }
+                }
+            }
+        }
+    }
+    public class static DistributedPubSubMessages
+    {
+        public static Google.ProtocolBuffers.Descriptors.FileDescriptor Descriptor { get; }
+        public static void RegisterAllExtensions(Google.ProtocolBuffers.ExtensionRegistry registry) { }
+    }
+    public sealed class Payload : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.PubSub.Serializers.Proto.Payload, Akka.Cluster.PubSub.Serializers.Proto.Payload.Builder>
+    {
+        public const int EnclosedMessageFieldNumber = 1;
+        public const int MessageManifestFieldNumber = 4;
+        public const int SerializerIdFieldNumber = 2;
+        public static Akka.Cluster.PubSub.Serializers.Proto.Payload DefaultInstance { get; }
+        public override Akka.Cluster.PubSub.Serializers.Proto.Payload DefaultInstanceForType { get; }
+        public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        public Google.ProtocolBuffers.ByteString EnclosedMessage { get; }
+        public bool HasEnclosedMessage { get; }
+        public bool HasMessageManifest { get; }
+        public bool HasSerializerId { get; }
+        protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.PubSub.Serializers.Proto.Payload, Akka.Cluster.PubSub.Serializers.Proto.Payload.Builder> InternalFieldAccessors { get; }
+        public override bool IsInitialized { get; }
+        public Google.ProtocolBuffers.ByteString MessageManifest { get; }
+        public override int SerializedSize { get; }
+        public int SerializerId { get; }
+        protected override Akka.Cluster.PubSub.Serializers.Proto.Payload ThisMessage { get; }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Payload.Builder CreateBuilder() { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Payload.Builder CreateBuilder(Akka.Cluster.PubSub.Serializers.Proto.Payload prototype) { }
+        public override Akka.Cluster.PubSub.Serializers.Proto.Payload.Builder CreateBuilderForType() { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Payload ParseDelimitedFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Payload ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Payload ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Payload ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Payload ParseFrom(byte[] data) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Payload ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Payload ParseFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Payload ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Payload ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Payload ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public override Akka.Cluster.PubSub.Serializers.Proto.Payload.Builder ToBuilder() { }
+        public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+        public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.PubSub.Serializers.Proto.Payload, Akka.Cluster.PubSub.Serializers.Proto.Payload.Builder>
+        {
+            public Builder() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Payload DefaultInstanceForType { get; }
+            public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public Google.ProtocolBuffers.ByteString EnclosedMessage { get; set; }
+            public bool HasEnclosedMessage { get; }
+            public bool HasMessageManifest { get; }
+            public bool HasSerializerId { get; }
+            public override bool IsInitialized { get; }
+            protected override Akka.Cluster.PubSub.Serializers.Proto.Payload MessageBeingBuilt { get; }
+            public Google.ProtocolBuffers.ByteString MessageManifest { get; set; }
+            public int SerializerId { get; set; }
+            protected override Akka.Cluster.PubSub.Serializers.Proto.Payload.Builder ThisBuilder { get; }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Payload BuildPartial() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Payload.Builder Clear() { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Payload.Builder ClearEnclosedMessage() { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Payload.Builder ClearMessageManifest() { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Payload.Builder ClearSerializerId() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Payload.Builder Clone() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Payload.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Payload.Builder MergeFrom(Akka.Cluster.PubSub.Serializers.Proto.Payload other) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Payload.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Payload.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Payload.Builder SetEnclosedMessage(Google.ProtocolBuffers.ByteString value) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Payload.Builder SetMessageManifest(Google.ProtocolBuffers.ByteString value) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Payload.Builder SetSerializerId(int value) { }
+        }
+    }
+    public sealed class Publish : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.PubSub.Serializers.Proto.Publish, Akka.Cluster.PubSub.Serializers.Proto.Publish.Builder>
+    {
+        public const int PayloadFieldNumber = 3;
+        public const int TopicFieldNumber = 1;
+        public static Akka.Cluster.PubSub.Serializers.Proto.Publish DefaultInstance { get; }
+        public override Akka.Cluster.PubSub.Serializers.Proto.Publish DefaultInstanceForType { get; }
+        public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        public bool HasPayload { get; }
+        public bool HasTopic { get; }
+        protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.PubSub.Serializers.Proto.Publish, Akka.Cluster.PubSub.Serializers.Proto.Publish.Builder> InternalFieldAccessors { get; }
+        public override bool IsInitialized { get; }
+        public Akka.Cluster.PubSub.Serializers.Proto.Payload Payload { get; }
+        public override int SerializedSize { get; }
+        protected override Akka.Cluster.PubSub.Serializers.Proto.Publish ThisMessage { get; }
+        public string Topic { get; }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Publish.Builder CreateBuilder() { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Publish.Builder CreateBuilder(Akka.Cluster.PubSub.Serializers.Proto.Publish prototype) { }
+        public override Akka.Cluster.PubSub.Serializers.Proto.Publish.Builder CreateBuilderForType() { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Publish ParseDelimitedFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Publish ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Publish ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Publish ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Publish ParseFrom(byte[] data) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Publish ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Publish ParseFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Publish ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Publish ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Publish ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public override Akka.Cluster.PubSub.Serializers.Proto.Publish.Builder ToBuilder() { }
+        public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+        public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.PubSub.Serializers.Proto.Publish, Akka.Cluster.PubSub.Serializers.Proto.Publish.Builder>
+        {
+            public Builder() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Publish DefaultInstanceForType { get; }
+            public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public bool HasPayload { get; }
+            public bool HasTopic { get; }
+            public override bool IsInitialized { get; }
+            protected override Akka.Cluster.PubSub.Serializers.Proto.Publish MessageBeingBuilt { get; }
+            public Akka.Cluster.PubSub.Serializers.Proto.Payload Payload { get; set; }
+            protected override Akka.Cluster.PubSub.Serializers.Proto.Publish.Builder ThisBuilder { get; }
+            public string Topic { get; set; }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Publish BuildPartial() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Publish.Builder Clear() { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Publish.Builder ClearPayload() { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Publish.Builder ClearTopic() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Publish.Builder Clone() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Publish.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Publish.Builder MergeFrom(Akka.Cluster.PubSub.Serializers.Proto.Publish other) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Publish.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Publish.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Publish.Builder MergePayload(Akka.Cluster.PubSub.Serializers.Proto.Payload value) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Publish.Builder SetPayload(Akka.Cluster.PubSub.Serializers.Proto.Payload value) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Publish.Builder SetPayload(Akka.Cluster.PubSub.Serializers.Proto.Payload.Builder builderForValue) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Publish.Builder SetTopic(string value) { }
+        }
+    }
+    public sealed class Send : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.PubSub.Serializers.Proto.Send, Akka.Cluster.PubSub.Serializers.Proto.Send.Builder>
+    {
+        public const int LocalAffinityFieldNumber = 2;
+        public const int PathFieldNumber = 1;
+        public const int PayloadFieldNumber = 3;
+        public static Akka.Cluster.PubSub.Serializers.Proto.Send DefaultInstance { get; }
+        public override Akka.Cluster.PubSub.Serializers.Proto.Send DefaultInstanceForType { get; }
+        public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        public bool HasLocalAffinity { get; }
+        public bool HasPath { get; }
+        public bool HasPayload { get; }
+        protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.PubSub.Serializers.Proto.Send, Akka.Cluster.PubSub.Serializers.Proto.Send.Builder> InternalFieldAccessors { get; }
+        public override bool IsInitialized { get; }
+        public bool LocalAffinity { get; }
+        public string Path { get; }
+        public Akka.Cluster.PubSub.Serializers.Proto.Payload Payload { get; }
+        public override int SerializedSize { get; }
+        protected override Akka.Cluster.PubSub.Serializers.Proto.Send ThisMessage { get; }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Send.Builder CreateBuilder() { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Send.Builder CreateBuilder(Akka.Cluster.PubSub.Serializers.Proto.Send prototype) { }
+        public override Akka.Cluster.PubSub.Serializers.Proto.Send.Builder CreateBuilderForType() { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Send ParseDelimitedFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Send ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Send ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Send ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Send ParseFrom(byte[] data) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Send ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Send ParseFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Send ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Send ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Send ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public override Akka.Cluster.PubSub.Serializers.Proto.Send.Builder ToBuilder() { }
+        public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+        public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.PubSub.Serializers.Proto.Send, Akka.Cluster.PubSub.Serializers.Proto.Send.Builder>
+        {
+            public Builder() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Send DefaultInstanceForType { get; }
+            public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public bool HasLocalAffinity { get; }
+            public bool HasPath { get; }
+            public bool HasPayload { get; }
+            public override bool IsInitialized { get; }
+            public bool LocalAffinity { get; set; }
+            protected override Akka.Cluster.PubSub.Serializers.Proto.Send MessageBeingBuilt { get; }
+            public string Path { get; set; }
+            public Akka.Cluster.PubSub.Serializers.Proto.Payload Payload { get; set; }
+            protected override Akka.Cluster.PubSub.Serializers.Proto.Send.Builder ThisBuilder { get; }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Send BuildPartial() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Send.Builder Clear() { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Send.Builder ClearLocalAffinity() { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Send.Builder ClearPath() { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Send.Builder ClearPayload() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Send.Builder Clone() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Send.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Send.Builder MergeFrom(Akka.Cluster.PubSub.Serializers.Proto.Send other) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Send.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Send.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Send.Builder MergePayload(Akka.Cluster.PubSub.Serializers.Proto.Payload value) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Send.Builder SetLocalAffinity(bool value) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Send.Builder SetPath(string value) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Send.Builder SetPayload(Akka.Cluster.PubSub.Serializers.Proto.Payload value) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Send.Builder SetPayload(Akka.Cluster.PubSub.Serializers.Proto.Payload.Builder builderForValue) { }
+        }
+    }
+    public sealed class SendToAll : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.PubSub.Serializers.Proto.SendToAll, Akka.Cluster.PubSub.Serializers.Proto.SendToAll.Builder>
+    {
+        public const int AllButSelfFieldNumber = 2;
+        public const int PathFieldNumber = 1;
+        public const int PayloadFieldNumber = 3;
+        public bool AllButSelf { get; }
+        public static Akka.Cluster.PubSub.Serializers.Proto.SendToAll DefaultInstance { get; }
+        public override Akka.Cluster.PubSub.Serializers.Proto.SendToAll DefaultInstanceForType { get; }
+        public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        public bool HasAllButSelf { get; }
+        public bool HasPath { get; }
+        public bool HasPayload { get; }
+        protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.PubSub.Serializers.Proto.SendToAll, Akka.Cluster.PubSub.Serializers.Proto.SendToAll.Builder> InternalFieldAccessors { get; }
+        public override bool IsInitialized { get; }
+        public string Path { get; }
+        public Akka.Cluster.PubSub.Serializers.Proto.Payload Payload { get; }
+        public override int SerializedSize { get; }
+        protected override Akka.Cluster.PubSub.Serializers.Proto.SendToAll ThisMessage { get; }
+        public static Akka.Cluster.PubSub.Serializers.Proto.SendToAll.Builder CreateBuilder() { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.SendToAll.Builder CreateBuilder(Akka.Cluster.PubSub.Serializers.Proto.SendToAll prototype) { }
+        public override Akka.Cluster.PubSub.Serializers.Proto.SendToAll.Builder CreateBuilderForType() { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.SendToAll ParseDelimitedFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.SendToAll ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.SendToAll ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.SendToAll ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.SendToAll ParseFrom(byte[] data) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.SendToAll ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.SendToAll ParseFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.SendToAll ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.SendToAll ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.SendToAll ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public override Akka.Cluster.PubSub.Serializers.Proto.SendToAll.Builder ToBuilder() { }
+        public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+        public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.PubSub.Serializers.Proto.SendToAll, Akka.Cluster.PubSub.Serializers.Proto.SendToAll.Builder>
+        {
+            public Builder() { }
+            public bool AllButSelf { get; set; }
+            public override Akka.Cluster.PubSub.Serializers.Proto.SendToAll DefaultInstanceForType { get; }
+            public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public bool HasAllButSelf { get; }
+            public bool HasPath { get; }
+            public bool HasPayload { get; }
+            public override bool IsInitialized { get; }
+            protected override Akka.Cluster.PubSub.Serializers.Proto.SendToAll MessageBeingBuilt { get; }
+            public string Path { get; set; }
+            public Akka.Cluster.PubSub.Serializers.Proto.Payload Payload { get; set; }
+            protected override Akka.Cluster.PubSub.Serializers.Proto.SendToAll.Builder ThisBuilder { get; }
+            public override Akka.Cluster.PubSub.Serializers.Proto.SendToAll BuildPartial() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.SendToAll.Builder Clear() { }
+            public Akka.Cluster.PubSub.Serializers.Proto.SendToAll.Builder ClearAllButSelf() { }
+            public Akka.Cluster.PubSub.Serializers.Proto.SendToAll.Builder ClearPath() { }
+            public Akka.Cluster.PubSub.Serializers.Proto.SendToAll.Builder ClearPayload() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.SendToAll.Builder Clone() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.SendToAll.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.SendToAll.Builder MergeFrom(Akka.Cluster.PubSub.Serializers.Proto.SendToAll other) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.SendToAll.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.SendToAll.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.SendToAll.Builder MergePayload(Akka.Cluster.PubSub.Serializers.Proto.Payload value) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.SendToAll.Builder SetAllButSelf(bool value) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.SendToAll.Builder SetPath(string value) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.SendToAll.Builder SetPayload(Akka.Cluster.PubSub.Serializers.Proto.Payload value) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.SendToAll.Builder SetPayload(Akka.Cluster.PubSub.Serializers.Proto.Payload.Builder builderForValue) { }
+        }
+    }
+    public sealed class Status : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.PubSub.Serializers.Proto.Status, Akka.Cluster.PubSub.Serializers.Proto.Status.Builder>
+    {
+        public const int VersionsFieldNumber = 1;
+        public static Akka.Cluster.PubSub.Serializers.Proto.Status DefaultInstance { get; }
+        public override Akka.Cluster.PubSub.Serializers.Proto.Status DefaultInstanceForType { get; }
+        public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.PubSub.Serializers.Proto.Status, Akka.Cluster.PubSub.Serializers.Proto.Status.Builder> InternalFieldAccessors { get; }
+        public override bool IsInitialized { get; }
+        public override int SerializedSize { get; }
+        protected override Akka.Cluster.PubSub.Serializers.Proto.Status ThisMessage { get; }
+        public int VersionsCount { get; }
+        public System.Collections.Generic.IList<Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version> VersionsList { get; }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Status.Builder CreateBuilder() { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Status.Builder CreateBuilder(Akka.Cluster.PubSub.Serializers.Proto.Status prototype) { }
+        public override Akka.Cluster.PubSub.Serializers.Proto.Status.Builder CreateBuilderForType() { }
+        public Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version GetVersions(int index) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Status ParseDelimitedFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Status ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Status ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Status ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Status ParseFrom(byte[] data) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Status ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Status ParseFrom(System.IO.Stream input) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Status ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Status ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public static Akka.Cluster.PubSub.Serializers.Proto.Status ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public override Akka.Cluster.PubSub.Serializers.Proto.Status.Builder ToBuilder() { }
+        public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+        public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.PubSub.Serializers.Proto.Status, Akka.Cluster.PubSub.Serializers.Proto.Status.Builder>
+        {
+            public Builder() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Status DefaultInstanceForType { get; }
+            public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public override bool IsInitialized { get; }
+            protected override Akka.Cluster.PubSub.Serializers.Proto.Status MessageBeingBuilt { get; }
+            protected override Akka.Cluster.PubSub.Serializers.Proto.Status.Builder ThisBuilder { get; }
+            public int VersionsCount { get; }
+            public Google.ProtocolBuffers.Collections.IPopsicleList<Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version> VersionsList { get; }
+            public Akka.Cluster.PubSub.Serializers.Proto.Status.Builder AddRangeVersions(System.Collections.Generic.IEnumerable<Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version> values) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Status.Builder AddVersions(Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version value) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Status.Builder AddVersions(Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder builderForValue) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Status BuildPartial() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Status.Builder Clear() { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Status.Builder ClearVersions() { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Status.Builder Clone() { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version GetVersions(int index) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Status.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Status.Builder MergeFrom(Akka.Cluster.PubSub.Serializers.Proto.Status other) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Status.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+            public override Akka.Cluster.PubSub.Serializers.Proto.Status.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Status.Builder SetVersions(int index, Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version value) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Status.Builder SetVersions(int index, Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder builderForValue) { }
+        }
+        public class static Types
+        {
+            public sealed class Version : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version, Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder>
+            {
+                public const int AddressFieldNumber = 1;
+                public const int TimestampFieldNumber = 2;
+                public Akka.Cluster.PubSub.Serializers.Proto.Address Address { get; }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version DefaultInstance { get; }
+                public override Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version DefaultInstanceForType { get; }
+                public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+                public bool HasAddress { get; }
+                public bool HasTimestamp { get; }
+                protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version, Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder> InternalFieldAccessors { get; }
+                public override bool IsInitialized { get; }
+                public override int SerializedSize { get; }
+                protected override Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version ThisMessage { get; }
+                public long Timestamp { get; }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder CreateBuilder() { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder CreateBuilder(Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version prototype) { }
+                public override Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder CreateBuilderForType() { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version ParseDelimitedFrom(System.IO.Stream input) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version ParseFrom(byte[] data) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version ParseFrom(System.IO.Stream input) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+                public static Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                public override Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder ToBuilder() { }
+                public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+                public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version, Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder>
+                {
+                    public Builder() { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Address Address { get; set; }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version DefaultInstanceForType { get; }
+                    public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+                    public bool HasAddress { get; }
+                    public bool HasTimestamp { get; }
+                    public override bool IsInitialized { get; }
+                    protected override Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version MessageBeingBuilt { get; }
+                    protected override Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder ThisBuilder { get; }
+                    public long Timestamp { get; set; }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version BuildPartial() { }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder Clear() { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder ClearAddress() { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder ClearTimestamp() { }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder Clone() { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder MergeAddress(Akka.Cluster.PubSub.Serializers.Proto.Address value) { }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder MergeFrom(Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version other) { }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+                    public override Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder SetAddress(Akka.Cluster.PubSub.Serializers.Proto.Address value) { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder SetAddress(Akka.Cluster.PubSub.Serializers.Proto.Address.Builder builderForValue) { }
+                    public Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder SetTimestamp(long value) { }
+                }
+            }
+        }
+    }
+}
+namespace Akka.Cluster.Tools.Client
+{
+    public class ClusterClient : Akka.Actor.ActorBase
+    {
+        public readonly Akka.Cluster.Tools.Client.ClusterClientSettings Settings;
+        public ClusterClient(Akka.Cluster.Tools.Client.ClusterClientSettings settings) { }
+        public Akka.Event.ILoggingAdapter Log { get; }
+        protected override void PostStop() { }
+        public static Akka.Actor.Props Props(Akka.Cluster.Tools.Client.ClusterClientSettings settings) { }
+        protected override bool Receive(object message) { }
+        public sealed class Publish
+        {
+            public readonly object Message;
+            public readonly string Topic;
+            public Publish(string topic, object message) { }
+        }
+        public sealed class Send
+        {
+            public readonly bool LocalAffinity;
+            public readonly object Message;
+            public readonly string Path;
+            public Send(string path, object message, bool localAffinity = False) { }
+        }
+        public sealed class SendToAll
+        {
+            public readonly object Message;
+            public readonly string Path;
+            public SendToAll(string path, object message) { }
+        }
+    }
+    public class ClusterClientReceptionist : Akka.Actor.IExtension
+    {
+        public ClusterClientReceptionist(Akka.Actor.ExtendedActorSystem system) { }
+        public bool IsTerminated { get; }
+        public Akka.Actor.IActorRef PubSubMediator { get; }
+        public static Akka.Configuration.Config DefaultConfig() { }
+        public static Akka.Cluster.Tools.Client.ClusterClientReceptionist Get(Akka.Actor.ActorSystem system) { }
+        public void RegisterService(Akka.Actor.IActorRef actorRef) { }
+        public void RegisterSubscriber(string topic, Akka.Actor.IActorRef actorRef) { }
+        public void UnregisterService(Akka.Actor.IActorRef actorRef) { }
+        public void UnregisterSubscriber(string topic, Akka.Actor.IActorRef actorRef) { }
+    }
+    public class ClusterClientReceptionistExtensionProvider : Akka.Actor.ExtensionIdProvider<Akka.Cluster.Tools.Client.ClusterClientReceptionist>
+    {
+        public ClusterClientReceptionistExtensionProvider() { }
+        public override Akka.Cluster.Tools.Client.ClusterClientReceptionist CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
+    }
+    public sealed class ClusterClientSettings
+    {
+        public readonly System.TimeSpan AcceptableHeartbeatPause;
+        public readonly int BufferSize;
+        public readonly System.TimeSpan EstablishingGetContactsInterval;
+        public readonly System.TimeSpan HeartbeatInterval;
+        public readonly System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> InitialContacts;
+        public readonly System.TimeSpan RefreshContactsInterval;
+        public ClusterClientSettings(System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> initialContacts, System.TimeSpan establishingGetContactsInterval, System.TimeSpan refreshContactsInterval, System.TimeSpan heartbeatInterval, System.TimeSpan acceptableHeartbeatPause, int bufferSize) { }
+        public static Akka.Cluster.Tools.Client.ClusterClientSettings Create(Akka.Actor.ActorSystem system) { }
+        public Akka.Cluster.Tools.Client.ClusterClientSettings WithBufferSize(int bufferSize) { }
+        public Akka.Cluster.Tools.Client.ClusterClientSettings WithEstablishingGetContactsInterval(System.TimeSpan value) { }
+        public Akka.Cluster.Tools.Client.ClusterClientSettings WithHeartbeatInterval(System.TimeSpan value) { }
+        public Akka.Cluster.Tools.Client.ClusterClientSettings WithInitialContacts(System.Collections.Generic.IEnumerable<Akka.Actor.ActorPath> initialContacts) { }
+        public Akka.Cluster.Tools.Client.ClusterClientSettings WithRefreshContactsInterval(System.TimeSpan value) { }
+    }
+    public class ClusterReceptionist : Akka.Actor.ActorBase
+    {
+        public ClusterReceptionist(Akka.Actor.IActorRef pubSubMediator, Akka.Cluster.Tools.Client.ClusterReceptionistSettings settings) { }
+        public Akka.Event.ILoggingAdapter Log { get; }
+        protected override void PostStop() { }
+        protected override void PreStart() { }
+        public static Akka.Actor.Props Props(Akka.Actor.IActorRef mediator, Akka.Cluster.Tools.Client.ClusterReceptionistSettings settings) { }
+        protected override bool Receive(object message) { }
+    }
+    public sealed class ClusterReceptionistSettings
+    {
+        public readonly int NumberOfContacts;
+        public readonly System.TimeSpan ResponseTunnelReceiveTimeout;
+        public readonly string Role;
+        public ClusterReceptionistSettings(string role, int numberOfContacts, System.TimeSpan responseTunnelReceiveTimeout) { }
+        public static Akka.Cluster.Tools.Client.ClusterReceptionistSettings Create(Akka.Actor.ActorSystem system) { }
+        public static Akka.Cluster.Tools.Client.ClusterReceptionistSettings Create(Akka.Configuration.Config config) { }
+        public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithNumberOfContacts(int numberOfContacts) { }
+        public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithoutRole() { }
+        public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithResponseTunnelReceiveTimeout(System.TimeSpan responseTunnelReceiveTimeout) { }
+        public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithRole(string role) { }
+    }
+    public interface IClusterClientMessage { }
+}
+namespace Akka.Cluster.Tools.Client.Serialization
+{
+    public class ClusterClientMessageSerializer : Akka.Serialization.SerializerWithStringManifest
+    {
+        public ClusterClientMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override int Identifier { get; }
+        public override object FromBinary(byte[] binary, string manifest) { }
+        public override string Manifest(object o) { }
+        public override byte[] ToBinary(object o) { }
+    }
+}
+namespace Akka.Cluster.Tools.PublishSubscribe
+{
+    public sealed class CurrentTopics : System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.CurrentTopics>
+    {
+        public readonly string[] Topics;
+        public CurrentTopics(string[] topics) { }
+        public bool Equals(Akka.Cluster.Tools.PublishSubscribe.CurrentTopics other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public class DistributedPubSub : Akka.Actor.IExtension
+    {
+        public DistributedPubSub(Akka.Actor.ExtendedActorSystem system) { }
+        public bool IsTerminated { get; }
+        public Akka.Actor.IActorRef Mediator { get; }
+        public static Akka.Configuration.Config DefaultConfig() { }
+        public static Akka.Cluster.Tools.PublishSubscribe.DistributedPubSub Get(Akka.Actor.ActorSystem system) { }
+    }
+    public class DistributedPubSubExtensionProvider : Akka.Actor.ExtensionIdProvider<Akka.Cluster.Tools.PublishSubscribe.DistributedPubSub>
+    {
+        public DistributedPubSubExtensionProvider() { }
+        public override Akka.Cluster.Tools.PublishSubscribe.DistributedPubSub CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
+    }
+    public class DistributedPubSubMediator : Akka.Actor.ReceiveActor
+    {
+        public DistributedPubSubMediator(Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings settings) { }
+        public Akka.Event.ILoggingAdapter Log { get; }
+        public System.Collections.Generic.IDictionary<Akka.Actor.Address, long> OwnVersions { get; }
+        protected override void PostStop() { }
+        protected override void PreStart() { }
+        public static Akka.Actor.Props Props(Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings settings) { }
+    }
+    public class DistributedPubSubSettings
+    {
+        public readonly System.TimeSpan GossipInterval;
+        public readonly int MaxDeltaElements;
+        public readonly System.TimeSpan RemovedTimeToLive;
+        public readonly string Role;
+        public readonly Akka.Routing.RoutingLogic RoutingLogic;
+        public DistributedPubSubSettings(string role, Akka.Routing.RoutingLogic routingLogic, System.TimeSpan gossipInterval, System.TimeSpan removedTimeToLive, int maxDeltaElements) { }
+        public static Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings Create(Akka.Actor.ActorSystem system) { }
+        public static Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings Create(Akka.Configuration.Config config) { }
+        public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithGossipInterval(System.TimeSpan gossipInterval) { }
+        public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithMaxDeltaElements(int maxDeltaElements) { }
+        public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithRemovedTimeToLive(System.TimeSpan removedTtl) { }
+        public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithRole(string role) { }
+        public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithRoutingLogic(Akka.Routing.RoutingLogic routingLogic) { }
+    }
+    public sealed class GetTopics : System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.GetTopics>
+    {
+        public static readonly Akka.Cluster.Tools.PublishSubscribe.GetTopics Instance;
+        public bool Equals(Akka.Cluster.Tools.PublishSubscribe.GetTopics other) { }
+        public override bool Equals(object obj) { }
+        public override string ToString() { }
+    }
+    public interface IDistributedPubSubMessage { }
+    public sealed class Publish : Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.Publish>
+    {
+        public readonly object Message;
+        public readonly bool SendOneMessageToEachGroup;
+        public readonly string Topic;
+        public Publish(string topic, object message, bool sendOneMessageToEachGroup = False) { }
+        public bool Equals(Akka.Cluster.Tools.PublishSubscribe.Publish other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class Put : System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.Put>
+    {
+        public readonly Akka.Actor.IActorRef Ref;
+        public Put(Akka.Actor.IActorRef @ref) { }
+        public bool Equals(Akka.Cluster.Tools.PublishSubscribe.Put other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class Remove : System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.Remove>
+    {
+        public readonly string Path;
+        public Remove(string path) { }
+        public bool Equals(Akka.Cluster.Tools.PublishSubscribe.Remove other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class Send : Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.Send>
+    {
+        public readonly bool LocalAffinity;
+        public readonly object Message;
+        public readonly string Path;
+        public Send(string path, object message, bool localAffinity = False) { }
+        public bool Equals(Akka.Cluster.Tools.PublishSubscribe.Send other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class SendToAll : Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.SendToAll>
+    {
+        public readonly bool ExcludeSelf;
+        public readonly object Message;
+        public readonly string Path;
+        public SendToAll(string path, object message, bool excludeSelf = False) { }
+        public bool Equals(Akka.Cluster.Tools.PublishSubscribe.SendToAll other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class Subscribe : System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.Subscribe>
+    {
+        public readonly string Group;
+        public readonly Akka.Actor.IActorRef Ref;
+        public readonly string Topic;
+        public Subscribe(string topic, Akka.Actor.IActorRef @ref, string group = null) { }
+        public bool Equals(Akka.Cluster.Tools.PublishSubscribe.Subscribe other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class SubscribeAck : System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.SubscribeAck>
+    {
+        public readonly Akka.Cluster.Tools.PublishSubscribe.Subscribe Subscribe;
+        public SubscribeAck(Akka.Cluster.Tools.PublishSubscribe.Subscribe subscribe) { }
+        public bool Equals(Akka.Cluster.Tools.PublishSubscribe.SubscribeAck other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class Unsubscribe : System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.Unsubscribe>
+    {
+        public readonly string Group;
+        public readonly Akka.Actor.IActorRef Ref;
+        public readonly string Topic;
+        public Unsubscribe(string topic, Akka.Actor.IActorRef @ref, string group = null) { }
+        public bool Equals(Akka.Cluster.Tools.PublishSubscribe.Unsubscribe other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class UnsubscribeAck : System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.UnsubscribeAck>
+    {
+        public readonly Akka.Cluster.Tools.PublishSubscribe.Unsubscribe Unsubscribe;
+        public UnsubscribeAck(Akka.Cluster.Tools.PublishSubscribe.Unsubscribe unsubscribe) { }
+        public bool Equals(Akka.Cluster.Tools.PublishSubscribe.UnsubscribeAck other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+}
+namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
+{
+    public class DistributedPubSubMessageSerializer : Akka.Serialization.SerializerWithStringManifest
+    {
+        public const int BufferSize = 4096;
+        public const string DeltaManifest = "B";
+        public const string PublishManifest = "E";
+        public const string SendManifest = "C";
+        public const string SendToAllManifest = "D";
+        public const string StatusManifest = "A";
+        public DistributedPubSubMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override int Identifier { get; }
+        public override object FromBinary(byte[] bytes, string manifestString) { }
+        public override string Manifest(object o) { }
+        public override byte[] ToBinary(object obj) { }
+    }
+}
+namespace Akka.Cluster.Tools.Singleton
+{
+    public sealed class ClusterSingletonManager : Akka.Actor.FSM<Akka.Cluster.Tools.Singleton.ClusterSingletonState, Akka.Cluster.Tools.Singleton.IClusterSingletonData>
+    {
+        public ClusterSingletonManager(Akka.Actor.Props singletonProps, object terminationMessage, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings settings) { }
+        public static Akka.Configuration.Config DefaultConfig() { }
+        protected override void PostStop() { }
+        protected override void PreStart() { }
+        public static Akka.Actor.Props Props(Akka.Actor.Props singletonProps, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings settings) { }
+        public static Akka.Actor.Props Props(Akka.Actor.Props singletonProps, object terminationMessage, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings settings) { }
+    }
+    public sealed class ClusterSingletonManagerIsStuck : Akka.Actor.AkkaException
+    {
+        public ClusterSingletonManagerIsStuck(string message) { }
+        public ClusterSingletonManagerIsStuck(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+    }
+    public sealed class ClusterSingletonManagerSettings : Akka.Actor.INoSerializationVerificationNeeded
+    {
+        public readonly System.TimeSpan HandOverRetryInterval;
+        public readonly System.TimeSpan RemovalMargin;
+        public readonly string Role;
+        public readonly string SingletonName;
+        public ClusterSingletonManagerSettings(string singletonName, string role, System.TimeSpan removalMargin, System.TimeSpan handOverRetryInterval) { }
+        public static Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings Create(Akka.Actor.ActorSystem system) { }
+        public static Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings Create(Akka.Configuration.Config config) { }
+        public Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings WithHandOverRetryInterval(System.TimeSpan handOverRetryInterval) { }
+        public Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings WithRemovalMargin(System.TimeSpan removalMargin) { }
+        public Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings WithRole(string role) { }
+        public Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings WithSingletonName(string singletonName) { }
+    }
+    public sealed class ClusterSingletonProxy : Akka.Actor.ReceiveActor
+    {
+        public ClusterSingletonProxy(string singletonManagerPath, Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings settings) { }
+        public static Akka.Configuration.Config DefaultConfig() { }
+        protected override void PostStop() { }
+        protected override void PreStart() { }
+        public static Akka.Actor.Props Props(string singletonManagerPath, Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings settings) { }
+    }
+    public sealed class ClusterSingletonProxySettings
+    {
+        public readonly int BufferSize;
+        public readonly string Role;
+        public readonly System.TimeSpan SingletonIdentificationInterval;
+        public readonly string SingletonName;
+        public ClusterSingletonProxySettings(string singletonName, string role, System.TimeSpan singletonIdentificationInterval, int bufferSize) { }
+        public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings Copy(string singletonName = null, string role = null, System.Nullable<System.TimeSpan> singletonIdentificationInterval = null, System.Nullable<int> bufferSize = null) { }
+        public static Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings Create(Akka.Actor.ActorSystem system) { }
+        public static Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings Create(Akka.Configuration.Config config) { }
+        public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithBufferSize(int bufferSize) { }
+        public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithRole(string role) { }
+        public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithSingletonIdentificationInterval(string singletonIdentificationInterval) { }
+        public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithSingletonName(string singletonName) { }
+    }
+    public enum ClusterSingletonState
+    {
+        Start = 0,
+        Oldest = 1,
+        Younger = 2,
+        BecomingOldest = 3,
+        WasOldest = 4,
+        HandingOver = 5,
+        TakeOver = 6,
+        End = 7,
+    }
+    public interface IClusterSingletonData { }
+    public interface IClusterSingletonMessage { }
+}
+namespace Akka.Cluster.Tools.Singleton.Serialization
+{
+    public class ClusterSingletonMessageSerializer : Akka.Serialization.SerializerWithStringManifest
+    {
+        public ClusterSingletonMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override int Identifier { get; }
+        public override object FromBinary(byte[] binary, string manifest) { }
+        public override string Manifest(object o) { }
+        public override byte[] ToBinary(object obj) { }
+    }
+}
+public class static ClusterClientMessages
+{
+    public static Google.ProtocolBuffers.Descriptors.FileDescriptor Descriptor { get; }
+    public static void RegisterAllExtensions(Google.ProtocolBuffers.ExtensionRegistry registry) { }
+}
+public sealed class Contacts : Google.ProtocolBuffers.GeneratedMessage<Contacts, Contacts.Builder>
+{
+    public const int ContactPointsFieldNumber = 1;
+    public int ContactPointsCount { get; }
+    public System.Collections.Generic.IList<string> ContactPointsList { get; }
+    public static Contacts DefaultInstance { get; }
+    public override Contacts DefaultInstanceForType { get; }
+    public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+    protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Contacts, Contacts.Builder> InternalFieldAccessors { get; }
+    public override bool IsInitialized { get; }
+    public override int SerializedSize { get; }
+    protected override Contacts ThisMessage { get; }
+    public static Contacts.Builder CreateBuilder() { }
+    public static Contacts.Builder CreateBuilder(Contacts prototype) { }
+    public override Contacts.Builder CreateBuilderForType() { }
+    public string GetContactPoints(int index) { }
+    public static Contacts ParseDelimitedFrom(System.IO.Stream input) { }
+    public static Contacts ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static Contacts ParseFrom(Google.ProtocolBuffers.ByteString data) { }
+    public static Contacts ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static Contacts ParseFrom(byte[] data) { }
+    public static Contacts ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static Contacts ParseFrom(System.IO.Stream input) { }
+    public static Contacts ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public static Contacts ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+    public static Contacts ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+    public override Contacts.Builder ToBuilder() { }
+    public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
+    public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Contacts, Contacts.Builder>
+    {
+        public Builder() { }
+        public int ContactPointsCount { get; }
+        public Google.ProtocolBuffers.Collections.IPopsicleList<string> ContactPointsList { get; }
+        public override Contacts DefaultInstanceForType { get; }
+        public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+        public override bool IsInitialized { get; }
+        protected override Contacts MessageBeingBuilt { get; }
+        protected override Contacts.Builder ThisBuilder { get; }
+        public Contacts.Builder AddContactPoints(string value) { }
+        public Contacts.Builder AddRangeContactPoints(System.Collections.Generic.IEnumerable<string> values) { }
+        public override Contacts BuildPartial() { }
+        public override Contacts.Builder Clear() { }
+        public Contacts.Builder ClearContactPoints() { }
+        public override Contacts.Builder Clone() { }
+        public string GetContactPoints(int index) { }
+        public override Contacts.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
+        public override Contacts.Builder MergeFrom(Contacts other) { }
+        public override Contacts.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
+        public override Contacts.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+        public Contacts.Builder SetContactPoints(int index, string value) { }
+    }
+}

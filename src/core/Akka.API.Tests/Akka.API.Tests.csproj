@@ -109,6 +109,22 @@
     <Compile Include="App_Packages\ApiApprover.3.0.1\PublicApiGenerator.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\contrib\cluster\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj">
+      <Project>{5cf8a8be-b634-473f-bb01-eba878746bd4}</Project>
+      <Name>Akka.Cluster.Tools</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka.Cluster\Akka.Cluster.csproj">
+      <Project>{6ab00f61-269a-4501-b06a-026707f000a7}</Project>
+      <Name>Akka.Cluster</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj">
+      <Project>{fca84dea-c118-424b-9eb8-34375dfef18a}</Project>
+      <Name>Akka.Persistence</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj">
+      <Project>{ea4ff8fd-7c53-49c8-b9aa-02e458b3e6a7}</Project>
+      <Name>Akka.Remote</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Akka\Akka.csproj">
       <Project>{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}</Project>
       <Name>Akka</Name>
