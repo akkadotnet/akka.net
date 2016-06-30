@@ -8,8 +8,8 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Linq;
+using System.Reflection;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Util.Reflection;
@@ -73,8 +73,8 @@ namespace Akka.Dispatch
         /// <returns><c>true</c> if this actor has a message queue type requirement. <c>false</c> otherwise.</returns>
         public bool HasRequiredType(Type actorType)
         {
-            return actorType.GetInterfaces()
-                .Where(i => i.IsGenericType)
+            return actorType.GetTypeInfo().GetInterfaces()
+                .Where(i => i.GetTypeInfo().IsGenericType)
                 .Any(i => i.GetGenericTypeDefinition() == RequiresMessageQueueGenericType);
         }
 
@@ -85,8 +85,8 @@ namespace Akka.Dispatch
         /// <returns><c>true</c> if this mailboxtype produces queues. <c>false</c> otherwise.</returns>
         public bool ProducesMessageQueue(Type mailboxType)
         {
-            return mailboxType.GetInterfaces()
-                .Where(i => i.IsGenericType)
+            return mailboxType.GetTypeInfo().GetInterfaces()
+                .Where(i => i.GetTypeInfo().IsGenericType)
                 .Any(i => i.GetGenericTypeDefinition() == ProducesMessageQueueGenericType);
         }
 
@@ -174,20 +174,20 @@ namespace Akka.Dispatch
         private static readonly Type RequiresMessageQueueGenericType = typeof (IRequiresMessageQueue<>);
         public Type GetRequiredType(Type actorType)
         {
-            return actorType.GetInterfaces()
-                .Where(i => i.IsGenericType)
+            return actorType.GetTypeInfo().GetInterfaces()
+                .Where(i => i.GetTypeInfo().IsGenericType)
                 .Where(i => i.GetGenericTypeDefinition() == RequiresMessageQueueGenericType)
-                .Select(i => i.GetGenericArguments().First())
+                .Select(i => i.GetTypeInfo().GetGenericArguments().First())
                 .FirstOrDefault();
         }
 
         private static readonly Type ProducesMessageQueueGenericType = typeof (IProducesMessageQueue<>);
         private Type GetProducedMessageQueueType(MailboxType mailboxType)
         {
-            var queueType = mailboxType.GetType().GetInterfaces()
-                .Where(i => i.IsGenericType)
+            var queueType = mailboxType.GetType().GetTypeInfo().GetInterfaces()
+                .Where(i => i.GetTypeInfo().IsGenericType)
                 .Where(i => i.GetGenericTypeDefinition() == ProducesMessageQueueGenericType)
-                .Select(i => i.GetGenericArguments().First())
+                .Select(i => i.GetTypeInfo().GetGenericArguments().First())
                 .FirstOrDefault();
 
             if(queueType == null)
@@ -225,10 +225,10 @@ namespace Akka.Dispatch
             Func<MailboxType, MailboxType> verifyRequirements = mailboxType =>
             {
                 Lazy<Type> mqType = new Lazy<Type>(() => GetProducedMessageQueueType(mailboxType));
-                if(hasMailboxRequirement && !mailboxRequirement.IsAssignableFrom(mqType.Value))
+                if(hasMailboxRequirement && !mailboxRequirement.GetTypeInfo().IsAssignableFrom(mqType.Value))
                     throw new ArgumentException($"produced message queue type [{mqType.Value}] does not fulfill requirement for dispatcher [{id}]." +
                                                 $"Must be a subclass of [{mailboxRequirement}]");
-                if(HasRequiredType(actorType) && !actorRequirement.Value.IsAssignableFrom(mqType.Value))
+                if(HasRequiredType(actorType) && !actorRequirement.Value.GetTypeInfo().IsAssignableFrom(mqType.Value))
                     throw new ArgumentException($"produced message queue type of [{mqType.Value}] does not fulfill requirement for actor class [{actorType}]." +
                                                 $"Must be a subclass of [{mailboxRequirement}]");
                 return mailboxType;

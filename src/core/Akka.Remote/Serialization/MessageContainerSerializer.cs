@@ -10,6 +10,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Serialization;
 using Google.ProtocolBuffers;
+using System.Reflection;
 
 namespace Akka.Remote.Serialization
 {
@@ -96,7 +97,7 @@ namespace Akka.Remote.Serialization
             else
             {
                 if (serializer.IncludeManifest)
-                    builder.SetMessageManifest(ByteString.CopyFromUtf8(message.GetType().AssemblyQualifiedName));
+                    builder.SetMessageManifest(ByteString.CopyFromUtf8(message.GetType().GetTypeInfo().AssemblyQualifiedName));
             }
 
             foreach (SelectionPathElement element in sel.Elements)

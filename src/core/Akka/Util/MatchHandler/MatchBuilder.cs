@@ -144,7 +144,7 @@ namespace Akka.Tools.MatchHandler
 
         private static void EnsureCanHandleType(Type handlesType)
         {
-            if(!_itemType.IsAssignableFrom(handlesType))
+            if(!_itemType.GetTypeInfo().IsAssignableFrom(handlesType))
                 throw new ArgumentException("The specified type (" + handlesType + ") must implement " + _itemType, "handlesType");
         }
 

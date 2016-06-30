@@ -74,7 +74,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         Task SelectEventsAsync(DbConnection connection, CancellationToken cancellationToken, IEnumerable<IHint> hints, Action<IPersistentRepresentation> callback);
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public class QueryConfiguration
     {
         public readonly string TagsColumnName;

@@ -84,7 +84,9 @@ namespace Akka.Streams
         Fail
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public class BufferOverflowException : Exception
     {
         public BufferOverflowException(string message) : base(message)
@@ -95,8 +97,10 @@ namespace Akka.Streams
         {
         }
 
+#if SERIALIZATION
         protected BufferOverflowException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
 }

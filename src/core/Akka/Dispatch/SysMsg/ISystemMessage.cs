@@ -251,7 +251,9 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     public abstract class SystemMessage : ISystemMessage
     {
+#if SERIALIZATION
         [NonSerialized]
+#endif
         internal SystemMessage Next;
 
         public void Unlink()

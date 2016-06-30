@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Pattern;
@@ -20,7 +21,9 @@ namespace Akka.Streams.Implementation
     {
         #region internal classes
 
+#if SERIALIZATION
         [Serializable]
+#endif
         internal struct SubstreamKey : IEquatable<SubstreamKey>
         {
             public readonly long Id;
@@ -41,7 +44,9 @@ namespace Akka.Streams.Implementation
             public static bool operator !=(SubstreamKey x, SubstreamKey y) => !(x == y);
         }
 
+#if SERIALIZATION
         [Serializable]
+#endif
         internal struct SubstreamRequestMore : INoSerializationVerificationNeeded
         {
             public readonly SubstreamKey Substream;
@@ -54,7 +59,9 @@ namespace Akka.Streams.Implementation
             }
         }
 
+#if SERIALIZATION
         [Serializable]
+#endif
         internal struct SubstreamCancel : INoSerializationVerificationNeeded
         {
             public readonly SubstreamKey Substream;
@@ -65,7 +72,9 @@ namespace Akka.Streams.Implementation
             }
         }
 
+#if SERIALIZATION
         [Serializable]
+#endif
         internal struct SubstreamSubscribe : INoSerializationVerificationNeeded
         {
             public readonly SubstreamKey Substream;
@@ -78,7 +87,9 @@ namespace Akka.Streams.Implementation
             }
         }
 
+#if SERIALIZATION
         [Serializable]
+#endif
         internal struct SubstreamSubscriptionTimeout : INoSerializationVerificationNeeded
         {
             public readonly SubstreamKey Substream;
@@ -127,14 +138,18 @@ namespace Akka.Streams.Implementation
             public interface IPublisherState { }
             public interface ICompletedState : IPublisherState { }
 
+#if SERIALIZATION
             [Serializable]
+#endif
             public sealed class Open : IPublisherState
             {
                 public static readonly Open Instance = new Open();
                 private Open() { }
             }
 
+#if SERIALIZATION
             [Serializable]
+#endif
             public sealed class Attached : IPublisherState
             {
                 public readonly ISubscriber<T> Subscriber;
@@ -145,21 +160,27 @@ namespace Akka.Streams.Implementation
                 }
             }
 
+#if SERIALIZATION
             [Serializable]
+#endif
             public sealed class Completed : ICompletedState
             {
                 public static readonly Completed Instance = new Completed();
                 private Completed() { }
             }
 
+#if SERIALIZATION
             [Serializable]
+#endif
             public sealed class Cancelled : ICompletedState
             {
                 public static readonly Cancelled Instance = new Cancelled();
                 private Cancelled() { }
             }
 
+#if SERIALIZATION
             [Serializable]
+#endif
             public sealed class Failed : ICompletedState
             {
                 public readonly Exception Reason;
@@ -433,8 +454,8 @@ namespace Akka.Streams.Implementation
             var typedTarget = UntypedPublisher.ToTyped<T>(target);
             if (
                 typedTarget.GetType()
-                    .GetInterfaces()
-                    .Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IProcessor<,>)))
+                    .GetTypeInfo().GetInterfaces()
+                    .Any(i => i.GetTypeInfo().IsGenericType && i.GetGenericTypeDefinition() == typeof(IProcessor<,>)))
             {
                 if (Log.IsDebugEnabled)
                     Log.Debug(

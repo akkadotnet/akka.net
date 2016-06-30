@@ -18,7 +18,7 @@ namespace Akka.Streams.Dsl
         }
     }
 
-    public class UnexpectedOutputException : SystemException
+    public class UnexpectedOutputException : Exception
     {
         public UnexpectedOutputException(object element) : base(element.ToString())
         {
@@ -26,7 +26,7 @@ namespace Akka.Streams.Dsl
         }
     }
 
-    public class OutputTruncationException : SystemException
+    public class OutputTruncationException : Exception
     {
 
     }

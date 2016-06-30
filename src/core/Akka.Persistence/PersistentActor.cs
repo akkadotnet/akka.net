@@ -14,7 +14,9 @@ using Akka.Tools.MatchHandler;
 
 namespace Akka.Persistence
 {
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class RecoveryCompleted
     {
         public static readonly RecoveryCompleted Instance = new RecoveryCompleted();
@@ -39,7 +41,9 @@ namespace Akka.Persistence
     /// <see cref="SnapshotOffer"/> message, followed by replayed messages, if any, that are younger than the snapshot, up to the
     /// specified upper sequence number bound (<see cref="ToSequenceNr"/>).
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class Recovery
     {
         public static readonly Recovery Default = new Recovery(SnapshotSelectionCriteria.Latest);

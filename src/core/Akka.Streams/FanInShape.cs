@@ -23,7 +23,9 @@ namespace Akka.Streams
             string Name { get; }
         }
 
+#if SERIALIZATION
         [Serializable]
+#endif
         public sealed class InitName : IInit
         {
             private readonly string _name;
@@ -42,7 +44,9 @@ namespace Akka.Streams
             public string Name => _name;
         }
 
+#if SERIALIZATION
         [Serializable]
+#endif
         public sealed class InitPorts : IInit
         {
             private readonly Outlet<TOut> _outlet;

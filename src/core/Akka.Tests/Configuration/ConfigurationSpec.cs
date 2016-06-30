@@ -7,7 +7,6 @@
 
 using System;
 using Akka.Configuration.Hocon;
-using System.Configuration;
 using System.Linq;
 using System.Threading;
 using Akka.Actor;
@@ -65,15 +64,17 @@ namespace Akka.Tests.Configuration
             settings.SchedulerClass.ShouldBe(typeof(DedicatedThreadScheduler).FullName);
         }
 
+#if CONFIGURATION
         [Fact]
         public void Deserializes_hocon_configuration_from_net_config_file()
         {
-            var section = (AkkaConfigurationSection)ConfigurationManager.GetSection("akka");
+            var section = (AkkaConfigurationSection)System.Configuration.ConfigurationManager.GetSection("akka");
             Assert.NotNull(section);
             Assert.False(string.IsNullOrEmpty(section.Hocon.Content));
             var akkaConfig = section.AkkaConfig;
             Assert.NotNull(akkaConfig);
         }
+#endif
 
         [Fact]
         public void Can_create_config_from_source_object()

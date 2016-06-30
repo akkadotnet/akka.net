@@ -26,7 +26,9 @@ namespace Akka.Persistence
     /// </summary>
     public interface ISnapshotResponse : ISnapshotMessage { }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class SnapshotMetadata : IEquatable<SnapshotMetadata>
     {
         internal class SnapshotMetadataComparer : IComparer<SnapshotMetadata>
@@ -108,7 +110,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Sent to <see cref="PersistentActor"/> after successful saving of a snapshot.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class SaveSnapshotSuccess : ISnapshotResponse, IEquatable<SaveSnapshotSuccess>
     {
         public SaveSnapshotSuccess(SnapshotMetadata metadata)
@@ -145,7 +149,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Sent to <see cref="PersistentActor"/> after successful deletion of a snapshot.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class DeleteSnapshotSuccess : ISnapshotResponse, IEquatable<DeleteSnapshotSuccess>
     {
         public DeleteSnapshotSuccess(SnapshotMetadata metadata)
@@ -182,7 +188,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Sent to <see cref="PersistentActor"/> after successful deletion of a specified range of snapshots.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class DeleteSnapshotsSuccess : ISnapshotResponse, IEquatable<DeleteSnapshotsSuccess>
     {
         public DeleteSnapshotsSuccess(SnapshotSelectionCriteria criteria)
@@ -219,7 +227,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Sent to <see cref="PersistentActor"/> after failed saving a snapshot.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class SaveSnapshotFailure : ISnapshotResponse, IEquatable<SaveSnapshotFailure>
     {
         public SaveSnapshotFailure(SnapshotMetadata metadata, Exception cause)
@@ -268,7 +278,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Sent to <see cref="PersistentActor"/> after failed deletion of a snapshot.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class DeleteSnapshotFailure : ISnapshotResponse, IEquatable<DeleteSnapshotFailure>
     {
         public DeleteSnapshotFailure(SnapshotMetadata metadata, Exception cause)
@@ -317,7 +329,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Sent to <see cref="PersistentActor"/> after failed deletion of a range of snapshots.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class DeleteSnapshotsFailure : ISnapshotResponse, IEquatable<DeleteSnapshotsFailure>
     {
         public DeleteSnapshotsFailure(SnapshotSelectionCriteria criteria, Exception cause)
@@ -367,7 +381,9 @@ namespace Akka.Persistence
     /// Offers a <see cref="PersistentActor"/> a previously saved snapshot during recovery.
     /// This offer is received before any further replayed messages.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class SnapshotOffer : IEquatable<SnapshotOffer>
     {
         public SnapshotOffer(SnapshotMetadata metadata, object snapshot)
@@ -409,7 +425,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Selection criteria for loading and deleting a snapshots.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class SnapshotSelectionCriteria : IEquatable<SnapshotSelectionCriteria>
     {
         public static readonly SnapshotSelectionCriteria Latest = new SnapshotSelectionCriteria(long.MaxValue, DateTime.MaxValue);
@@ -499,7 +517,9 @@ namespace Akka.Persistence
     /// <summary>
     /// A selected snapshot matching <see cref="SnapshotSelectionCriteria"/>.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class SelectedSnapshot : IEquatable<SelectedSnapshot>
     {
         public SelectedSnapshot(SnapshotMetadata metadata, object snapshot)
@@ -544,7 +564,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Instructs a snapshot store to load the snapshot.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class LoadSnapshot: ISnapshotRequest, IEquatable<LoadSnapshot>
     {
         public LoadSnapshot(string persistenceId, SnapshotSelectionCriteria criteria, long toSequenceNr)
@@ -604,7 +626,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Response to a <see cref="LoadSnapshot"/> message.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class LoadSnapshotResult : ISnapshotResponse, IEquatable<LoadSnapshotResult>
     {
         public LoadSnapshotResult(SelectedSnapshot snapshot, long toSequenceNr)
@@ -650,7 +674,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Instructs a snapshot store to save a snapshot.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class SaveSnapshot : ISnapshotRequest, IEquatable<SaveSnapshot>
     {
         public SaveSnapshot(SnapshotMetadata metadata, object snapshot)
@@ -695,7 +721,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Instructs a snapshot store to delete a snapshot.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class DeleteSnapshot : ISnapshotRequest, IEquatable<DeleteSnapshot>
     {
         public DeleteSnapshot(SnapshotMetadata metadata)
@@ -735,7 +763,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Instructs a snapshot store to delete all snapshots that match provided criteria.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class DeleteSnapshots : ISnapshotRequest, IEquatable<DeleteSnapshots>
     {
         public DeleteSnapshots(string persistenceId, SnapshotSelectionCriteria criteria)

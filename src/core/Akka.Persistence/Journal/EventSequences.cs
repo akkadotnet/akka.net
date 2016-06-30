@@ -18,7 +18,9 @@ namespace Akka.Persistence.Journal
 
     public interface IEmptyEventSequence : IEventSequence { }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class EmptyEventSequence : IEmptyEventSequence, IEquatable<IEventSequence>
     {
         public static readonly EmptyEventSequence Instance = new EmptyEventSequence();
@@ -38,7 +40,9 @@ namespace Akka.Persistence.Journal
         }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public class EventSequence<T> : IEventSequence, IEquatable<IEventSequence>
     {
         private readonly IList<object> _events;
@@ -60,7 +64,9 @@ namespace Akka.Persistence.Journal
         }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public struct SingleEventSequence : IEventSequence, IEquatable<IEventSequence>
     {
         private readonly object[] _events;

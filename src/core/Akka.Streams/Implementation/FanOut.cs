@@ -289,7 +289,9 @@ namespace Akka.Streams.Implementation
     /// </summary>
     internal static class FanOut
     {
+#if SERIALIZATION
         [Serializable]
+#endif
         public struct SubstreamRequestMore : INoSerializationVerificationNeeded
         {
             public readonly int Id;
@@ -302,7 +304,9 @@ namespace Akka.Streams.Implementation
             }
         }
 
+#if SERIALIZATION
         [Serializable]
+#endif
         public struct SubstreamCancel : INoSerializationVerificationNeeded
         {
             public readonly int Id;
@@ -313,7 +317,9 @@ namespace Akka.Streams.Implementation
             }
         }
 
+#if SERIALIZATION
         [Serializable]
+#endif
         public struct SubstreamSubscribePending : INoSerializationVerificationNeeded
         {
             public readonly int Id;
@@ -342,7 +348,9 @@ namespace Akka.Streams.Implementation
             public override string ToString() => "SubstreamSubscription" + GetHashCode();
         }
 
+#if SERIALIZATION
         [Serializable]
+#endif
         public struct ExposedPublishers<T> : INoSerializationVerificationNeeded
         {
             public readonly ImmutableList<ActorPublisher<T>> Publishers;

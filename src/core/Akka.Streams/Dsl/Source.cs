@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl.Internal;
@@ -427,7 +428,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Source<T, IActorRef> ActorPublisher<T>(Props props)
         {
-            if (!typeof(Actors.ActorPublisher<T>).IsAssignableFrom(props.Type))
+            if (!typeof(Actors.ActorPublisher<T>).GetTypeInfo().IsAssignableFrom(props.Type))
                 throw new ArgumentException("Actor must be ActorPublisher");
 
             return new Source<T, IActorRef>(new ActorPublisherSource<T>(props, DefaultAttributes.ActorPublisherSource, Shape<T>("ActorPublisherSource")));

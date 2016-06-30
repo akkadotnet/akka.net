@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Pattern;
@@ -17,14 +18,18 @@ using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
 {
+#if SERIALIZATION
     [Serializable]
+#endif
     internal sealed class SubscribePending
     {
         public static readonly SubscribePending Instance = new SubscribePending();
         private SubscribePending() { }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     internal sealed class RequestMore
     {
         public readonly IActorSubscription Subscription;
@@ -37,7 +42,9 @@ namespace Akka.Streams.Implementation
         }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     internal sealed class Cancel
     {
         public readonly IActorSubscription Subscription;
@@ -48,7 +55,9 @@ namespace Akka.Streams.Implementation
         }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     internal sealed class ExposedPublisher
     {
         public readonly IActorPublisher Publisher;
@@ -59,11 +68,15 @@ namespace Akka.Streams.Implementation
         }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public class NormalShutdownException : IllegalStateException
     {
         public NormalShutdownException(string message) : base(message) { }
+#if SERIALIZATION
         protected NormalShutdownException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+#endif
     }
 
     internal interface IActorPublisher : IUntypedPublisher
@@ -181,7 +194,7 @@ namespace Akka.Streams.Implementation
     {
         internal static IActorSubscription Create(IActorRef implementor, IUntypedSubscriber subscriber)
         {
-            var subscribedType = subscriber.GetType().GetGenericArguments().First(); // assumes type is UntypedSubscriberWrapper
+            var subscribedType = subscriber.GetType().GetTypeInfo().GetGenericArguments().First(); // assumes type is UntypedSubscriberWrapper
             var subscriptionType = typeof(ActorSubscription<>).MakeGenericType(subscribedType);
             return (IActorSubscription) Activator.CreateInstance(subscriptionType, implementor, UntypedSubscriber.ToTyped(subscriber));
         }

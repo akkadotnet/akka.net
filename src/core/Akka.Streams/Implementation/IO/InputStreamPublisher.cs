@@ -63,7 +63,7 @@ namespace Akka.Streams.Implementation.IO
             base.PostStop();
             try
             {
-                _inputstream?.Close();
+                _inputstream?.Dispose();
             }
             catch (Exception ex)
             {

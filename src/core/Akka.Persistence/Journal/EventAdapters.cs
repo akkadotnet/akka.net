@@ -9,6 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Configuration.Hocon;
@@ -86,7 +87,9 @@ namespace Akka.Persistence.Journal
         IEventSequence FromJournal(object evt, string manifest);
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public class IdentityEventAdapter : IEventAdapter
     {
         public static readonly IdentityEventAdapter Instance = new IdentityEventAdapter();
@@ -109,7 +112,9 @@ namespace Akka.Persistence.Journal
         }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     internal class NoopWriteEventAdapter : IEventAdapter
     {
         private readonly IReadEventAdapter _readEventAdapter;
@@ -137,7 +142,9 @@ namespace Akka.Persistence.Journal
         }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     internal class NoopReadEventAdapter : IEventAdapter
     {
         private readonly IWriteEventAdapter _writeEventAdapter;
@@ -165,7 +172,9 @@ namespace Akka.Persistence.Journal
         }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class CombinedReadEventAdapter : IEventAdapter
     {
         private static readonly Exception OnlyReadSideException = new IllegalStateException(
@@ -267,7 +276,7 @@ namespace Akka.Persistence.Journal
             return bindings.Aggregate(new List<KeyValuePair<Type, IEventAdapter>>(bindings.Count), (buf, ca) =>
             {
 
-                var idx = IndexWhere(buf, x => x.Key.IsAssignableFrom(ca.Key));
+                var idx = IndexWhere(buf, x => x.Key.GetTypeInfo().IsAssignableFrom(ca.Key));
 
                 if (idx == -1)
                     buf.Add(ca);
@@ -305,7 +314,7 @@ namespace Akka.Persistence.Journal
                 return adapter;
 
             // bindings are ordered from most specific to least specific
-            var pair = _bindings.FirstOrDefault(kv => kv.Key.IsAssignableFrom(type));
+            var pair = _bindings.FirstOrDefault(kv => kv.Key.GetTypeInfo().IsAssignableFrom(type));
             var value = !pair.Equals(default(KeyValuePair<Type, IEventAdapter>)) ? pair.Value : IdentityEventAdapter.Instance;
 
             adapter = _map.GetOrAdd(type, value);
@@ -315,11 +324,11 @@ namespace Akka.Persistence.Journal
         private static IEventAdapter InstantiateAdapter(string qualifiedName, ExtendedActorSystem system)
         {
             var type = Type.GetType(qualifiedName, true);
-            if (typeof(IEventAdapter).IsAssignableFrom(type))
+            if (typeof(IEventAdapter).GetTypeInfo().IsAssignableFrom(type))
                 return Instantiate<IEventAdapter>(qualifiedName, system);
-            if (typeof (IWriteEventAdapter).IsAssignableFrom(type))
+            if (typeof (IWriteEventAdapter).GetTypeInfo().IsAssignableFrom(type))
                 return new NoopReadEventAdapter(Instantiate<IWriteEventAdapter>(qualifiedName, system));
-            if (typeof (IReadEventAdapter).IsAssignableFrom(type))
+            if (typeof (IReadEventAdapter).GetTypeInfo().IsAssignableFrom(type))
                 return new NoopWriteEventAdapter(Instantiate<IReadEventAdapter>(qualifiedName, system));
             throw new ArgumentException("Configured " + qualifiedName + " does not implement any EventAdapter interface!");
         }
@@ -327,7 +336,7 @@ namespace Akka.Persistence.Journal
         private static T Instantiate<T>(string qualifiedName, ExtendedActorSystem system)
         {
             var type = Type.GetType(qualifiedName);
-            if (!typeof(T).IsAssignableFrom(type))
+            if (!typeof(T).GetTypeInfo().IsAssignableFrom(type))
                 throw new ArgumentException(string.Format("Couldn't create instance of [{0}] from provided qualified type name [{1}], because it's not assignable from it",
                     typeof(T), qualifiedName));
 

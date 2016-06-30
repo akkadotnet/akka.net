@@ -11,6 +11,7 @@ using System.Linq;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Util.Internal;
+using System.Reflection;
 
 namespace Akka.Serialization
 {
@@ -155,12 +156,12 @@ namespace Akka.Serialization
             foreach (var serializerType in _serializerMap)
             {
                 //force deferral of the base "object" serializer until all other higher-level types have been evaluated
-                if (serializerType.Key.IsAssignableFrom(type) && serializerType.Key != _objectType)
+                if (serializerType.Key.GetTypeInfo().IsAssignableFrom(type) && serializerType.Key != _objectType)
                     return serializerType.Value;
             }
 
             //do a final check for the "object" serializer
-            if (_serializerMap.ContainsKey(_objectType) && _objectType.IsAssignableFrom(type))
+            if (_serializerMap.ContainsKey(_objectType) && _objectType.GetTypeInfo().IsAssignableFrom(type))
                 return _serializerMap[_objectType];
 
             throw new Exception("Serializer not found for type " + objectType.Name);

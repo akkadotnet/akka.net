@@ -14,6 +14,7 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Util;
 using Akka.Util.Internal;
+using System.Reflection;
 
 namespace Akka.Actor
 {
@@ -749,7 +750,7 @@ namespace Akka.Actor
                 foreach (var kvp in Pairs)
                 {
                     //emulate if (cause is SomeType)
-                    if (kvp.Key.IsInstanceOfType(cause))
+                    if (kvp.Key.GetTypeInfo().IsInstanceOfType(cause))
                     {
                         return kvp.Value;
                     }

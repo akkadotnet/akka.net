@@ -13,6 +13,7 @@ using System.Threading;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Configuration;
+using System.Reflection;
 
 namespace Akka.Event
 {
@@ -39,7 +40,7 @@ namespace Akka.Event
         /// <returns><c>true</c> if the <paramref name="child" /> classifier is a subclass of <paramref name="parent" />; otherwise <c>false</c>.</returns>
         protected override bool IsSubClassification(Type parent, Type child)
         {
-            return parent.IsAssignableFrom(child);
+            return parent.GetTypeInfo().IsAssignableFrom(child);
         }
 
         /// <summary>
@@ -60,7 +61,7 @@ namespace Akka.Event
         /// <returns><c>true</c> if the classification succeeds; otherwise <c>false</c>.</returns>
         protected override bool Classify(object @event, Type classifier)
         {
-            return classifier.IsAssignableFrom(GetClassifier(@event));
+            return classifier.GetTypeInfo().IsAssignableFrom(GetClassifier(@event));
         }
 
         /// <summary>
