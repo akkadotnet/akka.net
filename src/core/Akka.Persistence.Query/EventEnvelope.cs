@@ -13,7 +13,9 @@ namespace Akka.Persistence.Query
     /// Event wrapper adding meta data for the events in the result stream of
     /// <see cref="IEventsByTagQuery"/> query, or similar queries.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class EventEnvelope : IEquatable<EventEnvelope>
     {
         public readonly long Offset;

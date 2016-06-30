@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Reflection;
 
 namespace Akka.Persistence.Sql.Common
 {
@@ -13,7 +14,7 @@ namespace Akka.Persistence.Sql.Common
     {
         public static string QualifiedTypeName(this Type type)
         {
-            return type.FullName + ", " + type.Assembly.GetName().Name;
+            return type.FullName + ", " + type.GetTypeInfo().Assembly.GetName().Name;
         }
     }
 }

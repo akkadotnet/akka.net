@@ -20,9 +20,11 @@ namespace Akka.Streams
         {
         }
 
+#if SERIALIZATION
         protected StreamTcpException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
 
     public class BindFailedException : StreamTcpException
@@ -33,9 +35,11 @@ namespace Akka.Streams
         {
         }
 
+#if SERIALIZATION
         protected BindFailedException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
 
     public class ConnectionException : StreamTcpException
@@ -48,8 +52,10 @@ namespace Akka.Streams
         {
         }
 
+#if SERIALIZATION
         protected ConnectionException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
 }

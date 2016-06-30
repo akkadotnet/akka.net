@@ -13,7 +13,9 @@ using Akka.Streams.Util;
 
 namespace Akka.Streams.Implementation
 {
+#if SERIALIZATION
     [Serializable]
+#endif
     public class NothingToReadException : Exception
     {
         public static readonly NothingToReadException Instance = new NothingToReadException();
@@ -22,10 +24,12 @@ namespace Akka.Streams.Implementation
         {
         }
 
+#if SERIALIZATION
         protected NothingToReadException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
+#endif
     }
 
     public interface ICursors

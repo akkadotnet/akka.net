@@ -26,7 +26,9 @@ namespace Akka.Persistence
     /// </summary>
     public interface IJournalResponse : IJournalMessage { }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class DeleteMessagesSuccess : IJournalResponse, IEquatable<DeleteMessagesSuccess>
     {
         public DeleteMessagesSuccess(long toSequenceNr)
@@ -63,7 +65,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Reply message to failed <see cref="DeleteMessages"/> request.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class DeleteMessagesFailure : IJournalResponse, IEquatable<DeleteMessagesFailure>
     {
         public DeleteMessagesFailure(Exception cause, long toSequenceNr)
@@ -108,7 +112,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Request to delete all persistent messages with sequence numbers up to `toSequenceNr` (inclusive).  
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class DeleteMessagesTo : IJournalRequest, IEquatable<DeleteMessagesTo>
     {
         public DeleteMessagesTo(string persistenceId, long toSequenceNr, IActorRef persistentActor)
@@ -156,7 +162,9 @@ namespace Akka.Persistence
         }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class WriteMessages : IJournalRequest, IEquatable<WriteMessages>
     {
         public WriteMessages(IEnumerable<IPersistentEnvelope> messages, IActorRef persistentActor,
@@ -207,7 +215,9 @@ namespace Akka.Persistence
     /// Reply message to a successful <see cref="WriteMessages"/> request. This reply is sent 
     /// to the requestor before all subsequent <see cref="WriteMessageSuccess"/> replies.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public class WriteMessagesSuccessful : IJournalResponse, IEquatable<WriteMessagesSuccessful>
     {
         public static readonly WriteMessagesSuccessful Instance = new WriteMessagesSuccessful();
@@ -236,7 +246,9 @@ namespace Akka.Persistence
     /// Reply message to a failed <see cref="WriteMessages"/> request. This reply is sent 
     /// to the requestor before all subsequent <see cref="WriteMessageFailure"/> replies.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class WriteMessagesFailed : IJournalResponse, IEquatable<WriteMessagesFailed>
     {
         public WriteMessagesFailed(Exception cause)
@@ -277,7 +289,9 @@ namespace Akka.Persistence
     /// Reply message to a successful <see cref="WriteMessages"/> request. For each contained 
     /// <see cref="IPersistentRepresentation"/> message in the request, a separate reply is sent to the requestor.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class WriteMessageSuccess : IJournalResponse, IEquatable<WriteMessageSuccess>
     {
         public WriteMessageSuccess(IPersistentRepresentation persistent, int actorInstanceId)
@@ -325,7 +339,9 @@ namespace Akka.Persistence
     /// before it was stored, e.g. because it could not be serialized. For each contained 
     /// <see cref="IPersistentRepresentation"/> message in the request, a separate reply is sent to the requestor.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class WriteMessageRejected : IJournalResponse, IEquatable<WriteMessageRejected>
     {
         public WriteMessageRejected(IPersistentRepresentation persistent, Exception cause, int actorInstanceId)
@@ -386,7 +402,9 @@ namespace Akka.Persistence
     /// Reply message to a failed <see cref="WriteMessages"/> request. For each contained 
     /// <see cref="IPersistentRepresentation"/> message in the request, a separate reply is sent to the requestor.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class WriteMessageFailure : IJournalResponse, IEquatable<WriteMessageFailure>
     {
         public WriteMessageFailure(IPersistentRepresentation persistent, Exception cause, int actorInstanceId)
@@ -446,7 +464,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Reply message to a <see cref="WriteMessages"/> with a non-persistent message.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class LoopMessageSuccess : IJournalResponse, IEquatable<LoopMessageSuccess>
     {
         public LoopMessageSuccess(object message, int actorInstanceId)
@@ -492,7 +512,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Request to replay messages to the <see cref="PersistentActor"/>.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class ReplayMessages : IJournalRequest, IEquatable<ReplayMessages>
     {
         public ReplayMessages(long fromSequenceNr, long toSequenceNr, long max, string persistenceId,
@@ -564,7 +586,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Reply message to a <see cref="ReplayMessages"/> request. A separate reply is sent to the requestor for each replayed message.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class ReplayedMessage : IJournalResponse, IEquatable<ReplayedMessage>
     {
         public ReplayedMessage(IPersistentRepresentation persistent)
@@ -605,7 +629,9 @@ namespace Akka.Persistence
     /// It includes the highest stored sequence number of a given persistent actor.
     /// Note that the replay might have been limited to a lower sequence number.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public class RecoverySuccess : IJournalResponse, IEquatable<RecoverySuccess>
     {
         public RecoverySuccess(long highestSequenceNr)
@@ -639,7 +665,9 @@ namespace Akka.Persistence
         }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class ReplayMessagesFailure : IJournalResponse, IEquatable<ReplayMessagesFailure>
     {
         public ReplayMessagesFailure(Exception cause)
@@ -676,7 +704,9 @@ namespace Akka.Persistence
         }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class ReadHighestSequenceNr : IEquatable<ReadHighestSequenceNr>
     {
         public ReadHighestSequenceNr(long fromSequenceNr, string persistenceId, IActorRef persistentActor)
@@ -724,7 +754,9 @@ namespace Akka.Persistence
         }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class ReadHighestSequenceNrSuccess : IEquatable<ReadHighestSequenceNrSuccess>, IComparable<ReadHighestSequenceNrSuccess>
     {
 
@@ -765,7 +797,9 @@ namespace Akka.Persistence
         }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class ReadHighestSequenceNrFailure : IEquatable<ReadHighestSequenceNrFailure>
     {
         public ReadHighestSequenceNrFailure(Exception cause)

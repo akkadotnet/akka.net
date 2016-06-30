@@ -134,7 +134,9 @@ namespace Akka.Streams
     /// has been terminated without being notified by an onError, onComplete or cancel signal. This usually happens
     /// when an ActorSystem is shut down while stream processing actors are still running.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public class AbruptTerminationException : Exception
     {
         public readonly IActorRef Actor;
@@ -145,10 +147,12 @@ namespace Akka.Streams
             Actor = actor;
         }
 
+#if SERIALIZATION
         protected AbruptTerminationException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
             Actor = (IActorRef)info.GetValue("Actor", typeof(IActorRef));
         }
+#endif
     }
 
     /// <summary>
@@ -158,7 +162,9 @@ namespace Akka.Streams
     {
         public MaterializationException(string message, Exception innerException) : base(message, innerException) { }
 
+#if SERIALIZATION
         protected MaterializationException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+#endif
     }
 
     /// <summary>

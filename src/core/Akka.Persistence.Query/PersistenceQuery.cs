@@ -55,13 +55,13 @@ namespace Akka.Persistence.Query
 
         private IReadJournalProvider CreateType(Type pluginType, object[] parameters)
         {
-            var ctor = pluginType.GetConstructor(new Type[] { typeof(ExtendedActorSystem), typeof(Config) });
+            var ctor = pluginType.GetTypeInfo().GetConstructor(new Type[] { typeof(ExtendedActorSystem), typeof(Config) });
             if (ctor != null) return (IReadJournalProvider)ctor.Invoke(parameters);
 
-            ctor = pluginType.GetConstructor(new Type[] { typeof(ExtendedActorSystem) });
+            ctor = pluginType.GetTypeInfo().GetConstructor(new Type[] { typeof(ExtendedActorSystem) });
             if (ctor != null) return (IReadJournalProvider)ctor.Invoke(new[] { parameters[0] });
 
-            ctor = pluginType.GetConstructor(new Type[0]);
+            ctor = pluginType.GetTypeInfo().GetConstructor(new Type[0]);
             if (ctor != null) return (IReadJournalProvider)ctor.Invoke(new object[0]);
 
             throw new ArgumentException($"Unable to create read journal plugin instance type {pluginType}!");
@@ -69,7 +69,7 @@ namespace Akka.Persistence.Query
 
         public static Config GetDefaultConfig<TJournal>()
         {
-            var defaultConfigMethod = typeof(TJournal).GetMethod("DefaultConfiguration", BindingFlags.Public | BindingFlags.Static);
+            var defaultConfigMethod = typeof(TJournal).GetTypeInfo().GetMethod("DefaultConfiguration", BindingFlags.Public | BindingFlags.Static);
             return defaultConfigMethod?.Invoke(null, null) as Config;
         }
     }

@@ -29,7 +29,7 @@ namespace Akka.Streams.Implementation
         private sealed class ActorMaterializerSession : MaterializerSession
         {
             private static readonly MethodInfo ProcessorForMethod =
-                typeof(ActorMaterializerSession).GetMethod("ProcessorFor",
+                typeof(ActorMaterializerSession).GetTypeInfo().GetMethod("ProcessorFor",
                     BindingFlags.NonPublic | BindingFlags.Instance);
             private readonly ActorMaterializerImpl _materializer;
             private readonly Func<GraphInterpreterShell, IActorRef> _subflowFuser;
@@ -68,7 +68,7 @@ namespace Akka.Streams.Implementation
                     // FIXME: Remove this, only stream-of-stream ops need it
                     var stage = (IStageModule) atomic;
                     // assumes BaseType is StageModule<>
-                    var methodInfo = ProcessorForMethod.MakeGenericMethod(atomic.GetType().BaseType.GenericTypeArguments);
+                    var methodInfo = ProcessorForMethod.MakeGenericMethod(atomic.GetType().GetTypeInfo().BaseType.GenericTypeArguments);
                     var parameters = new object[]
                     {stage, effectiveAttributes, _materializer.EffectiveSettings(effectiveAttributes), null};
                     var processor = methodInfo.Invoke(this, parameters);
@@ -121,7 +121,7 @@ namespace Akka.Streams.Implementation
                 while (inletsEnumerator.MoveNext())
                 {
                     var inlet = inletsEnumerator.Current;
-                    var elementType = inlet.GetType().GetGenericArguments().First();
+                    var elementType = inlet.GetType().GetTypeInfo().GetGenericArguments().First();
                     var subscriber = typeof(ActorGraphInterpreter.BoundarySubscriber<>).Instantiate(elementType, impl, shell, i);
                     AssignPort(inlet, UntypedSubscriber.FromTyped(subscriber));
                     i++;
@@ -132,7 +132,7 @@ namespace Akka.Streams.Implementation
                 while (outletsEnumerator.MoveNext())
                 {
                     var outlet = outletsEnumerator.Current;
-                    var elementType = outlet.GetType().GetGenericArguments().First();
+                    var elementType = outlet.GetType().GetTypeInfo().GetGenericArguments().First();
                     var publisher = typeof(ActorGraphInterpreter.BoundaryPublisher<>).Instantiate(elementType, impl, shell, i);
                     var message = new ActorGraphInterpreter.ExposedPublisher(shell, i, (IActorPublisher)publisher);
                     impl.Tell(message);
@@ -424,7 +424,7 @@ namespace Akka.Streams.Implementation
                 var groupBy = (IGroupBy) op;
                 result = GroupByProcessorImpl<TIn>.Props(settings, groupBy.MaxSubstreams, groupBy.Extractor);
             }
-            else if (op.GetType().IsGenericType && op.GetType().GetGenericTypeDefinition() == typeof(DirectProcessor<,>))
+            else if (op.GetType().GetTypeInfo().IsGenericType && op.GetType().GetGenericTypeDefinition() == typeof(DirectProcessor<,>))
                 throw new ArgumentException("DirectProcessor cannot end up in ActorProcessorFactory");
             else
                 throw new ArgumentException($"StageModule type {op.GetType()} is not supported");

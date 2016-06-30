@@ -15,6 +15,7 @@ using Akka.Event;
 using Akka.Serialization;
 using Akka.Util;
 using Assert = System.Diagnostics.Debug;
+using System.Reflection;
 
 namespace Akka.Actor
 {
@@ -129,7 +130,7 @@ namespace Akka.Actor
             if (System.Mailboxes.ProducesMessageQueue(mailboxType.GetType()) && System.Mailboxes.HasRequiredType(actorClass))
             {
                 var req = System.Mailboxes.GetRequiredType(actorClass);
-                if (req.IsInstanceOfType(mailbox.MessageQueue)) createMessage = new Create(null); //success
+                if (req.GetTypeInfo().IsInstanceOfType(mailbox.MessageQueue)) createMessage = new Create(null); //success
                 else
                 {
                     var gotType = mailbox.MessageQueue == null ? "null" : mailbox.MessageQueue.GetType().FullName;

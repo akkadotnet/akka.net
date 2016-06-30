@@ -10,6 +10,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Akka.Event;
 
 namespace Akka.Actor
@@ -69,7 +70,7 @@ namespace Akka.Actor
         /// </summary>
         public virtual bool CanBeAppliedTo(Type actorType)
         {
-            return typeof(TActor).IsAssignableFrom(actorType);
+            return typeof(TActor).GetTypeInfo().IsAssignableFrom(actorType);
         }
 
         void IActorProducerPlugin.AfterIncarnated(ActorBase actor, IActorContext context)

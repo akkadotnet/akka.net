@@ -563,7 +563,9 @@ namespace Akka.IO
         }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public abstract partial class CompactByteString : ByteString
     {
         public override bool IsCompact()

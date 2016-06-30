@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Reflection;
 using Akka.Actor;
 
 namespace Akka.Serialization
@@ -101,7 +102,7 @@ namespace Akka.Serialization
         /// <returns></returns>
         protected static string TypeQualifiedNameForManifest(Type type)
         {
-            return type == null ? string.Empty : string.Format("{0},{1}", type.FullName, type.Assembly.GetName().Name);
+            return type == null ? string.Empty : string.Format("{0},{1}", type.FullName, type.GetTypeInfo().Assembly.GetName().Name);
         }
     }
 

@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
@@ -23,7 +24,7 @@ namespace Akka.Tests.Event
     {
         protected override bool IsSubClassification(Type parent, Type child)
         {
-            return child.IsAssignableFrom(parent);
+            return child.GetTypeInfo().IsAssignableFrom(parent);
         }
 
         protected override void Publish(object evt, IActorRef subscriber)
@@ -33,7 +34,7 @@ namespace Akka.Tests.Event
 
         protected override bool Classify(object evt, Type classifier)
         {
-            return evt.GetType().IsAssignableFrom(classifier);
+            return evt.GetType().GetTypeInfo().IsAssignableFrom(classifier);
         }
 
         protected override Type GetClassifier(object @event)

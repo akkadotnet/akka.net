@@ -12,6 +12,7 @@ using Akka.Configuration;
 using Akka.Routing;
 using Akka.Serialization;
 using Google.ProtocolBuffers;
+using System.Reflection;
 
 namespace Akka.Remote.Serialization
 {
@@ -96,7 +97,7 @@ namespace Akka.Remote.Serialization
         private PropsData GetPropsData(Props props)
         {
             var builder = PropsData.CreateBuilder()
-                .SetClazz(props.Type.AssemblyQualifiedName)
+                .SetClazz(props.Type.GetTypeInfo().AssemblyQualifiedName)
                 .SetDeploy(GetDeployData(props.Deploy));
 
             foreach (object arg in props.Arguments)

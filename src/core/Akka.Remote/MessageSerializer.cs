@@ -9,6 +9,7 @@ using System;
 using Akka.Actor;
 using Akka.Serialization;
 using Google.ProtocolBuffers;
+using System.Reflection;
 
 namespace Akka.Remote
 {
@@ -58,7 +59,7 @@ namespace Akka.Remote
             else
             {
                 if (serializer.IncludeManifest)
-                    messageBuilder.SetMessageManifest(ByteString.CopyFromUtf8(message.GetType().AssemblyQualifiedName));
+                    messageBuilder.SetMessageManifest(ByteString.CopyFromUtf8(message.GetType().GetTypeInfo().AssemblyQualifiedName));
             }
 
             return messageBuilder.Build();

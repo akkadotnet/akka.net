@@ -75,7 +75,9 @@ namespace Akka.Persistence
     /// Message should be sent after <see cref="AtLeastOnceDeliverySemantic.WarnAfterNumberOfUnconfirmedAttempts" />
     /// limit will is reached.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class UnconfirmedWarning : IEquatable<UnconfirmedWarning>
     {
         public readonly UnconfirmedDelivery[] UnconfirmedDeliveries;
@@ -118,7 +120,9 @@ namespace Akka.Persistence
     /// It's included inside <see cref="UnconfirmedWarning" /> and <see cref="AtLeastOnceDeliverySnapshot" />.
     /// <see cref="AtLeastOnceDeliverySemantic.AfterNumberOfUnconfirmedAttempts" />
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class UnconfirmedDelivery : IEquatable<UnconfirmedDelivery>
     {
         public readonly long DeliveryId;
@@ -182,9 +186,11 @@ namespace Akka.Persistence
         {
         }
 
+#if SERIALIZATION
         protected MaxUnconfirmedMessagesExceededException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
 
     #endregion
@@ -192,7 +198,9 @@ namespace Akka.Persistence
     public class AtLeastOnceDeliverySemantic
     {
 
+#if SERIALIZATION
         [Serializable]
+#endif
         internal sealed class Delivery : IEquatable<Delivery>
         {
             public readonly int Attempt;
@@ -249,7 +257,9 @@ namespace Akka.Persistence
             }
         }
 
+#if SERIALIZATION
         [Serializable]
+#endif
         internal sealed class RedeliveryTick
         {
             public static readonly RedeliveryTick Instance = new RedeliveryTick();

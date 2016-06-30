@@ -88,7 +88,7 @@ namespace Akka.Tests.Actor
                 {
                     Sys.ActorOf(Props.Empty, name);
                 });
-            Assert.Contains(expectedExceptionMessageSubstring, exception.Message, StringComparison.InvariantCultureIgnoreCase);
+            Assert.Contains(expectedExceptionMessageSubstring, exception.Message, StringComparison.OrdinalIgnoreCase);
         }
 
         private class ActorWithDuplicateChild : ActorBase

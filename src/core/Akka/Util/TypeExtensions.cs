@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Reflection;
 
 namespace Akka.Util
 {
@@ -35,7 +36,7 @@ namespace Akka.Util
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         public static bool Implements(this Type type, Type moreGeneralType)
         {
-            return moreGeneralType.IsAssignableFrom(type);
+            return moreGeneralType.GetTypeInfo().IsAssignableFrom(type);
         }
     }
 }

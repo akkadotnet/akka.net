@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Configuration;
 using System.Data.Common;
 using System.Linq;
 using System.Threading;
@@ -404,10 +403,13 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected virtual string GetConnectionString()
         {
             var connectionString = _settings.ConnectionString;
+
+#if CONFIGURATION
             if (string.IsNullOrEmpty(connectionString))
             {
-                connectionString = ConfigurationManager.ConnectionStrings[_settings.ConnectionStringName].ConnectionString;
+                connectionString = System.Configuration.ConfigurationManager.ConnectionStrings[_settings.ConnectionStringName].ConnectionString;
             }
+#endif
 
             return connectionString;
         }

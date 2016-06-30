@@ -23,9 +23,11 @@ namespace Akka.Streams.Implementation
         {
         }
 
+#if SERIALIZATION
         protected SubscriptionTimeoutException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
