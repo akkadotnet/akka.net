@@ -1,13 +1,14 @@
-﻿
-using System;
+﻿using System;
 using Akka.Configuration;
+using Akka.Persistence.Query;
+using Akka.Persistence.Query.Sql;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.Query.Sql.Tests
+namespace Akka.Persistence.Sql.TestKit
 {
-    public class DefaultConfigSpec : TestKit.Xunit2.TestKit
+    public class DefaultConfigSpec : Akka.TestKit.Xunit2.TestKit
     {
         public DefaultConfigSpec(ITestOutputHelper output) : base(Config.Empty, output: output)
         {

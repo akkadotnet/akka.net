@@ -376,6 +376,7 @@ module Nuget =
         | "Akka.Persistence.TestKit" -> ["Akka.Persistence", preReleaseVersion; "Akka.TestKit.Xunit2", release.NugetVersion]
         | "Akka.Persistence.Query" -> ["Akka.Persistence", preReleaseVersion; "Akka.Streams", preReleaseVersion]
         | "Akka.Persistence.Query.Sql" -> ["Akka.Persistence.Query", preReleaseVersion; "Akka.Persistence.Sql.Common", preReleaseVersion]
+        | "Akka.Persistence.Sql.TestKit" -> ["Akka.Persistence.Query.Sql", preReleaseVersion; "Akka.Persistence.TestKit", preReleaseVersion; "Akka.Streams.TestKit", preReleaseVersion]
         | persistence when (persistence.Contains("Sql") && not (persistence.Equals("Akka.Persistence.Sql.Common"))) -> ["Akka.Persistence.Sql.Common", preReleaseVersion]
         | persistence when (persistence.StartsWith("Akka.Persistence.")) -> ["Akka.Persistence", preReleaseVersion]
         | "Akka.DI.TestKit" -> ["Akka.DI.Core", release.NugetVersion; "Akka.TestKit.Xunit2", release.NugetVersion]

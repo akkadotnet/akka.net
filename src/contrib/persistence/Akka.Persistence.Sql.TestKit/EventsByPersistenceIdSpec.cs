@@ -8,6 +8,8 @@
 using System;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Persistence.Query;
+using Akka.Persistence.Query.Sql;
 using Akka.Streams;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -15,9 +17,9 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.Query.Sql.Tests
+namespace Akka.Persistence.Sql.TestKit
 {
-    public abstract class EventsByPersistenceIdSpec : TestKit.Xunit2.TestKit
+    public abstract class EventsByPersistenceIdSpec : Akka.TestKit.Xunit2.TestKit
     {
         private readonly ActorMaterializer _materializer;
         private readonly SqlReadJournal _queries;
@@ -220,7 +222,7 @@ namespace Akka.Persistence.Query.Sql.Tests
 
         private IActorRef SetupEmpty(string persistenceId)
         {
-            return Sys.ActorOf(Tests.TestActor.Props(persistenceId));
+            return Sys.ActorOf(TestKit.TestActor.Props(persistenceId));
         }
 
         protected override void Dispose(bool disposing)

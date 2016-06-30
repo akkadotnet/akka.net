@@ -100,21 +100,17 @@
       <Project>{7dbd5c17-5e9d-40c4-9201-d092751532a7}</Project>
       <Name>Akka.TestKit.Xunit2</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Akka.Persistence.Query.Sql.Tests\Akka.Persistence.Query.Sql.Tests.csproj">
-      <Project>{f09ad64e-1c7a-458d-bec8-fb99046e3f4e}</Project>
-      <Name>Akka.Persistence.Query.Sql.Tests</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Akka.Persistence.Query.Sql\Akka.Persistence.Query.Sql.csproj">
       <Project>{3cbd3880-0655-44cc-ad81-77e8cadfcc3e}</Project>
       <Name>Akka.Persistence.Query.Sql</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Akka.Persistence.Sql.Common.TestKit\Akka.Persistence.Sql.Common.TestKit.csproj">
-      <Project>{e7bc4f35-b9fb-49cb-b12c-cd00f6a08ea2}</Project>
-      <Name>Akka.Persistence.Sql.Common.TestKit</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj">
       <Project>{3b9e6211-9488-4db5-b714-24248693b38f}</Project>
       <Name>Akka.Persistence.Sql.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka.Persistence.Sql.TestKit\Akka.Persistence.Sql.TestKit.csproj">
+      <Project>{14502a16-2b6f-4728-8a98-ed5af45fc515}</Project>
+      <Name>Akka.Persistence.Sql.TestKit</Name>
     </ProjectReference>
     <ProjectReference Include="..\Akka.Persistence.Sqlite\Akka.Persistence.Sqlite.csproj">
       <Project>{453efd22-7c53-4887-9dbf-fcfc9172e909}</Project>

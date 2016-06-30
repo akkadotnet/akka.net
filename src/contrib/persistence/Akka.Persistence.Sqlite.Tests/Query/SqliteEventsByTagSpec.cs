@@ -7,7 +7,7 @@
 
 using Akka.Configuration;
 using Akka.Persistence.Query.Sql;
-using Akka.Persistence.Query.Sql.Tests;
+using Akka.Persistence.Sql.TestKit;
 using Akka.Util.Internal;
 using Xunit.Abstractions;
 
@@ -21,7 +21,7 @@ namespace Akka.Persistence.Sqlite.Tests.Query
             akka.persistence.journal.plugin = ""akka.persistence.journal.sqlite""
             akka.persistence.journal.sqlite {{
                 event-adapters {{
-                  color-tagger  = ""Akka.Persistence.Query.Sql.Tests.ColorTagger, Akka.Persistence.Query.Sql.Tests""
+                  color-tagger  = ""Akka.Persistence.Sql.TestKit.ColorTagger, Akka.Persistence.Sql.TestKit""
                 }}
                 event-adapter-bindings = {{
                   ""System.String"" = color-tagger

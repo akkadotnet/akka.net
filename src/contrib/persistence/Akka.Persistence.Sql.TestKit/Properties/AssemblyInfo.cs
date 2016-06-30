@@ -1,23 +1,16 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="AssemblyInfo.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
-
-using System.Reflection;
+﻿using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Akka.Persistence.Sql.Common.TestKit")]
+[assembly: AssemblyTitle("Akka.Persistence.Sql.TestKit")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("Akka.Persistence.Sql.Common.TestKit")]
-[assembly: AssemblyCopyright("Copyright ©  2015")]
+[assembly: AssemblyProduct("Akka.Persistence.Sql.TestKit")]
+[assembly: AssemblyCopyright("Copyright ©  2016")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -27,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("e7bc4f35-b9fb-49cb-b12c-cd00f6a08ea2")]
+[assembly: Guid("14502a16-2b6f-4728-8a98-ed5af45fc515")]
 
 // Version information for an assembly consists of the following four values:
 //

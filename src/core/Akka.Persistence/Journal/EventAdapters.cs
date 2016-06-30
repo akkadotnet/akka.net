@@ -314,7 +314,7 @@ namespace Akka.Persistence.Journal
 
         private static IEventAdapter InstantiateAdapter(string qualifiedName, ExtendedActorSystem system)
         {
-            var type = Type.GetType(qualifiedName);
+            var type = Type.GetType(qualifiedName, true);
             if (typeof(IEventAdapter).IsAssignableFrom(type))
                 return Instantiate<IEventAdapter>(qualifiedName, system);
             if (typeof (IWriteEventAdapter).IsAssignableFrom(type))
