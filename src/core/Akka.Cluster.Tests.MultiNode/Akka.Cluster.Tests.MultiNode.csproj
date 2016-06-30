@@ -80,6 +80,7 @@
     <Compile Include="JoinSeedNodeSpec.cs" />
     <Compile Include="LeaderDowningNodeThatIsUnreachableSpec.cs" />
     <Compile Include="LeaderElectionSpec.cs" />
+    <Compile Include="LeaderDowningAllOtherNodesSpec.cs" />
     <Compile Include="LeaderLeavingSpec.cs" />
     <Compile Include="MembershipChangeListenerExitingSpec.cs" />
     <Compile Include="MembershipChangeListenerUpSpec.cs" />

@@ -1875,7 +1875,7 @@ namespace Akka.Cluster
         public bool ValidNodeForGossip(UniqueAddress node)
         {
             return !node.Equals(SelfUniqueAddress) && _latestGossip.HasMember(node) &&
-                    _latestGossip.ReachabilityExcludingDownedObservers.IsReachable(node);
+                    _latestGossip.ReachabilityExcludingDownedObservers.Value.IsReachable(node);
         }
 
         public void UpdateLatestGossip(Gossip newGossip)

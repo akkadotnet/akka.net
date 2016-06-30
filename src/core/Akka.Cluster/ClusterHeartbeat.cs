@@ -16,7 +16,6 @@ using Akka.Util.Internal;
 
 namespace Akka.Cluster
 {
-
     /// <summary>
     /// INTERNAL API
     /// 
@@ -24,12 +23,16 @@ namespace Akka.Cluster
     /// </summary>
     internal sealed class ClusterHeartbeatReceiver : ReceiveActor
     {
-        private readonly ClusterHeartbeatSender.HeartbeatRsp _selfHeartbeatRsp;
+        private readonly Lazy<ClusterHeartbeatSender.HeartbeatRsp> _selfHeartbeatRsp;
 
         public ClusterHeartbeatReceiver()
         {
-            _selfHeartbeatRsp = new ClusterHeartbeatSender.HeartbeatRsp(Cluster.Get(Context.System).SelfUniqueAddress);
-            Receive<ClusterHeartbeatSender.Heartbeat>(heartbeat => Sender.Tell(_selfHeartbeatRsp));
+            // Important - don't use Cluster.Get(Context.System) in constructor because that would
+            // cause deadlock. See startup sequence in ClusterDaemon.
+            _selfHeartbeatRsp = new Lazy<ClusterHeartbeatSender.HeartbeatRsp>(() =>
+                new ClusterHeartbeatSender.HeartbeatRsp(Cluster.Get(Context.System).SelfUniqueAddress));
+
+            Receive<ClusterHeartbeatSender.Heartbeat>(heartbeat => Sender.Tell(_selfHeartbeatRsp.Value));
         }
     }
 
@@ -38,52 +41,63 @@ namespace Akka.Cluster
     /// </summary>
     internal sealed class ClusterHeartbeatSender : ReceiveActor
     {
-        private readonly ICancelable _heartbeatTask;
-
-        public IFailureDetectorRegistry<Address> FailureDetector
-        {
-            get { return _cluster.FailureDetector; }
-        }
-
-        private ClusterHeartbeatSenderState _state;
-
-        private Heartbeat _selfHeartbeat;
-
-        private readonly Cluster _cluster;
-
         private readonly ILoggingAdapter _log = Context.GetLogger();
+        private readonly Cluster _cluster;
+        private readonly IFailureDetectorRegistry<Address> _failureDetector;
+        private readonly Heartbeat _selfHeartbeat;
+        private ClusterHeartbeatSenderState _state;
+        private readonly ICancelable _heartbeatTask;
 
         public ClusterHeartbeatSender()
         {
             _cluster = Cluster.Get(Context.System);
-            _selfHeartbeat = new Heartbeat(_cluster.SelfAddress);
-            _state = new ClusterHeartbeatSenderState(
-                new HeartbeatNodeRing(_cluster.SelfUniqueAddress, new[] { _cluster.SelfUniqueAddress },
-                    _cluster.Settings.MonitoredByNrOfMembers),
-                ImmutableHashSet.Create<UniqueAddress>(),
-                FailureDetector);
 
-            //start periodic heartbeat to other nodes in cluster
-            _heartbeatTask =
-            Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
-                _cluster.Settings.PeriodicTasksInitialDelay.Max(_cluster.Settings.HeartbeatInterval), 
-                _cluster.Settings.HeartbeatInterval, Self, new HeartbeatTick(), Self);
+            // the failureDetector is only updated by this actor, but read from other places
+            _failureDetector = _cluster.FailureDetector;
+
+            _selfHeartbeat = new Heartbeat(_cluster.SelfAddress);
+
+            _state = new ClusterHeartbeatSenderState(
+                ring: new HeartbeatNodeRing(
+                    _cluster.SelfUniqueAddress,
+                    ImmutableHashSet.Create(_cluster.SelfUniqueAddress),
+                    ImmutableHashSet<UniqueAddress>.Empty,
+                    _cluster.Settings.MonitoredByNrOfMembers),
+                oldReceiversNowUnreachable: ImmutableHashSet<UniqueAddress>.Empty,
+                failureDetector: _failureDetector);
+
+            // start periodic heartbeat to other nodes in cluster
+            _heartbeatTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
+                _cluster.Settings.PeriodicTasksInitialDelay.Max(_cluster.Settings.HeartbeatInterval),
+                _cluster.Settings.HeartbeatInterval,
+                Self,
+                new HeartbeatTick(),
+                Self);
+
             Initializing();
         }
 
         protected override void PreStart()
         {
-            _cluster.Subscribe(Self, new[] { typeof(ClusterEvent.IMemberEvent) });
+            _cluster.Subscribe(Self, new[] { typeof(ClusterEvent.IMemberEvent), typeof(ClusterEvent.IReachabilityEvent) });
         }
 
         protected override void PostStop()
         {
             foreach (var receiver in _state.ActiveReceivers)
             {
-                FailureDetector.Remove(receiver.Address);
+                _failureDetector.Remove(receiver.Address);
             }
             _heartbeatTask.Cancel();
             _cluster.Unsubscribe(Self);
+        }
+
+        /// <summary>
+        /// Looks up and returns the remote cluster heartbeat connection for the specific address.
+        /// </summary>
+        private ActorSelection HeartbeatReceiver(Address address)
+        {
+            return Context.ActorSelection(new RootActorPath(address) / "system" / "cluster" / "heartbeatReceiver");
         }
 
         private void Initializing()
@@ -102,32 +116,27 @@ namespace Akka.Cluster
             Receive<HeartbeatRsp>(rsp => DoHeartbeatRsp(rsp.From));
             Receive<ClusterEvent.MemberRemoved>(removed => RemoveMember(removed.Member));
             Receive<ClusterEvent.IMemberEvent>(evt => AddMember(evt.Member));
+            Receive<ClusterEvent.UnreachableMember>(m => UnreachableMember(m.Member));
+            Receive<ClusterEvent.ReachableMember>(m => ReachableMember(m.Member));
             Receive<ExpectedFirstHeartbeat>(heartbeat => TriggerFirstHeart(heartbeat.From));
-        }
-
-        /// <summary>
-        /// Looks up and returns the remote cluster heartbeat connection for the specific address.
-        /// </summary>
-        private ActorSelection HeartbeatReceiver(Address address)
-        {
-            return Context.ActorSelection(new RootActorPath(address)/"system"/"cluster"/"heartbeatReceiver");
         }
 
         private void Init(ClusterEvent.CurrentClusterState snapshot)
         {
             var nodes = snapshot.Members.Select(x => x.UniqueAddress).ToImmutableHashSet();
-            _state = _state.Init(nodes);
+            var unreachable = snapshot.Unreachable.Select(c => c.UniqueAddress).ToImmutableHashSet();
+            _state = _state.Init(nodes, unreachable);
         }
 
         private void AddMember(Member m)
         {
-            if (m.UniqueAddress != _cluster.SelfUniqueAddress && !_state.Contains(m.UniqueAddress))
+            if (!m.UniqueAddress.Equals(_cluster.SelfUniqueAddress) && !_state.Contains(m.UniqueAddress))
                 _state = _state.AddMember(m.UniqueAddress);
         }
 
         private void RemoveMember(Member m)
         {
-            if (m.UniqueAddress == _cluster.SelfUniqueAddress)
+            if (m.UniqueAddress.Equals(_cluster.SelfUniqueAddress))
             {
                 // This cluster node will be shutdown, but stop this actor immediately
                 // to avoid further updates
@@ -139,11 +148,21 @@ namespace Akka.Cluster
             }
         }
 
+        private void UnreachableMember(Member m)
+        {
+            _state = _state.UnreachableMember(m.UniqueAddress);
+        }
+
+        private void ReachableMember(Member m)
+        {
+            _state = _state.ReachableMember(m.UniqueAddress);
+        }
+
         private void DoHeartbeat()
         {
             foreach (var to in _state.ActiveReceivers)
             {
-                if (FailureDetector.IsMonitoring(to.Address))
+                if (_failureDetector.IsMonitoring(to.Address))
                 {
                     if (_cluster.Settings.VerboseHeartbeatLogging)
                     {
@@ -159,8 +178,11 @@ namespace Akka.Cluster
 
                     // schedule the expected first heartbeat for later, which will give the
                     // other side a chance to reply, and also trigger some resends if needed
-                    Context.System.Scheduler.ScheduleTellOnce(_cluster.Settings.HeartbeatExpectedResponseAfter, Self,
-                        new ExpectedFirstHeartbeat(to), Self);
+                    Context.System.Scheduler.ScheduleTellOnce(
+                        _cluster.Settings.HeartbeatExpectedResponseAfter,
+                        Self,
+                        new ExpectedFirstHeartbeat(to),
+                        Self);
                 }
                 HeartbeatReceiver(to.Address).Tell(_selfHeartbeat);
             }
@@ -177,13 +199,13 @@ namespace Akka.Cluster
 
         private void TriggerFirstHeart(UniqueAddress from)
         {
-            if (_state.ActiveReceivers.Contains(from) && !FailureDetector.IsMonitoring(from.Address))
+            if (_state.ActiveReceivers.Contains(from) && !_failureDetector.IsMonitoring(from.Address))
             {
                 if (_cluster.Settings.VerboseHeartbeatLogging)
                 {
                     _log.Debug("Cluster Node [{0}] - Trigger extra expected heartbeat from [{1}]", _cluster.SelfAddress, from.Address);
                 }
-                FailureDetector.Heartbeat(from.Address);
+                _failureDetector.Heartbeat(from.Address);
             }
         }
 
@@ -194,12 +216,12 @@ namespace Akka.Cluster
         /// </summary>
         internal sealed class Heartbeat : IClusterMessage, IPriorityMessage
         {
-            public Heartbeat(Address @from)
+            public Heartbeat(Address from)
             {
-                From = @from;
+                From = from;
             }
 
-            public Address From { get; private set; }
+            public Address From { get; }
 
 #pragma warning disable 659 //there might very well be multiple heartbeats from the same address. overriding GetHashCode may have uninteded side effects
             public override bool Equals(object obj)
@@ -221,12 +243,12 @@ namespace Akka.Cluster
         /// </summary>
         internal sealed class HeartbeatRsp : IClusterMessage, IPriorityMessage
         {
-            public HeartbeatRsp(UniqueAddress @from)
+            public HeartbeatRsp(UniqueAddress from)
             {
-                From = @from;
+                From = from;
             }
 
-            public UniqueAddress From { get; private set; }
+            public UniqueAddress From { get; }
 
 #pragma warning disable 659 //there might very well be multiple heartbeats from the same address. overriding GetHashCode may have uninteded side effects
             public override bool Equals(object obj)
@@ -250,17 +272,15 @@ namespace Akka.Cluster
 
         internal sealed class ExpectedFirstHeartbeat
         {
-            public ExpectedFirstHeartbeat(UniqueAddress @from)
+            public ExpectedFirstHeartbeat(UniqueAddress from)
             {
-                From = @from;
+                From = from;
             }
 
-            public UniqueAddress From { get; private set; }
+            public UniqueAddress From { get; }
         }
 
         #endregion
-
-
     }
 
     /// <summary>
@@ -270,37 +290,32 @@ namespace Akka.Cluster
     /// </summary>
     internal sealed class ClusterHeartbeatSenderState
     {
-        public ClusterHeartbeatSenderState(HeartbeatNodeRing ring, ImmutableHashSet<UniqueAddress> unreachable, IFailureDetectorRegistry<Address> failureDetector)
+        public ClusterHeartbeatSenderState(HeartbeatNodeRing ring, ImmutableHashSet<UniqueAddress> oldReceiversNowUnreachable, IFailureDetectorRegistry<Address> failureDetector)
         {
-            FailureDetector = failureDetector;
-            Unreachable = unreachable;
             Ring = ring;
-            ActiveReceivers = Ring.MyReceivers.Value.Union(Unreachable);
+            OldReceiversNowUnreachable = oldReceiversNowUnreachable;
+            FailureDetector = failureDetector;
+            ActiveReceivers = Ring.MyReceivers.Value.Union(OldReceiversNowUnreachable);
         }
 
-        public HeartbeatNodeRing Ring { get; private set; }
+        public HeartbeatNodeRing Ring { get; }
 
-        public ImmutableHashSet<UniqueAddress> Unreachable { get; private set; }
+        public ImmutableHashSet<UniqueAddress> OldReceiversNowUnreachable { get; }
 
-        public IFailureDetectorRegistry<Address> FailureDetector { get; private set; }
+        public IFailureDetectorRegistry<Address> FailureDetector { get; }
 
         public readonly ImmutableHashSet<UniqueAddress> ActiveReceivers;
 
         public UniqueAddress SelfAddress { get { return Ring.SelfAddress; } }
 
-        public ClusterHeartbeatSenderState Copy(HeartbeatNodeRing ring = null, ImmutableHashSet<UniqueAddress> unreachable = null, IFailureDetectorRegistry<Address> failureDetector = null)
+        public ClusterHeartbeatSenderState Init(ImmutableHashSet<UniqueAddress> nodes, ImmutableHashSet<UniqueAddress> unreachable)
         {
-            return new ClusterHeartbeatSenderState(ring ?? Ring, unreachable ?? Unreachable, failureDetector ?? FailureDetector);
-        }
-
-        public ClusterHeartbeatSenderState Init(ImmutableHashSet<UniqueAddress> nodes)
-        {
-            return Copy(ring: Ring.Copy(nodes: nodes.Add(SelfAddress)));
+            return Copy(ring: Ring.Copy(nodes: nodes.Add(SelfAddress), unreachable: unreachable));
         }
 
         public bool Contains(UniqueAddress node)
         {
-            return Ring.NodeRing.Contains(node);
+            return Ring.Nodes.Contains(node);
         }
 
         public ClusterHeartbeatSenderState AddMember(UniqueAddress node)
@@ -311,27 +326,38 @@ namespace Akka.Cluster
         public ClusterHeartbeatSenderState RemoveMember(UniqueAddress node)
         {
             var newState = MembershipChange(Ring - node);
+
             FailureDetector.Remove(node.Address);
-            if (newState.Unreachable.Contains(node))
-                return newState.Copy(unreachable: newState.Unreachable.Remove(node));
+            if (newState.OldReceiversNowUnreachable.Contains(node))
+                return newState.Copy(oldReceiversNowUnreachable: newState.OldReceiversNowUnreachable.Remove(node));
             return newState;
+        }
+
+        public ClusterHeartbeatSenderState UnreachableMember(UniqueAddress node)
+        {
+            return MembershipChange(Ring.Copy(unreachable: Ring.Unreachable.Add(node)));
+        }
+
+        public ClusterHeartbeatSenderState ReachableMember(UniqueAddress node)
+        {
+            return MembershipChange(Ring.Copy(unreachable: Ring.Unreachable.Remove(node)));
         }
 
         private ClusterHeartbeatSenderState MembershipChange(HeartbeatNodeRing newRing)
         {
             var oldReceivers = Ring.MyReceivers.Value;
             var removedReceivers = oldReceivers.Except(newRing.MyReceivers.Value);
-            var newUnreachable = Unreachable;
+            var adjustedOldReceiversNowUnreachable = OldReceiversNowUnreachable;
             foreach (var r in removedReceivers)
             {
                 if (FailureDetector.IsAvailable(r.Address))
                     FailureDetector.Remove(r.Address);
                 else
                 {
-                    newUnreachable = newUnreachable.Add(r);
+                    adjustedOldReceiversNowUnreachable = adjustedOldReceiversNowUnreachable.Add(r);
                 }
             }
-            return Copy(newRing, newUnreachable);
+            return Copy(newRing, adjustedOldReceiversNowUnreachable);
         }
 
         public ClusterHeartbeatSenderState HeartbeatRsp(UniqueAddress from)
@@ -339,18 +365,23 @@ namespace Akka.Cluster
             if (ActiveReceivers.Contains(from))
             {
                 FailureDetector.Heartbeat(from.Address);
-                if (Unreachable.Contains(from))
+                if (OldReceiversNowUnreachable.Contains(from))
                 {
                     //back from unreachable, ok to stop heartbeating to it
                     if (!Ring.MyReceivers.Value.Contains(from))
                     {
                         FailureDetector.Remove(from.Address);
                     }
-                    return Copy(unreachable: Unreachable.Remove(from));
+                    return Copy(oldReceiversNowUnreachable: OldReceiversNowUnreachable.Remove(from));
                 }
                 return this;
             }
             return this;
+        }
+
+        public ClusterHeartbeatSenderState Copy(HeartbeatNodeRing ring = null, ImmutableHashSet<UniqueAddress> oldReceiversNowUnreachable = null, IFailureDetectorRegistry<Address> failureDetector = null)
+        {
+            return new ClusterHeartbeatSenderState(ring ?? Ring, oldReceiversNowUnreachable ?? OldReceiversNowUnreachable, failureDetector ?? FailureDetector);
         }
     }
 
@@ -364,52 +395,101 @@ namespace Akka.Cluster
     /// </summary>
     internal sealed class HeartbeatNodeRing
     {
-        public HeartbeatNodeRing(UniqueAddress selfAddress, IEnumerable<UniqueAddress> nodes,
+        private readonly bool _useAllAsReceivers;
+
+        public HeartbeatNodeRing(
+            UniqueAddress selfAddress,
+            ImmutableHashSet<UniqueAddress> nodes,
+            ImmutableHashSet<UniqueAddress> unreachable,
             int monitoredByNumberOfNodes)
-            : this(selfAddress, ImmutableSortedSet.Create(nodes.ToArray()), monitoredByNumberOfNodes)
         {
-
-        }
-
-        public HeartbeatNodeRing(UniqueAddress selfAddress, ImmutableSortedSet<UniqueAddress> nodes, int monitoredByNumberOfNodes)
-        {
-            MonitoredByNumberOfNodes = monitoredByNumberOfNodes;
-            NodeRing = nodes;
             SelfAddress = selfAddress;
-            _useAllAsReceivers = MonitoredByNumberOfNodes >= (NodeRing.Count - 1);
+            Nodes = nodes;
+            Unreachable = unreachable;
+            MonitoredByNumberOfNodes = monitoredByNumberOfNodes;
+
+            if (!nodes.Contains(selfAddress))
+                throw new ArgumentException($"Nodes [${string.Join(", ", nodes)}] must contain selfAddress [{selfAddress}]");
+
+            _useAllAsReceivers = MonitoredByNumberOfNodes >= (NodeRing().Count - 1);
             MyReceivers = new Lazy<ImmutableHashSet<UniqueAddress>>(() => Receivers(SelfAddress));
         }
 
-        public UniqueAddress SelfAddress { get; private set; }
+        public UniqueAddress SelfAddress { get; }
 
-        public ImmutableSortedSet<UniqueAddress> NodeRing { get; private set; }
+        public ImmutableHashSet<UniqueAddress> Nodes { get; }
 
-        public int MonitoredByNumberOfNodes { get; private set; }
+        public ImmutableHashSet<UniqueAddress> Unreachable { get; }
+
+        public int MonitoredByNumberOfNodes { get; }
+
+        private ImmutableSortedSet<UniqueAddress> NodeRing()
+        {
+            return Nodes.ToImmutableSortedSet(RingComparer.Instance);
+        }
 
         /// <summary>
         /// Receivers for <see cref="SelfAddress"/>. Cached for subsequent access.
         /// </summary>
         public readonly Lazy<ImmutableHashSet<UniqueAddress>> MyReceivers;
 
-        private readonly bool _useAllAsReceivers;
-
         public ImmutableHashSet<UniqueAddress> Receivers(UniqueAddress sender)
         {
             if (_useAllAsReceivers)
-                return NodeRing.Remove(sender).ToImmutableHashSet();
-            var slice = NodeRing.From(sender).Skip(1).Take(MonitoredByNumberOfNodes).ToList(); //grab members furthest from this peer
-            if (slice.Count < MonitoredByNumberOfNodes)
             {
-                slice = slice.Concat(NodeRing.Take(MonitoredByNumberOfNodes - slice.Count)).ToList();
+                return NodeRing().Remove(sender).ToImmutableHashSet();
             }
-            return slice.ToImmutableHashSet();
+            else
+            {
+                // Pick nodes from the iterator until n nodes that are not unreachable have been selected.
+                // Intermediate unreachable nodes up to `monitoredByNrOfMembers` are also included in the result.
+                // The reason for not limiting it to strictly monitoredByNrOfMembers is that the leader must
+                // be able to continue its duties (e.g. removal of downed nodes) when many nodes are shutdown
+                // at the same time and nobody in the remaining cluster is monitoring some of the shutdown nodes.
+                Func<int, IEnumerator<UniqueAddress>, ImmutableSortedSet<UniqueAddress>, Tuple<int, ImmutableSortedSet<UniqueAddress>>> take = null;
+                take = (n, iter, acc) =>
+                {
+                    if (iter.MoveNext() == false || n == 0)
+                    {
+                        return Tuple.Create(n, acc);
+                    }
+                    else
+                    {
+                        UniqueAddress next = iter.Current;
+                        var isUnreachable = Unreachable.Contains(next);
+                        if (isUnreachable && acc.Count >= MonitoredByNumberOfNodes)
+                        {
+                            return take(n, iter, acc); // skip the unreachable, since we have already picked `MonitoredByNumberOfNodes`
+                        }
+                        else if (isUnreachable)
+                        {
+                            return take(n, iter, acc.Add(next)); // include the unreachable, but don't count it
+                        }
+                        else
+                        {
+                            return take(n - 1, iter, acc.Add(next)); // include the reachable
+                        }
+                    }
+                };
+
+                var tuple = take(MonitoredByNumberOfNodes, NodeRing().From(sender).Skip(1).GetEnumerator(), ImmutableSortedSet<UniqueAddress>.Empty);
+                var remaining = tuple.Item1;
+                var slice1 = tuple.Item2;
+
+                IImmutableSet<UniqueAddress> slice = remaining == 0 
+                    ? slice1 
+                    : take(remaining, NodeRing().Until(sender).Where(c => !c.Equals(sender)).GetEnumerator(), slice1).Item2;
+
+                return slice.ToImmutableHashSet();
+            }
         }
 
-        public HeartbeatNodeRing Copy(UniqueAddress selfAddress = null, IEnumerable<UniqueAddress> nodes = null,
-            int? monitoredByNumberOfNodes = null)
+        public HeartbeatNodeRing Copy(UniqueAddress selfAddress = null, ImmutableHashSet<UniqueAddress> nodes = null, ImmutableHashSet<UniqueAddress> unreachable = null, int? monitoredByNumberOfNodes = null)
         {
-            return new HeartbeatNodeRing(selfAddress ?? SelfAddress,
-                nodes ?? NodeRing,
+            return new HeartbeatNodeRing(
+                selfAddress ?? SelfAddress,
+                nodes ?? Nodes,
+                unreachable ?? Unreachable,
                 monitoredByNumberOfNodes.HasValue ? monitoredByNumberOfNodes.Value : MonitoredByNumberOfNodes);
         }
 
@@ -417,14 +497,34 @@ namespace Akka.Cluster
 
         public static HeartbeatNodeRing operator +(HeartbeatNodeRing ring, UniqueAddress node)
         {
-            return ring.NodeRing.Contains(node) ? ring : ring.Copy(nodes: ring.NodeRing.Add(node));
+            return ring.Nodes.Contains(node) ? ring : ring.Copy(nodes: ring.Nodes.Add(node));
         }
 
         public static HeartbeatNodeRing operator -(HeartbeatNodeRing ring, UniqueAddress node)
         {
-            return ring.NodeRing.Contains(node) ? ring.Copy(nodes: ring.NodeRing.Remove(node)) : ring;
+            return ring.Nodes.Contains(node) || ring.Unreachable.Contains(node)
+                ? ring.Copy(nodes: ring.Nodes.Remove(node), unreachable: ring.Unreachable.Remove(node)) 
+                : ring;
         }
 
+        #endregion
+
+        #region Comparer
+        internal class RingComparer : IComparer<UniqueAddress>
+        {
+            public static readonly RingComparer Instance = new RingComparer();
+            private RingComparer() { }
+
+            public int Compare(UniqueAddress a, UniqueAddress b)
+            {
+                var result = Member.AddressOrdering.Compare(a.Address, b.Address);
+                if (result == 0)
+                    if (a.Uid < b.Uid) return -1;
+                    else if (a.Uid == b.Uid) return 0;
+                    else return 1;
+                return result;
+            }
+        }
         #endregion
     }
 }

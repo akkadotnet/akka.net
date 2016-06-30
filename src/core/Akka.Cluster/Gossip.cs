@@ -76,15 +76,6 @@ namespace Akka.Cluster
         public GossipOverview Overview { get { return _overview; } }
         public VectorClock Version { get { return _version; } }
 
-        public Reachability ReachabilityExcludingDownedObservers
-        {
-            get
-            {
-                var downed = _members.Where(m => m.Status == MemberStatus.Down).ToList();
-                return Overview.Reachability.RemoveObservers(downed.Select(m => m.UniqueAddress).ToImmutableHashSet());
-            }
-        }
-
         public Gossip(ImmutableSortedSet<Member> members) : this(members, new GossipOverview(), VectorClock.Create() ) {}
 
         public Gossip(ImmutableSortedSet<Member> members, GossipOverview overview) : this(members, overview, VectorClock.Create()) { }
@@ -97,6 +88,12 @@ namespace Akka.Cluster
 
             _membersMap = new Lazy<ImmutableDictionary<UniqueAddress, Member>>(
                 () => members.ToImmutableDictionary(m => m.UniqueAddress, m => m));
+
+            ReachabilityExcludingDownedObservers = new Lazy<Reachability>(() =>
+            {
+                var downed = Members.Where(m => m.Status == MemberStatus.Down).ToList();
+                return Overview.Reachability.RemoveObservers(downed.Select(m => m.UniqueAddress).ToImmutableHashSet());
+            });
 
             _reachability = new Lazy<Reachability>(() =>
             {
@@ -222,13 +219,15 @@ namespace Akka.Cluster
         // version
         public bool Convergence(UniqueAddress selfUniqueAddress)
         {
-            var unreachable = ReachabilityExcludingDownedObservers.AllUnreachableOrTerminated
+            var unreachable = ReachabilityExcludingDownedObservers.Value.AllUnreachableOrTerminated
                 .Where(node => node != selfUniqueAddress)
                 .Select(GetMember);
 
             return unreachable.All(m => ConvergenceSkipUnreachableWithMemberStatus.Contains(m.Status))
                 && !_members.Any(m => ConvergenceMemberStatus.Contains(m.Status) && !SeenByNode(m.UniqueAddress));
         }
+
+        public Lazy<Reachability> ReachabilityExcludingDownedObservers { get; }
 
         public bool IsLeader(UniqueAddress node, UniqueAddress selfUniqueAddress)
         {
