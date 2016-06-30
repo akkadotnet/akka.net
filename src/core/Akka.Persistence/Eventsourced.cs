@@ -427,9 +427,9 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// Called when the journal rejected <see cref="PersistentActor.Persist{TEvent}(TEvent,Action{TEvent})"/> of an event.
+        /// Called when the journal rejected <see cref="Eventsourced.Persist{TEvent}(TEvent,Action{TEvent})"/> of an event.
         /// The event was not stored. By default this method logs the problem as a warning, and the actor continues.
-        /// The callback handler that was passed to the <see cref="PersistentActor.Persist{TEvent}(TEvent,Action{TEvent})"/>
+        /// The callback handler that was passed to the <see cref="Eventsourced.Persist{TEvent}(TEvent,Action{TEvent})"/>
         /// method will not be invoked.
         /// </summary>
         protected virtual void OnPersistRejected(Exception cause, object @event, long sequenceNr)

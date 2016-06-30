@@ -108,7 +108,7 @@ namespace Akka.Dispatch.SysMsg
         /// </summary>
         /// <param name="list">The list being modified.</param>
         /// <param name="msg">The new item to add to the head of the list.</param>
-        /// <returns>A new <see cref="LatestFirstSystemMessageList"/> with <see cref="msg"/> appended to the front.</returns>
+        /// <returns>A new <see cref="LatestFirstSystemMessageList"/> with <paramref name="msg"/> appended to the front.</returns>
         public static LatestFirstSystemMessageList operator +(LatestFirstSystemMessageList list, SystemMessage msg)
         {
             Assert.Assert(msg != null);
@@ -178,7 +178,7 @@ namespace Akka.Dispatch.SysMsg
         /// </summary>
         /// <param name="list">The list being modified.</param>
         /// <param name="msg">The new item to add to the head of the list.</param>
-        /// <returns>A new <see cref="LatestFirstSystemMessageList"/> with <see cref="msg"/> appended to the front.</returns>
+        /// <returns>A new <see cref="LatestFirstSystemMessageList"/> with <paramref name="msg"/> appended to the front.</returns>
         public static EarliestFirstSystemMessageList operator +(EarliestFirstSystemMessageList list, SystemMessage msg)
         {
             Assert.Assert(msg != null);
@@ -191,7 +191,7 @@ namespace Akka.Dispatch.SysMsg
         /// </summary>
         /// <param name="list">The original list.</param>
         /// <param name="other">The list to be reversed and prepended.</param>
-        /// <returns>A new list with <see cref="other"/> reversed and prepended to the front of <see cref="list"/>.</returns>
+        /// <returns>A new list with <paramref name="other"/> reversed and prepended to the front of <paramref name="list"/>.</returns>
         /// <example>
         /// Example: (3, 4, 5) reversePrepend (2, 1, 0) == (0, 1, 2, 3, 4, 5)
         /// </example>

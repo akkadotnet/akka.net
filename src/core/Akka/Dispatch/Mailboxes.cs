@@ -163,7 +163,7 @@ namespace Akka.Dispatch
         /// INTERNAL API
         /// </summary>
         /// <param name="id">The id of the mailbox whose config we're going to generate.</param>
-        /// <returns>A <see cref="Config"/> object for the mailbox with id <see cref="id"/></returns>
+        /// <returns>A <see cref="Config"/> object for the mailbox with <paramref name="id"/></returns>
         private Config Config(string id)
         {
             return ConfigurationFactory.ParseString($"id:{id}")

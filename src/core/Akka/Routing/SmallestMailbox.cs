@@ -131,7 +131,7 @@ namespace Akka.Routing
         /// <summary>
         /// Initializes a new instance of the <see cref="SmallestMailboxPool"/> class.
         /// <note>
-        /// A <see cref="SmallestMailboxPool"/> configured in this way uses the <see cref="Pool.DefaultStrategy"/> supervisor strategy.
+        /// A <see cref="SmallestMailboxPool"/> configured in this way uses the <see cref="Pool.DefaultSupervisorStrategy"/> supervisor strategy.
         /// </note>
         /// </summary>
         /// <param name="nrOfInstances">The initial number of routees in the pool.</param>

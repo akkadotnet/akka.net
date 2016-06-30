@@ -342,6 +342,7 @@ namespace Akka.Routing
         /// Initializes a new instance of the <see cref="RoundRobinGroup"/> class.
         /// </summary>
         /// <param name="paths">A list of paths used by the group router.</param>
+        /// <param name="routerDispatcher">The dispatcher to use when passing messages to routees.</param>
         public RoundRobinGroup(IEnumerable<string> paths, string routerDispatcher) 
             : base(paths, routerDispatcher)
         {

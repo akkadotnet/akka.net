@@ -14,7 +14,7 @@ namespace Akka.Persistence.Snapshot
     /// <summary>
     /// Used as a default snapshot-store in case no other store was configured.
     /// 
-    /// If a <see cref="PersistentActor"/> calls the <see cref="PersistentActor.SaveSnapshot(object)"/> method,
+    /// If a <see cref="PersistentActor"/> calls the <see cref="Eventsourced.SaveSnapshot(object)"/> method,
     /// and at the same time does not configure a specific snapshot-store to be used *and* no default snapshot-store
     /// is available, then the <see cref="NoSnapshotStore"/> will be used to signal a snapshot store failure.
     /// </summary>
