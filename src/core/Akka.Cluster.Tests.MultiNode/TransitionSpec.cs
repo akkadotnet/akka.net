@@ -87,32 +87,38 @@ namespace Akka.Cluster.Tests.MultiNode
 
         private ImmutableHashSet<RoleName> Members()
         {
-            return MemberAddresses().Select(c => RoleName(c)).ToImmutableHashSet();
+            return MemberAddresses().Select(RoleName).ToImmutableHashSet();
         }
 
         private ImmutableHashSet<RoleName> SeenLatestGossip()
         {
-            // TODO: is it proper conversion of clusterView.seenBy flatMap roleName?
-            return ClusterView.SeenBy.Select(c => RoleName(c)).ToImmutableHashSet();
+            return ClusterView.SeenBy.Select(RoleName).ToImmutableHashSet();
         }
 
         private void AwaitSeen(params Address[] addresses)
         {
-            SeenLatestGossip().Select(c => GetAddress(c)).Should().BeEquivalentTo(addresses.ToImmutableHashSet());
+            AwaitAssert(() =>
+            {
+                SeenLatestGossip().Select(GetAddress).Should().BeEquivalentTo(addresses.ToImmutableHashSet());
+            });
         }
 
         private void AwaitMembers(params Address[] addresses)
         {
-            ClusterView.RefreshCurrentState();
-            MemberAddresses().Should().BeEquivalentTo(addresses.ToImmutableHashSet());
+            AwaitAssert(() =>
+            {
+                ClusterView.RefreshCurrentState();
+                MemberAddresses().Should().BeEquivalentTo(addresses.ToImmutableHashSet());
+            });
         }
 
         private void AwaitMemberStatus(Address address, MemberStatus status)
         {
-            ClusterView.RefreshCurrentState();
-            AwaitCondition(() => MemberStatus(address).Equals(status));
-            // TODO: investigate why it should not work
-            MemberStatus(address).Should().Be(status);
+            AwaitAssert(() =>
+            {
+                ClusterView.RefreshCurrentState();
+                MemberStatus(address).Should().Be(status);
+            });
         }
 
         private void LeaderActions()
@@ -153,16 +159,16 @@ namespace Akka.Cluster.Tests.MultiNode
             {
                 EnterBarrier("before-gossip-" + _gossipBarrierCounter);
                 EnterBarrier("after-gossip-" + _gossipBarrierCounter);
-            }, Roles.Where(r => r != fromRole || r != toRole).ToArray());
+            }, Roles.Where(r => r != fromRole && r != toRole).ToArray());
         }
 
         [MultiNodeFact]
         public void TransitionSpecs()
         {
             A_Cluster_must_start_nodes_as_singleton_clusters();
-            // A_Cluster_must_perform_correct_transitions_when_second_joining_first();
-            // A_Cluster_must_perform_correct_transitions_when_third_joins_second();
-            // A_Cluster_must_perform_correct_transitions_when_second_becomes_unavailble();
+            A_Cluster_must_perform_correct_transitions_when_second_joining_first();
+            A_Cluster_must_perform_correct_transitions_when_third_joins_second();
+            A_Cluster_must_perform_correct_transitions_when_second_becomes_unavailble();
         }
 
         private void A_Cluster_must_start_nodes_as_singleton_clusters()
@@ -171,10 +177,7 @@ namespace Akka.Cluster.Tests.MultiNode
             {
                 Cluster.Join(GetAddress(Myself));
 
-                // TODO: should be removed after https://github.com/akkadotnet/akka.net/pull/2101
-                AwaitMemberStatus(GetAddress(Myself), Akka.Cluster.MemberStatus.Joining);
-                LeaderActions();
-
+                // first joining itself will immediately be moved to Up
                 AwaitMemberStatus(GetAddress(Myself), Akka.Cluster.MemberStatus.Up);
                 AwaitCondition(() => ClusterView.IsSingletonCluster);
             }, _config.First);

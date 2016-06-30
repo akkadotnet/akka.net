@@ -1907,7 +1907,7 @@ namespace Akka.Cluster
         public void Publish(Gossip newGossip)
         {
             _publisher.Tell(new InternalClusterAction.PublishChanges(newGossip));
-            if (_cluster.Settings.PublishStatsInterval == TimeSpan.MinValue)
+            if (_cluster.Settings.PublishStatsInterval == TimeSpan.Zero)
             {
                 PublishInternalStats();
             }
@@ -2143,6 +2143,7 @@ namespace Akka.Cluster
         {
             return new GossipStats(receivedGossipCount ?? ReceivedGossipCount,
                 mergeCount ?? MergeCount,
+                sameCount ?? SameCount,
                 newerCount ?? NewerCount,
                 olderCount ?? OlderCount);
         }
