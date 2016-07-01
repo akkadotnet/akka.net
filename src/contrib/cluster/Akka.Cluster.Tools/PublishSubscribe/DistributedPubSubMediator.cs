@@ -171,7 +171,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
                 if (routees.Count != 0)
                 {
-                    new Router(_settings.RoutingLogic, routees.ToArray()).Route(Utils.WrapIfNeeded(send.Message), Sender);
+                    new Router(_settings.RoutingLogic, routees.ToArray()).Route(Akka.Cluster.Tools.PublishSubscribe.Internal.Utils.WrapIfNeeded(send.Message), Sender);
                 }
             });
             Receive<SendToAll>(sendToAll =>

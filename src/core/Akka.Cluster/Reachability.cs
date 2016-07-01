@@ -27,7 +27,7 @@ namespace Akka.Cluster
     /// - Unreachable if any observer node considers it as Unreachable
     /// - Reachable otherwise, i.e. no observer node considers it as Unreachable
     /// </summary>
-    public class Reachability //TODO: ISerializable?
+    internal class Reachability //TODO: ISerializable?
     {
         public static readonly Reachability Empty = 
             new Reachability(ImmutableList.Create<Record>(), ImmutableDictionary.Create<UniqueAddress, long>());

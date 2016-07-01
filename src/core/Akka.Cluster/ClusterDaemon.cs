@@ -2247,33 +2247,30 @@ namespace Akka.Cluster
         }
     }
 
-    public class VectorClockStats
+    internal sealed class VectorClockStats
     {
-        readonly int _versionSize;
-        readonly int _seenLatest;
-
         public VectorClockStats(int versionSize = 0, int seenLatest = 0)
         {
-            _versionSize = versionSize;
-            _seenLatest = seenLatest;
+            VersionSize = versionSize;
+            SeenLatest = seenLatest;
         }
 
-        public int VersionSize { get { return _versionSize; } }
-        public int SeenLatest { get { return _seenLatest; } }
+        public int VersionSize { get; }
+        public int SeenLatest { get; }
 
         public override bool Equals(object obj)
         {
             var other = obj as VectorClockStats;
             if (other == null) return false;
-            return _versionSize == other._versionSize &&
-                   _seenLatest == other._seenLatest;
+            return VersionSize == other.VersionSize &&
+                   SeenLatest == other.SeenLatest;
         }
 
         public override int GetHashCode()
         {
             unchecked
             {
-                return (_versionSize * 397) ^ _seenLatest;
+                return (VersionSize * 397) ^ SeenLatest;
             }
         }
     }

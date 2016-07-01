@@ -26,7 +26,7 @@ namespace Akka.Cluster
     /// 
     /// Based on code from the 'vlock' VectorClock library by Coda Hale.
     /// </summary>
-    internal class VectorClock
+    public sealed class VectorClock
     {
         /**
          * Hash representation of a versioned node name.
@@ -97,7 +97,7 @@ namespace Akka.Cluster
             }
         }
 
-        public class Timestamp
+        internal class Timestamp
         {
             public static readonly long Zero = 0L;
             public static readonly long EndMarker = long.MinValue;

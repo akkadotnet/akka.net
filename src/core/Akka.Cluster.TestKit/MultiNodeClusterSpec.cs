@@ -231,7 +231,7 @@ namespace Akka.Cluster.TestKit
             return address;
         }
 
-        public ClusterReadView ClusterView { get { return Cluster.ReadView; } }
+        internal ClusterReadView ClusterView { get { return Cluster.ReadView; } }
 
         /// <summary>
         /// Get the cluster node to use.

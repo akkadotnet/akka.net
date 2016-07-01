@@ -16,7 +16,7 @@ using scg = global::System.Collections.Generic;
 namespace Akka.Cluster.Proto.Msg {
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  public static partial class ClusterMessages {
+  internal static partial class ClusterMessages {
   
     #region Extension registration
     public static void RegisterAllExtensions(pb::ExtensionRegistry registry) {
@@ -209,13 +209,13 @@ namespace Akka.Cluster.Proto.Msg {
     
   }
   #region Enums
-  public enum ReachabilityStatus {
+  internal enum ReachabilityStatus {
     Reachable = 0,
     Unreachable = 1,
     Terminated = 2,
   }
-  
-  public enum MemberStatus {
+
+    internal enum MemberStatus {
     Joining = 0,
     Up = 1,
     Leaving = 2,
@@ -228,7 +228,7 @@ namespace Akka.Cluster.Proto.Msg {
   
   #region Messages
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  public sealed partial class Join : pb::GeneratedMessage<Join, Join.Builder> {
+  internal sealed partial class Join : pb::GeneratedMessage<Join, Join.Builder> {
     private Join() { }
     private static readonly Join defaultInstance = new Join().MakeReadOnly();
     private static readonly string[] _joinFieldNames = new string[] { "node", "roles" };
@@ -588,7 +588,7 @@ namespace Akka.Cluster.Proto.Msg {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  public sealed partial class Welcome : pb::GeneratedMessage<Welcome, Welcome.Builder> {
+  internal sealed partial class Welcome : pb::GeneratedMessage<Welcome, Welcome.Builder> {
     private Welcome() { }
     private static readonly Welcome defaultInstance = new Welcome().MakeReadOnly();
     private static readonly string[] _welcomeFieldNames = new string[] { "from", "gossip" };
@@ -955,7 +955,7 @@ namespace Akka.Cluster.Proto.Msg {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  public sealed partial class GossipEnvelope : pb::GeneratedMessage<GossipEnvelope, GossipEnvelope.Builder> {
+  internal sealed partial class GossipEnvelope : pb::GeneratedMessage<GossipEnvelope, GossipEnvelope.Builder> {
     private GossipEnvelope() { }
     private static readonly GossipEnvelope defaultInstance = new GossipEnvelope().MakeReadOnly();
     private static readonly string[] _gossipEnvelopeFieldNames = new string[] { "from", "serializedGossip", "to" };
@@ -1367,7 +1367,7 @@ namespace Akka.Cluster.Proto.Msg {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  public sealed partial class GossipStatus : pb::GeneratedMessage<GossipStatus, GossipStatus.Builder> {
+  internal sealed partial class GossipStatus : pb::GeneratedMessage<GossipStatus, GossipStatus.Builder> {
     private GossipStatus() { }
     private static readonly GossipStatus defaultInstance = new GossipStatus().MakeReadOnly();
     private static readonly string[] _gossipStatusFieldNames = new string[] { "allHashes", "from", "version" };
@@ -1797,7 +1797,7 @@ namespace Akka.Cluster.Proto.Msg {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  public sealed partial class Gossip : pb::GeneratedMessage<Gossip, Gossip.Builder> {
+  internal sealed partial class Gossip : pb::GeneratedMessage<Gossip, Gossip.Builder> {
     private Gossip() { }
     private static readonly Gossip defaultInstance = new Gossip().MakeReadOnly();
     private static readonly string[] _gossipFieldNames = new string[] { "allAddresses", "allHashes", "allRoles", "members", "overview", "version" };
@@ -2436,7 +2436,7 @@ namespace Akka.Cluster.Proto.Msg {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  public sealed partial class GossipOverview : pb::GeneratedMessage<GossipOverview, GossipOverview.Builder> {
+  internal sealed partial class GossipOverview : pb::GeneratedMessage<GossipOverview, GossipOverview.Builder> {
     private GossipOverview() { }
     private static readonly GossipOverview defaultInstance = new GossipOverview().MakeReadOnly();
     private static readonly string[] _gossipOverviewFieldNames = new string[] { "observerReachability", "seen" };
@@ -2798,7 +2798,7 @@ namespace Akka.Cluster.Proto.Msg {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  public sealed partial class ObserverReachability : pb::GeneratedMessage<ObserverReachability, ObserverReachability.Builder> {
+  internal sealed partial class ObserverReachability : pb::GeneratedMessage<ObserverReachability, ObserverReachability.Builder> {
     private ObserverReachability() { }
     private static readonly ObserverReachability defaultInstance = new ObserverReachability().MakeReadOnly();
     private static readonly string[] _observerReachabilityFieldNames = new string[] { "addressIndex", "subjectReachability", "version" };
@@ -3186,7 +3186,7 @@ namespace Akka.Cluster.Proto.Msg {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  public sealed partial class SubjectReachability : pb::GeneratedMessage<SubjectReachability, SubjectReachability.Builder> {
+  internal sealed partial class SubjectReachability : pb::GeneratedMessage<SubjectReachability, SubjectReachability.Builder> {
     private SubjectReachability() { }
     private static readonly SubjectReachability defaultInstance = new SubjectReachability().MakeReadOnly();
     private static readonly string[] _subjectReachabilityFieldNames = new string[] { "addressIndex", "status", "version" };
@@ -3553,7 +3553,7 @@ namespace Akka.Cluster.Proto.Msg {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  public sealed partial class Member : pb::GeneratedMessage<Member, Member.Builder> {
+  internal sealed partial class Member : pb::GeneratedMessage<Member, Member.Builder> {
     private Member() { }
     private static readonly Member defaultInstance = new Member().MakeReadOnly();
     private static readonly string[] _memberFieldNames = new string[] { "addressIndex", "rolesIndexes", "status", "upNumber" };
@@ -3986,7 +3986,7 @@ namespace Akka.Cluster.Proto.Msg {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  public sealed partial class VectorClock : pb::GeneratedMessage<VectorClock, VectorClock.Builder> {
+  internal sealed partial class VectorClock : pb::GeneratedMessage<VectorClock, VectorClock.Builder> {
     private VectorClock() { }
     private static readonly VectorClock defaultInstance = new VectorClock().MakeReadOnly();
     private static readonly string[] _vectorClockFieldNames = new string[] { "timestamp", "versions" };
@@ -4650,7 +4650,7 @@ namespace Akka.Cluster.Proto.Msg {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  public sealed partial class MetricsGossipEnvelope : pb::GeneratedMessage<MetricsGossipEnvelope, MetricsGossipEnvelope.Builder> {
+  internal sealed partial class MetricsGossipEnvelope : pb::GeneratedMessage<MetricsGossipEnvelope, MetricsGossipEnvelope.Builder> {
     private MetricsGossipEnvelope() { }
     private static readonly MetricsGossipEnvelope defaultInstance = new MetricsGossipEnvelope().MakeReadOnly();
     private static readonly string[] _metricsGossipEnvelopeFieldNames = new string[] { "from", "gossip", "reply" };
@@ -5061,7 +5061,7 @@ namespace Akka.Cluster.Proto.Msg {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  public sealed partial class MetricsGossip : pb::GeneratedMessage<MetricsGossip, MetricsGossip.Builder> {
+  internal sealed partial class MetricsGossip : pb::GeneratedMessage<MetricsGossip, MetricsGossip.Builder> {
     private MetricsGossip() { }
     private static readonly MetricsGossip defaultInstance = new MetricsGossip().MakeReadOnly();
     private static readonly string[] _metricsGossipFieldNames = new string[] { "allAddresses", "allMetricNames", "nodeMetrics" };
@@ -5497,7 +5497,7 @@ namespace Akka.Cluster.Proto.Msg {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  public sealed partial class NodeMetrics : pb::GeneratedMessage<NodeMetrics, NodeMetrics.Builder> {
+  internal sealed partial class NodeMetrics : pb::GeneratedMessage<NodeMetrics, NodeMetrics.Builder> {
     private NodeMetrics() { }
     private static readonly NodeMetrics defaultInstance = new NodeMetrics().MakeReadOnly();
     private static readonly string[] _nodeMetricsFieldNames = new string[] { "addressIndex", "metrics", "timestamp" };
@@ -7041,7 +7041,7 @@ namespace Akka.Cluster.Proto.Msg {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  public sealed partial class Empty : pb::GeneratedMessage<Empty, Empty.Builder> {
+  internal sealed partial class Empty : pb::GeneratedMessage<Empty, Empty.Builder> {
     private Empty() { }
     private static readonly Empty defaultInstance = new Empty().MakeReadOnly();
     private static readonly string[] _emptyFieldNames = new string[] {  };
@@ -7268,7 +7268,7 @@ namespace Akka.Cluster.Proto.Msg {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  public sealed partial class Address : pb::GeneratedMessage<Address, Address.Builder> {
+  internal sealed partial class Address : pb::GeneratedMessage<Address, Address.Builder> {
     private Address() { }
     private static readonly Address defaultInstance = new Address().MakeReadOnly();
     private static readonly string[] _addressFieldNames = new string[] { "hostname", "port", "protocol", "system" };
@@ -7676,7 +7676,7 @@ namespace Akka.Cluster.Proto.Msg {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  public sealed partial class UniqueAddress : pb::GeneratedMessage<UniqueAddress, UniqueAddress.Builder> {
+  internal sealed partial class UniqueAddress : pb::GeneratedMessage<UniqueAddress, UniqueAddress.Builder> {
     private UniqueAddress() { }
     private static readonly UniqueAddress defaultInstance = new UniqueAddress().MakeReadOnly();
     private static readonly string[] _uniqueAddressFieldNames = new string[] { "address", "uid" };

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
@@ -46,21 +47,19 @@ namespace Akka.Cluster
             return system.WithExtension<Cluster, ClusterExtension>();
         }
 
-        public static bool IsAssertInvariantsEnabled
+        internal static bool IsAssertInvariantsEnabled
         {
             //TODO: Consequences of this?
             get { return false; }
         }
 
-        readonly ClusterSettings _settings;
-        public ClusterSettings Settings { get { return _settings; } }
-        readonly UniqueAddress _selfUniqueAddress;
-        public UniqueAddress SelfUniqueAddress { get { return _selfUniqueAddress; } }
+        public ClusterSettings Settings { get; }
+        public UniqueAddress SelfUniqueAddress { get; }
 
         public Cluster(ActorSystemImpl system)
         {
             System = system;
-            _settings = new ClusterSettings(system.Settings.Config, system.Name);
+            Settings = new ClusterSettings(system.Settings.Config, system.Name);
 
             var provider = system.Provider as ClusterActorRefProvider;
             if (provider == null)
@@ -68,19 +67,19 @@ namespace Akka.Cluster
                     String.Format("ActorSystem {0} needs to have a 'ClusterActorRefProvider' enabled in the configuration, currently uses {1}",
                         system,
                         system.Provider.GetType().FullName));
-            _selfUniqueAddress = new UniqueAddress(provider.Transport.DefaultAddress, AddressUidExtension.Uid(system));
+            SelfUniqueAddress = new UniqueAddress(provider.Transport.DefaultAddress, AddressUidExtension.Uid(system));
 
             _log = Logging.GetLogger(system, "Cluster");
 
             LogInfo("Starting up...");
 
-            _failureDetector = new DefaultFailureDetectorRegistry<Address>(() => FailureDetectorLoader.Load(_settings.FailureDetectorImplementationClass, _settings.FailureDetectorConfig,
+            _failureDetector = new DefaultFailureDetectorRegistry<Address>(() => FailureDetectorLoader.Load(Settings.FailureDetectorImplementationClass, Settings.FailureDetectorConfig,
                 system));
 
             _scheduler = CreateScheduler(system);
 
             //create supervisor for daemons under path "/system/cluster"
-            _clusterDaemons = system.SystemActorOf(Props.Create(() => new ClusterDaemon(_settings)).WithDeploy(Deploy.Local), "cluster");
+            _clusterDaemons = system.SystemActorOf(Props.Create(() => new ClusterDaemon(Settings)).WithDeploy(Deploy.Local), "cluster");
 
             _readView = new ClusterReadView(this);
 
@@ -117,7 +116,7 @@ namespace Akka.Cluster
         /// <param name="subscriber">The actor who'll receive the cluster domain events</param>
         /// <param name="to"><see cref="ClusterEvent.IClusterDomainEvent"/> subclasses</param>
         /// <remarks>A snapshot of <see cref="ClusterEvent.CurrentClusterState"/> will be sent to <paramref name="subscriber"/> as the first message</remarks>
-        public void Subscribe(IActorRef subscriber, Type[] to)
+        public void Subscribe(IActorRef subscriber, params Type[] to)
         {
             Subscribe(subscriber, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsSnapshot, to);
         }
@@ -133,7 +132,7 @@ namespace Akka.Cluster
         /// If set to <see cref="ClusterEvent.SubscriptionInitialStateMode.InitialStateAsSnapshot"/> 
         /// a snapshot of <see cref="ClusterEvent.CurrentClusterState"/> will be sent to <paramref name="subscriber"/> as the first message. </param>
         /// <param name="to"><see cref="ClusterEvent.IClusterDomainEvent"/> subclasses</param>
-        public void Subscribe(IActorRef subscriber, ClusterEvent.SubscriptionInitialStateMode initialStateMode, Type[] to)
+        public void Subscribe(IActorRef subscriber, ClusterEvent.SubscriptionInitialStateMode initialStateMode, params Type[] to)
         {
             if (to.Length == 0)
                 throw new ArgumentException("At least one `IClusterDomainEvent` class is required");
@@ -203,7 +202,7 @@ namespace Akka.Cluster
         /// When it has successfully joined it must be restarted to be able to join another
         /// cluster or to join the same cluster again.
         /// </summary>
-        public void JoinSeedNodes(ImmutableList<Address> seedNodes)
+        public void JoinSeedNodes(IEnumerable<Address> seedNodes)
         {
             ClusterCore.Tell(
                 new InternalClusterAction.JoinSeedNodes(seedNodes.Select(FillLocal).ToImmutableList()));
@@ -292,7 +291,7 @@ namespace Akka.Cluster
         /// </summary>
         public Address SelfAddress
         {
-            get { return _selfUniqueAddress.Address; }
+            get { return SelfUniqueAddress.Address; }
         }
 
         /// <summary>
@@ -300,7 +299,7 @@ namespace Akka.Cluster
         /// </summary>
         public ImmutableHashSet<string> SelfRoles
         {
-            get { return _settings.Roles; }
+            get { return Settings.Roles; }
         }
 
         /// <summary>
@@ -315,11 +314,11 @@ namespace Akka.Cluster
         /// </summary>
         public bool IsTerminated { get { return _isTerminated.Value; } }
 
-        internal ActorSystemImpl System { get; private set; }
+        public ExtendedActorSystem System { get; }
 
         private readonly ILoggingAdapter _log;
         private readonly ClusterReadView _readView;
-        public ClusterReadView ReadView { get { return _readView; } }
+        internal ClusterReadView ReadView { get { return _readView; } }
 
         private readonly DefaultFailureDetectorRegistry<Address> _failureDetector;
         public DefaultFailureDetectorRegistry<Address> FailureDetector { get { return _failureDetector; } }
@@ -365,7 +364,7 @@ namespace Akka.Cluster
         private readonly IActorRef _clusterDaemons;
         private IActorRef _clusterCore;
 
-        public IActorRef ClusterCore
+        internal IActorRef ClusterCore
         {
             get
             {
@@ -377,17 +376,17 @@ namespace Akka.Cluster
             }
         }
 
-        public void LogInfo(string message)
+        internal void LogInfo(string message)
         {
             _log.Info("Cluster Node [{0}] - {1}", SelfAddress, message);
         }
 
-        public void LogInfo(string template, object arg1)
+        internal void LogInfo(string template, object arg1)
         {
             _log.Info("Cluster Node [{0}] - " + template, SelfAddress, arg1);
         }
 
-        public void LogInfo(string template, object arg1, object arg2)
+        internal void LogInfo(string template, object arg1, object arg2)
         {
             _log.Info("Cluster Node [{0}] - " + template, SelfAddress, arg1, arg2);
         }
