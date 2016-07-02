@@ -43,7 +43,7 @@ namespace Akka.Cluster.Tests.MultiNode
             Seventh = Role("seventh");
             Eighth = Role("eighth");
 
-            CommonConfig = DebugConfig(false)
+            CommonConfig = DebugConfig(true)
                 .WithFallback(ConfigurationFactory.ParseString(@"
                     akka.remote.system-message-buffer-size = 100
                     akka.remote.helios.tcp.connection-timeout = 10s
