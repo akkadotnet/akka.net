@@ -454,13 +454,17 @@ namespace Akka.Cluster.Tests.MultiNode
                 var side1AfterJoin = side1.Add(_config.Eighth);
                 var side2 = ImmutableArray.Create(_config.Fifth, _config.Sixth, _config.Seventh);
 
-                foreach (var role1 in side1AfterJoin)
+                RunOn(() =>
                 {
-                    foreach (var role2 in side2)
+                    foreach (var role1 in side1AfterJoin)
                     {
-                        TestConductor.Blackhole(role1, role2, ThrottleTransportAdapter.Direction.Both).Wait();
+                        foreach (var role2 in side2)
+                        {
+                            TestConductor.Blackhole(role1, role2, ThrottleTransportAdapter.Direction.Both).Wait();
+                        }
                     }
-                }
+                }, _config.First);
+                
                 EnterBarrier("blackhole-7");
 
                 RunOn(() =>
