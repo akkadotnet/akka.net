@@ -20,7 +20,7 @@ namespace Akka.Cluster
     /// Read view of the cluster's state, updated via subscription of
     /// cluster events published on the <see cref="EventBus{TEvent,TClassifier,TSubscriber}"/>.
     /// </summary>
-    public class ClusterReadView : IDisposable
+    internal class ClusterReadView : IDisposable
     {
         public ClusterEvent.CurrentClusterState State { get { return _state; } }
 
@@ -29,7 +29,7 @@ namespace Akka.Cluster
         /// </summary>
         internal volatile ClusterEvent.CurrentClusterState _state;
 
-        public Reachability Reachability { get { return _reachability; } }
+        internal Reachability Reachability { get { return _reachability; } }
 
 
         internal volatile Reachability _reachability;

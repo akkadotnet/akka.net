@@ -25,7 +25,7 @@ namespace Akka.Cluster
     /// extension, i.e. the cluster will automatically be started when
     /// the `ClusterActorRefProvider` is used.
     /// </summary>
-    public class ClusterActorRefProvider : RemoteActorRefProvider
+    internal class ClusterActorRefProvider : RemoteActorRefProvider
     {
         public ClusterActorRefProvider(string systemName, Settings settings, EventStream eventStream /*DynamicAccess*/)
             : base(systemName, settings, eventStream)

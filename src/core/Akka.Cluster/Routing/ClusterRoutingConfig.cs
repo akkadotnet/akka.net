@@ -23,7 +23,7 @@ namespace Akka.Cluster.Routing
     public sealed class ClusterRouterGroupSettings : ClusterRouterSettingsBase
     {
         [Obsolete]
-        public ClusterRouterGroupSettings(int totalInstances, bool allowLocalRoutees, ImmutableHashSet<string> routeesPaths)
+        public ClusterRouterGroupSettings(int totalInstances, bool allowLocalRoutees, IEnumerable<string> routeesPaths)
             : this(totalInstances, routeesPaths, allowLocalRoutees, null)
         {
 
@@ -36,10 +36,10 @@ namespace Akka.Cluster.Routing
 
         }
 
-        public ClusterRouterGroupSettings(int totalInstances, ImmutableHashSet<string> routeesPaths, bool allowLocalRoutees, string useRole = null) 
+        public ClusterRouterGroupSettings(int totalInstances, IEnumerable<string> routeesPaths, bool allowLocalRoutees, string useRole = null) 
             : base(totalInstances, allowLocalRoutees, useRole)
         {
-            if (routeesPaths == null || routeesPaths.IsEmpty || string.IsNullOrEmpty(routeesPaths.First()))
+            if (routeesPaths == null || !routeesPaths.Any() || string.IsNullOrEmpty(routeesPaths.First()))
             {
                 throw new ArgumentException("RouteesPaths must be defined", nameof(routeesPaths));
             }
@@ -54,7 +54,7 @@ namespace Akka.Cluster.Routing
             }
         }
 
-        public ImmutableHashSet<string> RouteesPaths { get; }
+        public IEnumerable<string> RouteesPaths { get; }
 
         public static ClusterRouterGroupSettings FromConfig(Config config)
         {
@@ -126,7 +126,7 @@ namespace Akka.Cluster.Routing
 
         public string UseRole { get; }
 
-        protected static string UseRoleOption(string role)
+        internal static string UseRoleOption(string role)
         {
             if (string.IsNullOrEmpty(role))
                 return null;
@@ -134,7 +134,7 @@ namespace Akka.Cluster.Routing
             return role;
         }
 
-        protected static int GetMaxTotalNrOfInstances(Config config)
+        internal static int GetMaxTotalNrOfInstances(Config config)
         {
             int number = config.GetInt("nr-of-instances");
             if (number == 0 || number == 1)
@@ -272,7 +272,7 @@ namespace Akka.Cluster.Routing
             throw new NotImplementedException();
         }
 
-        public RouterConfig Copy(Pool local = null, ClusterRouterPoolSettings settings = null)
+        internal RouterConfig Copy(Pool local = null, ClusterRouterPoolSettings settings = null)
         {
             return new ClusterRouterPool(local ?? Local, settings ?? Settings);
         }
@@ -376,7 +376,7 @@ namespace Akka.Cluster.Routing
             return Copy(Local.WithFallback(other).AsInstanceOf<Group>());
         }
 
-        public RouterConfig Copy(Group local = null, ClusterRouterGroupSettings settings = null)
+        internal RouterConfig Copy(Group local = null, ClusterRouterGroupSettings settings = null)
         {
             return new ClusterRouterGroup(local ?? Local, settings ?? Settings);
         }
@@ -555,7 +555,7 @@ namespace Akka.Cluster.Routing
             }
 
             UsedRouteePaths = Settings.AllowLocalRoutees
-                ? ImmutableDictionary<Address, ImmutableHashSet<string>>.Empty.Add(Cluster.SelfAddress, settings.RouteesPaths)
+                ? ImmutableDictionary<Address, ImmutableHashSet<string>>.Empty.Add(Cluster.SelfAddress, settings.RouteesPaths.ToImmutableHashSet())
                 : ImmutableDictionary<Address, ImmutableHashSet<string>>.Empty;
         }
 

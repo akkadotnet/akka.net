@@ -34,7 +34,7 @@ namespace Akka.Cluster.Tests
         readonly Address _selfAddress;
         readonly Cluster _cluster;
 
-        public ClusterReadView ClusterView { get { return _cluster.ReadView; } }
+        internal ClusterReadView ClusterView { get { return _cluster.ReadView; } }
 
         public ClusterSpec()
             : base(Config)
