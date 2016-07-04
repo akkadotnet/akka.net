@@ -195,8 +195,6 @@ namespace Akka.Cluster.TestKit
                     typeof(GossipEnvelope),
                     typeof(GossipStatus), 
                     typeof(GossipStatus),
-                    typeof(MetricsGossipEnvelope),
-                    typeof(ClusterEvent.ClusterMetricsChanged),
                     typeof(InternalClusterAction.ITick),
                     typeof(PoisonPill),
                     typeof(DeathWatchNotification),

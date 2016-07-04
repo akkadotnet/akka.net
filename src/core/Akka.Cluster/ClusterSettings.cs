@@ -38,11 +38,6 @@ namespace Akka.Cluster
         readonly int _reduceGossipDifferentViewProbability;
         readonly TimeSpan _schedulerTickDuration;
         readonly int _schedulerTicksPerWheel;
-        readonly bool _metricsEnabled;
-        readonly string _metricsCollectorClass;
-        readonly TimeSpan _metricsInterval;
-        readonly TimeSpan _metricsGossipInterval;
-        readonly TimeSpan _metricsMovingAverageHalfLife;
         readonly int _minNrOfMembers;
         readonly ImmutableDictionary<string, int> _minNrOfMembersOfRole;
         readonly TimeSpan _downRemovalMargin;
@@ -86,11 +81,6 @@ namespace Akka.Cluster
             _reduceGossipDifferentViewProbability = cc.GetInt("reduce-gossip-different-view-probability");
             _schedulerTickDuration = cc.GetTimeSpan("scheduler.tick-duration");
             _schedulerTicksPerWheel = cc.GetInt("scheduler.ticks-per-wheel");
-            _metricsEnabled = cc.GetBoolean("metrics.enabled");
-            _metricsCollectorClass = cc.GetString("metrics.collector-class");
-            _metricsInterval = cc.GetTimeSpan("metrics.collect-interval");
-            _metricsGossipInterval = cc.GetTimeSpan("metrics.gossip-interval");
-            _metricsMovingAverageHalfLife = cc.GetTimeSpan("metrics.moving-average-half-life");
 
             _minNrOfMembersOfRole = cc.GetConfig("role").Root.GetObject().Items
                 .ToImmutableDictionary(kv => kv.Key, kv => kv.Value.GetObject().GetKey("min-nr-of-members").GetInt());
@@ -206,31 +196,6 @@ namespace Akka.Cluster
         public int SchedulerTicksPerWheel
         {
             get { return _schedulerTicksPerWheel; }
-        }
-
-        public bool MetricsEnabled
-        {
-            get { return _metricsEnabled; }
-        }
-
-        public string MetricsCollectorClass
-        {
-            get { return _metricsCollectorClass; }
-        }
-
-        public TimeSpan MetricsInterval
-        {
-            get { return _metricsInterval; }
-        }
-
-        public TimeSpan MetricsGossipInterval
-        {
-            get { return _metricsGossipInterval; }
-        }
-
-        public TimeSpan MetricsMovingAverageHalfLife
-        {
-            get { return _metricsMovingAverageHalfLife; }
         }
 
         public int MinNrOfMembers

@@ -57,13 +57,6 @@ namespace Akka.Cluster.Tests
             settings.FailureDetectorConfig.GetInt("monitored-by-nr-of-members").Should().Be(5);
             settings.FailureDetectorConfig.GetTimeSpan("expected-response-after").Should().Be(1.Seconds());
 
-            // TODO remove metrics
-            settings.MetricsEnabled.Should().BeTrue();
-            Type.GetType(settings.MetricsCollectorClass).Should().Be(typeof(PerformanceCounterMetricsCollector));
-            settings.MetricsInterval.Should().Be(3.Seconds());
-            settings.MetricsGossipInterval.Should().Be(3.Seconds());
-            settings.MetricsMovingAverageHalfLife.Should().Be(12.Seconds());
-
             settings.SchedulerTickDuration.Should().Be(33.Milliseconds());
             settings.SchedulerTicksPerWheel.Should().Be(512);
 

@@ -415,21 +415,6 @@ namespace Akka.Cluster
             }
         }
 
-        internal sealed class PublisherCreated
-        {
-            readonly IActorRef _publisher;
-
-            public PublisherCreated(IActorRef publisher)
-            {
-                _publisher = publisher;
-            }
-
-            public IActorRef Publisher
-            {
-                get { return _publisher; }
-            }
-        }
-
         /// <summary>
         /// Command to <see cref="Akka.Cluster.ClusterDaemon"/> to create a
         /// <see cref="OnMemberStatusChangedListener"/>
@@ -598,12 +583,6 @@ namespace Akka.Cluster
                     Props.Create(() => new OnMemberStatusChangedListener(msg.Callback, MemberStatus.Removed))
                         .WithDeploy(Deploy.Local));
             });
-
-            Receive<InternalClusterAction.PublisherCreated>(msg =>
-            {
-                if (_settings.MetricsEnabled)
-                    Context.ActorOf(Props.Create(() => new ClusterMetricsCollector(msg.Publisher)), "metrics");
-            });
         }
 
         private void CreateChildren()
@@ -663,10 +642,7 @@ namespace Akka.Cluster
                 Context.ActorOf(Props.Create<ClusterDomainEventPublisher>().WithDispatcher(Context.Props.Dispatcher), "publisher");
             _coreDaemon = Context.ActorOf(Props.Create(() => new ClusterCoreDaemon(_publisher)).WithDispatcher(Context.Props.Dispatcher), "daemon");
             Context.Watch(_coreDaemon);
-
-            Context.Parent.Tell(new InternalClusterAction.PublisherCreated(_publisher));
         }
-
     }
 
     internal class ClusterCoreDaemon : UntypedActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>

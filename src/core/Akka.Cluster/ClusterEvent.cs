@@ -445,26 +445,6 @@ namespace Akka.Cluster
             }
         }
 
-
-        /// <summary>
-        /// Current snapshot of cluster node metrics. Published to subscribers.
-        /// </summary>
-        [Obsolete("Superseded by akka.cluster.metrics package")]
-        public class ClusterMetricsChanged : IClusterDomainEvent
-        {
-            private readonly ImmutableHashSet<NodeMetrics> _nodeMetrics;
-
-            public ClusterMetricsChanged(ImmutableHashSet<NodeMetrics> nodeMetrics)
-            {
-                _nodeMetrics = nodeMetrics;
-            }
-
-            public ImmutableHashSet<NodeMetrics> NodeMetrics
-            {
-                get { return _nodeMetrics; }
-            }
-        }
-
         /// <summary>
         /// The nodes that have seen current version of the Gossip.
         /// </summary>
