@@ -20,6 +20,7 @@ using Helios.Channels.Bootstrap;
 using Helios.Channels.Sockets;
 using Helios.Codecs;
 using Helios.Exceptions;
+using Helios.Logging;
 using Helios.Topology;
 using Helios.Util.Concurrency;
 using AtomicCounter = Helios.Util.AtomicCounter;
@@ -27,9 +28,9 @@ using LengthFieldPrepender = Helios.Codecs.LengthFieldPrepender;
 
 namespace Akka.Remote.Transport.Helios
 {
-    abstract class TransportMode { }
+    internal abstract class TransportMode { }
 
-    class Tcp : TransportMode
+    internal class Tcp : TransportMode
     {
         public override string ToString()
         {
@@ -37,7 +38,7 @@ namespace Akka.Remote.Transport.Helios
         }
     }
 
-    class Udp : TransportMode
+    internal class Udp : TransportMode
     {
         public override string ToString()
         {
@@ -45,14 +46,14 @@ namespace Akka.Remote.Transport.Helios
         }
     }
 
-    class TcpTransportException : RemoteTransportException
+    internal class TcpTransportException : RemoteTransportException
     {
         public TcpTransportException(string message, Exception cause = null) : base(message, cause)
         {
         }
     }
 
-    class HeliosTransportSettings
+    internal class HeliosTransportSettings
     {
         internal readonly Config Config;
 
@@ -60,6 +61,15 @@ namespace Akka.Remote.Transport.Helios
         {
             Config = config;
             Init();
+        }
+
+        static HeliosTransportSettings()
+        {
+            // Disable STDOUT logging for Helios in release mode
+#if !DEBUG
+            LoggingFactory.DefaultFactory = new NoOpLoggerFactory();
+#endif
+
         }
 
         private void Init()
@@ -137,7 +147,7 @@ namespace Akka.Remote.Transport.Helios
 
         public bool BackwardsCompatibilityModeEnabled { get; private set; }
 
-        #region Internal methods
+#region Internal methods
 
         private long? OptionSize(string s)
         {
@@ -153,7 +163,7 @@ namespace Akka.Remote.Transport.Helios
                 config.GetInt("pool-size-max"));
         }
 
-        #endregion
+#endregion
     }
 
     /// <summary>
@@ -441,7 +451,7 @@ namespace Akka.Remote.Transport.Helios
 
         protected abstract Task<AssociationHandle> AssociateInternal(Address remoteAddress);
 
-        #region Static Members
+#region Static Members
 
         public static EndPoint AddressToSocketAddress(Address address)
         {
@@ -468,7 +478,7 @@ namespace Akka.Remote.Transport.Helios
             return new Address(schemeIdentifier, systemName, hostName ?? socketAddr.Address.ToString(), socketAddr.Port);
         }
 
-        #endregion
+#endregion
     }
 }
 

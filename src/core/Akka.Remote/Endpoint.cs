@@ -1030,7 +1030,9 @@ namespace Akka.Remote
 
         private void PublishAndThrow(Exception reason, LogLevel level)
         {
-            reason.Match().With<EndpointDisassociatedException>(endpoint => PublishDisassociated())
+            reason.Match()
+                .With<EndpointDisassociatedException>(endpoint => PublishDisassociated())
+                .With<ShutDownAssociation>(shutdown => {}) // don't log an error for planned shutdowns
                 .Default(msg => PublishError(reason, level));
 
             throw reason;
