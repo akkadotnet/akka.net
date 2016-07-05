@@ -1,5 +1,85 @@
-#### 1.0.10 April 26 2016 ####
-Placeholder for next release
+#### 1.1.0 July 05 2016 ####
+**Feature Release for Akka.NET**
+
+In Akka.NET 1.1 we introduce the following major changes:
+
+* Akka.Cluster is no longer in beta; it is released as a fully stable module with a frozen API that is ready for production use.
+* Akka.Remote now has a new Helios 2.1 transport that is up to 5x faster than the previous implementation and with tremendously lower memory consumption.
+* The actor mailbox system has been replaced with the `MailboxType` system, which standardizes all mailbox implementations on a common core and instead allows for pluggable `IMessageQueue` implementations. This will make it easier to develop user-defined mailboxes and also has the added benefit of reducing all actor memory footprints by 34%.
+* The entire router system has been updated, including support for new "controller" actors that can be used to adjust a router's routing table in accordance to external events (i.e. a router that adjusts whom it routes to based on CPU utilization, which will be implemented in Akka.Cluster.Metrics).
+
+[Full list of Akka.NET 1.1 fixes and changes](https://github.com/akkadotnet/akka.net/milestone/6)
+
+**API Changes**
+There have been a couple of important API changes which will affect end-users upgrading from Akka.NET versions 1.0.*.
+
+First breaking change deals with the `PriorityMailbox` base class, used by developers who need to prioritize specific message types ahead of others.
+
+All user-defined instances of this type must now include the following constructor in order to work (using an example from Akka.NET itself:)
+
+```csharp
+public class IntPriorityMailbox : UnboundedPriorityMailbox
+{
+    protected override int PriorityGenerator(object message)
+    {
+        return message as int? ?? Int32.MaxValue;
+    }
+
+    public IntPriorityMailbox(Settings settings, Config config) : base(settings, config)
+    {
+    }
+}
+```
+
+There must be a `MyMailboxType(Settings settings, Config config)` constructor on all custom mailbox types going forward, or a `ConfigurationException` will be thrown when trying to instantiate an actor who uses the mailbox type.
+
+Second breaking change deals with Akka.Cluster itself. In the past you could access all manner of data from the `ClusterReadView` class (accessed via the `Cluster.ReadView` property) - such as the addresses of all other members, who the current leader was, and so forth.
+
+Going forward `ClusterReadView` is now marked as `internal`, but if you need access to any of this data you can access the `Cluster.State` property, which will return a [`CurrentClusterState`](http://api.getakka.net/docs/stable/html/CFFD0D89.htm) object. This contains most of the same information that was previously available on `ClusterReadView`.
+
+**Akka.Streams**
+Another major part of Akka.NET 1.1 is the introduction of [Akka.Streams](http://getakka.net/docs/streams/introduction), a powerful library with a Domain-Specific Language (DSL) that allows you to compose Akka.NET actors and workflows into streams of events and messages. 
+
+As of 1.1 Akka.Streams is now available as a beta module on NuGet.
+
+We highly recommend that you read the [Akka.Streams Quick Start Guide for Akka.NET](http://getakka.net/docs/streams/quickstart) as a place to get started.
+
+**Akka.Persistence.Query**
+A second beta module is also now available as part of Akka.NET 1.1, Akka.Persistence.Query - this module is built on top of Akka.Streams and Akka.Persistence and allows users to query ranges of information directly from their underlying Akka.Persistence stores for more powerful types of reads, aggregations, and more.
+
+Akka.Persistence.Query is available for all SQL implementations of Akka.Persistence and will be added to our other Akka.Persistence plugins shortly thereafter.
+
+**Thank you!**
+Thanks for all of your patience and support as we worked to deliver this to you - it's been a tremendous amount of work but we really appreciate the help of all of the bug reports, Gitter questions, StackOverflow questions, and testing that our users have done on Akka.NET and specifically, Akka.Cluster over the past two years. We couldn't have done this without you.
+
+23 contributors since release v1.0.8
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 133 | 38124 | 7835 | Silv3rcircl3 |
+| 112 | 25826 | 10493 | Chris Constantin |
+| 70 | 45449 | 11556 | Bartosz Sypytkowski |
+| 44 | 22804 | 13971 | ravengerUA |
+| 40 | 9811 | 6396 | Aaron Stannard |
+| 12 | 9539 | 6619 | Marc Piechura |
+| 6 | 1692 | 959 | Sean Gilliam |
+| 4 | 448 | 0 | alexpantyukhin |
+| 3 | 772 | 4 | maxim.salamatko |
+| 3 | 3 | 382 | Danthar |
+| 2 | 40 | 46 | Vagif Abilov |
+| 1 | 91 | 103 | rogeralsing |
+| 1 | 3 | 3 | Jeff Cyr |
+| 1 | 219 | 44 | Michael Kantarovsky |
+| 1 | 2 | 1 | Juergen Hoetzel |
+| 1 | 19 | 8 | tstojecki |
+| 1 | 187 | 2 | Bart de Boer |
+| 1 | 178 | 0 | Willem Meints |
+| 1 | 17 | 1 | Kamil Wojciechowski |
+| 1 | 120 | 7 | JeffCyr |
+| 1 | 11 | 7 | corneliutusnea |
+| 1 | 1 | 1 | Tamas Vajk |
+| 1 | 0 | 64 | annymsMthd |
+
 
 #### 1.0.8 April 26 2016 ####
 **Maintenance release for Akka.NET v1.0.7**
