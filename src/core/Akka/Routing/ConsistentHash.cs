@@ -216,7 +216,7 @@ namespace Akka.Routing
         {
             public ISurrogated FromSurrogate(ActorSystem system)
             {
-                return new RandomPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+                return new ConsistentHashingPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
             }
 
             public int NrOfInstances { get; set; }
