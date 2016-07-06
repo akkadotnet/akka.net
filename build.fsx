@@ -257,9 +257,13 @@ Target "RunTests" <| fun _ ->
                                  // Akka.Streams.Tests.Performance is referencing Akka.Streams.Tests and Akka.Streams.TestKit.Tests
                                  "src/**/Akka.Streams.Tests.Performance/bin/Release/*.Tests.dll"
 
+    let nunitTestAssemblies = !! "src/**/bin/Release/Akka.Streams.Tests.TCK.dll"
+
     mkdir testOutput
    
-    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
+    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/FAKE/xunit.runner.console*/tools"
+    let nunitToolPath = findToolInSubPath "nunit3-console.exe" "src/packages/FAKE/NUnit.ConsoleRunner/tools"
+
     printfn "Using XUnit runner: %s" xunitToolPath
     let runSingleAssembly assembly =
         let assemblyName = Path.GetFileNameWithoutExtension(assembly)
@@ -268,6 +272,15 @@ Target "RunTests" <| fun _ ->
             (Seq.singleton assembly)
 
     xunitTestAssemblies |> Seq.iter (runSingleAssembly)
+    
+    let runNunitSingleAssembly assembly = 
+        let assemblyName = Path.GetFileNameWithoutExtension(assembly)
+        NUnit3
+             (fun p -> { p with ToolPath = nunitToolPath; WorkingDir = testOutput})
+             (Seq.singleton assembly)
+        
+    printfn "Using NUnit runner: %s" nunitToolPath
+    nunitTestAssemblies |> Seq.iter (runNunitSingleAssembly)
 
 Target "RunTestsMono" <| fun _ ->  
     let xunitTestAssemblies = !! "src/**/bin/Release Mono/*.Tests.dll"

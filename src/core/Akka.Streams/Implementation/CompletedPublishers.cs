@@ -12,7 +12,7 @@ using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
 {
-    internal sealed class EmptyPublisher<T> : IPublisher<T>
+    public sealed class EmptyPublisher<T> : IPublisher<T>
     {
         public static readonly IPublisher<T> Instance = new EmptyPublisher<T>();
 
