@@ -1,4 +1,4 @@
-#### 1.0.9 April 26 2016 ####
+#### 1.0.10 April 26 2016 ####
 Placeholder for next release
 
 #### 1.0.8 April 26 2016 ####

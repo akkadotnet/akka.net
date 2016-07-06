@@ -107,6 +107,7 @@
     <Compile Include="SunnyWeatherSpec.cs" />
     <Compile Include="TransitionSpec.cs" />
     <Compile Include="UnreachableNodeJoinsAgainSpec.cs" />
+    <Compile Include="JoinWithOfflineSeedNodeSpec.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj">
