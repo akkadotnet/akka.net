@@ -39,8 +39,8 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
-    <Reference Include="Reactive.Streams, Version=1.0.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\Reactive.Streams.1.0.1\lib\net40\Reactive.Streams.dll</HintPath>
+    <Reference Include="Reactive.Streams, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Reactive.Streams.1.0.0-RC1\lib\portable-net45+netcore45\Reactive.Streams.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -224,7 +224,9 @@
   <ItemGroup />
   <ItemGroup>
     <None Include="app.config" />
-    <None Include="packages.config" />
+    <None Include="packages.config">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
