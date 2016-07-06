@@ -388,7 +388,7 @@ namespace Akka.Streams.Actors
                 if (req.Count < 1)
                 {
                     if (_lifecycleState == LifecycleState.Active)
-                        OnError(new IllegalStateException("Number of requested elements must be positive"));
+                        OnError(new ArgumentException("Number of requested elements must be positive. Rule 3.9"));
                     else
                         base.AroundReceive(receive, message);
                 }

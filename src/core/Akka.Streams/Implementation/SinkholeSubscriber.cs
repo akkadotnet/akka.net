@@ -14,7 +14,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class SinkholeSubscriber<TIn> : ISubscriber<TIn>
+    public sealed class SinkholeSubscriber<TIn> : ISubscriber<TIn>
     {
         private readonly TaskCompletionSource<NotUsed> _whenCompleted;
         private bool _running;

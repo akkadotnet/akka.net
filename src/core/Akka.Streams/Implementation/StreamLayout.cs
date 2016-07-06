@@ -780,7 +780,7 @@ namespace Akka.Streams.Implementation
         public sealed override IImmutableDictionary<InPort, OutPort> Upstreams => base.Upstreams;
     }
 
-    internal sealed class VirtualProcessor<T> : IProcessor<T, T>
+    public sealed class VirtualProcessor<T> : IProcessor<T, T>
     {
         #region internal classes
 
