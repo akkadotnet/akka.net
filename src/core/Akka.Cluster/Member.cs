@@ -76,7 +76,7 @@ namespace Akka.Cluster
 
         public override string ToString()
         {
-            return String.Format("Member(address = {0}, status = {1}", Address, Status);
+            return $"Member(address = {Address}, status = {Status}, role=[{string.Join(",", Roles)}], upNumber={UpNumber})";
         }
 
         public bool HasRole(string role)

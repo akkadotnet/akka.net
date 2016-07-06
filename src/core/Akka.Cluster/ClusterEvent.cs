@@ -202,6 +202,11 @@ namespace Akka.Cluster
                     return hash;
                 }
             }
+
+            public override string ToString()
+            {
+                return $"{GetType()}(Member={Member})";
+            }
         }
 
         /// <summary>
@@ -322,6 +327,11 @@ namespace Akka.Cluster
                     return hash;
                 }
             }
+
+            public override string ToString()
+            {
+                return $"LeaderChanged(NewLeader={Leader})";
+            }
         }
 
         /// <summary>
@@ -370,6 +380,11 @@ namespace Akka.Cluster
                 return _role.Equals(other._role) 
                     && ((_leader == null && other._leader == null) || (_leader != null && _leader.Equals(other._leader)));
             }
+
+            public override string ToString()
+            {
+                return $"RoleLeaderChanged(Leader={Leader}, Role={Role})";
+            }
         }
 
         public sealed class ClusterShuttingDown : IClusterDomainEvent
@@ -379,6 +394,11 @@ namespace Akka.Cluster
             }
 
             public static readonly IClusterDomainEvent Instance = new ClusterShuttingDown();
+
+            public override string ToString()
+            {
+                return "ClusterShuttingDown";
+            }
         }
 
         /// <summary>
@@ -418,6 +438,11 @@ namespace Akka.Cluster
                     hash = hash * 23 + _member.GetHashCode();
                     return hash;
                 }
+            }
+
+            public override string ToString()
+            {
+                return $"{GetType()}(Member={Member})";
             }
         }
 

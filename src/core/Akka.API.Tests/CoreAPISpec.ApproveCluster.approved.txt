@@ -43,6 +43,7 @@ namespace Akka.Cluster
         public sealed class ClusterShuttingDown : Akka.Cluster.ClusterEvent.IClusterDomainEvent
         {
             public static readonly Akka.Cluster.ClusterEvent.IClusterDomainEvent Instance;
+            public override string ToString() { }
         }
         public sealed class CurrentClusterState
         {
@@ -68,6 +69,7 @@ namespace Akka.Cluster
             public Akka.Actor.Address Leader { get; }
             public override bool Equals(object obj) { }
             public override int GetHashCode() { }
+            public override string ToString() { }
         }
         public sealed class MemberExited : Akka.Cluster.ClusterEvent.MemberStatusChange
         {
@@ -95,6 +97,7 @@ namespace Akka.Cluster
             public Akka.Cluster.Member Member { get; }
             public override bool Equals(object obj) { }
             public override int GetHashCode() { }
+            public override string ToString() { }
         }
         public sealed class MemberUp : Akka.Cluster.ClusterEvent.MemberStatusChange
         {
@@ -106,6 +109,7 @@ namespace Akka.Cluster
             public Akka.Cluster.Member Member { get; }
             public override bool Equals(object obj) { }
             public override int GetHashCode() { }
+            public override string ToString() { }
         }
         public sealed class ReachableMember : Akka.Cluster.ClusterEvent.ReachabilityEvent
         {
@@ -118,6 +122,7 @@ namespace Akka.Cluster
             public string Role { get; }
             public override bool Equals(object obj) { }
             public override int GetHashCode() { }
+            public override string ToString() { }
         }
         public enum SubscriptionInitialStateMode
         {

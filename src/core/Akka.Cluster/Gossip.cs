@@ -70,7 +70,6 @@ namespace Akka.Cluster
         readonly ImmutableSortedSet<Member> _members;
         readonly GossipOverview _overview;
         readonly VectorClock _version;
-        private readonly Lazy<Reachability> _reachability;
 
         public ImmutableSortedSet<Member> Members { get { return _members; } }
         public GossipOverview Overview { get { return _overview; } }
@@ -93,15 +92,6 @@ namespace Akka.Cluster
             {
                 var downed = Members.Where(m => m.Status == MemberStatus.Down).ToList();
                 return Overview.Reachability.RemoveObservers(downed.Select(m => m.UniqueAddress).ToImmutableHashSet());
-            });
-
-            _reachability = new Lazy<Reachability>(() =>
-            {
-                var downed = _members
-                    .Where(m => m.Status == MemberStatus.Down)
-                    .Select(m=>m.UniqueAddress);
-
-                return overview.Reachability.Remove(downed);
             });
 
             if (Cluster.IsAssertInvariantsEnabled) AssertInvariants();
