@@ -148,23 +148,20 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 var routees = new List<Routee>();
 
                 Bucket bucket;
-                if (_registry.TryGetValue(_cluster.SelfAddress, out bucket))
+                ValueHolder valueHolder;
+                if (_registry.TryGetValue(_cluster.SelfAddress, out bucket) && bucket.Content.TryGetValue(send.Path, out valueHolder) && send.LocalAffinity)
                 {
-                    ValueHolder valueHolder;
-                    if (bucket.Content.TryGetValue(send.Path, out valueHolder) && send.LocalAffinity)
+                    var routee = valueHolder.Routee;
+                    if (routee != null) routees.Add(routee);
+                }
+                else
+                {
+                    foreach (var entry in _registry)
                     {
-                        var routee = valueHolder.Routee;
-                        if (routee != null) routees.Add(routee);
-                    }
-                    else
-                    {
-                        foreach (var entry in _registry)
+                        if (entry.Value.Content.TryGetValue(send.Path, out valueHolder))
                         {
-                            if (entry.Value.Content.TryGetValue(send.Path, out valueHolder))
-                            {
-                                var routee = valueHolder.Routee;
-                                if (routee != null) routees.Add(routee);
-                            }
+                            var routee = valueHolder.Routee;
+                            if (routee != null) routees.Add(routee);
                         }
                     }
                 }
