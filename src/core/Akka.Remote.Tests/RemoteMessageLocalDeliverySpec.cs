@@ -39,6 +39,18 @@ namespace Akka.Remote.Tests
 
         public RemoteMessageLocalDeliverySpec() : base(RemoteConfiguration) { }
 
+        /// <summary>
+        /// Reproduces https://github.com/akkadotnet/akka.net/issues/2151
+        /// </summary>
+        [Fact]
+        public void RemoteActorRefProvider_should_create_RemoteActorRef_for_nonlocaladdress()
+        {
+            var nonLocalAddress = new Address("akka.trttl.gremlin.tcp", Sys.Name, "localhost", RARP.For(Sys).Provider.DefaultAddress.Port);
+            var nonLocalActorPath = new RootActorPath(nonLocalAddress) / "user" / "foo";
+            var resolved = RARP.For(Sys).Provider.ResolveActorRefWithLocalAddress(nonLocalActorPath.ToSerializationFormat(), nonLocalAddress);
+            Assert.IsType<RemoteActorRef>(resolved); // should be a remote actorref
+        }
+
         [Fact]
         public void RemoteActorRefProvider_default_address_must_include_adapter_schemes()
         {

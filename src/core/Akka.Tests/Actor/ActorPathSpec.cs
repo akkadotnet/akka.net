@@ -155,6 +155,18 @@ namespace Akka.Tests.Actor
 
         }
 
+        /// <summary>
+        /// Reproduces https://github.com/akkadotnet/akka.net/issues/2151
+        /// </summary>
+        [Fact]
+        public void Fix2151_not_throw_NRE_on_RootActorPath_ElementsWithUid()
+        {
+            var a = new Address("akka.tcp", "mysys");
+            var rootA = new RootActorPath(a);
+            var uid = rootA.ElementsWithUid;
+            Assert.True(uid.Count > 0); // always at least 1 element when UID is appended
+        }
+
 
         /*
  "have correct path elements" in {
