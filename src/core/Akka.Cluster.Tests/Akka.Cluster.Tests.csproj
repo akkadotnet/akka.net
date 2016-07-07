@@ -87,20 +87,16 @@
     <Compile Include="ClusterHeartBeatSenderStateSpec.cs" />
     <Compile Include="ClusterSpec.cs" />
     <Compile Include="ClusterSpecBase.cs" />
-    <Compile Include="EWMASpec.cs" />
     <Compile Include="GossipSpec.cs" />
     <Compile Include="HeartbeatNodeRingSpec.cs" />
     <Compile Include="MemberOrderingSpec.cs" />
-    <Compile Include="MetricsCollectorSpec.cs" />
-    <Compile Include="MetricsGossipSpec.cs" />
-    <Compile Include="MetricValuesSpec.cs" />
-    <Compile Include="NodeMetricsSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Proto\ClusterMessageSerializerSpec.cs" />
     <Compile Include="ReachabilitySpec.cs" />
     <Compile Include="Routing\ClusterRouterAsk1343BugFixSpec.cs" />
     <Compile Include="Routing\ClusterRouterSupervisorSpec.cs" />
     <Compile Include="SerializationChecksSpec.cs" />
+    <Compile Include="StartupWithOneThreadSpec.cs" />
     <Compile Include="TestMember.cs" />
     <Compile Include="VectorClockSpec.cs" />
   </ItemGroup>

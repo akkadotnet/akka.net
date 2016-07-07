@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventSequences.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -25,7 +25,7 @@ namespace Akka.Persistence.Journal
 
         private EmptyEventSequence() { }
 
-        public IEnumerable<object> Events { get { return Enumerable.Empty<object>(); } }
+        public IEnumerable<object> Events => Enumerable.Empty<object>();
 
         public bool Equals(IEventSequence other)
         {
@@ -41,17 +41,17 @@ namespace Akka.Persistence.Journal
     [Serializable]
     public class EventSequence<T> : IEventSequence, IEquatable<IEventSequence>
     {
-        private readonly ISet<object> _events;
+        private readonly IList<object> _events;
         public EventSequence(IEnumerable<object> events)
         {
-            _events = new HashSet<object>(events);
+            _events = events.ToList();
         }
 
-        public IEnumerable<object> Events { get { return _events; } }
+        public IEnumerable<object> Events => _events;
 
         public bool Equals(IEventSequence other)
         {
-            return other != null && _events.SetEquals(other.Events);
+            return other != null && _events.SequenceEqual(other.Events);
         }
 
         public override bool Equals(object obj)
@@ -69,7 +69,7 @@ namespace Akka.Persistence.Journal
             _events = new[] { e };
         }
 
-        public IEnumerable<object> Events { get { return _events; } }
+        public IEnumerable<object> Events => _events;
 
         public bool Equals(IEventSequence other)
         {

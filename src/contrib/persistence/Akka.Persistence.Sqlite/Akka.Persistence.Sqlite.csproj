@@ -48,20 +48,17 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ConnectionContext.cs" />
-    <Compile Include="DbHelper.cs" />
     <Compile Include="Extension.cs" />
-    <Compile Include="Journal\SqliteQueryBuilder.cs" />
+    <Compile Include="Journal\SqliteQueryExecutor.cs" />
     <Compile Include="Journal\SqliteJournal.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Snapshot\QueryBuilder.cs" />
-    <Compile Include="Snapshot\SqliteQueryMapper.cs" />
     <Compile Include="Snapshot\SqliteSnapshotStore.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Akka.Persistence.Sqlite.nuspec" />
     <None Include="packages.config" />
     <EmbeddedResource Include="sqlite.conf">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>

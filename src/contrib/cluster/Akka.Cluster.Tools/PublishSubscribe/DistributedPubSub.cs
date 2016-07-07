@@ -1,10 +1,11 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DistributedPubSub.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -48,7 +49,6 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public DistributedPubSub(ExtendedActorSystem system)
         {
             _system = system;
-            _system.Settings.InjectTopLevelFallback(DefaultConfig());
             _settings = DistributedPubSubSettings.Create(system);
             _cluster = Cluster.Get(_system);
             _mediatorRef = CreateMediator();

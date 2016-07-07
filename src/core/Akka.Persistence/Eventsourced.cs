@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Eventsourced.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -422,14 +422,14 @@ namespace Akka.Persistence
         /// </summary>
         protected virtual void OnPersistFailure(Exception cause, object @event, long sequenceNr)
         {
-            _log.Error(cause, "Failed to persist event type [{}] with sequence number [{}] for persistenceId [{}].",
+            _log.Error(cause, "Failed to persist event type [{0}] with sequence number [{1}] for persistenceId [{2}].",
                 @event.GetType(), sequenceNr, PersistenceId);
         }
 
         /// <summary>
-        /// Called when the journal rejected <see cref="PersistentActor.Persist{TEvent}(TEvent,Action{TEvent})"/> of an event.
+        /// Called when the journal rejected <see cref="Eventsourced.Persist{TEvent}(TEvent,Action{TEvent})"/> of an event.
         /// The event was not stored. By default this method logs the problem as a warning, and the actor continues.
-        /// The callback handler that was passed to the <see cref="PersistentActor.Persist{TEvent}(TEvent,Action{TEvent})"/>
+        /// The callback handler that was passed to the <see cref="Eventsourced.Persist{TEvent}(TEvent,Action{TEvent})"/>
         /// method will not be invoked.
         /// </summary>
         protected virtual void OnPersistRejected(Exception cause, object @event, long sequenceNr)

@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestProbe.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -142,7 +142,12 @@ namespace Akka.TestKit
 
         public void SendSystemMessage(ISystemMessage message, IActorRef sender)
         {
-            ((IInternalActorRef)TestActor).SendSystemMessage(message, sender);
+            ((IInternalActorRef)TestActor).SendSystemMessage(message);
+        }
+
+        public void SendSystemMessage(ISystemMessage message)
+        {
+            ((IInternalActorRef)TestActor).SendSystemMessage(message);
         }
 
         public int CompareTo(object obj)

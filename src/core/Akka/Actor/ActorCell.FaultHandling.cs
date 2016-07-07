@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.FaultHandling.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -8,7 +8,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
+using System.Threading;
 using Akka.Actor.Internal;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -20,12 +22,12 @@ namespace Akka.Actor
     {
         private void SuspendNonRecursive()
         {
-            Mailbox.Suspend();
+            Dispatcher.Suspend(this);
         }
 
         private void ResumeNonRecursive()
         {
-            UseThreadContext(() => Mailbox.Resume());
+            Dispatcher.Resume(this);
         }
 
         // ReSharper disable once InconsistentNaming
@@ -84,7 +86,7 @@ namespace Akka.Actor
                     }
                 }
 
-                global::System.Diagnostics.Debug.Assert(Mailbox.IsSuspended, "Mailbox must be suspended during restart, status=" + Mailbox.Status);
+                global::System.Diagnostics.Debug.Assert(Mailbox.IsSuspended(), "Mailbox must be suspended during restart, status=" + Mailbox.CurrentStatus());
                 if (!SetChildrenTerminationReason(new SuspendReason.Recreation(cause)))
                 {
                     FinishRecreate(cause, failedActor);
@@ -147,7 +149,7 @@ namespace Akka.Actor
         /// </summary>
         private void FaultCreate()
         {
-            global::System.Diagnostics.Debug.Assert(Mailbox.IsSuspended, "Mailbox must be suspended during failed creation, status=" + Mailbox.Status);
+            global::System.Diagnostics.Debug.Assert(Mailbox.IsSuspended(), "Mailbox must be suspended during failed creation, status=" + Mailbox.CurrentStatus());
             global::System.Diagnostics.Debug.Assert(_self.Equals(Perpetrator), "Perpetrator should be self");
 
             SetReceiveTimeout(null);
@@ -178,7 +180,7 @@ namespace Akka.Actor
             {
                 HandleNonFatalOrInterruptedException(() => HandleInvokeFailure(e));
             }
-        }
+        }      
 
         /// <summary>Terminates this instance.</summary>
         private void Terminate()
@@ -189,15 +191,18 @@ namespace Akka.Actor
             // prevent Deadletter(Terminated) messages
             UnwatchWatchedActors(_actor);
 
+            // stop all children, which will turn childrenRefs into TerminatingChildrenContainer (if there are children)
             StopChildren();
-            //TODO: Implement when we have ActorSystem.Abort
-            //    if (systemImpl.aborting) {
-            //      // separate iteration because this is a very rare case that should not penalize normal operation
-            //      children foreach {
-            //        case ref: ActorRefScope if !ref.isLocal ⇒ self.sendSystemMessage(DeathWatchNotification(ref, true, false))
-            //        case _                                  ⇒
-            //      }
-            //    }
+
+            if (SystemImpl.Aborting)
+            {
+                // separate iteration because this is a very rare case that should not penalize normal operation
+                foreach (var child in Children)
+                {
+                    if(!child.AsInstanceOf<IActorRefScope>().IsLocal) // send ourselves a deathwatch notification pre-emptively for non-local children
+                        Self.AsInstanceOf<IInternalActorRef>().SendSystemMessage(new DeathWatchNotification(child, true, false));
+                }
+            }
             var wasTerminating = IsTerminating;
             if (SetChildrenTerminationReason(SuspendReason.Termination.Instance))
             {
@@ -240,7 +245,7 @@ namespace Akka.Actor
                     SuspendChildren(childrenNotToSuspend == null ? null : childrenNotToSuspend.ToList());
 
                     //Tell supervisor
-                    Parent.Tell(new Failed(_self, cause, _self.Path.Uid));
+                    Parent.SendSystemMessage(new Failed(_self, cause, _self.Path.Uid));
                 }
                 catch (Exception e)
                 {
@@ -265,7 +270,7 @@ namespace Akka.Actor
         {
             foreach (var child in ChildrenContainer.Children)
             {
-                child.Stop();
+                Stop(child); 
             }
         }
 
@@ -295,29 +300,16 @@ namespace Akka.Actor
             }
             finally
             {
-                try
-                //TODO: Akka Jvm: this is done in a call to dispatcher.detach()
-                {
-
-                    //TODO: Akka Jvm: this is done in a call to MessageDispatcher.detach()
-                    {
-                        var mailbox = Mailbox;
-                        var deadLetterMailbox = System.Mailboxes.DeadLetterMailbox;
-                        SwapMailbox(deadLetterMailbox);
-                        mailbox.BecomeClosed();
-                        mailbox.CleanUp();
-                        Dispatcher.Detach(this);
-                    }
-                }
+                try{ Dispatcher.Detach(this); }
                 finally
                 {
-                    try { Parent.Tell(new DeathWatchNotification(_self, existenceConfirmed: true, addressTerminated: false)); }
+                    try { Parent.SendSystemMessage(new DeathWatchNotification(_self, existenceConfirmed: true, addressTerminated: false)); }
                     finally
                     {
                         try { TellWatchersWeDied(); }
                         finally
                         {
-                            try { UnwatchWatchedActors(a); }
+                            try { UnwatchWatchedActors(a); } // stay here as we expect an emergency stop from HandleInvokeFailure
                             finally
                             {
                                 if (System.Settings.DebugLifecycle)
@@ -325,9 +317,9 @@ namespace Akka.Actor
 
                                 ClearActor(a);
                                 ClearActorCell();
-                                
+
                                 _actor = null;
-                                
+
                             }
                         }
                     }
@@ -376,7 +368,7 @@ namespace Akka.Actor
 
         }
 
-      
+
         private void HandleFailed(Failed f) //Called handleFailure in Akka JVM
         {
             CurrentMessage = f;
@@ -437,7 +429,7 @@ namespace Akka.Actor
             var recreation = status as SuspendReason.Recreation;
             if (recreation != null)
             {
-                FinishRecreate(recreation.Cause,_actor);
+                FinishRecreate(recreation.Cause, _actor);
             }
             else if (status is SuspendReason.Creation)
             {

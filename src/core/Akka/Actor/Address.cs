@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Address.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -62,6 +62,25 @@ namespace Akka.Actor
         public string Protocol
         {
             get { return _protocol; }
+        }
+
+        /// <summary>
+        /// Returns true if this Address is only defined locally. It is not safe to send locally scoped addresses to remote
+        ///  hosts. See also <see cref="HasGlobalScope"/>
+        /// </summary>
+        public bool HasLocalScope
+        {
+            get { return string.IsNullOrEmpty(Host); }
+        }
+
+        /// <summary>
+        /// Returns true if this Address is usable globally. Unlike locally defined addresses <see cref="HasLocalScope"/>
+        /// addresses of global scope are safe to sent to other hosts, as they globally and uniquely identify an addressable
+        /// entity.
+        /// </summary>
+        public bool HasGlobalScope
+        {
+            get { return !string.IsNullOrEmpty(Host); }
         }
 
         private Lazy<string> CreateLazyToString()

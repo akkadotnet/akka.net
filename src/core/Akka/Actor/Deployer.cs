@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Deployer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -31,7 +31,7 @@ namespace Akka.Actor
             var rootObj = config.Root.GetObject();
             if (rootObj == null) return;
             var unwrapped = rootObj.Unwrapped.Where(d => !d.Key.Equals("default")).ToArray();
-            foreach (var d in unwrapped.Select(x => ParseConfig(x.Key, config.GetConfig(x.Key))))
+            foreach (var d in unwrapped.Select(x => ParseConfig(x.Key, config.GetConfig(x.Key.BetweenDoubleQuotes()))))
             {
                 SetDeploy(d);
             }
@@ -96,7 +96,7 @@ namespace Akka.Actor
         private RouterConfig CreateRouterConfig(string routerTypeAlias, Config deployment)
         {
             if (routerTypeAlias == "from-code")
-                return RouterConfig.NoRouter;
+                return NoRouter.Instance;
 
             var path = string.Format("akka.actor.router.type-mapping.{0}", routerTypeAlias);
             var routerTypeName = _settings.Config.GetString(path);

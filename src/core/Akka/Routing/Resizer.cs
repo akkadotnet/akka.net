@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Resizer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -47,6 +47,20 @@ namespace Akka.Routing
         /// <param name="currentRoutees"></param>
         /// <returns></returns>
         public abstract int Resize(IEnumerable<Routee> currentRoutees);
+
+        public static Resizer FromConfig(Config parentConfig)
+        {
+            var defaultResizerConfig = parentConfig.GetConfig("resizer");
+
+            if (defaultResizerConfig != null && defaultResizerConfig.GetBoolean("enabled"))
+            {
+                return DefaultResizer.Apply(defaultResizerConfig);
+            }
+            else
+            {
+                return null;
+            }
+        }
     }
 
     /// <summary>
@@ -54,38 +68,30 @@ namespace Akka.Routing
     /// </summary>
     public class DefaultResizer : Resizer, IEquatable<DefaultResizer>
     {
-        public bool Equals(DefaultResizer other)
+        public DefaultResizer(
+            int lower,
+            int upper,
+            int pressureThreshold = 1,
+            double rampupRate = 0.2d,
+            double backoffThreshold = 0.3d,
+            double backoffRate = 0.1d,
+            int messagesPerResize = 10)
         {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return MessagesPerResize == other.MessagesPerResize && BackoffRate.Equals(other.BackoffRate) && RampupRate.Equals(other.RampupRate) && BackoffThreshold.Equals(other.BackoffThreshold) && UpperBound == other.UpperBound && PressureThreshold == other.PressureThreshold && LowerBound == other.LowerBound;
-        }
+            if (lower < 0)
+                throw new ArgumentException(string.Format("lowerBound must be >= 0, was: {0}", lower));
+            if (upper < 0)
+                throw new ArgumentException(string.Format("upperBound must be >= 0, was: {0}", upper));
+            if (upper < lower)
+                throw new ArgumentException(string.Format("upperBound must be >= lowerBound, was: {0} < {1}", upper, lower));
+            if (rampupRate < 0.0)
+                throw new ArgumentException(string.Format("rampupRate must be >= 0.0, was {0}", rampupRate));
+            if (backoffThreshold > 1.0)
+                throw new ArgumentException(string.Format("backoffThreshold must be <= 1.0, was {0}", backoffThreshold));
+            if (backoffRate < 0.0)
+                throw new ArgumentException(string.Format("backoffRate must be >= 0.0, was {0}", backoffRate));
+            if (messagesPerResize <= 0)
+                throw new ArgumentException(string.Format("messagesPerResize must be > 0, was {0}", messagesPerResize));
 
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
-            return Equals((DefaultResizer)obj);
-        }
-
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                int hashCode = MessagesPerResize;
-                hashCode = (hashCode * 397) ^ BackoffRate.GetHashCode();
-                hashCode = (hashCode * 397) ^ RampupRate.GetHashCode();
-                hashCode = (hashCode * 397) ^ BackoffThreshold.GetHashCode();
-                hashCode = (hashCode * 397) ^ UpperBound;
-                hashCode = (hashCode * 397) ^ PressureThreshold;
-                hashCode = (hashCode * 397) ^ LowerBound;
-                return hashCode;
-            }
-        }
-
-        public DefaultResizer(int lower, int upper, int pressureThreshold = 1, double rampupRate = 0.2d, double backoffThreshold = 0.3d, double backoffRate = 0.1d, int messagesPerResize = 10)
-        {
             LowerBound = lower;
             UpperBound = upper;
             PressureThreshold = pressureThreshold;
@@ -93,50 +99,28 @@ namespace Akka.Routing
             BackoffThreshold = backoffThreshold;
             BackoffRate = backoffRate;
             MessagesPerResize = messagesPerResize;
+        }
 
-            Validate();
+        public new static DefaultResizer FromConfig(Config resizerConfig)
+        {
+            return resizerConfig.GetBoolean("resizer.enabled") ? DefaultResizer.Apply(resizerConfig.GetConfig("resizer")) : null;
         }
 
         /// <summary>
         /// Creates a new DefaultResizer from the given configuration
         /// </summary>
         /// <param name="resizerConfig"></param>
-        private DefaultResizer(Config resizerConfig)
+        internal static DefaultResizer Apply(Config resizerConfig)
         {
-            LowerBound = resizerConfig.GetInt("lower-bound");
-            UpperBound = resizerConfig.GetInt("upper-bound");
-            PressureThreshold = resizerConfig.GetInt("pressure-threshold");
-            RampupRate = resizerConfig.GetDouble("rampup-rate");
-            BackoffThreshold = resizerConfig.GetDouble("backoff-threshold");
-            BackoffRate = resizerConfig.GetDouble("backoff-rate");
-            MessagesPerResize = resizerConfig.GetInt("messages-per-resize");
-
-            Validate();
-        }
-
-        private void Validate()
-        {
-            if (LowerBound < 0)
-                throw new ArgumentException(string.Format("lowerBound must be >= 0, was: {0}", LowerBound));
-
-            if (UpperBound < 0)
-                throw new ArgumentException(string.Format("upperBound must be >= 0, was: {0}", UpperBound));
-            if (UpperBound < LowerBound)
-                throw new ArgumentException(string.Format("upperBound must be >= lowerBound, was: {0} < {1}",
-                    UpperBound, LowerBound));
-            if (RampupRate < 0.0)
-                throw new ArgumentException(string.Format("rampupRate must be >= 0.0, was {0}", RampupRate));
-            if (BackoffThreshold > 1.0)
-                throw new ArgumentException(string.Format("backoffThreshold must be <= 1.0, was {0}", BackoffThreshold));
-            if (BackoffRate < 0.0)
-                throw new ArgumentException(string.Format("backoffRate must be >= 0.0, was {0}", BackoffRate));
-            if (MessagesPerResize <= 0)
-                throw new ArgumentException(string.Format("messagesPerResize must be > 0, was {0}", MessagesPerResize));
-        }
-
-        public static DefaultResizer FromConfig(Config resizerConfig)
-        {
-            return resizerConfig.GetBoolean("resizer.enabled") ? new DefaultResizer(resizerConfig.GetConfig("resizer")) : null;
+            return new DefaultResizer(
+                  resizerConfig.GetInt("lower-bound"),
+                  resizerConfig.GetInt("upper-bound"),
+                  resizerConfig.GetInt("pressure-threshold"),
+                  resizerConfig.GetDouble("rampup-rate"),
+                  resizerConfig.GetDouble("backoff-threshold"),
+                  resizerConfig.GetDouble("backoff-rate"),
+                  resizerConfig.GetInt("messages-per-resize")
+                );
         }
 
         public override bool IsTimeForResize(long messageCounter)
@@ -172,46 +156,6 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// This method can be used to smooth the capacity delta by considering
-        /// the current pressure and current capacity.
-        /// </summary>
-        /// <param name="pressure">pressure current number of busy routees</param>
-        /// <param name="capacity">capacity current number of routees</param>
-        /// <returns>proposed change in the capacity</returns>
-        public int Filter(int pressure, int capacity)
-        {
-            return Rampup(pressure, capacity) + Backoff(pressure, capacity);
-        }
-
-        /// <summary>
-        /// Computes a proposed negative (or zero) capacity delta using
-        /// the configured `backoffThreshold` and `backoffRate`
-        /// </summary>
-        /// <param name="pressure">pressure current number of busy routees</param>
-        /// <param name="capacity">capacity current number of routees</param>
-        /// <returns>proposed decrease in capacity (as a negative number)</returns>
-        public int Backoff(int pressure, int capacity)
-        {
-            if (BackoffThreshold > 0.0 && BackoffRate > 0.0 && capacity > 0 && (Convert.ToDouble(pressure) / Convert.ToDouble(capacity)) < BackoffThreshold)
-            {
-                return Convert.ToInt32(Math.Floor(-1.0 * BackoffRate * capacity));
-            }
-            return 0;
-        }
-
-        /// <summary>
-        /// Computes a proposed positive (or zero) capacity delta using
-        /// the configured `rampupRate`.
-        /// </summary>
-        /// <param name="pressure">the current number of busy routees</param>
-        /// <param name="capacity">the current number of total routees</param>
-        /// <returns>proposed increase in capacity</returns>
-        public int Rampup(int pressure, int capacity)
-        {
-            return (pressure < capacity) ? 0 : Convert.ToInt32(Math.Ceiling(RampupRate * capacity));
-        }
-
-        /// <summary>
         /// Number of routees considered busy, or above 'pressure level'.
         ///
         /// Implementation depends on the value of `pressureThreshold`
@@ -243,23 +187,65 @@ namespace Akka.Routing
                             if (cell != null)
                             {
                                 if (PressureThreshold == 1)
-                                    return cell.Mailbox.Status == Mailbox.MailboxStatus.Busy &&
-                                    cell.Mailbox.HasMessages;
+                                    return cell.Mailbox.IsScheduled() && cell.Mailbox.HasMessages;
                                 if (PressureThreshold < 1)
-                                    return cell.Mailbox.Status == Mailbox.MailboxStatus.Busy &&
-                                           cell.CurrentMessage != null;
+                                    return cell.Mailbox.IsScheduled() && cell.CurrentMessage != null;
+
                                 return cell.Mailbox.NumberOfMessages >= PressureThreshold;
                             }
                             else
                             {
-                                if (PressureThreshold == 1) return underlying.HasMessages;
-                                if (PressureThreshold < 1) return true; //unstarted cells are always busy, for instance
+                                if (PressureThreshold == 1)
+                                    return underlying.HasMessages;
+                                if (PressureThreshold < 1)
+                                    return true; //unstarted cells are always busy, for instance
                                 return underlying.NumberOfMessages >= PressureThreshold;
                             }
                         }
                     }
                     return false;
                 });
+        }
+
+        /// <summary>
+        /// This method can be used to smooth the capacity delta by considering
+        /// the current pressure and current capacity.
+        /// </summary>
+        /// <param name="pressure">pressure current number of busy routees</param>
+        /// <param name="capacity">capacity current number of routees</param>
+        /// <returns>proposed change in the capacity</returns>
+        public int Filter(int pressure, int capacity)
+        {
+            return Rampup(pressure, capacity) + Backoff(pressure, capacity);
+        }
+
+        /// <summary>
+        /// Computes a proposed positive (or zero) capacity delta using
+        /// the configured `rampupRate`.
+        /// </summary>
+        /// <param name="pressure">the current number of busy routees</param>
+        /// <param name="capacity">the current number of total routees</param>
+        /// <returns>proposed increase in capacity</returns>
+        public int Rampup(int pressure, int capacity)
+        {
+            return (pressure < capacity) ? 0 : Convert.ToInt32(Math.Ceiling(RampupRate * capacity));
+        }
+
+        /// <summary>
+        /// Computes a proposed negative (or zero) capacity delta using
+        /// the configured `backoffThreshold` and `backoffRate`
+        /// </summary>
+        /// <param name="pressure">pressure current number of busy routees</param>
+        /// <param name="capacity">capacity current number of routees</param>
+        /// <returns>proposed decrease in capacity (as a negative number)</returns>
+        public int Backoff(int pressure, int capacity)
+        {
+            if (BackoffThreshold > 0.0 && BackoffRate > 0.0 && capacity > 0 && (Convert.ToDouble(pressure) / Convert.ToDouble(capacity)) < BackoffThreshold)
+            {
+                return Convert.ToInt32(Math.Floor(-1.0 * BackoffRate * capacity));
+            }
+
+            return 0;
         }
 
         /// <summary>
@@ -318,6 +304,36 @@ namespace Akka.Routing
         /// Use 1 to resize before each message.
         /// </summary>
         public int MessagesPerResize { get; private set; }
+
+        public bool Equals(DefaultResizer other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return MessagesPerResize == other.MessagesPerResize && BackoffRate.Equals(other.BackoffRate) && RampupRate.Equals(other.RampupRate) && BackoffThreshold.Equals(other.BackoffThreshold) && UpperBound == other.UpperBound && PressureThreshold == other.PressureThreshold && LowerBound == other.LowerBound;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((DefaultResizer)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hashCode = MessagesPerResize;
+                hashCode = (hashCode * 397) ^ BackoffRate.GetHashCode();
+                hashCode = (hashCode * 397) ^ RampupRate.GetHashCode();
+                hashCode = (hashCode * 397) ^ BackoffThreshold.GetHashCode();
+                hashCode = (hashCode * 397) ^ UpperBound;
+                hashCode = (hashCode * 397) ^ PressureThreshold;
+                hashCode = (hashCode * 397) ^ LowerBound;
+                return hashCode;
+            }
+        }
     }
 }
 

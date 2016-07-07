@@ -1,12 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Cluster.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
@@ -14,6 +16,7 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Cluster
 {
@@ -28,14 +31,14 @@ namespace Akka.Cluster
     //TODO: xmldoc
     /// <summary>
     /// This module is responsible for cluster membership information. Changes to the cluster
-    /// information is retrieved through <see cref="Akka.Cluster.Cluster.Subscribe"/>. Commands to operate the cluster is
+    /// information is retrieved through <see cref="InternalClusterAction.Subscribe"/>. Commands to operate the cluster is
     /// available through methods in this class, such as <see cref="Akka.Cluster.Cluster.Join"/>, <see cref="Akka.Cluster.Cluster.Down"/> and <see cref="Akka.Cluster.Cluster.Leave"/>.
     /// 
     /// Each cluster <see cref="Akka.Cluster.Member"/> is identified by its <see cref="Akka.Actor.Address"/>, and
     /// the cluster address of this actor system is [[#selfAddress]]. A member also has a status;
     /// initially <see cref="Akka.Cluster.MemberStatus.Joining"/> followed by <see cref="Akka.Cluster.MemberStatus.Up"/>.
     /// </summary>
-    public class Cluster :IExtension
+    public class Cluster : IExtension
     {
         //TODO: Issue with missing overrides for Get and Lookup
 
@@ -44,46 +47,48 @@ namespace Akka.Cluster
             return system.WithExtension<Cluster, ClusterExtension>();
         }
 
-        public static bool IsAssertInvariantsEnabled
+        internal static bool IsAssertInvariantsEnabled
         {
             //TODO: Consequences of this?
             get { return false; }
         }
 
-        readonly ClusterSettings _settings;
-        public ClusterSettings Settings { get { return _settings; } }
-        readonly UniqueAddress _selfUniqueAddress;
-        public UniqueAddress SelfUniqueAddress {get{return _selfUniqueAddress;}}
-        
+        public ClusterSettings Settings { get; }
+        public UniqueAddress SelfUniqueAddress { get; }
+
         public Cluster(ActorSystemImpl system)
         {
             System = system;
-            _settings = new ClusterSettings(system.Settings.Config, system.Name);    
+            Settings = new ClusterSettings(system.Settings.Config, system.Name);
 
             var provider = system.Provider as ClusterActorRefProvider;
-            if(provider == null)
+            if (provider == null)
                 throw new ConfigurationException(
-                    String.Format("ActorSystem {0} needs to have a 'ClusterActorRefProvider' enabled in the configuration, currently uses {1}", 
-                        system, 
+                    String.Format("ActorSystem {0} needs to have a 'ClusterActorRefProvider' enabled in the configuration, currently uses {1}",
+                        system,
                         system.Provider.GetType().FullName));
-            _selfUniqueAddress = new UniqueAddress(provider.Transport.DefaultAddress, AddressUidExtension.Uid(system));
+            SelfUniqueAddress = new UniqueAddress(provider.Transport.DefaultAddress, AddressUidExtension.Uid(system));
 
             _log = Logging.GetLogger(system, "Cluster");
 
             LogInfo("Starting up...");
 
-            _failureDetector = new DefaultFailureDetectorRegistry<Address>(() => FailureDetectorLoader.Load(_settings.FailureDetectorImplementationClass, _settings.FailureDetectorConfig,
+            _failureDetector = new DefaultFailureDetectorRegistry<Address>(() => FailureDetectorLoader.Load(Settings.FailureDetectorImplementationClass, Settings.FailureDetectorConfig,
                 system));
 
             _scheduler = CreateScheduler(system);
 
             //create supervisor for daemons under path "/system/cluster"
-            _clusterDaemons = system.SystemActorOf(Props.Create(() => new ClusterDaemon(_settings)).WithDeploy(Deploy.Local), "cluster");
-
-            //TODO: Pretty sure this is bad and will at least throw aggregateexception possibly worse. 
-            _clusterCore = GetClusterCoreRef().Result;
+            _clusterDaemons = system.SystemActorOf(Props.Create(() => new ClusterDaemon(Settings)).WithDeploy(Deploy.Local), "cluster");
 
             _readView = new ClusterReadView(this);
+
+            // force the underlying system to start
+            _clusterCore = GetClusterCoreRef().Result;
+
+            system.RegisterOnTermination(Shutdown);
+
+            LogInfo("Started up successfully");
         }
 
         /// <summary>
@@ -103,7 +108,6 @@ namespace Akka.Cluster
                 System.DeadLetters.Tell(ex); //don't re-throw the error. Just log it.
                 return System.DeadLetters;
             }
-            //TODO: add system.terminationCallback support
         }
 
         /// <summary>
@@ -112,7 +116,7 @@ namespace Akka.Cluster
         /// <param name="subscriber">The actor who'll receive the cluster domain events</param>
         /// <param name="to"><see cref="ClusterEvent.IClusterDomainEvent"/> subclasses</param>
         /// <remarks>A snapshot of <see cref="ClusterEvent.CurrentClusterState"/> will be sent to <paramref name="subscriber"/> as the first message</remarks>
-        public void Subscribe(IActorRef subscriber, Type[] to)
+        public void Subscribe(IActorRef subscriber, params Type[] to)
         {
             Subscribe(subscriber, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsSnapshot, to);
         }
@@ -128,10 +132,14 @@ namespace Akka.Cluster
         /// If set to <see cref="ClusterEvent.SubscriptionInitialStateMode.InitialStateAsSnapshot"/> 
         /// a snapshot of <see cref="ClusterEvent.CurrentClusterState"/> will be sent to <paramref name="subscriber"/> as the first message. </param>
         /// <param name="to"><see cref="ClusterEvent.IClusterDomainEvent"/> subclasses</param>
-        public void Subscribe(IActorRef subscriber, ClusterEvent.SubscriptionInitialStateMode initialStateMode, Type[] to)
+        public void Subscribe(IActorRef subscriber, ClusterEvent.SubscriptionInitialStateMode initialStateMode, params Type[] to)
         {
-            var val = _clusterCore;
-            _clusterCore.Tell(new InternalClusterAction.Subscribe(subscriber, initialStateMode, ImmutableHashSet.Create<Type>(to)));
+            if (to.Length == 0)
+                throw new ArgumentException("At least one `IClusterDomainEvent` class is required");
+            if (!to.All(t => typeof(ClusterEvent.IClusterDomainEvent).IsAssignableFrom(t)))
+                throw new ArgumentException($"Subscribe to `IClusterDomainEvent` or subclasses, was [{string.Join(", ", to.Select(c => c.Name))}]");
+
+            ClusterCore.Tell(new InternalClusterAction.Subscribe(subscriber, initialStateMode, ImmutableHashSet.Create(to)));
         }
 
         /// <summary>
@@ -139,7 +147,7 @@ namespace Akka.Cluster
         /// </summary>
         public void Unsubscribe(IActorRef subscriber)
         {
-            Unsubscribe(subscriber,null);
+            Unsubscribe(subscriber, null);
         }
 
         /// <summary>
@@ -147,7 +155,7 @@ namespace Akka.Cluster
         /// </summary>
         public void Unsubscribe(IActorRef subscriber, Type to)
         {
-            _clusterCore.Tell(new InternalClusterAction.Unsubscribe(subscriber, to));
+            ClusterCore.Tell(new InternalClusterAction.Unsubscribe(subscriber, to));
         }
 
         /// <summary>
@@ -157,7 +165,7 @@ namespace Akka.Cluster
         /// </summary>
         public void SendCurrentClusterState(IActorRef receiver)
         {
-            _clusterCore.Tell(new InternalClusterAction.SendCurrentClusterState(receiver));
+            ClusterCore.Tell(new InternalClusterAction.SendCurrentClusterState(receiver));
         }
 
         /// <summary>
@@ -170,7 +178,20 @@ namespace Akka.Cluster
         /// </summary>
         public void Join(Address address)
         {
-            _clusterCore.Tell(new ClusterUserAction.JoinTo(address));
+            ClusterCore.Tell(new ClusterUserAction.JoinTo(FillLocal(address)));
+        }
+
+        private Address FillLocal(Address address)
+        {
+            // local address might be used if grabbed from IActorRef.Path.Address
+            if (address.HasLocalScope && address.System == SelfAddress.System)
+            {
+                return SelfAddress;
+            }
+            else
+            {
+                return address;
+            }
         }
 
         /// <summary>
@@ -181,9 +202,10 @@ namespace Akka.Cluster
         /// When it has successfully joined it must be restarted to be able to join another
         /// cluster or to join the same cluster again.
         /// </summary>
-        public void JoinSeedNodes(ImmutableList<Address> seedNodes)
+        public void JoinSeedNodes(IEnumerable<Address> seedNodes)
         {
-            _clusterCore.Tell(new InternalClusterAction.JoinSeedNodes(seedNodes));
+            ClusterCore.Tell(
+                new InternalClusterAction.JoinSeedNodes(seedNodes.Select(FillLocal).ToImmutableList()));
         }
 
         /// <summary>
@@ -201,7 +223,7 @@ namespace Akka.Cluster
         /// <param name="address"></param>
         public void Leave(Address address)
         {
-            _clusterCore.Tell(new ClusterUserAction.Leave(address));
+            ClusterCore.Tell(new ClusterUserAction.Leave(FillLocal(address)));
         }
 
         /// <summary>
@@ -214,7 +236,7 @@ namespace Akka.Cluster
         /// </summary>
         public void Down(Address address)
         {
-            _clusterCore.Tell(new ClusterUserAction.Down(address));
+            ClusterCore.Tell(new ClusterUserAction.Down(FillLocal(address)));
         }
 
         /// <summary>
@@ -222,10 +244,46 @@ namespace Akka.Cluster
         /// Typically used together with configuration option 'akka.cluster.min-nr-of-members' to defer some action,
         /// such as starting actors, until the cluster has reached a certain size.
         /// </summary>
-        /// <param name="callback"></param>
+        /// <param name="callback">The callback that will be run whenever the current member achieves a status of <see cref="MemberStatus.Up"/></param>
         public void RegisterOnMemberUp(Action callback)
         {
             _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberUpListener(callback));
+        }
+
+        /// <summary>
+        /// The supplied callback will be run once when the current cluster member is <see cref="MemberStatus.Removed"/>.
+        /// 
+        /// Typically used in combination with <see cref="Leave"/> and <see cref="ActorSystem.Terminate"/>.
+        /// </summary>
+        /// <param name="callback">The callback that will be run whenever the current member achieves a status of <see cref="MemberStatus.Down"/></param>
+        public void RegisterOnMemberRemoved(Action callback)
+        {
+            if (IsTerminated)
+                callback();
+            else
+                _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberRemovedListener(callback));
+        }
+
+        /// <summary>
+        /// Generate the remote actor path by replacing the Address in the RootActor Path for the given
+        /// ActorRef with the cluster's `SelfAddress`, unless address' host is already defined
+        /// </summary>
+        /// <param name="actorRef"></param>
+        public ActorPath RemotePathOf(IActorRef actorRef)
+        {
+            var path = actorRef.Path;
+            if (!string.IsNullOrEmpty(path.Address.Host))
+            {
+                return path;
+            }
+            else
+            {
+                return (new RootActorPath(path.Root.Address
+                    .WithProtocol(SelfAddress.Protocol)
+                    .WithSystem(SelfAddress.System)
+                    .WithHost(SelfAddress.Host)
+                    .WithPort(SelfAddress.Port)) / string.Join("/", path.Elements)).WithUid(path.Uid);
+            }
         }
 
         /// <summary>
@@ -233,7 +291,7 @@ namespace Akka.Cluster
         /// </summary>
         public Address SelfAddress
         {
-            get { return _selfUniqueAddress.Address; }
+            get { return SelfUniqueAddress.Address; }
         }
 
         /// <summary>
@@ -241,22 +299,28 @@ namespace Akka.Cluster
         /// </summary>
         public ImmutableHashSet<string> SelfRoles
         {
-            get { return _settings.Roles; }
+            get { return Settings.Roles; }
         }
 
-        internal ClusterEvent.CurrentClusterState State { get { return _readView._state; } }
+        /// <summary>
+        /// Current snapshot state of the cluster.
+        /// </summary>
+        public ClusterEvent.CurrentClusterState State { get { return _readView._state; } }
 
-        readonly AtomicBoolean _isTerminated = new AtomicBoolean(false);
+        private readonly AtomicBoolean _isTerminated = new AtomicBoolean(false);
 
+        /// <summary>
+        /// Returns true if this cluster instance has be shutdown.
+        /// </summary>
         public bool IsTerminated { get { return _isTerminated.Value; } }
 
-        internal ActorSystemImpl System { get; private set; }
+        public ExtendedActorSystem System { get; }
 
-        readonly ILoggingAdapter _log;
-        readonly ClusterReadView _readView;
-        public ClusterReadView ReadView {get { return _readView; }}
+        private readonly ILoggingAdapter _log;
+        private readonly ClusterReadView _readView;
+        internal ClusterReadView ReadView { get { return _readView; } }
 
-        readonly DefaultFailureDetectorRegistry<Address> _failureDetector;
+        private readonly DefaultFailureDetectorRegistry<Address> _failureDetector;
         public DefaultFailureDetectorRegistry<Address> FailureDetector { get { return _failureDetector; } }
 
         // ========================================================
@@ -272,7 +336,16 @@ namespace Akka.Cluster
             return system.Scheduler;
         }
 
-        public void Shutdown()
+        /// <summary>
+        /// INTERNAL API.
+        /// 
+        /// Shuts down all connections to other members, the cluster daemon and the periodic gossip and cleanup tasks.
+        /// Should not called by the user. 
+        /// 
+        /// The user can issue a <see cref="Leave"/> command which will tell the node
+        /// to go through graceful handoff process `LEAVE -> EXITING ->  REMOVED -> SHUTDOWN`.
+        /// </summary>
+        internal void Shutdown()
         {
             if (_isTerminated.CompareAndSet(false, true))
             {
@@ -288,21 +361,32 @@ namespace Akka.Cluster
             }
         }
 
-        readonly IActorRef _clusterDaemons;
-        IActorRef _clusterCore;
-        public IActorRef ClusterCore { get { return _clusterCore; } }
+        private readonly IActorRef _clusterDaemons;
+        private IActorRef _clusterCore;
 
-        public void LogInfo(string message)
+        internal IActorRef ClusterCore
+        {
+            get
+            {
+                if (_clusterCore == null)
+                {
+                    _clusterCore = GetClusterCoreRef().Result;
+                }
+                return _clusterCore;
+            }
+        }
+
+        internal void LogInfo(string message)
         {
             _log.Info("Cluster Node [{0}] - {1}", SelfAddress, message);
         }
 
-        public void LogInfo(string template, object arg1)
+        internal void LogInfo(string template, object arg1)
         {
             _log.Info("Cluster Node [{0}] - " + template, SelfAddress, arg1);
         }
 
-        public void LogInfo(string template, object arg1, object arg2)
+        internal void LogInfo(string template, object arg1, object arg2)
         {
             _log.Info("Cluster Node [{0}] - " + template, SelfAddress, arg1, arg2);
         }

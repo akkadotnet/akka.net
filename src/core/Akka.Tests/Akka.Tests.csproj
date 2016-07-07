@@ -108,6 +108,7 @@
     <Compile Include="Actor\ActorCellTests_SerializationOfUserMessages.cs" />
     <Compile Include="Actor\ActorDslSpec.cs" />
     <Compile Include="Actor\ActorLifeCycleSpec.cs" />
+    <Compile Include="Actor\ActorLookupSpec.cs" />
     <Compile Include="Actor\ActorPathSpec.cs" />
     <Compile Include="Actor\ActorProducerPipelineTests.cs" />
     <Compile Include="Actor\ActorRefSpec.cs" />
@@ -115,6 +116,7 @@
     <Compile Include="Actor\AskTimeoutSpec.cs" />
     <Compile Include="Actor\Cancellation\AlreadyCancelledCancelableTests.cs" />
     <Compile Include="Actor\Cancellation\CancelableTests.cs" />
+    <Compile Include="Actor\Dispatch\ActorModelSpec.cs" />
     <Compile Include="Actor\HotSwapSpec.cs" />
     <Compile Include="Actor\InboxSpec.cs" />
     <Compile Include="Actor\LocalActorRefProviderSpec.cs" />
@@ -153,10 +155,12 @@
     <Compile Include="Dispatch\AsyncAwaitSpec.cs" />
     <Compile Include="Dispatch\DispatchersSpec.cs" />
     <Compile Include="Dispatch\MailboxesSpec.cs" />
+    <Compile Include="Dispatch\SysMsg\SystemMessageListSpec.cs" />
     <Compile Include="Dispatch\XUnitAsyncTestsSanityCheck.cs" />
     <Compile Include="Event\EventBusSpec.cs" />
     <Compile Include="Event\EventStreamSpec.cs" />
     <Compile Include="Event\LoggerMailboxSpec.cs" />
+    <Compile Include="Event\LoggerSpec.cs" />
     <Compile Include="IO\SimpleDnsCacheSpec.cs" />
     <Compile Include="IO\TcpConnectionSpec.cs" />
     <Compile Include="IO\TcpIntegrationSpec.cs" />
@@ -173,11 +177,13 @@
     <Compile Include="Pattern\CircuitBreakerSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Routing\BroadcastSpec.cs" />
+    <Compile Include="Routing\ConfiguredLocalRoutingSpec.cs" />
     <Compile Include="Routing\ConsistentHashingRouterSpec.cs" />
     <Compile Include="Routing\ListenerSpec.cs" />
     <Compile Include="Routing\RandomSpec.cs" />
     <Compile Include="Routing\ResizerSpec.cs" />
     <Compile Include="Routing\RoundRobinSpec.cs" />
+    <Compile Include="Routing\RouteeCreationSpec.cs" />
     <Compile Include="Routing\RoutingSpec.cs" />
     <Compile Include="Routing\ScatterGatherFirstCompletedSpec.cs" />
     <Compile Include="Routing\SmallestMailboxSpec.cs" />
@@ -189,7 +195,9 @@
     <Compile Include="Util\ByteStringSpec.cs" />
     <Compile Include="Util\CollectionExtensionsSpec.cs" />
     <Compile Include="Util\ContinuousEnumeratorSpec.cs" />
+    <Compile Include="Util\IndexSpec.cs" />
     <Compile Include="Util\Internal\Collections\IteratorTests.cs" />
+    <Compile Include="Util\Internal\ExtensionsTests.cs" />
     <Compile Include="Util\Internal\InterlockedSpinTests.cs" />
     <Compile Include="Util\PatternSpec.cs" />
     <Compile Include="Util\SwitchTests.cs" />
@@ -215,7 +223,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="App.config">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
   <ItemGroup>

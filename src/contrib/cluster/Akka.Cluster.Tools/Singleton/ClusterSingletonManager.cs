@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonManager.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -16,14 +16,41 @@ using Akka.Remote;
 
 namespace Akka.Cluster.Tools.Singleton
 {
+    public interface IClusterSingletonMessage { }
+
     [Serializable]
-    internal enum ClusterSingletonMessage
+    internal sealed class HandOverToMe : IClusterSingletonMessage
     {
-        HandOverToMe,
-        HandOverInProgress,
-        HandOverDone,
-        TakeOverFromMe,
-        Cleanup
+        public static readonly HandOverToMe Instance = new HandOverToMe();
+        private HandOverToMe() { }
+    }
+
+    [Serializable]
+    internal sealed class HandOverInProgress : IClusterSingletonMessage
+    {
+        public static readonly HandOverInProgress Instance = new HandOverInProgress();
+        private HandOverInProgress() { }
+    }
+
+    [Serializable]
+    internal sealed class HandOverDone : IClusterSingletonMessage
+    {
+        public static readonly HandOverDone Instance = new HandOverDone();
+        private HandOverDone() { }
+    }
+
+    [Serializable]
+    internal sealed class TakeOverFromMe : IClusterSingletonMessage
+    {
+        public static readonly TakeOverFromMe Instance = new TakeOverFromMe();
+        private TakeOverFromMe() { }
+    }
+
+    [Serializable]
+    internal sealed class Cleanup : IClusterSingletonMessage
+    {
+        public static readonly Cleanup Instance = new Cleanup();
+        private Cleanup() { }
     }
 
     [Serializable]
@@ -285,7 +312,7 @@ namespace Akka.Cluster.Tools.Singleton
                 throw new ConfigurationException("min-number-of-hand-over-retries must be >= 1");
 
             _maxHandOverRetries = Math.Max(minRetries, n + 3);
-            _maxTakeOverRetries = Math.Max(1, n - 3);
+            _maxTakeOverRetries = Math.Max(1, _maxHandOverRetries - 3);
 
             InitializeFSM();
         }
@@ -299,7 +326,7 @@ namespace Akka.Cluster.Tools.Singleton
             // subscribe to cluster changes, re-subscribe when restart
             _cluster.Subscribe(Self, new[] { typeof(ClusterEvent.MemberExited), typeof(ClusterEvent.MemberRemoved) });
 
-            SetTimer(CleanupTimer, ClusterSingletonMessage.Cleanup, TimeSpan.FromMinutes(1.0), repeat: true);
+            SetTimer(CleanupTimer, Cleanup.Instance, TimeSpan.FromMinutes(1.0), repeat: true);
 
             // defer subscription to avoid some jitter when
             // starting/joining several nodes at the same time
@@ -353,7 +380,7 @@ namespace Akka.Cluster.Tools.Singleton
             if (handOverTo != null)
             {
                 newOldest = handOverTo.Path.Address;
-                handOverTo.Tell(ClusterSingletonMessage.HandOverDone);
+                handOverTo.Tell(HandOverDone.Instance);
             }
 
             Log.Info("Singleton terminated, hand-over done [{0} -> {1}]", _cluster.SelfAddress, newOldest);
@@ -375,7 +402,7 @@ namespace Akka.Cluster.Tools.Singleton
         {
             if (singletonTerminated) return HandleHandOverDone(handOverTo);
 
-            if (handOverTo != null) handOverTo.Tell(ClusterSingletonMessage.HandOverInProgress);
+            if (handOverTo != null) handOverTo.Tell(HandOverInProgress.Instance);
 
             singleton.Tell(_terminationMessage);
 
@@ -426,7 +453,7 @@ namespace Akka.Cluster.Tools.Singleton
                         else if (_removed.ContainsKey(youngerData.Oldest)) return GoToOldest();
                         else
                         {
-                            Peer(youngerData.Oldest).Tell(ClusterSingletonMessage.HandOverToMe);
+                            Peer(youngerData.Oldest).Tell(HandOverToMe.Instance);
                             return GoTo(ClusterSingletonState.BecomingOldest).Using(new BecomingOldestData(youngerData.Oldest));
                         }
                     }
@@ -466,49 +493,26 @@ namespace Akka.Cluster.Tools.Singleton
             {
                 DelayedMemberRemoved removed;
                 var becomingOldest = e.StateData as BecomingOldestData;
-                if (e.FsmEvent is ClusterSingletonMessage)
-                {
-                    var m = (ClusterSingletonMessage)e.FsmEvent;
-                    switch (m)
-                    {
-                        case ClusterSingletonMessage.HandOverInProgress:
-                            // confirmation that the hand-over process has started
-                            Log.Info("Hand-over in progress at [{0}]", Sender.Path.Address);
-                            CancelTimer(HandOverRetryTimer);
-                            return Stay();
-                        case ClusterSingletonMessage.HandOverDone:
-                            if (becomingOldest == null || becomingOldest.PreviousOldest == null) return null;
-                            else
-                            {
-                                if (Sender.Path.Address.Equals(becomingOldest.PreviousOldest))
-                                    return GoToOldest();
-                                else
-                                {
-                                    Log.Info("Ignoring HandOverDone in BecomingOldest from [{0}]. Expected previous oldest [{1}]", Sender.Path.Address, becomingOldest.PreviousOldest);
-                                    return Stay();
-                                }
-                            }
-                        case ClusterSingletonMessage.TakeOverFromMe:
-                            if (becomingOldest == null) return null;
-                            else
-                            {
-                                if (becomingOldest.PreviousOldest == null)
-                                {
-                                    Sender.Tell(ClusterSingletonMessage.HandOverToMe);
-                                    return Stay().Using(new BecomingOldestData(Sender.Path.Address));
-                                }
-                                else
-                                {
-                                    if (becomingOldest.PreviousOldest.Equals(Sender.Path.Address))
-                                        Sender.Tell(ClusterSingletonMessage.HandOverToMe);
-                                    else
-                                        Log.Info("Ignoring TakeOver request in BecomingOldest from [{0}]. Expected previous oldest [{1}]", Sender.Path.Address, becomingOldest.PreviousOldest);
 
-                                    return Stay();
-                                }
-                            }
-                        default:
-                            return null;
+                if (e.FsmEvent is HandOverInProgress)
+                {
+                    // confirmation that the hand-over process has started
+                    Log.Info("Hand-over in progress at [{0}]", Sender.Path.Address);
+                    CancelTimer(HandOverRetryTimer);
+                    return Stay();
+                }
+                else if (e.FsmEvent is HandOverDone)
+                {
+                    if (becomingOldest == null || becomingOldest.PreviousOldest == null) return null;
+                    else
+                    {
+                        if (Sender.Path.Address.Equals(becomingOldest.PreviousOldest))
+                            return GoToOldest();
+                        else
+                        {
+                            Log.Info("Ignoring HandOverDone in BecomingOldest from [{0}]. Expected previous oldest [{1}]", Sender.Path.Address, becomingOldest.PreviousOldest);
+                            return Stay();
+                        }
                     }
                 }
                 else if (e.FsmEvent is ClusterEvent.MemberRemoved)
@@ -533,6 +537,27 @@ namespace Akka.Cluster.Tools.Singleton
                     AddRemoved(removed.Member.Address);
                     return GoToOldest();
                 }
+                else if (e.FsmEvent is TakeOverFromMe)
+                {
+                    if (becomingOldest == null) return null;
+                    else
+                    {
+                        if (becomingOldest.PreviousOldest == null)
+                        {
+                            Sender.Tell(HandOverToMe.Instance);
+                            return Stay().Using(new BecomingOldestData(Sender.Path.Address));
+                        }
+                        else
+                        {
+                            if (becomingOldest.PreviousOldest.Equals(Sender.Path.Address))
+                                Sender.Tell(HandOverToMe.Instance);
+                            else
+                                Log.Info("Ignoring TakeOver request in BecomingOldest from [{0}]. Expected previous oldest [{1}]", Sender.Path.Address, becomingOldest.PreviousOldest);
+
+                            return Stay();
+                        }
+                    }
+                }
                 else if (e.FsmEvent is HandOverRetry && becomingOldest != null)
                 {
                     var handOverRetry = (HandOverRetry)e.FsmEvent;
@@ -540,7 +565,7 @@ namespace Akka.Cluster.Tools.Singleton
                     {
                         Log.Info("Retry [{0}], sending HandOverToMe to [{1}]", handOverRetry.Count, becomingOldest.PreviousOldest);
                         if (becomingOldest.PreviousOldest != null)
-                            Peer(becomingOldest.PreviousOldest).Tell(ClusterSingletonMessage.HandOverToMe);
+                            Peer(becomingOldest.PreviousOldest).Tell(HandOverToMe.Instance);
 
                         SetTimer(HandOverRetryTimer, new HandOverRetry(handOverRetry.Count + 1), _settings.HandOverRetryInterval, repeat: false);
                         return Stay();
@@ -551,6 +576,10 @@ namespace Akka.Cluster.Tools.Singleton
                         // previous oldest might be down or removed, so no TakeOverFromMe message is received
                         Log.Info("Timeout in BecomingOldest. Previous oldest unknown, removed and no TakeOver request.");
                         return GoToOldest();
+                    }
+                    else if (_cluster.IsTerminated)
+                    {
+                        return Stop();
                     }
                     else
                     {
@@ -579,7 +608,7 @@ namespace Akka.Cluster.Tools.Singleton
                         else
                         {
                             // send TakeOver request in case the new oldest doesn't know previous oldest
-                            Peer(oldestChanged.Oldest).Tell(ClusterSingletonMessage.TakeOverFromMe);
+                            Peer(oldestChanged.Oldest).Tell(TakeOverFromMe.Instance);
                             SetTimer(TakeOverRetryTimer, new TakeOverRetry(1), _settings.HandOverRetryInterval);
                             return GoTo(ClusterSingletonState.WasOldest)
                                     .Using(new WasOldestData(oldestData.Singleton, oldestData.SingletonTerminated, oldestChanged.Oldest));
@@ -592,7 +621,7 @@ namespace Akka.Cluster.Tools.Singleton
                         return GoTo(ClusterSingletonState.WasOldest).Using(new WasOldestData(oldestData.Singleton, oldestData.SingletonTerminated, null));
                     }
                 }
-                else if (e.FsmEvent.Equals(ClusterSingletonMessage.HandOverToMe) && oldestData != null)
+                else if (e.FsmEvent.Equals(HandOverToMe.Instance) && oldestData != null)
                 {
                     return GoToHandingOver(oldestData.Singleton, oldestData.SingletonTerminated, Sender);
                 }
@@ -618,15 +647,19 @@ namespace Akka.Cluster.Tools.Singleton
                         Log.Info("Retry [{0}], sending TakeOverFromMe to [{1}]", takeOverRetry.Count, wasOldestData.NewOldest);
 
                         if (wasOldestData.NewOldest != null)
-                            Peer(wasOldestData.NewOldest).Tell(ClusterSingletonMessage.TakeOverFromMe);
+                            Peer(wasOldestData.NewOldest).Tell(TakeOverFromMe.Instance);
 
                         SetTimer(TakeOverRetryTimer, new TakeOverRetry(takeOverRetry.Count + 1), _settings.HandOverRetryInterval);
                         return Stay();
                     }
+                    else if (_cluster.IsTerminated)
+                    {
+                        return Stop();
+                    }
                     else
                         throw new ClusterSingletonManagerIsStuck(string.Format("Expected hand-over to [{0}] never occured", wasOldestData.NewOldest));
                 }
-                else if (e.FsmEvent.Equals(ClusterSingletonMessage.HandOverToMe) && wasOldestData != null)
+                else if (e.FsmEvent.Equals(HandOverToMe.Instance) && wasOldestData != null)
                 {
                     return GoToHandingOver(wasOldestData.Singleton, wasOldestData.SingletonTerminated, Sender);
                 }
@@ -662,10 +695,10 @@ namespace Akka.Cluster.Tools.Singleton
                     {
                         return HandleHandOverDone(handingOverData.HandOverTo);
                     }
-                    if (e.FsmEvent.Equals(ClusterSingletonMessage.HandOverToMe)
+                    if (e.FsmEvent.Equals(HandOverToMe.Instance)
                         && handingOverData.HandOverTo.Equals(Sender))
                     {
-                        Sender.Tell(ClusterSingletonMessage.HandOverInProgress);
+                        Sender.Tell(HandOverInProgress.Instance);
                         return Stay();
                     }
                 }
@@ -720,12 +753,12 @@ namespace Akka.Cluster.Tools.Singleton
                     AddRemoved(m.Address);
                     return Stay();
                 }
-                if (e.FsmEvent.Equals(ClusterSingletonMessage.TakeOverFromMe))
+                if (e.FsmEvent.Equals(TakeOverFromMe.Instance))
                 {
                     Log.Info("Ignoring TakeOver request in [{0}] from [{1}].", StateName, Sender.Path.Address);
                     return Stay();
                 }
-                if (e.FsmEvent.Equals(ClusterSingletonMessage.Cleanup))
+                if (e.FsmEvent.Equals(Cleanup.Instance))
                 {
                     CleanupOverdueNotMemberAnyMore();
                     return Stay();

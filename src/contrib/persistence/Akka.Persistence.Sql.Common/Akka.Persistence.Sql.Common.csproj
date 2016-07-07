@@ -47,17 +47,16 @@
   <ItemGroup>
     <Compile Include="InternalExtensions.cs" />
     <Compile Include="Journal\ITimestampProvider.cs" />
-    <Compile Include="Journal\JournalDbEngine.cs" />
-    <Compile Include="Journal\QueryBuilder.cs" />
-    <Compile Include="Journal\QueryMapper.cs" />
+    <Compile Include="Journal\Messages.cs" />
+    <Compile Include="Journal\QueryApi.cs" />
+    <Compile Include="Journal\QueryExecutor.cs" />
     <Compile Include="Journal\SqlJournal.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Queries\Hints.cs" />
     <Compile Include="Queries\Query.cs" />
     <Compile Include="Settings.cs" />
+    <Compile Include="Snapshot\QueryExecutor.cs" />
     <Compile Include="Snapshot\SqlSnapshotStore.cs" />
-    <Compile Include="Snapshot\QueryBuilder.cs" />
-    <Compile Include="Snapshot\QueryMapper.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj">

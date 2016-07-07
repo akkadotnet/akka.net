@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystemImpl.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -67,6 +67,7 @@ namespace Akka.Actor.Internal
         }
 
         public override IActorRefProvider Provider { get { return _provider; } }
+        
         public override Settings Settings { get { return _settings; } }
         public override string Name { get { return _name; } }
         public override Serialization.Serialization Serialization { get { return _serialization; } }
@@ -81,19 +82,28 @@ namespace Akka.Actor.Internal
 
 
         public override IInternalActorRef Guardian { get { return _provider.Guardian; } }
+        public override IInternalActorRef LookupRoot => _provider.RootGuardian;
         public override IInternalActorRef SystemGuardian { get { return _provider.SystemGuardian; } }
 
 
         /// <summary>Creates a new system actor.</summary>
         public override IActorRef SystemActorOf(Props props, string name = null)
         {
-            return _provider.SystemGuardian.Cell.ActorOf(props, name: name);
+            return _provider.SystemGuardian.Cell.AttachChild(props, true, name);
         }
 
         /// <summary>Creates a new system actor.</summary>
         public override IActorRef SystemActorOf<TActor>(string name = null)
         {
-            return _provider.SystemGuardian.Cell.ActorOf<TActor>(name);
+            return _provider.SystemGuardian.Cell.AttachChild(Props.Create<TActor>(), true, name);
+        }
+
+        internal volatile bool Aborting = false;
+
+        public override void Abort()
+        {
+            Aborting = true;
+            Terminate();
         }
 
         /// <summary>Starts this system</summary>
@@ -133,7 +143,7 @@ namespace Akka.Actor.Internal
 
         public override IActorRef ActorOf(Props props, string name = null)
         {
-            return _provider.Guardian.Cell.ActorOf(props, name: name);
+            return _provider.Guardian.Cell.AttachChild(props, false, name);
         }
 
 

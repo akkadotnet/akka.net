@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteNodeRestartDeathWatchSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -65,8 +65,8 @@ namespace Akka.Remote.Tests.MultiNode
                     .GetAwaiter()
                     .GetResult();
                 TestConductor.Shutdown(_specConfig.Second).GetAwaiter().GetResult();
-                ExpectTerminated(subject, TimeSpan.FromSeconds(20));
-                Within(TimeSpan.FromSeconds(10), () =>
+                ExpectTerminated(subject, TimeSpan.FromSeconds(15));
+                Within(TimeSpan.FromSeconds(5), () =>
                 {
                     // retry because the Subject actor might not be started yet
                     AwaitAssert(() =>

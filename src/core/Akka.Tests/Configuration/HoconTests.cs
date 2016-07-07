@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HoconTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -16,7 +16,7 @@ namespace Akka.Tests.Configuration
 {
     public class HoconTests
     {
-        //Added tests to conform to the HOCON spec https://github.com/typesafehub/config/blob/master/HOCON.md
+        //Added tests to conform to the HOCON spec https://github.com/Lightbendhub/config/blob/master/HOCON.md
         [Fact]
         public void Can_use_paths_as_keys_3_14()
         {
@@ -559,6 +559,43 @@ a {
         }
 
         [Fact]
+        public void Can_parse_quoted_keys_with_dots()
+        {
+            var hocon = @"
+a {
+   ""/abc/d.ev/*"": 123
+}
+";
+            var config = ConfigurationFactory.ParseString(hocon);
+            config.GetConfig("a").Root.GetObject().GetKey("/abc/d.ev/*").GetInt().ShouldBe(123);
+        }
+
+        [Fact]
+        public void Get_config_supports_quoting()
+        {
+            var hocon = @"
+a {
+   ""/abc/d.ev/*"": 123
+}
+";
+            var config = ConfigurationFactory.ParseString(hocon);
+            config.GetConfig("a").GetConfig(@"""/abc/d.ev/*""").ShouldNotBe(null);
+        }
+
+        [Fact]
+        public void Get_config_supports_quoting_combined_with_dotting()
+        {
+            var hocon = @"
+a {
+   ""/abc/d.ev/*"".d: 123
+}
+";
+            var config = ConfigurationFactory.ParseString(hocon);
+            config.GetConfig(@"a.""/abc/d.ev/*""").ShouldNotBe(null);
+            config.GetConfig(@"a.""/abc/d.ev/*"".d").ShouldNotBe(null);
+        }
+
+        [Fact]
         public void Can_enumerate_quoted_keys()
         {
             var hocon = @"
@@ -571,6 +608,21 @@ a {
             var enumerable = config2.AsEnumerable();
 
             enumerable.Select(kvp => kvp.Key).First().ShouldBe("some quoted, key");
+        }
+
+        [Fact]
+        public void Can_enumerate_quoted_keys_with_dots()
+        {
+            var hocon = @"
+a {
+   ""/abc/d.ev/*"": 123
+}
+";
+            var config = ConfigurationFactory.ParseString(hocon);
+            var config2 = config.GetConfig("a");
+            var enumerable = config2.AsEnumerable();
+
+            enumerable.Select(kvp => kvp.Key).First().ShouldBe("/abc/d.ev/*");
         }
 
         [Fact]

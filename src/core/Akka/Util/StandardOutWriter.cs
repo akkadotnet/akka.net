@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StandardOutWriter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -37,7 +37,6 @@ namespace Akka.Util
         /// <param name="message">The <see cref="string"/> value to write</param>
         /// <param name="foregroundColor">Optional: The foreground color</param>
         /// <param name="backgroundColor">Optional: The background color</param>
-
         public static void WriteLine(string message, ConsoleColor? foregroundColor = null,
             ConsoleColor? backgroundColor = null)
         {

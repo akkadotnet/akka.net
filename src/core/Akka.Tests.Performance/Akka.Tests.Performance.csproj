@@ -30,12 +30,12 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="NBench, Version=0.2.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\NBench.0.2.1\lib\net45\NBench.dll</HintPath>
+    <Reference Include="NBench, Version=0.3.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\NBench.0.3.0\lib\net45\NBench.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="NBench.PerformanceCounters, Version=0.2.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\NBench.PerformanceCounters.0.2.1\lib\net45\NBench.PerformanceCounters.dll</HintPath>
+    <Reference Include="NBench.PerformanceCounters, Version=0.3.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\NBench.PerformanceCounters.0.3.0\lib\net45\NBench.PerformanceCounters.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -49,13 +49,18 @@
     <Compile Include="Actor\ActorSystemShutdownSpec.cs" />
     <Compile Include="Actor\AddressSpec.cs" />
     <Compile Include="Actor\MinimalActorRefThroughputSpec.cs" />
+    <Compile Include="Actor\Pattern\AskSpec.cs" />
     <Compile Include="Actor\ReceiveActorThroughputSpec.cs" />
     <Compile Include="Actor\UntypedActorThroughputSpec.cs" />
+    <Compile Include="Dispatch\CallingThreadExecutor.cs" />
     <Compile Include="Dispatch\DefaultDispatcherColdThroughputSpec.cs" />
     <Compile Include="Dispatch\DispatcherThroughputSpecBase.cs" />
     <Compile Include="Dispatch\ForkJoinDispatcherThroughputSpec.cs" />
+    <Compile Include="Dispatch\MailboxBenchmarks.cs" />
     <Compile Include="Dispatch\MailboxMemoryFootprintSpec.cs" />
     <Compile Include="Actor\ActorThroughputSpecBase.cs" />
+    <Compile Include="Dispatch\MessageDispatchAndReceiveBenchmark.cs" />
+    <Compile Include="Dispatch\ReceiveOnlyBenchmark.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Util\StandardOutWriterMemoryBenchmark.cs" />
   </ItemGroup>

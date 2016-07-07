@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Endpoint.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
@@ -59,10 +60,9 @@ namespace Akka.Remote
             IActorRef senderOption = null)
         {
             var payload = MessageSerializer.Deserialize(system, message);
-            Type payloadClass = payload == null ? null : payload.GetType();
+            Type payloadClass = payload?.GetType();
             var sender = senderOption ?? system.DeadLetters;
             var originalReceiver = recipient.Path;
-
 
             // message is intended for the RemoteDaemon, usually a command to create a remote actor
             if (recipient.Equals(remoteDaemon))
@@ -72,7 +72,7 @@ namespace Akka.Remote
                 {
                     if (settings.LogReceive)
                     {
-                        var msgLog = string.Format("RemoteMessage: {0} to {1}<+{2} from {3}", payload, recipient, originalReceiver,sender);
+                        var msgLog = $"RemoteMessage: {payload} to {recipient}<+{originalReceiver} from {sender}";
                         log.Debug("received daemon message [{0}]", msgLog);
                     }
                     remoteDaemon.Tell(payload);
@@ -84,7 +84,7 @@ namespace Akka.Remote
             {
                 if (settings.LogReceive)
                 {
-                    var msgLog = string.Format("RemoteMessage: {0} to {1}<+{2} from {3}", payload, recipient, originalReceiver,sender);
+                    var msgLog = $"RemoteMessage: {payload} to {recipient}<+{originalReceiver} from {sender}";
                     log.Debug("received local message [{0}]", msgLog);
                 }
                 if (payload is ActorSelectionMessage)
@@ -115,13 +115,12 @@ namespace Akka.Remote
                 }
                 else if (payload is ISystemMessage)
                 {
-                    recipient.Tell(payload);
+                    recipient.SendSystemMessage((ISystemMessage)payload);
                 }
                 else
                 {
                     recipient.Tell(payload, sender);
                 }
-
             }
 
             // message is intended for a remote-deployed recipient
@@ -501,9 +500,12 @@ namespace Akka.Remote
                 {
                     if (earlyUngateRequested)
                         Self.Tell(new Ungate());
+                    else
+                    {
+                        Context.System.Scheduler.ScheduleTellOnce(_settings.RetryGateClosedFor, Self, new Ungate(), Self);
+                    }
                 }
-                else
-                    Context.System.Scheduler.ScheduleTellOnce(_settings.RetryGateClosedFor, Self, new Ungate(), Self);
+                
                 Become(() => Gated(true, earlyUngateRequested));
             });
             Receive<IsIdle>(idle => Sender.Tell(Idle.Instance));
@@ -1028,7 +1030,9 @@ namespace Akka.Remote
 
         private void PublishAndThrow(Exception reason, LogLevel level)
         {
-            reason.Match().With<EndpointDisassociatedException>(endpoint => PublishDisassociated())
+            reason.Match()
+                .With<EndpointDisassociatedException>(endpoint => PublishDisassociated())
+                .With<ShutDownAssociation>(shutdown => {}) // don't log an error for planned shutdowns
                 .Default(msg => PublishError(reason, level));
 
             throw reason;

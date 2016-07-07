@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Extension.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -14,30 +14,18 @@ namespace Akka.Persistence.Sqlite
     public class SqliteJournalSettings : JournalSettings
     {
         public const string ConfigPath = "akka.persistence.journal.sqlite";
-
-        /// <summary>
-        /// Flag determining in in case of event journal table missing, it should be automatically initialized.
-        /// </summary>
-        public bool AutoInitialize { get; private set; }
-
+        
         public SqliteJournalSettings(Config config) : base(config)
         {
-            AutoInitialize = config.GetBoolean("auto-initialize");
         }
     }
 
     public class SqliteSnapshotSettings : SnapshotStoreSettings
     {
         public const string ConfigPath = "akka.persistence.snapshot-store.sqlite";
-
-        /// <summary>
-        /// Flag determining in in case of snapshot store table missing, it should be automatically initialized.
-        /// </summary>
-        public bool AutoInitialize { get; private set; }
-
+        
         public SqliteSnapshotSettings(Config config) : base(config)
         {
-            AutoInitialize = config.GetBoolean("auto-initialize");
         }
     }
 
@@ -60,39 +48,20 @@ namespace Akka.Persistence.Sqlite
         /// <summary>
         /// Journal-related settings loaded from HOCON configuration.
         /// </summary>
-        public readonly SqliteJournalSettings JournalSettings;
+        public readonly Config DefaultJournalConfig;
 
         /// <summary>
         /// Snapshot store related settings loaded from HOCON configuration.
         /// </summary>
-        public readonly SqliteSnapshotSettings SnapshotSettings;
+        public readonly Config DefaultSnapshotConfig;
 
         public SqlitePersistence(ExtendedActorSystem system)
         {
-            system.Settings.InjectTopLevelFallback(DefaultConfiguration());
+            var defaultConfig = DefaultConfiguration();
+            system.Settings.InjectTopLevelFallback(defaultConfig);
 
-            JournalSettings = new SqliteJournalSettings(system.Settings.Config.GetConfig(SqliteJournalSettings.ConfigPath));
-            SnapshotSettings = new SqliteSnapshotSettings(system.Settings.Config.GetConfig(SqliteSnapshotSettings.ConfigPath));
-
-            if (!string.IsNullOrEmpty(JournalSettings.ConnectionString))
-            {
-                ConnectionContext.Remember(JournalSettings.ConnectionString);
-                system.WhenTerminated.ContinueWith(t => ConnectionContext.Forget(JournalSettings.ConnectionString));
-
-                if (JournalSettings.AutoInitialize)
-                    DbHelper.CreateJournalTable(JournalSettings.ConnectionString, JournalSettings.TableName);
-            }
-
-            if (!string.IsNullOrEmpty(SnapshotSettings.ConnectionString))
-            {
-                ConnectionContext.Remember(SnapshotSettings.ConnectionString);
-                system.WhenTerminated.ContinueWith(t => ConnectionContext.Forget(SnapshotSettings.ConnectionString));
-
-                if (SnapshotSettings.AutoInitialize)
-                {
-                    DbHelper.CreateSnapshotStoreTable(SnapshotSettings.ConnectionString, SnapshotSettings.TableName);
-                }
-            }
+            DefaultJournalConfig = defaultConfig.GetConfig(SqliteJournalSettings.ConfigPath);
+            DefaultSnapshotConfig = defaultConfig.GetConfig(SqliteSnapshotSettings.ConfigPath);
         }
     }
 

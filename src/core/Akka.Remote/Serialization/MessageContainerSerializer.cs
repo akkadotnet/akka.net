@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MessageContainerSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -56,14 +56,7 @@ namespace Akka.Remote.Serialization
                 throw new ArgumentException("Object must be of type ActorSelectionMessage");
             }
 
-            return SerializeActorSelectionMessage((ActorSelectionMessage) obj);
-        }
-
-        private ByteString Serialize(object obj)
-        {
-            Serializer serializer = system.Serialization.FindSerializerFor(obj);
-            byte[] bytes = serializer.ToBinary(obj);
-            return ByteString.CopyFrom(bytes);
+            return SerializeSelection((ActorSelectionMessage)obj);
         }
 
         private object Deserialize(ByteString bytes, Type type, int serializerId)
@@ -82,16 +75,30 @@ namespace Akka.Remote.Serialization
             return builder;
         }
 
-        private byte[] SerializeActorSelectionMessage(ActorSelectionMessage sel)
+        private byte[] SerializeSelection(ActorSelectionMessage sel)
         {
             SelectionEnvelope.Builder builder = SelectionEnvelope.CreateBuilder();
-            Serializer serializer = system.Serialization.FindSerializerFor(sel.Message);
-            builder.SetEnclosedMessage(ByteString.CopyFrom(serializer.ToBinary(sel.Message)));
-            builder.SetSerializerId(serializer.Identifier);
-            if (serializer.IncludeManifest)
+            var message = sel.Message;
+            Serializer serializer = system.Serialization.FindSerializerFor(message);
+            builder
+                .SetEnclosedMessage(ByteString.CopyFrom(serializer.ToBinary(message)))
+                .SetSerializerId(serializer.Identifier);
+
+            var serializer2 = serializer as SerializerWithStringManifest;
+            if (serializer2 != null)
             {
-                builder.SetMessageManifest(ByteString.CopyFromUtf8(sel.Message.GetType().AssemblyQualifiedName));
+                var manifest = serializer2.Manifest(message);
+                if (!string.IsNullOrEmpty(manifest))
+                {
+                    builder.SetMessageManifest(ByteString.CopyFromUtf8(manifest));
+                }
             }
+            else
+            {
+                if (serializer.IncludeManifest)
+                    builder.SetMessageManifest(ByteString.CopyFromUtf8(message.GetType().AssemblyQualifiedName));
+            }
+
             foreach (SelectionPathElement element in sel.Elements)
             {
                 element.Match()
@@ -114,13 +121,12 @@ namespace Akka.Remote.Serialization
         public override object FromBinary(byte[] bytes, Type type)
         {
             SelectionEnvelope selectionEnvelope = SelectionEnvelope.ParseFrom(bytes);
-            Type msgType = null;
-            if (selectionEnvelope.HasMessageManifest)
-            {
-                msgType = Type.GetType(selectionEnvelope.MessageManifest.ToStringUtf8());
-            }
-            int serializerId = selectionEnvelope.SerializerId;
-            object msg = Deserialize(selectionEnvelope.EnclosedMessage, msgType, serializerId);
+            var manifest = selectionEnvelope.HasMessageManifest ? selectionEnvelope.MessageManifest.ToStringUtf8() : string.Empty;
+            var message = system.Serialization.Deserialize(
+                selectionEnvelope.EnclosedMessage.ToByteArray(),
+                selectionEnvelope.SerializerId,
+                manifest);
+
             SelectionPathElement[] elements = selectionEnvelope.PatternList.Select<Selection, SelectionPathElement>(p =>
             {
                 if (p.Type == PatternType.PARENT)
@@ -131,7 +137,8 @@ namespace Akka.Remote.Serialization
                     return new SelectChildPattern(p.Matcher);
                 throw new NotSupportedException("Unknown SelectionEnvelope.Elements.Type");
             }).ToArray();
-            return new ActorSelectionMessage(msg, elements);
+
+            return new ActorSelectionMessage(message, elements);
         }
     }
 }

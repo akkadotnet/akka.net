@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TopicMessages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using Akka.Actor;
 using Akka.Routing;
 
@@ -28,7 +29,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     [Serializable]
-    internal struct Bucket
+    internal class Bucket : IEquatable<Bucket>
     {
         public readonly Address Owner;
         public readonly long Version;
@@ -38,16 +39,42 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         {
         }
 
-        public Bucket(Address owner, long version, IImmutableDictionary<string, ValueHolder> content) : this()
+        public Bucket(Address owner, long version, IImmutableDictionary<string, ValueHolder> content)
         {
             Owner = owner;
             Version = version;
             Content = content;
         }
+
+        public bool Equals(Bucket other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(other, this)) return true;
+
+            return Equals(Owner, other.Owner)
+                   && Equals(Version, other.Version)
+                   && Content.SequenceEqual(other.Content);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as Bucket);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = (Owner != null ? Owner.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ Version.GetHashCode();
+                hashCode = (hashCode * 397) ^ (Content != null ? Content.GetHashCode() : 0);
+                return hashCode;
+            }
+        }
     }
 
     [Serializable]
-    internal sealed class ValueHolder
+    internal sealed class ValueHolder : IEquatable<ValueHolder>
     {
         public readonly long Version;
         public readonly IActorRef Ref;
@@ -62,10 +89,33 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
 
         public Routee Routee { get { return _routee ?? (_routee = Ref != null ? new ActorRefRoutee(Ref) : null); } }
+
+        public bool Equals(ValueHolder other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(other, this)) return true;
+            return Equals(Version, other.Version) &&
+                   Equals(Ref, other.Ref);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as ValueHolder);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = Version.GetHashCode();
+                hashCode = (hashCode * 397) ^ (Ref != null ? Ref.GetHashCode() : 0);
+                return hashCode;
+            }
+        }
     }
 
     [Serializable]
-    internal sealed class Status : IDistributedPubSubMessage
+    internal sealed class Status : IDistributedPubSubMessage, IEquatable<Status>
     {
         public readonly IDictionary<Address, long> Versions;
 
@@ -73,16 +123,52 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         {
             Versions = versions ?? new Dictionary<Address, long>(0);
         }
+
+        public bool Equals(Status other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(other, this)) return true;
+
+            return Versions.SequenceEqual(other.Versions);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as Status);
+        }
+
+        public override int GetHashCode()
+        {
+            return Versions != null ? Versions.GetHashCode() : 0;
+        }
     }
 
     [Serializable]
-    internal sealed class Delta : IDistributedPubSubMessage
+    internal sealed class Delta : IDistributedPubSubMessage, IEquatable<Delta>
     {
         public readonly Bucket[] Buckets;
 
         public Delta(Bucket[] buckets)
         {
             Buckets = buckets ?? new Bucket[0];
+        }
+
+        public bool Equals(Delta other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(other, this)) return true;
+
+            return Buckets.SequenceEqual(other.Buckets);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as Delta);
+        }
+
+        public override int GetHashCode()
+        {
+            return Buckets != null ? Buckets.GetHashCode() : 0;
         }
     }
 

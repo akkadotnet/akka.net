@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MemoryJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -33,6 +33,7 @@ namespace Akka.Persistence.Journal
     public class MemoryJournal : AsyncWriteJournal
     {
         private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _messages = new ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>>();
+        private readonly ConcurrentDictionary<string, long> _meta = new ConcurrentDictionary<string, long>();
 
         protected virtual ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> Messages { get { return _messages; } }
 
@@ -50,7 +51,8 @@ namespace Akka.Persistence.Journal
 
         public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
         {
-            return Task.FromResult(HighestSequenceNr(persistenceId));
+            long metaSeqNr;
+            return Task.FromResult(Math.Max(HighestSequenceNr(persistenceId), _meta.TryGetValue(persistenceId, out metaSeqNr) ? metaSeqNr : 0L));
         }
 
         public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max,
@@ -64,7 +66,10 @@ namespace Akka.Persistence.Journal
 
         protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
         {
-            var toSeqNr = Math.Min(toSequenceNr, HighestSequenceNr(persistenceId));
+            var highestSeqNr = HighestSequenceNr(persistenceId);
+            var toSeqNr = Math.Min(toSequenceNr, highestSeqNr);
+            if (toSeqNr == highestSeqNr)
+                _meta.AddOrUpdate(persistenceId, highestSeqNr, (pid, old) => highestSeqNr);
             for (var snr = 1L; snr <= toSeqNr; snr++)
                 Delete(persistenceId, snr);
             return Task.FromResult(new object());

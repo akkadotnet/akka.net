@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BusLogging.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -39,15 +39,27 @@ namespace Akka.Event
         }
 
         private readonly bool _isDebugEnabled;
+        /// <summary>
+        /// Check to determine whether the <see cref="LogLevel.DebugLevel" /> is enabled.
+        /// </summary>
         public override bool IsDebugEnabled { get { return _isDebugEnabled; } }
 
         private readonly bool _isErrorEnabled;
+        /// <summary>
+        /// Check to determine whether the <see cref="LogLevel.ErrorLevel" /> is enabled.
+        /// </summary>
         public override bool IsErrorEnabled { get { return _isErrorEnabled; } }
 
         private readonly bool _isInfoEnabled;
+        /// <summary>
+        /// Check to determine whether the <see cref="LogLevel.InfoLevel" /> is enabled.
+        /// </summary>
         public override bool IsInfoEnabled { get { return _isInfoEnabled; } }
 
         private readonly bool _isWarningEnabled;
+        /// <summary>
+        /// Check to determine whether the <see cref="LogLevel.WarningLevel" /> is enabled.
+        /// </summary>
         public override bool IsWarningEnabled { get { return _isWarningEnabled; } }
 
         /// <summary>

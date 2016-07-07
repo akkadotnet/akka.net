@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ListPriorityQueue.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -22,9 +22,9 @@ namespace Akka.Util
         private readonly List<Envelope> _data;
         private Func<object, int> _priorityCalculator = message => 1;
 
-        public ListPriorityQueue()
+        public ListPriorityQueue(int initialCapacity)
         {
-            _data = new List<Envelope>();
+            _data = new List<Envelope>(initialCapacity);
         }
 
         public void SetPriorityCalculator(Func<object, int> priorityCalculator)

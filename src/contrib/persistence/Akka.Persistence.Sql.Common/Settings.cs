@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Settings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -30,21 +30,31 @@ namespace Akka.Persistence.Sql.Common
         /// Connection timeout for SQL Server related operations.
         /// </summary>
         public TimeSpan ConnectionTimeout { get; private set; }
+        
+        /// <summary>
+        /// Name of the table corresponding to event journal.
+        /// </summary>
+        public string JournalTableName { get; private set; }
 
         /// <summary>
-        /// Schema name, where table corresponding to event journal is placed.
+        /// Name of the schema, where journal table resides.
         /// </summary>
         public string SchemaName { get; private set; }
 
         /// <summary>
-        /// Name of the table corresponding to event journal.
+        /// Name of the table corresponding to event journal persistenceId and sequenceNr metadata.
         /// </summary>
-        public string TableName { get; private set; }
+        public string MetaTableName { get; private set; }
 
         /// <summary>
         /// Fully qualified type name for <see cref="ITimestampProvider"/> used to generate journal timestamps.
         /// </summary>
         public string TimestampProvider { get; set; }
+
+        /// <summary>
+        /// Flag determining in in case of event journal or metadata table missing, they should be automatically initialized.
+        /// </summary>
+        public bool AutoInitialize { get; private set; }
 
         public JournalSettings(Config config)
         {
@@ -54,8 +64,10 @@ namespace Akka.Persistence.Sql.Common
             ConnectionStringName = config.GetString("connection-string-name");
             ConnectionTimeout = config.GetTimeSpan("connection-timeout");
             SchemaName = config.GetString("schema-name");
-            TableName = config.GetString("table-name");
+            JournalTableName = config.GetString("table-name");
+            MetaTableName = config.GetString("metadata-table-name");
             TimestampProvider = config.GetString("timestamp-provider");
+            AutoInitialize = config.GetBoolean("auto-initialize");
         }
     }
 
@@ -89,6 +101,11 @@ namespace Akka.Persistence.Sql.Common
         /// </summary>
         public string TableName { get; private set; }
 
+        /// <summary>
+        /// Flag determining in in case of snapshot store table missing, they should be automatically initialized.
+        /// </summary>
+        public bool AutoInitialize { get; private set; }
+
         public SnapshotStoreSettings(Config config)
         {
             if (config == null) throw new ArgumentNullException("config", "SqlServer snapshot store settings cannot be initialized, because required HOCON section couldn't been found");
@@ -98,6 +115,9 @@ namespace Akka.Persistence.Sql.Common
             ConnectionTimeout = config.GetTimeSpan("connection-timeout");
             SchemaName = config.GetString("schema-name");
             TableName = config.GetString("table-name");
+            AutoInitialize = config.GetBoolean("auto-initialize");
         }
+
+        public string FullTableName => string.IsNullOrEmpty(SchemaName) ? TableName : SchemaName + "." + TableName;
     }
 }

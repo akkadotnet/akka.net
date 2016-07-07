@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterDeathWatchSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -8,6 +8,7 @@
 using System;
 using System.Linq;
 using Akka.Actor;
+using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote;
 using Akka.Remote.TestKit;
@@ -38,7 +39,8 @@ namespace Akka.Cluster.Tests.MultiNode
             _fourth = Role("fourth");
             _fifth = Role("fifth");
             DeployOn(_fourth, @"/hello.remote = ""@first@""");
-            CommonConfig = ConfigurationFactory.ParseString(@"akka.cluster.publish-stats-interval = 25s")
+            CommonConfig = ConfigurationFactory.ParseString(@"akka.cluster.publish-stats-interval = 25s
+                akka.actor.debug.lifecycle = true")
                 .WithFallback(MultiNodeLoggingConfig.LoggingConfig)
                 .WithFallback(DebugConfig(true))
                 .WithFallback(MultiNodeClusterSpec.ClusterConfigWithFailureDetectorPuppet());
@@ -117,7 +119,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         public void An_actor_watching_a_remote_actor_in_the_cluster_must_receive_terminated_when_watched_node_becomes_down_removed()
         {
-            Within(TimeSpan.FromSeconds(20), () =>
+            Within(TimeSpan.FromSeconds(30), () =>
             {
                 AwaitClusterUp(_config.First, _config.Second, _config.Third, _config.Fourth);
                 EnterBarrier("cluster-up");
@@ -214,7 +216,9 @@ namespace Akka.Cluster.Tests.MultiNode
                     AwaitAssert(() =>
                     {
                         RemoteWatcher.Tell(Remote.RemoteWatcher.Stats.Empty);
-                        ExpectMsg<Remote.RemoteWatcher.Stats>().WatchingRefs.Contains(new Tuple<IActorRef, IActorRef>(subject5, TestActor)).ShouldBeTrue();
+                        var stats = ExpectMsg<Remote.RemoteWatcher.Stats>();
+                        stats.WatchingRefs.Contains(new Tuple<IActorRef, IActorRef>(subject5, TestActor)).ShouldBeTrue();
+                        stats.WatchingAddresses.Contains(GetAddress(_config.Fifth)).ShouldBeTrue();
                     });
                 }, _config.First);
                 EnterBarrier("remote-watch");
@@ -229,7 +233,9 @@ namespace Akka.Cluster.Tests.MultiNode
                     AwaitAssert(() =>
                     {
                         RemoteWatcher.Tell(Remote.RemoteWatcher.Stats.Empty);
-                        ExpectMsg<Remote.RemoteWatcher.Stats>().WatchingRefs.Select(x => x.Item1.Path.Name).Contains("subject5").ShouldBeFalse();
+                        var stats = ExpectMsg<Remote.RemoteWatcher.Stats>();
+                        stats.WatchingRefs.Select(x => x.Item1.Path.Name).Contains("subject5").ShouldBeTrue();
+                        stats.WatchingAddresses.Contains(GetAddress(_config.Fifth)).ShouldBeFalse();
                     });
                 }, _config.First);
 
@@ -289,7 +295,10 @@ namespace Akka.Cluster.Tests.MultiNode
                     var timeout = RemainingOrDefault;
                     try
                     {
-                        Sys.WhenTerminated.Wait(timeout);
+                        if (!Sys.WhenTerminated.Wait(timeout)) // TestConductor.Shutdown called by First MUST terminate this actor system
+                        {
+                            Assert.True(false, String.Format("Failed to stop [{0}] within [{1}]", Sys.Name, timeout));
+                        }
                     }
                     catch (TimeoutException)
                     {
@@ -328,6 +337,8 @@ namespace Akka.Cluster.Tests.MultiNode
                         TestConductor.Shutdown(_config.Fourth).Wait();
                         ExpectMsg<EndActor.End>();
                     }, _config.First);
+
+                    EnterBarrier("after-4");
                 }, _config.First, _config.Second, _config.Third, _config.Fifth);
 
             });

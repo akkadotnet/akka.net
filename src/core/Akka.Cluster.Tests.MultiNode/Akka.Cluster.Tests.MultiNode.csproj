@@ -35,6 +35,14 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="FluentAssertions, Version=4.1.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\FluentAssertions.4.1.0\lib\net45\FluentAssertions.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="FluentAssertions.Core, Version=4.1.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\FluentAssertions.4.1.0\lib\net45\FluentAssertions.Core.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Collections.Immutable, Version=1.1.36.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\..\packages\System.Collections.Immutable.1.1.36\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
@@ -60,17 +68,46 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AttemptSysMsgRedeliverySpec.cs" />
+    <Compile Include="ClientDowningNodeThatIsUnreachableSpec.cs" />
+    <Compile Include="ClientDowningNodeThatIsUpSpec.cs" />
+    <Compile Include="ClusterAccrualFailureDetectorSpec.cs" />
     <Compile Include="ClusterDeathWatchSpec.cs" />
     <Compile Include="ConvergenceSpec.cs" />
+    <Compile Include="DeterministicOldestWhenJoiningSpec.cs" />
+    <Compile Include="DisallowJoinOfTwoClustersSpec.cs" />
     <Compile Include="InitialHeartbeatSpec.cs" />
     <Compile Include="JoinInProgressSpec.cs" />
     <Compile Include="JoinSeedNodeSpec.cs" />
+    <Compile Include="LeaderDowningNodeThatIsUnreachableSpec.cs" />
+    <Compile Include="LeaderElectionSpec.cs" />
+    <Compile Include="LeaderDowningAllOtherNodesSpec.cs" />
     <Compile Include="LeaderLeavingSpec.cs" />
+    <Compile Include="MembershipChangeListenerExitingSpec.cs" />
+    <Compile Include="MembershipChangeListenerUpSpec.cs" />
+    <Compile Include="NodeChurnSpec.cs" />
+    <Compile Include="MinMembersBeforeUpSpec.cs" />
+    <Compile Include="NodeDowningAndBeingRemovedSpec.cs" />
+    <Compile Include="NodeLeavingAndExitingAndBeingRemovedSpec.cs" />
+    <Compile Include="NodeLeavingAndExitingSpec.cs" />
+    <Compile Include="NodeMembershipSpec.cs" />
+    <Compile Include="NodeUpSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="QuickRestartSpec.cs" />
+    <Compile Include="RestartFirstSeedNodeSpec.cs" />
+    <Compile Include="RestartNode2Spec.cs" />
+    <Compile Include="RestartNode3Spec.cs" />
     <Compile Include="RestartNodeSpec.cs" />
     <Compile Include="Routing\ClusterConsistentHashingGroupSpec.cs" />
     <Compile Include="Routing\ClusterConsistentHashingRouterSpec.cs" />
+    <Compile Include="Routing\ClusterRoundRobinSpec.cs" />
+    <Compile Include="Routing\UseRoleIgnoredSpec.cs" />
+    <Compile Include="SingletonClusterSpec.cs" />
+    <Compile Include="SplitBrainSpec.cs" />
+    <Compile Include="SunnyWeatherSpec.cs" />
+    <Compile Include="TransitionSpec.cs" />
     <Compile Include="UnreachableNodeJoinsAgainSpec.cs" />
+    <Compile Include="JoinWithOfflineSeedNodeSpec.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj">
@@ -96,10 +133,6 @@
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj">
       <Project>{0d3cbad0-bbdb-43e5-afc4-ed1d3ecdc224}</Project>
       <Name>Akka.TestKit</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj">
-      <Project>{e636d23c-3432-4aa9-9a5d-5f29d33d3399}</Project>
-      <Name>Akka.Tests.Shared.Internals</Name>
     </ProjectReference>
     <ProjectReference Include="..\Akka\Akka.csproj">
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>

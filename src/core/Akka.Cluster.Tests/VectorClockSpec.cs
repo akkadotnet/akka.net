@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="VectorClockSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using FluentAssertions;
 using Xunit;
 
 namespace Akka.Cluster.Tests
@@ -13,23 +14,23 @@ namespace Akka.Cluster.Tests
     public class VectorClockSpec
     {
         [Fact]
-        public void Must_have_zero_versions_when_created()
+        public void A_VectorClock_must_have_zero_versions_when_created()
         {
             var clock = VectorClock.Create();
-            Assert.Equal(new Dictionary<VectorClock.Node, long>(), clock.Versions);
+            clock.Versions.Should().BeEmpty();
         }
 
         [Fact]
-        public void Must_not_happen_before_itself()
+        public void A_VectorClock_must_not_happen_before_itself()
         {
             var clock1 = VectorClock.Create();
             var clock2 = VectorClock.Create();
 
-            Assert.False(clock1.IsConcurrentWith(clock2));
+            (clock1 != clock2).Should().BeFalse();
         }
 
         [Fact]
-        public void Must_pass_misc_comparison_test1()
+        public void A_VectorClock_must_pass_misc_comparison_test1()
         {
             var clock1_1 = VectorClock.Create();
             var clock2_1 = clock1_1.Increment(VectorClock.Node.Create("1"));
@@ -41,11 +42,11 @@ namespace Akka.Cluster.Tests
             var clock3_2 = clock2_2.Increment(VectorClock.Node.Create("2"));
             var clock4_2 = clock3_2.Increment(VectorClock.Node.Create("1"));
 
-            Assert.False(clock4_1.IsConcurrentWith(clock4_2));
+            (clock4_1 != clock4_2).Should().BeFalse();
         }
 
         [Fact]
-        public void Must_pass_misc_comparison_test2()
+        public void A_VectorClock_must_pass_misc_comparison_test2()
         {
             var clock1_1 = VectorClock.Create();
             var clock2_1 = clock1_1.Increment(VectorClock.Node.Create("1"));
@@ -58,11 +59,11 @@ namespace Akka.Cluster.Tests
             var clock4_2 = clock3_2.Increment(VectorClock.Node.Create("1"));
             var clock5_2 = clock4_2.Increment(VectorClock.Node.Create("3"));
 
-            Assert.True(clock4_1.IsBefore(clock5_2));
+            (clock4_1 < clock5_2).Should().BeTrue();
         }
 
         [Fact]
-        public void Must_pass_misc_comparison_test3()
+        public void A_VectorClock_must_pass_misc_comparison_test3()
         {
             var clock1_1 = VectorClock.Create();
             var clock2_1 = clock1_1.Increment(VectorClock.Node.Create("1"));
@@ -71,10 +72,11 @@ namespace Akka.Cluster.Tests
             var clock2_2 = clock1_2.Increment(VectorClock.Node.Create("2"));
 
             Assert.True(clock2_1.IsConcurrentWith(clock2_2));
+            (clock2_1 != clock2_2).Should().BeTrue();
         }
 
         [Fact]
-        public void Must_pass_misc_comparison_test4()
+        public void A_VectorClock_must_pass_misc_comparison_test4()
         {
             var clock1_3 = VectorClock.Create();
             var clock2_3 = clock1_3.Increment(VectorClock.Node.Create("1"));
@@ -86,11 +88,11 @@ namespace Akka.Cluster.Tests
             var clock3_4 = clock2_4.Increment(VectorClock.Node.Create("1"));
             var clock4_4 = clock3_4.Increment(VectorClock.Node.Create("3"));
 
-            Assert.True(clock4_3.IsConcurrentWith(clock4_4));
+            (clock4_3 != clock4_4).Should().BeTrue();
         }
 
         [Fact]
-        public void Must_pass_misc_comparison_test5()
+        public void A_VectorClock_must_pass_misc_comparison_test5()
         {
             var clock1_1 = VectorClock.Create();
             var clock2_1 = clock1_1.Increment(VectorClock.Node.Create("2"));
@@ -102,12 +104,12 @@ namespace Akka.Cluster.Tests
             var clock4_2 = clock3_2.Increment(VectorClock.Node.Create("2"));
             var clock5_2 = clock4_2.Increment(VectorClock.Node.Create("3"));
             
-            Assert.True(clock3_1.IsBefore(clock5_2));
-            Assert.True(clock5_2.IsAfter(clock3_1));
+            (clock3_1 < clock5_2).Should().BeTrue();
+            (clock5_2 > clock3_1).Should().BeTrue();
         }
 
         [Fact]
-        public void Must_pass_misc_comparison_test6()
+        public void A_VectorClock_must_pass_misc_comparison_test6()
         {
             var clock1_1 = VectorClock.Create();
             var clock2_1 = clock1_1.Increment(VectorClock.Node.Create("1"));
@@ -117,12 +119,12 @@ namespace Akka.Cluster.Tests
             var clock2_2 = clock1_2.Increment(VectorClock.Node.Create("1"));
             var clock3_2 = clock2_2.Increment(VectorClock.Node.Create("1"));
 
-            Assert.True(clock3_1.IsConcurrentWith(clock3_2));
-            Assert.True(clock3_2.IsConcurrentWith(clock3_1));
+            (clock3_1 != clock3_2).Should().BeTrue();
+            (clock3_2 != clock3_1).Should().BeTrue();
         }
 
         [Fact]
-        public void Must_pass_misc_comparison_test7()
+        public void A_VectorClock_must_pass_misc_comparison_test7()
         {
             var clock1_1 = VectorClock.Create();
             var clock2_1 = clock1_1.Increment(VectorClock.Node.Create("1"));
@@ -134,12 +136,12 @@ namespace Akka.Cluster.Tests
             var clock2_2 = clock1_2.Increment(VectorClock.Node.Create("2"));
             var clock3_2 = clock2_2.Increment(VectorClock.Node.Create("2"));
 
-            Assert.True(clock5_1.IsConcurrentWith(clock3_2));
-            Assert.True(clock3_2.IsConcurrentWith(clock5_1));
+            (clock5_1 != clock3_2).Should().BeTrue();
+            (clock3_2 != clock5_1).Should().BeTrue();
         }
 
         [Fact]
-        public void Must_pass_misc_comparison_test8()
+        public void A_VectorClock_must_pass_misc_comparison_test8()
         {
             var clock1_1 = VectorClock.Create();
             var clock2_1 = clock1_1.Increment(VectorClock.Node.FromHash("1"));
@@ -149,12 +151,12 @@ namespace Akka.Cluster.Tests
 
             var clock4_1 = clock3_1.Increment(VectorClock.Node.FromHash("3"));
 
-            Assert.True(clock4_1.IsConcurrentWith(clock1_2));
-            Assert.True(clock1_2.IsConcurrentWith(clock4_1));
+            (clock4_1 != clock1_2).Should().BeTrue();
+            (clock1_2 != clock4_1).Should().BeTrue();
         }
 
         [Fact]
-        public void Must_correctly_merge_two_clocks()
+        public void A_VectorClock_must_correctly_merge_two_clocks()
         {
             var node1 = VectorClock.Node.Create("1");
             var node2 = VectorClock.Node.Create("2");
@@ -171,28 +173,28 @@ namespace Akka.Cluster.Tests
             var clock3_2 = clock2_2.Increment(node2);
 
             var merged1 = clock3_2.Merge(clock5_1);
-            Assert.Equal(3, merged1.Versions.Count);
-            Assert.True(merged1.Versions.ContainsKey(node1));
-            Assert.True(merged1.Versions.ContainsKey(node2));
-            Assert.True(merged1.Versions.ContainsKey(node3));
+            merged1.Versions.Count.Should().Be(3);
+            merged1.Versions.ContainsKey(node1).Should().BeTrue();
+            merged1.Versions.ContainsKey(node2).Should().BeTrue();
+            merged1.Versions.ContainsKey(node3).Should().BeTrue();
 
             var merged2 = clock5_1.Merge(clock3_2);
-            Assert.Equal(3, merged2.Versions.Count);
-            Assert.True(merged2.Versions.ContainsKey(node1));
-            Assert.True(merged2.Versions.ContainsKey(node2));
-            Assert.True(merged2.Versions.ContainsKey(node3));
+            merged2.Versions.Count.Should().Be(3);
+            merged2.Versions.ContainsKey(node1).Should().BeTrue();
+            merged2.Versions.ContainsKey(node2).Should().BeTrue();
+            merged2.Versions.ContainsKey(node3).Should().BeTrue();
 
-            Assert.True(clock3_2.IsBefore(merged1));
-            Assert.True(clock5_1.IsBefore(merged1));
+            (clock3_2 < merged1).Should().BeTrue();
+            (clock5_1 < merged1).Should().BeTrue();
 
-            Assert.True(clock3_2.IsBefore(merged2));
-            Assert.True(clock5_1.IsBefore(merged2));
+            (clock3_2 < merged2).Should().BeTrue();
+            (clock5_1 < merged2).Should().BeTrue();
 
-            Assert.True(merged1.IsSameAs(merged2));
+            (merged1 == merged2).Should().BeTrue();
         }
 
         [Fact]
-        public void Must_correctly_merge_two_disjoint_vector_clocks()
+        public void A_VectorClock_must_correctly_merge_two_disjoint_vector_clocks()
         {
             var node1 = VectorClock.Node.Create("1");
             var node2 = VectorClock.Node.Create("2");
@@ -210,30 +212,30 @@ namespace Akka.Cluster.Tests
             var clock3_2 = clock2_2.Increment(node4);
 
             var merged1 = clock3_2.Merge(clock5_1);
-            Assert.Equal(4, merged1.Versions.Count);
-            Assert.True(merged1.Versions.ContainsKey(node1));
-            Assert.True(merged1.Versions.ContainsKey(node2));
-            Assert.True(merged1.Versions.ContainsKey(node3));
-            Assert.True(merged1.Versions.ContainsKey(node4));
+            merged1.Versions.Count.Should().Be(4);
+            merged1.Versions.ContainsKey(node1).Should().BeTrue();
+            merged1.Versions.ContainsKey(node2).Should().BeTrue();
+            merged1.Versions.ContainsKey(node3).Should().BeTrue();
+            merged1.Versions.ContainsKey(node4).Should().BeTrue();
 
             var merged2 = clock5_1.Merge(clock3_2);
-            Assert.Equal(4, merged2.Versions.Count);
-            Assert.True(merged2.Versions.ContainsKey(node1));
-            Assert.True(merged2.Versions.ContainsKey(node2));
-            Assert.True(merged2.Versions.ContainsKey(node3));
-            Assert.True(merged2.Versions.ContainsKey(node4));
+            merged2.Versions.Count.Should().Be(4);
+            merged2.Versions.ContainsKey(node1).Should().BeTrue();
+            merged2.Versions.ContainsKey(node2).Should().BeTrue();
+            merged2.Versions.ContainsKey(node3).Should().BeTrue();
+            merged2.Versions.ContainsKey(node4).Should().BeTrue();
 
-            Assert.True(clock3_2.IsBefore(merged1));
-            Assert.True(clock5_1.IsBefore(merged1));
+            (clock3_2 < merged1).Should().BeTrue();
+            (clock5_1 < merged1).Should().BeTrue();
 
-            Assert.True(clock3_2.IsBefore(merged2));
-            Assert.True(clock5_1.IsBefore(merged2));
+            (clock3_2 < merged2).Should().BeTrue();
+            (clock5_1 < merged2).Should().BeTrue();
 
-            Assert.True(merged1.IsSameAs(merged2));            
+            (merged1 == merged2).Should().BeTrue();
         }
 
         [Fact]
-        public void Must_pass_blank_clock_incrementing()
+        public void A_VectorClock_must_pass_blank_clock_incrementing()
         {
             var node1 = VectorClock.Node.Create("1");
             var node2 = VectorClock.Node.Create("2");
@@ -244,18 +246,18 @@ namespace Akka.Cluster.Tests
             var vv1 = v1.Increment(node1);
             var vv2 = v2.Increment(node2);
 
-            Assert.True(vv1.IsAfter(v1));
-            Assert.True(vv2.IsAfter(v2));
+            (vv1 > v1).Should().BeTrue();
+            (vv2 > v2).Should().BeTrue();
 
-            Assert.True(vv1.IsAfter(v2));
-            Assert.True(vv2.IsAfter(v1));
+            (vv1 > v2).Should().BeTrue();
+            (vv2 > v1).Should().BeTrue();
 
-            Assert.False(vv2.IsAfter(vv1));
-            Assert.False(vv1.IsAfter(vv2));
+            (vv2 > vv1).Should().BeFalse();
+            (vv1 > vv2).Should().BeFalse();
         }
 
         [Fact]
-        public void Must_pass_merging_behavior()
+        public void A_VectorClock_must_pass_merging_behavior()
         {
             var node1 = VectorClock.Node.Create("1");
             var node2 = VectorClock.Node.Create("2");
@@ -271,8 +273,32 @@ namespace Akka.Cluster.Tests
             var c = a2.Merge(b1);
             var c1 = c.Increment(node3);
 
-            Assert.True(c1.IsAfter(a2));
-            Assert.True(c1.IsAfter(b1));
+            (c1 > a2).Should().BeTrue();
+            (c1 > b1).Should().BeTrue();
+        }
+
+        [Fact]
+        public void A_VectorClock_must_support_prunning()
+        {
+            var node1 = VectorClock.Node.Create("1");
+            var node2 = VectorClock.Node.Create("2");
+            var node3 = VectorClock.Node.Create("3");
+
+            var a = VectorClock.Create();
+            var b = VectorClock.Create();
+
+            var a1 = a.Increment(node1);
+            var b1 = b.Increment(node2);
+
+            var c = a1.Merge(b1);
+            var c1 = c.Prune(node1).Increment(node3);
+            c1.Versions.ContainsKey(node1).Should().BeFalse();
+            (c1 != c).Should().BeTrue();
+
+            (c.Prune(node1).Merge(c1)).Versions.ContainsKey(node1).Should().BeFalse();
+
+            var c2 = c.Increment(node2);
+            (c1 != c2).Should().BeTrue();
         }
     }
 }

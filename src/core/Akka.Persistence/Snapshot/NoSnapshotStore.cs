@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------
 // <copyright file="NoSnapshotStore.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -14,7 +14,7 @@ namespace Akka.Persistence.Snapshot
     /// <summary>
     /// Used as a default snapshot-store in case no other store was configured.
     /// 
-    /// If a <see cref="PersistentActor"/> calls the <see cref="PersistentActor.SaveSnapshot(object)"/> method,
+    /// If a <see cref="PersistentActor"/> calls the <see cref="Eventsourced.SaveSnapshot(object)"/> method,
     /// and at the same time does not configure a specific snapshot-store to be used *and* no default snapshot-store
     /// is available, then the <see cref="NoSnapshotStore"/> will be used to signal a snapshot store failure.
     /// </summary>

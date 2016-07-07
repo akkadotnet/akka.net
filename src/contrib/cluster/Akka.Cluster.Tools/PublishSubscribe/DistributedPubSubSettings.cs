@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DistributedPubSubSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -19,6 +19,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// </summary>
         public static DistributedPubSubSettings Create(ActorSystem system)
         {
+            system.Settings.InjectTopLevelFallback(DistributedPubSub.DefaultConfig());
             var config = system.Settings.Config.GetConfig("akka.cluster.pub-sub");
             if (config == null) throw new ArgumentException("Actor system settings has no configuration for akka.cluster.pub-sub defined");
 
@@ -89,6 +90,11 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// </summary>
         public DistributedPubSubSettings(string role, RoutingLogic routingLogic, TimeSpan gossipInterval, TimeSpan removedTimeToLive, int maxDeltaElements)
         {
+            if (routingLogic is ConsistentHashingRoutingLogic)
+            {
+                throw new ArgumentException("ConsistentHashingRoutingLogic cannot be used by the pub-sub mediator");
+            }
+
             Role = !string.IsNullOrEmpty(role) ? role : null;
             RoutingLogic = routingLogic;
             GossipInterval = gossipInterval;

@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Hints.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -11,13 +11,16 @@ using Akka.Persistence.Sql.Common.Journal;
 
 namespace Akka.Persistence.Sql.Common.Queries
 {
+    [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
     public interface IHint { }
 
+    [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
     public static class Hints
     {
         /// <summary>
         /// Returns a hint that expects a reply with events with matching manifest.
         /// </summary>
+        [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
         public static IHint Manifest(string manifest)
         {
             return new WithManifest(manifest);
@@ -26,6 +29,7 @@ namespace Akka.Persistence.Sql.Common.Queries
         /// <summary>
         /// Returns a hint that expects a reply with events from provided set of persistence ids.
         /// </summary>
+        [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
         public static IHint PersistenceIds(IEnumerable<string> persistenceIds)
         {
             return new PersistenceIdRange(persistenceIds);
@@ -34,7 +38,35 @@ namespace Akka.Persistence.Sql.Common.Queries
         /// <summary>
         /// Returns a hint that expects a reply with events, that have timestamp value before provided date.
         /// </summary>
+        [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
         public static IHint TimestampBefore(DateTime to)
+        {
+            return new TimestampRange(null, to.Ticks);
+        }
+
+        /// <summary>
+        /// Returns a hint that expects a reply with events, that have timestamp value after or equal provided date.
+        /// </summary>
+        [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
+        public static IHint TimestampAfter(DateTime from)
+        {
+            return new TimestampRange(from.Ticks, null);
+        }
+
+        /// <summary>
+        /// Returns a hint that expects a reply with events, that have timestamp from between provided range of values (left side inclusive).
+        /// </summary>
+        [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
+        public static IHint TimestampBetween(DateTime from, DateTime to)
+        {
+            return new TimestampRange(from.Ticks, to.Ticks);
+        }
+
+        /// <summary>
+        /// Returns a hint that expects a reply with events, that have timestamp value before provided date.
+        /// </summary>
+        [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
+        public static IHint TimestampBefore(long to)
         {
             return new TimestampRange(null, to);
         }
@@ -42,7 +74,8 @@ namespace Akka.Persistence.Sql.Common.Queries
         /// <summary>
         /// Returns a hint that expects a reply with events, that have timestamp value after or equal provided date.
         /// </summary>
-        public static IHint TimestampAfter(DateTime from)
+        [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
+        public static IHint TimestampAfter(long from)
         {
             return new TimestampRange(from, null);
         }
@@ -50,7 +83,8 @@ namespace Akka.Persistence.Sql.Common.Queries
         /// <summary>
         /// Returns a hint that expects a reply with events, that have timestamp from between provided range of values (left side inclusive).
         /// </summary>
-        public static IHint TimestampBetween(DateTime from, DateTime to)
+        [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
+        public static IHint TimestampBetween(long from, long to)
         {
             return new TimestampRange(from, to);
         }
@@ -60,6 +94,7 @@ namespace Akka.Persistence.Sql.Common.Queries
     /// Hint for the SQL journal used to filter journal entries returned in the response based on the manifest.
     /// </summary>
     [Serializable]
+    [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
     public sealed class WithManifest : IHint, IEquatable<WithManifest>
     {
 
@@ -96,6 +131,7 @@ namespace Akka.Persistence.Sql.Common.Queries
     /// Hint for the SQL journal used to filter journal entries returned in the response based on set of perisistence ids provided.
     /// </summary>
     [Serializable]
+    [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
     public sealed class PersistenceIdRange : IHint, IEquatable<PersistenceIdRange>
     {
         public readonly ISet<string> PersistenceIds;
@@ -135,12 +171,13 @@ namespace Akka.Persistence.Sql.Common.Queries
     /// Timestamp is generated by <see cref="JournalDbEngine.GenerateTimestamp"/> method, which may be overloaded.
     /// </summary>
     [Serializable]
+    [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
     public sealed class TimestampRange : IHint, IEquatable<TimestampRange>
     {
-        public readonly DateTime? From;
-        public readonly DateTime? To;
+        public readonly long? From;
+        public readonly long? To;
 
-        public TimestampRange(DateTime? @from, DateTime? to)
+        public TimestampRange(long? @from, long? to)
         {
             if (!from.HasValue && !to.HasValue)
                 throw new ArgumentException("TimestampRange hint requires either 'From' or 'To' or both range limiters provided");

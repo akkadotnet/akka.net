@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ResizablePoolCell.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -28,16 +28,21 @@ namespace Akka.Routing
         /// </summary>
         private AtomicBoolean _resizeInProgress;
         private AtomicCounterLong _resizeCounter;
-        private readonly Props _routerProps;
         private Pool _pool;
 
-        public ResizablePoolCell(ActorSystemImpl system, IInternalActorRef self, Props routerProps, MessageDispatcher dispatcher, Props routeeProps, IInternalActorRef supervisor, Pool pool)
-            : base(system,self, routerProps,dispatcher, routeeProps, supervisor)
+        public ResizablePoolCell(
+            ActorSystemImpl system,
+            IInternalActorRef self,
+            Props routerProps,
+            MessageDispatcher dispatcher,
+            Props routeeProps,
+            IInternalActorRef supervisor,
+            Pool pool)
+            : base(system, self, routerProps, dispatcher, routeeProps, supervisor)
         {
             if (pool.Resizer == null) throw new ArgumentException("RouterConfig must be a Pool with defined resizer");
 
             resizer = pool.Resizer;
-            _routerProps = routerProps;
             _pool = pool;
             _resizeCounter = new AtomicCounterLong(0);
             _resizeInProgress = new AtomicBoolean();
@@ -48,56 +53,51 @@ namespace Akka.Routing
             // initial resize, before message send
             if (resizer.IsTimeForResize(_resizeCounter.GetAndIncrement()))
             {
-                Resize(true);
+                Resize(initial: true);
             }
-
         }
 
-        public override void Post(IActorRef sender, object message)
+        public override void SendMessage(IActorRef sender, object message)
         {
-            if(!(_routerProps.RouterConfig.IsManagementMessage(message)) &&
-                !(message is ISystemMessage) &&
+            if(!(RouterConfig.IsManagementMessage(message)) &&
                 resizer.IsTimeForResize(_resizeCounter.GetAndIncrement()) &&
                 _resizeInProgress.CompareAndSet(false, true))
             {
-                base.Post(Self, new Resize());
+                base.SendMessage(Self, new Resize());
                 
             }
-            base.Post(sender, message);
+
+            base.SendMessage(sender, message);
         }
 
         internal void Resize(bool initial)
         {
             if (_resizeInProgress.Value || initial)
+            {
                 try
                 {
                     var requestedCapacity = resizer.Resize(Router.Routees);
                     if (requestedCapacity > 0)
                     {
-                        var newRoutees = new List<Routee>();
-                        for (var i = 0; i < requestedCapacity; i++)
-                        {
-                            newRoutees.Add(_pool.NewRoutee(RouteeProps, this));
-                        }
-                        AddRoutees(newRoutees.ToArray());
+                        var newRoutees = Vector.Fill<Routee>(requestedCapacity)(() => _pool.NewRoutee(RouteeProps, this));
+                        AddRoutees(newRoutees);
                     }
                     else if (requestedCapacity < 0)
                     {
-                        var currentRoutees = Router.Routees;
-                        var enumerable = currentRoutees as Routee[] ?? currentRoutees.ToArray();
+                        var currentRoutees = Router.Routees.ToList();
 
-                        var routeesToAbandon = enumerable
-                            .Drop(enumerable.Count() + requestedCapacity)
+                        var abandon = currentRoutees
+                            .Drop(currentRoutees.Count + requestedCapacity)
                             .ToList();
 
-                        RemoveRoutees(routeesToAbandon, true);
+                        RemoveRoutees(abandon, stopChild: true);
                     }
                 }
                 finally
                 {
                     _resizeInProgress.Value = false;
                 }
+            }
         }
     }
 }
-

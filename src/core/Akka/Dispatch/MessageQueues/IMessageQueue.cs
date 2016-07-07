@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="IMessageQueue.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
+using Akka.Event;
 
 namespace Akka.Dispatch.MessageQueues
 {
@@ -27,8 +28,13 @@ namespace Akka.Dispatch.MessageQueues
         /// <summary> 
         /// Enqueues an mailbox envelope onto the message queue 
         /// </summary>
+        /// <param name="receiver">
+        /// The receiver of the messages.
+        /// 
+        /// This field is only used in a couple of places, but it should not be removed.
+        /// </param>
         /// <param name="envelope"> The envelope to enqueue </param>
-        void Enqueue(Envelope envelope);
+        void Enqueue(IActorRef receiver, Envelope envelope);
 
         /// <summary> 
         /// Tries to pull an envelope of the message queue 
@@ -36,6 +42,16 @@ namespace Akka.Dispatch.MessageQueues
         /// <param name="envelope"> The envelope that was dequeued </param>
         /// <returns> </returns>
         bool TryDequeue(out Envelope envelope);
+
+        /// <summary>
+        /// Called when the <see cref="Mailbox"/> this queue belongs to is disposed of. Normally
+        /// it is expected to transfer all remaining messages into the deadletter queue which is passed in. The owner
+        /// of this <see cref="IMessageQueue"/> is passed in if available (e.g. for creating <see cref="DeadLetter"/>s),
+        /// "/deadletters" otherwise.
+        /// </summary>
+        /// <param name="owner">The owner of this message queue if available, "/deadletters" otherwise.</param>
+        /// <param name="deadletters">The dead letters message queue.</param>
+        void CleanUp(IActorRef owner, IMessageQueue deadletters);
     }
 }
 

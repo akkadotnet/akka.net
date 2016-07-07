@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventAdapters.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -314,7 +314,7 @@ namespace Akka.Persistence.Journal
 
         private static IEventAdapter InstantiateAdapter(string qualifiedName, ExtendedActorSystem system)
         {
-            var type = Type.GetType(qualifiedName);
+            var type = Type.GetType(qualifiedName, true);
             if (typeof(IEventAdapter).IsAssignableFrom(type))
                 return Instantiate<IEventAdapter>(qualifiedName, system);
             if (typeof (IWriteEventAdapter).IsAssignableFrom(type))

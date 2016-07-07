@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Member.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -24,59 +24,49 @@ namespace Akka.Cluster
     /// </summary>
     public class Member : IComparable<Member>
     {
-        public readonly static ImmutableHashSet<Member> None = ImmutableHashSet.Create<Member>();
-                
-        public static Member Create(UniqueAddress uniqueAddress, ImmutableHashSet<string> roles)
+        internal static Member Create(UniqueAddress uniqueAddress, ImmutableHashSet<string> roles)
         {
             return new Member(uniqueAddress, int.MaxValue, MemberStatus.Joining, roles);
         }
 
-        public static Member Removed(UniqueAddress node)
+        internal static Member Removed(UniqueAddress node)
         {
             return new Member(node, int.MaxValue, MemberStatus.Removed, ImmutableHashSet.Create<string>());
         }
 
-        readonly UniqueAddress _uniqueAddress;
-        public UniqueAddress UniqueAddress { get { return _uniqueAddress; } }
+        public UniqueAddress UniqueAddress { get; }
 
-        readonly int _upNumber;
+        internal int UpNumber { get; }
 
-        /// <summary>
-        /// TODO: explain what this does
-        /// </summary>
-        internal int UpNumber { get { return _upNumber; } }
+        public MemberStatus Status { get; }
 
-        readonly MemberStatus _status;
-        public MemberStatus Status { get { return _status; } }
+        public ImmutableHashSet<string> Roles { get; }
 
-        readonly ImmutableHashSet<string> _roles;
-        public ImmutableHashSet<string> Roles { get { return _roles; } }
-
-        public static Member Create(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, ImmutableHashSet<string> roles)
+        internal static Member Create(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, ImmutableHashSet<string> roles)
         {
             return new Member(uniqueAddress, upNumber, status, roles);
         }
 
-        Member(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, ImmutableHashSet<string> roles)
+        internal Member(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, ImmutableHashSet<string> roles)
         {
-            _uniqueAddress = uniqueAddress;
-            _upNumber = upNumber;
-            _status = status;
-            _roles = roles;
+            UniqueAddress = uniqueAddress;
+            UpNumber = upNumber;
+            Status = status;
+            Roles = roles;
         }
 
         public Address Address { get { return UniqueAddress.Address; } }
 
         public override int GetHashCode()
         {
-            return _uniqueAddress.GetHashCode();
+            return UniqueAddress.GetHashCode();
         }
 
         public override bool Equals(object obj)
         {
             var m = obj as Member;
             if (m == null) return false;
-            return _uniqueAddress.Equals(m.UniqueAddress);
+            return UniqueAddress.Equals(m.UniqueAddress);
         }
 
         public int CompareTo(Member other)
@@ -86,7 +76,7 @@ namespace Akka.Cluster
 
         public override string ToString()
         {
-            return String.Format("Member(address = {0}, status = {1}", Address, Status);
+            return $"Member(address = {Address}, status = {Status}, role=[{string.Join(",", Roles)}], upNumber={UpNumber})";
         }
 
         public bool HasRole(string role)
@@ -102,31 +92,36 @@ namespace Akka.Cluster
         /// </summary>
         public bool IsOlderThan(Member other)
         {
+            if (UpNumber.Equals(other.UpNumber))
+            {
+                return Member.AddressOrdering.Compare(Address, other.Address) < 0;
+            }
+
             return UpNumber < other.UpNumber;
         }
 
         public Member Copy(MemberStatus status)
         {
-            var oldStatus = _status;
+            var oldStatus = Status;
             if (status == oldStatus) return this;
 
             //TODO: Akka exception?
             if (!AllowedTransitions[oldStatus].Contains(status))
                 throw new InvalidOperationException(String.Format("Invalid member status transition {0} -> {1}", Status, status));
             
-            return new Member(_uniqueAddress, _upNumber, status, _roles);
+            return new Member(UniqueAddress, UpNumber, status, Roles);
         }
 
         public Member CopyUp(int upNumber)
         {
-            return new Member(_uniqueAddress, upNumber, _status, _roles).Copy(status: MemberStatus.Up);
+            return new Member(UniqueAddress, upNumber, Status, Roles).Copy(status: MemberStatus.Up);
         }
 
         /// <summary>
         ///  `Address` ordering type class, sorts addresses by host and port.
         /// </summary>
-        public static readonly AddressComparer AddressOrdering = new AddressComparer();
-        public class AddressComparer : IComparer<Address>
+        internal static readonly AddressComparer AddressOrdering = new AddressComparer();
+        internal class AddressComparer : IComparer<Address>
         {
             public int Compare(Address x, Address y)
             {
@@ -137,12 +132,23 @@ namespace Akka.Cluster
             }
         }
 
+        internal static readonly AgeComparer AgeOrdering = new AgeComparer();
+        internal class AgeComparer : IComparer<Member>
+        {
+            public int Compare(Member a, Member b)
+            {
+                if (a.Equals(b)) return 0;
+                if (a.IsOlderThan(b)) return -1;
+                return 1;
+            }
+        }
+
         /// <summary>
         /// Orders the members by their address except that members with status
         /// Joining, Exiting and Down are ordered last (in that order).
         /// </summary>
-        public static readonly LeaderStatusMemberComparer LeaderStatusOrdering = new LeaderStatusMemberComparer();
-        public class LeaderStatusMemberComparer : IComparer<Member>
+        internal static readonly LeaderStatusMemberComparer LeaderStatusOrdering = new LeaderStatusMemberComparer();
+        internal class LeaderStatusMemberComparer : IComparer<Member>
         {
             public int Compare(Member a, Member b)
             {
@@ -162,8 +168,8 @@ namespace Akka.Cluster
         /// <summary>
         /// `Member` ordering type class, sorts members by host and port.
         /// </summary>
-        public static readonly MemberComparer Ordering = new MemberComparer();
-        public class MemberComparer : IComparer<Member>
+        internal static readonly MemberComparer Ordering = new MemberComparer();
+        internal class MemberComparer : IComparer<Member>
         {
             public int Compare(Member x, Member y)
             {
@@ -195,6 +201,11 @@ namespace Akka.Cluster
         /// </summary>
         public static Member HighestPriorityOf(Member m1, Member m2)
         {
+            if (m1.Status.Equals(m2.Status))
+            {
+                return m1.IsOlderThan(m2) ? m1 : m2;
+            }
+
             var m1Status = m1.Status;
             var m2Status = m2.Status;
             if (m1Status == MemberStatus.Removed) return m1;
@@ -207,10 +218,10 @@ namespace Akka.Cluster
             if (m2Status == MemberStatus.Leaving) return m2;
             if (m1Status == MemberStatus.Joining) return m2;
             if (m2Status == MemberStatus.Joining) return m1;
-            return m1; //case (Up, Up)     ⇒ m1
+            return m1;
         }
 
-        public static readonly ImmutableDictionary<MemberStatus, ImmutableHashSet<MemberStatus>> AllowedTransitions =
+        internal static readonly ImmutableDictionary<MemberStatus, ImmutableHashSet<MemberStatus>> AllowedTransitions =
             new Dictionary<MemberStatus, ImmutableHashSet<MemberStatus>>
             {
                 {MemberStatus.Joining, ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Down, MemberStatus.Removed)},
@@ -221,6 +232,7 @@ namespace Akka.Cluster
                 {MemberStatus.Removed, ImmutableHashSet.Create<MemberStatus>()}
             }.ToImmutableDictionary();
     }
+
 
     /// <summary>
     /// Defines the current status of a cluster member node
@@ -244,16 +256,14 @@ namespace Akka.Cluster
     /// </summary>
     public class UniqueAddress : IComparable<UniqueAddress>
     {
-        readonly Address _address;
-        public Address Address { get { return _address;} }
-        
-        readonly int _uid;
-        public int Uid { get { return _uid; } }
+        public Address Address { get; }
+
+        public int Uid { get; }
 
         public UniqueAddress(Address address, int uid)
         {
-            _uid = uid;
-            _address = address;
+            Uid = uid;
+            Address = address;
         }
 
         public override bool Equals(object obj)
@@ -265,7 +275,7 @@ namespace Akka.Cluster
 
         public override int GetHashCode()
         {
-            return _uid;
+            return Uid;
         }
 
         public int CompareTo(UniqueAddress that)
@@ -280,7 +290,7 @@ namespace Akka.Cluster
 
         public override string ToString()
         {
-            return string.Format("UniqueAddress: ({0}, {1})", Address, _uid);
+            return string.Format("UniqueAddress: ({0}, {1})", Address, Uid);
         }
 
         #region operator overloads

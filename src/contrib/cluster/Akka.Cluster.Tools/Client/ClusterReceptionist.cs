@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterReceptionist.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -35,8 +35,8 @@ namespace Akka.Cluster.Tools.Client
     /// <para>
     /// Response messages from the destination actor are tunneled via the receptionist
     /// to avoid inbound connections from other cluster nodes to the client, i.e.
-    /// the <see cref="Sender"/>, as seen by the destination actor, is not the client itself.
-    /// The <see cref="Sender"/> of the response messages, as seen by the client, is preserved
+    /// the <see cref="ActorBase.Sender"/>, as seen by the destination actor, is not the client itself.
+    /// The <see cref="ActorBase.Sender"/> of the response messages, as seen by the client, is preserved
     /// as the original sender, so the client can choose to send subsequent messages
     /// directly to the actor in the cluster.
     /// </para>
@@ -151,7 +151,10 @@ namespace Akka.Cluster.Tools.Client
             }
             else if (message is Heartbeat)
             {
-                Log.Debug("Heartbeat from client [{0}]", Sender.Path);
+                if (_cluster.Settings.VerboseHeartbeatLogging)
+                {
+                    Log.Debug("Heartbeat from client [{0}]", Sender.Path);
+                }
                 Sender.Tell(HeartbeatRsp.Instance);
             }
             else if (message is GetContacts)

@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Random.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -8,6 +8,7 @@
 using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Dispatch;
 using Akka.Util;
 
 namespace Akka.Routing
@@ -15,7 +16,7 @@ namespace Akka.Routing
     /// <summary>
     /// This class contains logic used by a <see cref="Router"/> to route a message to a random <see cref="Routee"/>.
     /// </summary>
-    public class RandomLogic : RoutingLogic
+    public sealed class RandomLogic : RoutingLogic
     {
         /// <summary>
         /// Picks a random <see cref="Routee"/> to receive the <paramref name="message"/>.
@@ -29,59 +30,55 @@ namespace Akka.Routing
             {
                 return Routee.NoRoutee;
             }
+
             return routees[ThreadLocalRandom.Current.Next(routees.Length - 1)%routees.Length];
         }
     }
 
     /// <summary>
-    /// This class represents a <see cref="Group"/> router that sends messages to a random <see cref="Routee"/>.
+    /// This class represents a <see cref="Pool"/> router that sends messages to a random <see cref="Routee"/>.
     /// </summary>
-    public class RandomGroup : Group 
+    public sealed class RandomPool : Pool
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="RandomGroup"/> class.
+        /// Initializes a new instance of the <see cref="RandomPool"/> class.
         /// </summary>
-        /// <param name="config">
-        /// The configuration to use to lookup paths used by the group router.
-        /// 
-        /// <note>
-        /// If 'routees.path' is defined in the provided configuration then those paths will be used by the router.
-        /// </note>
-        /// </param>
-        public RandomGroup(Config config)
-            : base(config.GetStringList("routees.paths"))
+        /// <param name="config">The configuration used to configure the pool.</param>
+        public RandomPool(Config config)
+            : this(
+                  nrOfInstances: config.GetInt("nr-of-instances"),
+                  resizer: Resizer.FromConfig(config),
+                  supervisorStrategy: Pool.DefaultSupervisorStrategy,
+                  routerDispatcher: Dispatchers.DefaultDispatcherId,
+                  usePoolDispatcher: config.HasPath("pool-dispatcher"))
         {
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RandomGroup"/> class.
+        /// Initializes a new instance of the <see cref="RandomPool"/> class.
         /// </summary>
-        /// <param name="paths">A list of paths used by the group router.</param>
-        public RandomGroup(params string[] paths)
-            : base(paths)
+        /// <param name="nrOfInstances">The initial number of routees in the pool.</param>
+        public RandomPool(int nrOfInstances) 
+            : this(nrOfInstances, null, DefaultSupervisorStrategy, Dispatchers.DefaultDispatcherId)
         {
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RandomGroup"/> class.
+        /// Initializes a new instance of the <see cref="RandomPool"/> class.
         /// </summary>
-        /// <param name="paths">An enumeration of paths used by the group router.</param>
-        public RandomGroup(IEnumerable<string> paths)
-            : base(paths)
+        /// <param name="nrOfInstances">The initial number of routees in the pool.</param>
+        /// <param name="resizer">The resizer to use when dynamically allocating routees to the pool.</param>
+        /// <param name="supervisorStrategy">The strategy to use when supervising the pool.</param>
+        /// <param name="routerDispatcher">The dispatcher to use when passing messages to the routees.</param>
+        /// <param name="usePoolDispatcher"><c>true</c> to use the pool dispatcher; otherwise <c>false</c>.</param>
+        public RandomPool(
+            int nrOfInstances,
+            Resizer resizer,
+            SupervisorStrategy supervisorStrategy,
+            string routerDispatcher,
+            bool usePoolDispatcher = false)
+            : base(nrOfInstances, resizer, supervisorStrategy, routerDispatcher, usePoolDispatcher)
         {
-        }
-
-        /// <summary>
-        /// Creates a surrogate representation of the current <see cref="RandomGroup"/>.
-        /// </summary>
-        /// <param name="system">The actor system that owns this router.</param>
-        /// <returns>The surrogate representation of the current <see cref="RandomGroup"/>.</returns>
-        public override ISurrogate ToSurrogate(ActorSystem system)
-        {
-            return new RandomGroupSurrogate
-            {
-                Paths = Paths
-            };
         }
 
         /// <summary>
@@ -91,11 +88,43 @@ namespace Akka.Routing
         /// <returns>The newly created router tied to the given system.</returns>
         public override Router CreateRouter(ActorSystem system)
         {
-            return new Router(new RandomLogic());
+            return new Router(new RoundRobinRoutingLogic());
+        }
+
+        public override int GetNrOfInstances(ActorSystem system)
+        {
+            return NrOfInstances;
         }
 
         /// <summary>
-        /// Creates a new <see cref="RandomGroup" /> router with a given dispatcher id.
+        /// Creates a new <see cref="RandomPool" /> router with a given <see cref="SupervisorStrategy" />.
+        /// <note>
+        /// This method is immutable and returns a new instance of the router.
+        /// </note>
+        /// </summary>
+        /// <param name="strategy">The <see cref="SupervisorStrategy" /> used to configure the new router.</param>
+        /// <returns>A new router with the provided <paramref name="strategy" />.</returns>
+        public RandomPool WithSupervisorStrategy(SupervisorStrategy strategy)
+        {
+            return new RandomPool(NrOfInstances, Resizer, strategy, RouterDispatcher, UsePoolDispatcher);
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="RandomPool" /> router with a given <see cref="Resizer" />.
+        /// 
+        /// <note>
+        /// This method is immutable and returns a new instance of the router.
+        /// </note>
+        /// </summary>
+        /// <param name="resizer">The <see cref="Resizer" /> used to configure the new router.</param>
+        /// <returns>A new router with the provided <paramref name="resizer" />.</returns>
+        public RandomPool WithResizer(Resizer resizer)
+        {
+            return new RandomPool(NrOfInstances, resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="RandomPool" /> router with a given dispatcher id.
         /// 
         /// <note>
         /// This method is immutable and returns a new instance of the router.
@@ -103,85 +132,55 @@ namespace Akka.Routing
         /// </summary>
         /// <param name="dispatcher">The dispatcher id used to configure the new router.</param>
         /// <returns>A new router with the provided dispatcher id.</returns>
-        public override Group WithDispatcher(string dispatcher)
+        public RandomPool WithDispatcher(string dispatcher)
         {
-            return new RandomGroup(Paths){ RouterDispatcher = dispatcher};
+            return new RandomPool(NrOfInstances, Resizer, SupervisorStrategy, dispatcher, UsePoolDispatcher);
         }
 
         /// <summary>
-        /// This class represents a surrogate of a <see cref="RandomGroup"/> router.
-        /// Its main use is to help during the serialization process.
+        /// Configure the current router with an auxiliary router for routes that it does not know how to handle.
         /// </summary>
-        public class RandomGroupSurrogate : ISurrogate
+        /// <param name="routerConfig">The router to use as an auxiliary source.</param>
+        /// <returns>The router configured with the auxiliary information.</returns>
+        public override RouterConfig WithFallback(RouterConfig routerConfig)
         {
-            /// <summary>
-            /// The actor paths used by this router during routee selection.
-            /// </summary>
-            public string[] Paths { get; set; }
+            return OverrideUnsetConfig(routerConfig);
+        }
 
-            /// <summary>
-            /// Creates a <see cref="RandomGroup"/> encapsulated by this surrogate.
-            /// </summary>
-            /// <param name="system">The actor system that owns this router.</param>
-            /// <returns>The <see cref="RandomGroup"/> encapsulated by this surrogate.</returns>
-            public ISurrogated FromSurrogate(ActorSystem system)
+        private RouterConfig OverrideUnsetConfig(RouterConfig other)
+        {
+            if (other is NoRouter)
             {
-                return new RandomGroup(Paths);
+                return this;
             }
-        }
-    }
+            else
+            {
+                var pool = other as Pool;
+                if (pool != null)
+                {
+                    RandomPool wssConf;
 
-    /// <summary>
-    /// This class represents a <see cref="Pool"/> router that sends messages to a random <see cref="Routee"/>.
-    /// </summary>
-    public class RandomPool : Pool
-    {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RandomPool"/> class.
-        /// </summary>
-        /// <param name="nrOfInstances">The initial number of routees in the pool.</param>
-        /// <param name="resizer">The resizer to use when dynamically allocating routees to the pool.</param>
-        /// <param name="supervisorStrategy">The strategy to use when supervising the pool.</param>
-        /// <param name="routerDispatcher">The dispatcher to use when passing messages to the routees.</param>
-        /// <param name="usePoolDispatcher"><c>true</c> to use the pool dispatcher; otherwise <c>false</c>.</param>
-        public RandomPool(int nrOfInstances, Resizer resizer, SupervisorStrategy supervisorStrategy,
-            string routerDispatcher, bool usePoolDispatcher = false)
-            : base(nrOfInstances, resizer, supervisorStrategy, routerDispatcher, usePoolDispatcher)
-        {
-        }
+                    if (SupervisorStrategy != null
+                        && SupervisorStrategy.Equals(Pool.DefaultSupervisorStrategy)
+                        && !(pool.SupervisorStrategy.Equals(Pool.DefaultSupervisorStrategy)))
+                    {
+                        wssConf = this.WithSupervisorStrategy(pool.SupervisorStrategy);
+                    }
+                    else
+                    {
+                        wssConf = this;
+                    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RandomPool"/> class.
-        /// </summary>
-        /// <param name="config">The configuration used to configure the pool.</param>
-        public RandomPool(Config config)
-            : base(config)
-        {
-        }
+                    if (wssConf.Resizer == null && pool.Resizer != null)
+                        return wssConf.WithResizer(pool.Resizer);
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RandomPool"/> class.
-        /// 
-        /// <note>
-        /// A <see cref="RandomPool"/> configured in this way uses the <see cref="Pool.DefaultStrategy"/> supervisor strategy.
-        /// </note>
-        /// </summary>
-        /// <param name="nrOfInstances">The initial number of routees in the pool.</param>
-        public RandomPool(int nrOfInstances) : base(nrOfInstances, null, DefaultStrategy, null)
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RandomPool"/> class.
-        /// 
-        /// <note>
-        /// A <see cref="RandomPool"/> configured in this way uses the <see cref="Pool.DefaultStrategy"/> supervisor strategy.
-        /// </note>
-        /// </summary>
-        /// <param name="nrOfInstances">The initial number of routees in the pool.</param>
-        /// <param name="resizer">The resizer to use when dynamically allocating routees to the pool.</param>
-        public RandomPool(int nrOfInstances, Resizer resizer) : base(nrOfInstances, resizer, DefaultStrategy, null)
-        {
+                    return wssConf;
+                }
+                else
+                {
+                    return this;
+                }
+            }
         }
 
         /// <summary>
@@ -199,16 +198,6 @@ namespace Akka.Routing
                 SupervisorStrategy = SupervisorStrategy,
                 RouterDispatcher = RouterDispatcher
             };
-        }
-
-        /// <summary>
-        /// Creates a router that is responsible for routing messages to routees within the provided <paramref name="system" />.
-        /// </summary>
-        /// <param name="system">The actor system that owns this router.</param>
-        /// <returns>The newly created router tied to the given system.</returns>
-        public override Router CreateRouter(ActorSystem system)
-        {
-            return new Router(new RoundRobinRoutingLogic());
         }
 
         /// <summary>
@@ -249,57 +238,123 @@ namespace Akka.Routing
                 return new RandomPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
             }
         }
+    }
 
+    /// <summary>
+    /// This class represents a <see cref="Group"/> router that sends messages to a random <see cref="Routee"/>.
+    /// </summary>
+    public sealed class RandomGroup : Group 
+    {
         /// <summary>
-        /// Creates a new <see cref="RandomPool" /> router with a given <see cref="SupervisorStrategy" />.
+        /// Initializes a new instance of the <see cref="RandomGroup"/> class.
+        /// </summary>
+        /// <param name="config">
+        /// The configuration to use to lookup paths used by the group router.
         /// 
         /// <note>
-        /// This method is immutable and returns a new instance of the router.
+        /// If 'routees.path' is defined in the provided configuration then those paths will be used by the router.
         /// </note>
-        /// </summary>
-        /// <param name="strategy">The <see cref="SupervisorStrategy" /> used to configure the new router.</param>
-        /// <returns>A new router with the provided <paramref name="strategy" />.</returns>
-        public override Pool WithSupervisorStrategy(SupervisorStrategy strategy)
+        /// </param>
+        public RandomGroup(Config config)
+            : this(config.GetStringList("routees.paths"), Dispatchers.DefaultDispatcherId)
         {
-            return new RandomPool(NrOfInstances, Resizer, strategy, RouterDispatcher, UsePoolDispatcher);
         }
 
         /// <summary>
-        /// Creates a new <see cref="RandomPool" /> router with a given <see cref="Resizer" />.
-        /// 
-        /// <note>
-        /// This method is immutable and returns a new instance of the router.
-        /// </note>
+        /// Initializes a new instance of the <see cref="RandomGroup"/> class.
         /// </summary>
-        /// <param name="resizer">The <see cref="Resizer" /> used to configure the new router.</param>
-        /// <returns>A new router with the provided <paramref name="resizer" />.</returns>
-        public override Pool WithResizer(Resizer resizer)
+        /// <param name="paths">>A list of actor paths used by the group router.</param>
+        public RandomGroup(params string[] paths)
+            : base(paths, Dispatchers.DefaultDispatcherId)
         {
-            return new RandomPool(NrOfInstances, resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
         }
 
         /// <summary>
-        /// Creates a new <see cref="RandomPool" /> router with a given dispatcher id.
-        /// 
+        /// Initializes a new instance of the <see cref="RandomGroup"/> class.
+        /// </summary>
+        /// <param name="paths">An enumeration of paths used by the group router.</param>
+        public RandomGroup(IEnumerable<string> paths)
+            : base(paths, Dispatchers.DefaultDispatcherId)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RandomGroup"/> class.
+        /// </summary>
+        /// <param name="paths">An enumeration of paths used by the group router.</param>
+        /// <param name="routerDispatcher">The dispatcher to use when passing messages to the routees.</param>
+        public RandomGroup(IEnumerable<string> paths, string routerDispatcher)
+            : base(paths, routerDispatcher)
+        {
+        }
+
+        public override IEnumerable<string> GetPaths(ActorSystem system)
+        {
+            return Paths;
+        }
+
+        /// <summary>
+        /// Creates a router that is responsible for routing messages to routees within the provided <paramref name="system" />.
+        /// </summary>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>The newly created router tied to the given system.</returns>
+        public override Router CreateRouter(ActorSystem system)
+        {
+            return new Router(new RandomLogic());
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="RandomGroup" /> router with a given dispatcher id.
         /// <note>
         /// This method is immutable and returns a new instance of the router.
         /// </note>
         /// </summary>
         /// <param name="dispatcher">The dispatcher id used to configure the new router.</param>
         /// <returns>A new router with the provided dispatcher id.</returns>
-        public override Pool WithDispatcher(string dispatcher)
+        public RandomGroup WithDispatcher(string dispatcher)
         {
-            return new RandomPool(NrOfInstances, Resizer, SupervisorStrategy, dispatcher, UsePoolDispatcher);
+            return new RandomGroup(Paths, dispatcher);
         }
 
         /// <summary>
-        /// Configure the current router with an auxiliary router for routes that it does not know how to handle.
+        /// Creates a surrogate representation of the current <see cref="RandomGroup"/>.
         /// </summary>
-        /// <param name="routerConfig">The router to use as an auxiliary source.</param>
-        /// <returns>The router configured with the auxiliary information.</returns>
-        public override RouterConfig WithFallback(RouterConfig routerConfig)
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>The surrogate representation of the current <see cref="RandomGroup"/>.</returns>
+        public override ISurrogate ToSurrogate(ActorSystem system)
         {
-            return OverrideUnsetConfig(routerConfig);
+            return new RandomGroupSurrogate
+            {
+                Paths = Paths,
+                RouterDispatcher = RouterDispatcher
+            };
+        }
+
+        /// <summary>
+        /// This class represents a surrogate of a <see cref="RandomGroup"/> router.
+        /// Its main use is to help during the serialization process.
+        /// </summary>
+        public class RandomGroupSurrogate : ISurrogate
+        {
+            /// <summary>
+            /// Creates a <see cref="RandomGroup"/> encapsulated by this surrogate.
+            /// </summary>
+            /// <param name="system">The actor system that owns this router.</param>
+            /// <returns>The <see cref="RandomGroup"/> encapsulated by this surrogate.</returns>
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new RandomGroup(Paths, RouterDispatcher);
+            }
+
+            /// <summary>
+            /// The actor paths used by this router during routee selection.
+            /// </summary>
+            public IEnumerable<string> Paths { get; set; }
+
+            /// <summary>
+            /// The dispatcher to use when passing messages to the routees.
+            /// </summary>
+            public string RouterDispatcher { get; set; }
         }
     }
 }

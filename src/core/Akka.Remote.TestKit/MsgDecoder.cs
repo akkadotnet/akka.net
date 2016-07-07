@@ -1,20 +1,28 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MsgDecoder.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using Akka.Remote.Transport;
 using Akka.Util;
+using Helios.Buffers;
+using Helios.Channels;
+using Helios.Codecs;
+using Helios.Logging;
+using Helios.Util;
 using TCP;
 using Address = Akka.Actor.Address;
 
 namespace Akka.Remote.TestKit
 {
-    internal class MsgDecoder
+    internal class MsgDecoder : MessageToMessageDecoder<object>
     {
+        private readonly ILogger _logger = LoggingFactory.GetLogger<MsgDecoder>();
+
         public static Address Proto2Address(TCP.Address addr)
         {
             return new Address(addr.Protocol, addr.System, addr.Host, addr.Port);
@@ -34,8 +42,9 @@ namespace Akka.Remote.TestKit
             }
         }
 
-        public object Decode(object message)
+        protected object Decode(object message)
         {
+            _logger.Debug("Decoding {0}", message);
             var w = message as TCP.Wrapper;
             if (w != null && w.AllFields.Count == 1)
             {
@@ -95,6 +104,13 @@ namespace Akka.Remote.TestKit
             }
 
             throw new ArgumentException(string.Format("wrong message {0}", message));
+        }
+
+        protected override void Decode(IChannelHandlerContext context, object message, List<object> output)
+        {
+            var o = Decode(message);
+            _logger.Debug("Decoded {0}", o);
+            output.Add(o);
         }
     }
 }

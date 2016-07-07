@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AsyncRecovery.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -32,6 +32,7 @@ namespace Akka.Persistence.Journal
         /// is completed with success or failure within reasonable time. It is not allowed to
         /// ignore completing the <see cref="Task"/>.
         /// </summary>
+        /// <param name="context">The contextual information about the actor processing replayed messages.</param>
         /// <param name="persistenceId">Persistent actor identifier</param>
         /// <param name="fromSequenceNr">Inclusive sequence number where replay should start</param>
         /// <param name="toSequenceNr">Inclusive sequence number where replay should end</param>

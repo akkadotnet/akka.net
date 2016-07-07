@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonProxySettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -15,6 +15,7 @@ namespace Akka.Cluster.Tools.Singleton
     {
         public static ClusterSingletonProxySettings Create(ActorSystem system)
         {
+            system.Settings.InjectTopLevelFallback(ClusterSingletonManager.DefaultConfig());
             var config = system.Settings.Config.GetConfig("akka.cluster.singleton-proxy");
             if (config == null)
                 throw new ConfigurationException(string.Format("Cannot create {0}: akka.cluster.singleton-proxy configuration node not found", typeof(ClusterSingletonProxySettings)));

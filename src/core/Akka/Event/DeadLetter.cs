@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeadLetter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -10,17 +10,16 @@ using Akka.Actor;
 namespace Akka.Event
 {
     /// <summary>
-    /// Represents a message that could not be delivered to it's recipient. 
-    /// This message wraps the original message, the sender and the intended recipient of the message.
+    /// This class represents a message that could not be delivered to its recipient.
     /// </summary>
     public class DeadLetter
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="DeadLetter"/> class.
         /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="sender">The sender.</param>
-        /// <param name="recipient">The recipient.</param>
+        /// <param name="message">The original message that could not be delivered.</param>
+        /// <param name="sender">The actor that sent the message.</param>
+        /// <param name="recipient">The actor that was to receive the message.</param>
         public DeadLetter(object message, IActorRef sender, IActorRef recipient)
         {
             Message = message;
@@ -29,27 +28,27 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Gets the original message that could not be delivered.
+        /// The original message that could not be delivered.
         /// </summary>
-        /// <value>The message.</value>
         public object Message { get; private set; }
 
         /// <summary>
-        /// Gets the recipient of the message.
+        /// The actor that was to receive the message.
         /// </summary>
-        /// <value>The recipient of the message.</value>
         public IActorRef Recipient { get; private set; }
 
         /// <summary>
-        /// Gets the sender of the message.
+        /// The actor that sent the message.
         /// </summary>
-        /// <value>The sender of the message.</value>
         public IActorRef Sender { get; private set; }
 
+        /// <summary>
+        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// </summary>
+        /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
         public override string ToString()
         {
             return "DeadLetter from " + Sender + " to " + Recipient + ": <" + Message + ">";
         }
     }
 }
-

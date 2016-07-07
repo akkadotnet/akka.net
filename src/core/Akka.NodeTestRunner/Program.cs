@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -24,7 +24,7 @@ namespace Akka.NodeTestRunner
         /// If it takes longer than this value for the <see cref="Sink"/> to get back to us
         /// about a particular test passing or failing, throw loudly.
         /// </summary>
-        private static readonly TimeSpan MaxProcessWaitTimeout = TimeSpan.FromMinutes(1.5);
+        private static readonly TimeSpan MaxProcessWaitTimeout = TimeSpan.FromMinutes(5);
         private static IActorRef _logger;
 
         static int Main(string[] args)
@@ -58,7 +58,6 @@ namespace Akka.NodeTestRunner
                 {
                     using (var sink = new Sink(nodeIndex, tcpClient))
                     {
-                        Thread.Sleep(10000);
                         try
                         {
                             controller.Find(true, discovery, TestFrameworkOptions.ForDiscovery());
@@ -111,8 +110,7 @@ namespace Akka.NodeTestRunner
                         }
 
                         FlushLogMessages();
-                        system.Shutdown();
-                        system.AwaitTermination();
+                        system.Terminate().Wait();
 
                         Environment.Exit(sink.Passed && !timedOut ? 0 : 1);
                         return sink.Passed ? 0 : 1;

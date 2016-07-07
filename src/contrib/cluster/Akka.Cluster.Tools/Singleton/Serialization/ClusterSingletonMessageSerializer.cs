@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonMessageSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -20,63 +20,52 @@ namespace Akka.Cluster.Tools.Singleton.Serialization
         private const string TakeOverFromMeManifest = "D";
 
         private static readonly byte[] EmptyBytes = new byte[0];
-        private static readonly IDictionary<string, ClusterSingletonMessage> FromBinaryMap = new Dictionary<string, ClusterSingletonMessage>
-        {
-            {HandOverToMeManifest, ClusterSingletonMessage.HandOverToMe},
-            {HandOverInProgressManifest, ClusterSingletonMessage.HandOverInProgress},
-            {HandOverDoneManifest, ClusterSingletonMessage.HandOverDone},
-            {TakeOverFromMeManifest, ClusterSingletonMessage.TakeOverFromMe}
-        };
+        private readonly IDictionary<string, Func<byte[], IClusterSingletonMessage>> _fromBinaryMap;
 
         private readonly int _identifier;
+        public override int Identifier { get { return _identifier; } }
 
         public ClusterSingletonMessageSerializer(ExtendedActorSystem system) : base(system)
         {
             _identifier = SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(this.GetType(), system);
+            _fromBinaryMap = new Dictionary<string, Func<byte[], IClusterSingletonMessage>>
+            {
+                {HandOverToMeManifest, _ => HandOverToMe.Instance},
+                {HandOverInProgressManifest, _ => HandOverInProgress.Instance},
+                {HandOverDoneManifest, _ => HandOverDone.Instance},
+                {TakeOverFromMeManifest, _ => TakeOverFromMe.Instance}
+            };
         }
 
-        public override int Identifier { get { return _identifier; } }
-        public override byte[] ToBinary(object o)
+        public override byte[] ToBinary(object obj)
         {
-            if (o is ClusterSingletonMessage)
-            {
-                switch ((ClusterSingletonMessage)o)
-                {
-                    case ClusterSingletonMessage.HandOverToMe:
-                    case ClusterSingletonMessage.HandOverInProgress:
-                    case ClusterSingletonMessage.HandOverDone:
-                    case ClusterSingletonMessage.TakeOverFromMe:
-                        return EmptyBytes;
-                    default: throw new ArgumentException(string.Format("Cannot serialize object of type [{0}] in [{1}]", o.GetType(), GetType()));
-                }
-            }
-            else throw new ArgumentException(string.Format("Cannot serialize object of type [{0}] in [{1}]", o.GetType(), GetType()));
+            if (obj is HandOverToMe) return EmptyBytes;
+            if (obj is HandOverInProgress) return EmptyBytes;
+            if (obj is HandOverDone) return EmptyBytes;
+            if (obj is TakeOverFromMe) return EmptyBytes;
+
+            throw new ArgumentException(string.Format("Cannot serialize object of type [{0}] in [{1}]", obj.GetType(), GetType()));
         }
 
         public override object FromBinary(byte[] binary, string manifest)
         {
-            ClusterSingletonMessage mapping;
-            if (FromBinaryMap.TryGetValue(manifest, out mapping))
+            Func<byte[], IClusterSingletonMessage> mapper;
+            if (_fromBinaryMap.TryGetValue(manifest, out mapper))
             {
-                return mapping;
+                return mapper(binary);
             }
-            else throw new ArgumentException(string.Format("Unimplemented deserialization of message with manifest [{0}] in [{1}]", manifest, GetType()));
+
+            throw new ArgumentException(string.Format("Unimplemented deserialization of message with manifest [{0}] in [{1}]", manifest, GetType()));
         }
 
         public override string Manifest(object o)
         {
-            if (o is ClusterSingletonMessage)
-            {
-                switch ((ClusterSingletonMessage)o)
-                {
-                    case ClusterSingletonMessage.HandOverToMe: return HandOverToMeManifest;
-                    case ClusterSingletonMessage.HandOverInProgress: return HandOverInProgressManifest;
-                    case ClusterSingletonMessage.HandOverDone: return HandOverDoneManifest;
-                    case ClusterSingletonMessage.TakeOverFromMe: return TakeOverFromMeManifest;
-                    default: throw new ArgumentException(string.Format("Cannot serialize object of type [{0}] in [{1}]", o.GetType(), GetType()));
-                }
-            }
-            else throw new ArgumentException(string.Format("Cannot serialize object of type [{0}] in [{1}]", o.GetType(), GetType()));
+            if (o is HandOverToMe) return HandOverToMeManifest;
+            if (o is HandOverInProgress) return HandOverInProgressManifest;
+            if (o is HandOverDone) return HandOverDoneManifest;
+            if (o is TakeOverFromMe) return TakeOverFromMeManifest;
+
+            throw new ArgumentException(string.Format("Cannot serialize object of type [{0}] in [{1}]", o.GetType(), GetType()));
         }
     }
 }

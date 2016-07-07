@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BarrierCoordinator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -440,7 +440,7 @@ namespace Akka.Remote.TestKit
                         else if (clients.Select(x => x.FSM).SequenceEqual(new List<IActorRef>() {Sender}))
                             nextState =
                                 Stay().Replying(new ToClient<BarrierResult>(new BarrierResult(barrier.Name, true)));
-                        else if (clients.All(x => x.FSM != Sender))
+                        else if (clients.All(x => !Equals(x.FSM, Sender)))
                             nextState =
                                 Stay().Replying(new ToClient<BarrierResult>(new BarrierResult(barrier.Name, false)));
                         else
@@ -475,7 +475,7 @@ namespace Akka.Remote.TestKit
                     {
                         if (barrier.Name != currentBarrier)
                             throw new WrongBarrierException(barrier.Name, Sender, @event.StateData);
-                        var together = clients.Any(x => x.FSM == Sender)
+                        var together = clients.Any(x => Equals(x.FSM, Sender))
                             ? @event.StateData.Arrived.Add(Sender)
                             : @event.StateData.Arrived;
                         var enterDeadline = GetDeadline(barrier.Timeout);
@@ -498,7 +498,7 @@ namespace Akka.Remote.TestKit
                         {
                             nextState =
                                 HandleBarrier(@event.StateData.Copy(clients.Remove(removedClient),
-                                    arrived: arrived.Where(x => x != removedClient.FSM).ToImmutableHashSet()));
+                                    arrived: arrived.Where(x => !Equals(x, removedClient.FSM)).ToImmutableHashSet()));
                         }
                     })
                     .With<FailBarrier>(barrier =>

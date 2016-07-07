@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.Children.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Akka.Actor.Internal;
+using Akka.Serialization;
 using Akka.Util;
 using Akka.Util.Internal;
 
@@ -16,18 +17,12 @@ namespace Akka.Actor
 {
     public partial class ActorCell
     {
-        private IChildrenContainer _childrenContainerDoNotCallMeDirectly = EmptyChildrenContainer.Instance;
-        private long _nextRandomNameDoNotCallMeDirectly;
+        private volatile IChildrenContainer _childrenContainerDoNotCallMeDirectly = EmptyChildrenContainer.Instance;
+        private long _nextRandomNameDoNotCallMeDirectly = -1; // Interlocked.Increment automatically adds 1 to this value. Allows us to start from 0.
 
-        [Obsolete("Use ChildrenContainer instead", true)]
-        private IChildrenContainer ChildrenRefs
+        public IChildrenContainer ChildrenContainer
         {
-            get { return ChildrenContainer; }
-        }
-
-        private IChildrenContainer ChildrenContainer
-        {
-            get { return _childrenContainerDoNotCallMeDirectly; }   //TODO: Hmm do we need memory barriers here???
+            get { return _childrenContainerDoNotCallMeDirectly; } 
         }
 
         private IReadOnlyCollection<IActorRef> Children
@@ -35,25 +30,9 @@ namespace Akka.Actor
             get { return ChildrenContainer.Children; }
         }
 
-        private bool TryGetChild(string name, out IActorRef child)
-        {
-            IChildStats stats;
-            if (ChildrenContainer.TryGetByName(name, out stats))
-            {
-                var restartStats = stats as ChildRestartStats;
-                if (restartStats != null)
-                {
-                    child = restartStats.Child;
-                    return true;
-                }
-            }
-            child = null;
-            return false;
-        }
-
         public virtual IActorRef AttachChild(Props props, bool isSystemService, string name = null)
         {
-            return ActorOf(props, name, true, isSystemService);
+            return MakeChild(props, name == null ? GetRandomActorName() : CheckName(name), true, isSystemService);
         }
         
         public virtual IActorRef ActorOf(Props props, string name = null)
@@ -95,10 +74,6 @@ namespace Akka.Actor
             ((IInternalActorRef)child).Stop();
         }
 
-        [Obsolete("Use UpdateChildrenRefs instead", true)]
-        private void SwapChildrenRefs() { }
-
-
         /// <summary>
         /// Swaps out the children container, by calling <paramref name="updater"/>  to produce the new container.
         /// If the underlying container has been updated while <paramref name="updater"/> was called,
@@ -113,7 +88,13 @@ namespace Akka.Actor
         /// <returns>The third value of the tuple that <paramref name="updater"/> returned.</returns>
         private TReturn UpdateChildrenRefs<TReturn>(Func<IChildrenContainer, Tuple<bool, IChildrenContainer, TReturn>> updater)
         {
-            return InterlockedSpin.ConditionallySwap(ref _childrenContainerDoNotCallMeDirectly, updater);
+            while (true)
+            {
+                var current = ChildrenContainer;
+                var t = updater(current);
+                if (!t.Item1) return t.Item3;
+                if (Interlocked.CompareExchange(ref _childrenContainerDoNotCallMeDirectly, t.Item2, current) == current) return t.Item3;
+            }
         }
 
         /// <summary>
@@ -231,7 +212,7 @@ namespace Akka.Actor
             foreach (var stats in ChildrenContainer.Stats)
             {
                 var child = stats.Child;
-                var cause = child.Equals(perpetrator) ? causedByFailure : null;
+                var cause = (perpetrator != null && child.Equals(perpetrator)) ? causedByFailure : null;
                 child.Resume(cause);
             }
         }
@@ -323,7 +304,7 @@ namespace Akka.Actor
             return null;
         }
 
-        private void CheckName(string name)
+        private static string CheckName(string name)
         {
             if (name == null) throw new InvalidActorNameException("Actor name must not be null.");
             if (name.Length == 0) throw new InvalidActorNameException("Actor name must not be empty.");
@@ -331,48 +312,79 @@ namespace Akka.Actor
             {
                 throw new InvalidActorNameException(string.Format("Illegal actor name [{0}]. Actor paths MUST: not start with `$`, include only ASCII letters and can only contain these special characters: ${1}.", name, new String(ActorPath.ValidSymbols)));
             }
+            return name;
         }
 
         private IInternalActorRef MakeChild(Props props, string name, bool async, bool systemService)
         {
-            //TODO: Implement SerializeAllCreators
-            //   if (cell.system.settings.SerializeAllCreators && !systemService && props.deploy.scope != LocalScope)
-            //     try {
-            //       val ser = SerializationExtension(cell.system)
-            //       props.args forall (arg ⇒
-            //         arg == null ||
-            //           arg.isInstanceOf[INoSerializationVerificationNeeded] ||
-            //           ser.deserialize(ser.serialize(arg.asInstanceOf[AnyRef]).get, arg.getClass).get != null)
-            //     } catch {
-            //       case NonFatal(e) ⇒ throw new IllegalArgumentException(s"pre-creation serialization check failed at [${cell.self.path}/$name]", e)
-            //     }
+            if (_systemImpl.Settings.SerializeAllCreators && !systemService && props.Deploy != Deploy.Local)
+            {
+                var ser = _systemImpl.Serialization;
+                if (props.Arguments != null)
+                {
+                    foreach (var argument in props.Arguments)
+                    {
+                        if (argument != null && !(argument is INoSerializationVerificationNeeded))
+                        {
+                            var objectType = argument.GetType();
+                            var serializer = ser.FindSerializerFor(objectType);
+                            var bytes = serializer.ToBinary(objectType);
+                            var manifestSerializer = serializer as SerializerWithStringManifest;
+                            if (manifestSerializer != null)
+                            {
+                                var manifest = manifestSerializer.Manifest(objectType);
+                                if (ser.Deserialize(bytes, manifestSerializer.Identifier, manifest) == null)
+                                {
+                                    throw new ArgumentException(string.Format("Pre-creation serialization check failed at [${0}/{1}]", _self.Path, name));
+                                }
+                            }
+                            else
+                            {
+                                if (ser.Deserialize(bytes, serializer.Identifier, argument.GetType().AssemblyQualifiedName) == null)
+                                {
+                                    throw new ArgumentException(string.Format("Pre-creation serialization check failed at [${0}/{1}]", _self.Path, name));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             // In case we are currently terminating, fail external attachChild requests
             // (internal calls cannot happen anyway because we are suspended)
-            if (IsTerminating)
+            if (ChildrenContainer.IsTerminating)
+            {
                 throw new InvalidOperationException("Cannot create child while terminating or terminated");
-            //reserve the name before we create the actor
-            ReserveChild(name);
-            IInternalActorRef actor;
-            try
-            {
-                var childPath = new ChildActorPath(Self.Path, name, NewUid());
-                actor = _systemImpl.Provider.ActorOf(_systemImpl, props, _self, childPath, systemService: systemService, deploy: null, lookupDeploy: true, async: async);
             }
-            catch
+            else
             {
-                //if actor creation failed, unreserve the name
-                UnreserveChild(name);
-                throw;
-            }
-            //TODO: When Mailbox has SuspendCount implement this
-            //      // mailbox==null during RoutedActorCell constructor, where suspends are queued otherwise
-            //      if (mailbox ne null) for (_ ← 1 to mailbox.suspendCount) actor.suspend()
+                // this name will either be unreserved or overwritten with a real child below
+                ReserveChild(name);
+                IInternalActorRef actor;
+                try
+                {
+                    var childPath = new ChildActorPath(Self.Path, name, NewUid());
+                    actor = _systemImpl.Provider.ActorOf(_systemImpl, props, _self, childPath,
+                        systemService: systemService, deploy: null, lookupDeploy: true, async: async);
+                }
+                catch
+                {
+                    //if actor creation failed, unreserve the name
+                    UnreserveChild(name);
+                    throw;
+                }
 
-            //replace the reservation with the real actor
-            InitChild(actor);
-            actor.Start();
-            return actor;
+                if (Mailbox != null)
+                {
+                    for(var i = 1; i <= Mailbox.SuspendCount(); i++)
+                        actor.Suspend();
+                }
+
+                //replace the reservation with the real actor
+                InitChild(actor);
+                actor.Start();
+                return actor;
+            }
         }
     }
 }

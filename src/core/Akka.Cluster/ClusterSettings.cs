@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -38,14 +38,10 @@ namespace Akka.Cluster
         readonly int _reduceGossipDifferentViewProbability;
         readonly TimeSpan _schedulerTickDuration;
         readonly int _schedulerTicksPerWheel;
-        readonly bool _metricsEnabled;
-        readonly string _metricsCollectorClass;
-        readonly TimeSpan _metricsInterval;
-        readonly TimeSpan _metricsGossipInterval;
-        readonly TimeSpan _metricsMovingAverageHalfLife;
         readonly int _minNrOfMembers;
         readonly ImmutableDictionary<string, int> _minNrOfMembersOfRole;
         readonly TimeSpan _downRemovalMargin;
+        readonly bool _verboseHeartbeatLogging;
 
         public ClusterSettings(Config config, string systemName)
         {
@@ -67,7 +63,11 @@ namespace Akka.Cluster
             _leaderActionsInterval = cc.GetTimeSpan("leader-actions-interval");
             _unreachableNodesReaperInterval = cc.GetTimeSpan("unreachable-nodes-reaper-interval");
             _publishStatsInterval = cc.GetTimeSpanWithOffSwitch("publish-stats-interval");
-            _downRemovalMargin = cc.GetTimeSpan("down-removal-margin");
+
+            var key = "down-removal-margin";
+            _downRemovalMargin = cc.GetString(key).ToLowerInvariant().Equals("off") 
+                ? TimeSpan.Zero
+                : cc.GetTimeSpan("down-removal-margin");
 
             _autoDownUnreachableAfter = cc.GetTimeSpanWithOffSwitch("auto-down-unreachable-after");
 
@@ -75,21 +75,17 @@ namespace Akka.Cluster
             _minNrOfMembers = cc.GetInt("min-nr-of-members");
             //TODO:
             //_minNrOfMembersOfRole = cc.GetConfig("role").Root.GetArray().ToImmutableDictionary(o => o. )
-            //TODO: Ignored jmx
             _useDispatcher = cc.GetString("use-dispatcher");
             if (String.IsNullOrEmpty(_useDispatcher)) _useDispatcher = Dispatchers.DefaultDispatcherId;
             _gossipDifferentViewProbability = cc.GetDouble("gossip-different-view-probability");
             _reduceGossipDifferentViewProbability = cc.GetInt("reduce-gossip-different-view-probability");
             _schedulerTickDuration = cc.GetTimeSpan("scheduler.tick-duration");
             _schedulerTicksPerWheel = cc.GetInt("scheduler.ticks-per-wheel");
-            _metricsEnabled = cc.GetBoolean("metrics.enabled");
-            _metricsCollectorClass = cc.GetString("metrics.collector-class");
-            _metricsInterval = cc.GetTimeSpan("metrics.collect-interval");
-            _metricsGossipInterval = cc.GetTimeSpan("metrics.gossip-interval");
-            _metricsMovingAverageHalfLife = cc.GetTimeSpan("metrics.moving-average-half-life");
 
             _minNrOfMembersOfRole = cc.GetConfig("role").Root.GetObject().Items
                 .ToImmutableDictionary(kv => kv.Key, kv => kv.Value.GetObject().GetKey("min-nr-of-members").GetInt());
+
+            _verboseHeartbeatLogging = cc.GetBoolean("debug.verbose-heartbeat-logging");
         }
 
         public bool LogInfo
@@ -202,31 +198,6 @@ namespace Akka.Cluster
             get { return _schedulerTicksPerWheel; }
         }
 
-        public bool MetricsEnabled
-        {
-            get { return _metricsEnabled; }
-        }
-
-        public string MetricsCollectorClass
-        {
-            get { return _metricsCollectorClass; }
-        }
-
-        public TimeSpan MetricsInterval
-        {
-            get { return _metricsInterval; }
-        }
-
-        public TimeSpan MetricsGossipInterval
-        {
-            get { return _metricsGossipInterval; }
-        }
-
-        public TimeSpan MetricsMovingAverageHalfLife
-        {
-            get { return _metricsMovingAverageHalfLife; }
-        }
-
         public int MinNrOfMembers
         {
             get { return _minNrOfMembers; }
@@ -240,6 +211,11 @@ namespace Akka.Cluster
         public TimeSpan DownRemovalMargin
         {
             get { return _downRemovalMargin; }
+        }
+
+        public bool VerboseHeartbeatLogging
+        {
+            get { return _verboseHeartbeatLogging; }
         }
     }
 }

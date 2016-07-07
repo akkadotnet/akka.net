@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventStream.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -27,14 +27,11 @@ namespace Akka.Event
     /// </summary>
     public class EventStream : LoggingBus
     {
-        /// <summary>
-        /// Determines if subscription logging is enabled.
-        /// </summary>
         private readonly bool _debug;
-
 
         private readonly AtomicReference<Either<IImmutableSet<IActorRef>, IActorRef>> _initiallySubscribedOrUnsubscriber =
             new AtomicReference<Either<IImmutableSet<IActorRef>, IActorRef>>();
+
         /// <summary>
         /// Initializes a new instance of the <see cref="EventStream"/> class.
         /// </summary>
@@ -56,12 +53,13 @@ namespace Akka.Event
             if (subscriber == null)
                 throw new ArgumentNullException("subscriber");
 
+            RegisterWithUnsubscriber(subscriber);
+            var res = base.Subscribe(subscriber, channel);
             if (_debug)
             {
                 Publish(new Debug(SimpleName(this), GetType(), "subscribing " + subscriber + " to channel " + channel));
             }
-            RegisterWithUnsubscriber(subscriber);
-            return base.Subscribe(subscriber, channel);
+            return res;
         }
 
         /// <summary>
@@ -178,4 +176,3 @@ namespace Akka.Event
         }
     }
 }
-

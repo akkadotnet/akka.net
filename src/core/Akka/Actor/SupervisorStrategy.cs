@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SupervisorStrategy.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -197,7 +197,7 @@ namespace Akka.Actor
     /// <summary>
     ///     Class OneForOneStrategy. This class cannot be inherited.
     /// </summary>
-    public class OneForOneStrategy : SupervisorStrategy
+    public class OneForOneStrategy : SupervisorStrategy, IEquatable<OneForOneStrategy>
     {
         private readonly int _maxNumberOfRetries;
         private readonly int _withinTimeRangeMilliseconds;
@@ -367,12 +367,38 @@ namespace Akka.Actor
                 WithinTimeRangeMilliseconds = WithinTimeRangeMilliseconds
             };
         }
+
+        public bool Equals(OneForOneStrategy other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(other, this)) return true;
+
+            return MaxNumberOfRetries.Equals(other.MaxNumberOfRetries) &&
+                   WithinTimeRangeMilliseconds.Equals(other.WithinTimeRangeMilliseconds) &&
+                   Decider.Equals(other.Decider);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as OneForOneStrategy);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = (Decider != null ? Decider.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ MaxNumberOfRetries.GetHashCode();
+                hashCode = (hashCode * 397) ^ WithinTimeRangeMilliseconds.GetHashCode();
+                return hashCode;
+            }
+        }
     }
 
     /// <summary>
     ///     Class AllForOneStrategy. This class cannot be inherited.
     /// </summary>
-    public class AllForOneStrategy : SupervisorStrategy
+    public class AllForOneStrategy : SupervisorStrategy, IEquatable<AllForOneStrategy>
     {
         private readonly IDecider _decider;
         private readonly int _withinTimeRangeMilliseconds;
@@ -554,6 +580,32 @@ namespace Akka.Actor
                 WithinTimeRangeMilliseconds = WithinTimeRangeMilliseconds
             };
         }
+
+        public bool Equals(AllForOneStrategy other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(other, this)) return true;
+
+            return MaxNumberOfRetries.Equals(other.MaxNumberOfRetries) &&
+                   WithinTimeRangeMilliseconds.Equals(other.WithinTimeRangeMilliseconds) &&
+                   Decider.Equals(other.Decider);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as AllForOneStrategy);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = (Decider != null ? Decider.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ MaxNumberOfRetries.GetHashCode();
+                hashCode = (hashCode * 397) ^ WithinTimeRangeMilliseconds.GetHashCode();
+                return hashCode;
+            }
+        }
     }
 
     /// <summary>
@@ -668,7 +720,7 @@ namespace Akka.Actor
         }
     }
 
-    public class DeployableDecider : IDecider
+    public class DeployableDecider : IDecider, IEquatable<DeployableDecider>
     {
         //Json .net can not decide which of the other ctors are the correct one to use
         //so we fall back to default ctor and property injection for deserializer
@@ -705,6 +757,30 @@ namespace Akka.Actor
             }
 
             return DefaultDirective;
+        }
+
+        public bool Equals(DeployableDecider other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(other, this)) return true;
+
+            return DefaultDirective.Equals(other.DefaultDirective) &&
+                   Pairs.SequenceEqual(other.Pairs);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as DeployableDecider);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = (Pairs != null ? Pairs.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ ((int)DefaultDirective).GetHashCode();
+                return hashCode;
+            }
         }
     }
 

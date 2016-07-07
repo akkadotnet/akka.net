@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ConsistentHashRouter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Dispatch;
 using Akka.Event;
 using Akka.Serialization;
 using Akka.Util;
@@ -46,7 +47,7 @@ namespace Akka.Routing
     /// This class represents a <see cref="RouterEnvelope"/> that can be wrapped around a message in order to make
     /// it hashable for use with <see cref="ConsistentHashingGroup"/> or <see cref="ConsistentHashingPool"/> routers.
     /// </summary>
-    public class ConsistentHashableEnvelope : RouterEnvelope, IConsistentHashable
+    public sealed class ConsistentHashableEnvelope : RouterEnvelope, IConsistentHashable
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ConsistentHashableEnvelope"/> class.
@@ -110,7 +111,7 @@ namespace Akka.Routing
     /// </li>
     /// </ol>
     /// </summary>
-    public class ConsistentHashingRoutingLogic : RoutingLogic
+    public sealed class ConsistentHashingRoutingLogic : RoutingLogic
     {
         private readonly Lazy<ILoggingAdapter> _log;
         private ConsistentHashMapping _hashMapping;
@@ -295,189 +296,6 @@ namespace Akka.Routing
         }
     }
 
-    /// <summary>
-    /// This class represents a <see cref="Group"/> router that sends messages to a <see cref="Routee"/> determined using consistent-hashing.
-    /// Please refer to <see cref="ConsistentHashingRoutingLogic"/> for more information on consistent hashing.
-    /// </summary>
-    public class ConsistentHashingGroup : Group
-    {
-        /// <summary>
-        /// This class represents a surrogate of a <see cref="ConsistentHashingGroup"/> router.
-        /// Its main use is to help during the serialization process.
-        /// </summary>
-        public class ConsistentHashingGroupSurrogate : ISurrogate
-        {
-            /// <summary>
-            /// Creates a <see cref="ConsistentHashingGroup"/> encapsulated by this surrogate.
-            /// </summary>
-            /// <param name="system">The actor system that owns this router.</param>
-            /// <returns>The <see cref="ConsistentHashingGroup"/> encapsulated by this surrogate.</returns>
-            public ISurrogated FromSurrogate(ActorSystem system)
-            {
-                return new ConsistentHashingGroup(Paths);
-            }
-
-            /// <summary>
-            /// The actor paths used by this router during routee selection.
-            /// </summary>
-            public string[] Paths { get; set; }
-        }
-
-        /// <summary>
-        /// Virtual nodes used in the <see cref="ConsistentHash{T}"/>.
-        /// </summary>
-        public int VirtualNodesFactor { get; private set; }
-
-        /// <summary>
-        /// The consistent hash mapping function to use on incoming messages.
-        /// </summary>
-        protected ConsistentHashMapping HashMapping;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ConsistentHashingGroup"/> class.
-        /// </summary>
-        /// <param name="config">
-        /// The configuration to use to lookup paths used by the group router.
-        /// 
-        /// <note>
-        /// If 'routees.path' is defined in the provided configuration then those paths will be used by the router.
-        /// 'virtual-nodes-factor' defaults to 0 (zero) if it is not defined in the provided configuration.
-        /// </note>
-        /// </param>
-        public ConsistentHashingGroup(Config config)
-            : base(config.GetStringList("routees.paths"))
-        {
-            VirtualNodesFactor = config.GetInt("virtual-nodes-factor", 0);
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ConsistentHashingGroup"/> class.
-        /// </summary>
-        /// <param name="paths">A list of actor paths used by the group router.</param>
-        public ConsistentHashingGroup(params string[] paths)
-            : base(paths)
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ConsistentHashingGroup"/> class.
-        /// </summary>
-        /// <param name="paths">An enumeration of actor paths used by the group router.</param>
-        /// <param name="virtualNodesFactor">The number of virtual nodes to use on the hash ring.</param>
-        /// <param name="hashMapping">The consistent hash mapping function to use on incoming messages.</param>
-        public ConsistentHashingGroup(IEnumerable<string> paths, int virtualNodesFactor = 0,
-            ConsistentHashMapping hashMapping = null)
-            : base(paths)
-        {
-            VirtualNodesFactor = virtualNodesFactor;
-            HashMapping = hashMapping;
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ConsistentHashingGroup"/> class.
-        /// </summary>
-        /// <param name="routees">An enumeration of routees used by the group router.</param>
-        /// <param name="virtualNodesFactor">The number of virtual nodes to use on the hash ring.</param>
-        /// <param name="hashMapping">The consistent hash mapping function to use on incoming messages.</param>
-        public ConsistentHashingGroup(IEnumerable<IActorRef> routees, int virtualNodesFactor = 0,
-            ConsistentHashMapping hashMapping = null)
-            : base(routees)
-        {
-            VirtualNodesFactor = virtualNodesFactor;
-            HashMapping = hashMapping;
-        }
-
-        /// <summary>
-        /// Creates a new <see cref="ConsistentHashingGroup" /> router with a given <see cref="VirtualNodesFactor"/>.
-        /// 
-        /// <note>
-        /// This method is immutable and returns a new instance of the router.
-        /// </note>
-        /// </summary>
-        /// <param name="vnodes">The <see cref="VirtualNodesFactor"/> used to configure the new router.</param>
-        /// <returns>A new router with the provided <paramref name="vnodes" />.</returns>
-        public ConsistentHashingGroup WithVirtualNodesFactor(int vnodes)
-        {
-            return new ConsistentHashingGroup(Paths, vnodes, HashMapping);
-        }
-
-        /// <summary>
-        /// Creates a new <see cref="ConsistentHashingGroup"/> router with a given <see cref="ConsistentHashMapping"/>.
-        /// 
-        /// <note>
-        /// This method is immutable and returns a new instance of the router.
-        /// </note>
-        /// </summary>
-        /// <param name="mapping">The <see cref="ConsistentHashMapping"/> used to configure the new router.</param>
-        /// <returns>A new router with the provided <paramref name="mapping"/>.</returns>
-        public ConsistentHashingGroup WithHashMapping(ConsistentHashMapping mapping)
-        {
-            return new ConsistentHashingGroup(Paths, VirtualNodesFactor, mapping);
-        }
-
-        /// <summary>
-        /// Creates a router that is responsible for routing messages to routees within the provided <paramref name="system" />.
-        /// </summary>
-        /// <param name="system">The actor system that owns this router.</param>
-        /// <returns>The newly created router tied to the given system.</returns>
-        public override Router CreateRouter(ActorSystem system)
-        {
-            return
-                new Router(new ConsistentHashingRoutingLogic(system, VirtualNodesFactor,
-                    HashMapping ?? ConsistentHashingRouter.EmptyConsistentHashMapping));
-        }
-
-        /// <summary>
-        /// Creates a new <see cref="ConsistentHashingGroup" /> router with a given dispatcher id.
-        /// 
-        /// <note>
-        /// This method is immutable and returns a new instance of the router.
-        /// </note>
-        /// </summary>
-        /// <param name="dispatcher">The dispatcher id used to configure the new router.</param>
-        /// <returns>A new router with the provided dispatcher id.</returns>
-        public override Group WithDispatcher(string dispatcher)
-        {
-            return new ConsistentHashingGroup(Paths, VirtualNodesFactor, HashMapping){ RouterDispatcher = dispatcher};
-        }
-
-        /// <summary>
-        /// Configure the current router with an auxiliary router for routes that it does not know how to handle.
-        /// </summary>
-        /// <param name="routerConfig">The router to use as an auxiliary source.</param>
-        /// <returns>The router configured with the auxiliary information.</returns>
-        /// <exception cref="ArgumentException">Expected ConsistentHashingGroup, got <paramref name="routerConfig"/>.</exception>
-        public override RouterConfig WithFallback(RouterConfig routerConfig)
-        {
-            if (routerConfig is FromConfig || routerConfig is NoRouter)
-            {
-                return base.WithFallback(routerConfig);
-            }
-            else if (routerConfig is ConsistentHashingGroup)
-            {
-                var other = routerConfig as ConsistentHashingGroup;
-                return WithHashMapping(other.HashMapping);
-            }
-            else
-            {
-                throw new ArgumentException(string.Format("Expected ConsistentHashingGroup, got {0}", routerConfig),
-                    "routerConfig");
-            }
-        }
-
-        /// <summary>
-        /// Creates a surrogate representation of the current <see cref="ConsistentHashingGroup"/>.
-        /// </summary>
-        /// <param name="system">The actor system that owns this router.</param>
-        /// <returns>The surrogate representation of the current <see cref="ConsistentHashingGroup"/>.</returns>
-        public override ISurrogate ToSurrogate(ActorSystem system)
-        {
-            return new ConsistentHashingGroupSurrogate
-            {
-                Paths = Paths,
-            };
-        }
-    }
 
     /// <summary>
     /// This class represents a <see cref="Pool"/> router that sends messages to a <see cref="Routee"/> determined using consistent-hashing.
@@ -489,14 +307,23 @@ namespace Akka.Routing
     /// number of routees per node in the event of clustered deployments.
     /// </note>
     /// </summary>
-    public class ConsistentHashingPool : Pool
+    public sealed class ConsistentHashingPool : Pool
     {
-        /// <summary>
-        /// Virtual nodes used in the <see cref="ConsistentHash{T}"/>.
-        /// </summary>
-        public int VirtualNodesFactor { get; private set; }
-
         private readonly ConsistentHashMapping _hashMapping;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConsistentHashingPool"/> class.
+        /// <note>
+        /// A <see cref="ConsistentHashingPool"/> configured in this way uses the <see cref="Pool.DefaultSupervisorStrategy"/> supervisor strategy.
+        /// </note>
+        /// </summary>
+        /// <param name="nrOfInstances">The initial number of routees in the pool.</param>
+        public ConsistentHashingPool(int nrOfInstances) : this(
+            nrOfInstances,
+            null,
+            Pool.DefaultSupervisorStrategy,
+            Dispatchers.DefaultDispatcherId,
+            false) { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ConsistentHashingPool"/> class.
@@ -507,9 +334,26 @@ namespace Akka.Routing
         /// </summary>
         /// <param name="config">The configuration used to configure the pool.</param>
         public ConsistentHashingPool(Config config)
-            : base(config)
+            : this(
+                  nrOfInstances: config.GetInt("nr-of-instances"),
+                  resizer: Resizer.FromConfig(config),
+                  supervisorStrategy: Pool.DefaultSupervisorStrategy,
+                  routerDispatcher: Dispatchers.DefaultDispatcherId,
+                  usePoolDispatcher: config.HasPath("pool-dispatcher"))
         {
-            VirtualNodesFactor = config.GetInt("virtual-nodes-factor", 0);
+            VirtualNodesFactor = config.GetInt("virtual-nodes-factor");
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConsistentHashingPool"/> class.
+        /// </summary>
+        /// <param name="nrOfInstances">The initial number of routees in the pool.</param>
+        /// <param name="hashMapping">The consistent hash mapping function to use on incoming messages.</param>
+        public ConsistentHashingPool(
+            int nrOfInstances,
+            ConsistentHashMapping hashMapping)
+            : this(nrOfInstances, null, Pool.DefaultSupervisorStrategy, Dispatchers.DefaultDispatcherId, false, 0, hashMapping)
+        {
         }
 
         /// <summary>
@@ -522,8 +366,13 @@ namespace Akka.Routing
         /// <param name="usePoolDispatcher"><c>true</c> to use the pool dispatcher; otherwise <c>false</c>.</param>
         /// <param name="virtualNodesFactor">The number of virtual nodes to use on the hash ring.</param>
         /// <param name="hashMapping">The consistent hash mapping function to use on incoming messages.</param>
-        public ConsistentHashingPool(int nrOfInstances, Resizer resizer, SupervisorStrategy supervisorStrategy,
-            string routerDispatcher, bool usePoolDispatcher = false, int virtualNodesFactor = 0,
+        public ConsistentHashingPool(
+            int nrOfInstances,
+            Resizer resizer,
+            SupervisorStrategy supervisorStrategy,
+            string routerDispatcher,
+            bool usePoolDispatcher = false,
+            int virtualNodesFactor = 0,
             ConsistentHashMapping hashMapping = null)
             : base(nrOfInstances, resizer, supervisorStrategy, routerDispatcher, usePoolDispatcher)
         {
@@ -532,18 +381,83 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// Creates a new <see cref="ConsistentHashingPool" /> router with a given <see cref="VirtualNodesFactor"/>.
+        /// Virtual nodes used in the <see cref="ConsistentHash{T}"/>.
+        /// </summary>
+        public int VirtualNodesFactor { get; }
+
+        /// <summary>
+        /// Creates a router that is responsible for routing messages to routees within the provided <paramref name="system" />.
+        /// </summary>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>The newly created router tied to the given system.</returns>
+        public override Router CreateRouter(ActorSystem system)
+        {
+            return
+                new Router(new ConsistentHashingRoutingLogic(system, VirtualNodesFactor,
+                    _hashMapping ?? ConsistentHashingRouter.EmptyConsistentHashMapping));
+        }
+
+        public override int GetNrOfInstances(ActorSystem system)
+        {
+            return this.NrOfInstances;
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="ConsistentHashingPool" /> router with a given <see cref="SupervisorStrategy" />.
+        /// <note>
+        /// This method is immutable and returns a new instance of the router.
+        /// </note>
+        /// </summary>
+        /// <param name="strategy">The <see cref="SupervisorStrategy" /> used to configure the new router.</param>
+        /// <returns>A new router with the provided <paramref name="strategy" />.</returns>
+        public ConsistentHashingPool WithSupervisorStrategy(SupervisorStrategy strategy)
+        {
+            return new ConsistentHashingPool(NrOfInstances, Resizer, strategy, RouterDispatcher, UsePoolDispatcher,
+                VirtualNodesFactor, _hashMapping);
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="ConsistentHashingPool" /> router with a given <see cref="Resizer" />.
+        /// <note>
+        /// This method is immutable and returns a new instance of the router.
+        /// </note>
+        /// <note>
+        /// Using <see cref="Resizer"/> with <see cref="ConsistentHashingPool"/> is potentially harmful, as hash ranges
+        /// might change radically during live message processing. This router works best with fixed-sized pools or fixed
+        /// number of routees per node in the event of clustered deployments.
+        /// </note>
+        /// </summary>
+        /// <param name="resizer">The <see cref="Resizer" /> used to configure the new router.</param>
+        /// <returns>A new router with the provided <paramref name="resizer" />.</returns>
+        public ConsistentHashingPool WithResizer(Resizer resizer)
+        {
+            return new ConsistentHashingPool(NrOfInstances, resizer, SupervisorStrategy, RouterDispatcher,
+                UsePoolDispatcher, VirtualNodesFactor, _hashMapping);
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="ConsistentHashingPool" /> router with a given dispatcher id.
         /// 
         /// <note>
         /// This method is immutable and returns a new instance of the router.
         /// </note>
         /// </summary>
-        /// <param name="vnodes">The <see cref="VirtualNodesFactor"/> used to configure the new router.</param>
-        /// <returns>A new router with the provided <paramref name="vnodes" />.</returns>
+        /// <param name="dispatcher">The dispatcher id used to configure the new router.</param>
+        /// <returns>A new router with the provided dispatcher id.</returns>
+        public ConsistentHashingPool WithDispatcher(string dispatcher)
+        {
+            return new ConsistentHashingPool(NrOfInstances, Resizer, SupervisorStrategy, dispatcher,
+               UsePoolDispatcher, VirtualNodesFactor, _hashMapping);
+        }
+
+        /// <summary>
+        /// Setting the number of virtual nodes per node, used in <see cref="ConsistentHash" />.
+        /// </summary>
+        /// <returns>A new router with the provided dispatcher id.</returns>
         public ConsistentHashingPool WithVirtualNodesFactor(int vnodes)
         {
             return new ConsistentHashingPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher,
-                UsePoolDispatcher, vnodes, _hashMapping);
+               UsePoolDispatcher, vnodes, _hashMapping);
         }
 
         /// <summary>
@@ -559,81 +473,6 @@ namespace Akka.Routing
         {
             return new ConsistentHashingPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher,
                 UsePoolDispatcher, VirtualNodesFactor, mapping);
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ConsistentHashingPool"/> class.
-        /// 
-        /// <note>
-        /// A <see cref="ConsistentHashingPool"/> configured in this way uses the <see cref="Pool.DefaultStrategy"/> supervisor strategy.
-        /// </note>
-        /// </summary>
-        /// <param name="nrOfInstances">The initial number of routees in the pool.</param>
-        public ConsistentHashingPool(int nrOfInstances) : base(nrOfInstances, null, Pool.DefaultStrategy, null)
-        {
-        }
-
-        /// <summary>
-        /// Creates a router that is responsible for routing messages to routees within the provided <paramref name="system" />.
-        /// </summary>
-        /// <param name="system">The actor system that owns this router.</param>
-        /// <returns>The newly created router tied to the given system.</returns>
-        public override Router CreateRouter(ActorSystem system)
-        {
-            return
-                new Router(new ConsistentHashingRoutingLogic(system, VirtualNodesFactor,
-                    _hashMapping ?? ConsistentHashingRouter.EmptyConsistentHashMapping));
-        }
-
-        /// <summary>
-        /// Creates a new <see cref="ConsistentHashingPool" /> router with a given <see cref="SupervisorStrategy" />.
-        /// 
-        /// <note>
-        /// This method is immutable and returns a new instance of the router.
-        /// </note>
-        /// </summary>
-        /// <param name="strategy">The <see cref="SupervisorStrategy" /> used to configure the new router.</param>
-        /// <returns>A new router with the provided <paramref name="strategy" />.</returns>
-        public override Pool WithSupervisorStrategy(SupervisorStrategy strategy)
-        {
-            return new ConsistentHashingPool(NrOfInstances, Resizer, strategy, RouterDispatcher, UsePoolDispatcher,
-                VirtualNodesFactor, _hashMapping);
-        }
-
-        /// <summary>
-        /// Creates a new <see cref="ConsistentHashingPool" /> router with a given <see cref="Resizer" />.
-        /// 
-        /// <note>
-        /// This method is immutable and returns a new instance of the router.
-        /// </note>
-        /// 
-        /// <note>
-        /// Using <see cref="Resizer"/> with <see cref="ConsistentHashingPool"/> is potentially harmful, as hash ranges
-        /// might change radically during live message processing. This router works best with fixed-sized pools or fixed
-        /// number of routees per node in the event of clustered deployments.
-        /// </note>
-        /// </summary>
-        /// <param name="resizer">The <see cref="Resizer" /> used to configure the new router.</param>
-        /// <returns>A new router with the provided <paramref name="resizer" />.</returns>
-        public override Pool WithResizer(Resizer resizer)
-        {
-            return new ConsistentHashingPool(NrOfInstances, resizer, SupervisorStrategy, RouterDispatcher,
-                UsePoolDispatcher, VirtualNodesFactor, _hashMapping);
-        }
-
-        /// <summary>
-        /// Creates a new <see cref="ConsistentHashingPool" /> router with a given dispatcher id.
-        /// 
-        /// <note>
-        /// This method is immutable and returns a new instance of the router.
-        /// </note>
-        /// </summary>
-        /// <param name="dispatcher">The dispatcher id used to configure the new router.</param>
-        /// <returns>A new router with the provided dispatcher id.</returns>
-        public override Pool WithDispatcher(string dispatcher)
-        {
-            return new ConsistentHashingPool(NrOfInstances, Resizer, SupervisorStrategy, dispatcher,
-               UsePoolDispatcher, VirtualNodesFactor, _hashMapping);
         }
 
         /// <summary>
@@ -656,8 +495,61 @@ namespace Akka.Routing
             else
             {
                 throw new ArgumentException(string.Format("Expected ConsistentHashingPool, got {0}", routerConfig),
-                    "routerConfig");
+                    nameof(routerConfig));
             }
+        }
+
+        private RouterConfig OverrideUnsetConfig(RouterConfig other)
+        {
+            if (other is NoRouter)
+            {
+                return this;
+            }
+            else
+            {
+                var pool = other as Pool;
+                if (pool != null)
+                {
+                    ConsistentHashingPool wssConf;
+
+                    if (SupervisorStrategy != null
+                        && SupervisorStrategy.Equals(Pool.DefaultSupervisorStrategy)
+                        && !(pool.SupervisorStrategy.Equals(Pool.DefaultSupervisorStrategy)))
+                    {
+                        wssConf = this.WithSupervisorStrategy(pool.SupervisorStrategy);
+                    }
+                    else
+                    {
+                        wssConf = this;
+                    }
+
+                    if (wssConf.Resizer == null && pool.Resizer != null)
+                        return wssConf.WithResizer(pool.Resizer);
+
+                    return wssConf;
+                }
+                else
+                {
+                    return this;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Creates a surrogate representation of the current <see cref="ConsistentHashingPool"/>.
+        /// </summary>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>The surrogate representation of the current <see cref="ConsistentHashingPool"/>.</returns>
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new ConsistentHashingPoolSurrogate
+            {
+                NrOfInstances = NrOfInstances,
+                UsePoolDispatcher = UsePoolDispatcher,
+                Resizer = Resizer,
+                SupervisorStrategy = SupervisorStrategy,
+                RouterDispatcher = RouterDispatcher,
+            };
         }
 
         /// <summary>
@@ -698,22 +590,214 @@ namespace Akka.Routing
             /// </summary>
             public string RouterDispatcher { get; set; }
         }
+    }
+
+    /// <summary>
+    /// This class represents a <see cref="Group"/> router that sends messages to a <see cref="Routee"/> determined using consistent-hashing.
+    /// Please refer to <see cref="ConsistentHashingRoutingLogic"/> for more information on consistent hashing.
+    /// </summary>
+    public sealed class ConsistentHashingGroup : Group
+    {
+        private readonly ConsistentHashMapping _hashMapping;
 
         /// <summary>
-        /// Creates a surrogate representation of the current <see cref="ConsistentHashingPool"/>.
+        /// Initializes a new instance of the <see cref="ConsistentHashingGroup"/> class.
+        /// </summary>
+        /// <param name="config">
+        /// The configuration to use to lookup paths used by the group router.
+        /// 
+        /// <note>
+        /// If 'routees.path' is defined in the provided configuration then those paths will be used by the router.
+        /// 'virtual-nodes-factor' defaults to 0 (zero) if it is not defined in the provided configuration.
+        /// </note>
+        /// </param>
+        public ConsistentHashingGroup(Config config)
+            : this(config.GetStringList("routees.paths"))
+        {
+            VirtualNodesFactor = config.GetInt("virtual-nodes-factor", 0);
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConsistentHashingGroup"/> class.
+        /// </summary>
+        /// <param name="paths">>A list of actor paths used by the group router.</param>
+        public ConsistentHashingGroup(params string[] paths)
+            : this(paths, 0, ConsistentHashingRouter.EmptyConsistentHashMapping, Dispatchers.DefaultDispatcherId)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConsistentHashingGroup"/> class.
+        /// </summary>
+        /// <param name="paths">A list of actor paths used by the group router.</param>
+        public ConsistentHashingGroup(IEnumerable<string> paths)
+            : this(paths, 0, ConsistentHashingRouter.EmptyConsistentHashMapping, Dispatchers.DefaultDispatcherId)
+        {
+        }
+
+        [Obsolete("Use new ConsistentHashingGroup(actorRefs.Select(c => c.Path.ToString())) instead")]
+        public ConsistentHashingGroup(IEnumerable<IActorRef> routees)
+            : this(routees.Select(c => c.Path.ToString()))
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConsistentHashingGroup"/> class.
+        /// </summary>
+        /// <param name="paths">An enumeration of actor paths used by the group router.</param>
+        /// <param name="hashMapping">The consistent hash mapping function to use on incoming messages.</param>
+        public ConsistentHashingGroup(
+            IEnumerable<string> paths,
+            ConsistentHashMapping hashMapping)
+            : this(paths, 0, hashMapping, Dispatchers.DefaultDispatcherId)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConsistentHashingGroup"/> class.
+        /// </summary>
+        /// <param name="paths">An enumeration of actor paths used by the group router.</param>
+        /// <param name="virtualNodesFactor">The number of virtual nodes to use on the hash ring.</param>
+        /// <param name="hashMapping">The consistent hash mapping function to use on incoming messages.</param>
+        /// <param name="routerDispatcher">The dispatcher to use when passing messages to the routees.</param>
+        public ConsistentHashingGroup(
+            IEnumerable<string> paths,
+            int virtualNodesFactor,
+            ConsistentHashMapping hashMapping,
+            string routerDispatcher)
+            : base(paths, routerDispatcher)
+        {
+            VirtualNodesFactor = virtualNodesFactor;
+            _hashMapping = hashMapping;
+        }
+
+        /// <summary>
+        /// Virtual nodes used in the <see cref="ConsistentHash{T}"/>.
+        /// </summary>
+        public int VirtualNodesFactor { get; private set; }
+
+        public override IEnumerable<string> GetPaths(ActorSystem system)
+        {
+            return Paths;
+        }
+
+        /// <summary>
+        /// Creates a router that is responsible for routing messages to routees within the provided <paramref name="system" />.
         /// </summary>
         /// <param name="system">The actor system that owns this router.</param>
-        /// <returns>The surrogate representation of the current <see cref="ConsistentHashingPool"/>.</returns>
+        /// <returns>The newly created router tied to the given system.</returns>
+        public override Router CreateRouter(ActorSystem system)
+        {
+            return
+                new Router(new ConsistentHashingRoutingLogic(system, VirtualNodesFactor,
+                    _hashMapping ?? ConsistentHashingRouter.EmptyConsistentHashMapping));
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="ConsistentHashingGroup" /> router with a given dispatcher id.
+        /// 
+        /// <note>
+        /// This method is immutable and returns a new instance of the router.
+        /// </note>
+        /// </summary>
+        /// <param name="dispatcher">The dispatcher id used to configure the new router.</param>
+        /// <returns>A new router with the provided dispatcher id.</returns>
+        public ConsistentHashingGroup WithDispatcher(string dispatcher)
+        {
+            return new ConsistentHashingGroup(Paths, VirtualNodesFactor, _hashMapping, dispatcher);
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="ConsistentHashingGroup" /> router with a given <see cref="VirtualNodesFactor"/>.
+        /// 
+        /// <note>
+        /// This method is immutable and returns a new instance of the router.
+        /// </note>
+        /// </summary>
+        /// <param name="vnodes">The <see cref="VirtualNodesFactor"/> used to configure the new router.</param>
+        /// <returns>A new router with the provided <paramref name="vnodes" />.</returns>
+        public ConsistentHashingGroup WithVirtualNodesFactor(int vnodes)
+        {
+            return new ConsistentHashingGroup(Paths, vnodes, _hashMapping, RouterDispatcher);
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="ConsistentHashingGroup"/> router with a given <see cref="ConsistentHashMapping"/>.
+        /// 
+        /// <note>
+        /// This method is immutable and returns a new instance of the router.
+        /// </note>
+        /// </summary>
+        /// <param name="mapping">The <see cref="ConsistentHashMapping"/> used to configure the new router.</param>
+        /// <returns>A new router with the provided <paramref name="mapping"/>.</returns>
+        public ConsistentHashingGroup WithHashMapping(ConsistentHashMapping mapping)
+        {
+            return new ConsistentHashingGroup(Paths, VirtualNodesFactor, mapping, RouterDispatcher);
+        }
+
+        /// <summary>
+        /// Configure the current router with an auxiliary router for routes that it does not know how to handle.
+        /// </summary>
+        /// <param name="routerConfig">The router to use as an auxiliary source.</param>
+        /// <returns>The router configured with the auxiliary information.</returns>
+        /// <exception cref="ArgumentException">Expected ConsistentHashingGroup, got <paramref name="routerConfig"/>.</exception>
+        public override RouterConfig WithFallback(RouterConfig routerConfig)
+        {
+            if (routerConfig is FromConfig || routerConfig is NoRouter)
+            {
+                return base.WithFallback(routerConfig);
+            }
+            else if (routerConfig is ConsistentHashingGroup)
+            {
+                var other = routerConfig as ConsistentHashingGroup;
+                return WithHashMapping(other._hashMapping);
+            }
+            else
+            {
+                throw new ArgumentException(string.Format("Expected ConsistentHashingGroup, got {0}", routerConfig),
+                    nameof(routerConfig));
+            }
+        }
+
+        /// <summary>
+        /// Creates a surrogate representation of the current <see cref="ConsistentHashingGroup"/>.
+        /// </summary>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <returns>The surrogate representation of the current <see cref="ConsistentHashingGroup"/>.</returns>
         public override ISurrogate ToSurrogate(ActorSystem system)
         {
-            return new ConsistentHashingPoolSurrogate
+            return new ConsistentHashingGroupSurrogate
             {
-                NrOfInstances = NrOfInstances,
-                UsePoolDispatcher = UsePoolDispatcher,
-                Resizer = Resizer,
-                SupervisorStrategy = SupervisorStrategy,
-                RouterDispatcher = RouterDispatcher,
+                Paths = Paths,
+                RouterDispatcher = RouterDispatcher
             };
+        }
+
+        /// <summary>
+        /// This class represents a surrogate of a <see cref="ConsistentHashingGroup"/> router.
+        /// Its main use is to help during the serialization process.
+        /// </summary>
+        public class ConsistentHashingGroupSurrogate : ISurrogate
+        {
+            /// <summary>
+            /// Creates a <see cref="ConsistentHashingGroup"/> encapsulated by this surrogate.
+            /// </summary>
+            /// <param name="system">The actor system that owns this router.</param>
+            /// <returns>The <see cref="ConsistentHashingGroup"/> encapsulated by this surrogate.</returns>
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new ConsistentHashingGroup(Paths, 0, ConsistentHashingRouter.EmptyConsistentHashMapping, RouterDispatcher);
+            }
+
+            /// <summary>
+            /// The actor paths used by this router during routee selection.
+            /// </summary>
+            public IEnumerable<string> Paths { get; set; }
+
+            /// <summary>
+            /// The dispatcher to use when passing messages to the routees.
+            /// </summary>
+            public string RouterDispatcher { get; set; }
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AutoDown.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -22,7 +22,7 @@ namespace Akka.Cluster
     /// The implementation is split into two classes AutoDown and AutoDownBase to be
     /// able to unit test the logic without running cluster.
     /// </summary>
-    public class AutoDown : AutoDownBase
+    internal class AutoDown : AutoDownBase
     {
         public static Props Props(TimeSpan autoDownUnreachableAfter)
         {
@@ -80,7 +80,7 @@ namespace Akka.Cluster
 
     }
 
-    public abstract class AutoDownBase : UntypedActor
+    internal abstract class AutoDownBase : UntypedActor
     {
         readonly ImmutableHashSet<MemberStatus> _skipMemberStatus =
             Gossip.ConvergenceSkipUnreachableWithMemberStatus;

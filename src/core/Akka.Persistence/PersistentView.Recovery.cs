@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentView.Recovery.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -38,7 +38,7 @@ namespace Akka.Persistence
     {
         /// <summary>
         /// Processes a loaded snapshot, if any. A loaded snapshot is offered with a <see cref="SnapshotOffer"/>
-        /// message to the actor's <see cref="PersistentView.Receive"/> method. Then initiates a message replay, either 
+        /// message to the actor's <see cref="ActorBase.Receive"/> method. Then initiates a message replay, either 
         /// starting from the loaded snapshot or from scratch, and switches to <see cref="ReplayStarted"/> state.
         /// All incoming messages are stashed.
         /// </summary>
@@ -63,7 +63,7 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// Processes replayed message, if any. The actor's <see cref="PersistentView.Receive"/> is invoked 
+        /// Processes replayed message, if any. The actor's <see cref="ActorBase.Receive"/> is invoked 
         /// with the replayed events.
         /// 
         /// If replay succeeds it got highest stored sequence number response from the journal and

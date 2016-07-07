@@ -1,15 +1,18 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SqlSnapshotStore.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Collections.Generic;
+using System;
 using System.Configuration;
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.Configuration;
+using Akka.Event;
 using Akka.Persistence.Snapshot;
 
 namespace Akka.Persistence.Sql.Common.Snapshot
@@ -17,18 +20,40 @@ namespace Akka.Persistence.Sql.Common.Snapshot
     /// <summary>
     /// Abstract snapshot store implementation, customized to work with SQL-based persistence providers.
     /// </summary>
-    public abstract class SqlSnapshotStore : SnapshotStore
+    public abstract class SqlSnapshotStore : SnapshotStore, IWithUnboundedStash
     {
+        #region messages
+        
+        private sealed class Initialized
+        {
+            public static readonly Initialized Instance = new Initialized();
+            private Initialized() { }
+        }
+            
+        #endregion
+
         /// <summary>
         /// List of cancellation tokens for all pending asynchronous database operations.
         /// </summary>
         private readonly CancellationTokenSource _pendingRequestsCancellation;
 
-        protected SqlSnapshotStore()
+        private readonly SnapshotStoreSettings _settings;
+
+        protected SqlSnapshotStore(Config config)
         {
-            QueryMapper = new DefaultSnapshotQueryMapper(Context.System.Serialization);
+            _settings = new SnapshotStoreSettings(config);
             _pendingRequestsCancellation = new CancellationTokenSource();
         }
+
+        private ILoggingAdapter _log;
+        protected ILoggingAdapter Log => _log ?? (_log ?? Context.GetLogger());
+
+        public IStash Stash { get; set; }
+
+        /// <summary>
+        /// Query executor used to convert snapshot store related operations into corresponding SQL queries.
+        /// </summary>
+        public abstract ISnapshotQueryExecutor QueryExecutor { get; }
 
         /// <summary>
         /// Returns a new instance of database connection.
@@ -43,20 +68,15 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             return CreateDbConnection(GetConnectionString());
         }
 
-        /// <summary>
-        /// Gets settings for the current snapshot store.
-        /// </summary>
-        protected abstract SnapshotStoreSettings Settings { get; }
-
-        /// <summary>
-        /// Query builder used to convert snapshot store related operations into corresponding SQL queries.
-        /// </summary>
-        public ISnapshotQueryBuilder QueryBuilder { get; set; }
-
-        /// <summary>
-        /// Query mapper used to map SQL query results into snapshots.
-        /// </summary>
-        public ISnapshotQueryMapper QueryMapper { get; set; }
+        protected override void PreStart()
+        {
+            base.PreStart();
+            if (_settings.AutoInitialize)
+            {
+                Initialize().PipeTo(Self);
+                BecomeStacked(WaitingForInitialization);
+            }
+        }
 
         protected override void PostStop()
         {
@@ -66,11 +86,35 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             _pendingRequestsCancellation.Cancel();
         }
 
+        private async Task<Initialized> Initialize()
+        {
+            using (var connection = CreateDbConnection())
+            {
+                await connection.OpenAsync(_pendingRequestsCancellation.Token);
+                await QueryExecutor.CreateTableAsync(connection, _pendingRequestsCancellation.Token);
+                return Initialized.Instance;
+            }
+        }
+
+        private bool WaitingForInitialization(object message) => message.Match()
+            .With<Initialized>(_ =>
+            {
+                UnbecomeStacked();
+                Stash.UnstashAll();
+            })
+            .With<Failure>(failure =>
+            {
+                _log.Error(failure.Exception, "Error during snapshot store intiialization");
+                Context.Stop(Self);
+            })
+            .Default(_ => Stash.Stash())
+            .WasHandled;
+
         protected virtual string GetConnectionString()
         {
-            var connectionString = Settings.ConnectionString;
+            var connectionString = _settings.ConnectionString;
             return string.IsNullOrEmpty(connectionString)
-                ? ConfigurationManager.ConnectionStrings[Settings.ConnectionStringName].ConnectionString
+                ? ConfigurationManager.ConnectionStrings[_settings.ConnectionStringName].ConnectionString
                 : connectionString;
         }
 
@@ -81,20 +125,8 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         {
             using (var connection = CreateDbConnection())
             {
-                await connection.OpenAsync();
-
-                var sqlCommand = QueryBuilder.SelectSnapshot(persistenceId, criteria.MaxSequenceNr, criteria.MaxTimeStamp);
-                CompleteCommand(sqlCommand, connection);
-                
-                var reader = await sqlCommand.ExecuteReaderAsync(_pendingRequestsCancellation.Token);
-                try
-                {
-                    return reader.Read() ? QueryMapper.Map(reader) : null;
-                }
-                finally
-                {
-                    reader.Close();
-                }
+                await connection.OpenAsync(_pendingRequestsCancellation.Token);
+                return await QueryExecutor.SelectSnapshotAsync(connection, _pendingRequestsCancellation.Token, persistenceId, criteria.MaxSequenceNr, criteria.MaxTimeStamp);
             }
         }
 
@@ -106,12 +138,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             using (var connection = CreateDbConnection())
             {
                 await connection.OpenAsync();
-
-                var entry = ToSnapshotEntry(metadata, snapshot);
-                var sqlCommand = QueryBuilder.InsertSnapshot(entry);
-                CompleteCommand(sqlCommand, connection);
-                
-                await sqlCommand.ExecuteNonQueryAsync(_pendingRequestsCancellation.Token);
+                await QueryExecutor.InsertAsync(connection, _pendingRequestsCancellation.Token, snapshot, metadata);
             }
         }
 
@@ -120,10 +147,8 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             using (var connection = CreateDbConnection())
             {
                 await connection.OpenAsync();
-                var sqlCommand = QueryBuilder.DeleteOne(metadata.PersistenceId, metadata.SequenceNr, metadata.Timestamp);
-                CompleteCommand(sqlCommand, connection);
-
-                await sqlCommand.ExecuteNonQueryAsync();
+                DateTime? timestamp = metadata.Timestamp != DateTime.MinValue ? metadata.Timestamp : default(DateTime?);
+                await QueryExecutor.DeleteAsync(connection, _pendingRequestsCancellation.Token, metadata.PersistenceId, metadata.SequenceNr, timestamp);
             }
         }
 
@@ -132,19 +157,10 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             using (var connection = CreateDbConnection())
             {
                 await connection.OpenAsync();
-                var sqlCommand = QueryBuilder.DeleteMany(persistenceId, criteria.MaxSequenceNr, criteria.MaxTimeStamp);
-                CompleteCommand(sqlCommand, connection);
-
-                await sqlCommand.ExecuteNonQueryAsync();
+                await QueryExecutor.DeleteBatchAsync(connection, _pendingRequestsCancellation.Token, persistenceId, criteria.MaxSequenceNr, criteria.MaxTimeStamp);
             }
         }
-
-        private void CompleteCommand(DbCommand command, DbConnection connection)
-        {
-            command.Connection = connection;
-            command.CommandTimeout = (int)Settings.ConnectionTimeout.TotalMilliseconds;
-        }
-
+        
         private SnapshotEntry ToSnapshotEntry(SnapshotMetadata metadata, object snapshot)
         {
             var snapshotType = snapshot.GetType();
@@ -156,8 +172,8 @@ namespace Akka.Persistence.Sql.Common.Snapshot
                 persistenceId: metadata.PersistenceId,
                 sequenceNr: metadata.SequenceNr,
                 timestamp: metadata.Timestamp,
-                snapshotType: snapshotType.QualifiedTypeName(),
-                snapshot: binary);
+                manifest: snapshotType.QualifiedTypeName(),
+                payload: binary);
         }
     }
 }

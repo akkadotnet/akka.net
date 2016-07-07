@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UnboundedMailboxQueue.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -20,11 +20,6 @@ namespace Akka.Dispatch.MessageQueues
     {
         private readonly TQueue _queue = new TQueue();
 
-        public void Enqueue(Envelope envelope)
-        {
-            _queue.Enqueue(envelope);
-        }
-
         public bool HasMessages
         {
             get { return _queue.Count > 0; }
@@ -35,9 +30,23 @@ namespace Akka.Dispatch.MessageQueues
             get { return _queue.Count; }
         }
 
+        public void Enqueue(IActorRef receiver, Envelope envelope)
+        {
+            _queue.Enqueue(envelope);
+        }
+
         public bool TryDequeue(out Envelope envelope)
         {
             return _queue.TryDequeue(out envelope);
+        }
+
+        public void CleanUp(IActorRef owner, IMessageQueue deadletters)
+        {
+            Envelope msg;
+            while (TryDequeue(out msg))
+            {
+                deadletters.Enqueue(owner, msg);
+            }
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardingMessages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -132,13 +132,13 @@ namespace Akka.Cluster.Sharding
     }
 
     /// <summary>
-    /// Send this message to the `ShardRegion` actor to request for <see cref="ShardRegionStats"/>,
+    /// Send this message to the <see cref="ShardRegion"/> actor to request for <see cref="ShardRegionStats"/>,
     /// which contains statistics about the currently running sharded entities in the
     /// entire region.
     /// Intended for testing purpose to see when cluster sharding is "ready" or to monitor
     /// the state of the shard regions.
     /// 
-    /// For the statistics for the entire cluster, see <see cref="GetClusterShardingStats$"/>.
+    /// For the statistics for the entire cluster, see <see cref="GetClusterShardingStats"/>.
     /// </summary>
     [Serializable]
     public sealed class GetShardRegionStats : IShardRegionQuery

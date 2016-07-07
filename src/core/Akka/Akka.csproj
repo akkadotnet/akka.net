@@ -174,17 +174,13 @@
     <Compile Include="Configuration\Hocon\IHoconElement.cs" />
     <Compile Include="Dispatch\AbstractDispatcher.cs" />
     <Compile Include="Dispatch\ActorTaskScheduler.cs" />
-    <Compile Include="Dispatch\BoundedDequeBasedMailbox.cs" />
     <Compile Include="Dispatch\CachingConfig.cs" />
-    <Compile Include="Dispatch\ConcurrentQueueMailbox.cs" />
-    <Compile Include="Dispatch\DequeBasedMailbox.cs" />
-    <Compile Include="Dispatch\DispatcherConfigurator.cs" />
-    <Compile Include="Dispatch\ForkJoinDispatcher.cs" />
-    <Compile Include="Dispatch\GenericMailbox.cs" />
+    <Compile Include="Dispatch\Dispatcher.cs" />
+    <Compile Include="Dispatch\ExecutorService.cs" />
     <Compile Include="Dispatch\Dispatchers.cs" />
     <Compile Include="Actor\Exceptions.cs" />
     <Compile Include="Dispatch\IDispatcherPrerequisites.cs" />
-    <Compile Include="Dispatch\MessageQueueMailbox.cs" />
+    <Compile Include="Dispatch\IRunnable.cs" />
     <Compile Include="Dispatch\MessageQueues\BlockingMessageQueue.cs" />
     <Compile Include="Dispatch\MessageQueues\BoundedMessageQueue.cs" />
     <Compile Include="Dispatch\MessageQueues\DequeWrapperMessageQueue.cs" />
@@ -204,13 +200,9 @@
     <Compile Include="Actor\UntypedReceive.cs" />
     <Compile Include="Dispatch\Mailboxes.cs" />
     <Compile Include="Dispatch\MessageQueues\IMessageQueue.cs" />
-    <Compile Include="Dispatch\SingleThreadDispatcher.cs" />
+    <Compile Include="Dispatch\PinnedDispatcher.cs" />
     <Compile Include="Dispatch\SysMsg\ISystemMessage.cs" />
-    <Compile Include="Dispatch\TaskDispatcher.cs" />
     <Compile Include="Dispatch\ThreadPoolBuilder.cs" />
-    <Compile Include="Dispatch\UnboundedDequeBasedMailbox.cs" />
-    <Compile Include="Dispatch\UnboundedMailbox.cs" />
-    <Compile Include="Dispatch\UnboundedPriorityMailbox.cs" />
     <Compile Include="Event\ActorEventBus.cs" />
     <Compile Include="Event\AddressTerminatedTopic.cs" />
     <Compile Include="Event\BusLogging.cs" />
@@ -273,12 +265,16 @@
     <Compile Include="IO\TcpListener.cs" />
     <Compile Include="IO\TcpManager.cs" />
     <Compile Include="IO\TcpOutgoingConnection.cs" />
+    <Compile Include="NotUsed.cs" />
     <Compile Include="Util\ByteIterator.cs" />
     <Compile Include="Util\ByteString.cs" />
     <Compile Include="Util\ContinuousEnumerator.cs" />
+    <Compile Include="Util\FastLazy.cs" />
+    <Compile Include="Util\Index.cs" />
     <Compile Include="Util\Internal\AtomicState.cs" />
     <Compile Include="Util\Internal\Collections\EnumeratorExtensions.cs" />
     <Compile Include="Util\Internal\Collections\Iterator.cs" />
+    <Compile Include="Util\Internal\DictionaryExtensions.cs" />
     <Compile Include="Util\Internal\ImmutabilityUtils.cs" />
     <Compile Include="Util\Internal\InterlockedSpin.cs" />
     <Compile Include="Util\Internal\Collections\IBinaryTreeNode.cs" />
@@ -287,6 +283,7 @@
     <Compile Include="Util\Internal\TaskExtensions.cs" />
     <Compile Include="Util\ISurrogate.cs" />
     <Compile Include="Util\MonotonicClock.cs" />
+    <Compile Include="Util\Result.cs" />
     <Compile Include="Util\Reflection\TypeCache.cs" />
     <Compile Include="Util\StandardOutWriter.cs" />
     <Compile Include="Event\Subscription.cs" />
@@ -296,7 +293,7 @@
     <Compile Include="Util\Internal\Extensions.cs" />
     <Compile Include="Dispatch\IRequiresMessageQueue.cs" />
     <Compile Include="Routing\SmallestMailbox.cs" />
-    <Compile Include="Routing\TailChoppingRoutingLogic.cs" />
+    <Compile Include="Routing\TailChopping.cs" />
     <Compile Include="Serialization\ByteArraySerializer.cs" />
     <Compile Include="Serialization\NewtonSoftJsonSerializer.cs" />
     <Compile Include="Serialization\NullSerializer.cs" />
@@ -377,7 +374,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Akka.ExternalAnnotations.xml">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
   <ItemGroup />

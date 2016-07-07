@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -11,7 +11,10 @@ using System.Threading;
 using Akka.Actor.Internal;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
+using Akka.Event;
 using Akka.Serialization;
+using Akka.Util;
+using Assert = System.Diagnostics.Debug;
 
 namespace Akka.Actor
 {
@@ -21,15 +24,34 @@ namespace Akka.Actor
         private IInternalActorRef _self;
         public const int UndefinedUid = 0;
         private Props _props;
-        private static readonly Props terminatedProps=new TerminatedProps();
+        private static readonly Props terminatedProps =new TerminatedProps();
 
+        private const int DefaultState = 0;
+        private const int SuspendedState = 1;
+        private const int SuspendedWaitForChildrenState = 2;
+        // todo: might need a special state for AsyncAwait
 
-        private long _uid;
         private ActorBase _actor;
         private bool _actorHasBeenCleared;
-        private Mailbox _mailbox;
+        private volatile Mailbox _mailboxDoNotCallMeDirectly;
         private readonly ActorSystemImpl _systemImpl;
         private ActorTaskScheduler _taskScheduler;
+
+        // special system message stash, used when we aren't able to handle other system messages just yet
+        private LatestFirstSystemMessageList _sysMsgStash = SystemMessageList.LNil;
+
+        protected void Stash(SystemMessage msg)
+        {
+            Assert.Assert(msg.Unlinked);
+            _sysMsgStash = _sysMsgStash + msg;
+        }
+
+        private LatestFirstSystemMessageList UnstashAll()
+        {
+            var unstashed = _sysMsgStash;
+            _sysMsgStash = SystemMessageList.LNil;
+            return unstashed;
+        }
 
 
         public ActorCell(ActorSystemImpl system, IInternalActorRef self, Props props, MessageDispatcher dispatcher, IInternalActorRef parent)
@@ -43,12 +65,12 @@ namespace Akka.Actor
         }
 
         public object CurrentMessage { get; private set; }
-        public Mailbox Mailbox { get { return _mailbox; } }
+        public Mailbox Mailbox => Volatile.Read(ref _mailboxDoNotCallMeDirectly);
 
         public MessageDispatcher Dispatcher { get; private set; }
         public bool IsLocal { get{return true;} }
         protected ActorBase Actor { get { return _actor; } }
-        public bool IsTerminated { get { return ReferenceEquals(_systemImpl.Mailboxes.DeadLetterMailbox,_mailbox) || _mailbox.IsClosed; } }
+        public bool IsTerminated => Mailbox.IsClosed();
         internal static ActorCell Current
         {
             get { return InternalCurrentActorCellKeeper.Current; }
@@ -61,7 +83,7 @@ namespace Akka.Actor
         IActorRef IActorContext.Parent { get { return Parent; } }
         public IInternalActorRef Parent { get; private set; }
         public IActorRef Sender { get; private set; }
-        public bool HasMessages { get { return Mailbox.HasUnscheduledMessages; } }
+        public bool HasMessages { get { return Mailbox.HasMessages; } }
         public int NumberOfMessages { get { return Mailbox.NumberOfMessages; } }
         internal bool ActorHasBeenCleared { get { return _actorHasBeenCleared; } }
         internal static Props TerminatedProps { get { return terminatedProps; } }
@@ -80,47 +102,55 @@ namespace Akka.Actor
             }
         }
 
-        public void Init(bool sendSupervise, Func<Mailbox> createMailbox /*, MailboxType mailboxType*/) //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType
+        /// <summary>
+        /// Initialize this cell, i.e. set up mailboxes and supervision. The UID must be
+        /// reasonably different from the previous UID of a possible actor with the same path,
+        /// which can be achieved by using <see cref="ThreadLocalRandom"/>
+        /// </summary>
+        /// <param name="sendSupervise"></param>
+        /// <param name="mailboxType"></param>
+        public void Init(bool sendSupervise, MailboxType mailboxType)
         {
-            var mailbox = createMailbox(); //Akka: dispatcher.createMailbox(this, mailboxType)
-            Dispatcher.Attach(this);
-            mailbox.Setup(Dispatcher);
-            mailbox.SetActor(this);
-            _mailbox = mailbox;
+            /*
+             * Create the mailbox and enqueue the Create() message to ensure that
+             * this is processed before anything else.
+             */
+            var mailbox = Dispatcher.CreateMailbox(this, mailboxType);
 
-            var createMessage = new Create();
-            // AKKA:
-            //   /*
-            //    * The mailboxType was calculated taking into account what the MailboxType
-            //    * has promised to produce. If that was more than the default, then we need
-            //    * to reverify here because the dispatcher may well have screwed it up.
-            //    */
-            //// we need to delay the failure to the point of actor creation so we can handle
-            //// it properly in the normal way
-            //val actorClass = props.actorClass
-            //val createMessage = mailboxType match {
-            //    case _: ProducesMessageQueue[_] if system.mailboxes.hasRequiredType(actorClass) ⇒
-            //    val req = system.mailboxes.getRequiredType(actorClass)
-            //    if (req isInstance mbox.messageQueue) Create(None)
-            //    else {
-            //        val gotType = if (mbox.messageQueue == null) "null" else mbox.messageQueue.getClass.getName
-            //        Create(Some(ActorInitializationException(self,
-            //        s"Actor [$self] requires mailbox type [$req] got [$gotType]")))
-            //    }
-            //    case _ ⇒ Create(None)
-            //}
+            Create createMessage;
+            /*
+             * The mailboxType was calculated taking into account what the MailboxType
+             * has promised to produce. If that was more than the default, then we need
+             * to reverify here because the dispatcher may well have screwed it up.
+             */
+            // we need to delay the failure to the point of actor creation so we can handle
+            // it properly in the normal way
+            var actorClass = Props.Type;
+            if (System.Mailboxes.ProducesMessageQueue(mailboxType.GetType()) && System.Mailboxes.HasRequiredType(actorClass))
+            {
+                var req = System.Mailboxes.GetRequiredType(actorClass);
+                if (req.IsInstanceOfType(mailbox.MessageQueue)) createMessage = new Create(null); //success
+                else
+                {
+                    var gotType = mailbox.MessageQueue == null ? "null" : mailbox.MessageQueue.GetType().FullName;
+                    createMessage = new Create(new ActorInitializationException(Self,$"Actor [{Self}] requires mailbox type [{req}] got [{gotType}]"));
+                }
+            }
+            else
+            {
+               createMessage = new Create(null);
+            }
 
-            //swapMailbox(mbox)
-            //mailbox.setActor(this)
+            SwapMailbox(mailbox);
+            Mailbox.SetActor(this);
 
             //// ➡➡➡ NEVER SEND THE SAME SYSTEM MESSAGE OBJECT TO TWO ACTORS ⬅⬅⬅
-            //mailbox.systemEnqueue(self, createMessage)
             var self = Self;
-            mailbox.Post(self, new Envelope {Message = createMessage, Sender = self});
+            mailbox.SystemEnqueue(self, createMessage);
 
             if(sendSupervise)
             {
-                Parent.Tell(new Supervise(self, async: false), self);
+                Parent.SendSystemMessage(new Supervise(self, async: false));
             }
         }
 
@@ -210,8 +240,12 @@ namespace Akka.Actor
 
         private long NewUid()
         {
-            var auid = Interlocked.Increment(ref _uid);
-            return auid;
+            // Note that this uid is also used as hashCode in ActorRef, so be careful
+            // to not break hashing if you change the way uid is generated
+            var uid = ThreadLocalRandom.Current.Next();
+            while (uid == UndefinedUid)
+                uid = ThreadLocalRandom.Current.Next();
+            return uid;
         }
 
         private ActorBase NewActor()
@@ -262,8 +296,7 @@ namespace Akka.Actor
             }
         }
 
-
-        public virtual void Post(IActorRef sender, object message)
+        public virtual void SendMessage(IActorRef sender, object message)
         {
             if (Mailbox == null)
             {
@@ -272,14 +305,28 @@ namespace Akka.Actor
                 //this._systemImpl.DeadLetters.Tell(new DeadLetter(message, sender, this.Self));
             }
 
-            if (_systemImpl.Settings.SerializeAllMessages && !(message is INoSerializationVerificationNeeded))
+            if (_systemImpl.Settings.SerializeAllMessages)
             {
-                Serializer serializer = _systemImpl.Serialization.FindSerializerFor(message);
-                byte[] serialized = serializer.ToBinary(message);
-                object deserialized = _systemImpl.Serialization.Deserialize(serialized, serializer.Identifier,
-                    message.GetType());
-                message = deserialized;
-            }           
+                DeadLetter deadLetter;
+                var unwrapped = (deadLetter = message as DeadLetter) != null ? deadLetter.Message : message;
+                if (!(unwrapped is INoSerializationVerificationNeeded))
+                {
+                    Serializer serializer = _systemImpl.Serialization.FindSerializerFor(message);
+                    byte[] serialized = serializer.ToBinary(message);
+
+
+                    var manifestSerializer = serializer as SerializerWithStringManifest;
+                    if (manifestSerializer != null)
+                    {
+                        var manifest = manifestSerializer.Manifest(serialized);
+                        message = _systemImpl.Serialization.Deserialize(serialized, manifestSerializer.Identifier, manifest);
+                    }
+                    else
+                    {
+                        message = _systemImpl.Serialization.Deserialize(serialized, serializer.Identifier, message.GetType().AssemblyQualifiedName);
+                    }
+                }
+            }
 
             var m = new Envelope
             {
@@ -287,12 +334,12 @@ namespace Akka.Actor
                 Message = message,
             };
 
-            Mailbox.Post(Self, m);
+            Dispatcher.Dispatch(this, m);
         }
 
         protected void ClearActorCell()
         {
-            //TODO_ UnstashAll stashed system messages (this is not the same stash that might exist on the actor)
+            UnstashAll();
             _props = terminatedProps;
         }
 

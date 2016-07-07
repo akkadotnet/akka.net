@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentFSM.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -35,7 +35,7 @@ namespace Akka.Persistence.Fsm
 
         protected abstract TData ApplyEvent(TEvent e, TData data);
 
-        protected override void ApplyState(State<TState, TData, TEvent> upcomingState)
+        protected override void ApplyState(State upcomingState)
         {
             var eventsToPersist = new List<object>();
             if (upcomingState.DomainEvents != null)

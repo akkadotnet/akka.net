@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentView.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -139,6 +139,16 @@ namespace Akka.Persistence
         /// Gets the <see cref="ViewId"/>.
         /// </summary>
         public string SnapshotterId { get { return ViewId; } }
+
+        /// <summary>
+        /// Returns true if this persistent view is currently recovering.
+        /// </summary>
+        public bool IsRecovering { get { return _currentState.IsRecoveryRunning; } }
+
+        /// <summary>
+        /// Returns true if this persistent view has successfully finished recovery.
+        /// </summary>
+        public bool IsRecoveryFinished { get { return !IsRecovering; } }
 
         /// <summary>
         /// If true, the currently processed message was persisted - it sent from the <see cref="Journal"/>.

@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterConfigSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -8,10 +8,12 @@
 using System;
 using System.Collections.Immutable;
 using Akka.Actor;
+using Akka.Dispatch;
 using Akka.Remote;
 using Akka.TestKit;
 using Xunit;
 using Assert = Xunit.Assert;
+using FluentAssertions;
 
 namespace Akka.Cluster.Tests
 {
@@ -23,52 +25,42 @@ namespace Akka.Cluster.Tests
         public void Clustering_must_be_able_to_parse_generic_cluster_config_elements()
         {
             var settings = new ClusterSettings(Sys.Settings.Config, Sys.Name);
-            Assert.True(settings.LogInfo);
-            Assert.Equal(8, settings.FailureDetectorConfig.GetDouble("threshold"));
-            Assert.Equal(1000, settings.FailureDetectorConfig.GetInt("max-sample-size"));
-            Assert.Equal(TimeSpan.FromMilliseconds(100), settings.FailureDetectorConfig.GetTimeSpan("min-std-deviation"));
-            Assert.Equal(TimeSpan.FromSeconds(3), settings.FailureDetectorConfig.GetTimeSpan("acceptable-heartbeat-pause"));
-            Assert.Equal(typeof(PhiAccrualFailureDetector), Type.GetType(settings.FailureDetectorImplementationClass));
-            Assert.Equal(ImmutableList.Create<Address>(), settings.SeedNodes);
-            Assert.Equal(TimeSpan.FromSeconds(5), settings.SeedNodeTimeout);
-            Assert.Equal(TimeSpan.FromSeconds(10), settings.RetryUnsuccessfulJoinAfter);
-            Assert.Equal(TimeSpan.FromSeconds(1), settings.PeriodicTasksInitialDelay);
-            Assert.Equal(TimeSpan.FromSeconds(1), settings.GossipInterval);
-            Assert.Equal(TimeSpan.FromSeconds(2), settings.GossipTimeToLive);
-            Assert.Equal(TimeSpan.FromSeconds(1), settings.HeartbeatInterval);
-            Assert.Equal(5, settings.MonitoredByNrOfMembers);
-            Assert.Equal(TimeSpan.FromSeconds(5), settings.HeartbeatExpectedResponseAfter);
-            Assert.Equal(TimeSpan.FromSeconds(1), settings.LeaderActionsInterval);
-            Assert.Equal(TimeSpan.FromSeconds(1), settings.UnreachableNodesReaperInterval);
-            Assert.Null(settings.PublishStatsInterval);
-            Assert.Null(settings.AutoDownUnreachableAfter);
-            Assert.Equal(1, settings.MinNrOfMembers);
-            //TODO:
-            //Assert.AreEqual(ImmutableDictionary.Create<string, int>(), settings.);
-            Assert.Equal(ImmutableHashSet.Create<string>(), settings.Roles);
-            Assert.Equal("akka.cluster.default-cluster-dispatcher", settings.UseDispatcher);
-            Assert.Equal(.8, settings.GossipDifferentViewProbability);
-            Assert.Equal(400, settings.ReduceGossipDifferentViewProbability);
-            Assert.Equal(TimeSpan.FromMilliseconds(33), settings.SchedulerTickDuration);
-            Assert.Equal(512, settings.SchedulerTicksPerWheel);
-            Assert.True(settings.MetricsEnabled);
-            //TODO:
-            //Assert.AreEqual(typeof(SigarMetricsCollector).FullName, settings.MetricsCollectorClass);
-            Assert.Equal(TimeSpan.FromSeconds(3), settings.MetricsGossipInterval);
-            Assert.Equal(TimeSpan.FromSeconds(12), settings.MetricsMovingAverageHalfLife);
-        }
+            settings.LogInfo.Should().BeTrue();
 
-        [Fact]
-        public void Clustering_should_have_correct_default_fork_join_dispatcher()
-        {
-            var dispatchConfig = Sys.Settings.Config.GetConfig("akka.cluster.default-cluster-dispatcher");
-            var dispatcherThreadPoolSettings = dispatchConfig.GetConfig("dedicated-thread-pool");
+            settings.SeedNodes.Should().BeEquivalentTo(ImmutableList.Create<Address>());
+            settings.SeedNodeTimeout.Should().Be(5.Seconds());
+            settings.RetryUnsuccessfulJoinAfter.Should().Be(10.Seconds());
+            settings.PeriodicTasksInitialDelay.Should().Be(1.Seconds());
+            settings.GossipInterval.Should().Be(1.Seconds());
+            settings.GossipTimeToLive.Should().Be(2.Seconds());
+            settings.HeartbeatInterval.Should().Be(1.Seconds());
+            settings.MonitoredByNrOfMembers.Should().Be(5);
+            settings.HeartbeatExpectedResponseAfter.Should().Be(1.Seconds());
+            settings.LeaderActionsInterval.Should().Be(1.Seconds());
+            settings.UnreachableNodesReaperInterval.Should().Be(1.Seconds());
+            settings.PublishStatsInterval.Should().NotHaveValue();
+            settings.AutoDownUnreachableAfter.Should().NotHaveValue();
+            settings.DownRemovalMargin.Should().Be(TimeSpan.Zero);
+            settings.MinNrOfMembers.Should().Be(1);
+            settings.MinNrOfMembersOfRole.Should().Equal(ImmutableDictionary<string, int>.Empty);
+            settings.Roles.Should().BeEquivalentTo(ImmutableHashSet<string>.Empty);
+            settings.UseDispatcher.Should().Be(Dispatchers.DefaultDispatcherId);
+            settings.GossipDifferentViewProbability.Should().Be(0.8);
+            settings.ReduceGossipDifferentViewProbability.Should().Be(400);
 
-            var dispatcherType = dispatchConfig.GetString("type");
-            var threadCount = dispatcherThreadPoolSettings.GetInt("thread-count");
+            Type.GetType(settings.FailureDetectorImplementationClass).Should().Be(typeof(PhiAccrualFailureDetector));
+            settings.FailureDetectorConfig.GetTimeSpan("heartbeat-interval").Should().Be(1.Seconds());
+            settings.FailureDetectorConfig.GetDouble("threshold").Should().Be(8.0d);
+            settings.FailureDetectorConfig.GetInt("max-sample-size").Should().Be(1000);
+            settings.FailureDetectorConfig.GetTimeSpan("min-std-deviation").Should().Be(100.Milliseconds());
+            settings.FailureDetectorConfig.GetTimeSpan("acceptable-heartbeat-pause").Should().Be(3.Seconds());
+            settings.FailureDetectorConfig.GetInt("monitored-by-nr-of-members").Should().Be(5);
+            settings.FailureDetectorConfig.GetTimeSpan("expected-response-after").Should().Be(1.Seconds());
 
-            Assert.Equal("ForkJoinDispatcher", dispatcherType);
-            Assert.Equal(4, threadCount);
+            settings.SchedulerTickDuration.Should().Be(33.Milliseconds());
+            settings.SchedulerTicksPerWheel.Should().Be(512);
+
+            settings.VerboseHeartbeatLogging.Should().BeFalse();
         }
     }
 }

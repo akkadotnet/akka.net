@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BuiltInActors.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 
@@ -30,7 +31,7 @@ namespace Akka.Actor
     /// <summary>
     ///     Class GuardianActor.
     /// </summary>
-    public class GuardianActor : ActorBase
+    public class GuardianActor : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         protected override bool Receive(object message)
         {
@@ -42,6 +43,11 @@ namespace Akka.Actor
                 Context.System.DeadLetters.Tell(new DeadLetter(message, Sender, Self), Sender);
             return true;
         }
+
+        protected override void PreStart()
+        {
+            // guardian MUST NOT lose its children during restart
+        }
     }
 
     /// <summary>
@@ -49,7 +55,7 @@ namespace Akka.Actor
     /// 
     /// Root actor for all actors under the /system path.
     /// </summary>
-    public class SystemGuardianActor : ActorBase
+    public class SystemGuardianActor : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         private readonly IActorRef _userGuardian;
         private readonly HashSet<IActorRef> _terminationHooks;
@@ -166,12 +172,20 @@ namespace Akka.Actor
             _eventStream = eventStream;
         }
 
-        //TODO: Since this isn't overriding SendUserMessage it doesn't handle all messages as Akka JVM does
-
-        protected override void HandleDeadLetter(DeadLetter deadLetter)
+        protected override void TellInternal(object message, IActorRef sender)
         {
-            if(!SpecialHandle(deadLetter.Message, deadLetter.Sender))
-                _eventStream.Publish(deadLetter);
+            if(message == null) throw new InvalidMessageException("Message is null");
+            var i = message as Identify;
+            if (i != null)
+            {
+                sender.Tell(new ActorIdentity(i.MessageId, ActorRefs.Nobody));
+                return;
+            }
+            var d = message as DeadLetter;
+            if(d != null && !SpecialHandle(d.Message, d.Sender)) { _eventStream.Publish(d);
+                return;
+            }
+            if(!SpecialHandle(message, sender)) { _eventStream.Publish(new DeadLetter(message, sender.IsNobody() ? Provider.DeadLetters : sender, this));}
         }
 
         protected override bool SpecialHandle(object message, IActorRef sender)
@@ -179,9 +193,9 @@ namespace Akka.Actor
             var w = message as Watch;
             if(w != null)
             {
-                if(w.Watchee != this && w.Watcher != this)
+                if(!w.Watchee.Equals(this) && !w.Watcher.Equals(this))
                 {
-                    w.Watcher.Tell(new DeathWatchNotification(w.Watchee, existenceConfirmed: false, addressTerminated: false));
+                    w.Watcher.SendSystemMessage(new DeathWatchNotification(w.Watchee, existenceConfirmed: false, addressTerminated: false));
                 }
                 return true;
             }

@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AsyncWriteJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -88,10 +88,10 @@ namespace Akka.Persistence.Journal
         /// 
         /// Each <see cref="AtomicWrite"/> message contains the single <see cref="Persistent"/>
         /// that corresponds to the event that was passed to the 
-        /// <see cref="PersistentActor.Persist{TEvent}(TEvent,Action{TEvent})"/> method of the
+        /// <see cref="Eventsourced.Persist{TEvent}(TEvent,Action{TEvent})"/> method of the
         /// <see cref="PersistentActor" />, or it contains several <see cref="Persistent"/>
         /// that correspond to the events that were passed to the
-        /// <see cref="PersistentActor.PersistAll{TEvent}(IEnumerable{TEvent},Action{TEvent})"/>
+        /// <see cref="Eventsourced.PersistAll{TEvent}(IEnumerable{TEvent},Action{TEvent})"/>
         /// method of the <see cref="PersistentActor"/>. All <see cref="Persistent"/> of the
         /// <see cref="AtomicWrite"/> must be written to the data store atomically, i.e. all or none must
         /// be stored. If the journal (data store) cannot support atomic writes of multiple
@@ -282,7 +282,7 @@ namespace Akka.Persistence.Journal
                 }, _continuationOptions);
         }
 
-        private Exception TryUnwrapException(Exception e)
+        protected Exception TryUnwrapException(Exception e)
         {
             var aggregateException = e as AggregateException;
             if (aggregateException != null)

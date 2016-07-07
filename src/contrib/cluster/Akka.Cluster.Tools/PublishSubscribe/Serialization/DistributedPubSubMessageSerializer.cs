@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DistributedPubSubMessageSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -57,11 +57,12 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
         public override byte[] ToBinary(object obj)
         {
             if (obj is Internal.Status) return Compress(StatusToProto(obj as Internal.Status));
-            else if (obj is Internal.Delta) return Compress(DeltaToProto(obj as Internal.Delta));
-            else if (obj is Send) return SendToProto(obj as Send).ToByteArray();
-            else if (obj is SendToAll) return SendToAllToProto(obj as SendToAll).ToByteArray();
-            else if (obj is Publish) return PublishToProto(obj as Publish).ToByteArray();
-            else throw new ArgumentException(string.Format("Can't serialize object of type {0} with {1}", obj.GetType(), GetType()));
+            if (obj is Internal.Delta) return Compress(DeltaToProto(obj as Internal.Delta));
+            if (obj is Send) return SendToProto(obj as Send).ToByteArray();
+            if (obj is SendToAll) return SendToAllToProto(obj as SendToAll).ToByteArray();
+            if (obj is Publish) return PublishToProto(obj as Publish).ToByteArray();
+
+            throw new ArgumentException(string.Format("Can't serialize object of type {0} with {1}", obj.GetType(), GetType()));
         }
 
         public override object FromBinary(byte[] bytes, string manifestString)
@@ -71,8 +72,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
             {
                 return deserializer(bytes);
             }
-            else
-                throw new ArgumentException(string.Format("Unimplemented deserialization of message with manifest [{0}] in serializer {1}", manifestString, GetType()));
+
+            throw new ArgumentException(string.Format("Unimplemented deserialization of message with manifest [{0}] in serializer {1}", manifestString, GetType()));
         }
 
         public override string Manifest(object o)
@@ -86,26 +87,30 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
             throw new ArgumentException(string.Format("Serializer {0} cannot serialize message of type {1}", this.GetType(), o.GetType()));
         }
 
-        private byte[] Compress(IMessageLite proto)
+        private byte[] Compress(IMessageLite message)
         {
-            using (var memStream = new MemoryStream(BufferSize))
-            using (var gzip = new GZipStream(memStream, CompressionLevel.Fastest))
+            using (var bos = new MemoryStream(BufferSize))
+            using (var gzipStream = new GZipStream(bos, CompressionMode.Compress))
             {
-                proto.WriteTo(gzip);
-                gzip.Flush();
-                memStream.Position = 0;
-                return memStream.ToArray();
+                message.WriteTo(gzipStream);
+                gzipStream.Close();
+                return bos.ToArray();
             }
         }
 
-        private byte[] Decompress(byte[] binary)
+        private byte[] Decompress(byte[] bytes)
         {
-            using (var memStream = new MemoryStream(binary))
-            using (var gzip = new GZipStream(memStream, CompressionLevel.Fastest))
-            using (var outStream = new MemoryStream(BufferSize))
+            using (var input = new GZipStream(new MemoryStream(bytes), CompressionMode.Decompress))
+            using (var output = new MemoryStream())
             {
-                gzip.CopyTo(outStream);
-                return outStream.ToArray();
+                var buffer = new byte[BufferSize];
+                var bytesRead = input.Read(buffer, 0, BufferSize);
+                while (bytesRead > 0)
+                {
+                    output.Write(buffer, 0, bytesRead);
+                    bytesRead = input.Read(buffer, 0, BufferSize);
+                }
+                return output.ToArray();
             }
         }
 

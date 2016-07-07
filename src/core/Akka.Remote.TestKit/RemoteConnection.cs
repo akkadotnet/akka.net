@@ -1,22 +1,26 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteConnection.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 using Akka.Remote.TestKit.Proto;
 using Akka.Remote.Transport.Helios;
 using Helios.Buffers;
+using Helios.Channels;
+using Helios.Channels.Bootstrap;
+using Helios.Channels.Sockets;
+using Helios.Codecs;
 using Helios.Exceptions;
-using Helios.Net;
-using Helios.Net.Bootstrap;
-using Helios.Reactor.Bootstrap;
-using Helios.Serialization;
-using Helios.Topology;
+using Helios.Logging;
+using Helios.Util.Concurrency;
+using LengthFieldPrepender = Helios.Codecs.LengthFieldPrepender;
 
 namespace Akka.Remote.TestKit
 {
@@ -30,101 +34,104 @@ namespace Akka.Remote.TestKit
     };
 
     /// <summary>
-    /// Handler interface for receiving events from Helios
-    /// </summary>
-    public interface IHeliosConnectionHandler
-    {
-       void OnConnect(INode remoteAddress, IConnection responseChannel);
-
-       void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel);
-
-       void OnMessage(object message, IConnection responseChannel);
-
-       void OnException(Exception ex, IConnection erroredChannel);
-    }
-
-    /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class RemoteConnection : HeliosHelpers
+    internal class RemoteConnection
     {
-        private readonly MsgDecoder _msgDecoder;
-        private readonly MsgEncoder _msgEncoder;
-        private readonly ProtobufDecoder _protobufDecoder;
-        private readonly IHeliosConnectionHandler _handler;
-
-        public RemoteConnection(IConnection underlyingConnection, IHeliosConnectionHandler handler) : base(underlyingConnection)
+        static RemoteConnection()
         {
-            _msgDecoder = new MsgDecoder();
-            _msgEncoder = new MsgEncoder();
-            _protobufDecoder = new ProtobufDecoder(TCP.Wrapper.DefaultInstance);
-            _handler = handler;
+            LoggingFactory.DefaultFactory = new StandardOutLoggerFactory();
         }
 
-        protected override void OnConnect(INode remoteAddress, IConnection responseChannel)
+        private static void ApplyChannelPipeline(IChannel channel, IChannelHandler handler)
         {
-            //Got to pass OnMessage here or get null reference.
-            responseChannel.BeginReceive(OnMessage);
-            _handler.OnConnect(remoteAddress, responseChannel);
+            var encoders = new IChannelHandler[]
+            {new LengthFieldPrepender(4, false), new LengthFieldBasedFrameDecoder(10000, 0, 4, 0, 4)};
+            var protobuf = new IChannelHandler[] { new ProtobufEncoder(), new ProtobufDecoder(TCP.Wrapper.DefaultInstance) };
+            var msg = new IChannelHandler[] { new MsgEncoder(), new MsgDecoder() };
+            var pipeline = encoders.Concat(protobuf).Concat(msg).Concat(new IChannelHandler[] { handler });
+            foreach (var h in pipeline)
+                channel.Pipeline.AddLast(h);
         }
 
-        protected override void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
-        {
-            _handler.OnDisconnect(cause, closedChannel);
-        }
-
-        protected override void OnMessage(NetworkData data, IConnection responseChannel)
-        {
-            var protoMessage = _protobufDecoder.Decode(data.Buffer);
-            var testkitMesage = _msgDecoder.Decode(protoMessage);
-            _handler.OnMessage(testkitMesage, responseChannel);
-        }
-
-        public void Write(object msg)
-        {
-            List<IByteBuf> protoMessages;
-            _msgEncoder.Encode(this, msg, out protoMessages);
-            foreach(var message in protoMessages)
-                Send(NetworkData.Create(RemoteHost, message));
-        }
-
-        protected override void OnException(Exception ex, IConnection erroredChannel)
-        {
-            _handler.OnException(ex, erroredChannel);
-        }
 
         #region Static methods
 
-        public static RemoteConnection CreateConnection(Role role, INode socketAddress, int poolSize, IHeliosConnectionHandler upstreamHandler)
+        private static IEventLoopGroup _clientPool;
+        private static IEventLoopGroup GetClientWorkerPool(int poolSize)
+        {
+            if (_clientPool == null)
+            {
+                _clientPool = new MultithreadEventLoopGroup(poolSize);
+            }
+            return _clientPool;
+        }
+
+        private static IEventLoopGroup _serverPool;
+        private static IEventLoopGroup GetServerPool(int poolSize)
+        {
+            if (_serverPool == null)
+            {
+                _serverPool = new MultithreadEventLoopGroup(poolSize);
+            }
+            return _serverPool;
+        }
+
+        private static IEventLoopGroup _serverWorkerPool;
+
+        private static IEventLoopGroup GetServerWorkerPool(int poolSize)
+        {
+            if (_serverWorkerPool == null)
+            {
+                _serverWorkerPool = new MultithreadEventLoopGroup(poolSize);
+            }
+            return _serverWorkerPool;
+        }
+
+        public static Task<IChannel> CreateConnection(Role role, IPEndPoint socketAddress, int poolSize, IChannelHandler upstreamHandler)
         {
             if (role == Role.Client)
             {
-                var connection = new ClientBootstrap().SetTransport(TransportType.Tcp)
-                    .SetOption("TcpNoDelay", true)
-                    .SetEncoder(Encoders.DefaultEncoder) //LengthFieldPrepender
-                    .SetDecoder(Encoders.DefaultDecoder) //LengthFieldFrameBasedDecoder
-                    .WorkerThreads(poolSize).Build().NewConnection(socketAddress);
-                var remoteConnection = new RemoteConnection(connection, upstreamHandler);
-                remoteConnection.Open();
-                return remoteConnection;
+                var connection = new ClientBootstrap()
+                    .Channel<TcpSocketChannel>()
+                    .Option(ChannelOption.TcpNodelay, true)
+                    .Group(GetClientWorkerPool(poolSize))
+                    .Handler(new ActionChannelInitializer<TcpSocketChannel>(channel =>
+                    {
+                        ApplyChannelPipeline(channel, upstreamHandler);
+                    }));
+
+                return connection.ConnectAsync(socketAddress);
             }
             else //server
             {
-                var connection = new ServerBootstrap().SetTransport(TransportType.Tcp)
-                    .SetOption("TcpNoDelay", true)
-                    .SetEncoder(Encoders.DefaultEncoder) //LengthFieldPrepender
-                    .SetDecoder(Encoders.DefaultDecoder) //LengthFieldFrameBasedDecoder
-                    .WorkerThreads(poolSize).Build().NewConnection(socketAddress);
-                var remoteConnection = new RemoteConnection(connection, upstreamHandler);
-                remoteConnection.Open();
-                return remoteConnection;
+                var connection = new ServerBootstrap()
+                    .Group(GetServerPool(poolSize), GetServerWorkerPool(poolSize))
+                    .Channel<TcpServerSocketChannel>()
+                    .ChildOption(ChannelOption.TcpNodelay, true)
+                    .ChildHandler(new ActionChannelInitializer<TcpSocketChannel>(channel =>
+                    {
+                        ApplyChannelPipeline(channel, upstreamHandler);
+                    }));
+                return connection.BindAsync(socketAddress);
             }
         }
 
-        public static void Shutdown(IConnection connection)
+        public static void Shutdown(IChannel connection)
         {
-            //TODO: Correct?
-            connection.Close();
+            var disconnectTimeout = TimeSpan.FromSeconds(2); //todo: make into setting loaded from HOCON
+            if (!connection.CloseAsync().Wait(disconnectTimeout))
+            {
+                LoggingFactory.GetLogger<RemoteConnection>().Warning("Failed to shutdown remote connection within {0}", disconnectTimeout);
+            }
+            
+        }
+
+        public static async Task ReleaseAll()
+        {
+            Task tc = _clientPool?.ShutdownGracefullyAsync() ?? TaskEx.Completed;
+            Task ts = _serverPool?.ShutdownGracefullyAsync() ?? TaskEx.Completed;
+            await Task.WhenAll(tc, ts);
         }
 
         #endregion

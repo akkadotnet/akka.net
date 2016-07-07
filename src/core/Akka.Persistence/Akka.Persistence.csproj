@@ -72,6 +72,7 @@
     <Compile Include="Journal\EventSequences.cs" />
     <Compile Include="Journal\PersistencePluginProxy.cs" />
     <Compile Include="Journal\ReplayFilter.cs" />
+    <Compile Include="Journal\Tagged.cs" />
     <Compile Include="PersistentActor.cs" />
     <Compile Include="PersistentView.Recovery.cs" />
     <Compile Include="PersistentView.Lifecycle.cs" />

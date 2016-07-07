@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MultiNodeSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -12,6 +12,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
+
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Configuration.Hocon;
@@ -31,7 +33,7 @@ namespace Akka.Remote.TestKit
         // allows us to avoid NullReferenceExceptions if we make this empty rather than null
         // so that way if a MultiNodeConfig doesn't explicitly set CommonConfig to some value
         // it will remain safe by defaut
-        Config _commonConf = Akka.Configuration.Config.Empty; 
+        Config _commonConf = Akka.Configuration.Config.Empty;
 
         ImmutableDictionary<RoleName, Config> _nodeConf = ImmutableDictionary.Create<RoleName, Config>();
         ImmutableList<RoleName> _roles = ImmutableList.Create<RoleName>();
@@ -168,7 +170,7 @@ namespace Akka.Remote.TestKit
     /// `AskTimeoutException: sending to terminated ref breaks promises`. Using lazy
     /// val is fine.
     /// </summary>
-    public abstract class MultiNodeSpec : TestKitBase, IMultiNodeSpecCallbacks
+    public abstract class MultiNodeSpec : TestKitBase, IMultiNodeSpecCallbacks, IDisposable
     {
         //TODO: Sort out references to Java classes in 
 
@@ -381,6 +383,7 @@ namespace Akka.Remote.TestKit
         readonly RoleName _myself;
         public RoleName Myself { get { return _myself; } }
         readonly ILoggingAdapter _log;
+        private bool _isDisposed; //Automatically initialized to false;
         readonly ImmutableList<RoleName> _roles;
         readonly Func<RoleName, ImmutableList<string>> _deployments;
         readonly ImmutableDictionary<RoleName, Replacement> _replacements;
@@ -402,11 +405,7 @@ namespace Akka.Remote.TestKit
             _log = Logging.GetLogger(Sys, this);
             _roles = roles;
             _deployments = deployments;
-            var node = new Node()
-            {
-                Host = Dns.GetHostEntry(ServerName).AddressList.First(a => a.AddressFamily == AddressFamily.InterNetwork),
-                Port = ServerPort
-            };
+            var node = new IPEndPoint(Dns.GetHostAddresses(ServerName)[0], ServerPort);
             _controllerAddr = node;
 
             AttachConductor(new TestConductor(system));
@@ -418,6 +417,7 @@ namespace Akka.Remote.TestKit
             _myAddress = system.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;
 
             Log.Info("Role [{0}] started with address [{1}]", myself.Name, _myAddress);
+            MultiNodeSpecBeforeAll();
         }
 
         public void MultiNodeSpecBeforeAll()
@@ -431,9 +431,9 @@ namespace Akka.Remote.TestKit
             if (SelfIndex == 0)
             {
                 TestConductor.RemoveNode(_myself);
-                Within(TestConductor.Settings.BarrierTimeout, () => 
-                    AwaitCondition(() => TestConductor.GetNodes().Result.Any(n => !n.Equals(_myself))));
-              
+                Within(TestConductor.Settings.BarrierTimeout, () =>
+                    AwaitCondition(() => TestConductor.GetNodes().Result.All(n => n.Equals(_myself))));
+
             }
             Shutdown(Sys);
             AfterTermination();
@@ -547,7 +547,7 @@ namespace Akka.Remote.TestKit
         * Implementation (i.e. wait for start etc.)
         */
 
-        readonly INode _controllerAddr;
+        readonly IPEndPoint _controllerAddr;
 
         protected void AttachConductor(TestConductor tc)
         {
@@ -588,7 +588,7 @@ namespace Akka.Remote.TestKit
 
         protected void InjectDeployments(ActorSystem system, RoleName role)
         {
-            var deployer = Sys.AsInstanceOf<ExtendedActorSystem>().Provider.Deployer;
+            var deployer = system.AsInstanceOf<ExtendedActorSystem>().Provider.Deployer;
             foreach (var str in _deployments(role))
             {
                 var deployString = _replacements.Values.Aggregate(str, (@base, r) =>
@@ -606,7 +606,7 @@ namespace Akka.Remote.TestKit
                         // controller node is finished/exited before r.addr is run
                         // on the other nodes
                         var unresolved = "akka://unresolved-replacement-" + r.Role.Name;
-		         Log.Warning(unresolved + " due to: {0}", e.ToString());
+                        Log.Warning(unresolved + " due to: {0}", e.ToString());
                         replaceWith = unresolved;
                     }
                     return @base.Replace(r.Tag, replaceWith);
@@ -630,17 +630,53 @@ namespace Akka.Remote.TestKit
 
         protected ActorSystem StartNewSystem()
         {
+            var sb =
+                new StringBuilder("akka.remote.helios.tcp{").AppendLine()
+                    .AppendFormat("port={0}", _myAddress.Port)
+                    .AppendLine()
+                    .AppendFormat(@"hostname=""{0}""", _myAddress.Host)
+                    .AppendLine("}");
             var config =
                 ConfigurationFactory
-                .ParseString(String.Format(@"helios.tcp{port={0}\nhostname=""{1}""",
-                    _myAddress.Host,
-                    _myAddress.Port))
+                .ParseString(sb.ToString())
                 .WithFallback(Sys.Settings.Config);
 
             var system = ActorSystem.Create(Sys.Name, config);
             InjectDeployments(system, _myself);
             AttachConductor(new TestConductor(system));
             return system;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            //Take this object off the finalization queue and prevent finalization code for this object
+            //from executing a second time.
+            GC.SuppressFinalize(this);
+        }
+
+
+        /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+        /// <param name="disposing">if set to <c>true</c> the method has been called directly or indirectly by a 
+        /// user's code. Managed and unmanaged resources will be disposed.<br />
+        /// if set to <c>false</c> the method has been called by the runtime from inside the finalizer and only 
+        /// unmanaged resources can be disposed.</param>
+        protected void Dispose(bool disposing)
+        {
+            // If disposing equals false, the method has been called by the
+            // runtime from inside the finalizer and you should not reference
+            // other objects. Only unmanaged resources can be disposed.
+
+            //Make sure Dispose does not get called more than once, by checking the disposed field
+            if (!_isDisposed)
+            {
+                if (disposing)
+                {
+                    Console.WriteLine("---------------DISPOSING--------------------");
+                    MultiNodeSpecAfterAll();
+                }
+            }
+            _isDisposed = true;
         }
     }
 

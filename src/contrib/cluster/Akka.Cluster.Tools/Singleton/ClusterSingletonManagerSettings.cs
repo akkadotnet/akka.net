@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonManagerSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -16,6 +16,8 @@ namespace Akka.Cluster.Tools.Singleton
     {
         public static ClusterSingletonManagerSettings Create(ActorSystem system)
         {
+            system.Settings.InjectTopLevelFallback(ClusterSingletonManager.DefaultConfig());
+
             var config = system.Settings.Config.GetConfig("akka.cluster.singleton");
             if (config == null)
                 throw new ConfigurationException(string.Format("Cannot initialize {0}: akka.cluster.singleton configuration node was not provided", typeof(ClusterSingletonManagerSettings)));

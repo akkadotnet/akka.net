@@ -1,13 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReachabilitySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using Akka.Actor;
 using FluentAssertions;
 using Xunit;
@@ -26,8 +25,8 @@ namespace Akka.Cluster.Tests
         public void ReachabilityTable_must_be_reachable_when_empty()
         {
             var r = Reachability.Empty;
-            Assert.True(r.IsReachable(nodeA));
-            Assert.Equal(ImmutableHashSet.Create<UniqueAddress>(), r.AllUnreachable);
+            r.IsReachable(nodeA).Should().BeTrue();
+            r.AllUnreachable.Should().BeEquivalentTo(ImmutableHashSet.Create<UniqueAddress>());
         }
 
         [Fact]
@@ -42,41 +41,56 @@ namespace Akka.Cluster.Tests
         public void ReachabilityTable_must_not_be_reachable_when_terminated()
         {
             var r = Reachability.Empty.Terminated(nodeB, nodeA);
-            Assert.False(r.IsReachable(nodeA));
+            r.IsReachable(nodeA).Should().BeFalse();
             // allUnreachable doesn't include terminated
-            Assert.Equal(ImmutableHashSet.Create<UniqueAddress>(), r.AllUnreachable);
-            Assert.Equal(ImmutableHashSet.Create(nodeA), r.AllUnreachableOrTerminated);
+            r.AllUnreachable.Should().BeEquivalentTo(ImmutableHashSet.Create<UniqueAddress>());
+            r.AllUnreachableOrTerminated.Should().BeEquivalentTo(ImmutableHashSet.Create(nodeA));
         }
 
         [Fact]
         public void ReachabilityTable_must_not_change_terminated_entry()
         {
             var r = Reachability.Empty.Terminated(nodeB, nodeA);
-            Assert.True(r == r.Reachable(nodeB, nodeA));
-            Assert.True(r == r.Unreachable(nodeB, nodeA));
+            r.Reachable(nodeB, nodeA).Should().BeSameAs(r);
+            r.Unreachable(nodeB, nodeA).Should().BeSameAs(r);
         }
 
         [Fact]
         public void ReachabilityTable_must_not_change_when_same_status()
         {
             var r = Reachability.Empty.Unreachable(nodeB, nodeA);
-            Assert.True(r == r.Unreachable(nodeB, nodeA));
+            r.Unreachable(nodeB, nodeA).Should().BeSameAs(r);
         }
 
         [Fact]
         public void ReachabilityTable_must_be_unreachable_when_some_observed_unreachable_and_other_reachable()
         {
             var r = Reachability.Empty.Unreachable(nodeB, nodeA).Unreachable(nodeC, nodeA).Reachable(nodeD, nodeA);
-            Assert.False(r.IsReachable(nodeA));
+            r.IsReachable(nodeA).Should().BeFalse();
         }
 
         [Fact]
-        public void ReachabilityTable_must_reachable_when_all_observed_reachable_again()
+        public void ReachabilityTable_must_be_reachable_when_all_observed_reachable_again()
         {
             var r = Reachability.Empty.Unreachable(nodeB, nodeA).Unreachable(nodeC, nodeA).
                 Reachable(nodeB, nodeA).Reachable(nodeC, nodeA).
                 Unreachable(nodeB, nodeC).Unreachable(nodeC, nodeB);
-            Assert.True(r.IsReachable(nodeA));
+            r.IsReachable(nodeA).Should().BeTrue();
+        }
+
+        [Fact]
+        public void ReachabilityTable_must_exclude_observations_from_specific_downed_nodes()
+        {
+            var r = Reachability.Empty.
+                Unreachable(nodeC, nodeA).Reachable(nodeC, nodeA).
+                Unreachable(nodeC, nodeB).
+                Unreachable(nodeB, nodeA).Unreachable(nodeB, nodeC);
+
+            r.IsReachable(nodeA).Should().BeFalse();
+            r.IsReachable(nodeB).Should().BeFalse();
+            r.IsReachable(nodeC).Should().BeFalse();
+            r.AllUnreachableOrTerminated.Should().BeEquivalentTo(ImmutableHashSet.Create(nodeA, nodeB, nodeC));
+            r.RemoveObservers(ImmutableHashSet.Create(nodeB)).AllUnreachableOrTerminated.Should().BeEquivalentTo(ImmutableHashSet.Create(nodeB));
         }
 
         [Fact]
@@ -86,22 +100,21 @@ namespace Akka.Cluster.Tests
                 Unreachable(nodeB, nodeA).Unreachable(nodeB, nodeC).
                 Unreachable(nodeD, nodeC).
                 Reachable(nodeB, nodeA).Reachable(nodeB, nodeC);
-            Assert.True(r.IsReachable(nodeA));
-            Assert.False(r.IsReachable(nodeC));
-            var expected1 = ImmutableList.Create(new Reachability.Record(
-                nodeD,
-                nodeC,
-                Reachability.ReachabilityStatus.Unreachable,
-                1));
-            Assert.Equal(expected1, r.Records);
+
+            r.IsReachable(nodeA).Should().BeTrue();
+            r.IsReachable(nodeC).Should().BeFalse();
+
+            var expected1 = ImmutableList.Create(
+                new Reachability.Record(nodeD, nodeC, Reachability.ReachabilityStatus.Unreachable, 1));
+            r.Records.Should().BeEquivalentTo(expected1);
 
             var r2 = r.Unreachable(nodeB, nodeD).Unreachable(nodeB, nodeE);
             var expected2 = ImmutableHashSet.Create(
                 new Reachability.Record(nodeD, nodeC, Reachability.ReachabilityStatus.Unreachable, 1),
                 new Reachability.Record(nodeB, nodeD, Reachability.ReachabilityStatus.Unreachable, 5),
-                new Reachability.Record(nodeB, nodeE, Reachability.ReachabilityStatus.Unreachable, 6)
-                );
-            Assert.Equal(expected2, r2.Records.ToImmutableHashSet());
+                new Reachability.Record(nodeB, nodeE, Reachability.ReachabilityStatus.Unreachable, 6));
+
+            r2.Records.ToImmutableHashSet().Should().BeEquivalentTo(expected2);
         }
 
         [Fact]
@@ -111,8 +124,8 @@ namespace Akka.Cluster.Tests
                 new Reachability.Record(nodeA, nodeB, Reachability.ReachabilityStatus.Reachable, 2),
                 new Reachability.Record(nodeC, nodeB, Reachability.ReachabilityStatus.Unreachable, 2),
                 new Reachability.Record(nodeA, nodeD, Reachability.ReachabilityStatus.Unreachable, 3),
-                new Reachability.Record(nodeD, nodeB, Reachability.ReachabilityStatus.Terminated, 4)
-                );
+                new Reachability.Record(nodeD, nodeB, Reachability.ReachabilityStatus.Terminated, 4));
+
             var versions = ImmutableDictionary.CreateRange(new[]
             {
                 new KeyValuePair<UniqueAddress, long>(nodeA, 3),
@@ -120,9 +133,9 @@ namespace Akka.Cluster.Tests
                 new KeyValuePair<UniqueAddress, long>(nodeD, 4)
             });
             var r = new Reachability(records, versions);
-            Assert.Equal(Reachability.ReachabilityStatus.Reachable, r.Status(nodeA));
-            Assert.Equal(Reachability.ReachabilityStatus.Terminated, r.Status(nodeB));
-            Assert.Equal(Reachability.ReachabilityStatus.Unreachable, r.Status(nodeD));
+            r.Status(nodeA).Should().Be(Reachability.ReachabilityStatus.Reachable);
+            r.Status(nodeB).Should().Be(Reachability.ReachabilityStatus.Terminated);
+            r.Status(nodeD).Should().Be(Reachability.ReachabilityStatus.Unreachable);
         }
 
         [Fact]
@@ -135,27 +148,27 @@ namespace Akka.Cluster.Tests
                 Reachable(nodeE, nodeD).
                 Unreachable(nodeA, nodeE).Terminated(nodeB, nodeE);
 
-            Assert.Equal(Reachability.ReachabilityStatus.Unreachable, r.Status(nodeB, nodeA));
-            Assert.Equal(Reachability.ReachabilityStatus.Unreachable, r.Status(nodeC, nodeA));
-            Assert.Equal(Reachability.ReachabilityStatus.Unreachable, r.Status(nodeD, nodeA));
+            r.Status(nodeB, nodeA).Should().Be(Reachability.ReachabilityStatus.Unreachable);
+            r.Status(nodeC, nodeA).Should().Be(Reachability.ReachabilityStatus.Unreachable);
+            r.Status(nodeD, nodeA).Should().Be(Reachability.ReachabilityStatus.Unreachable);
 
-            Assert.Equal(Reachability.ReachabilityStatus.Reachable, r.Status(nodeC, nodeB));
-            Assert.Equal(Reachability.ReachabilityStatus.Unreachable, r.Status(nodeD, nodeB));
+            r.Status(nodeC, nodeB).Should().Be(Reachability.ReachabilityStatus.Reachable);
+            r.Status(nodeD, nodeB).Should().Be(Reachability.ReachabilityStatus.Unreachable);
 
-            Assert.Equal(Reachability.ReachabilityStatus.Unreachable, r.Status(nodeA, nodeE));
-            Assert.Equal(Reachability.ReachabilityStatus.Terminated, r.Status(nodeB, nodeE));
+            r.Status(nodeA, nodeE).Should().Be(Reachability.ReachabilityStatus.Unreachable);
+            r.Status(nodeB, nodeE).Should().Be(Reachability.ReachabilityStatus.Terminated);
 
-            Assert.False(r.IsReachable(nodeA));
-            Assert.False(r.IsReachable(nodeB));
-            Assert.True(r.IsReachable(nodeC));
-            Assert.True(r.IsReachable(nodeD));
-            Assert.False(r.IsReachable(nodeE));
+            r.IsReachable(nodeA).Should().BeFalse();
+            r.IsReachable(nodeB).Should().BeFalse();
+            r.IsReachable(nodeC).Should().BeTrue();
+            r.IsReachable(nodeD).Should().BeTrue();
+            r.IsReachable(nodeE).Should().BeFalse();
 
-            Assert.Equal(ImmutableHashSet.Create(nodeA, nodeB), r.AllUnreachable);
-            Assert.Equal(ImmutableHashSet.Create(nodeE), r.AllUnreachableFrom(nodeA));
-            Assert.Equal(ImmutableHashSet.Create(nodeA), r.AllUnreachableFrom(nodeB));
-            Assert.Equal(ImmutableHashSet.Create(nodeA), r.AllUnreachableFrom(nodeC));
-            Assert.Equal(ImmutableHashSet.Create(nodeA, nodeB), r.AllUnreachableFrom(nodeD));
+            r.AllUnreachable.Should().BeEquivalentTo(ImmutableHashSet.Create(nodeA, nodeB));
+            r.AllUnreachableFrom(nodeA).Should().BeEquivalentTo(ImmutableHashSet.Create(nodeE));
+            r.AllUnreachableFrom(nodeB).Should().BeEquivalentTo(ImmutableHashSet.Create(nodeA));
+            r.AllUnreachableFrom(nodeC).Should().BeEquivalentTo(ImmutableHashSet.Create(nodeA));
+            r.AllUnreachableFrom(nodeD).Should().BeEquivalentTo(ImmutableHashSet.Create(nodeA, nodeB));
 
             var expected = new Dictionary<UniqueAddress, ImmutableHashSet<UniqueAddress>>
             {
@@ -164,14 +177,31 @@ namespace Akka.Cluster.Tests
                 {nodeE, ImmutableHashSet.Create(nodeA)}
             }.ToImmutableDictionary();
 
-            r.ObserversGroupedByUnreachable
-                .Should()
-                .HaveCount(3);
+            r.ObserversGroupedByUnreachable.Should().HaveCount(3);
+            r.ObserversGroupedByUnreachable[nodeA].Should().BeEquivalentTo(expected[nodeA]);
+            r.ObserversGroupedByUnreachable[nodeB].Should().BeEquivalentTo(expected[nodeB]);
+            r.ObserversGroupedByUnreachable[nodeE].Should().BeEquivalentTo(expected[nodeE]);
+        }
 
-            foreach (var pair in r.ObserversGroupedByUnreachable)
-            {
-                pair.Value.ShouldBeEquivalentTo(expected[pair.Key]);
-            }
+        [Fact]
+        public void ReachabilityTable_must_merge_by_picking_latest_version_of_each_record()
+        {
+            var r1 = Reachability.Empty.Unreachable(nodeB, nodeA).Unreachable(nodeC, nodeD);
+            var r2 = r1.Reachable(nodeB, nodeA).Unreachable(nodeD, nodeE).Unreachable(nodeC, nodeA);
+            var merged = r1.Merge(ImmutableHashSet.Create(nodeA, nodeB, nodeC, nodeD, nodeE), r2);
+
+            merged.Status(nodeB, nodeA).Should().Be(Reachability.ReachabilityStatus.Reachable);
+            merged.Status(nodeC, nodeA).Should().Be(Reachability.ReachabilityStatus.Unreachable);
+            merged.Status(nodeC, nodeD).Should().Be(Reachability.ReachabilityStatus.Unreachable);
+            merged.Status(nodeD, nodeE).Should().Be(Reachability.ReachabilityStatus.Unreachable);
+            merged.Status(nodeE, nodeA).Should().Be(Reachability.ReachabilityStatus.Reachable);
+
+            merged.IsReachable(nodeA).Should().BeFalse();
+            merged.IsReachable(nodeD).Should().BeFalse();
+            merged.IsReachable(nodeE).Should().BeFalse();
+
+            var merged2 = r2.Merge(ImmutableHashSet.Create(nodeA, nodeB, nodeC, nodeD, nodeE), r1);
+            merged2.Records.ToImmutableHashSet().Should().BeEquivalentTo(merged.Records.ToImmutableHashSet());
         }
 
         [Fact]
@@ -183,21 +213,21 @@ namespace Akka.Cluster.Tests
             var allowed = ImmutableHashSet.Create(nodeA, nodeB, nodeC, nodeE);
             var merged = r1.Merge(allowed, r2);
 
-            Assert.Equal(Reachability.ReachabilityStatus.Reachable, merged.Status(nodeB, nodeA));
-            Assert.Equal(Reachability.ReachabilityStatus.Unreachable, merged.Status(nodeC, nodeA));
-            Assert.Equal(Reachability.ReachabilityStatus.Reachable, merged.Status(nodeC, nodeD));
-            Assert.Equal(Reachability.ReachabilityStatus.Reachable, merged.Status(nodeD, nodeE));
-            Assert.Equal(Reachability.ReachabilityStatus.Reachable, merged.Status(nodeE, nodeA));
+            merged.Status(nodeB, nodeA).Should().Be(Reachability.ReachabilityStatus.Reachable);
+            merged.Status(nodeC, nodeA).Should().Be(Reachability.ReachabilityStatus.Unreachable);
+            merged.Status(nodeC, nodeD).Should().Be(Reachability.ReachabilityStatus.Reachable);
+            merged.Status(nodeD, nodeE).Should().Be(Reachability.ReachabilityStatus.Reachable);
+            merged.Status(nodeE, nodeA).Should().Be(Reachability.ReachabilityStatus.Reachable);
 
-            Assert.False(merged.IsReachable(nodeA));
-            Assert.True(merged.IsReachable(nodeD));
-            Assert.True(merged.IsReachable(nodeE));
+            merged.IsReachable(nodeA).Should().BeFalse();
+            merged.IsReachable(nodeD).Should().BeTrue();
+            merged.IsReachable(nodeE).Should().BeTrue();
 
-            Assert.Equal(ImmutableHashSet.Create(nodeB, nodeC), merged.Versions.Keys.ToImmutableHashSet());
+            merged.Versions.Keys.Should().BeEquivalentTo(ImmutableHashSet.Create(nodeB, nodeC));
 
             var merged2 = r2.Merge(allowed, r1);
-            Assert.Equal(merged.Records.ToImmutableHashSet(), merged2.Records.ToImmutableHashSet());
-            Assert.Equal(merged.Versions, merged2.Versions);
+            merged2.Records.ToImmutableHashSet().Should().BeEquivalentTo(merged.Records.ToImmutableHashSet());
+            merged2.Versions.Should().Equal(merged.Versions);
         }
 
         [Fact]
@@ -208,29 +238,44 @@ namespace Akka.Cluster.Tests
             var r3 = r1.Reachable(nodeB, nodeA); //nodeB pruned
             var merged = r2.Merge(ImmutableHashSet.Create(nodeA, nodeB, nodeC, nodeD, nodeE), r3);
 
-            Assert.Equal(ImmutableHashSet.Create(
+            var expected = ImmutableHashSet.Create(
                 new Reachability.Record(nodeA, nodeE, Reachability.ReachabilityStatus.Unreachable, 1),
-                new Reachability.Record(nodeC, nodeD, Reachability.ReachabilityStatus.Unreachable, 1))
-                , merged.Records.ToImmutableHashSet());
+                new Reachability.Record(nodeC, nodeD, Reachability.ReachabilityStatus.Unreachable, 1));
+            merged.Records.ToImmutableHashSet().Should().BeEquivalentTo(expected);
 
             var merged3 = r3.Merge(ImmutableHashSet.Create(nodeA, nodeB, nodeC, nodeD, nodeE), r2);
-            Assert.Equal(merged.Records.ToImmutableHashSet(), merged3.Records.ToImmutableHashSet());
+            merged3.Records.ToImmutableHashSet().Should().BeEquivalentTo(merged.Records.ToImmutableHashSet());
         }
 
         [Fact]
         public void ReachabilityTable_must_merge_versions_correctly()
         {
-            var r1 = new Reachability(ImmutableList.Create<Reachability.Record>(),
-                new Dictionary<UniqueAddress, long> {{nodeA, 3}, {nodeB, 5}, {nodeC, 7}}.ToImmutableDictionary());
-            var r2 = new Reachability(ImmutableList.Create<Reachability.Record>(),
-                new Dictionary<UniqueAddress, long> { { nodeA, 6 }, { nodeB, 2 }, { nodeD, 1 } }.ToImmutableDictionary());
+            var r1 = new Reachability(ImmutableList.Create<Reachability.Record>(), new Dictionary<UniqueAddress, long>
+            {
+                { nodeA, 3 },
+                { nodeB, 5 },
+                { nodeC, 7 }
+            }.ToImmutableDictionary());
+
+            var r2 = new Reachability(ImmutableList.Create<Reachability.Record>(), new Dictionary<UniqueAddress, long>
+            {
+                { nodeA, 6 },
+                { nodeB, 2 },
+                { nodeD, 1 }
+            }.ToImmutableDictionary());
             var merged = r1.Merge(ImmutableHashSet.Create(nodeA, nodeB, nodeC, nodeD, nodeE), r2);
 
-            var expected = new Dictionary<UniqueAddress, long> { { nodeA, 6 }, { nodeB, 5 }, { nodeC, 7 }, { nodeD, 1} }.ToImmutableDictionary();
-            Assert.Equal(expected, merged.Versions);
+            var expected = new Dictionary<UniqueAddress, long>
+            {
+                { nodeA, 6 },
+                { nodeB, 5 },
+                { nodeC, 7 },
+                { nodeD, 1 }
+            }.ToImmutableDictionary();
+            merged.Versions.Should().Equal(expected);
 
             var merged2 = r2.Merge(ImmutableHashSet.Create(nodeA, nodeB, nodeC, nodeD, nodeE), r1);
-            Assert.Equal(expected, merged2.Versions);
+            merged2.Versions.Should().Equal(expected);
         }
 
         [Fact]
@@ -243,11 +288,10 @@ namespace Akka.Cluster.Tests
                 Unreachable(nodeB, nodeE).
                 Remove(ImmutableHashSet.Create(nodeA, nodeB));
 
-            Assert.Equal(Reachability.ReachabilityStatus.Reachable, r.Status(nodeB, nodeA));
-            Assert.Equal(Reachability.ReachabilityStatus.Unreachable, r.Status(nodeC, nodeD));
-            Assert.Equal(Reachability.ReachabilityStatus.Reachable, r.Status(nodeB, nodeC));
-            Assert.Equal(Reachability.ReachabilityStatus.Reachable, r.Status(nodeB, nodeE));
+            r.Status(nodeB, nodeA).Should().Be(Reachability.ReachabilityStatus.Reachable);
+            r.Status(nodeC, nodeD).Should().Be(Reachability.ReachabilityStatus.Unreachable);
+            r.Status(nodeB, nodeC).Should().Be(Reachability.ReachabilityStatus.Reachable);
+            r.Status(nodeB, nodeE).Should().Be(Reachability.ReachabilityStatus.Reachable);
         }
     }
 }
-

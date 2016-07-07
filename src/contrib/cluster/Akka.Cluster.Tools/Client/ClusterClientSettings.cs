@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterClientSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -19,7 +19,12 @@ namespace Akka.Cluster.Tools.Client
     {
         public static ClusterClientSettings Create(ActorSystem system)
         {
+            system.Settings.InjectTopLevelFallback(ClusterClientReceptionist.DefaultConfig());
+
             var config = system.Settings.Config.GetConfig("akka.cluster.client");
+            if (config == null)
+                throw new ArgumentException(string.Format("Actor system [{0}] doesn't have `akka.cluster.client` config set up", system.Name));
+
             var initialContacts = config.GetStringList("initial-contacts").Select(ActorPath.Parse).ToImmutableSortedSet();
 
             return new ClusterClientSettings(initialContacts,

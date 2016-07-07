@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Logging.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -11,13 +11,13 @@ using Akka.Actor;
 namespace Akka.Event
 {
     /// <summary>
-    /// This is a “marker” class which is inserted as originator class into
+    /// This class represents a marker which is inserted as originator class into
     /// <see cref="LogEvent"/> when the string representation was supplied directly.
     /// </summary>
     public class DummyClassForStringSources { }
-    
+
     /// <summary>
-    /// Provides the functionality for creating logger instances and helpers for converting to/from LogLevel values.
+    /// This class provides the functionality for creating logger instances and helpers for converting to/from <see cref="LogLevel"/> values.
     /// </summary>
     public static class Logging
     {
@@ -29,16 +29,16 @@ namespace Akka.Event
         private const LogLevel OffLogLevel = (LogLevel) int.MaxValue;
 
         /// <summary>
-        /// Returns an instance of the standard out logger.
+        /// Returns a singleton instance of the standard out logger.
         /// </summary>
         public static readonly StandardOutLogger StandardOutLogger = new StandardOutLogger();
 
         /// <summary>
-        /// Classes for.
+        /// Retrieves the log event class associated with the specified log level.
         /// </summary>
-        /// <param name="logLevel">The log level.</param>
-        /// <returns>Type.</returns>
-        /// <exception cref="System.ArgumentException">Unknown LogLevel;logLevel</exception>
+        /// <param name="logLevel">The log level used to lookup the associated class.</param>
+        /// <returns>The log event class associated with the specified log level.</returns>
+        /// <exception cref="System.ArgumentException">Unknown LogLevel</exception>
         public static Type ClassFor(this LogLevel logLevel)
         {
             switch (logLevel)
@@ -57,11 +57,11 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Returns the string representation for a particular LogLevel.
+        /// Retrieves the log event class name associated with the specified log level.
         /// </summary>
-        /// <param name="logLevel">The log level to get the string representation for.</param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentException"></exception>
+        /// <param name="logLevel">The log level used to lookup the associated class.</param>
+        /// <returns>The log event class name associated with the specified log level.</returns>
+        /// <exception cref="System.ArgumentException">Unknown LogLevel</exception>
         public static string StringFor(this LogLevel logLevel)
         {
             switch (logLevel)
@@ -82,11 +82,11 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Gets an instance of the logger.
+        /// Creates a new logging adapter using the specified context's event stream.
         /// </summary>
-        /// <param name="context">The context.</param>
-        /// <param name="logMessageFormatter">The log message formatter.</param>
-        /// <returns>A logging adapter instance.</returns>
+        /// <param name="context">The context used to configure the logging adapter.</param>
+        /// <param name="logMessageFormatter">The formatter used to format log messages.</param>
+        /// <returns>The newly created logging adapter.</returns>
         public static ILoggingAdapter GetLogger(this IActorContext context, ILogMessageFormatter logMessageFormatter = null)
         {
             var logSource = context.Self.ToString();
@@ -96,24 +96,24 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Gets an instance of the logger.
+        /// Creates a new logging adapter using the specified system's event stream.
         /// </summary>
-        /// <param name="system">The actor system.</param>
-        /// <param name="logSourceObj">The log source object.</param>
-        /// <param name="logMessageFormatter">The log message formatter.</param>
-        /// <returns>A logging adapter instance.</returns>
+        /// <param name="system">The system used to configure the logging adapter.</param>
+        /// <param name="logSourceObj">The source that produces the log events.</param>
+        /// <param name="logMessageFormatter">The formatter used to format log messages.</param>
+        /// <returns>The newly created logging adapter.</returns>
         public static ILoggingAdapter GetLogger(ActorSystem system, object logSourceObj, ILogMessageFormatter logMessageFormatter = null)
         {
             return GetLogger(system.EventStream, logSourceObj, logMessageFormatter);
         }
 
         /// <summary>
-        /// Gets an instance of the logger.
+        /// Creates a new logging adapter that writes to the specified logging bus.
         /// </summary>
-        /// <param name="loggingBus">The logging bus this logger will write to.</param>
-        /// <param name="logSourceObj">The log source object.</param>
-        /// <param name="logMessageFormatter">The log message formatter.</param>
-        /// <returns>A logging adapter instance.</returns>
+        /// <param name="loggingBus">The bus on which this logger writes.</param>
+        /// <param name="logSourceObj">The source that produces the log events.</param>
+        /// <param name="logMessageFormatter">The formatter used to format log messages.</param>
+        /// <returns>The newly created logging adapter.</returns>
         public static ILoggingAdapter GetLogger(LoggingBus loggingBus, object logSourceObj, ILogMessageFormatter logMessageFormatter = null)
         {
             //TODO: refine this
@@ -136,11 +136,11 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Gets the LogLevel for a particular log level string.
+        /// Retrieves the log level from the specified string.
         /// </summary>
-        /// <param name="logLevel">The log level string.</param>
-        /// <returns>The LogLevel mapping to the string based log level.</returns>
-        /// <exception cref="System.ArgumentException">Unknown LogLevel;logLevel</exception>
+        /// <param name="logLevel">The string representation of the log level to lookup.</param>
+        /// <returns>The log level that matches the specified string.</returns>
+        /// <exception cref="System.ArgumentException">Unknown log level</exception>
         public static LogLevel LogLevelFor(string logLevel)
         {
             if (!string.IsNullOrEmpty(logLevel))
@@ -166,12 +166,11 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Given the type of <see cref="LogEvent"/> returns the corresponding <see cref="LogLevel"/>
+        /// Retrieves the log level associated with the specified <typeparamref name="T">log event</typeparamref>.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns>The <see cref="LogLevel"/> that corresponds to the specified type.</returns>
-        /// <exception cref="System.ArgumentException">Thrown for unknown types, i.e. when <typeparamref name="T"/> is not
-        /// <see cref="Event.Debug"/>, <see cref="Event.Info"/>, <see cref="Event.Warning"/> or<see cref="Event.Error"/></exception>
+        /// <typeparam name="T">The type of the log event.</typeparam>
+        /// <returns>The log level associated with the specified type.</returns>
+        /// <exception cref="System.ArgumentException">Unknown log event type</exception>
         public static LogLevel LogLevelFor<T>() where T:LogEvent
         {
             var type = typeof(T);
@@ -185,4 +184,3 @@ namespace Akka.Event
         }
     }
 }
-

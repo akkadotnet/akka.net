@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MultiNodeClusterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -12,16 +12,17 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Akka.Actor;
-using Akka.Cluster;
+using Akka.Cluster.Tests.MultiNode;
 using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2;
+using Akka.Util.Internal;
 using Xunit;
 
-namespace Akka.Cluster.Tests.MultiNode
+namespace Akka.Cluster.TestKit
 {
     //TODO: WatchedByCoroner?
     //@Aaronontheweb: Coroner is a JVM-specific instrument used to report deadlocks and other fun stuff.
@@ -194,8 +195,6 @@ namespace Akka.Cluster.Tests.MultiNode
                     typeof(GossipEnvelope),
                     typeof(GossipStatus), 
                     typeof(GossipStatus),
-                    typeof(MetricsGossipEnvelope),
-                    typeof(ClusterEvent.ClusterMetricsChanged),
                     typeof(InternalClusterAction.ITick),
                     typeof(PoisonPill),
                     typeof(DeathWatchNotification),
@@ -230,7 +229,7 @@ namespace Akka.Cluster.Tests.MultiNode
             return address;
         }
 
-        public ClusterReadView ClusterView { get { return Cluster.ReadView; } }
+        internal ClusterReadView ClusterView { get { return Cluster.ReadView; } }
 
         /// <summary>
         /// Get the cluster node to use.
@@ -303,11 +302,11 @@ namespace Akka.Cluster.Tests.MultiNode
         {
             var members = gotMembers.ToImmutableList();
             _assertions.AssertEqual(expectedAddresses.Length, members.Count);
-            expectedAddresses.ToImmutableSortedSet(Member.AddressOrdering);
-            for (var i = 0; i < expectedAddresses.Length; i++)
+
+            expectedAddresses.ToImmutableSortedSet(Member.AddressOrdering).ZipWithIndex().ForEach(kvp =>
             {
-                _assertions.AssertEqual(expectedAddresses[i], members[i].Address);
-            }
+                _assertions.AssertEqual(kvp.Key, members[kvp.Value].Address);
+            });
         }
 
         /// <summary>

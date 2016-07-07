@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MailboxesSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -8,10 +8,12 @@
 using System;
 using System.Linq;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Tests.Dispatch
@@ -31,6 +33,10 @@ namespace Akka.Tests.Dispatch
 
             return 5;
         }
+
+        public TestPriorityMailbox(Settings settings, Config config) : base(settings, config)
+        {
+        }
     }
 
     public class IntPriorityMailbox : UnboundedPriorityMailbox
@@ -38,6 +44,10 @@ namespace Akka.Tests.Dispatch
         protected override int PriorityGenerator(object message)
         {
             return message as int? ?? Int32.MaxValue;
+        }
+
+        public IntPriorityMailbox(Settings settings, Config config) : base(settings, config)
+        {
         }
     }
 
@@ -64,10 +74,10 @@ int-prio-mailbox {
         [Fact]
         public void Can_use_unbounded_priority_mailbox()
         {
-            var actor = Sys.ActorOf(EchoActor.Props(this).WithMailbox("string-prio-mailbox"), "echo");
+            var actor = (IInternalActorRef)Sys.ActorOf(EchoActor.Props(this).WithMailbox("string-prio-mailbox"), "echo");
 
             //pause mailbox until all messages have been told
-            actor.Tell(Suspend.Instance);
+            actor.SendSystemMessage(new Suspend());
 
             actor.Tell(true);
             for (var i = 0; i < 30; i++)
@@ -80,7 +90,7 @@ int-prio-mailbox {
             {
                 actor.Tell(1);
             }
-            actor.Tell(new Resume(null));
+            actor.SendSystemMessage(new Resume(null));
 
             //resume mailbox, this prevents the mailbox from running to early
             //priority mailbox is best effort only
@@ -99,12 +109,12 @@ int-prio-mailbox {
         [Fact]
         public void Priority_mailbox_keeps_ordering_with_many_priority_values()
         {
-            var actor = Sys.ActorOf(EchoActor.Props(this).WithMailbox("int-prio-mailbox"), "echo");
+            var actor = (IInternalActorRef)Sys.ActorOf(EchoActor.Props(this).WithMailbox("int-prio-mailbox"), "echo");
 
             //pause mailbox until all messages have been told
-            actor.Tell(Suspend.Instance);
+            actor.SendSystemMessage(new Suspend());
 
-            AwaitCondition(()=> ((LocalActorRef)actor).Cell.Mailbox.IsSuspended);
+            AwaitCondition(()=> (((ActorRefWithCell)actor).Underlying is ActorCell) && ((ActorRefWithCell)actor).Underlying.AsInstanceOf<ActorCell>().Mailbox.IsSuspended());
             // creates 50 messages with values spanning from Int32.MinValue to Int32.MaxValue
             var values = new int[50];
             var increment = (int)(UInt32.MaxValue / values.Length);
@@ -121,7 +131,7 @@ int-prio-mailbox {
             }
 
             //resume mailbox, this prevents the mailbox from running to early
-            actor.Tell(new Resume(null));
+            actor.SendSystemMessage(new Resume(null));
 
             // expect the messages in the correct order
             foreach (var value in values)

@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Dispatchers.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -11,106 +11,154 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Helios.Concurrency;
 
 namespace Akka.Dispatch
 {
-
-
-    public static class DispatcherExtensions
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal abstract class ThreadPoolExecutorService : ExecutorService
     {
-        /// <summary>
-        /// Schedules the specified run and returns a continuation task.
-        /// </summary>
-        public static Task<T> ScheduleAsync<T>(this MessageDispatcher dispatcher, Func<T> fn)
-        {
-            var promise = new TaskCompletionSource<T>();
-            dispatcher.Schedule(() =>
-            {
-                try
-                {
-                    var result = fn();
-                    promise.SetResult(result);
-                }
-                catch (Exception e)
-                {
-                    promise.SetException(e);
-                }
-            });
+        // cache the delegate used for execution to prevent allocations
+        protected static readonly WaitCallback Executor = t => { ((IRunnable)t).Run(); };
 
-            return promise.Task;
+        public override void Shutdown()
+        {
+            // do nothing. No cleanup required.
+        }
+
+        protected ThreadPoolExecutorService(string id) : base(id)
+        {
         }
     }
 
     /// <summary>
-    ///     Class ThreadPoolDispatcher.
+    /// INTERNAL API
     /// </summary>
-    public class ThreadPoolDispatcher : MessageDispatcher
+    internal sealed class FullThreadPoolExecutorServiceImpl : ThreadPoolExecutorService
     {
-
-        private static readonly bool _isFullTrusted = AppDomain.CurrentDomain.IsFullyTrusted;
-
-        /// <summary>
-        /// Takes a <see cref="MessageDispatcherConfigurator"/>
-        /// </summary>
-        public ThreadPoolDispatcher(MessageDispatcherConfigurator configurator) : base(configurator)
+        public override void Execute(IRunnable run)
         {
+            ThreadPool.UnsafeQueueUserWorkItem(Executor, run);
         }
 
-        /// <summary>
-        ///     Schedules the specified run.
-        /// </summary>
-        /// <param name="run">The run.</param>
-        public override void Schedule(Action run)
+        public FullThreadPoolExecutorServiceImpl(string id) : base(id)
         {
-            var wc = new WaitCallback(_ => run());
-            // we use unsafe version if current application domain is FullTrusted
-            if (_isFullTrusted)
-                ThreadPool.UnsafeQueueUserWorkItem(wc, null);
-            else
-                ThreadPool.QueueUserWorkItem(wc, null);
         }
     }
 
     /// <summary>
-    ///     Dispatcher that dispatches messages on the current synchronization context, e.g. WinForms or WPF GUI thread
+    /// INTERNAL API
     /// </summary>
-    public class CurrentSynchronizationContextDispatcher : MessageDispatcher
+    internal sealed class PartialTrustThreadPoolExecutorService : ThreadPoolExecutorService
+    {
+        public override void Execute(IRunnable run)
+        {
+            ThreadPool.QueueUserWorkItem(Executor, run);
+        }
+
+        public PartialTrustThreadPoolExecutorService(string id) : base(id)
+        {
+        }
+    }
+
+
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Executes its tasks using the <see cref="TaskScheduler"/>
+    /// </summary>
+    internal sealed class TaskSchedulerExecutor : ExecutorService
     {
         /// <summary>
         ///     The scheduler
         /// </summary>
-        private readonly TaskScheduler _scheduler;
+        private TaskScheduler _scheduler;
 
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="CurrentSynchronizationContextDispatcher" /> class.
-        /// </summary>
-        public CurrentSynchronizationContextDispatcher(MessageDispatcherConfigurator configurator)
-            : base(configurator)
+        public TaskSchedulerExecutor(string id, TaskScheduler scheduler) : base(id)
         {
-            _scheduler = TaskScheduler.FromCurrentSynchronizationContext();
+            _scheduler = scheduler;
         }
 
-        /// <summary>
-        ///     Schedules the specified run.
-        /// </summary>
-        /// <param name="run">The run.</param>
-        public override void Schedule(Action run)
+        // cache the delegate used for execution to prevent allocations
+        private static readonly Action<object> Executor = t => { ((IRunnable)t).Run(); };
+
+        public override void Execute(IRunnable run)
         {
-            var t = new Task(run);
+            var t = new Task(Executor, run);
             t.Start(_scheduler);
         }
+
+        public override void Shutdown()
+        {
+            // clear the scheduler
+            _scheduler = null;
+        }
     }
+
+
+
+
+    /// <summary>
+    /// ForkJoinExecutorService - custom multi-threaded dispatcher that runs on top of a 
+    /// <see cref="Helios.Concurrency.DedicatedThreadPool"/>, designed to be used for mission-critical actors
+    /// that can't afford <see cref="ThreadPool"/> starvation.
+    /// 
+    /// Relevant configuration options:
+    /// <code>
+    ///     my-forkjoin-dispatcher{
+    ///             type = ForkJoinDispatcher
+    ///	            throughput = 100
+    ///	            dedicated-thread-pool{ #settings for Helios.DedicatedThreadPool
+    ///		            thread-count = 3 #number of threads
+    ///		            #deadlock-timeout = 3s #optional timeout for deadlock detection
+    ///		            threadtype = background #values can be "background" or "foreground"
+    ///	            }
+    ///     }
+    /// </code>
+    /// </summary>
+    internal sealed class ForkJoinExecutor : ExecutorService
+    {
+        private DedicatedThreadPool _dedicatedThreadPool;
+        private byte _shuttingDown = 0;
+
+        public ForkJoinExecutor(string id, DedicatedThreadPoolSettings poolSettings) : base(id)
+        {
+            _dedicatedThreadPool = new DedicatedThreadPool(poolSettings);
+        }
+
+        public override void Execute(IRunnable run)
+        {
+            if (Volatile.Read(ref _shuttingDown) == 1)
+                throw new RejectedExecutionException("ForkJoinExecutor is shutting down");
+            _dedicatedThreadPool.QueueUserWorkItem(run.Run);
+        }
+
+        public override void Shutdown()
+        {
+            // shut down the dedicated threadpool and null it out
+            Volatile.Write(ref _shuttingDown, 1);
+            _dedicatedThreadPool?.Dispose();
+            _dedicatedThreadPool = null;
+        }
+    }
+
 
     /// <summary>
     /// The registry of all <see cref="MessageDispatcher"/> instances available to this <see cref="ActorSystem"/>.
     /// </summary>
-    public class Dispatchers
+    public sealed class Dispatchers
     {
         /// <summary>
         ///     The default dispatcher identifier, also the full key of the configuration of the default dispatcher.
         /// </summary>
-        public readonly static string DefaultDispatcherId = "akka.actor.default-dispatcher";
-        public readonly static string SynchronizedDispatcherId = "akka.actor.synchronized-dispatcher";
+        public static readonly string DefaultDispatcherId = "akka.actor.default-dispatcher";
+
+        /// <summary>
+        ///     The identifier for synchronized dispatchers.
+        /// </summary>
+        public static readonly string SynchronizedDispatcherId = "akka.actor.synchronized-dispatcher";
 
         private readonly ActorSystem _system;
         private CachingConfig _cachingConfig;
@@ -121,7 +169,7 @@ namespace Akka.Dispatch
         /// 
         /// Has to be thread-safe, as this collection can be accessed concurrently by many actors.
         /// </summary>
-        private ConcurrentDictionary<string, MessageDispatcherConfigurator> _dispatcherConfigurators = new ConcurrentDictionary<string, MessageDispatcherConfigurator>();
+        private readonly ConcurrentDictionary<string, MessageDispatcherConfigurator> _dispatcherConfigurators = new ConcurrentDictionary<string, MessageDispatcherConfigurator>();
 
         /// <summary>Initializes a new instance of the <see cref="Dispatchers" /> class.</summary>
         /// <param name="system">The system.</param>
@@ -274,33 +322,42 @@ namespace Akka.Dispatch
             return ConfigurationFactory.ParseString(string.Format("id: {0}", id));
         }
 
+
+        private static readonly Config ForkJoinExecutorConfig = ConfigurationFactory.ParseString("executor=fork-join-executor");
+
+        private static readonly Config CurrentSynchronizationContextExecutorConfig =
+            ConfigurationFactory.ParseString(@"executor=current-context-executor");
+
+        private static readonly Config TaskExecutorConfig = ConfigurationFactory.ParseString(@"executor=task-executor");
         private MessageDispatcherConfigurator ConfiguratorFrom(Config cfg)
         {
-            if(!cfg.HasPath("id")) throw new ConfigurationException(string.Format("Missing dispatcher `id` property in config: {0}", cfg.Root));
+            if (!cfg.HasPath("id")) throw new ConfigurationException(string.Format("Missing dispatcher `id` property in config: {0}", cfg.Root));
 
             var id = cfg.GetString("id");
             var type = cfg.GetString("type");
-            var throughput = cfg.GetInt("throughput");
-            var throughputDeadlineTime = cfg.GetTimeSpan("throughput-deadline-time").Ticks;
 
 
             MessageDispatcherConfigurator dispatcher;
+            /*
+             * Fallbacks are added here in order to preserve backwards compatiblity with versions of AKka.NET prior to 1.1,
+             * before the ExecutorService system was implemented
+             */
             switch (type)
             {
                 case "Dispatcher":
-                    dispatcher = new ThreadPoolDispatcherConfigurator(cfg, Prerequisites);
+                    dispatcher = new DispatcherConfigurator(cfg, Prerequisites);
                     break;
                 case "TaskDispatcher":
-                    dispatcher = new TaskDispatcherConfigurator(cfg, Prerequisites);
+                    dispatcher = new DispatcherConfigurator(TaskExecutorConfig.WithFallback(cfg), Prerequisites);
                     break;
                 case "PinnedDispatcher":
                     dispatcher = new PinnedDispatcherConfigurator(cfg, Prerequisites);
                     break;
                 case "ForkJoinDispatcher":
-                    dispatcher = new ForkJoinDispatcherConfigurator(cfg, Prerequisites);
+                    dispatcher = new DispatcherConfigurator(ForkJoinExecutorConfig.WithFallback(cfg), Prerequisites);
                     break;
                 case "SynchronizedDispatcher":
-                    dispatcher = new CurrentSynchronizationContextDispatcherConfigurator(cfg, Prerequisites);
+                    dispatcher = new DispatcherConfigurator(CurrentSynchronizationContextExecutorConfig.WithFallback(cfg), Prerequisites);
                     break;
                 case null:
                     throw new ConfigurationException("Could not resolve dispatcher for path " + id + ". type is null");
@@ -314,7 +371,7 @@ namespace Akka.Dispatch
                     break;
             }
 
-            return new DispatcherConfigurator(dispatcher, id, throughput, throughputDeadlineTime);
+            return dispatcher;
         }
     }
 
@@ -322,31 +379,43 @@ namespace Akka.Dispatch
     /// The cached <see cref="MessageDispatcher"/> factory that gets looked up via configuration
     /// inside <see cref="Dispatchers"/>
     /// </summary>
-    class DispatcherConfigurator : MessageDispatcherConfigurator
+    public sealed class DispatcherConfigurator : MessageDispatcherConfigurator
     {
-        public string Id { get; private set; }
+        private readonly MessageDispatcher _instance;
 
-        private readonly MessageDispatcherConfigurator _configurator;
-
-        public DispatcherConfigurator(MessageDispatcherConfigurator configurator, string id, int throughput, long? throughputDeadlineTime)
-            : base(configurator.Config, configurator.Prerequisites)
+        /// <summary>
+        /// Used to configure and produce <see cref="Dispatcher"/> instances for use with actors.
+        /// </summary>
+        /// <param name="config">The configuration for this dispatcher.</param>
+        /// <param name="prerequisites">System pre-reqs needed to run this dispatcher.</param>
+        public DispatcherConfigurator(Config config, IDispatcherPrerequisites prerequisites)
+            : base(config, prerequisites)
         {
-            _configurator = configurator;
-            ThroughputDeadlineTime = throughputDeadlineTime;
-            Id = id;
-            Throughput = throughput;
+            // Need to see if a non-zero value is available for this setting
+            TimeSpan deadlineTime = config.GetTimeSpan("throughput-deadline-time");
+            long? deadlineTimeTicks = null;
+            if (deadlineTime.Ticks > 0)
+                deadlineTimeTicks = deadlineTime.Ticks;
+
+            _instance = new Dispatcher(this, config.GetString("id"), 
+                config.GetInt("throughput"),
+                deadlineTimeTicks,
+                ConfigureExecutor(),
+                config.GetTimeSpan("shutdown-timeout"));
         }
 
-        public int Throughput { get; private set; }
 
-        public long? ThroughputDeadlineTime { get; private set; }
+        /// <summary>
+        /// Returns a <see cref="MessageDispatcherConfigurator.Dispatcher"/> instance.
+        /// 
+        /// Whether or not this <see cref="MessageDispatcherConfigurator"/> returns a new instance 
+        /// or returns a reference to an existing instance is an implementation detail of the
+        /// underlying implementation.
+        /// </summary>
+        /// <returns></returns>
         public override MessageDispatcher Dispatcher()
         {
-            var dispatcher = _configurator.Dispatcher();
-            dispatcher.Id = Id;
-            dispatcher.Throughput = Throughput;
-            dispatcher.ThroughputDeadlineTime = ThroughputDeadlineTime > 0 ? ThroughputDeadlineTime : null;
-            return dispatcher;
+            return _instance;
         }
     }
 }

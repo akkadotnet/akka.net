@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Gossip.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -70,12 +70,10 @@ namespace Akka.Cluster
         readonly ImmutableSortedSet<Member> _members;
         readonly GossipOverview _overview;
         readonly VectorClock _version;
-        private readonly Lazy<Reachability> _reachability;
 
         public ImmutableSortedSet<Member> Members { get { return _members; } }
         public GossipOverview Overview { get { return _overview; } }
         public VectorClock Version { get { return _version; } }
-        public Reachability ReachabilityExcludingDownedObservers { get { return _reachability.Value; } }
 
         public Gossip(ImmutableSortedSet<Member> members) : this(members, new GossipOverview(), VectorClock.Create() ) {}
 
@@ -90,13 +88,10 @@ namespace Akka.Cluster
             _membersMap = new Lazy<ImmutableDictionary<UniqueAddress, Member>>(
                 () => members.ToImmutableDictionary(m => m.UniqueAddress, m => m));
 
-            _reachability = new Lazy<Reachability>(() =>
+            ReachabilityExcludingDownedObservers = new Lazy<Reachability>(() =>
             {
-                var downed = _members
-                    .Where(m => m.Status == MemberStatus.Down)
-                    .Select(m=>m.UniqueAddress);
-
-                return overview.Reachability.Remove(downed);
+                var downed = Members.Where(m => m.Status == MemberStatus.Down).ToList();
+                return Overview.Reachability.RemoveObservers(downed.Select(m => m.UniqueAddress).ToImmutableHashSet());
             });
 
             if (Cluster.IsAssertInvariantsEnabled) AssertInvariants();
@@ -214,18 +209,15 @@ namespace Akka.Cluster
         // version
         public bool Convergence(UniqueAddress selfUniqueAddress)
         {
-            var unreachable = _overview.Reachability.AllUnreachableOrTerminated
+            var unreachable = ReachabilityExcludingDownedObservers.Value.AllUnreachableOrTerminated
                 .Where(node => node != selfUniqueAddress)
                 .Select(GetMember);
 
-            var convergedUnreachable = unreachable
-                .All(m => ConvergenceSkipUnreachableWithMemberStatus.Contains(m.Status));
-
-            var convergedSeen =
-                !_members.Any(m => ConvergenceMemberStatus.Contains(m.Status) && !SeenByNode(m.UniqueAddress));
-
-            return convergedUnreachable && convergedSeen;
+            return unreachable.All(m => ConvergenceSkipUnreachableWithMemberStatus.Contains(m.Status))
+                && !_members.Any(m => ConvergenceMemberStatus.Contains(m.Status) && !SeenByNode(m.UniqueAddress));
         }
+
+        public Lazy<Reachability> ReachabilityExcludingDownedObservers { get; }
 
         public bool IsLeader(UniqueAddress node, UniqueAddress selfUniqueAddress)
         {
@@ -294,7 +286,16 @@ namespace Akka.Cluster
             }
         }
 
-        public override string ToString()
+        public Gossip Prune(VectorClock.Node removedNode)
+        {
+            var newVersion = Version.Prune(removedNode);
+            if (newVersion.Equals(Version))
+                return this;
+            else
+                return new Gossip(Members, Overview, newVersion);
+        }
+
+    public override string ToString()
         {
             return String.Format("Gossip(members = [{0}], overview = {1}, version = {2}",
                 _members.Select(m => m.ToString()).Aggregate((a, b) => a + ", " + b), _overview, _version);

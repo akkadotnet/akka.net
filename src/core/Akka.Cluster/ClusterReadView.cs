@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterReadView.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -20,7 +20,7 @@ namespace Akka.Cluster
     /// Read view of the cluster's state, updated via subscription of
     /// cluster events published on the <see cref="EventBus{TEvent,TClassifier,TSubscriber}"/>.
     /// </summary>
-    public class ClusterReadView : IDisposable
+    internal class ClusterReadView : IDisposable
     {
         public ClusterEvent.CurrentClusterState State { get { return _state; } }
 
@@ -29,7 +29,7 @@ namespace Akka.Cluster
         /// </summary>
         internal volatile ClusterEvent.CurrentClusterState _state;
 
-        public Reachability Reachability { get { return _reachability; } }
+        internal Reachability Reachability { get { return _reachability; } }
 
 
         internal volatile Reachability _reachability;
@@ -43,13 +43,6 @@ namespace Akka.Cluster
         /// Current internal cluster stats, updated periodically via event bus.
         /// </summary>
         internal volatile ClusterEvent.CurrentInternalStats _latestStats;
-
-        public ImmutableHashSet<NodeMetrics> ClusterMetrics { get { return _clusterMetrics; } }
-
-        /// <summary>
-        /// Current cluster metrics, updated periodically via event bus.
-        /// </summary>
-        internal volatile ImmutableHashSet<NodeMetrics> _clusterMetrics;
 
         readonly Address _selfAddress;
 
@@ -68,7 +61,6 @@ namespace Akka.Cluster
             _state = new ClusterEvent.CurrentClusterState();
             _reachability = Reachability.Empty;
             _latestStats = new ClusterEvent.CurrentInternalStats(new GossipStats(), new VectorClockStats());
-            _clusterMetrics = ImmutableHashSet.Create<NodeMetrics>();
             _selfAddress = cluster.SelfAddress;
 
             _eventBusListener =
@@ -143,10 +135,6 @@ namespace Akka.Cluster
                         .With<ClusterEvent.CurrentInternalStats>(stats =>
                         {
                             readView._latestStats = stats;
-                        })
-                        .With<ClusterEvent.ClusterMetricsChanged>(changed =>
-                        {
-                            readView._clusterMetrics = changed.NodeMetrics;
                         })
                         .With<ClusterEvent.ClusterShuttingDown>(_ => { });
                 });

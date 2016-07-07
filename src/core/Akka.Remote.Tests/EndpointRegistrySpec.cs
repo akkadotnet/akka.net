@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EndpointRegistrySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -89,6 +89,7 @@ namespace Akka.Remote.Tests
             var deadline = Deadline.Now;
             reg.MarkAsFailed(actorA, deadline);
             Assert.Equal(deadline, reg.WritableEndpointWithPolicyFor(address1).AsInstanceOf<EndpointManager.Gated>().TimeOfRelease);
+            Assert.Null(reg.WritableEndpointWithPolicyFor(address1).AsInstanceOf<EndpointManager.Gated>().RefuseUid);
             Assert.False(reg.IsReadOnly(actorA));
             Assert.False(reg.IsWritable(actorA));
         }
@@ -116,6 +117,7 @@ namespace Akka.Remote.Tests
             reg.UnregisterEndpoint(actorB);
 
             Assert.Equal(deadline, reg.WritableEndpointWithPolicyFor(address1).AsInstanceOf<EndpointManager.Gated>().TimeOfRelease);
+            Assert.Null(reg.WritableEndpointWithPolicyFor(address1).AsInstanceOf<EndpointManager.Gated>().RefuseUid);
             Assert.Equal(deadline, reg.WritableEndpointWithPolicyFor(address2).AsInstanceOf<EndpointManager.Quarantined>().Deadline);
             Assert.Equal(42, reg.WritableEndpointWithPolicyFor(address2).AsInstanceOf<EndpointManager.Quarantined>().Uid);
         }
@@ -131,7 +133,7 @@ namespace Akka.Remote.Tests
             reg.MarkAsFailed(actorB, farIntheFuture);
             reg.Prune();
 
-            Assert.Null(reg.WritableEndpointWithPolicyFor(address1));
+            Assert.Equal(null, reg.WritableEndpointWithPolicyFor(address1).AsInstanceOf<EndpointManager.WasGated>().RefuseUid);
             Assert.Equal(farIntheFuture, reg.WritableEndpointWithPolicyFor(address2).AsInstanceOf<EndpointManager.Gated>().TimeOfRelease);
         }
 

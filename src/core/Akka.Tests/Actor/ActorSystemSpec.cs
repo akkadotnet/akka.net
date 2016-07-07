@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystemSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -160,11 +160,14 @@ namespace Akka.Tests.Actor
             Assert.Equal(typeof(LocalActorRef), ExpectMsg<Type>());
         }
 
-        [Fact]
+        [Fact()]
         public void Reliable_deny_creation_of_actors_while_shutting_down()
         {
-            var sys = ActorSystem.Create("DenyCreationWhileShuttingDone");
-            Task.Delay(500).ContinueWith(_ => sys.Terminate());
+            var sys = ActorSystem.Create("DenyCreationWhileShuttingDown");
+            sys.Scheduler.Advanced.ScheduleOnce(TimeSpan.FromMilliseconds(100), () =>
+            {
+                sys.Terminate();
+            });
             var failing = false;
             var created = new HashSet<IActorRef>();
 
@@ -177,7 +180,7 @@ namespace Akka.Tests.Actor
                     created.Add(t);
 
                     if (created.Count % 1000 == 0)
-                        Thread.Sleep(200); // in case of unfair thread scheduling
+                        Thread.Sleep(50); // in case of unfair thread scheduling
                 }
                 catch (InvalidOperationException)
                 {
@@ -185,14 +188,15 @@ namespace Akka.Tests.Actor
                 }
 
                 
-                if (!failing && sys.Uptime.TotalSeconds >= 5)
+                if (!failing && sys.Uptime.TotalSeconds >= 10)
                     throw new AssertionFailedException(created.Last() + Environment.NewLine +
                                                        "System didn't terminate within 5 seconds");
             }
 
-            Assert.Empty(
-                created.Cast<ActorRefWithCell>()
-                    .Where(actor => !actor.IsTerminated && !(actor.Underlying is UnstartedCell)));
+            var nonTerminatedOrNonstartedActors = created.Cast<ActorRefWithCell>()
+                .Where(actor => !actor.IsTerminated && !(actor.Underlying is UnstartedCell)).ToList();
+            Assert.Equal(0, 
+                nonTerminatedOrNonstartedActors.Count);
         }
 
         #region Extensions tests
@@ -459,10 +463,15 @@ namespace Akka.Tests.Actor
             {
             }
 
-            public override void Schedule(Action run)
+            protected override void ExecuteTask(IRunnable run)
             {
-                Task.Run(run);
+                run.Run();
                 _latch.Ready(TimeSpan.FromSeconds(1));
+            }
+
+            protected override void Shutdown()
+            {
+                // do nothing
             }
 
             public override void Attach(ActorCell cell)

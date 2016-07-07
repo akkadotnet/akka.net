@@ -1,17 +1,18 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Controller.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Immutable;
+using System.Net;
+using System.Runtime.Serialization;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
-using Helios.Net;
-using Helios.Topology;
-using System.Runtime.Serialization;
+using Helios.Channels;
 
 namespace Akka.Remote.TestKit
 {
@@ -22,7 +23,7 @@ namespace Akka.Remote.TestKit
     /// 
     /// INTERNAL API.
     /// </summary>
-    class Controller : UntypedActor
+    class Controller : UntypedActor, ILogReceive
     {
         public sealed class ClientDisconnected
         {
@@ -192,17 +193,21 @@ namespace Akka.Remote.TestKit
 
         public sealed class CreateServerFSM : INoSerializationVerificationNeeded
         {
-            public CreateServerFSM(RemoteConnection channel)
+            public CreateServerFSM(IChannel channel)
             {
                 Channel = channel;
             }
 
-            public RemoteConnection Channel { get; private set; }
+            public IChannel Channel { get; private set; }
         }
 
         int _initialParticipants;
         readonly TestConductorSettings _settings = TestConductor.Get(Context.System).Settings;
-        readonly IConnection _connection;
+
+        /// <summary>
+        /// Lazily load the result later
+        /// </summary>
+        private IChannel _connection;
         readonly IActorRef _barrier;
         ImmutableDictionary<RoleName, NodeInfo> _nodes =
             ImmutableDictionary.Create<RoleName, NodeInfo>();
@@ -210,11 +215,14 @@ namespace Akka.Remote.TestKit
         ImmutableDictionary<RoleName, ImmutableHashSet<IActorRef>> _addrInterest =
             ImmutableDictionary.Create<RoleName, ImmutableHashSet<IActorRef>>();
         int _generation = 1;
+        private readonly ILoggingAdapter _log = Context.GetLogger();
 
-        public Controller(int initialParticipants, INode controllerPort)
+        public Controller(int initialParticipants, IPEndPoint controllerPort)
         {
+            _log.Debug("Opening connection");
             _connection = RemoteConnection.CreateConnection(Role.Server, controllerPort, _settings.ServerSocketWorkerPoolSize,
-                new ConductorHandler(Self, Logging.GetLogger(Context.System, typeof (ConductorHandler))));
+                new ConductorHandler(Self, Logging.GetLogger(Context.System, typeof (ConductorHandler)))).Result;
+            _log.Debug("Connection bound");
             _barrier = Context.ActorOf(Props.Create<BarrierCoordinator>(), "barriers");
             _initialParticipants = initialParticipants;
         }
@@ -257,18 +265,18 @@ namespace Akka.Remote.TestKit
             return Directive.Restart;
         }
 
-        //TODO: Logging receive?
         protected override void OnReceive(object message)
         {
             var createServerFSM = message as CreateServerFSM;
             if (createServerFSM != null)
             {
                 var channel = createServerFSM.Channel;
-                var host = channel.RemoteHost;
-                var name = host.ToEndPoint() + ":" + host.Port + "-server" + _generation++;
-                Sender.Tell(
-                    Context.ActorOf(
-                        new Props(typeof (ServerFSM), new object[] {Self, channel}).WithDeploy(Deploy.Local), name));
+                var host = (IPEndPoint)channel.RemoteAddress;
+                var name = WebUtility.UrlEncode(host + ":" + host.Port + "-server" + _generation++);
+                var fsm = Context.ActorOf(
+                    Props.Create(() => new ServerFSM(Self, channel)).WithDeploy(Deploy.Local), name);
+                _log.Debug("Sending FSM {0} to {1}", fsm, Sender);
+                Sender.Tell(fsm);
                 return;
             }
             var nodeInfo = message as NodeInfo;
@@ -377,7 +385,7 @@ namespace Akka.Remote.TestKit
             }
             if (message is GetSockAddr)
             {
-                Sender.Tell(_connection.Local);
+                Sender.Tell(_connection.LocalAddress);
                 return;
             }
         }

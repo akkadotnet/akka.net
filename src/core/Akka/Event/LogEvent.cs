@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LogEvent.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -12,7 +12,7 @@ using Akka.Actor;
 namespace Akka.Event
 {
     /// <summary>
-    /// Represents a LogEvent in the system.
+    /// This class represents a logging event in the system.
     /// </summary>
     public abstract class LogEvent : INoSerializationVerificationNeeded
     {
@@ -26,39 +26,34 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Gets the timestamp of this LogEvent.
+        /// The timestamp that this event occurred.
         /// </summary>
-        /// <value>The timestamp.</value>
         public DateTime Timestamp { get; private set; }
 
         /// <summary>
-        /// Gets the thread of this LogEvent.
+        /// The thread where this event occurred.
         /// </summary>
-        /// <value>The thread.</value>
         public Thread Thread { get; private set; }
 
         /// <summary>
-        /// Gets the log source of this LogEvent.
+        /// The source that generated this event.
         /// </summary>
-        /// <value>The log source.</value>
         public string LogSource { get; protected set; }
 
         /// <summary>
-        /// Gets the log class of this LogEvent.
+        /// The type that generated this event.
         /// </summary>
-        /// <value>The log class.</value>
         public Type LogClass { get; protected set; }
 
         /// <summary>
-        /// Gets the message of this LogEvent.
+        /// The message associated with this event.
         /// </summary>
-        /// <value>The message.</value>
         public object Message { get; protected set; }
 
         /// <summary>
-        /// Gets the specified LogLevel for this LogEvent.
+        /// Retrieves the <see cref="Akka.Event.LogLevel" /> used to classify this event.
         /// </summary>
-        /// <returns>LogLevel.</returns>
+        /// <returns>The <see cref="Akka.Event.LogLevel" /> used to classify this event.</returns>
         public abstract LogLevel LogLevel();
 
         /// <summary>
@@ -71,4 +66,3 @@ namespace Akka.Event
         }
     }
 }
-

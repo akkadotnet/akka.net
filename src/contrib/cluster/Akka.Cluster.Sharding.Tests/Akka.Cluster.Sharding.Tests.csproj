@@ -60,6 +60,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ClusterShardingConfigSpec.cs" />
     <Compile Include="ClusterShardingFailureSpec.cs" />
     <Compile Include="ClusterShardingGracefulShutdownSpec.cs" />
     <Compile Include="ClusterShardingLeavingSpec.cs" />

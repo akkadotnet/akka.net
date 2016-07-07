@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AtomicCounter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -50,6 +50,14 @@ namespace Akka.Util.Internal
         }
 
         /// <summary>
+        /// Decrements the counter and returns the next value
+        /// </summary>
+        public int Decrement()
+        {
+            return Interlocked.Decrement(ref _value);
+        }
+
+        /// <summary>
         /// Atomically increments the counter by one.
         /// </summary>
         /// <returns>The original value.</returns>
@@ -67,6 +75,25 @@ namespace Akka.Util.Internal
         {
             var nextValue = Next();
             return nextValue;
+        }
+
+        /// <summary>
+        /// Atomically decrements the counter by one.
+        /// </summary>
+        /// <returns>The original value.</returns>
+        public int GetAndDecrement()
+        {
+            var previousValue = Decrement();
+            return previousValue + 1;
+        }
+
+        /// <summary>
+        /// Atomically decrements the counter by one.
+        /// </summary>
+        /// <returns>The new value.</returns>
+        public int DecrementAndGet()
+        {
+            return Decrement();
         }
 
         /// <summary>
@@ -98,6 +125,24 @@ namespace Akka.Util.Internal
         public void Reset()
         {
             Interlocked.Exchange(ref _value, 0);
+        }
+
+        /// <summary>
+        /// Returns current counter value and sets a new value on it's place in one operation.
+        /// </summary>
+        public int GetAndSet(int value)
+        {
+            return Interlocked.Exchange(ref _value, value);
+        }
+
+        /// <summary>
+        /// Compares current counter value with provided <paramref name="expected"/> value,
+        /// and sets it to <paramref name="newValue"/> if compared values where equal.
+        /// Returns true if replacement has succeed.
+        /// </summary>
+        public bool CompareAndSet(int expected, int newValue)
+        {
+            return Interlocked.CompareExchange(ref _value, newValue, expected) != _value;
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSelectionSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -34,6 +34,15 @@ namespace Akka.Tests.Actor
         public void Can_resolve_child_path()
         {
             var selection = Sys.ActorSelection("user/test");
+            selection.Tell("hello");
+            ExpectMsg("hello");
+        }
+
+        [Fact]
+        public void Can_resolve_absolute_path()
+        {
+            var actorPath = new RootActorPath(TestActor.Path.Address) / "user" / "test";
+            var selection = Sys.ActorSelection(actorPath);
             selection.Tell("hello");
             ExpectMsg("hello");
         }

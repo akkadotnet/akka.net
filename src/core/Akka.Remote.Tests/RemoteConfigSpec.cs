@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteConfigSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -52,7 +52,7 @@ namespace Akka.Remote.Tests
             Assert.Equal(typeof(HeliosTcpTransport), Type.GetType(remoteSettings.Transports.Head().TransportClass));
             Assert.Equal(typeof(PhiAccrualFailureDetector), Type.GetType(remoteSettings.WatchFailureDetectorImplementationClass));
             Assert.Equal(TimeSpan.FromSeconds(1), remoteSettings.WatchHeartBeatInterval);
-            Assert.Equal(TimeSpan.FromSeconds(3), remoteSettings.WatchHeartbeatExpectedResponseAfter);
+            Assert.Equal(TimeSpan.FromSeconds(1), remoteSettings.WatchHeartbeatExpectedResponseAfter);
             Assert.Equal(TimeSpan.FromSeconds(1), remoteSettings.WatchUnreachableReaperInterval);
             Assert.Equal(10, remoteSettings.WatchFailureDetectorConfig.GetDouble("threshold"));
             Assert.Equal(200, remoteSettings.WatchFailureDetectorConfig.GetDouble("max-sample-size"));
@@ -94,8 +94,9 @@ namespace Akka.Remote.Tests
             Assert.True(s.TcpKeepAlive);
             Assert.True(s.TcpReuseAddr);
             Assert.True(string.IsNullOrEmpty(c.GetString("hostname")));
-            Assert.Equal(1, s.ServerSocketWorkerPoolSize);
-            Assert.Equal(1, s.ClientSocketWorkerPoolSize);
+            Assert.Equal(2, s.ServerSocketWorkerPoolSize);
+            Assert.Equal(2, s.ClientSocketWorkerPoolSize);
+            Assert.False(s.BackwardsCompatibilityModeEnabled);
         }
 
         [Fact]
@@ -106,17 +107,17 @@ namespace Akka.Remote.Tests
             // server-socket-worker-pool
             {
                 var pool = c.GetConfig("server-socket-worker-pool");
-                Assert.Equal(1, pool.GetInt("pool-size-min"));
+                Assert.Equal(2, pool.GetInt("pool-size-min"));
                 Assert.Equal(1.0d, pool.GetDouble("pool-size-factor"));
-                Assert.Equal(1, pool.GetInt("pool-size-max"));
+                Assert.Equal(2, pool.GetInt("pool-size-max"));
             }
 
             //client-socket-worker-pool
             {
                 var pool = c.GetConfig("client-socket-worker-pool");
-                Assert.Equal(1, pool.GetInt("pool-size-min"));
+                Assert.Equal(2, pool.GetInt("pool-size-min"));
                 Assert.Equal(1.0d, pool.GetDouble("pool-size-factor"));
-                Assert.Equal(1, pool.GetInt("pool-size-max"));
+                Assert.Equal(2, pool.GetInt("pool-size-max"));
             }
         }
 

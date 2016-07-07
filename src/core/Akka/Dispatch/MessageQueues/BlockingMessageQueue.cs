@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BlockingMessageQueue.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -26,19 +26,6 @@ namespace Akka.Dispatch.MessageQueues
             set { _blockTimeOut = value; }
         }
 
-        public void Enqueue(Envelope envelope)
-        {
-            Monitor.TryEnter(_lock, BlockTimeOut);
-            try
-            {
-                LockedEnqueue(envelope);
-            }
-            finally
-            {
-                Monitor.Exit(_lock);
-            }
-        }
-
         public bool HasMessages
         {
             get { return Count > 0; }
@@ -60,6 +47,19 @@ namespace Akka.Dispatch.MessageQueues
             }
         }
 
+        public void Enqueue(IActorRef receiver, Envelope envelope)
+        {
+            Monitor.TryEnter(_lock, BlockTimeOut);
+            try
+            {
+                LockedEnqueue(envelope);
+            }
+            finally
+            {
+                Monitor.Exit(_lock);
+            }
+        }
+
         public bool TryDequeue(out Envelope envelope)
         {
             Monitor.TryEnter(_lock, BlockTimeOut);
@@ -70,6 +70,15 @@ namespace Akka.Dispatch.MessageQueues
             finally
             {
                 Monitor.Exit(_lock);
+            }
+        }
+
+        public void CleanUp(IActorRef owner, IMessageQueue deadletters)
+        {
+            Envelope msg;
+            while (TryDequeue(out msg)) // lock gets acquired inside the TryDequeue method
+            {
+                deadletters.Enqueue(owner, msg);
             }
         }
 

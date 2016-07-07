@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Transport.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -190,7 +190,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// Marker type for whenever new actors / endpoints are associated with this <see cref="ActorSystem"/> via remoting.
     /// </summary>
-    public interface IAssociationEvent
+    public interface IAssociationEvent : INoSerializationVerificationNeeded
     {
 
     }

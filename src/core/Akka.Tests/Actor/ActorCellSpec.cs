@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCellSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
@@ -63,7 +63,7 @@ namespace Akka.Tests.Actor
             var actor = Sys.ActorOf(Props.Create(() => new DummyAsyncActor(autoResetEvent)));
             actor.Tell("hello");
             //ensure the message was received
-            autoResetEvent.WaitOne();
+            Assert.True(autoResetEvent.WaitOne(TimeSpan.FromSeconds(3)), "Timed out while waiting for autoreset event");
             var refCell = actor as ActorRefWithCell;
             var cell = refCell.Underlying as ActorCell;
             //wait while current message is not null (that is, receive is not yet completed/exited)

@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="IActorContext.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using Akka.Dispatch;
 
 namespace Akka.Actor
 {
@@ -38,7 +39,17 @@ namespace Akka.Actor
         /// Gets the <see cref="IActorRef"/> belonging to the current actor.
         /// </summary>
         IActorRef Self { get; }
+
+
+        /// <summary>
+        /// The <see cref="Props"/> used to originally create this <see cref="IActorRef"/>
+        /// </summary>
         Props Props { get; }
+
+        /// <summary>
+        /// The dispatcher this actor is running on
+        /// </summary>
+        MessageDispatcher Dispatcher { get; }
 
         /// <summary>
         /// Gets the <see cref="IActorRef"/> of the actor who sent the current message.

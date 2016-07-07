@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Futures.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -95,15 +96,20 @@ namespace Akka.Actor
     /// </summary>
     internal sealed class PromiseActorRef : MinimalActorRef
     {
-        public PromiseActorRef(IActorRefProvider provider, TaskCompletionSource<object> result, string mcn)
+        /// <summary>
+        /// Can't access constructor directly - use <see cref="Apply"/> instead.
+        /// </summary>
+        private PromiseActorRef(IActorRefProvider provider, TaskCompletionSource<object> promise, string mcn)
         {
             _provider = provider;
-            Result = result;
+            _promise = promise;
             _mcn = mcn;
         }
 
         private readonly IActorRefProvider _provider;
-        public readonly TaskCompletionSource<object> Result;
+        private readonly TaskCompletionSource<object> _promise;
+
+        public Task<object> Result => _promise.Task;
 
         /// <summary>
         /// This is necessary for weaving the PromiseActorRef into the asked message, i.e. the replyTo pattern.
@@ -184,28 +190,28 @@ namespace Akka.Actor
 
         private static readonly Status.Failure ActorStopResult = new Status.Failure(new ActorKilledException("Stopped"));
 
+        // use a static delegate to avoid allocations
+        private static readonly Action<object> CancelAction = o => ((TaskCompletionSource<object>)o).TrySetCanceled();
+
         public static PromiseActorRef Apply(IActorRefProvider provider, TimeSpan timeout, object targetName,
             string messageClassName, IActorRef sender = null)
         {
             sender = sender ?? ActorRefs.NoSender;
             var result = new TaskCompletionSource<object>();
             var a = new PromiseActorRef(provider, result, messageClassName);
-            var scheduler = provider.Guardian.Underlying.System.Scheduler.Advanced;
-            var c = new Cancelable(scheduler, timeout);
-            scheduler.ScheduleOnce(timeout, () => result.TrySetResult(new Status.Failure(new AskTimeoutException(
-                string.Format("Ask timed out on [{0}] after [{1} ms]. Sender[{2}] sent message of type {3}.", targetName, timeout.TotalMilliseconds, sender, messageClassName)))),
-                c);
+            var cancellationSource = new CancellationTokenSource();
+            cancellationSource.Token.Register(CancelAction, result);
+            cancellationSource.CancelAfter(timeout);
+
+            //var scheduler = provider.Guardian.Underlying.System.Scheduler.Advanced;
+            //var c = new Cancelable(scheduler, timeout);
+            //scheduler.ScheduleOnce(timeout, () => result.TrySetResult(new Status.Failure(new AskTimeoutException(
+            //    string.Format("Ask timed out on [{0}] after [{1} ms]. Sender[{2}] sent message of type {3}.", targetName, timeout.TotalMilliseconds, sender, messageClassName)))),
+            //    c);
 
             result.Task.ContinueWith(r =>
             {
-                try
-                {
-                    a.Stop();
-                }
-                finally
-                {
-                    c.Cancel(false);
-                }
+                a.Stop();
             }, TaskContinuationOptions.ExecuteSynchronously);
 
             return a;
@@ -214,14 +220,15 @@ namespace Akka.Actor
         #endregion
 
         //TODO: ActorCell.emptyActorRefSet ?
-        private readonly AtomicReference<HashSet<IActorRef>> _watchedByDoNotCallMeDirectly = new AtomicReference<HashSet<IActorRef>>();
+        // Aaronontheweb: using the ImmutableHashSet.Empty for now
+        private readonly AtomicReference<ImmutableHashSet<IActorRef>> _watchedByDoNotCallMeDirectly = new AtomicReference<ImmutableHashSet<IActorRef>>(ImmutableHashSet<IActorRef>.Empty);
 
-        private HashSet<IActorRef> WatchedBy
+        private ImmutableHashSet<IActorRef> WatchedBy
         {
-            get { return _watchedByDoNotCallMeDirectly; }
+            get { return _watchedByDoNotCallMeDirectly.Value; }
         }
 
-        private bool UpdateWatchedBy(HashSet<IActorRef> oldWatchedBy, HashSet<IActorRef> newWatchedBy)
+        private bool UpdateWatchedBy(ImmutableHashSet<IActorRef> oldWatchedBy, ImmutableHashSet<IActorRef> newWatchedBy)
         {
             return _watchedByDoNotCallMeDirectly.CompareAndSet(oldWatchedBy, newWatchedBy);
         }
@@ -232,7 +239,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Returns false if the <see cref="Result"/> is already completed.
+        /// Returns false if the <see cref="_promise"/> is already completed.
         /// </summary>
         private bool AddWatcher(IActorRef watcher)
         {
@@ -240,7 +247,7 @@ namespace Akka.Actor
             {
                 return false;
             }
-            return UpdateWatchedBy(WatchedBy, WatchedBy.CopyAndAdd(watcher)) || AddWatcher(watcher);
+            return UpdateWatchedBy(WatchedBy, WatchedBy.Add(watcher)) || AddWatcher(watcher);
         }
 
         private void RemoveWatcher(IActorRef watcher)
@@ -249,21 +256,21 @@ namespace Akka.Actor
             {
                 return;
             }
-            if (!UpdateWatchedBy(WatchedBy, WatchedBy.CopyAndRemove(watcher))) RemoveWatcher(watcher);
+            if (!UpdateWatchedBy(WatchedBy, WatchedBy.Remove(watcher))) RemoveWatcher(watcher);
         }
 
-        private HashSet<IActorRef> ClearWatchers()
+        private ImmutableHashSet<IActorRef> ClearWatchers()
         {
             //TODO: ActorCell.emptyActorRefSet ?
-            if (WatchedBy == null) return new HashSet<IActorRef>();
+            if (WatchedBy == null || WatchedBy.IsEmpty) return ImmutableHashSet<IActorRef>.Empty;
             if (!UpdateWatchedBy(WatchedBy, null)) return ClearWatchers();
             else return WatchedBy;
         }
 
         private object State
         {
-            get { return _stateDoNotCallMeDirectly; }
-            set { _stateDoNotCallMeDirectly = value; }
+            get { return _stateDoNotCallMeDirectly.Value; }
+            set { _stateDoNotCallMeDirectly.Value = value; }
         }
 
         private bool UpdateState(object oldState, object newState)
@@ -327,30 +334,24 @@ namespace Akka.Actor
 
         protected override void TellInternal(object message, IActorRef sender)
         {
-            if (message is ISystemMessage)
-            {
-                SendSystemMessage(message as ISystemMessage); 
-                return;
-            }
-
             if (State is Stopped || State is StoppedWithPath) Provider.DeadLetters.Tell(message);
             else
             {
-                if(message == null) throw new InvalidMessageException();
-                var wrappedMessage = message;
-                if (!(message is Status.Success || message is Status.Failure))
-                {
-                    wrappedMessage = new Status.Success(message);
-                }
-                if (!(Result.TrySetResult(wrappedMessage)))
+                if (message == null) throw new InvalidMessageException("Message is null");
+                // @Aaronontheweb note: not using any of the Status stuff here. Seems like it's extraneous in CLR
+                //var wrappedMessage = message;
+                //if (!(message is Status.Success || message is Status.Failure))
+                //{
+                //    wrappedMessage = new Status.Success(message);
+                //}
+                if (!(_promise.TrySetResult(message)))
                     Provider.DeadLetters.Tell(message);
             }
         }
 
-        //TODO: isn't SendSystemMessage supposed to be a part of ActorRef? Why isn't it overridable?
-        private void SendSystemMessage(ISystemMessage message)
+        public override void SendSystemMessage(ISystemMessage message)
         {
-            if(message is Terminate) Stop();
+            if (message is Terminate) Stop();
             else if (message is DeathWatchNotification)
             {
                 var dw = message as DeathWatchNotification;
@@ -359,12 +360,12 @@ namespace Akka.Actor
             else if (message is Watch)
             {
                 var watch = message as Watch;
-                if (watch.Watchee == this)
+                if (Equals(watch.Watchee, this))
                 {
                     if (!AddWatcher(watch.Watcher))
                     {
                         // ➡➡➡ NEVER SEND THE SAME SYSTEM MESSAGE OBJECT TO TWO ACTORS ⬅⬅⬅
-                        watch.Watcher.Tell(new DeathWatchNotification(watch.Watchee, existenceConfirmed: true,
+                        watch.Watcher.SendSystemMessage(new DeathWatchNotification(watch.Watchee, existenceConfirmed: true,
                             addressTerminated: false));
                     }
                     else
@@ -377,62 +378,66 @@ namespace Akka.Actor
             else if (message is Unwatch)
             {
                 var unwatch = message as Unwatch;
-                if(unwatch.Watchee == this && unwatch.Watcher != this) RemoveWatcher(unwatch.Watcher);
+                if (Equals(unwatch.Watchee, this) && !Equals(unwatch.Watcher, this)) RemoveWatcher(unwatch.Watcher);
                 else Console.WriteLine("BUG: illegal Unwatch({0},{1}) for {2}", unwatch.Watchee, unwatch.Watcher, this);
             }
-            else { }
         }
 
         public override void Stop()
         {
-            Action ensureCompleted = () =>
+            while (true)
             {
-                Result.TrySetResult(ActorStopResult);
-                var watchers = ClearWatchers();
-                if (watchers.Any())
+                var state = State;
+                // if path was never queried nobody can possibly be watching us, so we don't have to publish termination either
+                if (state == null)
                 {
-                    foreach (var watcher in watchers)
+                    if (UpdateState(null, Stopped.Instance)) StopEnsureCompleted();
+                    else continue;
+                }
+                else if (state is ActorPath)
+                {
+                    var p = state as ActorPath;
+                    if (UpdateState(p, new StoppedWithPath(p)))
                     {
-                        watcher.Tell(new DeathWatchNotification(watcher, existenceConfirmed: true,
-                            addressTerminated: false));
+                        try
+                        {
+                            StopEnsureCompleted();
+                        }
+                        finally
+                        {
+                            Provider.UnregisterTempActor(p);
+                        }
+                    }
+                    else
+                    {
+                        continue;
                     }
                 }
-            };
+                else if (state is Stopped || state is StoppedWithPath)
+                {
+                    //already stopped
+                }
+                else if (state is Registering)
+                {
+                    //spin until registration is completed before stopping
+                    continue;
+                }
+                break;
+            }
+        }
 
-            var state = State;
-            // if path was never queried nobody can possibly be watching us, so we don't have to publish termination either
-            if (state == null)
+        private void StopEnsureCompleted()
+        {
+            _promise.TrySetResult(ActorStopResult);
+            var watchers = ClearWatchers();
+            if (watchers.Any())
             {
-                if (UpdateState(null, Stopped.Instance)) ensureCompleted();
-                else Stop();
-            }
-            else if (state is ActorPath)
-            {
-                var p = state as ActorPath;
-                if (UpdateState(p, new StoppedWithPath(p)))
+                foreach (var watcher in watchers)
                 {
-                    try
-                    {
-                        ensureCompleted();
-                    }
-                    finally
-                    {
-                        Provider.UnregisterTempActor(p);
-                    }
+                    watcher.AsInstanceOf<IInternalActorRef>()
+                        .SendSystemMessage(new DeathWatchNotification(watcher, existenceConfirmed: true,
+                            addressTerminated: false));
                 }
-                else
-                {
-                    Stop();
-                }
-            }
-            else if (state is Stopped || state is StoppedWithPath)
-            {
-                //already stopped
-            }
-            else if (state is Registering)
-            {
-                //spin until registration is completed before stopping
-                Stop();
             }
         }
     }
