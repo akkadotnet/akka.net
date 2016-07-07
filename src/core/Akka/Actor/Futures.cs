@@ -27,17 +27,37 @@ namespace Akka.Actor
         //when asking from outside of an actor, we need to pass a system, so the FutureActor can register itself there and be resolvable for local and remote calls
         public static Task<object> Ask(this ICanTell self, object message, TimeSpan? timeout = null)
         {
-            return self.Ask<object>(message, timeout);
+            return self.Ask<object>(message, timeout, CancellationToken.None);
+        }
+
+        public static Task<object> Ask(this ICanTell self, object message, CancellationToken cancellationToken)
+        {
+            return self.Ask<object>(message, null, cancellationToken);
+        }
+
+        public static Task<object> Ask(this ICanTell self, object message, TimeSpan? timeout, CancellationToken cancellationToken)
+        {
+            return self.Ask<object>(message, timeout, cancellationToken);
         }
 
         public static Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout = null)
+        {
+            return self.Ask<T>(message, timeout, CancellationToken.None);
+        }
+
+        public static Task<T> Ask<T>(this ICanTell self, object message, CancellationToken cancellationToken)
+        {
+            return self.Ask<T>(message, null, cancellationToken);
+        }
+
+        public static Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout, CancellationToken cancellationToken)
         {
             IActorRefProvider provider = ResolveProvider(self);
             if (provider == null)
                 throw new NotSupportedException("Unable to resolve the target Provider");
 
             ResolveReplyTo();
-            return Ask(self, message, provider, timeout).CastTask<object, T>();
+            return Ask(self, message, provider, timeout, cancellationToken).CastTask<object, T>();
         }
 
         internal static IActorRef ResolveReplyTo()
@@ -63,19 +83,28 @@ namespace Akka.Actor
         }
 
         private static Task<object> Ask(ICanTell self, object message, IActorRefProvider provider,
-            TimeSpan? timeout)
+            TimeSpan? timeout, CancellationToken cancellationToken)
         {
             var result = new TaskCompletionSource<object>();
 
-            timeout = timeout ?? provider.Settings.AskTimeout;
+            var t = timeout.GetValueOrDefault(provider.Settings.AskTimeout);
 
-            if (timeout != Timeout.InfiniteTimeSpan && timeout.Value > default(TimeSpan))
+            if (t != Timeout.InfiniteTimeSpan && t > default(TimeSpan))
             {
                 var cancellationSource = new CancellationTokenSource();
                 cancellationSource.Token.Register(() => result.TrySetCanceled());
-                cancellationSource.CancelAfter(timeout.Value);
+                cancellationSource.CancelAfter(t);
+                result.Task.ContinueWith(_ => cancellationSource.Dispose(), 
+                    CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
             }
 
+            if (cancellationToken.CanBeCanceled)
+            {
+                var ctr = cancellationToken.Register(() => result.TrySetCanceled());
+                result.Task.ContinueWith(_ => ctr.Dispose(), 
+                    CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+            }                
+        
             //create a new tempcontainer path
             ActorPath path = provider.TempPath();
             //callback to unregister from tempcontainer
