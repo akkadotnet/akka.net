@@ -1,3 +1,6 @@
+#### 1.1.1 July 06 2016 ####
+**Place holder for vNext**
+
 #### 1.1.0 July 05 2016 ####
 **Feature Release for Akka.NET**
 
