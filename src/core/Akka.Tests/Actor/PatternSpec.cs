@@ -8,6 +8,7 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Event;
 using Akka.TestKit;
 using Xunit;
 
@@ -28,7 +29,6 @@ namespace Akka.Tests.Actor
 
             //assert
             Assert.True(result.Result);
-
         }
 
         [Fact]
@@ -38,7 +38,6 @@ namespace Akka.Tests.Actor
             var target = Sys.ActorOf<TargetActor>();
 
             //act
-            
 
             //assert
             Assert.True(await target.GracefulStop(TimeSpan.FromSeconds(5)));
@@ -63,7 +62,21 @@ namespace Akka.Tests.Actor
                 var result = task.Result;
             });
             latch.Open();
+        }
 
+        [Fact]
+        public async Task GracefulStop_must_not_send_unnecessary_Deadletter_bug_2157()
+        {
+            //arrange
+            var target = Sys.ActorOf<TargetActor>();
+            Sys.EventStream.Subscribe(TestActor, typeof(DeadLetter));
+
+            //act
+            var stopped = await target.GracefulStop(TimeSpan.FromSeconds(5));
+
+            //assert
+            Assert.True(stopped);
+            ExpectNoMsg(TimeSpan.Zero);
         }
 
         #region Actors
