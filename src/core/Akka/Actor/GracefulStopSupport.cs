@@ -49,19 +49,29 @@ namespace Akka.Actor
             target.Tell(stopMessage, ActorRefs.NoSender);
             return promiseRef.Result.ContinueWith(t =>
             {
-                var returnResult = false;
-                PatternMatch.Match(t.Result)
-                    .With<Terminated>(terminated =>
-                    {
-                        returnResult = (terminated.ActorRef.Path.Equals(target.Path));
-                    })
-                    .Default(m =>
-                    {
-                        returnResult = false;
-                    });
-
-                internalTarget.SendSystemMessage(new Unwatch(internalTarget, promiseRef));
-                return returnResult;
+                if (t.Status == TaskStatus.RanToCompletion)
+                {
+                    var returnResult = false;
+                    PatternMatch.Match(t.Result)
+                        .With<Terminated>(terminated =>
+                        {
+                            returnResult = (terminated.ActorRef.Path.Equals(target.Path));
+                        })
+                        .Default(m =>
+                        {
+                            internalTarget.SendSystemMessage(new Unwatch(internalTarget, promiseRef));
+                            returnResult = false;
+                        });
+                    return returnResult;
+                }
+                else
+                {
+                    internalTarget.SendSystemMessage(new Unwatch(internalTarget, promiseRef));
+                    if (t.Status == TaskStatus.Canceled)
+                        throw new TaskCanceledException();
+                    else
+                        throw t.Exception;
+                }
             }, TaskContinuationOptions.ExecuteSynchronously);
         }
     }
