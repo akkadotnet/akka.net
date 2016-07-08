@@ -8,6 +8,7 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Event;
 using Akka.TestKit;
 using Xunit;
 
@@ -21,6 +22,7 @@ namespace Akka.Tests.Actor
         {
             //arrange
             var target = Sys.ActorOf<TargetActor>();
+            Sys.EventStream.Subscribe(TestActor, typeof(DeadLetter));
 
             //act
             var result = target.GracefulStop(TimeSpan.FromSeconds(5));
@@ -28,7 +30,7 @@ namespace Akka.Tests.Actor
 
             //assert
             Assert.True(result.Result);
-
+            ExpectNoMsg(); // there should be no deadletter.
         }
 
         [Fact]
@@ -38,7 +40,6 @@ namespace Akka.Tests.Actor
             var target = Sys.ActorOf<TargetActor>();
 
             //act
-            
 
             //assert
             Assert.True(await target.GracefulStop(TimeSpan.FromSeconds(5)));
@@ -63,7 +64,6 @@ namespace Akka.Tests.Actor
                 var result = task.Result;
             });
             latch.Open();
-
         }
 
         #region Actors
