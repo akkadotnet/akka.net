@@ -33,7 +33,7 @@ namespace Akka.Actor
         /// <param name="message">The message.</param>
         protected override sealed bool Receive(object message)
         {
-            MethodInfo method = GetType().GetMethod("Handle", new[] {message.GetType()});
+            MethodInfo method = GetType().GetTypeInfo().GetMethod("Handle", new[] {message.GetType()});
             if (method == null)
             {
                 return false;

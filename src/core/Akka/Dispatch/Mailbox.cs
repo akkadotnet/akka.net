@@ -338,10 +338,12 @@ namespace Akka.Dispatch
                 msg.Unlink();
                 DebugPrint("{0} processing system message {1} with {2}", Actor.Self, msg, string.Join(",", Actor.GetChildren()));
                 // we know here that SystemInvoke ensures that only "fatal" exceptions get rethrown
+#if UNSAFE_THREADING
                 try
                 {
                     Actor.SystemInvoke(msg);
                 }
+
                 catch (ThreadInterruptedException ex)
                 // thrown only if thread is explicitly interrupted, which should never happen
                 {
@@ -351,6 +353,9 @@ namespace Akka.Dispatch
                 {
                     interruption = ex;
                 }
+#else 
+                Actor.SystemInvoke(msg);
+#endif
 
                 // don't ever execute normal message when system message present!
                 if (messageList.IsEmpty && !IsClosed())
@@ -371,6 +376,7 @@ namespace Akka.Dispatch
                 {
                     dlm.SystemEnqueue(Actor.Self, msg);
                 }
+#if UNSAFE_THREADING
                 catch (ThreadInterruptedException ex)
                 // thrown only if thread is explicitly interrupted, which should never happen
                 {
@@ -380,6 +386,7 @@ namespace Akka.Dispatch
                 {
                     interruption = ex;
                 }
+#endif
                 catch (Exception ex)
                 {
                     Actor.System.EventStream.Publish(new Error(ex, GetType().FullName, GetType(), $"error while enqueuing {msg} to deadletters: {ex.Message}"));

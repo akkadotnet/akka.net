@@ -14,11 +14,15 @@ namespace Akka.Streams.Implementation
 {
     public interface ISpecViolation { }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public class SignalThrewException : IllegalStateException, ISpecViolation
     {
         public SignalThrewException(string message, Exception cause) : base(message, cause) { }
+#if SERIALIZATION
         protected SignalThrewException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+#endif
     }
 
     public static class ReactiveStreamsCompliance

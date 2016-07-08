@@ -144,14 +144,18 @@ namespace Akka.Streams.Stage
 
         internal interface IAndThen { }
 
+#if SERIALIZATION
         [Serializable]
+#endif
         internal sealed class Finish : IAndThen
         {
             public static readonly Finish Instance = new Finish();
             private Finish() { }
         }
 
+#if SERIALIZATION
         [Serializable]
+#endif
         internal sealed class Become<TIn, TOut> : IAndThen
         {
             public readonly StageState<TIn, TOut> State;
@@ -162,7 +166,9 @@ namespace Akka.Streams.Stage
             }
         }
 
+#if SERIALIZATION
         [Serializable]
+#endif
         internal sealed class Stay : IAndThen
         {
             public static readonly Stay Instance = new Stay();

@@ -13,7 +13,9 @@ using Reactive.Streams;
 
 namespace Akka.Streams.Actors
 {
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class OnSubscribe : INoSerializationVerificationNeeded
     {
         public readonly ISubscription Subscription;
@@ -26,7 +28,9 @@ namespace Akka.Streams.Actors
 
     public interface IActorSubscriberMessage : INoSerializationVerificationNeeded { }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class OnNext : IActorSubscriberMessage
     {
         public readonly object Element;
@@ -37,7 +41,9 @@ namespace Akka.Streams.Actors
         }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class OnError : IActorSubscriberMessage
     {
         public readonly Exception Cause;
@@ -48,7 +54,9 @@ namespace Akka.Streams.Actors
         }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class OnComplete : IActorSubscriberMessage
     {
         public static readonly OnComplete Instance = new OnComplete();
@@ -268,7 +276,9 @@ namespace Akka.Streams.Actors
 
     public sealed class ActorSubscriberState : ExtensionIdProvider<ActorSubscriberState>, IExtension
     {
+#if SERIALIZATION
         [Serializable]
+#endif
         public sealed class State
         {
             public readonly ISubscription Subscription;

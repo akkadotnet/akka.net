@@ -28,19 +28,21 @@ namespace Akka.Dispatch
 
         internal static ThreadType ConfigureThreadType(string threadType)
         {
-            return string.Compare(threadType, ThreadType.Foreground.ToString(), StringComparison.InvariantCultureIgnoreCase) == 0 ?
+            return string.Compare(threadType, ThreadType.Foreground.ToString(), StringComparison.OrdinalIgnoreCase) == 0 ?
                 ThreadType.Foreground : ThreadType.Background;
         }
 
+#if UNSAFE_THREADING
         internal static ApartmentState GetApartmentState(Config cfg)
         {
             var s = cfg.GetString("apartment");
-            return string.Compare(s, "sta", StringComparison.InvariantCultureIgnoreCase) == 0
+            return string.Compare(s, "sta", StringComparison.OrdinalIgnoreCase) == 0
                 ? ApartmentState.STA
-                : string.Compare(s, "mta", StringComparison.InvariantCultureIgnoreCase) == 0
+                : string.Compare(s, "mta", StringComparison.OrdinalIgnoreCase) == 0
                     ? ApartmentState.MTA
                     : ApartmentState.Unknown;
         }
+#endif
 
         /// <summary>
         /// Default settings for <see cref="SingleThreadDispatcher"/> instances.

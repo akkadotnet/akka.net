@@ -24,7 +24,9 @@ namespace Akka.Persistence.Sql.Common.Queries
     /// set of events not based on any partition key. Therefore query request don't need to contain 
     /// partition id of the persistent actor.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
     public sealed class Query: IEquatable<Query>
     {
@@ -73,7 +75,9 @@ namespace Akka.Persistence.Sql.Common.Queries
     /// Message send back from SQL-based journal to <see cref="Query"/> sender, 
     /// when the query execution has been completed and result is returned.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
     public sealed class QueryResponse : IQueryReply, IEquatable<QueryResponse>
     {
@@ -116,7 +120,9 @@ namespace Akka.Persistence.Sql.Common.Queries
     /// <summary>
     /// Message send back from SQL-based journal, when <see cref="Query"/> has been successfully responded.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
     public sealed class QuerySuccess : IQueryReply, IEquatable<QuerySuccess>
     {
@@ -153,7 +159,9 @@ namespace Akka.Persistence.Sql.Common.Queries
     /// <summary>
     /// Message send back from SQL-based journal to <see cref="Query"/> sender, when the query execution has failed.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     [Obsolete("Existing SQL persistence query will be obsoleted, once Akka.Persistence.Query will came out")]
     public sealed class QueryFailure : IQueryReply, IEquatable<QueryFailure>
     {

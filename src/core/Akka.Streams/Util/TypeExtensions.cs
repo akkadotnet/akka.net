@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Reflection;
 using Reactive.Streams;
 
 namespace Akka.Streams.Util
@@ -17,9 +18,9 @@ namespace Akka.Streams.Util
         {
             return
                 type
-                    .GetInterfaces()
-                    .Single(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof (ISubscriber<>))
-                    .GetGenericArguments()
+                    .GetTypeInfo().GetInterfaces()
+                    .Single(i => i.GetTypeInfo().IsGenericType && i.GetGenericTypeDefinition() == typeof (ISubscriber<>))
+                    .GetTypeInfo().GetGenericArguments()
                     .First();
         }
 
@@ -27,9 +28,9 @@ namespace Akka.Streams.Util
         {
             return
                 type
-                    .GetInterfaces()
-                    .Single(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof (IPublisher<>))
-                    .GetGenericArguments()
+                    .GetTypeInfo().GetInterfaces()
+                    .Single(i => i.GetTypeInfo().IsGenericType && i.GetGenericTypeDefinition() == typeof (IPublisher<>))
+                    .GetTypeInfo().GetGenericArguments()
                     .First();
         }
     }

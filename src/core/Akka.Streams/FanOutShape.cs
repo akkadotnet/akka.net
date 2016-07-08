@@ -23,7 +23,9 @@ namespace Akka.Streams
             string Name { get; }
         }
 
+#if SERIALIZATION
         [Serializable]
+#endif
         public sealed class InitName : IInit
         {
             public InitName(string name)
@@ -40,7 +42,9 @@ namespace Akka.Streams
             public string Name { get; }
         }
 
+#if SERIALIZATION
         [Serializable]
+#endif
         public sealed class InitPorts : IInit
         {
             public InitPorts(Inlet<TIn> inlet, IEnumerable<Outlet> outlets)

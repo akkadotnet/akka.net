@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Runtime.Serialization;
 using Xunit.Sdk;
 
 namespace Akka.TestKit.Xunit2.Internals
@@ -23,10 +22,12 @@ namespace Akka.TestKit.Xunit2.Internals
             _args = args;
         }
 
-        protected AkkaEqualException(SerializationInfo info, StreamingContext context)
+#if SERIALIZATION
+        protected AkkaEqualException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context)
             : base(info, context)
         {
         }
+#endif
 
         public override string Message
         {

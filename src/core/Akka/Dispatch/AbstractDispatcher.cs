@@ -191,12 +191,16 @@ namespace Akka.Dispatch
     /// </summary>
     internal sealed class ThreadPoolExecutorServiceFactory : ExecutorServiceConfigurator
     {
+#if UNSAFE_THREADING
         private static readonly bool IsFullTrusted = AppDomain.CurrentDomain.IsFullyTrusted;
+#endif
 
         public override ExecutorService Produce(string id)
         {
+#if UNSAFE_THREADING
             if (IsFullTrusted)
                 return new FullThreadPoolExecutorServiceImpl(id);
+#endif
             return new PartialTrustThreadPoolExecutorService(id);
         }
 

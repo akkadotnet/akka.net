@@ -171,7 +171,7 @@ namespace Akka.Serialization
                 if (objectType == typeof (int) || objectType == typeof (float) || objectType == typeof (decimal))
                     return true;
 
-                if (typeof (ISurrogated).IsAssignableFrom(objectType))
+                if (typeof (ISurrogated).GetTypeInfo().IsAssignableFrom(objectType))
                     return true;
 
                 if (objectType == typeof (object))

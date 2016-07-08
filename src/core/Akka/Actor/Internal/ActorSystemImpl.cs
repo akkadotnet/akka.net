@@ -17,7 +17,7 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Serialization;
 using Akka.Util;
-
+using System.Reflection;
 
 namespace Akka.Actor.Internal
 {
@@ -172,7 +172,7 @@ namespace Akka.Actor.Internal
             foreach(var extensionFqn in _settings.Config.GetStringList("akka.extensions"))
             {
                 var extensionType = Type.GetType(extensionFqn);
-                if(extensionType == null || !typeof(IExtensionId).IsAssignableFrom(extensionType) || extensionType.IsAbstract || !extensionType.IsClass)
+                if(extensionType == null || !typeof(IExtensionId).GetTypeInfo().IsAssignableFrom(extensionType) || extensionType.GetTypeInfo().IsAbstract || !extensionType.GetTypeInfo().IsClass)
                 {
                     _log.Error("[{0}] is not an 'ExtensionId', skipping...", extensionFqn);
                     continue;
@@ -242,7 +242,7 @@ namespace Akka.Actor.Internal
 
         public override bool HasExtension(Type t)
         {
-            if(typeof(IExtension).IsAssignableFrom(t))
+            if(typeof(IExtension).GetTypeInfo().IsAssignableFrom(t))
             {
                 return _extensions.ContainsKey(t);
             }

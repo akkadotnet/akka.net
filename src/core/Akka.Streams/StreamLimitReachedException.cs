@@ -16,8 +16,10 @@ namespace Akka.Streams
         {
         }
 
+#if SERIALIZATION
         protected StreamLimitReachedException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
 }

@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.Serialization;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
@@ -962,9 +963,11 @@ namespace Akka.Streams.Implementation
             {
             }
 
+#if SERIALIZATION
             protected MaterializationPanicException(SerializationInfo info, StreamingContext context) : base(info, context)
             {
             }
+#endif
         }
 
         protected readonly IModule TopLevel;
@@ -1103,7 +1106,7 @@ namespace Akka.Streams.Implementation
                 GraphStageModule graphStageModule;
                 Type stageType;
                 if (((graphStageModule = submodule as GraphStageModule) != null) &&
-                    (stageType = graphStageModule.Stage.GetType()).IsGenericType &&
+                    (stageType = graphStageModule.Stage.GetType()).GetTypeInfo().IsGenericType &&
                     stageType.GetGenericTypeDefinition() == typeof(MaterializedValueSource<>))
                 {
                     var copy = new MaterializedValueSource<object>(graphStageModule.MaterializedValueComputation).CopySource();

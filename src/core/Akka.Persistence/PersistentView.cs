@@ -18,7 +18,9 @@ namespace Akka.Persistence
     /// To update a view with messages that have been written after handling this request, another <see cref="Update"/> 
     /// request must be sent to the view.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class Update
     {
         public Update()
@@ -53,7 +55,9 @@ namespace Akka.Persistence
         public long ReplayMax { get; private set; }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class ScheduledUpdate
     {
         public ScheduledUpdate(long replayMax)

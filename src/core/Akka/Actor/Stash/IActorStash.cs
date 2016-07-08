@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Reflection;
 
 namespace Akka.Actor
 {
@@ -32,7 +33,7 @@ namespace Akka.Actor
         /// </summary>
         public override bool CanBeAppliedTo(Type actorType)
         {
-            return typeof (IActorStash).IsAssignableFrom(actorType);
+            return typeof (IActorStash).GetTypeInfo().IsAssignableFrom(actorType);
         }
 
         /// <summary>

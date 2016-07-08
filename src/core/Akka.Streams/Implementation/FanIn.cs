@@ -286,7 +286,9 @@ namespace Akka.Streams.Implementation
 
     internal static class FanIn
     {
+#if SERIALIZATION
         [Serializable]
+#endif
         public struct OnError : INoSerializationVerificationNeeded
         {
             public readonly int Id;
@@ -299,7 +301,9 @@ namespace Akka.Streams.Implementation
             }
         }
 
+#if SERIALIZATION
         [Serializable]
+#endif
         public struct OnComplete : INoSerializationVerificationNeeded
         {
             public readonly int Id;
@@ -310,7 +314,9 @@ namespace Akka.Streams.Implementation
             }
         }
 
+#if SERIALIZATION
         [Serializable]
+#endif
         public struct OnNext : INoSerializationVerificationNeeded
         {
             public readonly int Id;
@@ -323,7 +329,9 @@ namespace Akka.Streams.Implementation
             }
         }
 
+#if SERIALIZATION
         [Serializable]
+#endif
         public struct OnSubscribe : INoSerializationVerificationNeeded
         {
             public readonly int Id;

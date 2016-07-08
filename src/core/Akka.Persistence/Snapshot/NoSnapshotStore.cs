@@ -33,10 +33,11 @@ namespace Akka.Persistence.Snapshot
             public NoSnapshotStoreException(string message, Exception innerException) : base(message, innerException)
             {
             }
-
+#if SERIALIZATION
             protected NoSnapshotStoreException(SerializationInfo info, StreamingContext context) : base(info, context)
             {
             }
+#endif
         }
 
         protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)

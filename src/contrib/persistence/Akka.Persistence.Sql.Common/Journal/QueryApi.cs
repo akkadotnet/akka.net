@@ -20,7 +20,9 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// Used by query-side. The journal will send <see cref="EventAppended"/> messages to
     /// the subscriber when <see cref="AsyncWriteJournal.WriteMessagesAsync"/> has been called.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class SubscribePersistenceId : ISubscriptionCommand
     {
         public readonly string PersistenceId;
@@ -31,7 +33,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class EventAppended
     {
         public readonly string PersistenceId;
@@ -48,14 +52,18 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// subscriber followed by <see cref="PersistenceIdAdded"/> messages when new persistenceIds
     /// are created.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class SubscribeAllPersistenceIds : ISubscriptionCommand
     {
         public static readonly SubscribeAllPersistenceIds Instance = new SubscribeAllPersistenceIds();
         private SubscribeAllPersistenceIds() { }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class CurrentPersistenceIds
     {
         public readonly IEnumerable<string> AllPersistenceIds;
@@ -66,7 +74,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class PersistenceIdAdded
     {
         public readonly string PersistenceId;
@@ -84,7 +94,9 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// Events are tagged by wrapping in <see cref="Tagged"/>
     /// via an <see cref="IEventAdapter"/>.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class SubscribeTag : ISubscriptionCommand
     {
         public readonly string Tag;
@@ -95,7 +107,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class TaggedEventAppended
     {
         public readonly string Tag;
@@ -106,7 +120,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class ReplayTaggedMessages
     {
         public readonly long FromOffset;
@@ -130,7 +146,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class ReplayedTaggedMessage : INoSerializationVerificationNeeded
     {
         public readonly IPersistentRepresentation Persistent;

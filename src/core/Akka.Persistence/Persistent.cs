@@ -214,7 +214,9 @@ namespace Akka.Persistence
         IPersistentRepresentation Update(long sequenceNr, string persistenceId, bool isDeleted, IActorRef sender, string writerGuid);
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public class Persistent : IPersistentRepresentation, IEquatable<IPersistentRepresentation>
     {
         public static readonly string Undefined = string.Empty;

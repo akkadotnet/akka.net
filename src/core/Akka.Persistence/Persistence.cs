@@ -14,6 +14,7 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Journal;
 using Akka.Util.Internal;
+using System.Reflection;
 
 namespace Akka.Persistence
 {
@@ -206,7 +207,7 @@ namespace Akka.Persistence
                 throw new ArgumentException(string.Format("Plugin class name must be defined in config property [{0}.class]", configPath));
             var pluginType = Type.GetType(pluginTypeName, true);
             var pluginDispatcherId = pluginConfig.GetString("plugin-dispatcher");
-            object[] pluginActorArgs = pluginType.GetConstructor(new[] {typeof (Config)}) != null ? new object[] {pluginConfig} : null;
+            object[] pluginActorArgs = pluginType.GetTypeInfo().GetConstructor(new[] {typeof (Config)}) != null ? new object[] {pluginConfig} : null;
             var pluginActorProps = new Props(pluginType, pluginActorArgs).WithDispatcher(pluginDispatcherId);
 
             return system.SystemActorOf(pluginActorProps, pluginActorName);

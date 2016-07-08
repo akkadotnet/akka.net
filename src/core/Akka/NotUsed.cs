@@ -15,7 +15,9 @@ namespace Akka
     /// used from the other language. An example use-case is the materialized value of an Akka Stream for cases
     /// where no result shall be returned from materialization.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class NotUsed : IEquatable<NotUsed>, IComparable<NotUsed>
     {
         public static readonly NotUsed Instance = new NotUsed();

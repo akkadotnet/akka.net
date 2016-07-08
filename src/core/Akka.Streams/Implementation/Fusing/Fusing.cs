@@ -17,6 +17,7 @@ using Atomic = Akka.Streams.Implementation.StreamLayout.Atomic;
 using Combine = Akka.Streams.Implementation.StreamLayout.Combine;
 using IMaterializedValueNode = Akka.Streams.Implementation.StreamLayout.IMaterializedValueNode;
 using Transform = Akka.Streams.Implementation.StreamLayout.Transform;
+using System.Reflection;
 
 namespace Akka.Streams.Implementation.Fusing
 {
@@ -440,7 +441,7 @@ namespace Akka.Streams.Implementation.Fusing
                             ? subMat[((Atomic) ms.Computation).Module]
                             : matNodeMapping[ms.Computation];
 
-                        var outputType = ms.Outlet.GetType().GetGenericArguments().First();
+                        var outputType = ms.Outlet.GetType().GetTypeInfo().GetGenericArguments().First();
                         var materializedValueSourceType = typeof(MaterializedValueSource<>).MakeGenericType(outputType);
                         var newSrc = (IMaterializedValueSource) Activator.CreateInstance(materializedValueSourceType, mapped, ms.Outlet);
                         var replacement = new CopiedModule(c.Shape, c.Attributes, newSrc.Module);
@@ -793,7 +794,7 @@ namespace Akka.Streams.Implementation.Fusing
             Type stageType;
             return copiedModule != null
                 && (graphStageModule = copiedModule.CopyOf as GraphStageModule) != null
-                && (stageType = graphStageModule.Stage.GetType()).IsGenericType
+                && (stageType = graphStageModule.Stage.GetType()).GetTypeInfo().IsGenericType
                 && stageType.GetGenericTypeDefinition() == typeof(MaterializedValueSource<>);
         }
 

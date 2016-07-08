@@ -18,7 +18,9 @@ namespace Akka.Persistence.Journal
     /// <summary>
     /// This exception is thrown when the replay inactivity exceeds a specified timeout.
     /// </summary>
+#if SERIALIZATION
     [Serializable]
+#endif
     public class AsyncReplayTimeoutException : AkkaException
     {
         /// <summary>
@@ -37,6 +39,7 @@ namespace Akka.Persistence.Journal
         {
         }
 
+#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncReplayTimeoutException"/> class.
         /// </summary>
@@ -46,9 +49,12 @@ namespace Akka.Persistence.Journal
             : base(info, context)
         {
         }
+#endif
     }
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public sealed class SetStore
     {
         public SetStore(IActorRef store)
@@ -67,7 +73,9 @@ namespace Akka.Persistence.Journal
 
         #region Internal Messages
 
+#if SERIALIZATION
         [Serializable]
+#endif
         public sealed class ReplayFailure
         {
             public ReplayFailure(Exception cause)
@@ -81,7 +89,9 @@ namespace Akka.Persistence.Journal
             public Exception Cause { get; private set; }
         }
 
+#if SERIALIZATION
         [Serializable]
+#endif
         public sealed class ReplaySuccess : IEquatable<ReplaySuccess>
         {
             public ReplaySuccess(long highestSequenceNr)
@@ -99,7 +109,9 @@ namespace Akka.Persistence.Journal
             }
         }
 
+#if SERIALIZATION
         [Serializable]
+#endif
         public sealed class WriteMessages
         {
             public WriteMessages(IEnumerable<AtomicWrite> messages)
@@ -110,7 +122,9 @@ namespace Akka.Persistence.Journal
             public AtomicWrite[] Messages { get; private set; }
         }
 
+#if SERIALIZATION
         [Serializable]
+#endif
         public sealed class ReplayMessages : IEquatable<ReplayMessages>
         {
             public ReplayMessages(string persistenceId, long fromSequenceNr, long toSequenceNr, long max)
@@ -137,7 +151,9 @@ namespace Akka.Persistence.Journal
             }
         }
 
+#if SERIALIZATION
         [Serializable]
+#endif
         public sealed class DeleteMessagesTo : IEquatable<DeleteMessagesTo>
         {
             public DeleteMessagesTo(string persistenceId, long toSequenceNr)

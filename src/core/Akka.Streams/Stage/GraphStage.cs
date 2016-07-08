@@ -230,7 +230,9 @@ namespace Akka.Streams.Stage
 
     internal static class TimerMessages
     {
+#if SERIALIZATION
         [Serializable]
+#endif
         public sealed class Scheduled
         {
             public readonly object TimerKey;
@@ -1531,12 +1533,16 @@ namespace Akka.Streams.Stage
     }
 
 
+#if SERIALIZATION
     [Serializable]
+#endif
     public class StageActorRefNotInitializedException : Exception
     {
         public static readonly StageActorRefNotInitializedException Instance = new StageActorRefNotInitializedException();
         private StageActorRefNotInitializedException() : base("You must first call getStageActorRef, to initialize the Actors behaviour") { }
+#if SERIALIZATION
         protected StageActorRefNotInitializedException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+#endif
     }
 
     /// <summary>

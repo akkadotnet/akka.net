@@ -326,7 +326,7 @@ namespace Akka.Tests.Pattern
     }
 
 
-    internal class TestException : ApplicationException
+    internal class TestException : Exception
     {
         public TestException( )
         {
@@ -342,10 +342,12 @@ namespace Akka.Tests.Pattern
         {
         }
 
+#if SERIALIZATION
         protected TestException( SerializationInfo info, StreamingContext context )
             : base( info, context )
         {
         }
+#endif
     }
 
 }
