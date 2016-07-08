@@ -63,6 +63,7 @@
     <Compile Include="Query\SqliteEventsByTagSpec.cs" />
     <Compile Include="Query\SqliteAllPersistenceIdsSpec.cs" />
     <Compile Include="Query\SqliteEventsByPersistenceIdSpec.cs" />
+    <Compile Include="SqliteConfigSpec.cs" />
     <Compile Include="SqliteJournalQuerySpec.cs" />
     <Compile Include="SqliteJournalSpec.cs" />
     <Compile Include="SqliteSnapshotStoreSpec.cs" />
