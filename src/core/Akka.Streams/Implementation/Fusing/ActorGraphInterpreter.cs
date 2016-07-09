@@ -8,6 +8,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Threading;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Pattern;
@@ -131,7 +133,7 @@ namespace Akka.Streams.Implementation.Fusing
             var offset = _assembly.ConnectionCount - _outputs.Length;
             for (int i = 0; i < _outputs.Length; i++)
             {
-                var outputType = _shape.Outlets[i].GetType().GetGenericArguments().First();
+                var outputType = _shape.Outlets[i].GetType().GetTypeInfo().GetGenericArguments().First();
                 var output = (ActorGraphInterpreter.IActorOutputBoundary) typeof(ActorGraphInterpreter.ActorOutputBoundary<>).Instantiate(outputType, Self, this, i);
                 _outputs[i] = output;
                 Interpreter.AttachDownstreamBoundary(i + offset, (GraphInterpreter.DownstreamBoundaryStageLogic) output);
@@ -352,7 +354,7 @@ namespace Akka.Streams.Implementation.Fusing
 
     internal class ActorGraphInterpreter : ActorBase
     {
-        #region messages
+#region messages
 
         public interface IBoundaryEvent : INoSerializationVerificationNeeded
         {
@@ -508,9 +510,9 @@ namespace Akka.Streams.Implementation.Fusing
             {
             }
         }
-        #endregion
+#endregion
 
-        #region internal classes
+#region internal classes
 
         public sealed class BoundaryPublisher<T> : ActorPublisher<T>
         {
@@ -579,7 +581,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         public class BatchingActorInputBoundary : GraphInterpreter.UpstreamBoundaryStageLogic
         {
-            #region OutHandler
+#region OutHandler
             private sealed class OutHandler : Stage.OutHandler
             {
                 private readonly BatchingActorInputBoundary _that;
@@ -610,7 +612,7 @@ namespace Akka.Streams.Implementation.Fusing
 
                 public override string ToString() => _that.ToString();
             }
-            #endregion
+#endregion
 
             private readonly int _size;
             private readonly int _id;
@@ -757,7 +759,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         public class ActorOutputBoundary<T> : GraphInterpreter.DownstreamBoundaryStageLogic, IActorOutputBoundary
         {
-            #region InHandler
+#region InHandler
             private sealed class InHandler : Stage.InHandler
             {
                 private readonly ActorOutputBoundary<T> _that;
@@ -782,7 +784,7 @@ namespace Akka.Streams.Implementation.Fusing
 
                 public override string ToString() => _that.ToString();
             }
-            #endregion
+#endregion
 
             private readonly IActorRef _actor;
             private readonly GraphInterpreterShell _shell;
@@ -901,7 +903,7 @@ namespace Akka.Streams.Implementation.Fusing
             }
         }
 
-        #endregion
+#endregion
 
         public static Props Props(GraphInterpreterShell shell)
         {

@@ -16,8 +16,20 @@
   "frameworks": {
     "net451": {
       "frameworkAssemblies": {
-        "System.Threading.Tasks": "4.0.0" 
+        "System.Threading.Tasks": "4.0.0"
       }
+    },
+    "netcoreapp1.0": {
+      "dependencies": {
+        "Microsoft.NETCore.App": {
+          "version": "1.0.0",
+          "type": "platform"
+        },
+        "Microsoft.NETCore.Portable.Compatibility": "1.0.1"
+      },
+      "imports": [
+        "portable-net45+win8"
+      ]
     }
   }
 }

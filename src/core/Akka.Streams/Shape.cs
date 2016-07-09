@@ -102,7 +102,10 @@ namespace Akka.Streams
     /// matters from the outside are the connections that can be made with it,
     /// otherwise it is just a black box.
     /// </summary>
-    public abstract class Shape : ICloneable
+    public abstract class Shape
+#if CLONEABLE
+        : ICloneable
+#endif
     {
         /// <summary>
         /// Gets list of all input ports.

@@ -33,8 +33,20 @@
   "frameworks": {
     "net45": {
       "buildOptions": {
-        "define": [ "SERIALIZATION" ]
+        "define": [ "SERIALIZATION", "CLONEABLE" ]
       }
+    },
+    "netstandard1.6": {
+      "buildOptions": {
+        "define": [ "CORECLR" ]
+      },
+      "dependencies": {
+        "Microsoft.NETCore.Portable.Compatibility": "1.0.1",
+        "System.IO.FileSystem": "4.0.1"
+      },
+      "imports": [
+        "portable-net45+win8"
+      ]
     }
   }
 }

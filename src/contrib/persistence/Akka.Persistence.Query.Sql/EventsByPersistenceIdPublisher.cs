@@ -15,7 +15,9 @@ namespace Akka.Persistence.Query.Sql
 {
     internal static class EventsByPersistenceIdPublisher
     {
+#if SERIALIZATION
         [Serializable]
+#endif
         public sealed class Continue
         {
             public static readonly Continue Instance = new Continue();
