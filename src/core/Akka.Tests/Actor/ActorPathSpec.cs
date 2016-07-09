@@ -7,7 +7,7 @@
 
 using System;
 using System.Linq;
-using System.Web;
+using System.Net;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
@@ -226,7 +226,7 @@ namespace Akka.Tests.Actor
         [InlineData("Using parenthesis(4711)")]
         public void Validate_that_url_encoded_values_are_valid_element_parts(string element)
         {
-            var urlEncode = HttpUtility.UrlEncode(element);
+            var urlEncode = WebUtility.UrlEncode(element);
             global::System.Diagnostics.Debug.WriteLine("Encoded \"{0}\" to \"{1}\"", element, urlEncode)  ;
             ActorPath.IsValidPathElement(urlEncode).ShouldBeTrue();
         }
