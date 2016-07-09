@@ -43,7 +43,9 @@ namespace Akka.Persistence.Tests
             object Payload { get; }
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         public sealed class A : IAppModel
         {
             public A(object payload)
@@ -54,7 +56,9 @@ namespace Akka.Persistence.Tests
             public object Payload { get; private set; }
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         public sealed class B : IAppModel
         {
             public B(object payload)
@@ -65,7 +69,9 @@ namespace Akka.Persistence.Tests
             public object Payload { get; private set; }
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         public sealed class NewA : IAppModel
         {
             public NewA(object payload)
@@ -76,7 +82,9 @@ namespace Akka.Persistence.Tests
             public object Payload { get; private set; }
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         public sealed class NewB : IAppModel
         {
             public NewB(object payload)
@@ -87,7 +95,9 @@ namespace Akka.Persistence.Tests
             public object Payload { get; private set; }
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         public sealed class Json
         {
             public readonly object Payload;

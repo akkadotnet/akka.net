@@ -27,7 +27,9 @@ namespace Akka.Persistence.Tests
             }
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         public class SimulatedException : Exception
         {
             public SimulatedException()

@@ -5,7 +5,6 @@
     "Akka": { "target": "project" },
     "Akka.Persistence": { "target": "project" },
     "Akka.TestKit": { "target": "project" },
-    "Akka.Remote": { "target": "project" },
     "Akka.TestKit.Xunit2": { "target": "project" },
     "Akka.Tests.Shared.Internals": { "target": "project" },
     "System.Collections.Immutable": "1.2.0",
@@ -17,7 +16,21 @@
 
   "frameworks": {
     "net451": {
-
+      "buildOptions": {
+        "define": [ "SERIALIZABLE" ]
+      }
+    },
+    "netcoreapp1.0": {
+      "dependencies": {
+        "Microsoft.NETCore.App": {
+          "version": "1.0.0",
+          "type": "platform"
+        },
+        "Microsoft.NETCore.Portable.Compatibility": "1.0.1"
+      },
+      "imports": [
+        "portable-net45+win8"
+      ]
     }
   }
 }

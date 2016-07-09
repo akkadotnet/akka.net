@@ -26,7 +26,9 @@ namespace Akka.Persistence.Tests
             ISet<string> Tags { get; }
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         public sealed class Tagged : IJournalModel, IEquatable<IJournalModel>
         {
             public object Payload { get; private set; }
@@ -49,7 +51,9 @@ namespace Akka.Persistence.Tests
             }
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         public sealed class NotTagged : IJournalModel, IEquatable<IJournalModel>
         {
             public object Payload { get; private set; }
@@ -73,7 +77,9 @@ namespace Akka.Persistence.Tests
 
         public interface IDomainEvent { }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         public sealed class TaggedDataChanged : IDomainEvent, IEquatable<TaggedDataChanged>
         {
             public readonly ISet<string> Tags;
@@ -96,7 +102,9 @@ namespace Akka.Persistence.Tests
             }
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         public sealed class UserDataChanged : IDomainEvent, IEquatable<UserDataChanged>
         {
             public readonly string CountryCode;

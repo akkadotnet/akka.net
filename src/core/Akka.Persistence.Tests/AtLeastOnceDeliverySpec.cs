@@ -161,7 +161,9 @@ namespace Akka.Persistence.Tests
             }
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         sealed class Req
         {
             public Req(string payload)
@@ -172,7 +174,9 @@ namespace Akka.Persistence.Tests
             public string Payload { get; private set; }
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         sealed class ReqAck
         {
             public static readonly ReqAck Instance = new ReqAck();
@@ -183,7 +187,9 @@ namespace Akka.Persistence.Tests
             }
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         sealed class InvalidReq
         {
             public static readonly InvalidReq Instance = new InvalidReq();
@@ -196,7 +202,9 @@ namespace Akka.Persistence.Tests
 
         interface IEvt { }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         sealed class AcceptedReq : IEvt
         {
             public AcceptedReq(string payload, string destinationPath)
@@ -211,7 +219,9 @@ namespace Akka.Persistence.Tests
             public string DestinationPath { get; private set; }
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         sealed class ReqDone : IEvt, IEquatable<ReqDone>
         {
             public ReqDone(long id)
@@ -226,7 +236,9 @@ namespace Akka.Persistence.Tests
             }
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         sealed class Action : IEquatable<Action>
         {
 
@@ -258,7 +270,9 @@ namespace Akka.Persistence.Tests
             }
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         sealed class ActionAck : IEquatable<ActionAck>
         {
             public ActionAck(long id)
@@ -273,13 +287,19 @@ namespace Akka.Persistence.Tests
             }
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         sealed class Boom { public static readonly Boom Instance = new Boom(); }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         sealed class SaveSnap { public static readonly SaveSnap Instance = new SaveSnap(); }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         sealed class Snap
         {
             public Snap(AtLeastOnceDeliverySnapshot deliverySnapshot)

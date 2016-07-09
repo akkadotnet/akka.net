@@ -19,7 +19,9 @@ namespace Akka.Persistence.Tests
     {
         #region internal test classes
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         private sealed class AcceptedReq : IEvt
         {
             public AcceptedReq(string payload, string destinationPath)
@@ -34,7 +36,9 @@ namespace Akka.Persistence.Tests
             public string DestinationPath { get; private set; }
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         private sealed class Action : IEquatable<Action>
         {
             public Action(long id, string payload)
@@ -66,7 +70,9 @@ namespace Akka.Persistence.Tests
             }
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         private sealed class ActionAck : IEquatable<ActionAck>
         {
             public ActionAck(long id)
@@ -82,7 +88,9 @@ namespace Akka.Persistence.Tests
             }
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         private sealed class Boom
         {
             public static readonly Boom Instance = new Boom();
@@ -112,7 +120,9 @@ namespace Akka.Persistence.Tests
         {
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         private sealed class InvalidReq
         {
             public static readonly InvalidReq Instance = new InvalidReq();
@@ -245,7 +255,9 @@ namespace Akka.Persistence.Tests
             }
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         private sealed class Req
         {
             public Req(string payload)
@@ -256,7 +268,9 @@ namespace Akka.Persistence.Tests
             public string Payload { get; private set; }
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         private sealed class ReqAck
         {
             public static readonly ReqAck Instance = new ReqAck();
@@ -271,7 +285,9 @@ namespace Akka.Persistence.Tests
             }
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         private sealed class ReqDone : IEvt, IEquatable<ReqDone>
         {
             public ReqDone(long id)
@@ -287,13 +303,17 @@ namespace Akka.Persistence.Tests
             }
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         private sealed class SaveSnap
         {
             public static readonly SaveSnap Instance = new SaveSnap();
         }
 
+#if SERIALIZABLE
         [Serializable]
+#endif
         private sealed class Snap
         {
             public Snap(AtLeastOnceDeliverySnapshot deliverySnapshot)

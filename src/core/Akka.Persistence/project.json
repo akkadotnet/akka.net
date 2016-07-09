@@ -36,6 +36,15 @@
       "buildOptions": {
         "define": [ "SERIALIZATION" ]
       }
+    },
+    "netstandard1.6": {
+      "dependencies": {
+        "System.IO.FileSystem": "4.0.1",
+        "Microsoft.NETCore.Portable.Compatibility": "1.0.1"
+      },
+      "imports": [
+        "portable-net45+win8"
+      ]
     }
   }
 }
