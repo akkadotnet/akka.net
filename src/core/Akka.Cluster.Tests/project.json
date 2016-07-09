@@ -1,0 +1,16 @@
+{
+  "testRunner": "xunit",
+
+  "dependencies": {
+    "Akka.Cluster": { "target": "project" },
+    "Akka.TestKit.Xunit2": { "target": "project" },
+    "Akka.Tests.Shared.Internals": { "target": "project" },
+    "xunit": "2.2.0-beta2-build3300",
+    "dotnet-test-xunit": "2.2.0-preview2-build1029",
+    "FluentAssertions": "4.11.0"
+  },
+
+  "frameworks": {
+    "net451": {}
+  }
+}

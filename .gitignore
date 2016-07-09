@@ -227,3 +227,7 @@ target/
 
 # API Approval received files
 **/Akka.API.Tests/*.received.txt
+
+# NetCore
+project.lock.json
+

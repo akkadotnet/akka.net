@@ -1,0 +1,41 @@
+﻿{
+  "version": "1.2.0-*",
+  "title": "Akka.Persistence",
+  "description": "Persistence actor support for Akka.NET",
+  "authors": [ "Akka.NET Team" ],
+  "copyright": "Copyright © 2013-2016 Akka.NET Team",
+
+  "packOptions": {
+    "licenseUrl": "https://github.com/akkadotnet/akka.net/blob/master/LICENSE",
+    "projectUrl": "https://github.com/akkadotnet/akka.net",
+    "iconUrl": "http://getakka.net/images/AkkaNetLogo.Normal.png",
+    "owners": [ "Akka.NET Team" ],
+    "requireLicenseAcceptance": false,
+    "tags": [ "akka", "actors", "actor model", "Akka", "concurrency", "persistence", "eventsource" ],
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/akkadotnet/akka.net"
+    }
+  },
+
+  "dependencies": {
+    "Akka": { "target": "project" },
+    "Newtonsoft.Json": "9.0.1",
+    "System.Collections.Immutable": "1.2.0",
+    "Google.ProtocolBuffers": "2.4.1.555"
+  },
+
+  "buildOptions": {
+    "embed": {
+      "includeFiles": [ "persistence.conf" ]
+    }
+  },
+
+  "frameworks": {
+    "net45": {
+      "buildOptions": {
+        "define": [ "SERIALIZATION" ]
+      }
+    }
+  }
+}

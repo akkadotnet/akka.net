@@ -1,0 +1,38 @@
+﻿{
+  "version": "1.2.0-*",
+  "title": "Akka.Remote.TestKit",
+  "description": "TestKit for Testing Distributed Akka.NET Applications",
+  "authors": [ "Akka.NET Team" ],
+  "copyright": "Copyright © 2013-2016 Akka.NET Team",
+
+  "packOptions": {
+    "licenseUrl": "https://github.com/akkadotnet/akka.net/blob/master/LICENSE",
+    "projectUrl": "https://github.com/akkadotnet/akka.net",
+    "iconUrl": "http://getakka.net/images/AkkaNetLogo.Normal.png",
+    "owners": [ "Akka.NET Team" ],
+    "requireLicenseAcceptance": false,
+    "tags": [ "akka", "actors", "actor model", "Akka", "concurrency" ],
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/akkadotnet/akka.net"
+    }
+  },
+
+  "dependencies": {
+    "Akka.Remote": { "target": "project" },
+    "Akka.TestKit.Xunit2": { "target": "project" },
+    "Helios": "2.1.1",
+    "System.Collections.Immutable": "1.2.0",
+    "Google.ProtocolBuffers": "2.4.1.555"
+  },
+
+  "buildOptions": {
+    "embed": {
+      "includeFiles": [ "Internals/Reference.conf" ]
+    }
+  },
+
+  "frameworks": {
+    "net45": {}
+  }
+}
