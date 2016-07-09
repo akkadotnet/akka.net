@@ -9,6 +9,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
@@ -20,13 +21,17 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.TestKit.Tests
 {
+#if SERIALIZATION
     [Serializable]
+#endif
     public class ScriptException : Exception
     {
         public ScriptException() { }
         public ScriptException(string message) : base(message) { }
         public ScriptException(string message, Exception inner) : base(message, inner) { }
+#if SERIALIZATION
         protected ScriptException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+#endif
     }
 
     public abstract class ScriptedTest : AkkaSpec
@@ -104,7 +109,7 @@ namespace Akka.Streams.TestKit.Tests
                 if (NoOutputsPending)
                     throw new ScriptException($"Tried to produce element {output} but no elements should be produced right now");
 
-                var equalsExpectedOutput = typeof (IEnumerable).IsAssignableFrom(typeof (TOut))
+                var equalsExpectedOutput = typeof(IEnumerable).GetTypeInfo().IsAssignableFrom(typeof (TOut))
                     ? ((IEnumerable) output).Cast<object>().SequenceEqual(((IEnumerable) ExpectedOutputs[OutputCursor]).Cast<object>())
                     : Equals(output, ExpectedOutputs[OutputCursor]);
                 if (!equalsExpectedOutput)

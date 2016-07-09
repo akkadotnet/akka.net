@@ -24,6 +24,14 @@
   },
 
   "frameworks": {
-    "net45": {}
+    "net45": {},
+    "netstandard1.6": {
+      "dependencies": {
+        "Microsoft.NETCore.Portable.Compatibility": "1.0.1"
+      },
+      "imports": [
+        "portable-net45+win8"
+      ]
+    }
   }
 }

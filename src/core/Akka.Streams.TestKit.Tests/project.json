@@ -2,6 +2,7 @@
   "testRunner": "xunit",
 
   "dependencies": {
+    "Akka": { "target": "project" },
     "Akka.Streams": { "target": "project" },
     "Akka.Streams.TestKit": { "target": "project" },
     "Akka.TestKit": { "target": "project" },
@@ -19,6 +20,25 @@
   },
 
   "frameworks": {
-    "net451": {}
+    "net451": {
+      "buildOptions": {
+        "define": [ "SERIALIZATION" ]
+      }
+    },
+    "netcoreapp1.0": {
+      "buildOptions": {
+        "define": [ "CORECLR" ]
+      },
+      "dependencies": {
+        "Microsoft.NETCore.App": {
+          "version": "1.0.0",
+          "type": "platform"
+        },
+        "Microsoft.NETCore.Portable.Compatibility": "1.0.1"
+      },
+      "imports": [
+        "portable-net45+win8"
+      ]
+    }
   }
 }

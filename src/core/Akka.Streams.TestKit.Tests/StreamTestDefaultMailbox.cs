@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Reflection;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -27,7 +28,7 @@ namespace Akka.Streams.TestKit.Tests
             if (owner is ActorRefWithCell)
             {
                 var actorType = owner.AsInstanceOf<ActorRefWithCell>().Underlying.Props.Type;
-                if (!typeof(ActorBase).IsAssignableFrom(actorType))
+                if (!typeof(ActorBase).GetTypeInfo().IsAssignableFrom(actorType))
                     throw new ArgumentException(
                         $"Don't use anonymouse actor classes, actor class for {owner} was [{actorType.FullName}]");
                 // StreamTcpManager is allowed to use another dispatcher
