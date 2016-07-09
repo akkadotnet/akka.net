@@ -20,7 +20,11 @@ namespace Akka.Tools.MatchHandler
 
         public void CompileToMethod(LambdaExpression expression, MethodBuilder method)
         {
+#if !CORECLR
             expression.CompileToMethod(method);
+#else
+            // TODO: CORECLR FIX IT
+#endif
         }
     }
 }

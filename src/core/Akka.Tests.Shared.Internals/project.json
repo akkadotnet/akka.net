@@ -13,6 +13,14 @@
       "frameworkAssemblies": {
         "System.Threading.Tasks": "4.0.0"
       }
+    },
+    "netstandard1.6": {
+      "buildOptions": {
+        "define": [ "CORECLR" ]
+      },
+      "dependencies": {
+        "System.Diagnostics.StackTrace": "4.0.1"
+      }
     }
   }
 }

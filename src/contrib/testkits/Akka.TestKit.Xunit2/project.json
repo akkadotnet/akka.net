@@ -28,6 +28,9 @@
       "buildOptions": {
         "define": [ "SERIALIZATION" ]
       }
+    },
+    "netstandard1.6": {
+
     }
   }
 }

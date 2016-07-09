@@ -15,10 +15,24 @@
     "net451": {
       "buildOptions": {
         "define": [ "SERIALIZATION", "CONFIGURATION" ]
-      },
-      "frameworkAssemblies": {
-        "System.Web": "4.0.0"
       }
+    },
+    "netcoreapp1.0": {
+      "buildOptions": {
+        "define": [ "CORECLR" ]
+      },
+      "dependencies": {
+        "Microsoft.NETCore.App": {
+          "version": "1.0.0",
+          "type": "platform"
+        },
+        "Microsoft.NETCore.Portable.Compatibility": "1.0.1",
+        "System.Net.Sockets": "4.1.0",
+        "System.Runtime.Extensions": "4.1.0"
+      },
+      "imports": [
+        "portable-net45+win8"
+      ]
     }
   }
 }

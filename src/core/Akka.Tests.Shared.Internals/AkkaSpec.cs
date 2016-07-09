@@ -14,6 +14,7 @@ using Akka.Configuration;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
+using System.Reflection;
 
 // ReSharper disable once CheckNamespace
 namespace Akka.TestKit
@@ -72,6 +73,10 @@ namespace Akka.TestKit
 
         private static string GetCallerName()
         {
+#if CORECLR
+            // TODO: CORECLR FIX IT
+            var name = "AkkaSpec";
+#else
             var systemNumber = Interlocked.Increment(ref _systemNumber);
             var stackTrace = new StackTrace(0);
             var name = stackTrace.GetFrames().
@@ -80,6 +85,7 @@ namespace Akka.TestKit
                 SkipWhile(m => m.DeclaringType.Name == "AkkaSpec").
                 Select(m => _nameReplaceRegex.Replace(m.DeclaringType.Name + "-" + systemNumber, "-")).
                 FirstOrDefault() ?? "test";
+#endif
             return name;
         }
 
@@ -97,7 +103,7 @@ namespace Akka.TestKit
             var message = envelope.Message;
             Assertions.AssertTrue(message != null, string.Format("expected {0} but got null message", hint));
             //TODO: Check next line. 
-            Assertions.AssertTrue(function.Method.GetParameters().Any(x => x.ParameterType.IsInstanceOfType(message)), string.Format("expected {0} but got {1} instead", hint, message));
+            Assertions.AssertTrue(function.GetMethodInfo().GetParameters().Any(x => x.ParameterType.GetTypeInfo().IsInstanceOfType(message)), string.Format("expected {0} but got {1} instead", hint, message));
             return function.Invoke(message);
         }
 
@@ -107,7 +113,7 @@ namespace Akka.TestKit
         {
             var t = ExpectMsg<T>();
             //TODO: Check if this really is needed:
-            Assertions.AssertTrue(pf.Method.GetParameters().Any(x => x.ParameterType.IsInstanceOfType(t)), string.Format("expected {0} but got {1} instead", hint, t));
+            Assertions.AssertTrue(pf.GetMethodInfo().GetParameters().Any(x => x.ParameterType.GetTypeInfo().IsInstanceOfType(t)), string.Format("expected {0} but got {1} instead", hint, t));
             return pf.Invoke(t);
         }
 

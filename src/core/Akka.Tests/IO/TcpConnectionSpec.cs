@@ -521,7 +521,11 @@ namespace Akka.Tests.IO
         {
             new UnacceptedConnectionTest(this).Run(x =>
             {
+#if CORECLR
+                x.LocalServerChannel.Socket.Accept();
+#else
                 x.LocalServerChannel.Socket.BeginAccept(ar => x.LocalServerChannel.Socket.EndAccept(ar), null);
+#endif
 
                 x.Selector.Send(x.ConnectionActor, SelectionHandler.ChannelConnectable.Instance);
                 x.UserHandler.ExpectMsg<Tcp.Connected>();
@@ -863,6 +867,17 @@ namespace Akka.Tests.IO
 
         internal SocketChannel AcceptServerSideChannel(SocketChannel localServer)
         {
+#if CORECLR
+            // TODO: CORECLR FIX IT
+            localServer.Socket.Listen(100);
+            localServer.Socket.Accept();
+            Selector.Send(ConnectionActor, SelectionHandler.ChannelConnectable.Instance);
+
+            var channel = new SocketChannel(localServer.Socket);
+
+            channel.Register(ChannelProbe, SocketAsyncOperation.None);
+            return channel;
+#else
             var promise = new TaskCompletionSource<Socket>();
             var task = promise.Task;
 
@@ -874,8 +889,11 @@ namespace Akka.Tests.IO
             task.Wait();
 
             var channel = new SocketChannel(task.Result);
-            channel.Register(ChannelProbe, SocketAsyncOperation.None);
+
+             channel.Register(ChannelProbe, SocketAsyncOperation.None);
             return channel;
+#endif
+
         }
 
     }

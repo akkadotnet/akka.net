@@ -218,7 +218,16 @@ namespace Akka.Tests.Actor.Dispatch
                 Receive<CountDownNStop>(countDown => { Ack(); countDown.Latch.Signal(); Context.Stop(Self); _busy.SwitchOff(); });
                 Receive<Restart>(restart => { Ack(); _busy.SwitchOff(); throw new Exception("restart requested"); }, restart => true); // had to add predicate for compiler magic
                 Receive<Interrupt>(interrupt => { Ack(); Sender.Tell(new Status.Failure(new ActorInterruptedException(cause: new Exception(Ping)))); _busy.SwitchOff(); throw new Exception(Ping); }, interrupt => true);
-                Receive<InterruptNicely>(interrupt => { Ack(); Sender.Tell(interrupt.Expect); _busy.SwitchOff(); Thread.CurrentThread.Interrupt(); });
+                Receive<InterruptNicely>(interrupt =>
+                {
+                    Ack();
+                    Sender.Tell(interrupt.Expect);
+                    _busy.SwitchOff();
+#if !CORECLR
+                    // TODO: CORECLR FIX IT
+                    Thread.CurrentThread.Interrupt();
+#endif
+                });
                 Receive<ThrowException>(throwEx => { Ack(); _busy.SwitchOff(); throw throwEx.E; }, throwEx => true);
                 Receive<DoubleStop>(doubleStop => { Ack(); Context.Stop(Self); Context.Stop(Self); _busy.SwitchOff(); });
             }

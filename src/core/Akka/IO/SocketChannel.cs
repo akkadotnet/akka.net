@@ -16,15 +16,16 @@ namespace Akka.IO
      * SocketChannel does not exists in the .NET BCL - This class is an adapter to hide the differences in CLR & JVM IO.
      * This implementation uses blocking IO calls, and then catch SocketExceptions if the socket is set to non blocking. 
      * This might introduce performance issues, with lots of thrown exceptions
-     * TODO: Implements this class with .NET Async calls
      */
     public class SocketChannel 
     {
         private readonly Socket _socket;
         private IActorRef _connection;
         private bool _connected;
+#if !CORECLR
         private IAsyncResult _connectResult;
-            
+#endif
+
         public SocketChannel(Socket socket) 
         {
             _socket = socket;
@@ -59,6 +60,11 @@ namespace Akka.IO
 
         public bool Connect(EndPoint address)
         {
+#if CORECLR
+            _socket.Connect(address);
+            _connected = true;
+            return true;
+#else
             _connectResult = _socket.BeginConnect(address, ar => { }, null);
             if (_connectResult.CompletedSynchronously)
             {
@@ -67,10 +73,12 @@ namespace Akka.IO
                 return true;
             }
             return false;
+#endif
         }
 
         public bool FinishConnect()
         {
+#if !CORECLR
             if (_connectResult.CompletedSynchronously)
                 return true;
             if (_connectResult.IsCompleted)
@@ -78,6 +86,7 @@ namespace Akka.IO
                 _socket.EndConnect(_connectResult);
                 _connected = true;
             }
+#endif
             return _connected;
         }
 

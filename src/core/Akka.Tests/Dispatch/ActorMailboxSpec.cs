@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.TestKit;
@@ -111,7 +112,7 @@ akka.actor.deployment {
 
             var mailbox = ExpectMsg<IMessageQueue>(msg =>
             {
-                expectedMailboxTypes.ForEach(type => Assert.True(type.IsAssignableFrom(msg.GetType()),
+                expectedMailboxTypes.ForEach(type => Assert.True(type.GetTypeInfo().IsAssignableFrom(msg.GetType()),
                     String.Format(CultureInfo.InvariantCulture, "Type [{0}] is not assignable to [{1}]", msg.GetType(), type)));
             });
 
