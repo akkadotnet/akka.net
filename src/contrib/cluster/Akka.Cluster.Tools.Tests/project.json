@@ -1,0 +1,21 @@
+{
+  "testRunner": "xunit",
+
+  "dependencies": {
+    "Akka": { "target": "project" },
+    "Akka.Cluster": { "target": "project" },
+    "Akka.Cluster.Tools": { "target": "project" },
+    "Akka.Remote": { "target": "project" },
+    "Akka.Remote.TestKit": { "target": "project" },
+    "Akka.TestKit": { "target": "project" },
+    "Akka.TestKit.Xunit2": { "target": "project" },
+    "Akka.Tests.Shared.Internals": { "target": "project" },
+    "dotnet-test-xunit": "2.2.0-preview2-build1029",
+    "FluentAssertions": "4.11.0",
+    "xunit": "2.2.0-beta2-build3300"
+  },
+
+  "frameworks": {
+    "net451": {}
+  }
+}

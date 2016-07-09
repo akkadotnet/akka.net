@@ -68,6 +68,20 @@ Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Akka.Persistence.Query.Test
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "persistence", "persistence", "{6771684C-0A9D-4244-AB5F-E4997DCBD7DB}"
 EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Akka.Cluster.Sharding.Tests", "contrib\cluster\Akka.Cluster.Sharding.Tests\Akka.Cluster.Sharding.Tests.xproj", "{7F980AD5-27FF-4A86-8FB4-622A64615AD4}"
+EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Akka.Cluster.Tools.Tests", "contrib\cluster\Akka.Cluster.Tools.Tests\Akka.Cluster.Tools.Tests.xproj", "{C9D9946B-946C-4138-86D7-5F9111CEFA6D}"
+EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Akka.Persistence.Sql.Common", "contrib\persistence\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.xproj", "{3B9B3550-0F9C-43D2-9E20-894E8C0D9B05}"
+EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Akka.Persistence.Sqlite", "contrib\persistence\Akka.Persistence.Sqlite\Akka.Persistence.Sqlite.xproj", "{7859CB65-308E-4291-9AF2-07DBBC60EB29}"
+EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Akka.Persistence.Sqlite.Tests", "contrib\persistence\Akka.Persistence.Sqlite.Tests\Akka.Persistence.Sqlite.Tests.xproj", "{7530B37A-EFB3-4EA2-9351-8631A269CCC9}"
+EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Akka.Persistence.Query.Sql", "contrib\persistence\Akka.Persistence.Query.Sql\Akka.Persistence.Query.Sql.xproj", "{03BA6F61-A4AD-42D3-B277-C469C7342EF5}"
+EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Akka.Persistence.Sql.TestKit", "contrib\persistence\Akka.Persistence.Sql.TestKit\Akka.Persistence.Sql.TestKit.xproj", "{2880D21E-B58A-4771-A1A6-9223ECF2785B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -174,6 +188,34 @@ Global
 		{1261589D-EA1F-4923-A678-5C5C83C8601D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1261589D-EA1F-4923-A678-5C5C83C8601D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1261589D-EA1F-4923-A678-5C5C83C8601D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F980AD5-27FF-4A86-8FB4-622A64615AD4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F980AD5-27FF-4A86-8FB4-622A64615AD4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F980AD5-27FF-4A86-8FB4-622A64615AD4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F980AD5-27FF-4A86-8FB4-622A64615AD4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C9D9946B-946C-4138-86D7-5F9111CEFA6D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C9D9946B-946C-4138-86D7-5F9111CEFA6D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C9D9946B-946C-4138-86D7-5F9111CEFA6D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C9D9946B-946C-4138-86D7-5F9111CEFA6D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3B9B3550-0F9C-43D2-9E20-894E8C0D9B05}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3B9B3550-0F9C-43D2-9E20-894E8C0D9B05}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3B9B3550-0F9C-43D2-9E20-894E8C0D9B05}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3B9B3550-0F9C-43D2-9E20-894E8C0D9B05}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7859CB65-308E-4291-9AF2-07DBBC60EB29}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7859CB65-308E-4291-9AF2-07DBBC60EB29}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7859CB65-308E-4291-9AF2-07DBBC60EB29}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7859CB65-308E-4291-9AF2-07DBBC60EB29}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7530B37A-EFB3-4EA2-9351-8631A269CCC9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7530B37A-EFB3-4EA2-9351-8631A269CCC9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7530B37A-EFB3-4EA2-9351-8631A269CCC9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7530B37A-EFB3-4EA2-9351-8631A269CCC9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{03BA6F61-A4AD-42D3-B277-C469C7342EF5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{03BA6F61-A4AD-42D3-B277-C469C7342EF5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{03BA6F61-A4AD-42D3-B277-C469C7342EF5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{03BA6F61-A4AD-42D3-B277-C469C7342EF5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2880D21E-B58A-4771-A1A6-9223ECF2785B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2880D21E-B58A-4771-A1A6-9223ECF2785B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2880D21E-B58A-4771-A1A6-9223ECF2785B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2880D21E-B58A-4771-A1A6-9223ECF2785B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -207,5 +249,12 @@ Global
 		{6E62D055-D6CF-4FE2-8993-1479F4326AAF} = {A04FB48F-475D-4591-B5C6-DD0BF824E6EE}
 		{1261589D-EA1F-4923-A678-5C5C83C8601D} = {A04FB48F-475D-4591-B5C6-DD0BF824E6EE}
 		{6771684C-0A9D-4244-AB5F-E4997DCBD7DB} = {B32C3935-1914-4B26-8BAC-4F75C30A0374}
+		{7F980AD5-27FF-4A86-8FB4-622A64615AD4} = {83A0056A-214B-4A8F-9A34-E93A8C0CA46C}
+		{C9D9946B-946C-4138-86D7-5F9111CEFA6D} = {83A0056A-214B-4A8F-9A34-E93A8C0CA46C}
+		{3B9B3550-0F9C-43D2-9E20-894E8C0D9B05} = {6771684C-0A9D-4244-AB5F-E4997DCBD7DB}
+		{7859CB65-308E-4291-9AF2-07DBBC60EB29} = {6771684C-0A9D-4244-AB5F-E4997DCBD7DB}
+		{7530B37A-EFB3-4EA2-9351-8631A269CCC9} = {6771684C-0A9D-4244-AB5F-E4997DCBD7DB}
+		{03BA6F61-A4AD-42D3-B277-C469C7342EF5} = {6771684C-0A9D-4244-AB5F-E4997DCBD7DB}
+		{2880D21E-B58A-4771-A1A6-9223ECF2785B} = {6771684C-0A9D-4244-AB5F-E4997DCBD7DB}
 	EndGlobalSection
 EndGlobal

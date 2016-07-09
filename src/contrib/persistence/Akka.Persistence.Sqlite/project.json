@@ -1,0 +1,41 @@
+﻿{
+  "version": "1.2.0-*",
+  "title": "Akka.Persistence.Sqlite",
+  "description": "Akka.NET Persistence journal and snapshot store backed by SQLite.",
+  "authors": [ "Akka.NET Team" ],
+  "copyright": "Copyright © 2013-2016 Akka.NET Team",
+
+  "packOptions": {
+    "licenseUrl": "https://github.com/akkadotnet/akka.net/blob/master/LICENSE",
+    "projectUrl": "https://github.com/akkadotnet/akka.net",
+    "iconUrl": "http://getakka.net/images/AkkaNetLogo.Normal.png",
+    "owners": [ "Akka.NET Team" ],
+    "requireLicenseAcceptance": false,
+    "tags": [ "akka", "actors", "actor model", "Akka", "concurrency" ],
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/akkadotnet/akka.net"
+    }
+  },
+
+  "dependencies": {
+    "Akka": { "target": "project" },
+    "Akka.Persistence": { "target": "project" },
+    "Akka.Persistence.Sql.Common": { "target": "project" },
+    "System.Data.SQLite.Core": "1.0.98.1"
+  },
+
+  "buildOptions": {
+    "embed": {
+      "includeFiles": [ "sqlite.conf" ]
+    }
+  },
+
+  "frameworks": {
+    "net45": {
+      "frameworkAssemblies": {
+
+      }
+    }
+  }
+}
