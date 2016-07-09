@@ -171,7 +171,12 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
                 if (routees.Count != 0)
                 {
-                    new Router(_settings.RoutingLogic, routees.ToArray()).Route(Akka.Cluster.Tools.PublishSubscribe.Internal.Utils.WrapIfNeeded(send.Message), Sender);
+                    new Router(_settings.RoutingLogic, routees.ToArray()).Route(
+                        Akka.Cluster.Tools.PublishSubscribe.Internal.Utils.WrapIfNeeded(send.Message), Sender);
+                }
+                else
+                {
+                    SendToDeadLetters(send.Message);
                 }
             });
             Receive<SendToAll>(sendToAll =>
@@ -433,6 +438,11 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             }
         }
 
+        private void SendToDeadLetters(object message)
+        {
+            Context.System.DeadLetters.Tell(new DeadLetter(message, Sender, Context.Self));
+        }
+
         private void PublishMessage(string path, object message, bool allButSelf = false)
         {
             foreach (var entry in _registry)
@@ -447,6 +457,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     {
                         valueHolder.Ref.Forward(message);
                     }
+                    else
+                    {
+                        SendToDeadLetters(message);
+                    }
                 }
             }
         }
@@ -456,14 +470,21 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             var prefix = path + "/";
             var lastKey = path + "0";   // '0' is the next char of '/'
 
-            var groups = ExtractGroups(prefix, lastKey).GroupBy(kv => kv.Key);
+            var groups = ExtractGroups(prefix, lastKey).GroupBy(kv => kv.Key).ToList();
             var wrappedMessage = new SendToOneSubscriber(message);
 
-            foreach (var g in groups)
+            if (groups.Count == 0)
             {
-                var routees = g.Select(r => r.Value).ToArray();
-                if (routees.Length != 0)
-                    new Router(_settings.RoutingLogic, routees).Route(wrappedMessage, Sender);
+                SendToDeadLetters(message);
+            }
+            else
+            {
+                foreach (var g in groups)
+                {
+                    var routees = g.Select(r => r.Value).ToArray();
+                    if (routees.Length != 0)
+                        new Router(_settings.RoutingLogic, routees).Route(wrappedMessage, Sender);
+                }
             }
         }
 
