@@ -172,7 +172,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 if (routees.Count != 0)
                 {
                     new Router(_settings.RoutingLogic, routees.ToArray()).Route(
-                        Akka.Cluster.Tools.PublishSubscribe.Internal.Utils.WrapIfNeeded(send.Message), Sender);
+                        Internal.Utils.WrapIfNeeded(send.Message), Sender);
                 }
                 else
                 {
@@ -194,8 +194,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             });
             Receive<Put>(put =>
             {
-                if (!string.IsNullOrEmpty(put.Ref.Path.Address.Host))
+                if (put.Ref.Path.Address.HasGlobalScope)
+                {
                     Log.Warning("Registered actor must be local: [{0}]", put.Ref);
+                }
                 else
                 {
                     PutToRegistry(put.Ref.Path.ToStringWithoutAddress(), put.Ref);
@@ -263,7 +265,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     Sender.Tell(new Delta(delta));
 
                 if (OtherHasNewerVersions(status.Versions))
-                    Sender.Tell(new Status(OwnVersions));
+                    Sender.Tell(new Status(OwnVersions)); // it will reply with Delta
             });
             Receive<Delta>(delta =>
             {
@@ -316,6 +318,14 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Receive<ClusterEvent.MemberUp>(up =>
             {
                 if (IsMatchingRole(up.Member)) _nodes.Add(up.Member.Address);
+            });
+            Receive<ClusterEvent.MemberLeft>(left =>
+            {
+                if (IsMatchingRole(left.Member))
+                {
+                    _nodes.Remove(left.Member.Address);
+                    _registry.Remove(left.Member.Address);
+                }
             });
             Receive<ClusterEvent.MemberRemoved>(removed =>
             {
