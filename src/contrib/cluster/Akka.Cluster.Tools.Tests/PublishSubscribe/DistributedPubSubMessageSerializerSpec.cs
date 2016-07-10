@@ -55,7 +55,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
                 { address1, 3 },
                 { address2, 17 },
                 { address3, 5 }
-            }));
+            }, isReplyToStatus: true));
 
             CheckSerialization(new Delta(new List<Bucket>
             {
