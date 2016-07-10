@@ -175,6 +175,7 @@
     <Compile Include="Dispatch\AbstractDispatcher.cs" />
     <Compile Include="Dispatch\ActorTaskScheduler.cs" />
     <Compile Include="Dispatch\CachingConfig.cs" />
+    <Compile Include="Dispatch\CurrentSynchronizationContextDispatcher.cs" />
     <Compile Include="Dispatch\Dispatcher.cs" />
     <Compile Include="Dispatch\ExecutorService.cs" />
     <Compile Include="Dispatch\Dispatchers.cs" />
