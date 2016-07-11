@@ -113,6 +113,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         private readonly TimeSpan _pruneInterval;
 
         private ISet<Address> _nodes = new HashSet<Address>();
+        private long deltaCount = 0L;
         private ILoggingAdapter _log;
         private IDictionary<Address, Bucket> _registry = new Dictionary<Address, Bucket>();
 
@@ -256,16 +257,23 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             });
             Receive<Status>(status =>
             {
-                // gossip chat starts with a Status message, containing the bucket versions of the other node
-                var delta = CollectDelta(status.Versions).ToArray();
-                if (delta.Length != 0)
-                    Sender.Tell(new Delta(delta));
+                // only accept status from known nodes, otherwise old cluster with same address may interact
+                // also accept from local for testing purposes
+                if (_nodes.Contains(Sender.Path.Address) || Sender.Path.Address.HasLocalScope)
+                {
+                    // gossip chat starts with a Status message, containing the bucket versions of the other node
+                    var delta = CollectDelta(status.Versions).ToArray();
+                    if (delta.Length != 0)
+                        Sender.Tell(new Delta(delta));
 
-                if (OtherHasNewerVersions(status.Versions))
-                    Sender.Tell(new Status(OwnVersions)); // it will reply with Delta
+                    if (!status.IsReplyToStatus && OtherHasNewerVersions(status.Versions))
+                        Sender.Tell(new Status(versions: OwnVersions, isReplyToStatus: true)); // it will reply with Delta
+                }
             });
             Receive<Delta>(delta =>
             {
+                deltaCount += 1;
+
                 // reply from Status message in the gossip chat
                 // the Delta contains potential updates (newer versions) from the other node
                 // only accept deltas/buckets from known nodes, otherwise there is a risk of
@@ -342,6 +350,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             {
                 var count = _registry.Sum(entry => entry.Value.Content.Count(kv => kv.Value.Ref != null));
                 Sender.Tell(count);
+            });
+            Receive<DeltaCount>(_ =>
+            {
+                Sender.Tell(deltaCount);
             });
         }
 
@@ -534,7 +546,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
         private void GossipTo(Address address)
         {
-            Context.ActorSelection(Self.Path.ToStringWithAddress(address)).Tell(new Status(OwnVersions));
+            var sel = Context.ActorSelection(Self.Path.ToStringWithAddress(address));
+            sel.Tell(new Status(versions: OwnVersions, isReplyToStatus: false));
         }
 
         private Address SelectRandomNode(IList<Address> addresses)

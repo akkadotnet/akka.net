@@ -115,31 +115,45 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     [Serializable]
-    internal sealed class Status : IDistributedPubSubMessage, IEquatable<Status>
+    internal sealed class Status : IDistributedPubSubMessage
     {
-        public readonly IDictionary<Address, long> Versions;
-
-        public Status(IDictionary<Address, long> versions)
+        public Status(IDictionary<Address, long> versions, bool isReplyToStatus)
         {
             Versions = versions ?? new Dictionary<Address, long>(0);
+            IsReplyToStatus = isReplyToStatus;
         }
 
-        public bool Equals(Status other)
-        {
-            if (ReferenceEquals(other, null)) return false;
-            if (ReferenceEquals(other, this)) return true;
+        public IDictionary<Address, long> Versions { get; }
 
-            return Versions.SequenceEqual(other.Versions);
-        }
+        public bool IsReplyToStatus { get; }
 
         public override bool Equals(object obj)
         {
-            return Equals(obj as Status);
+            if (ReferenceEquals(obj, null)) return false;
+            if (ReferenceEquals(obj, this)) return true;
+
+            var other = obj as Status;
+            if (other == null)
+                return false;
+
+            return Versions.SequenceEqual(other.Versions) 
+                && IsReplyToStatus.Equals(other.IsReplyToStatus);
         }
 
         public override int GetHashCode()
         {
-            return Versions != null ? Versions.GetHashCode() : 0;
+            unchecked
+            {
+                int hashCode = 13;
+                foreach (var v in Versions.Values)
+                {
+                    hashCode = hashCode * 17 + v.GetHashCode();
+                }
+
+                hashCode = hashCode * 17 + IsReplyToStatus.GetHashCode();
+
+                return hashCode;
+            }
         }
     }
 
@@ -170,6 +184,15 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         {
             return Buckets != null ? Buckets.GetHashCode() : 0;
         }
+    }
+
+    // Only for testing purposes, to verify replication
+    [Serializable]
+    internal sealed class DeltaCount
+    {
+        public static readonly DeltaCount Instance = new DeltaCount();
+
+        private DeltaCount() { }
     }
 
     [Serializable]
