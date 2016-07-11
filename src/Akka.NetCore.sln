@@ -82,6 +82,10 @@ Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Akka.Persistence.Query.Sql"
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Akka.Persistence.Sql.TestKit", "contrib\persistence\Akka.Persistence.Sql.TestKit\Akka.Persistence.Sql.TestKit.xproj", "{2880D21E-B58A-4771-A1A6-9223ECF2785B}"
 EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Akka.FSharp", "core\Akka.FSharp\Akka.FSharp.xproj", "{D4FD7253-54CD-4C8A-BBFE-7464BD1D1720}"
+EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Akka.Persistence.FSharp", "core\Akka.Persistence.FSharp\Akka.Persistence.FSharp.xproj", "{D4CD1C72-C973-4750-AB2A-12C0F2394003}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -216,6 +220,14 @@ Global
 		{2880D21E-B58A-4771-A1A6-9223ECF2785B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2880D21E-B58A-4771-A1A6-9223ECF2785B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2880D21E-B58A-4771-A1A6-9223ECF2785B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D4FD7253-54CD-4C8A-BBFE-7464BD1D1720}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D4FD7253-54CD-4C8A-BBFE-7464BD1D1720}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D4FD7253-54CD-4C8A-BBFE-7464BD1D1720}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D4FD7253-54CD-4C8A-BBFE-7464BD1D1720}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D4CD1C72-C973-4750-AB2A-12C0F2394003}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D4CD1C72-C973-4750-AB2A-12C0F2394003}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D4CD1C72-C973-4750-AB2A-12C0F2394003}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D4CD1C72-C973-4750-AB2A-12C0F2394003}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -256,5 +268,7 @@ Global
 		{7530B37A-EFB3-4EA2-9351-8631A269CCC9} = {6771684C-0A9D-4244-AB5F-E4997DCBD7DB}
 		{03BA6F61-A4AD-42D3-B277-C469C7342EF5} = {6771684C-0A9D-4244-AB5F-E4997DCBD7DB}
 		{2880D21E-B58A-4771-A1A6-9223ECF2785B} = {6771684C-0A9D-4244-AB5F-E4997DCBD7DB}
+		{D4FD7253-54CD-4C8A-BBFE-7464BD1D1720} = {A04FB48F-475D-4591-B5C6-DD0BF824E6EE}
+		{D4CD1C72-C973-4750-AB2A-12C0F2394003} = {A04FB48F-475D-4591-B5C6-DD0BF824E6EE}
 	EndGlobalSection
 EndGlobal

@@ -1,0 +1,52 @@
+{
+  "version": "1.2.0-*",
+  "title": "Akka",
+  "description": "F# API support for Akka.NET",
+  "authors": [ "Akka.NET Team" ],
+  "copyright": "Copyright © 2013-2016 Akka.NET Team",
+
+  "packOptions": {
+    "licenseUrl": "https://github.com/akkadotnet/akka.net/blob/master/LICENSE",
+    "projectUrl": "https://github.com/akkadotnet/akka.net",
+    "iconUrl": "http://getakka.net/images/AkkaNetLogo.Normal.png",
+    "owners": [ "Akka.NET Team" ],
+    "requireLicenseAcceptance": false,
+    "tags": [ "akka", "actors", "actor model", "Akka", "concurrency", "F#", "Fsharp", "persistence", "eventsource" ]
+  },
+
+  "buildOptions": {
+    "compilerName": "fsc",
+    "compile": {
+      "includeFiles": [
+        "FsApi.fs"
+      ]
+    }
+  },
+
+  "dependencies": {
+    "Akka.FSharp": { "target": "project" },
+    "Akka.Persistence": { "target": "project" }
+  },
+
+  "tools": {
+    "dotnet-compile-fsc": {
+      "version": "1.0.0-preview2-020000",
+      "imports": [
+        "dnxcore50",
+        "portable-net45+win81",
+        "netstandard1.3"
+      ]
+    }
+  },
+
+  "frameworks": {
+    "net45": {
+      "dependencies": {
+        "FSharp.Core": "4.0.0.1"
+      },
+      "frameworkAssemblies": {
+        "System.Numerics": "4.0.0.0"
+      }
+    }
+  }
+}
