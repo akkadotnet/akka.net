@@ -23,7 +23,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.IO
 {
-    public class InputStreamSinkSpec : AkkaSpec
+    public class InputStreamSinkSpec : TestKit.Tests.AkkaSpec
     {
         private static readonly TimeSpan Timeout = TimeSpan.FromMilliseconds(300);
         private readonly ActorMaterializer _materializer;

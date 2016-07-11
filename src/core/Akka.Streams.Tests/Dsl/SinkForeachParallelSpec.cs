@@ -21,7 +21,7 @@ using System.Threading;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class SinkForeachParallelSpec : AkkaSpec
+    public class SinkForeachParallelSpec : TestKit.Tests.AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
 

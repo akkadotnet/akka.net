@@ -18,7 +18,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.IO
 {
-    public abstract class TcpHelper : AkkaSpec
+    public abstract class TcpHelper : TestKit.Tests.AkkaSpec
     {
         protected TcpHelper(string config, ITestOutputHelper helper) : base(config, helper)
         {

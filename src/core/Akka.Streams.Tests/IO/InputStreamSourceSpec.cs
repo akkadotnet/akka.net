@@ -22,7 +22,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.IO
 {
-    public class InputStreamSourceSpec : AkkaSpec
+    public class InputStreamSourceSpec : TestKit.Tests.AkkaSpec
     {
         #region internal classes 
 
