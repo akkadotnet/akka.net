@@ -9,7 +9,7 @@ using Akka.Event;
 
 namespace Akka.Testkit.Tests.TestEventListenerTests
 {
-    public abstract class EventFilterTestBase : TestKit.Xunit.TestKit
+    public abstract class EventFilterTestBase : TestKit.Xunit2.TestKit
     {
         /// <summary>
         /// Used to signal that the test was successful and that we should ensure no more messages were logged

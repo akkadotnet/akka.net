@@ -12,7 +12,7 @@ using Xunit;
 namespace Akka.Testkit.Tests
 {
     // ReSharper disable once InconsistentNaming
-    public class TestKit_Config_Tests : TestKit.Xunit.TestKit
+    public class TestKit_Config_Tests : TestKit.Xunit2.TestKit
     {
         [Fact]
         public void DefaultValues_should_be_correct()

@@ -200,7 +200,7 @@ namespace Akka.Testkit.Tests.TestEventListenerTests
         [Fact]
         public void ShouldTimeoutIfTooFewMessages()
         {
-            var exception = XAssert.Throws<AssertException>(() =>
+            var exception = XAssert.Throws<AssertActualExpectedException>(() =>
             {
                 EventFilter.ForLogLevel(LogLevel).Expect(2, TimeSpan.FromMilliseconds(50), () =>
                 {

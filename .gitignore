@@ -230,4 +230,5 @@ target/
 
 # NetCore
 project.lock.json
+.vs/
 

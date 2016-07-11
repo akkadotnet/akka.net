@@ -24,7 +24,7 @@
 
   "buildOptions": {
     "embed": {
-      "includeFiles": [ "Internal/Reference.conf" ]
+      "includeFiles": [ "Configs/TestScheduler.conf", "Internal/Reference.conf" ]
     }
   },
 

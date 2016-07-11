@@ -11,7 +11,7 @@ using Xunit;
 
 namespace Akka.Testkit.Tests.TestEventListenerTests
 {
-    public class ConfigTests : TestKit.Xunit.TestKit
+    public class ConfigTests : TestKit.Xunit2.TestKit
     {
         [Fact]
         public void TestEventListener_is_in_config_by_default()
