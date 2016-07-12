@@ -1,0 +1,20 @@
+﻿{
+  "testRunner": "nunit",
+
+  "dependencies": {
+    "Akka": { "target": "project" },
+    "Akka.Streams": { "target": "project" },
+    "Akka.Streams.TestKit": { "target": "project" },
+    "Akka.Streams.TestKit.Tests": { "target": "project" },
+    "Akka.TestKit": { "target": "project" },
+    "dotnet-test-nunit": "3.4.0-beta-1",
+    "NUnit": "3.4.1",
+    "Reactive.Streams": "1.0.0-RC1",
+    "Reactive.Streams.TCK": "1.0.0-RC1",
+    "System.Collections.Immutable": "1.2.0"
+  },
+
+  "frameworks": {
+    "net451": {}
+  }
+}
