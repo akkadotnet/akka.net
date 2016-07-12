@@ -174,7 +174,7 @@ namespace Akka.Actor
 
         protected override void TellInternal(object message, IActorRef sender)
         {
-            if(message == null) throw new InvalidMessageException("Message is null");
+            if (message == null) throw new InvalidMessageException("Message is null");
             var i = message as Identify;
             if (i != null)
             {
@@ -182,18 +182,20 @@ namespace Akka.Actor
                 return;
             }
             var d = message as DeadLetter;
-            if(d != null && !SpecialHandle(d.Message, d.Sender)) { _eventStream.Publish(d);
+            if (d != null)
+            {
+                if (!SpecialHandle(d.Message, d.Sender)) { _eventStream.Publish(d); }
                 return;
             }
-            if(!SpecialHandle(message, sender)) { _eventStream.Publish(new DeadLetter(message, sender.IsNobody() ? Provider.DeadLetters : sender, this));}
+            if (!SpecialHandle(message, sender)) { _eventStream.Publish(new DeadLetter(message, sender.IsNobody() ? Provider.DeadLetters : sender, this)); }
         }
 
         protected override bool SpecialHandle(object message, IActorRef sender)
         {
             var w = message as Watch;
-            if(w != null)
+            if (w != null)
             {
-                if(!w.Watchee.Equals(this) && !w.Watcher.Equals(this))
+                if (!w.Watchee.Equals(this) && !w.Watcher.Equals(this))
                 {
                     w.Watcher.SendSystemMessage(new DeathWatchNotification(w.Watchee, existenceConfirmed: false, addressTerminated: false));
                 }
