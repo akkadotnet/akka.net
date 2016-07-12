@@ -1,0 +1,19 @@
+{
+  "testRunner": "xunit",
+
+  "dependencies": {
+    "Akka": { "target": "project" },
+    "Akka.Remote": { "target": "project" },
+    "Akka.Remote.TestKit": { "target": "project" },
+    "Akka.TestKit": { "target": "project" },
+    "Akka.TestKit.Xunit2": { "target": "project" },
+    "Akka.Tests.Shared.Internals": { "target": "project" },
+    "FluentAssertions": "4.11.0",
+    "System.Collections.Immutable": "1.2.0",
+    "xunit": "2.2.0-beta2-build3300"
+  },
+
+  "frameworks": {
+    "net45": {}
+  }
+}
