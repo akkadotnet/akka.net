@@ -94,25 +94,6 @@ namespace Akka.Dispatch
         public IDispatcherPrerequisites Prerequisites { get; private set; }
     }
 
-        /// <summary>
-    /// INTERNAL API
-    /// 
-    /// Produces <see cref="ExecutorService"/> that dispatches messages on the current synchronization context,
-    ///  e.g. WinForms or WPF GUI thread
-    /// </summary>
-    internal sealed class CurrentSynchronizationContextExecutorServiceFactory : ExecutorServiceConfigurator
-    {
-        public override ExecutorService Produce(string id)
-        {
-            return new TaskSchedulerExecutor(id, TaskScheduler.FromCurrentSynchronizationContext());
-        }
-
-        public CurrentSynchronizationContextExecutorServiceFactory(Config config, IDispatcherPrerequisites prerequisites) : base(config, prerequisites)
-        {
-        }
-    }
-
-
     /// <summary>
     /// INTERNAL API
     /// 

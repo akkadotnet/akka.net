@@ -15,14 +15,14 @@ using Helios.Concurrency;
 namespace Akka.Dispatch
 {
     /// <summary>
-    /// Used to create instances of the <see cref="SingleThreadDispatcher"/>. 
+    /// Used to create instances of the <see cref="PinnedDispatcher"/>. 
     /// 
     /// Each actor created using the pinned dispatcher gets its own unique thread.
     /// <remarks>
     /// Always returns a new instance.
     /// </remarks>
     /// </summary>
-    class PinnedDispatcherConfigurator : MessageDispatcherConfigurator
+    internal sealed class PinnedDispatcherConfigurator : MessageDispatcherConfigurator
     {
         private readonly ExecutorServiceConfigurator _executorServiceConfigurator;
 
