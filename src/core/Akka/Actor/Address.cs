@@ -191,6 +191,9 @@ namespace Akka.Actor
             {
                 var systemName = uri.UserInfo;
                 var host = uri.Host;
+                /*
+                 * Aaronontheweb: in the event that an Address is passed in with port 0, the Uri converts it to -1 (which is invalid.)
+                 */
                 var port = uri.Port;
 
                 return new Address(protocol, systemName, host, port);

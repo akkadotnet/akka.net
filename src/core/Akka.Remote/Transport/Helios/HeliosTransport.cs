@@ -9,6 +9,7 @@ using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -475,7 +476,32 @@ namespace Akka.Remote.Transport.Helios
         public static Address MapSocketToAddress(IPEndPoint socketAddr, string schemeIdentifier, string systemName, string hostName = null)
         {
             if (socketAddr == null) return null;
-            return new Address(schemeIdentifier, systemName, hostName ?? socketAddr.Address.ToString(), socketAddr.Port);
+            return new Address(schemeIdentifier, systemName, SafeMapHostName(hostName) ?? SafeMapIPv6(socketAddr.Address), socketAddr.Port);
+        }
+
+        /// <summary>
+        /// Check to see if a given hostname is IPV6, IPV4, or DNS and apply the appropriate formatting
+        /// </summary>
+        /// <param name="hostName">The hostname parsed from the file</param>
+        /// <returns>An RFC-compliant formatting of the hostname</returns>
+        public static string SafeMapHostName(string hostName)
+        {
+            IPAddress addr;
+            if (!string.IsNullOrEmpty(hostName) && IPAddress.TryParse(hostName, out addr))
+            {
+                if (addr.AddressFamily == AddressFamily.InterNetworkV6)
+                    return "[" + addr + "]";
+                return addr.ToString();
+            }
+
+            return hostName;
+        }
+
+        public static string SafeMapIPv6(IPAddress address)
+        {
+            if (address.AddressFamily == AddressFamily.InterNetworkV6)
+                return "[" + address + "]";
+            return address.ToString();
         }
 
 #endregion

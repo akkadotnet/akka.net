@@ -12,7 +12,6 @@ using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Extensions;
 using Akka.TestKit.TestActors;
 
 namespace Akka.Tests.Actor
