@@ -1,0 +1,20 @@
+{
+  "testRunner": "xunit",
+
+  "dependencies": {
+    "Akka": { "target": "project" },
+    "Akka.TestKit": { "target": "project" },
+    "Akka.Streams": { "target": "project" },
+    "Akka.Streams.Tests": { "target": "project" },
+    "Akka.Streams.TestKit": { "target": "project" },
+    "Akka.Streams.TestKit.Tests": { "target": "project" },
+    "Akka.TestKit.Xunit2": { "target": "project" },
+    "NBench": "0.3.0",
+    "System.Collections.Immutable": "1.2.0",
+    "Reactive.Streams": "1.0.0-RC1"
+  },
+
+  "frameworks": {
+    "net451": {}
+  }
+}

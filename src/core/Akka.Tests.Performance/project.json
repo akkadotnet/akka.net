@@ -1,0 +1,14 @@
+{
+  "testRunner": "xunit",
+
+  "dependencies": {
+    "Akka": { "target": "project" },
+    "Akka.TestKit": { "target": "project" },
+    "NBench": "0.3.0",
+    "NBench.PerformanceCounters": "0.3.0"
+  },
+
+  "frameworks": {
+    "net45": {}
+  }
+}

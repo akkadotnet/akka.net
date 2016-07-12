@@ -1,0 +1,14 @@
+{
+  "testRunner": "xunit",
+
+  "dependencies": {
+    "Akka": { "target": "project" },
+    "Akka.Remote": { "target": "project" },
+    "Google.ProtocolBuffers": "2.4.1.555",
+    "NBench": "0.3.0"
+  },
+
+  "frameworks": {
+    "net45": {}
+  }
+}
