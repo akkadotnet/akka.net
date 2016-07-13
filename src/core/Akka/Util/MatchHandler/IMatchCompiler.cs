@@ -14,7 +14,9 @@ namespace Akka.Tools.MatchHandler
     public interface IMatchCompiler<in T>
     {
         PartialAction<T> Compile(IReadOnlyList<TypeHandler> handlers, IReadOnlyList<Argument> capturedArguments, MatchBuilderSignature signature);
+#if !CORECLR
         void CompileToMethod(IReadOnlyList<TypeHandler> handlers, IReadOnlyList<Argument> capturedArguments, MatchBuilderSignature signature, TypeBuilder typeBuilder, string methodName, MethodAttributes methodAttributes = MethodAttributes.Public | MethodAttributes.Static);
+#endif
     }
 }
 

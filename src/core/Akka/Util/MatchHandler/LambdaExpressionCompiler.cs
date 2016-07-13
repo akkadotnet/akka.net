@@ -18,14 +18,12 @@ namespace Akka.Tools.MatchHandler
             return expression.Compile();
         }
 
+#if !CORECLR
         public void CompileToMethod(LambdaExpression expression, MethodBuilder method)
         {
-#if !CORECLR
             expression.CompileToMethod(method);
-#else
-            // TODO: CORECLR FIX IT
-#endif
         }
+#endif
     }
 }
 
