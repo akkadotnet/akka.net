@@ -279,7 +279,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
             else
             {
                 if (serializer.IncludeManifest)
-                    builder.SetMessageManifest(ByteString.CopyFromUtf8(message.GetType().FullName));
+                    builder.SetMessageManifest(ByteString.CopyFromUtf8(TypeQualifiedNameForManifest(message.GetType())));
             }
 
             return builder.Build();
