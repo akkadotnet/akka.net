@@ -18,9 +18,15 @@
     "net451": {
       "buildOptions": {
         "define": [ "SERIALIZABLE" ]
+      },
+      "dependencies": {
+        "Akka.Remote": { "target": "project" }
       }
     },
     "netcoreapp1.0": {
+      "buildOptions": {
+        "define": [ "CORECLR" ]
+      },
       "dependencies": {
         "Microsoft.NETCore.App": {
           "version": "1.0.0",

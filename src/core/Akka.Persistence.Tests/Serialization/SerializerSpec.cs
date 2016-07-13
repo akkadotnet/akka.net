@@ -359,6 +359,7 @@ akka {
         }
     }
 
+#if !CORECLR
     public class MessageSerializerRemotingSpec : AkkaSpec
     {
         internal class LocalActor : ActorBase
@@ -475,4 +476,5 @@ akka {
             back.Manifest.ShouldBe(p1.Manifest);
         }
     }
+#endif
 }
