@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Reflection;
 using Xunit;
 
 namespace Akka.TestKit.Tests.Xunit2
@@ -20,12 +21,10 @@ namespace Akka.TestKit.Tests.Xunit2
             TestKitSettings.SingleExpectDefault.ShouldBe(TimeSpan.FromSeconds(3));
             TestKitSettings.TestEventFilterLeeway.ShouldBe(TimeSpan.FromSeconds(3));
             TestKitSettings.TestTimeFactor.ShouldBe(1);
-            var callingThreadDispatcherTypeName = typeof(CallingThreadDispatcherConfigurator).FullName + ", " + typeof(CallingThreadDispatcher).Assembly.GetName().Name;
+            var callingThreadDispatcherTypeName = typeof(CallingThreadDispatcherConfigurator).FullName + ", " + typeof(CallingThreadDispatcher).GetTypeInfo().Assembly.GetName().Name;
             Sys.Settings.Config.GetString("akka.test.calling-thread-dispatcher.type").ShouldBe(callingThreadDispatcherTypeName);
             Sys.Settings.Config.GetString("akka.test.test-actor.dispatcher.type").ShouldBe(callingThreadDispatcherTypeName);
             CallingThreadDispatcher.Id.ShouldBe("akka.test.calling-thread-dispatcher");
-
-
         }
     }
 }
