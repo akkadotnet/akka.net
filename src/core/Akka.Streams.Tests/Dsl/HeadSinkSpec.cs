@@ -65,10 +65,10 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                Source.Failed<int>(new SystemException("ex"))
+                Source.Failed<int>(new Exception("ex"))
                     .Invoking(s => s.RunWith(Sink.First<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))
                     .ShouldThrow<AggregateException>()
-                    .WithInnerException<SystemException>()
+                    .WithInnerException<Exception>()
                     .WithInnerMessage("ex");
             }, Materializer);
         }
@@ -109,10 +109,10 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                Source.Failed<int>(new SystemException("ex"))
+                Source.Failed<int>(new Exception("ex"))
                     .Invoking(s => s.RunWith(Sink.FirstOrDefault<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))
                     .ShouldThrow<AggregateException>()
-                    .WithInnerException<SystemException>()
+                    .WithInnerException<Exception>()
                     .WithInnerMessage("ex");
             }, Materializer);
         }

@@ -87,13 +87,19 @@ namespace Akka.Streams.TestKit.Tests
 
             public override Encoding Encoding => Encoding.UTF8;
 
-#if CORECLR
-            // TODO: CORECLR, why tey made this method as abstract?
             public override void Write(char value)
             {
-                Write(value.ToString());
-            }
+                try
+                {
+                    _helper.WriteLine(value + "\b");
+                }
+                finally
+                {
+#if !CORECLR
+                    base.Write(value);
 #endif
+                }
+            }
 
             public override void Write(string value)
             {

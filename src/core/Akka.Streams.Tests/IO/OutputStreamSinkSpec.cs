@@ -95,7 +95,11 @@ namespace Akka.Streams.Tests.IO
                 throw new System.NotImplementedException();
             }
 
-            public override void Close() => _p.Ref.Tell("closed");
+            protected override void Dispose(bool disposing)
+            {
+                _p.Ref.Tell("closed");
+                base.Dispose(disposing);
+            }
 
             public override bool CanRead { get; }
             public override bool CanSeek { get; }
@@ -136,7 +140,11 @@ namespace Akka.Streams.Tests.IO
             public override void Write(byte[] buffer, int offset, int count)
                 => _p.Ref.Tell(ByteString.Create(buffer, offset, count).DecodeString());
 
-            public override void Close() => _p.Ref.Tell("closed");
+            protected override void Dispose(bool disposing)
+            {
+                _p.Ref.Tell("closed");
+                base.Dispose(disposing);
+            }
 
             public override bool CanRead { get; }
             public override bool CanSeek { get; }
