@@ -374,7 +374,7 @@ namespace Akka.Actor
                     throw;
                 }
 
-                if (Mailbox != null)
+                if (Mailbox != null && IsFailed)
                 {
                     for(var i = 1; i <= Mailbox.SuspendCount(); i++)
                         actor.Suspend();
