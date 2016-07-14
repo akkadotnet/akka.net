@@ -276,12 +276,19 @@ namespace Akka.Actor
                 {
                     DrainSysMsgQueue(cell);
 
-                    foreach (var envelope in _messageQueue)
+                    // In some scenarios `cell.SendMessage` can send additional messages to Self in current thread, that would change _messageQueue
+                    while (this._messageQueue.Any())
                     {
-                        cell.SendMessage(envelope.Sender, envelope.Message);
+                        var queue = new List<Envelope>(this._messageQueue);
+                        this._messageQueue.Clear();
 
-                        // drain sysmsgQueue in case a msg enqueues a sys msg
-                        DrainSysMsgQueue(cell);
+                        foreach (var envelope in queue)
+                        {
+                            cell.SendMessage(envelope.Sender, envelope.Message);
+
+                            // drain sysmsgQueue in case a msg enqueues a sys msg
+                            DrainSysMsgQueue(cell);
+                        }
                     }
                 }
                 finally
