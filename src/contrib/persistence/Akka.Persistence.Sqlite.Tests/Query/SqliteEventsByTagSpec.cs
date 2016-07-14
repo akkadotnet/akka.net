@@ -29,7 +29,7 @@ namespace Akka.Persistence.Sqlite.Tests.Query
                 class = ""Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite""
                 plugin-dispatcher = ""akka.actor.default-dispatcher""
                 table-name = event_journal
-                meta-table-name = journal_metadata
+                metadata-table-name = journal_metadata
                 auto-initialize = on
                 connection-string = ""FullUri=file:memdb-journal-{id}.db?mode=memory&cache=shared;""
                 refresh-interval = 1s
