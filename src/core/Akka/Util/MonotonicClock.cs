@@ -8,16 +8,12 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace Akka.Util
 {
 	internal static class MonotonicClock
 	{
 		private static readonly Stopwatch Stopwatch = Stopwatch.StartNew();
-		private static readonly bool IsMono = Type.GetType("Mono.Runtime") != null;
-		[DllImport("kernel32")]
-		private static extern ulong GetTickCount64();
 
 		private const int TicksInMillisecond = 10000;
 
@@ -38,10 +34,8 @@ namespace Akka.Util
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 	    public static long GetMilliseconds()
-	    {
-            return IsMono
-                ? Stopwatch.ElapsedMilliseconds
-                : (long)GetTickCount64();
+        {
+            return Stopwatch.ElapsedMilliseconds;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
