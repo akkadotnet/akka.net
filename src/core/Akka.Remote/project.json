@@ -32,6 +32,10 @@
   },
 
   "frameworks": {
-    "net45": {}
+    "net45": {
+      "frameworkAssemblies": {
+        "System.Net": "4.0.0"
+      }
+    }
   }
 }
