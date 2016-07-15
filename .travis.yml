@@ -1,13 +1,30 @@
-language: objective-c
+sudo: required
+dist: trusty
 
-env:
- matrix:
-  - MONO_VERSION="3.6.0"
+language: csharp
+mono:
+  - latest
+
+addons:
+  apt:
+    packages:
+    - gettext
+    - libunwind8
+    - libicu52
+    - dbus
+
+branches:
+  only:
+    - netcorecodefixes
 
 before_install:
- - wget "http://download.mono-project.com/archive/${MONO_VERSION}/macos-10-x86/MonoFramework-MDK-${MONO_VERSION}.macos10.xamarin.x86.pkg"
- - sudo installer -pkg "MonoFramework-MDK-${MONO_VERSION}.macos10.xamarin.x86.pkg" -target /
+  - export DEBIAN_FRONTEND=noninteractive
+  - sudo sh -c 'echo "deb [arch=amd64] https://apt-mo.trafficmanager.net/repos/dotnet/ trusty main" > /etc/apt/sources.list.d/dotnetdev.list'
+  - sudo apt-key adv --keyserver apt-mo.trafficmanager.net --recv-keys 417A0893
+  - sudo apt-get update
+  - sudo apt-get -y install dotnet-dev-1.0.0-preview2-003121
 
 script:
- - ./build.sh BuildMono
- - ./build.sh RunTestsMono
+  - dotnet restore
+  - dotnet build **/project.json
+  - find ./ -type f -name "project.json" -exec dotnet test "{}" \;

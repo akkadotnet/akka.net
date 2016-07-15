@@ -35,8 +35,8 @@
         "define": [ "SERIALIZATION", "CONFIGURATION", "UNSAFE_THREADING", "CLONEABLE" ]
       },
       "frameworkAssemblies": {
-        "System.Configuration": "",
-        "System.Xml": ""
+        "System.Configuration": "4.0.0",
+        "System.Xml": "4.0.0"
       }
     },
     "netstandard1.6": {

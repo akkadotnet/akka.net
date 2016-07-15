@@ -32,10 +32,6 @@
   },
 
   "frameworks": {
-    "net45": {
-      "frameworkAssemblies": {
-        "System.Web": "4.0.0"
-      }
-    }
+    "net45": {}
   }
 }
