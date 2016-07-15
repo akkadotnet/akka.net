@@ -238,7 +238,7 @@ namespace Akka.Actor
         private readonly object _lock = new object();
 
        /* Both queues must be accessed via lock */
-        private readonly List<Envelope> _messageQueue = new List<Envelope>();
+        private readonly LinkedList<Envelope> _messageQueue = new LinkedList<Envelope>();
         private LatestFirstSystemMessageList _sysMsgQueue = SystemMessageList.LNil;
 
         private readonly TimeSpan _timeout;
@@ -276,9 +276,12 @@ namespace Akka.Actor
                 {
                     DrainSysMsgQueue(cell);
 
-                    foreach (var envelope in _messageQueue)
+                    while (_messageQueue.Count > 0)
                     {
-                        cell.SendMessage(envelope.Sender, envelope.Message);
+                        // roughly equal to what "poll" does
+                        var e = _messageQueue.First.Value;
+                        _messageQueue.RemoveFirst();
+                        cell.SendMessage(e.Sender, e.Message);
 
                         // drain sysmsgQueue in case a msg enqueues a sys msg
                         DrainSysMsgQueue(cell);
@@ -366,7 +369,7 @@ namespace Akka.Actor
                     }
                     else
                     {
-                        _messageQueue.Add(new Envelope { Message = message, Sender = sender });
+                        _messageQueue.AddLast(new Envelope { Message = message, Sender = sender });
                         Mailbox.DebugPrint("{0} temp queueing {1} from {2}", Self, message, sender);
                     }
                 }
