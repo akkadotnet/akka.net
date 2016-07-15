@@ -7,7 +7,6 @@
 
 using System.IO;
 using System.Linq;
-using Akka.Dispatch;
 using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit.Tests;
@@ -20,11 +19,12 @@ namespace Akka.Streams.Tests.TCK
         private const int ChunkSize = 256;
         private const int Elements = 1000;
 
-        private FileInfo _file;
+        private static int _counter;
+        private readonly FileInfo _file;
 
         public FilePublisherTest() : base(Utils.UnboundedMailboxConfig.WithFallback(AkkaSpec.TestConfig))
         {
-            _file = new FileInfo(Path.Combine(Path.GetTempPath(), "file-source-tck.tmp"));
+            _file = new FileInfo(Path.Combine(Path.GetTempPath(), $"file-source-tck-{_counter++}.tmp"));
 
             var chunk = Enumerable.Range(1, ChunkSize).Select(_ => "x").Aggregate("", (s, s1) => s + s1);
             using (var writer = _file.CreateText()) 
