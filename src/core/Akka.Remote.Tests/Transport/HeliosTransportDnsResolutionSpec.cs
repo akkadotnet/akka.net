@@ -7,12 +7,14 @@
 
 using System;
 using System.Net;
+using System.Net.Sockets;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.Transport.Helios;
 using Akka.TestKit;
 using FsCheck;
 using FsCheck.Xunit;
+using Xunit;
 using Config = Akka.Configuration.Config;
 // ReSharper disable EmptyGeneralCatchClause
 
@@ -24,20 +26,17 @@ namespace Akka.Remote.Tests.Transport
     /// </summary>
     public static class EndpointGenerators
     {
-        public static Arbitrary<EndPoint> Endpoints()
-        {
-            return Arb.From(Gen.Elements<EndPoint>(new IPEndPoint(IPAddress.Loopback, 0),
-                new IPEndPoint(IPAddress.IPv6Loopback, 0),
-                new DnsEndPoint("localhost", 0)));
-        }
-
         public static Arbitrary<IPEndPoint> IpEndPoints()
         {
             return Arb.From(Gen.Elements<IPEndPoint>(new IPEndPoint(IPAddress.Loopback, 1337),
                new IPEndPoint(IPAddress.IPv6Loopback, 1337),
-               new IPEndPoint(IPAddress.Any, 1337), new IPEndPoint(IPAddress.IPv6Any, 1337),
-               new IPEndPoint(IPAddress.Any.MapToIPv6(), 1337)));
-        } 
+               new IPEndPoint(IPAddress.Any, 1337), new IPEndPoint(IPAddress.IPv6Any, 1337)));
+        }
+
+        public static Arbitrary<DnsEndPoint> DnsEndPoints()
+        {
+            return Arb.From(Gen.Elements(new DnsEndPoint("localhost", 0)));
+        }
 
         /// <summary>
         /// Includes IPV4 / IPV6 "any" addresses
@@ -70,12 +69,13 @@ namespace Akka.Remote.Tests.Transport
             Arb.Register(typeof(EndpointGenerators));
         }
 
-        public Config BuildConfig(string hostname, int? port = null, string publichostname = null)
+        public Config BuildConfig(string hostname, int? port = null, string publichostname = null, bool useIpv6 = false)
         {
             return ConfigurationFactory.ParseString(@"akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""")
                 .WithFallback("akka.remote.helios.tcp.hostname =\"" + hostname + "\"")
                 .WithFallback("akka.remote.helios.tcp.public-hostname =\"" + (publichostname ?? hostname) + "\"")
                 .WithFallback("akka.remote.helios.tcp.port = " + (port ?? 0))
+                .WithFallback("akka.remote.helios.tcp.dns-use-ipv6 = " + useIpv6.ToString().ToLowerInvariant())
                 .WithFallback("akka.test.single-expect-default = 1s")
                 .WithFallback(Sys.Settings.Config);
         }
@@ -88,10 +88,10 @@ namespace Akka.Remote.Tests.Transport
             }
         }
 
-        private void Setup(string inboundHostname, string outboundHostname, string inboundPublicHostname = null, string outboundPublicHostname = null)
+        private void Setup(string inboundHostname, string outboundHostname, string inboundPublicHostname = null, string outboundPublicHostname = null, bool useIpv6Dns = false)
         {
-            _inbound = ActorSystem.Create("Sys1", BuildConfig(inboundHostname, 0, inboundPublicHostname));
-            _outbound = ActorSystem.Create("Sys2", BuildConfig(outboundHostname, 0, outboundPublicHostname));
+            _inbound = ActorSystem.Create("Sys1", BuildConfig(inboundHostname, 0, inboundPublicHostname, useIpv6Dns));
+            _outbound = ActorSystem.Create("Sys2", BuildConfig(outboundHostname, 0, outboundPublicHostname, useIpv6Dns));
 
             _inbound.ActorOf(Props.Create(() => new AssociationAcker()), "ack");
             _outbound.ActorOf(Props.Create(() => new AssociationAcker()), "ack");
@@ -119,12 +119,20 @@ namespace Akka.Remote.Tests.Transport
         private TestProbe _inboundProbe;
         private TestProbe _outboundProbe;
 
-        [Property(MaxTest = 25)]
-        public Property HeliosTransport_Should_Resolve_DNS(EndPoint inbound, EndPoint outbound)
+        public static bool IsAnyIp(EndPoint ep)
         {
+            var ip = ep as IPEndPoint;
+            if (ip == null) return false;
+            return (ip.Address.Equals(IPAddress.Any) || ip.Address.Equals(IPAddress.IPv6Any));
+        }
+
+        [Property]
+        public Property HeliosTransport_Should_Resolve_DNS(EndPoint inbound, EndPoint outbound, bool dnsIpv6)
+        {
+            if (IsAnyIp(inbound) || IsAnyIp(outbound)) return true.Label("Can't connect directly to an ANY address");
             try
             {
-                Setup(EndpointGenerators.ParseAddress(inbound), EndpointGenerators.ParseAddress(outbound));
+                Setup(EndpointGenerators.ParseAddress(inbound), EndpointGenerators.ParseAddress(outbound), useIpv6Dns:dnsIpv6);
                 var outboundReceivedAck = true;
                 var inboundReceivedAck = true;
                 _outbound.ActorSelection(_inboundAck).Tell("ping", _outboundProbe.Ref);
@@ -148,6 +156,56 @@ namespace Akka.Remote.Tests.Transport
                     inboundReceivedAck = false;
                 }
                 
+
+                return outboundReceivedAck.Label($"Expected (outbound: {RARP.For(_outbound).Provider.DefaultAddress}) to be able to successfully message and receive reply from (inbound: {RARP.For(_inbound).Provider.DefaultAddress})")
+                    .And(inboundReceivedAck.Label($"Expected (inbound: {RARP.For(_inbound).Provider.DefaultAddress}) to be able to successfully message and receive reply from (outbound: {RARP.For(_outbound).Provider.DefaultAddress})"));
+            }
+            finally
+            {
+                Cleanup();
+            }
+        }
+
+        [Property]
+        public Property HeliosTransport_Should_Resolve_DNS_with_PublicHostname(IPEndPoint inbound, DnsEndPoint publicInbound,
+            IPEndPoint outbound, DnsEndPoint publicOutbound, bool dnsUseIpv6)
+        {
+            if (dnsUseIpv6 &&
+                (inbound.AddressFamily == AddressFamily.InterNetwork ||
+                 (outbound.AddressFamily == AddressFamily.InterNetwork))) return true.Label("Can't connect to IPV4 socket using IPV6 DNS resolution");
+            if (!dnsUseIpv6 &&
+                (inbound.AddressFamily == AddressFamily.InterNetworkV6 ||
+                 (outbound.AddressFamily == AddressFamily.InterNetworkV6))) return true.Label("Need to apply DNS resolution and IP stack verison consistently.");
+
+            try
+            {
+                Setup(EndpointGenerators.ParseAddress(inbound),
+                    EndpointGenerators.ParseAddress(outbound),
+                    EndpointGenerators.ParseAddress(publicInbound),
+                    EndpointGenerators.ParseAddress(publicOutbound), dnsUseIpv6);
+                var outboundReceivedAck = true;
+                var inboundReceivedAck = true;
+                _outbound.ActorSelection(_inboundAck).Tell("ping", _outboundProbe.Ref);
+                try
+                {
+                    _outboundProbe.ExpectMsg("ack");
+
+                }
+                catch
+                {
+                    outboundReceivedAck = false;
+                }
+
+                _inbound.ActorSelection(_outboundAck).Tell("ping", _inboundProbe.Ref);
+                try
+                {
+                    _inboundProbe.ExpectMsg("ack");
+                }
+                catch
+                {
+                    inboundReceivedAck = false;
+                }
+
 
                 return outboundReceivedAck.Label($"Expected (outbound: {RARP.For(_outbound).Provider.DefaultAddress}) to be able to successfully message and receive reply from (inbound: {RARP.For(_inbound).Provider.DefaultAddress})")
                     .And(inboundReceivedAck.Label($"Expected (inbound: {RARP.For(_inbound).Provider.DefaultAddress}) to be able to successfully message and receive reply from (outbound: {RARP.For(_outbound).Provider.DefaultAddress})"));

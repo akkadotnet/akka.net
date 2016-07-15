@@ -95,6 +95,7 @@ namespace Akka.Remote.Transport.Helios
             TcpReuseAddr = Config.GetBoolean("tcp-reuse-addr");
             var configHost = Config.GetString("hostname");
             var publicConfigHost = Config.GetString("public-hostname");
+            DnsUseIpv6 = Config.GetBoolean("dns-use-ipv6");
             Hostname = string.IsNullOrEmpty(configHost) ? IPAddress.Any.ToString() : configHost;
             PublicHostname = string.IsNullOrEmpty(publicConfigHost) ? Hostname : publicConfigHost;
             ServerSocketWorkerPoolSize = ComputeWps(Config.GetConfig("server-socket-worker-pool"));
@@ -130,6 +131,8 @@ namespace Akka.Remote.Transport.Helios
         public bool TcpKeepAlive { get; private set; }
 
         public bool TcpReuseAddr { get; private set; }
+
+        public bool DnsUseIpv6 { get; private set; }
 
         /// <summary>
         /// The hostname that this server binds to
@@ -287,6 +290,7 @@ namespace Akka.Remote.Transport.Helios
                     .Option(ChannelOption.TcpNodelay, Settings.TcpNoDelay)
                     .Option(ChannelOption.ConnectTimeout, Settings.ConnectTimeout)
                     .Option(ChannelOption.AutoRead, false)
+                    .PreferredDnsResolutionFamily(Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork)
                     .Channel<TcpSocketChannel>()
                     .Handler(
                         new ActionChannelInitializer<TcpSocketChannel>(
@@ -325,6 +329,7 @@ namespace Akka.Remote.Transport.Helios
                      .ChildOption(ChannelOption.TcpNodelay, Settings.TcpNoDelay)
                      .ChildOption(ChannelOption.AutoRead, false)
                      .Option(ChannelOption.SoBacklog, Settings.Backlog)
+                     .PreferredDnsResolutionFamily(Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork)
                      .ChildHandler(
                          new ActionChannelInitializer<TcpSocketChannel>(
                              SetServerPipeline));
@@ -345,13 +350,6 @@ namespace Akka.Remote.Transport.Helios
         {
             if (InternalTransport == TransportType.Tcp)
             {
-                /*
-                 * Need to cast the EndPoint to the correct concrete type, otherwise
-                 * Helios will not perform DNS resolution on bind.
-                 */
-                var dns = listenAddress as DnsEndPoint;
-                if(dns != null)
-                    return await ServerFactory.BindAsync(dns).ConfigureAwait(false);
                 return await ServerFactory.BindAsync(listenAddress).ConfigureAwait(false);
             }
                 
