@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Configuration;
 using Akka.Configuration.Hocon;
 using System.Linq;
 using System.Reflection;
@@ -32,9 +31,9 @@ namespace Akka.Tests.Configuration
 
         private static void ResetConfigMechanism()
         {
-            typeof(ConfigurationManager).GetField("s_initState", BindingFlags.NonPublic | BindingFlags.Static).SetValue(null, 0);
-            typeof(ConfigurationManager).GetField("s_configSystem", BindingFlags.NonPublic | BindingFlags.Static).SetValue(null, null);
-            typeof(ConfigurationManager)
+            typeof(System.Configuration.ConfigurationManager).GetField("s_initState", BindingFlags.NonPublic | BindingFlags.Static).SetValue(null, 0);
+            typeof(System.Configuration.ConfigurationManager).GetField("s_configSystem", BindingFlags.NonPublic | BindingFlags.Static).SetValue(null, null);
+            typeof(System.Configuration.ConfigurationManager)
                 .Assembly.GetTypes()
                 .Where(x => x.FullName == "System.Configuration.ClientConfigPaths")
                 .First()
