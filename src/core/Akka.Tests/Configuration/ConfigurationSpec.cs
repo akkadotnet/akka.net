@@ -6,8 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Configuration;
 using Akka.Configuration.Hocon;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
@@ -21,6 +23,26 @@ namespace Akka.Tests.Configuration
 {
     public class ConfigurationSpec : AkkaSpec
     {
+#if CONFIGURATION
+        static ConfigurationSpec()
+        {
+            AppDomain.CurrentDomain.SetData("APP_CONFIG_FILE", System.IO.Path.Combine(typeof(ConfigurationSpec).Assembly.Location + ".config"));
+            ResetConfigMechanism();
+        }
+
+        private static void ResetConfigMechanism()
+        {
+            typeof(ConfigurationManager).GetField("s_initState", BindingFlags.NonPublic | BindingFlags.Static).SetValue(null, 0);
+            typeof(ConfigurationManager).GetField("s_configSystem", BindingFlags.NonPublic | BindingFlags.Static).SetValue(null, null);
+            typeof(ConfigurationManager)
+                .Assembly.GetTypes()
+                .Where(x => x.FullName == "System.Configuration.ClientConfigPaths")
+                .First()
+                .GetField("s_current", BindingFlags.NonPublic | BindingFlags.Static)
+                .SetValue(null, null);
+        }
+#endif
+
         public ConfigurationSpec() : base(ConfigurationFactory.Default())
         {
         }
