@@ -1,5 +1,18 @@
-#### 1.1.1 July 06 2016 ####
-**Place holder for vNext**
+#### 1.1.1 July 15 2016 ####
+**Maintenance release for Akka.NET v1.1**
+
+Akka.NET 1.1.1 addresses a number of bugs and issues reported by end users who made the upgrade from Akka.NET 1.0.* to Akka.NET 1.1. 
+
+**DNS improvements**
+The biggest set of fixes included in Akka.NET 1.1.1 deal with how the Helios transport treats IPV6 addresses and performs DNS resolution. In Akka.NET 1.0.* Helios only supported IPV4 addresses and would use that as the default for DNS. In Akka.NET 1.1 we upgraded to using Helios 2.1, which supports both IPV6 and IPV4, but *changed the default DNS resolution strategy to use IPV6.* This caused some breakages for users who were using the `public-hostname` setting inside Helios in combination with a `hostname` value that used an IPV4 address.
+
+This is now fixed - Akka.NET 1.1.1 uses Helios 2.1.2 which defaults back to an IPV4 DNS resolution strategy for both inbound and outbound connections. We've also fixed the way we encode and format IPV6 addresses into `ActorPath` and `Address` string representations (although we [still have an issue with parsing IPV6 from HOCON](https://github.com/akkadotnet/akka.net/issues/2187).)
+
+If you need to use IPV6 for DNS resolution, you can enable it by changing the following setting:
+
+`akka.remote.helios.tcp.dns-use-ipv6 = true`
+
+You can [see the full list of Akka.NET 1.1.1 changes here](https://github.com/akkadotnet/akka.net/milestone/9).
 
 #### 1.1.0 July 05 2016 ####
 **Feature Release for Akka.NET**
