@@ -22,7 +22,7 @@ namespace Akka.Persistence.Sqlite.Journal
             QueryExecutor = new SqliteQueryExecutor(new QueryConfiguration(
                 schemaName: null,
                 journalEventsTableName: config.GetString("table-name"),
-                metaTableName: config.GetString("meta-table-name"),
+                metaTableName: config.GetString("metadata-table-name"),
                 persistenceIdColumnName: "persistence_id",
                 sequenceNrColumnName: "sequence_nr",
                 payloadColumnName: "payload",

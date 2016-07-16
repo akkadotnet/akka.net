@@ -10,7 +10,6 @@ using System.Data;
 using System.Data.Common;
 using System.Data.SQLite;
 using Akka.Configuration;
-using Akka.Persistence.Sql.Common;
 using Akka.Persistence.Sql.Common.Snapshot;
 
 namespace Akka.Persistence.Sqlite.Snapshot
@@ -28,9 +27,18 @@ namespace Akka.Persistence.Sqlite.Snapshot
                     {configuration.PayloadColumnName} BLOB NOT NULL,
                     PRIMARY KEY ({configuration.PersistenceIdColumnName}, {configuration.SequenceNrColumnName})
                 );";
+
+            InsertSnapshotSql = $@"
+                UPDATE {configuration.FullSnapshotTableName}
+                SET {configuration.TimestampColumnName} = @Timestamp, {configuration.ManifestColumnName} = @Manifest, {configuration.PayloadColumnName} = @Payload
+                WHERE {configuration.PersistenceIdColumnName} = @PersistenceId AND {configuration.SequenceNrColumnName} = @SequenceNr;
+                INSERT OR IGNORE INTO {configuration.FullSnapshotTableName} ({configuration.PersistenceIdColumnName}, {configuration.SequenceNrColumnName}, {configuration.TimestampColumnName}, {configuration.ManifestColumnName}, {configuration.PayloadColumnName})
+                VALUES (@PersistenceId, @SequenceNr, @Timestamp, @Manifest, @Payload)";
         }
 
+        protected override string InsertSnapshotSql { get; }
         protected override string CreateSnapshotTableSql { get; }
+
         protected override DbCommand CreateCommand(DbConnection connection)
         {
             return new SQLiteCommand((SQLiteConnection)connection);

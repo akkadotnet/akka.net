@@ -109,6 +109,7 @@ namespace Akka.Dispatch
                                   if (exception == null)
                                   {
                                       dispatcher.Resume(context);
+
                                       context.CheckReceiveTimeout();
                                   }
                                   else

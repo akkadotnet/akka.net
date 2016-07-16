@@ -189,7 +189,7 @@ namespace Akka.Actor
                 var current = this;
                 var elements = new List<string>() { AppendUidFragment(current.Name) };
                 current = current.Parent;
-                while (!(current is RootActorPath))
+                while (!(current is RootActorPath || current == null))
                 {
                     elements.Add(current.Name);
                     current = current.Parent;

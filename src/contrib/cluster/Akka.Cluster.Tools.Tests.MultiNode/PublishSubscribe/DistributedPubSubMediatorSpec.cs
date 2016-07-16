@@ -693,7 +693,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
             RunOn(() =>
             {
-                Mediator.Tell(new Tools.PublishSubscribe.Internal.Status(new Dictionary<Address, long>()));
+                Mediator.Tell(new Tools.PublishSubscribe.Internal.Status(new Dictionary<Address, long>(), isReplyToStatus: false));
                 var deltaBuckets = ExpectMsg<Delta>().Buckets;
                 deltaBuckets.Length.ShouldBe(3);
                 deltaBuckets.First(x => x.Owner == firstAddress).Content.Count.ShouldBe(10);
@@ -711,15 +711,15 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     Mediator.Tell(new Put(CreateChatUser("u" + (1000 + i))));
                 }
 
-                Mediator.Tell(new Tools.PublishSubscribe.Internal.Status(new Dictionary<Address, long>()));
+                Mediator.Tell(new Tools.PublishSubscribe.Internal.Status(new Dictionary<Address, long>(), isReplyToStatus: false));
                 var deltaBuckets1 = ExpectMsg<Delta>().Buckets;
                 deltaBuckets1.Sum(x => x.Content.Count).ShouldBe(500);
 
-                Mediator.Tell(new Tools.PublishSubscribe.Internal.Status(deltaBuckets1.ToDictionary(b => b.Owner, b => b.Version)));
+                Mediator.Tell(new Tools.PublishSubscribe.Internal.Status(deltaBuckets1.ToDictionary(b => b.Owner, b => b.Version), isReplyToStatus: false));
                 var deltaBuckets2 = ExpectMsg<Delta>().Buckets;
                 deltaBuckets2.Sum(x => x.Content.Count).ShouldBe(500);
 
-                Mediator.Tell(new Tools.PublishSubscribe.Internal.Status(deltaBuckets2.ToDictionary(b => b.Owner, b => b.Version)));
+                Mediator.Tell(new Tools.PublishSubscribe.Internal.Status(deltaBuckets2.ToDictionary(b => b.Owner, b => b.Version), isReplyToStatus: false));
                 var deltaBuckets3 = ExpectMsg<Delta>().Buckets;
                 deltaBuckets3.Sum(x => x.Content.Count).ShouldBe(10 + 9 + 2 + many - 500 - 500);
             }, _first);

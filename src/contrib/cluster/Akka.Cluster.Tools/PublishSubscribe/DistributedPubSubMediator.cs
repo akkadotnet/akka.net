@@ -113,6 +113,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         private readonly TimeSpan _pruneInterval;
 
         private ISet<Address> _nodes = new HashSet<Address>();
+        private long deltaCount = 0L;
         private ILoggingAdapter _log;
         private IDictionary<Address, Bucket> _registry = new Dictionary<Address, Bucket>();
 
@@ -148,30 +149,32 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 var routees = new List<Routee>();
 
                 Bucket bucket;
-                if (_registry.TryGetValue(_cluster.SelfAddress, out bucket))
+                ValueHolder valueHolder;
+                if (_registry.TryGetValue(_cluster.SelfAddress, out bucket) && bucket.Content.TryGetValue(send.Path, out valueHolder) && send.LocalAffinity)
                 {
-                    ValueHolder valueHolder;
-                    if (bucket.Content.TryGetValue(send.Path, out valueHolder) && send.LocalAffinity)
+                    var routee = valueHolder.Routee;
+                    if (routee != null) routees.Add(routee);
+                }
+                else
+                {
+                    foreach (var entry in _registry)
                     {
-                        var routee = valueHolder.Routee;
-                        if (routee != null) routees.Add(routee);
-                    }
-                    else
-                    {
-                        foreach (var entry in _registry)
+                        if (entry.Value.Content.TryGetValue(send.Path, out valueHolder))
                         {
-                            if (entry.Value.Content.TryGetValue(send.Path, out valueHolder))
-                            {
-                                var routee = valueHolder.Routee;
-                                if (routee != null) routees.Add(routee);
-                            }
+                            var routee = valueHolder.Routee;
+                            if (routee != null) routees.Add(routee);
                         }
                     }
                 }
 
                 if (routees.Count != 0)
                 {
-                    new Router(_settings.RoutingLogic, routees.ToArray()).Route(Akka.Cluster.Tools.PublishSubscribe.Internal.Utils.WrapIfNeeded(send.Message), Sender);
+                    new Router(_settings.RoutingLogic, routees.ToArray()).Route(
+                        Internal.Utils.WrapIfNeeded(send.Message), Sender);
+                }
+                else
+                {
+                    SendToDeadLetters(send.Message);
                 }
             });
             Receive<SendToAll>(sendToAll =>
@@ -189,8 +192,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             });
             Receive<Put>(put =>
             {
-                if (!string.IsNullOrEmpty(put.Ref.Path.Address.Host))
+                if (put.Ref.Path.Address.HasGlobalScope)
+                {
                     Log.Warning("Registered actor must be local: [{0}]", put.Ref);
+                }
                 else
                 {
                     PutToRegistry(put.Ref.Path.ToStringWithoutAddress(), put.Ref);
@@ -252,16 +257,23 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             });
             Receive<Status>(status =>
             {
-                // gossip chat starts with a Status message, containing the bucket versions of the other node
-                var delta = CollectDelta(status.Versions).ToArray();
-                if (delta.Length != 0)
-                    Sender.Tell(new Delta(delta));
+                // only accept status from known nodes, otherwise old cluster with same address may interact
+                // also accept from local for testing purposes
+                if (_nodes.Contains(Sender.Path.Address) || Sender.Path.Address.HasLocalScope)
+                {
+                    // gossip chat starts with a Status message, containing the bucket versions of the other node
+                    var delta = CollectDelta(status.Versions).ToArray();
+                    if (delta.Length != 0)
+                        Sender.Tell(new Delta(delta));
 
-                if (OtherHasNewerVersions(status.Versions))
-                    Sender.Tell(new Status(OwnVersions));
+                    if (!status.IsReplyToStatus && OtherHasNewerVersions(status.Versions))
+                        Sender.Tell(new Status(versions: OwnVersions, isReplyToStatus: true)); // it will reply with Delta
+                }
             });
             Receive<Delta>(delta =>
             {
+                deltaCount += 1;
+
                 // reply from Status message in the gossip chat
                 // the Delta contains potential updates (newer versions) from the other node
                 // only accept deltas/buckets from known nodes, otherwise there is a risk of
@@ -312,6 +324,14 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             {
                 if (IsMatchingRole(up.Member)) _nodes.Add(up.Member.Address);
             });
+            Receive<ClusterEvent.MemberLeft>(left =>
+            {
+                if (IsMatchingRole(left.Member))
+                {
+                    _nodes.Remove(left.Member.Address);
+                    _registry.Remove(left.Member.Address);
+                }
+            });
             Receive<ClusterEvent.MemberRemoved>(removed =>
             {
                 var member = removed.Member;
@@ -330,6 +350,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             {
                 var count = _registry.Sum(entry => entry.Value.Content.Count(kv => kv.Value.Ref != null));
                 Sender.Tell(count);
+            });
+            Receive<DeltaCount>(_ =>
+            {
+                Sender.Tell(deltaCount);
             });
         }
 
@@ -433,6 +457,11 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             }
         }
 
+        private void SendToDeadLetters(object message)
+        {
+            Context.System.DeadLetters.Tell(new DeadLetter(message, Sender, Context.Self));
+        }
+
         private void PublishMessage(string path, object message, bool allButSelf = false)
         {
             foreach (var entry in _registry)
@@ -447,6 +476,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     {
                         valueHolder.Ref.Forward(message);
                     }
+                    else
+                    {
+                        SendToDeadLetters(message);
+                    }
                 }
             }
         }
@@ -456,14 +489,21 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             var prefix = path + "/";
             var lastKey = path + "0";   // '0' is the next char of '/'
 
-            var groups = ExtractGroups(prefix, lastKey).GroupBy(kv => kv.Key);
+            var groups = ExtractGroups(prefix, lastKey).GroupBy(kv => kv.Key).ToList();
             var wrappedMessage = new SendToOneSubscriber(message);
 
-            foreach (var g in groups)
+            if (groups.Count == 0)
             {
-                var routees = g.Select(r => r.Value).ToArray();
-                if (routees.Length != 0)
-                    new Router(_settings.RoutingLogic, routees).Route(wrappedMessage, Sender);
+                SendToDeadLetters(message);
+            }
+            else
+            {
+                foreach (var g in groups)
+                {
+                    var routees = g.Select(r => r.Value).ToArray();
+                    if (routees.Length != 0)
+                        new Router(_settings.RoutingLogic, routees).Route(wrappedMessage, Sender);
+                }
             }
         }
 
@@ -506,7 +546,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
         private void GossipTo(Address address)
         {
-            Context.ActorSelection(Self.Path.ToStringWithAddress(address)).Tell(new Status(OwnVersions));
+            var sel = Context.ActorSelection(Self.Path.ToStringWithAddress(address));
+            sel.Tell(new Status(versions: OwnVersions, isReplyToStatus: false));
         }
 
         private Address SelectRandomNode(IList<Address> addresses)

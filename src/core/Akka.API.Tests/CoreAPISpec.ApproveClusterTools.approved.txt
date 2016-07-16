@@ -520,12 +520,15 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
     }
     public sealed class Status : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.PubSub.Serializers.Proto.Status, Akka.Cluster.PubSub.Serializers.Proto.Status.Builder>
     {
+        public const int ReplyToStatusFieldNumber = 2;
         public const int VersionsFieldNumber = 1;
         public static Akka.Cluster.PubSub.Serializers.Proto.Status DefaultInstance { get; }
         public override Akka.Cluster.PubSub.Serializers.Proto.Status DefaultInstanceForType { get; }
         public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
+        public bool HasReplyToStatus { get; }
         protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Akka.Cluster.PubSub.Serializers.Proto.Status, Akka.Cluster.PubSub.Serializers.Proto.Status.Builder> InternalFieldAccessors { get; }
         public override bool IsInitialized { get; }
+        public bool ReplyToStatus { get; }
         public override int SerializedSize { get; }
         protected override Akka.Cluster.PubSub.Serializers.Proto.Status ThisMessage { get; }
         public int VersionsCount { get; }
@@ -551,8 +554,10 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
             public Builder() { }
             public override Akka.Cluster.PubSub.Serializers.Proto.Status DefaultInstanceForType { get; }
             public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
+            public bool HasReplyToStatus { get; }
             public override bool IsInitialized { get; }
             protected override Akka.Cluster.PubSub.Serializers.Proto.Status MessageBeingBuilt { get; }
+            public bool ReplyToStatus { get; set; }
             protected override Akka.Cluster.PubSub.Serializers.Proto.Status.Builder ThisBuilder { get; }
             public int VersionsCount { get; }
             public Google.ProtocolBuffers.Collections.IPopsicleList<Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version> VersionsList { get; }
@@ -561,6 +566,7 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
             public Akka.Cluster.PubSub.Serializers.Proto.Status.Builder AddVersions(Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder builderForValue) { }
             public override Akka.Cluster.PubSub.Serializers.Proto.Status BuildPartial() { }
             public override Akka.Cluster.PubSub.Serializers.Proto.Status.Builder Clear() { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Status.Builder ClearReplyToStatus() { }
             public Akka.Cluster.PubSub.Serializers.Proto.Status.Builder ClearVersions() { }
             public override Akka.Cluster.PubSub.Serializers.Proto.Status.Builder Clone() { }
             public Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version GetVersions(int index) { }
@@ -568,6 +574,7 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
             public override Akka.Cluster.PubSub.Serializers.Proto.Status.Builder MergeFrom(Akka.Cluster.PubSub.Serializers.Proto.Status other) { }
             public override Akka.Cluster.PubSub.Serializers.Proto.Status.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
             public override Akka.Cluster.PubSub.Serializers.Proto.Status.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
+            public Akka.Cluster.PubSub.Serializers.Proto.Status.Builder SetReplyToStatus(bool value) { }
             public Akka.Cluster.PubSub.Serializers.Proto.Status.Builder SetVersions(int index, Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version value) { }
             public Akka.Cluster.PubSub.Serializers.Proto.Status.Builder SetVersions(int index, Akka.Cluster.PubSub.Serializers.Proto.Status.Types.Version.Builder builderForValue) { }
         }

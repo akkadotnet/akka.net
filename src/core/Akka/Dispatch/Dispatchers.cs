@@ -357,7 +357,7 @@ namespace Akka.Dispatch
                     dispatcher = new DispatcherConfigurator(ForkJoinExecutorConfig.WithFallback(cfg), Prerequisites);
                     break;
                 case "SynchronizedDispatcher":
-                    dispatcher = new DispatcherConfigurator(CurrentSynchronizationContextExecutorConfig.WithFallback(cfg), Prerequisites);
+                    dispatcher = new CurrentSynchronizationContextDispatcherConfigurator(cfg, Prerequisites);
                     break;
                 case null:
                     throw new ConfigurationException("Could not resolve dispatcher for path " + id + ". type is null");

@@ -2310,6 +2310,10 @@ namespace Akka.Dispatch
         public System.TimeSpan PushTimeout { get; }
         public override Akka.Dispatch.MessageQueues.IMessageQueue Create(Akka.Actor.IActorRef owner, Akka.Actor.ActorSystem system) { }
     }
+    public sealed class CurrentSynchronizationContextDispatcher : Akka.Dispatch.Dispatcher
+    {
+        public CurrentSynchronizationContextDispatcher(Akka.Dispatch.MessageDispatcherConfigurator configurator, string id, int throughput, System.Nullable<long> throughputDeadlineTime, Akka.Dispatch.ExecutorServiceFactory executorServiceFactory, System.TimeSpan shutdownTimeout) { }
+    }
     public sealed class DefaultDispatcherPrerequisites : Akka.Dispatch.IDispatcherPrerequisites
     {
         public DefaultDispatcherPrerequisites(Akka.Event.EventStream eventStream, Akka.Actor.IScheduler scheduler, Akka.Actor.Settings settings, Akka.Dispatch.Mailboxes mailboxes) { }

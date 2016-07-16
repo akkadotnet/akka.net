@@ -9,6 +9,7 @@ using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -94,6 +95,7 @@ namespace Akka.Remote.Transport.Helios
             TcpReuseAddr = Config.GetBoolean("tcp-reuse-addr");
             var configHost = Config.GetString("hostname");
             var publicConfigHost = Config.GetString("public-hostname");
+            DnsUseIpv6 = Config.GetBoolean("dns-use-ipv6");
             Hostname = string.IsNullOrEmpty(configHost) ? IPAddress.Any.ToString() : configHost;
             PublicHostname = string.IsNullOrEmpty(publicConfigHost) ? Hostname : publicConfigHost;
             ServerSocketWorkerPoolSize = ComputeWps(Config.GetConfig("server-socket-worker-pool"));
@@ -129,6 +131,8 @@ namespace Akka.Remote.Transport.Helios
         public bool TcpKeepAlive { get; private set; }
 
         public bool TcpReuseAddr { get; private set; }
+
+        public bool DnsUseIpv6 { get; private set; }
 
         /// <summary>
         /// The hostname that this server binds to
@@ -286,6 +290,7 @@ namespace Akka.Remote.Transport.Helios
                     .Option(ChannelOption.TcpNodelay, Settings.TcpNoDelay)
                     .Option(ChannelOption.ConnectTimeout, Settings.ConnectTimeout)
                     .Option(ChannelOption.AutoRead, false)
+                    .PreferredDnsResolutionFamily(Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork)
                     .Channel<TcpSocketChannel>()
                     .Handler(
                         new ActionChannelInitializer<TcpSocketChannel>(
@@ -324,6 +329,7 @@ namespace Akka.Remote.Transport.Helios
                      .ChildOption(ChannelOption.TcpNodelay, Settings.TcpNoDelay)
                      .ChildOption(ChannelOption.AutoRead, false)
                      .Option(ChannelOption.SoBacklog, Settings.Backlog)
+                     .PreferredDnsResolutionFamily(Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork)
                      .ChildHandler(
                          new ActionChannelInitializer<TcpSocketChannel>(
                              SetServerPipeline));
@@ -344,13 +350,6 @@ namespace Akka.Remote.Transport.Helios
         {
             if (InternalTransport == TransportType.Tcp)
             {
-                /*
-                 * Need to cast the EndPoint to the correct concrete type, otherwise
-                 * Helios will not perform DNS resolution on bind.
-                 */
-                var dns = listenAddress as DnsEndPoint;
-                if(dns != null)
-                    return await ServerFactory.BindAsync(dns).ConfigureAwait(false);
                 return await ServerFactory.BindAsync(listenAddress).ConfigureAwait(false);
             }
                 
@@ -475,7 +474,32 @@ namespace Akka.Remote.Transport.Helios
         public static Address MapSocketToAddress(IPEndPoint socketAddr, string schemeIdentifier, string systemName, string hostName = null)
         {
             if (socketAddr == null) return null;
-            return new Address(schemeIdentifier, systemName, hostName ?? socketAddr.Address.ToString(), socketAddr.Port);
+            return new Address(schemeIdentifier, systemName, SafeMapHostName(hostName) ?? SafeMapIPv6(socketAddr.Address), socketAddr.Port);
+        }
+
+        /// <summary>
+        /// Check to see if a given hostname is IPV6, IPV4, or DNS and apply the appropriate formatting
+        /// </summary>
+        /// <param name="hostName">The hostname parsed from the file</param>
+        /// <returns>An RFC-compliant formatting of the hostname</returns>
+        public static string SafeMapHostName(string hostName)
+        {
+            IPAddress addr;
+            if (!string.IsNullOrEmpty(hostName) && IPAddress.TryParse(hostName, out addr))
+            {
+                if (addr.AddressFamily == AddressFamily.InterNetworkV6)
+                    return "[" + addr + "]";
+                return addr.ToString();
+            }
+
+            return hostName;
+        }
+
+        public static string SafeMapIPv6(IPAddress address)
+        {
+            if (address.AddressFamily == AddressFamily.InterNetworkV6)
+                return "[" + address + "]";
+            return address.ToString();
         }
 
 #endregion

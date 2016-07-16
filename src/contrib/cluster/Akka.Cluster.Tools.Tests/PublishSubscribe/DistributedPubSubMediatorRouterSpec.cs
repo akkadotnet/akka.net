@@ -9,6 +9,7 @@ using System;
 using Akka.Actor;
 using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.Routing;
 using Akka.TestKit;
 using Xunit;
@@ -50,6 +51,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             Keep_the_RouterEnvelope_when_sending_to_all_actors_on_logical_path(msg);
             Keep_the_RouterEnvelope_when_sending_to_topic(msg);
             Keep_the_RouterEnvelope_when_sending_to_topic_for_group(msg);
+            Send_message_to_dead_letters_if_no_recipients_available(msg);
         }
 
         private void Keep_the_RouterEnvelope_when_sending_to_local_logical_path(object msg)
@@ -98,6 +100,15 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
 
             mediator.Tell(new Unsubscribe("topic", TestActor));
             ExpectMsg<UnsubscribeAck>();
+        }
+
+        private void Send_message_to_dead_letters_if_no_recipients_available(object msg)
+        {
+            var probe = CreateTestProbe();
+            Sys.EventStream.Subscribe(probe.Ref, typeof(DeadLetter));
+            mediator.Tell(new Publish("nowhere", msg, sendOneMessageToEachGroup: true));
+            probe.ExpectMsg<DeadLetter>();
+            Sys.EventStream.Unsubscribe(probe.Ref, typeof(DeadLetter));
         }
     }
 

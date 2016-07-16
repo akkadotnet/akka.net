@@ -95,8 +95,8 @@ namespace Akka.Actor
             {
                 if (Interlocked.Exchange(ref status, COMPLETED) == INITIATED)
                 {
-                    _unregister();
                     _result.TrySetResult(message);
+                    _unregister();
                 }
             }
         }

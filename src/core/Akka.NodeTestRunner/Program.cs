@@ -44,8 +44,7 @@ namespace Akka.NodeTestRunner
             system.Tcp().Tell(new Tcp.Connect(listenEndpoint), tcpClient);
 
             Thread.Sleep(TimeSpan.FromSeconds(10));
-
-            using (var controller = new XunitFrontController(assemblyFileName))
+            using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, assemblyFileName))
             {
                 /* need to pass in just the assembly name to Discovery, not the full path
                  * i.e. "Akka.Cluster.Tests.MultiNode.dll"

@@ -186,7 +186,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
                     .Build())
                 .ToArray();
 
-            return Status.CreateBuilder().AddRangeVersions(versions).Build();
+            return Status.CreateBuilder()
+                .AddRangeVersions(versions)
+                .SetReplyToStatus(status.IsReplyToStatus)
+                .Build();
         }
 
         private Internal.Status StatusFromBinary(byte[] binary)
@@ -196,10 +199,11 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
 
         private Internal.Status StatusFromProto(Status status)
         {
+            var isReplyToStatus = status.HasReplyToStatus ? status.ReplyToStatus : false;
             return new Internal.Status(status.VersionsList
                 .ToDictionary(
                     v => AddressFromProto(v.Address),
-                    v => v.Timestamp));
+                    v => v.Timestamp), isReplyToStatus);
         }
 
         private Akka.Cluster.PubSub.Serializers.Proto.Send SendToProto(Send send)
@@ -275,7 +279,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
             else
             {
                 if (serializer.IncludeManifest)
-                    builder.SetMessageManifest(ByteString.CopyFromUtf8(message.GetType().FullName));
+                    builder.SetMessageManifest(ByteString.CopyFromUtf8(TypeQualifiedNameForManifest(message.GetType())));
             }
 
             return builder.Build();

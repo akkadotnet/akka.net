@@ -21,9 +21,9 @@ namespace Akka.TestKit
         /// the innermost enclosing `within` block.</para>
         /// <remarks>Note that the max duration is scaled using <see cref="Dilated(TimeSpan)"/> which uses the config value "akka.test.timefactor"</remarks>
         /// </summary>
-        public void Within(TimeSpan max, Action action)
+        public void Within(TimeSpan max, Action action, TimeSpan? epsilonValue = null)
         {
-            Within(TimeSpan.Zero, max, action);
+            Within(TimeSpan.Zero, max, action, epsilonValue: epsilonValue);
         }
 
         /// <summary>
@@ -33,9 +33,9 @@ namespace Akka.TestKit
         /// the innermost enclosing `within` block.</para>
         /// <remarks>Note that the max duration is scaled using <see cref="Dilated(TimeSpan)"/> which uses the config value "akka.test.timefactor"</remarks>
         /// </summary>
-        public void Within(TimeSpan min, TimeSpan max, Action action, string hint = null)
+        public void Within(TimeSpan min, TimeSpan max, Action action, string hint = null, TimeSpan? epsilonValue = null)
         {
-            Within<object>(min, max, () => { action(); return null; }, hint);
+            Within<object>(min, max, () => { action(); return null; }, hint, epsilonValue);
         }
 
 
@@ -46,9 +46,9 @@ namespace Akka.TestKit
         /// the innermost enclosing `within` block.</para>
         /// <remarks>Note that the max duration is scaled using <see cref="Dilated(TimeSpan)"/> which uses the config value "akka.test.timefactor"</remarks>
         /// </summary>
-        public T Within<T>(TimeSpan max, Func<T> function)
+        public T Within<T>(TimeSpan max, Func<T> function, TimeSpan? epsilonValue = null)
         {
-            return Within(TimeSpan.Zero, max, function);
+            return Within(TimeSpan.Zero, max, function, epsilonValue: epsilonValue);
         }
 
         /// <summary>
@@ -58,7 +58,7 @@ namespace Akka.TestKit
         /// the innermost enclosing `within` block.</para>
         /// <remarks>Note that the max duration is scaled using <see cref="Dilated(TimeSpan)"/> which uses the config value "akka.test.timefactor"</remarks>
         /// </summary>
-        public T Within<T>(TimeSpan min, TimeSpan max, Func<T> function, string hint = null)
+        public T Within<T>(TimeSpan min, TimeSpan max, Func<T> function, string hint = null, TimeSpan? epsilonValue = null)
         {
             min.EnsureIsPositiveFinite("min");
             min.EnsureIsPositiveFinite("max");
@@ -93,7 +93,8 @@ namespace Akka.TestKit
             }
             if (!_testState.LastWasNoMsg)
             {
-                var tookTooLong = elapsed > maxDiff;
+                epsilonValue = epsilonValue ?? TimeSpan.Zero;
+                var tookTooLong = elapsed > maxDiff + epsilonValue;
                 if(tookTooLong)
                 {
                     const string failMessage = "Failed: Block took {0}, exceeding {1}. {2}";

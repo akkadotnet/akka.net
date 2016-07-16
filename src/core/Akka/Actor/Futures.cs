@@ -67,19 +67,29 @@ namespace Akka.Actor
         {
             var result = new TaskCompletionSource<object>();
 
+            CancellationTokenSource timeoutCancellation = null;
+
             timeout = timeout ?? provider.Settings.AskTimeout;
 
             if (timeout != Timeout.InfiniteTimeSpan && timeout.Value > default(TimeSpan))
             {
-                var cancellationSource = new CancellationTokenSource();
-                cancellationSource.Token.Register(() => result.TrySetCanceled());
-                cancellationSource.CancelAfter(timeout.Value);
+                timeoutCancellation = new CancellationTokenSource();
+                timeoutCancellation.Token.Register(() => result.TrySetCanceled());
+                timeoutCancellation.CancelAfter(timeout.Value);
             }
 
             //create a new tempcontainer path
             ActorPath path = provider.TempPath();
             //callback to unregister from tempcontainer
-            Action unregister = () => provider.UnregisterTempActor(path);
+            Action unregister =
+                () =>
+                {
+                    // cancelling timeout (if any) in order to prevent memory leaks
+                    // (a reference to 'result' variable in CancellationToken's callback)
+                    timeoutCancellation?.Cancel();
+                    provider.UnregisterTempActor(path);
+                };
+
             var future = new FutureActorRef(result, unregister, path);
             //The future actor needs to be registered in the temp container
             provider.RegisterTempActor(future, path);
