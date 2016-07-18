@@ -11,10 +11,33 @@ using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.Routing;
 using Akka.TestKit.TestActors;
+using Akka.Util;
 using Xunit;
 
 namespace Akka.Tests.Serialization
 {
+    public class Poco : ISurrogated
+    {
+        public class Surrogate : ISurrogate
+        {
+            public string TheName { get; set; }
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new Poco()
+                {
+                    Name = TheName
+                };
+            }
+        }
+        public string Name { get; set; }
+        public ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new Surrogate
+            {
+                TheName = Name
+            };
+        }
+    }
     public abstract class AkkaSerializationSpec : TestKit.Xunit2.TestKit
     {
         protected AkkaSerializationSpec(Type serializerType):base(GetConfig(serializerType))
@@ -37,6 +60,28 @@ akka.actor {
 ";
         }
 
+        [Fact]
+        public void CanSerializeArrayOfTypes()
+        {
+            var message = new[] {typeof(NullReferenceException), typeof(ArgumentException)};
+            var serializer = Sys.Serialization.FindSerializerFor(message);
+            var bytes = serializer.ToBinary(message);
+            var res = (Type[])serializer.FromBinary(bytes, typeof(Type[]));
+        }
+
+        [Fact]
+        public void CanSerializeSurrogate()
+        {
+            var message = new Poco
+            {
+                Name = "Foo"
+            };
+            var serializer = Sys.Serialization.FindSerializerFor(message);
+            var bytes = serializer.ToBinary(message);
+            var res = (Poco)serializer.FromBinary(bytes, typeof(Poco));
+
+            Assert.Equal(message.Name,res.Name);
+        }
         [Fact]
         public void CanSerializeAddressMessage()
         {
@@ -359,6 +404,22 @@ akka.actor {
             var surrogate = aref.ToSurrogate(Sys) as ActorRefBase.Surrogate;
             var uid = aref.Path.Uid;
             Assert.True(surrogate.Path.Contains("#" + uid));
+        }
+
+        [Fact]
+        public void CanSerializeEmptyDecider()
+        {
+            var decider = Decider.From(
+                Directive.Restart,
+                Directive.Stop.When<NullReferenceException>(),
+                Directive.Escalate.When<Exception>()
+                );
+
+            var serializer = Sys.Serialization.FindSerializerFor(decider);
+            var bytes = serializer.ToBinary(decider);
+            var sref = (DeployableDecider)serializer.FromBinary(bytes, typeof(DeployableDecider));
+            Assert.NotNull(sref);
+            Assert.Equal(decider.DefaultDirective, sref.DefaultDirective);
         }
 
         [Fact]
