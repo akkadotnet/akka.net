@@ -765,6 +765,44 @@ y = ${x}
             Assert.Equal(123, config.GetInt("a.b.c.d.e.x"));
             Assert.Equal(123, config.GetInt("a.b.c.d.e.y"));
         }
+
+        [Fact]
+        public void Can_parse_unquoted_ipv4()
+        {
+            var hocon = @"
+ip = 127.0.0.1
+";
+            Assert.Equal("127.0.0.1", ConfigurationFactory.ParseString(hocon).GetString("ip"));
+        }
+
+        [Fact]
+        public void Can_parse_quoted_ipv4()
+        {
+            var hocon = @"
+ip = ""127.0.0.1""
+";
+            Assert.Equal("127.0.0.1", ConfigurationFactory.ParseString(hocon).GetString("ip"));
+        }
+
+        [Fact(Skip = "Not allowed according to current HOCON spec")]
+        public void Can_parse_unquoted_ipv6()
+        {
+            var hocon = @"
+ip = ::1
+";
+            var res = ConfigurationFactory.ParseString(hocon).GetString("ip");
+            Assert.Equal("::1", res);
+        }
+
+        [Fact]
+        public void Can_parse_quoted_ipv6()
+        {
+            var hocon = @"
+ip = ""::1""
+";
+            var res = ConfigurationFactory.ParseString(hocon).GetString("ip");
+            Assert.Equal("::1", res);
+        }
     }
 }
 
