@@ -269,6 +269,7 @@
     <Compile Include="NotUsed.cs" />
     <Compile Include="Util\ByteIterator.cs" />
     <Compile Include="Util\ByteString.cs" />
+    <Compile Include="Util\ConcurrentEnvelopeQueue.cs" />
     <Compile Include="Util\ContinuousEnumerator.cs" />
     <Compile Include="Util\FastLazy.cs" />
     <Compile Include="Util\Index.cs" />

@@ -5,11 +5,15 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Runtime.Serialization;
 using Akka.Actor;
 #if MONO
 using TQueue = Akka.Util.MonoConcurrentQueue<Akka.Actor.Envelope>;
 #else
-using TQueue = System.Collections.Concurrent.ConcurrentQueue<Akka.Actor.Envelope>;
+using TQueue = Akka.Util.ConcurrentEnvelopeQueue;
 
 #endif
 
@@ -32,7 +36,11 @@ namespace Akka.Dispatch.MessageQueues
 
         public void Enqueue(IActorRef receiver, Envelope envelope)
         {
+#if MONO
             _queue.Enqueue(envelope);
+#else
+            _queue.Enqueue(ref envelope);
+#endif
         }
 
         public bool TryDequeue(out Envelope envelope)
@@ -50,4 +58,3 @@ namespace Akka.Dispatch.MessageQueues
         }
     }
 }
-
