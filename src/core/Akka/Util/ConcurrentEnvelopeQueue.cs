@@ -11,7 +11,7 @@ namespace Akka.Util
     /// This implemenatation is aware of the <see cref="Envelope"/> structure using its two fields <see cref="Envelope.Message"/> and <see cref="Envelope.Sender"/> to persist data 
     /// without additional overhead of the status field. Writing and reading every <see cref="Segment._messages"/> item with <see cref="Volatile"/> ensures proper ordering without the burden of maintaining the envelope's struct status.
     /// </remarks>
-    public sealed class ConcurrentEnvelopeQueue
+    internal sealed class ConcurrentEnvelopeQueue
     {
         private volatile Segment _head;
         private volatile Segment _tail;
