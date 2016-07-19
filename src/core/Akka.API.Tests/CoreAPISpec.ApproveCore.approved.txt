@@ -291,13 +291,14 @@ namespace Akka.Actor
         public ActorSelection(Akka.Actor.IActorRef anchor, string path) { }
         public ActorSelection(Akka.Actor.IActorRef anchor, System.Collections.Generic.IEnumerable<string> elements) { }
         public Akka.Actor.IActorRef Anchor { get; }
-        public Akka.Actor.SelectionPathElement[] Path { get; set; }
+        public Akka.Actor.SelectionPathElement[] Path { get; }
         public string PathString { get; }
         public override bool Equals(object obj) { }
         protected bool Equals(Akka.Actor.ActorSelection other) { }
         public override int GetHashCode() { }
         public System.Threading.Tasks.Task<Akka.Actor.IActorRef> ResolveOne(System.TimeSpan timeout) { }
         public void Tell(object message, Akka.Actor.IActorRef sender = null) { }
+        public override string ToString() { }
     }
     public class ActorSelectionMessage : Akka.Actor.IAutoReceivedMessage, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.IPossiblyHarmful
     {
@@ -1498,7 +1499,7 @@ namespace Akka.Actor
     public class SelectChildName : Akka.Actor.SelectionPathElement
     {
         public SelectChildName(string name) { }
-        public string Name { get; set; }
+        public string Name { get; }
         public override string ToString() { }
     }
     public class SelectChildPattern : Akka.Actor.SelectionPathElement
