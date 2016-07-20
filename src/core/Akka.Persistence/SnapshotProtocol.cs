@@ -431,22 +431,22 @@ namespace Akka.Persistence
         /// <summary>
         /// Upper bound for a selected snapshot's sequence number.
         /// </summary>
-        public long MaxSequenceNr { get; }
+        public readonly long MaxSequenceNr;
 
         /// <summary>
         /// Upper bound for a selected snapshot's timestamp.
         /// </summary>
-        public DateTime MaxTimeStamp { get; }
+        public readonly DateTime MaxTimeStamp;
 
         /// <summary>
         /// Lower bound for a selected snapshot's sequence number
         /// </summary>
-        public long MinSequenceNr { get; set; }
+        public readonly long MinSequenceNr;
 
         /// <summary>
         /// Lower bound for a selected snapshot's timestamp
         /// </summary>
-        public DateTime? MinTimestamp { get; set; }
+        public readonly DateTime? MinTimestamp;
 
         internal SnapshotSelectionCriteria Limit(long toSequenceNr)
         {
