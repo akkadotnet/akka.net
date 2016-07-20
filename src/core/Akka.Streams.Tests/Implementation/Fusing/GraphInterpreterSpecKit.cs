@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     var inHandlers = mat.Item1;
                     var outHandlers = mat.Item2;
                     var logics = mat.Item3;
-                    var interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, inHandlers, outHandlers, logics, (l, o, a) => {}, false);
+                    var interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, inHandlers, outHandlers, logics, (l, o, a) => {}, false, null);
 
                     var i = 0;
                     foreach (var upstream in _upstreams)
@@ -166,7 +166,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 var inHandlers = mat.Item1;
                 var outHandlers = mat.Item2;
                 var logics = mat.Item3;
-                _interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, inHandlers, outHandlers, logics, (l, o, a) => {}, false);
+                _interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, inHandlers, outHandlers, logics, (l, o, a) => {}, false, null);
             }
 
             public AssemblyBuilder Builder(params IGraphStageWithMaterializedValue<Shape, object>[] stages)

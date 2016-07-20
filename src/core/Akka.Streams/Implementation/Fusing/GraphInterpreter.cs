@@ -8,6 +8,7 @@
 using System;
 using System.Linq;
 using System.Threading;
+using Akka.Actor;
 using Akka.Event;
 using Akka.Streams.Stage;
 using Akka.Streams.Util;
@@ -183,6 +184,8 @@ namespace Akka.Streams.Implementation.Fusing
         public readonly Action<GraphStageLogic, object, Action<object>> OnAsyncInput;
         public readonly bool FuzzingMode;
 
+        public IActorRef Context { get; }
+
         // Maintains additional information for events, basically elements in-flight, or failure.
         // Other events are encoded in the portStates bitfield.
         public readonly object[] ConnectionSlots;
@@ -211,7 +214,8 @@ namespace Akka.Streams.Implementation.Fusing
             IOutHandler[] outHandlers,
             GraphStageLogic[] logics,
             Action<GraphStageLogic, object, Action<object>> onAsyncInput,
-            bool fuzzingMode)
+            bool fuzzingMode,
+            IActorRef context)
         {
             Logics = logics;
             Assembly = assembly;
@@ -221,6 +225,7 @@ namespace Akka.Streams.Implementation.Fusing
             OutHandlers = outHandlers;
             OnAsyncInput = onAsyncInput;
             FuzzingMode = fuzzingMode;
+            Context = context;
 
             ConnectionSlots = new object[assembly.ConnectionCount];
             for (var i = 0; i < ConnectionSlots.Length; i++)
@@ -382,15 +387,15 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Executes pending events until the given limit is met. If there were remaining events, <see cref="IsSuspended"/> will return true.
         /// </summary>
-        public void Execute(int eventLimit)
+        public int Execute(int eventLimit)
         {
             if (IsDebug) Console.WriteLine($"{Name} ---------------- EXECUTE {QueueStatus()} (running={RunningStagesCount}, shutdown={ShutdownCounters()})");
             var currentInterpreterHolder = CurrentInterpreter.Value;
             var previousInterpreter = currentInterpreterHolder[0];
             currentInterpreterHolder[0] = this;
+            var eventsRemaining = eventLimit;
             try
             {
-                var eventsRemaining = eventLimit;
                 while (eventsRemaining > 0 && _queueTail != _queueHead)
                 {
                     var connection = Dequeue();
@@ -419,6 +424,7 @@ namespace Akka.Streams.Implementation.Fusing
             }
             if (IsDebug) Console.WriteLine($"{Name} ---------------- {QueueStatus()} (running={RunningStagesCount}, shutdown={ShutdownCounters()})");
             // TODO: deadlock detection
+            return eventsRemaining;
         }
 
         public void RunAsyncInput(GraphStageLogic logic, object evt, Action<object> handler)

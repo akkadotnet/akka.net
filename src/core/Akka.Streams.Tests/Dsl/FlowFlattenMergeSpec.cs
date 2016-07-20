@@ -173,7 +173,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_FlattenMerge_must_cancel_substreams_when_failing_map_function()
         {
-            var settings = ActorMaterializerSettings.Create(Sys).WithSyncProcessingLimit(1);
+            var settings = ActorMaterializerSettings.Create(Sys).WithSyncProcessingLimit(1).WithInputBuffer(1, 1);
             var materializer = ActorMaterializer.Create(Sys, settings);
             var p = TestPublisher.CreateProbe<int>(this);
             var ex = new TestException("buh");
