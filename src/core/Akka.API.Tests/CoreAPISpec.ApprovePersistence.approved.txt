@@ -637,9 +637,11 @@ namespace Akka.Persistence
         public static readonly Akka.Persistence.SnapshotSelectionCriteria Latest;
         public readonly long MaxSequenceNr;
         public readonly System.DateTime MaxTimeStamp;
+        public readonly long MinSequenceNr;
+        public readonly System.Nullable<System.DateTime> MinTimestamp;
         public static readonly Akka.Persistence.SnapshotSelectionCriteria None;
         [Newtonsoft.Json.JsonConstructorAttribute()]
-        public SnapshotSelectionCriteria(long maxSequenceNr, System.DateTime maxTimeStamp) { }
+        public SnapshotSelectionCriteria(long maxSequenceNr, System.DateTime maxTimeStamp, long minSequenceNr = 0, System.Nullable<System.DateTime> minTimestamp = null) { }
         public SnapshotSelectionCriteria(long maxSequenceNr) { }
         public bool Equals(Akka.Persistence.SnapshotSelectionCriteria other) { }
         public override bool Equals(object obj) { }
