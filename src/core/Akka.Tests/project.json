@@ -15,6 +15,9 @@
     "net451": {
       "buildOptions": {
         "define": [ "SERIALIZATION", "CONFIGURATION" ]
+      },
+      "dependencies": {
+        "FsCheck.Xunit": "2.5.0"
       }
     },
     "netcoreapp1.0": {

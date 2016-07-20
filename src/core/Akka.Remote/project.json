@@ -20,7 +20,7 @@
 
   "dependencies": {
     "Akka": { "target": "project" },
-    "Helios": "2.1.1",
+    "Helios": "2.1.2",
     "System.Collections.Immutable": "1.2.0",
     "Google.ProtocolBuffers": "2.4.1.555"
   },
