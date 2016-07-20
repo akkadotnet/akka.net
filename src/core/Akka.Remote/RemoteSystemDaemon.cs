@@ -258,37 +258,27 @@ namespace Akka.Remote
         /// <returns>ActorRef.</returns>
         public override IActorRef GetChild(IEnumerable<string> name)
         {
-            string[] parts = name.ToArray();
-
-            if (string.IsNullOrEmpty(parts.FirstOrDefault()))
+            var elements = name.ToArray();
+            var path = elements.Join("/");
+            var n = 0;
+            while (true)
             {
-                return this;
-            }
-
-
-            var joined = string.Join("/", parts);
-
-            var child = GetChild(joined);
-            if (child != null)
-            {
-                return child;
-            }
-            var last = joined.LastIndexOf("/", StringComparison.Ordinal);
-            var i = 1;
-            while (last != -1 || parts.Length <= i)
-            {
-                var s = joined.Substring(0, last);
-                child = GetChild(s);
-                if (child != null)
+                var nameAndUid = ActorCell.SplitNameAndUid(path);
+                var child = GetChild(nameAndUid.Name);
+                if (child == null)
                 {
-                    return child.GetChild(parts.TakeRight(i));
+                    var last = path.LastIndexOf("/", StringComparison.Ordinal);
+                    if (last == -1)
+                        return Nobody.Instance;
+                    path = path.Substring(0, last);
+                    n++;
+                    continue;
                 }
-                last = s.LastIndexOf("/", StringComparison.Ordinal);
-                i++;
+                if (nameAndUid.Uid != ActorCell.UndefinedUid && nameAndUid.Uid != child.Path.Uid)
+                    return Nobody.Instance;
+
+                return n == 0 ? child : child.GetChild(elements.TakeRight(n));
             }
-
-
-            return ActorRefs.Nobody;
         }
 
 
