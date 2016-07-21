@@ -9,6 +9,7 @@ open Fake
 open Fake.FileUtils
 open Fake.TaskRunnerHelper
 open Fake.ProcessHelper
+open Fake.DotNet
 
 cd __SOURCE_DIRECTORY__
 
@@ -60,14 +61,13 @@ let docDir = "bin" @@ "doc"
 let sourceBrowserDocsDir = binDir @@ "sourcebrowser"
 let msdeployPath = "C:\Program Files (x86)\IIS\Microsoft Web Deploy V3\msdeploy.exe"
 
-open Fake.RestorePackageHelper
 Target "RestorePackages" (fun _ -> 
-     "./src/Akka.sln"
-     |> RestoreMSSolutionPackages (fun p ->
-         { p with
-             OutputPath = "./src/packages"
-             Retries = 4 })
- )
+     DotNet.Restore
+        (fun p ->
+            { p with 
+                WorkingDir = "./src"
+                NoCache = true})
+)
 
 //--------------------------------------------------------------------------------
 // Clean build results
@@ -111,16 +111,11 @@ Target "AssemblyInfo" <| fun _ ->
 // Build the solution
 
 Target "Build" <| fun _ ->
-
-    !!"src/Akka.sln"
-    |> MSBuildRelease "" "Rebuild"
-    |> ignore
-
-Target "BuildMono" <| fun _ ->
-
-    !!"src/Akka.sln"
-    |> MSBuild "" "Rebuild" [("Configuration","Release Mono")]
-    |> ignore
+    !! "src/**/project.json"
+    |> DotNet.Build
+        (fun p -> 
+            { p with 
+                Configuration = "Release" })
 
 //--------------------------------------------------------------------------------
 // Build the docs
@@ -249,54 +244,12 @@ Target "CleanTests" <| fun _ ->
 //--------------------------------------------------------------------------------
 // Run tests
 
-open Fake.Testing
 Target "RunTests" <| fun _ ->  
-    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- 
-                                 // Akka.Streams.Tests is referencing Akka.Streams.TestKit.Tests
-                                 "src/**/Akka.Streams.Tests/bin/Release/Akka.Streams.TestKit.Tests.dll" --
-                                 // Akka.Streams.Tests.Performance is referencing Akka.Streams.Tests and Akka.Streams.TestKit.Tests
-                                 "src/**/Akka.Streams.Tests.Performance/bin/Release/*.Tests.dll"
-
-    let nunitTestAssemblies = !! "src/**/bin/Release/Akka.Streams.Tests.TCK.dll"
-
-    mkdir testOutput
-   
-    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/FAKE/xunit.runner.console*/tools"
-    let nunitToolPath = findToolInSubPath "nunit3-console.exe" "src/packages/FAKE/NUnit.ConsoleRunner/tools"
-
-    printfn "Using XUnit runner: %s" xunitToolPath
-    let runSingleAssembly assembly =
-        let assemblyName = Path.GetFileNameWithoutExtension(assembly)
-        xUnit2
-            (fun p -> { p with XmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.xml"); HtmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization }) 
-            (Seq.singleton assembly)
-
-    xunitTestAssemblies |> Seq.iter (runSingleAssembly)
-    
-    let runNunitSingleAssembly assembly = 
-        let assemblyName = Path.GetFileNameWithoutExtension(assembly)
-        NUnit3
-             (fun p -> { p with ToolPath = nunitToolPath; WorkingDir = testOutput})
-             (Seq.singleton assembly)
-        
-    printfn "Using NUnit runner: %s" nunitToolPath
-    nunitTestAssemblies |> Seq.iter (runNunitSingleAssembly)
-
-Target "RunTestsMono" <| fun _ ->  
-    let xunitTestAssemblies = !! "src/**/bin/Release Mono/*.Tests.dll"
-
-    mkdir testOutput
-
-    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
-    printfn "Using XUnit runner: %s" xunitToolPath
-    let runSingleAssembly assembly =
-        let assemblyName = Path.GetFileNameWithoutExtension(assembly)
-        xUnit2
-            (fun p -> { p with XmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.xml"); HtmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization }) 
-            (Seq.singleton assembly)
-
-    xunitTestAssemblies |> Seq.iter (runSingleAssembly)
-
+    !! "src/**/*.Tests/project.json"
+    |> DotNet.Test
+        (fun p -> 
+            { p with 
+                Configuration = "Release" })
 
 (* Debug helper for troubleshooting an issue we had when we were running multi-node tests multiple times *)
 Target "PrintMultiNodeTests" <| fun _ ->
@@ -421,87 +374,13 @@ Target "CleanNuget" <| fun _ ->
 // Publish to nuget.org if nugetkey is specified
 
 let createNugetPackages _ =
-    let removeDir dir = 
-        let del _ = 
-            DeleteDir dir
-            not (directoryExists dir)
-        runWithRetries del 3 |> ignore
-
-    let getReleaseFiles project releaseDir =
-        match project with
-        | "Akka.MultiNodeTestRunner" -> // because the MNTR is an exe, all of its dlls have to be available in the same working directory when it executes
-            !! (releaseDir @@ "*.dll")
-            ++ (releaseDir @@ "*.exe")
-            ++ (releaseDir @@ "*.pdb")
-            ++ (releaseDir @@ "*.xml")
-        | _ ->
-            !! (releaseDir @@ project + ".dll")
-            ++ (releaseDir @@ project + ".exe")
-            ++ (releaseDir @@ project + ".pdb")
-            ++ (releaseDir @@ project + ".xml")
-
-    let getExternalPackages project packagesFile =
-        match project with
-        | "Akka.MultiNodeTestRunner" -> [] // because the MNTR is an exe, all of its dlls have to be available in the same working directory when it executes
-        | _ -> if (fileExists packagesFile) then (getDependencies packagesFile) else []
-
     ensureDirectory nugetDir
-    for nuspec in !! "src/**/*.nuspec" do
-        printfn "Creating nuget packages for %s" nuspec
-        
-        CleanDir workingDir
 
-        let project = Path.GetFileNameWithoutExtension nuspec 
-        let projectDir = Path.GetDirectoryName nuspec
-        let projectFile = (!! (projectDir @@ project + ".*sproj")) |> Seq.head
-        let releaseDir = projectDir @@ @"bin\Release"
-        let packages = projectDir @@ "packages.config"
-        let packageDependencies = getExternalPackages project packages
-        let dependencies = packageDependencies @ getAkkaDependency project
-        let releaseVersion = getProjectVersion project
-
-        let pack outputDir symbolPackage =
-            NuGetHelper.NuGet
-                (fun p ->
-                    { p with
-                        Description = description
-                        Authors = authors
-                        Copyright = copyright
-                        Project =  project
-                        Properties = ["Configuration", "Release"]
-                        ReleaseNotes = release.Notes |> String.concat "\n"
-                        Version = releaseVersion
-                        Tags = tags |> String.concat " "
-                        OutputPath = outputDir
-                        WorkingDir = workingDir
-                        SymbolPackage = symbolPackage
-                        Dependencies = dependencies })
-                nuspec
-
-        // Copy dll, pdb and xml to libdir = workingDir/lib/net45/
-        ensureDirectory libDir
-        getReleaseFiles project releaseDir
-        |> CopyFiles libDir
-
-        // Copy all src-files (.cs and .fs files) to workingDir/src
-        let nugetSrcDir = workingDir @@ @"src/"
-        // CreateDir nugetSrcDir
-
-        let isCs = hasExt ".cs"
-        let isFs = hasExt ".fs"
-        let isAssemblyInfo f = (filename f).Contains("AssemblyInfo")
-        let isSrc f = (isCs f || isFs f) && not (isAssemblyInfo f) 
-        CopyDir nugetSrcDir projectDir isSrc
-        
-        //Remove workingDir/src/obj and workingDir/src/bin
-        removeDir (nugetSrcDir @@ "obj")
-        removeDir (nugetSrcDir @@ "bin")
-
-        // Create both normal nuget package and symbols nuget package. 
-        // Uses the files we copied to workingDir and outputs to nugetdir
-        pack nugetDir NugetSymbolPackage.Nuspec
-        
-        removeDir workingDir
+    !! "src/**/project.json"
+    |> DotNet.Pack
+        (fun p -> 
+            { p with 
+                Configuration = "Release" })
 
 let publishNugetPackages _ = 
     let rec publishPackage url accessKey trialsLeft packageFile =

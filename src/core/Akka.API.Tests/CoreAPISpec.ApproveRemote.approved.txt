@@ -7,7 +7,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests.Performance")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("78986bdb-73f7-4532-8e03-1c9ccbe8148e")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5", FrameworkDisplayName=".NET Framework 4.5")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5")]
 public sealed class AckAndEnvelopeContainer : Google.ProtocolBuffers.GeneratedMessage<AckAndEnvelopeContainer, AckAndEnvelopeContainer.Builder>
 {
     public const int AckFieldNumber = 1;
@@ -1631,5 +1631,9 @@ namespace Akka.Remote.Transport.AkkaIO
         public override bool IsResponsibleFor(Akka.Actor.Address remote) { }
         public override System.Threading.Tasks.Task<System.Tuple<Akka.Actor.Address, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IAssociationEventListener>>> Listen() { }
         public override System.Threading.Tasks.Task<bool> Shutdown() { }
+    }
+    public class static IPExtensions
+    {
+        public static System.Net.IPAddress MapToIPv4(this System.Net.IPAddress ipa) { }
     }
 }

@@ -2,7 +2,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools.Tests.MultiNode")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("5cf8a8be-b634-473f-bb01-eba878746bd4")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5", FrameworkDisplayName=".NET Framework 4.5")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5")]
 namespace Akka.Cluster.PubSub.Serializers.Proto
 {
     public sealed class Address : Google.ProtocolBuffers.GeneratedMessage<Akka.Cluster.PubSub.Serializers.Proto.Address, Akka.Cluster.PubSub.Serializers.Proto.Address.Builder>
