@@ -245,11 +245,14 @@ Target "CleanTests" <| fun _ ->
 // Run tests
 
 Target "RunTests" <| fun _ ->  
+    mkdir testOutput
+
     !! "src/**/*.Tests/project.json"
     |> DotNet.Test
         (fun p -> 
-            { p with 
-                Configuration = "Release" })
+            { p with
+                Configuration = "Release"
+                AdditionalArgs = ["-xml " + testOutput + @"\Akka_xunit.xml"] })
 
 (* Debug helper for troubleshooting an issue we had when we were running multi-node tests multiple times *)
 Target "PrintMultiNodeTests" <| fun _ ->
@@ -380,7 +383,9 @@ let createNugetPackages _ =
     |> DotNet.Pack
         (fun p -> 
             { p with 
-                Configuration = "Release" })
+                Configuration = "Release"
+                OutputPath = nugetDir
+                VersionSuffix = "beta" })
 
 let publishNugetPackages _ = 
     let rec publishPackage url accessKey trialsLeft packageFile =
