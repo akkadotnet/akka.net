@@ -22,7 +22,11 @@ namespace Akka.Dispatch.MessageQueues
 
         public bool HasMessages
         {
+#if MONO
             get { return _queue.Count > 0; }
+#else
+            get { return !_queue.IsEmpty; }
+#endif
         }
 
         public int Count
@@ -50,4 +54,3 @@ namespace Akka.Dispatch.MessageQueues
         }
     }
 }
-
