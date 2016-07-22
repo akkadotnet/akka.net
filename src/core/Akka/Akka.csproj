@@ -234,6 +234,8 @@
     <Compile Include="Event\LogMessage.cs" />
     <Compile Include="Event\StandardOutLogger.cs" />
     <Compile Include="Helios.Concurrency.DedicatedThreadPool.cs" />
+    <Compile Include="Pattern\BackoffOnRestartSupervisor.cs" />
+    <Compile Include="Pattern\BackoffOptions.cs" />
     <Compile Include="Pattern\BackoffSupervisor.cs" />
     <Compile Include="IO\DatagramChannel.cs" />
     <Compile Include="IO\Dns.cs" />
@@ -250,6 +252,7 @@
     <Compile Include="IO\UdpManager.cs" />
     <Compile Include="IO\UdpSender.cs" />
     <Compile Include="IO\WithUdpSend.cs" />
+    <Compile Include="Pattern\BackoffSupervisorBase.cs" />
     <Compile Include="Pattern\CircuitBreaker.cs" />
     <Compile Include="Pattern\CircuitBreakerState.cs" />
     <Compile Include="Pattern\OpenCircuitException.cs" />
