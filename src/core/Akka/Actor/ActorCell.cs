@@ -296,7 +296,7 @@ namespace Akka.Actor
             }
         }
 
-        public virtual void SendMessage(IActorRef sender, object message)
+        public virtual void SendMessage(Envelope message)
         {
             if (Mailbox == null)
             {
@@ -308,33 +308,31 @@ namespace Akka.Actor
             if (_systemImpl.Settings.SerializeAllMessages)
             {
                 DeadLetter deadLetter;
-                var unwrapped = (deadLetter = message as DeadLetter) != null ? deadLetter.Message : message;
+                var unwrapped = (deadLetter = message.Message as DeadLetter) != null ? deadLetter.Message : message.Message;
                 if (!(unwrapped is INoSerializationVerificationNeeded))
                 {
-                    Serializer serializer = _systemImpl.Serialization.FindSerializerFor(message);
-                    byte[] serialized = serializer.ToBinary(message);
-
+                    Serializer serializer = _systemImpl.Serialization.FindSerializerFor(message.Message);
+                    byte[] serialized = serializer.ToBinary(message.Message);
 
                     var manifestSerializer = serializer as SerializerWithStringManifest;
                     if (manifestSerializer != null)
                     {
                         var manifest = manifestSerializer.Manifest(serialized);
-                        message = _systemImpl.Serialization.Deserialize(serialized, manifestSerializer.Identifier, manifest);
+                        message = new Envelope(_systemImpl.Serialization.Deserialize(serialized, manifestSerializer.Identifier, manifest), message.Sender);
                     }
                     else
                     {
-                        message = _systemImpl.Serialization.Deserialize(serialized, serializer.Identifier, message.GetType().AssemblyQualifiedName);
+                        message = new Envelope(_systemImpl.Serialization.Deserialize(serialized, serializer.Identifier, message.Message.GetType().AssemblyQualifiedName), message.Sender);
                     }
                 }
             }
 
-            var m = new Envelope
-            {
-                Sender = sender,
-                Message = message,
-            };
+            Dispatcher.Dispatch(this, message);
+        }
 
-            Dispatcher.Dispatch(this, m);
+        public virtual void SendMessage(IActorRef sender, object message)
+        {
+            SendMessage(new Envelope(message, sender, System));
         }
 
         protected void ClearActorCell()

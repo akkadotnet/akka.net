@@ -369,7 +369,7 @@ namespace Akka.Actor
                     }
                     else
                     {
-                        _messageQueue.AddLast(new Envelope { Message = message, Sender = sender });
+                        _messageQueue.AddLast(new Envelope(message, sender));
                         Mailbox.DebugPrint("{0} temp queueing {1} from {2}", Self, message, sender);
                     }
                 }

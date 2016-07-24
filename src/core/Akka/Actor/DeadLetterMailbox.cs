@@ -41,7 +41,7 @@ namespace Akka.Actor
 
         public bool TryDequeue(out Envelope envelope)
         {
-            envelope = new Envelope() {Message = new NoMessage()};
+            envelope = new Envelope(new NoMessage(), ActorRefs.NoSender);
             return false;
         }
 

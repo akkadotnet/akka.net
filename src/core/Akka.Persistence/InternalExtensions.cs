@@ -22,7 +22,7 @@ namespace Akka.Persistence
             var cell = (ActorCell)context;
             var mailbox = cell.Mailbox;
             var queue = (IUnboundedDequeBasedMessageQueueSemantics)mailbox.MessageQueue;
-            queue.EnqueueFirst(new Envelope { Sender = context.Sender, Message = message });
+            queue.EnqueueFirst(new Envelope(message, context.Sender));
         }
     }
 }
