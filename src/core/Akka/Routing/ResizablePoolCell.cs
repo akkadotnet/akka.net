@@ -57,17 +57,16 @@ namespace Akka.Routing
             }
         }
 
-        public override void SendMessage(IActorRef sender, object message)
+        public override void SendMessage(Envelope envelope)
         {
-            if(!(RouterConfig.IsManagementMessage(message)) &&
+            if(!(RouterConfig.IsManagementMessage(envelope.Message)) &&
                 resizer.IsTimeForResize(_resizeCounter.GetAndIncrement()) &&
                 _resizeInProgress.CompareAndSet(false, true))
             {
-                base.SendMessage(Self, new Resize());
-                
+                base.SendMessage(new Envelope(new Resize(), Self, System));
             }
 
-            base.SendMessage(sender, message);
+            base.SendMessage(envelope);
         }
 
         internal void Resize(bool initial)

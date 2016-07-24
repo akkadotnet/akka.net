@@ -5,26 +5,43 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+
 namespace Akka.Actor
 {
-    //Note: this is a struct in order to lower GC pressure, it will be removed once the mailbox Run call goes out of scope. //Roger
-
     /// <summary>
-    ///     Envelope class, represents a message and the sender of the message.    
+    /// Envelope class, represents a message and the sender of the message.    
     /// </summary>
     public struct Envelope
     {
-        /// <summary>
-        ///     Gets or sets the sender.
-        /// </summary>
-        /// <value>The sender.</value>
-        public IActorRef Sender { get; set; }
+        public Envelope(object message, IActorRef sender, ActorSystem system)
+        {
+            if (message == null)
+            {
+                throw new ArgumentNullException(nameof(message));
+            }
+
+            Message = message;
+            Sender = sender != ActorRefs.NoSender ? sender : system.DeadLetters;
+        }
+
+        public Envelope(object message, IActorRef sender)
+        {
+            Message = message;
+            Sender = sender;
+        }
 
         /// <summary>
-        ///     Gets or sets the message.
+        /// Gets or sets the sender.
+        /// </summary>
+        /// <value>The sender.</value>
+        public IActorRef Sender { get; private set; }
+
+        /// <summary>
+        /// Gets or sets the message.
         /// </summary>
         /// <value>The message.</value>
-        public object Message { get; set; }
+        public object Message { get; private set; }
 
         public override string ToString()
         {

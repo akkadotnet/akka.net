@@ -50,7 +50,7 @@ namespace Akka.Tests.Performance.Dispatch
 
             // force initialization of the actor
             for(var i = 0; i < ExpectedMessages-1;i++)
-                TestActor.AsInstanceOf<RepointableActorRef>().Underlying.AsInstanceOf<ActorCell>().Mailbox.MessageQueue.Enqueue(TestActor, new Envelope() {  Message = "hit", Sender = ActorRefs.Nobody}); // queue all of the messages into the actor
+                TestActor.AsInstanceOf<RepointableActorRef>().Underlying.AsInstanceOf<ActorCell>().Mailbox.MessageQueue.Enqueue(TestActor, new Envelope("hit", ActorRefs.Nobody)); // queue all of the messages into the actor
         }
 
         [PerfBenchmark(NumberOfIterations = 10, TestMode = TestMode.Measurement, RunMode = RunMode.Iterations, RunTimeMilliseconds = 1000, Skip = "Causes StackoverflowExceptions when coupled with CallingThreadDispatcher")]

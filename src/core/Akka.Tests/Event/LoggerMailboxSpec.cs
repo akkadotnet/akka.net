@@ -20,7 +20,7 @@ namespace Akka.Tests.Event
         {
             var loggerMailbox = new LoggerMailbox(ActorRefs.Nobody, Sys);
             loggerMailbox.SetActor((ActorCell)TestActor.AsInstanceOf<ActorRefWithCell>().Underlying); // mailboxes won't cleanup without an actorcell set
-            loggerMailbox.Enqueue(TestActor, new Envelope { Message = "foo", Sender = TestActor });
+            loggerMailbox.Enqueue(TestActor, new Envelope("foo", TestActor));
 
             loggerMailbox.NumberOfMessages.ShouldBe(1);
 

@@ -63,7 +63,7 @@ namespace Akka.Tests.Actor
             actor.Tell(PoisonPill.Instance);
             ExpectMsg<Terminated>();
 
-            actor.Tell(new Envelope { Message = "SomeUserMessage", Sender = TestActor });
+            actor.Tell(new Envelope("SomeUserMessage", TestActor));
             ExpectMsg<DeadLetter>(d => ((Envelope)d.Message).Message.Equals("SomeUserMessage"));
 
             //The actor should Terminate, exchange the mailbox to a DeadLetterMailbox and forward the user message to the DeadLetterMailbox

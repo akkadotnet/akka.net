@@ -45,7 +45,7 @@ namespace Akka.Tests.Performance.Dispatch
         [CounterMeasurement("MsgReceived")]
         public void MailboxRawRunPerf(BenchmarkContext context)
         {
-            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope() { Message = "hit", Sender = ActorRefs.NoSender});
+            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope("hit", ActorRefs.NoSender));
             Mailbox.Run();
         }
 
@@ -53,19 +53,19 @@ namespace Akka.Tests.Performance.Dispatch
         [CounterMeasurement("MsgReceived")]
         public void MailboxBatchRunPerf(BenchmarkContext context)
         {
-            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope() { Message = "hit", Sender = ActorRefs.NoSender });
-            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope() { Message = "hit", Sender = ActorRefs.NoSender });
-            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope() { Message = "hit", Sender = ActorRefs.NoSender });
-            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope() { Message = "hit", Sender = ActorRefs.NoSender });
-            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope() { Message = "hit", Sender = ActorRefs.NoSender });
-            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope() { Message = "hit", Sender = ActorRefs.NoSender });
-            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope() { Message = "hit", Sender = ActorRefs.NoSender });
-            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope() { Message = "hit", Sender = ActorRefs.NoSender });
-            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope() { Message = "hit", Sender = ActorRefs.NoSender });
-            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope() { Message = "hit", Sender = ActorRefs.NoSender });
-            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope() { Message = "hit", Sender = ActorRefs.NoSender });
-            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope() { Message = "hit", Sender = ActorRefs.NoSender });
-            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope() { Message = "hit", Sender = ActorRefs.NoSender });
+            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope("hit", ActorRefs.NoSender));
+            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope("hit", ActorRefs.NoSender));
+            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope("hit", ActorRefs.NoSender));
+            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope("hit", ActorRefs.NoSender));
+            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope("hit", ActorRefs.NoSender));
+            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope("hit", ActorRefs.NoSender));
+            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope("hit", ActorRefs.NoSender));
+            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope("hit", ActorRefs.NoSender));
+            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope("hit", ActorRefs.NoSender));
+            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope("hit", ActorRefs.NoSender));
+            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope("hit", ActorRefs.NoSender));
+            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope("hit", ActorRefs.NoSender));
+            Mailbox.MessageQueue.Enqueue(TestActor, new Envelope("hit", ActorRefs.NoSender));
             Mailbox.Run();
         }
 
