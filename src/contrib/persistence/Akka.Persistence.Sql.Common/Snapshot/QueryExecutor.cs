@@ -125,7 +125,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
 
     public abstract class AbstractQueryExecutor : ISnapshotQueryExecutor
     {
-        private readonly Akka.Serialization.Serialization _serialization;
+        protected Akka.Serialization.Serialization Serialization;
 
         protected virtual string SelectSnapshotSql { get; }
         protected virtual string DeleteSnapshotSql { get; }
@@ -136,7 +136,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected AbstractQueryExecutor(QueryConfiguration configuration, Akka.Serialization.Serialization serialization)
         {
             Configuration = configuration;
-            _serialization = serialization;
+            Serialization = serialization;
 
             SelectSnapshotSql = $@"
                 SELECT {Configuration.PersistenceIdColumnName},
@@ -178,7 +178,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected virtual void SetPayloadParameter(object snapshot, DbCommand command)
         {
             var snapshotType = snapshot.GetType();
-            var serializer = _serialization.FindSerializerForType(snapshotType);
+            var serializer = Serialization.FindSerializerForType(snapshotType);
 
             var binary = serializer.ToBinary(snapshot);
             AddParameter(command, "@Payload", DbType.Binary, binary);
@@ -186,7 +186,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
 
         protected virtual void SetManifestParameter(Type snapshotType, DbCommand command) => AddParameter(command, "@Manifest", DbType.String, snapshotType.QualifiedTypeName());
 
-        public async Task DeleteAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId, long sequenceNr,
+        public virtual async Task DeleteAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId, long sequenceNr,
             DateTime? timestamp)
         {
             var sql = timestamp.HasValue
@@ -212,7 +212,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             }
         }
 
-        public async Task DeleteBatchAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId,
+        public virtual async Task DeleteBatchAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId,
             long maxSequenceNr, DateTime maxTimestamp)
         {
             using (var command = GetCommand(connection, DeleteSnapshotRangeSql))
@@ -230,7 +230,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             }
         }
 
-        public async Task InsertAsync(DbConnection connection, CancellationToken cancellationToken, object snapshot, SnapshotMetadata metadata)
+        public virtual async Task InsertAsync(DbConnection connection, CancellationToken cancellationToken, object snapshot, SnapshotMetadata metadata)
         {
             using (var command = GetCommand(connection, InsertSnapshotSql))
             using(var tx = connection.BeginTransaction())
@@ -249,7 +249,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             }
         }
 
-        public async Task<SelectedSnapshot> SelectSnapshotAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId,
+        public virtual async Task<SelectedSnapshot> SelectSnapshotAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId,
             long maxSequenceNr, DateTime maxTimestamp)
         {
             using (var command = GetCommand(connection, SelectSnapshotSql))
@@ -269,7 +269,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             return null;
         }
 
-        public async Task CreateTableAsync(DbConnection connection, CancellationToken cancellationToken)
+        public virtual async Task CreateTableAsync(DbConnection connection, CancellationToken cancellationToken)
         {
             using (var command = GetCommand(connection, CreateSnapshotTableSql))
             using (var tx = connection.BeginTransaction())
@@ -315,7 +315,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected object GetSnapshot(DbDataReader reader)
         {
             var type = Type.GetType(reader.GetString(3), true);
-            var serializer = _serialization.FindSerializerForType(type);
+            var serializer = Serialization.FindSerializerForType(type);
             var binary = (byte[])reader[4];
 
             var obj = serializer.FromBinary(binary, type);
