@@ -420,7 +420,7 @@ namespace Akka.Actor
         public AllForOneStrategy(System.Func<System.Exception, Akka.Actor.Directive> localOnlyDecider) { }
         public AllForOneStrategy(Akka.Actor.IDecider decider) { }
         protected AllForOneStrategy() { }
-        public Akka.Actor.IDecider Decider { get; }
+        public override Akka.Actor.IDecider Decider { get; }
         public int MaxNumberOfRetries { get; }
         public int WithinTimeRangeMilliseconds { get; }
         public bool Equals(Akka.Actor.AllForOneStrategy other) { }
@@ -428,7 +428,9 @@ namespace Akka.Actor
         public override int GetHashCode() { }
         protected override Akka.Actor.Directive Handle(Akka.Actor.IActorRef child, System.Exception x) { }
         public override void HandleChildTerminated(Akka.Actor.IActorContext actorContext, Akka.Actor.IActorRef child, System.Collections.Generic.IEnumerable<Akka.Actor.IInternalActorRef> children) { }
+        [System.ObsoleteAttribute()]
         protected override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, System.Exception cause, Akka.Actor.Internal.ChildRestartStats failedChildStats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> allChildren) { }
+        protected override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, Akka.Actor.IActorRef child, System.Exception cause, Akka.Actor.Internal.ChildRestartStats stats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> children) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
         public class AllForOneStrategySurrogate : Akka.Util.ISurrogate
         {
@@ -1258,7 +1260,7 @@ namespace Akka.Actor
         public OneForOneStrategy(System.Func<System.Exception, Akka.Actor.Directive> localOnlyDecider) { }
         public OneForOneStrategy(Akka.Actor.IDecider decider) { }
         protected OneForOneStrategy() { }
-        public Akka.Actor.IDecider Decider { get; }
+        public override Akka.Actor.IDecider Decider { get; }
         public int MaxNumberOfRetries { get; }
         public int WithinTimeRangeMilliseconds { get; }
         public bool Equals(Akka.Actor.OneForOneStrategy other) { }
@@ -1266,7 +1268,9 @@ namespace Akka.Actor
         public override int GetHashCode() { }
         protected override Akka.Actor.Directive Handle(Akka.Actor.IActorRef child, System.Exception x) { }
         public override void HandleChildTerminated(Akka.Actor.IActorContext actorContext, Akka.Actor.IActorRef child, System.Collections.Generic.IEnumerable<Akka.Actor.IInternalActorRef> children) { }
+        [System.ObsoleteAttribute()]
         protected override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, System.Exception cause, Akka.Actor.Internal.ChildRestartStats failedChildStats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> allChildren) { }
+        protected override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, Akka.Actor.IActorRef child, System.Exception cause, Akka.Actor.Internal.ChildRestartStats stats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> children) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
         public class OneForOneStrategySurrogate : Akka.Util.ISurrogate
         {
@@ -1589,12 +1593,17 @@ namespace Akka.Actor
         public static readonly Akka.Actor.SupervisorStrategy DefaultStrategy;
         public static readonly Akka.Actor.OneForOneStrategy StoppingStrategy;
         protected SupervisorStrategy() { }
+        public abstract Akka.Actor.IDecider Decider { get; }
         protected bool LoggingEnabled { get; set; }
         protected abstract Akka.Actor.Directive Handle(Akka.Actor.IActorRef child, System.Exception x);
         public abstract void HandleChildTerminated(Akka.Actor.IActorContext actorContext, Akka.Actor.IActorRef child, System.Collections.Generic.IEnumerable<Akka.Actor.IInternalActorRef> children);
+        [System.ObsoleteAttribute()]
         public bool HandleFailure(Akka.Actor.ActorCell actorCell, System.Exception cause, Akka.Actor.Internal.ChildRestartStats failedChildStats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> allChildren) { }
+        public bool HandleFailure(Akka.Actor.ActorCell actorCell, Akka.Actor.IActorRef child, System.Exception cause, Akka.Actor.Internal.ChildRestartStats stats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> children) { }
         protected virtual void LogFailure(Akka.Actor.IActorContext context, Akka.Actor.IActorRef child, System.Exception cause, Akka.Actor.Directive directive) { }
+        [System.ObsoleteAttribute()]
         protected abstract void ProcessFailure(Akka.Actor.IActorContext context, bool restart, System.Exception cause, Akka.Actor.Internal.ChildRestartStats failedChildStats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> allChildren);
+        protected abstract void ProcessFailure(Akka.Actor.IActorContext context, bool restart, Akka.Actor.IActorRef child, System.Exception cause, Akka.Actor.Internal.ChildRestartStats stats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> children);
         protected void RestartChild(Akka.Actor.IActorRef child, System.Exception cause, bool suspendFirst) { }
         protected void ResumeChild(Akka.Actor.IActorRef child, System.Exception exception) { }
         public abstract Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system);
