@@ -71,7 +71,7 @@ An (unbounded) deque-based mailbox can be configured as follows:
             _currentEnvelopeId = _actorCell.CurrentEnvelopeId;
             
             if(_capacity <= 0 || _theStash.Count < _capacity)
-                _theStash.AddLast(new Envelope() { Message = currMsg, Sender = sender });
+                _theStash.AddLast(new Envelope(currMsg, sender));
             else throw new StashOverflowException(string.Format("Couldn't enqueue message {0} to stash of {1}", currMsg, _actorCell.Self));
         }
 

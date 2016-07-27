@@ -70,7 +70,7 @@ namespace Akka.TestKit.Internal
         {
             var cell = Cell;
             sender = sender.IsNobody() ? cell.System.DeadLetters : sender;
-            var envelope = new Envelope { Message = message, Sender = sender };
+            var envelope = new Envelope(message, sender);
             cell.UseThreadContext(() => cell.ReceiveMessageForTest(envelope));
         }
 

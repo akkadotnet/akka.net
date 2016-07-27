@@ -101,6 +101,7 @@ namespace Akka.Actor
         public void ReserveChild(string name) { }
         public void Restart(System.Exception cause) { }
         public void Resume(System.Exception causedByFailure) { }
+        public virtual void SendMessage(Akka.Actor.Envelope message) { }
         public virtual void SendMessage(Akka.Actor.IActorRef sender, object message) { }
         public void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage systemMessage) { }
         protected void SetActorFields(Akka.Actor.ActorBase actor) { }
@@ -646,8 +647,10 @@ namespace Akka.Actor
     }
     public struct Envelope
     {
-        public object Message { get; set; }
-        public Akka.Actor.IActorRef Sender { get; set; }
+        public Envelope(object message, Akka.Actor.IActorRef sender, Akka.Actor.ActorSystem system) { }
+        public Envelope(object message, Akka.Actor.IActorRef sender) { }
+        public object Message { get; }
+        public Akka.Actor.IActorRef Sender { get; }
         public override string ToString() { }
     }
     public class EventStreamActor : Akka.Actor.ActorBase
@@ -4915,6 +4918,7 @@ namespace Akka.Util
     {
         public static bool Implements<T>(this System.Type type) { }
         public static bool Implements(this System.Type type, System.Type moreGeneralType) { }
+        public static string TypeQualifiedName(this System.Type type) { }
     }
     public class static Vector
     {
