@@ -24,7 +24,7 @@ namespace Akka.Actor
         private IInternalActorRef _self;
         public const int UndefinedUid = 0;
         private Props _props;
-        private static readonly Props terminatedProps =new TerminatedProps();
+        private static readonly Props terminatedProps = new TerminatedProps();
 
         private const int DefaultState = 0;
         private const int SuspendedState = 1;

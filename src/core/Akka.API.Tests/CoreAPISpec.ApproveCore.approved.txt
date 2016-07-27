@@ -1286,7 +1286,7 @@ namespace Akka.Actor
         public static System.Threading.Tasks.Task PipeTo<T>(this System.Threading.Tasks.Task<T> taskToPipe, Akka.Actor.ICanTell recipient, Akka.Actor.IActorRef sender = null, System.Func<T, object> success = null, System.Func<System.Exception, object> failure = null) { }
         public static System.Threading.Tasks.Task PipeTo(this System.Threading.Tasks.Task taskToPipe, Akka.Actor.ICanTell recipient, Akka.Actor.IActorRef sender = null) { }
     }
-    public sealed class PoisonPill : Akka.Actor.IAutoReceivedMessage, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.IPossiblyHarmful
+    public sealed class PoisonPill : Akka.Actor.IAutoReceivedMessage, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.IPossiblyHarmful, Akka.Event.IDeadLetterSuppression
     {
         public static Akka.Actor.PoisonPill Instance { get; }
         public override string ToString() { }
@@ -1614,7 +1614,7 @@ namespace Akka.Actor
         protected override void PreRestart(System.Exception reason, object message) { }
         protected override bool Receive(object message) { }
     }
-    public sealed class Terminated : Akka.Actor.IAutoReceivedMessage, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.IPossiblyHarmful
+    public sealed class Terminated : Akka.Actor.IAutoReceivedMessage, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.IPossiblyHarmful, Akka.Event.IDeadLetterSuppression
     {
         public Terminated(Akka.Actor.IActorRef actorRef, bool existenceConfirmed, bool addressTerminated) { }
         public Akka.Actor.IActorRef ActorRef { get; }
@@ -2588,7 +2588,7 @@ namespace Akka.Dispatch.SysMsg
         public Akka.Actor.ActorInitializationException Failure { get; }
         public override string ToString() { }
     }
-    public sealed class DeathWatchNotification : Akka.Dispatch.SysMsg.SystemMessage
+    public sealed class DeathWatchNotification : Akka.Dispatch.SysMsg.SystemMessage, Akka.Event.IDeadLetterSuppression
     {
         public DeathWatchNotification(Akka.Actor.IActorRef actor, bool existenceConfirmed, bool addressTerminated) { }
         public Akka.Actor.IActorRef Actor { get; }
@@ -2662,7 +2662,7 @@ namespace Akka.Dispatch.SysMsg
         public bool Unlinked { get; }
         public void Unlink() { }
     }
-    public sealed class Terminate : Akka.Dispatch.SysMsg.SystemMessage, Akka.Actor.IPossiblyHarmful
+    public sealed class Terminate : Akka.Dispatch.SysMsg.SystemMessage, Akka.Actor.IPossiblyHarmful, Akka.Event.IDeadLetterSuppression
     {
         public Terminate() { }
         public override string ToString() { }
@@ -2698,6 +2698,14 @@ namespace Akka.Event
     {
         protected ActorEventBus() { }
     }
+    public abstract class AllDeadLetters
+    {
+        protected AllDeadLetters(object message, Akka.Actor.IActorRef sender, Akka.Actor.IActorRef recipient) { }
+        public object Message { get; }
+        public Akka.Actor.IActorRef Recipient { get; }
+        public Akka.Actor.IActorRef Sender { get; }
+        public override string ToString() { }
+    }
     public class BusLogging : Akka.Event.LoggingAdapterBase
     {
         public BusLogging(Akka.Event.LoggingBus bus, string logSource, System.Type logClass, Akka.Event.ILogMessageFormatter logMessageFormatter) { }
@@ -2711,13 +2719,9 @@ namespace Akka.Event
         protected override void NotifyInfo(object message) { }
         protected override void NotifyWarning(object message) { }
     }
-    public class DeadLetter
+    public sealed class DeadLetter : Akka.Event.AllDeadLetters
     {
         public DeadLetter(object message, Akka.Actor.IActorRef sender, Akka.Actor.IActorRef recipient) { }
-        public object Message { get; }
-        public Akka.Actor.IActorRef Recipient { get; }
-        public Akka.Actor.IActorRef Sender { get; }
-        public override string ToString() { }
     }
     public class DeadLetterListener : Akka.Actor.ActorBase
     {
@@ -2782,6 +2786,7 @@ namespace Akka.Event
         public static bool Subscribe<TChannel>(this Akka.Event.EventStream eventStream, Akka.Actor.IActorRef subscriber) { }
         public static bool Unsubscribe<TChannel>(this Akka.Event.EventStream eventStream, Akka.Actor.IActorRef subscriber) { }
     }
+    public interface IDeadLetterSuppression { }
     public interface ILoggerMessageQueueSemantics : Akka.Dispatch.ISemantics { }
     public interface ILoggingAdapter
     {
@@ -2926,6 +2931,10 @@ namespace Akka.Event
         public Subscription(TSubscriber subscriber) { }
         public TSubscriber Subscriber { get; }
         public System.Collections.Generic.ISet<TClassifier> Unsubscriptions { get; }
+    }
+    public sealed class SuppressedDeadLetter : Akka.Event.AllDeadLetters
+    {
+        public SuppressedDeadLetter(Akka.Event.IDeadLetterSuppression message, Akka.Actor.IActorRef sender, Akka.Actor.IActorRef recipient) { }
     }
     public class TraceLogger : Akka.Actor.UntypedActor
     {
@@ -3668,12 +3677,12 @@ namespace Akka.Pattern
         {
             public static readonly Akka.Pattern.BackoffSupervisor.GetCurrentChild Instance;
         }
-        public sealed class ResetRestartCount
+        public sealed class ResetRestartCount : Akka.Event.IDeadLetterSuppression
         {
             public readonly int Current;
             public ResetRestartCount(int current) { }
         }
-        public sealed class StartChild
+        public sealed class StartChild : Akka.Event.IDeadLetterSuppression
         {
             public static readonly Akka.Pattern.BackoffSupervisor.StartChild Instance;
         }
