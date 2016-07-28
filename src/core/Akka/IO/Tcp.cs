@@ -338,8 +338,8 @@ namespace Akka.IO
 
             public WriteFile(string filePath, long position, long count, Event ack)
             {
-                if (position < 0) throw new ArgumentException("WriteFile.position must be >= 0");
-                if (count <= 0) throw new ArgumentException("WriteFile.count must be > 0");
+                if (position < 0) throw new ArgumentException("WriteFile.position must be >= 0", nameof(position));
+                if (count <= 0) throw new ArgumentException("WriteFile.count must be > 0", nameof(count));
 
                 _ack = ack;
                 FilePath = filePath;

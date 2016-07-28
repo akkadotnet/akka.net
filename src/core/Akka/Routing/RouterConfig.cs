@@ -426,30 +426,45 @@ namespace Akka.Routing
         public static FromConfig Instance { get; } = new FromConfig();
 
         /// <summary>
-        /// Creates a router that is responsible for routing messages to routees within the provided <paramref name="system"/>.
+        /// N/A
         /// </summary>
-        /// <param name="system">The actor system that owns this router.</param>
-        /// <returns>
-        /// The newly created router tied to the given system.
-        /// </returns>
-        /// <exception cref="NotSupportedException"></exception>
+        /// <param name="system">N/A</param>
+        /// <exception cref="NotSupportedException">
+        /// This exception is automatically thrown since <see cref="FromConfig"/> cannot create routers.
+        /// </exception>
+        /// <returns>N/A</returns>
         public override Router CreateRouter(ActorSystem system)
         {
             throw new NotSupportedException("FromConfig must not create Router");
         }
 
+        /// <summary>
+        /// N/A
+        /// </summary>
+        /// <exception cref="NotSupportedException">
+        /// This exception is automatically thrown since <see cref="FromConfig"/> cannot create router actors.
+        /// </exception>
+        /// <returns>N/A</returns>
         internal override RouterActor CreateRouterActor()
         {
             throw new NotSupportedException("FromConfig must not create RouterActor");
         }
 
+        /// <summary>
+        /// N/A
+        /// </summary>
+        /// <param name="path">N/A</param>
+        /// <exception cref="ConfigurationException">
+        /// This exception is automatically thrown since 'akka.actor.dispatch' is missing router configuration for <paramref name="path"/>.
+        /// </exception>
+        /// <returns>N/A</returns>
         public override void VerifyConfig(ActorPath path)
         {
             throw new ConfigurationException($"Configuration missing for router [{path}] in 'akka.actor.deployment' section.");
         }
 
         /// <summary>
-        /// Setting the supervisor strategy to be used for the “head” Router actor
+        /// Setting the supervisor strategy to be used for the "head" Router actor
         /// </summary>
         public FromConfig WithSupervisorStrategy(SupervisorStrategy strategy)
         {
@@ -525,19 +540,39 @@ namespace Akka.Routing
     {
         protected NoRouter()
         {
-            
         }
 
+        /// <summary>
+        /// N/A
+        /// </summary>
+        /// <param name="system">N/A</param>
+        /// <exception cref="NotSupportedException">
+        /// This exception is automatically thrown since <see cref="NoRouter"/> cannot create routers.
+        /// </exception>
+        /// <returns>N/A</returns>
         public override Router CreateRouter(ActorSystem system)
         {
             throw new NotSupportedException("NoRouter has no Router");
         }
 
+        /// <summary>
+        /// N/A
+        /// </summary>
+        /// <exception cref="NotSupportedException">
+        /// This exception is automatically thrown since <see cref="NoRouter"/> cannot create router actors.
+        /// </exception>
+        /// <returns>N/A</returns>
         internal override RouterActor CreateRouterActor()
         {
             throw new NotSupportedException("NoRouter must not create RouterActor");
         }
 
+        /// <summary>
+        /// N/A
+        /// </summary>
+        /// <exception cref="NotSupportedException">
+        /// This exception is automatically thrown since <see cref="NoRouter"/> does not have a dispatcher.
+        /// </exception>
         public override string RouterDispatcher
         {
             get

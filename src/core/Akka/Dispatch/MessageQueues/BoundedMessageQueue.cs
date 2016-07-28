@@ -24,12 +24,18 @@ namespace Akka.Dispatch.MessageQueues
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BoundedMessageQueue"/> class.
+        /// </summary>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if the given <paramref name="boundedCapacity"/> is negative.
+        /// </exception>
         public BoundedMessageQueue(int boundedCapacity, TimeSpan pushTimeOut)
         {
             PushTimeOut = pushTimeOut;
             if (boundedCapacity < 0)
             {
-                throw new ArgumentException("The capacity for BoundedMessageQueue can not be negative");
+                throw new ArgumentException("The capacity for BoundedMessageQueue can not be negative", nameof(boundedCapacity));
             }
             else if (boundedCapacity == 0)
             {

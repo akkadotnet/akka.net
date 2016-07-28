@@ -166,6 +166,8 @@ namespace Akka.IO
             {
             }
 
+            /// <summary></summary>
+            /// <exception cref="IndexOutOfRangeException"></exception>
             public override byte this[int idx]
             {
                 get { return _bytes[checkRangeConvert(idx)]; }
@@ -205,6 +207,8 @@ namespace Akka.IO
                 get { return _length; }
             }
 
+            /// <summary></summary>
+            /// <exception cref="InvalidOperationException"></exception>
             public override ByteString Concat(ByteString that)
             {
                 if (that.IsEmpty) return this;
@@ -258,6 +262,8 @@ namespace Akka.IO
                 _length = length;
             }
 
+            /// <summary></summary>
+            /// <exception cref="IndexOutOfRangeException"></exception>
             public override byte this[int idx]
             {
                 get
@@ -288,12 +294,16 @@ namespace Akka.IO
                         _byteStrings.Select(x => (ByteIterator.ByteArrayIterator) x.Iterator()).ToArray());
             }
 
-			public override IEnumerator<byte> GetEnumerator()
-			{
-				return _byteStrings.SelectMany(byteString => byteString).GetEnumerator();
-			}
+            public override IEnumerator<byte> GetEnumerator()
+            {
+                return _byteStrings.SelectMany(byteString => byteString).GetEnumerator();
+            }
 
-			public override ByteString Concat(ByteString that)
+            /// <summary></summary>
+            /// <exception cref="InvalidOperationException">
+            /// This exception is thrown if this <see cref="ByteString"/> cannot be concatenated with <paramref name="that"/>.
+            /// </exception>
+            public override ByteString Concat(ByteString that)
             {
                 if (that.IsEmpty)
                 {
@@ -323,7 +333,7 @@ namespace Akka.IO
                         return new ByteStrings(Items.Concat(bs.Items).ToArray());
                     }
 
-                    throw new InvalidOperationException("No suitable implementation found for concatenating ByteString of type " + that.GetType());
+                    throw new InvalidOperationException($"No suitable implementation found for concatenating ByteString of type {that.GetType()}");
                 }
             }
 
@@ -464,6 +474,13 @@ namespace Akka.IO
         public abstract CompactByteString Compact();
         public abstract bool IsCompact();
 
+        /// <summary>
+        /// N/A
+        /// </summary>
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown automatically since iterators aren't supported in <see cref="ByteString"/>.
+        /// </exception>
+        /// <returns>N/A</returns>
         public virtual IEnumerator<byte> GetEnumerator()
         {
             throw new NotSupportedException("Method iterator is not implemented in ByteString");

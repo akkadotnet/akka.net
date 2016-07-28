@@ -73,9 +73,8 @@ namespace Akka.Actor
     {
         /// <summary>Gets the context for this instance.</summary>
         /// <value>The context.</value>
-        /// <exception cref="System.NotSupportedException">
-        /// There is no active Context, this is most likely due to use of async
-        /// operations from within this actor.
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown if there is no active Context. The most likely cause is due to use of async operations from within this actor.
         /// </exception>
         IActorContext ActorContext { get; }
     }
@@ -91,7 +90,9 @@ namespace Akka.Actor
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorBase" /> class.
         /// </summary>
-        /// <exception cref="System.Exception">Do not create actors using 'new', always create them using an ActorContext/System</exception>
+        /// <exception cref="ActorInitializationException">
+        /// This exception is thrown when an actor is created using <c>new</c>. Always create actors using an ActorContext/System.
+        /// </exception>
         protected ActorBase()
         {
             if (ActorCell.Current == null)
@@ -118,9 +119,8 @@ namespace Akka.Actor
         ///     Gets the context.
         /// </summary>
         /// <value>The context.</value>
-        /// <exception cref="System.NotSupportedException">
-        ///     There is no active ActorContext, this is most likely due to use of async
-        ///     operations from within this actor.
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown if there is no active ActorContext. The most likely cause is due to use of async operations from within this actor.
         /// </exception>
         IActorContext IInternalActor.ActorContext
         {
@@ -133,9 +133,8 @@ namespace Akka.Actor
         ///     Gets the context.
         /// </summary>
         /// <value>The context.</value>
-        /// <exception cref="System.NotSupportedException">
-        ///     There is no active Context, this is most likely due to use of async
-        ///     operations from within this actor.
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown if there is no active Context. The most likely cause is due to use of async operations from within this actor.
         /// </exception>
         protected static IActorContext Context
         {
@@ -178,6 +177,9 @@ namespace Akka.Actor
         /// to the actor's system's <see cref="EventStream"/>
         /// </summary>
         /// <param name="message">The unhandled message.</param>
+        /// <exception cref="DeathPactException">
+        /// This exception is thrown if the given <paramref name="message"/> is a <see cref="Terminated"/> message.
+        /// </exception>
         protected virtual void Unhandled(object message)
         {
             var terminatedMessage = message as Terminated;

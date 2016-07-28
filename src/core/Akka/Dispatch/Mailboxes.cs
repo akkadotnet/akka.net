@@ -104,6 +104,7 @@ namespace Akka.Dispatch
         /// Returns a <see cref="MailboxType"/> as specified in configuration, based on the type, or if not defined null.
         /// </summary>
         /// <param name="queueType">The mailbox we need given the queue requirements.</param>
+        /// <exception cref="ConfigurationException">This exception is thrown if a mapping is not configured for the given <paramref name="queueType"/>.</exception>
         /// <returns>A <see cref="MailboxType"/> as specified in configuration, based on the type, or if not defined null.</returns>
         public MailboxType LookupByQueueType(Type queueType)
         {
@@ -114,6 +115,12 @@ namespace Akka.Dispatch
         /// Returns a <see cref="MailboxType"/> as specified in configuration, based on the id, or if not defined null.
         /// </summary>
         /// <param name="id">The ID of the mailbox to lookup</param>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown if the mailbox type is not configured or the system could not load or find the type specified.
+        /// </exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if the mailbox type could not be instantiated.
+        /// </exception>
         /// <returns>The <see cref="MailboxType"/> specified in configuration or if not defined null.</returns>
         public MailboxType Lookup(string id) => LookupConfigurator(id);
 
@@ -146,7 +153,7 @@ namespace Akka.Dispatch
                     catch (Exception ex)
                     {
                         throw new ArgumentException($"Cannot instantiate MailboxType {type}, defined in [{id}]. Make sure it has a public " +
-                                                    $"constructor with [Akka.Actor.Settings, Akka.Configuration.Config] parameters", ex);
+                                                     "constructor with [Akka.Actor.Settings, Akka.Configuration.Config] parameters", ex);
                     }
 
                     // TODO: check for blocking mailbox with a non-zero pushtimeout and issue a warning
@@ -201,6 +208,10 @@ namespace Akka.Dispatch
             return mailboxRequirement == null || mailboxRequirement.Equals(NoMailboxRequirement) ? typeof (IMessageQueue) : Type.GetType(mailboxRequirement, true);
         }
 
+        /// <summary></summary>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if the 'mailbox-requirement' in the given <paramref name="dispatcherConfig"/> isn't met.
+        /// </exception>
         public MailboxType GetMailboxType(Props props, Config dispatcherConfig)
         {
             if (dispatcherConfig == null)
@@ -211,7 +222,7 @@ namespace Akka.Dispatch
             var actorRequirement = new Lazy<Type>(() => GetRequiredType(actorType));
 
             var mailboxRequirement = GetMailboxRequirement(dispatcherConfig);
-            var hasMailboxRequirement = mailboxRequirement != typeof (IMessageQueue);
+            var hasMailboxRequirement = mailboxRequirement != typeof(IMessageQueue);
 
             var hasMailboxType = dispatcherConfig.HasPath("mailbox-type") &&
                                  dispatcherConfig.GetString("mailbox-type") != Deploy.NoMailboxGiven;
@@ -225,10 +236,10 @@ namespace Akka.Dispatch
             Func<MailboxType, MailboxType> verifyRequirements = mailboxType =>
             {
                 Lazy<Type> mqType = new Lazy<Type>(() => GetProducedMessageQueueType(mailboxType));
-                if(hasMailboxRequirement && !mailboxRequirement.IsAssignableFrom(mqType.Value))
+                if (hasMailboxRequirement && !mailboxRequirement.IsAssignableFrom(mqType.Value))
                     throw new ArgumentException($"produced message queue type [{mqType.Value}] does not fulfill requirement for dispatcher [{id}]." +
                                                 $"Must be a subclass of [{mailboxRequirement}]");
-                if(HasRequiredType(actorType) && !actorRequirement.Value.IsAssignableFrom(mqType.Value))
+                if (HasRequiredType(actorType) && !actorRequirement.Value.IsAssignableFrom(mqType.Value))
                     throw new ArgumentException($"produced message queue type of [{mqType.Value}] does not fulfill requirement for actor class [{actorType}]." +
                                                 $"Must be a subclass of [{mailboxRequirement}]");
                 return mailboxType;

@@ -129,6 +129,12 @@ namespace Akka.Dispatch
 
         private readonly DedicatedThreadPoolSettings _threadPoolConfiguration;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ForkJoinExecutorServiceFactory"/> class.
+        /// </summary>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown if either 'dedicated-thread-pool' OR 'fork-join-executor' is not defined in <paramref name="config"/>.
+        /// </exception>
         public ForkJoinExecutorServiceFactory(Config config, IDispatcherPrerequisites prerequisites)
             : base(config, prerequisites)
         {
@@ -223,8 +229,10 @@ namespace Akka.Dispatch
         /// <summary>
         /// Configures the <see cref="ExecutorServiceConfigurator"/> that will be used inside this dispatcher.
         /// </summary>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown if a custom ExecutorServiceConfiguration implementation cannot be loaded.
+        /// </exception>
         /// <returns>The requested <see cref="ExecutorServiceConfigurator"/> instance.</returns>
-        /// <exception cref="ConfigurationException">Thrown if a custom ExecutorServiceConfiguration implementation cannot be loaded.</exception>
         protected ExecutorServiceConfigurator ConfigureExecutor()
         {
             var executor = Config.GetString("executor");
@@ -245,7 +253,7 @@ namespace Akka.Dispatch
                     Type executorConfiguratorType = Type.GetType(executor);
                     if (executorConfiguratorType == null)
                     {
-                        throw new ConfigurationException("Could not resolve executor service configurator type " + executor + " for path " + Config.GetString("id"));
+                        throw new ConfigurationException($"Could not resolve executor service configurator type {executor} for path {Config.GetString("id")}");
                     }
                     var args = new object[] { Config, Prerequisites };
                     return (ExecutorServiceConfigurator)Activator.CreateInstance(executorConfiguratorType, args);

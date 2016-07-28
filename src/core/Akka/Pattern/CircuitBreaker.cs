@@ -54,9 +54,9 @@ namespace Akka.Pattern
         /// <param name="oldState">Previous state on transition</param>
         /// <param name="newState">Next state on transition</param>
         /// <returns>Whether the previous state matched correctly</returns>
-        private bool SwapState( AtomicState oldState, AtomicState newState )
+        private bool SwapState(AtomicState oldState, AtomicState newState)
         {
-            return Interlocked.CompareExchange( ref _currentState, newState, oldState ) == oldState;
+            return Interlocked.CompareExchange(ref _currentState, newState, oldState) == oldState;
         }
 
         /// <summary>
@@ -66,7 +66,7 @@ namespace Akka.Pattern
         {
             get
             {
-                Interlocked.MemoryBarrier( );
+                Interlocked.MemoryBarrier();
                 return _currentState;
             }
         }
@@ -75,11 +75,11 @@ namespace Akka.Pattern
 
         public TimeSpan CallTimeout { get; private set; }
         public TimeSpan ResetTimeout { get; private set; }
-        
+
         //akka.io implementation is to use nested static classes and access parent member variables
         //.Net static nested classes do not have access to parent member variables -- so we configure the states here and
         //swap them above
-        private AtomicState Closed { get; set; } 
+        private AtomicState Closed { get; set; }
         private AtomicState Open { get; set; }
         private AtomicState HalfOpen { get; set; }
 
@@ -90,9 +90,9 @@ namespace Akka.Pattern
         /// <param name="callTimeout"><see cref="TimeSpan"/> of time after which to consider a call a failure</param>
         /// <param name="resetTimeout"><see cref="TimeSpan"/> of time after which to attempt to close the circuit</param>
         /// <returns></returns>
-        public static CircuitBreaker Create( int maxFailures, TimeSpan callTimeout, TimeSpan resetTimeout )
+        public static CircuitBreaker Create(int maxFailures, TimeSpan callTimeout, TimeSpan resetTimeout)
         {
-            return new CircuitBreaker( maxFailures, callTimeout, resetTimeout );
+            return new CircuitBreaker(maxFailures, callTimeout, resetTimeout);
         }
 
         /// <summary>
@@ -102,14 +102,14 @@ namespace Akka.Pattern
         /// <param name="callTimeout"><see cref="TimeSpan"/> of time after which to consider a call a failure</param>
         /// <param name="resetTimeout"><see cref="TimeSpan"/> of time after which to attempt to close the circuit</param>
         /// <returns></returns>
-        public CircuitBreaker( int maxFailures, TimeSpan callTimeout, TimeSpan resetTimeout )
+        public CircuitBreaker(int maxFailures, TimeSpan callTimeout, TimeSpan resetTimeout)
         {
             MaxFailures = maxFailures;
             CallTimeout = callTimeout;
             ResetTimeout = resetTimeout;
-            Closed = new Closed( this );
-            Open = new Open( this );
-            HalfOpen = new HalfOpen( this );
+            Closed = new Closed(this);
+            Open = new Open(this);
+            HalfOpen = new HalfOpen(this);
             _currentState = Closed;
             //_failures = new AtomicInteger();
         }
@@ -128,9 +128,9 @@ namespace Akka.Pattern
         /// <typeparam name="T"></typeparam>
         /// <param name="body">Call needing protected</param>
         /// <returns><see cref="Task"/> containing the call result</returns>
-        public async Task<T> WithCircuitBreaker<T>( Func<Task<T>> body )
+        public async Task<T> WithCircuitBreaker<T>(Func<Task<T>> body)
         {
-            return await CurrentState.Invoke<T>( body );
+            return await CurrentState.Invoke<T>(body);
         }
 
         /// <summary>
@@ -138,23 +138,23 @@ namespace Akka.Pattern
         /// </summary>
         /// <param name="body">Call needing protected</param>
         /// <returns><see cref="Task"/></returns>
-        public async Task WithCircuitBreaker( Func<Task> body )
+        public async Task WithCircuitBreaker(Func<Task> body)
         {
-            await CurrentState.Invoke( body );
+            await CurrentState.Invoke(body);
         }
 
         /// <summary>
         /// The failure will be recorded farther down.
         /// </summary>
         /// <param name="body"></param>
-        public void WithSyncCircuitBreaker( Action body )
+        public void WithSyncCircuitBreaker(Action body)
         {
-            var cbTask = WithCircuitBreaker( () => Task.Factory.StartNew( body ) );
-            if ( !cbTask.Wait( CallTimeout ) )
+            var cbTask = WithCircuitBreaker(() => Task.Factory.StartNew(body));
+            if (!cbTask.Wait(CallTimeout))
             {
                 //throw new TimeoutException( string.Format( "Execution did not complete within the time alotted {0} ms", CallTimeout.TotalMilliseconds ) );
             }
-            if ( cbTask.Exception != null )
+            if (cbTask.Exception != null)
             {
                 throw cbTask.Exception;
             }
@@ -174,10 +174,10 @@ namespace Akka.Pattern
         /// <typeparam name="T"></typeparam>
         /// <param name="body"></param>
         /// <returns><typeparamref name="T"/> or default(<typeparamref name="T"/>)</returns>
-        public T WithSyncCircuitBreaker<T>( Func<T> body )
+        public T WithSyncCircuitBreaker<T>(Func<T> body)
         {
-            var cbTask = WithCircuitBreaker( () => Task.Factory.StartNew( body ) );
-            return cbTask.Wait( CallTimeout ) ? cbTask.Result : default(T);
+            var cbTask = WithCircuitBreaker(() => Task.Factory.StartNew(body));
+            return cbTask.Wait(CallTimeout) ? cbTask.Result : default(T);
         }
 
         /// <summary>
@@ -185,9 +185,9 @@ namespace Akka.Pattern
         /// </summary>
         /// <param name="callback"><see cref="Action"/> Handler to be invoked on state change</param>
         /// <returns>CircuitBreaker for fluent usage</returns>
-        public CircuitBreaker OnOpen( Action callback )
+        public CircuitBreaker OnOpen(Action callback)
         {
-            Open.AddListener( callback );
+            Open.AddListener(callback);
             return this;
         }
 
@@ -196,9 +196,9 @@ namespace Akka.Pattern
         /// </summary>
         /// <param name="callback"><see cref="Action"/> Handler to be invoked on state change</param>
         /// <returns>CircuitBreaker for fluent usage</returns>
-        public CircuitBreaker OnHalfOpen( Action callback )
+        public CircuitBreaker OnHalfOpen(Action callback)
         {
-            HalfOpen.AddListener( callback );
+            HalfOpen.AddListener(callback);
             return this;
         }
 
@@ -207,9 +207,9 @@ namespace Akka.Pattern
         /// </summary>
         /// <param name="callback"><see cref="Action"/> Handler to be invoked on state change</param>
         /// <returns>CircuitBreaker for fluent usage</returns>
-        public CircuitBreaker OnClose( Action callback )
+        public CircuitBreaker OnClose(Action callback)
         {
-            Closed.AddListener( callback );
+            Closed.AddListener(callback);
             return this;
         }
 
@@ -218,16 +218,19 @@ namespace Akka.Pattern
         /// </summary>
         /// <param name="fromState">State being transitioning from</param>
         /// <param name="toState">State being transitioned to</param>
-        private void Transition( AtomicState fromState, AtomicState toState )
+        /// <exception cref="IllegalStateException">
+        /// This exception is thrown if an invalid transition is attempted from <paramref name="fromState"/> to <paramref name="toState"/>.
+        /// </exception>
+        private void Transition(AtomicState fromState, AtomicState toState)
         {
-            if ( SwapState( fromState, toState ) )
+            if (SwapState(fromState, toState))
             {
-                Debug.WriteLine( "Successful transition from {0} to {1}", fromState, toState );
-                toState.Enter( );
+                Debug.WriteLine("Successful transition from {0} to {1}", fromState, toState);
+                toState.Enter();
             }
             else
             {
-                throw new IllegalStateException( string.Format( "Illegal transition attempted from {0} to {1}", fromState, toState ) );
+                throw new IllegalStateException($"Illegal transition attempted from {fromState} to {toState}");
             }
         }
 
@@ -235,25 +238,25 @@ namespace Akka.Pattern
         /// Trips breaker to an open state. This is valid from Closed or Half-Open states
         /// </summary>
         /// <param name="fromState">State we're coming from (Closed or Half-Open)</param>
-        internal void TripBreaker( AtomicState fromState )
+        internal void TripBreaker(AtomicState fromState)
         {
-            Transition( fromState, Open );
+            Transition(fromState, Open);
         }
 
         /// <summary>
         /// Resets breaker to a closed state.  This is valid from an Half-Open state only.
         /// </summary>
-        internal void ResetBreaker( )
+        internal void ResetBreaker()
         {
-            Transition( HalfOpen, Closed );
+            Transition(HalfOpen, Closed);
         }
 
         /// <summary>
         /// Attempts to reset breaker by transitioning to a half-open state.  This is valid from an Open state only.
         /// </summary>
-        internal void AttemptReset( )
+        internal void AttemptReset()
         {
-            Transition( Open, HalfOpen );
+            Transition(Open, HalfOpen);
         }
 
         //private readonly Task timeoutTask = Task.FromResult(new TimeoutException("Circuit Breaker Timed out."));

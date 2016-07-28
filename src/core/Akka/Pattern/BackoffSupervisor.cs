@@ -71,11 +71,20 @@ namespace Akka.Pattern
         private int _restartCount = 0;
         private IActorRef _child = null;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BackoffSupervisor"/> class.
+        /// </summary>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if the given <paramref name="minBackoff"/> is negative or greater than <paramref name="maxBackoff"/>.
+        /// </exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// This exception is thrown if the given <paramref name="randomFactor"/> isn't between 0.0 and 1.0.
+        /// </exception>
         public BackoffSupervisor(Props childProps, string childName, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor)
         {
-            if (minBackoff <= TimeSpan.Zero) throw new ArgumentException("MinBackoff must be greater than 0");
-            if (maxBackoff < minBackoff) throw new ArgumentException("MaxBackoff must be greater than MinBackoff");
-            if (randomFactor < 0.0 || randomFactor > 1.0) throw new ArgumentException("RandomFactor must be between 0.0 and 1.0");
+            if (minBackoff <= TimeSpan.Zero) throw new ArgumentException("MinBackoff must be greater than 0", nameof(minBackoff));
+            if (maxBackoff < minBackoff) throw new ArgumentException("MaxBackoff must be greater than MinBackoff", nameof(maxBackoff));
+            if (randomFactor < 0.0 || randomFactor > 1.0) throw new ArgumentOutOfRangeException(nameof(randomFactor), "RandomFactor must be between 0.0 and 1.0");
 
             _childProps = childProps;
             _childName = childName;

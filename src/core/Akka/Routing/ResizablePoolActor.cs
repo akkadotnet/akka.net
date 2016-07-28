@@ -21,6 +21,8 @@ namespace Akka.Routing
         {
         }
 
+        /// <summary></summary>
+        /// <exception cref="ActorInitializationException"></exception>
         protected ResizablePoolCell ResizerCell
         {
             get
@@ -29,7 +31,7 @@ namespace Akka.Routing
                 if (resizablePoolCell != null)
                     return resizablePoolCell;
                 else 
-                    throw new ActorInitializationException("Resizable router actor can only be used when resizer is defined, not in " + Context.GetType());
+                    throw new ActorInitializationException($"Resizable router actor can only be used when resizer is defined, not in {Context.GetType()}");
             }
         }
 

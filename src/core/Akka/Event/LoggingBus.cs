@@ -77,7 +77,12 @@ namespace Akka.Event
         /// Starts the loggers defined in the system configuration.
         /// </summary>
         /// <param name="system">The system that the loggers need to start monitoring.</param>
-        /// <exception cref="Akka.Configuration.ConfigurationException">The logger specified in the system configuration could not be found or loaded.</exception>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown if the logger specified in the <paramref name="system"/> configuration could not be found or loaded.
+        /// </exception>
+        /// <exception cref="LoggerInitializationException">
+        /// This exception is thrown if the logger doesn't respond with a <see cref="LoggerInitialized"/> message when initialized.
+        /// </exception>
         internal void StartDefaultLoggers(ActorSystemImpl system)
         {
             var logName = SimpleName(this) + "(" + system.Name + ")";
@@ -91,7 +96,7 @@ namespace Akka.Event
                 var loggerType = Type.GetType(strLoggerType);
                 if (loggerType == null)
                 {
-                    throw new ConfigurationException("Logger specified in config cannot be found: \"" + strLoggerType + "\"");
+                    throw new ConfigurationException($@"Logger specified in config cannot be found: ""{strLoggerType}""");
                 }
 
                 if (loggerType == typeof(StandardOutLogger))
@@ -106,7 +111,7 @@ namespace Akka.Event
                 }
                 catch (Exception e)
                 {
-                    throw new ConfigurationException(string.Format("Logger [{0}] specified in config cannot be loaded: {1}", strLoggerType, e),e);
+                    throw new ConfigurationException($"Logger [{strLoggerType}] specified in config cannot be loaded: {e}", e);
                 }
             }
 
@@ -172,7 +177,7 @@ namespace Akka.Event
                 var response = askTask.Result;
                 if (!(response is LoggerInitialized))
                 {
-                    throw new LoggerInitializationException(string.Format("Logger {0} [{2}] did not respond with LoggerInitialized, sent instead {1}", loggerName, response, loggerType.FullName));
+                    throw new LoggerInitializationException($"Logger {loggerName} [{loggerType.FullName}] did not respond with LoggerInitialized, sent instead {response}");
                 }
 
                 _loggers.Add(logger);

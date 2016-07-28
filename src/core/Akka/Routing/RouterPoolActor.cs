@@ -27,6 +27,7 @@ namespace Akka.Routing
         /// Initializes a new instance of the <see cref="RouterPoolActor"/> class.
         /// </summary>
         /// <param name="supervisorStrategy">The supervisor strategy.</param>
+        /// <exception cref="ActorInitializationException"></exception>
         public RouterPoolActor(SupervisorStrategy supervisorStrategy)
         {
             _supervisorStrategy = supervisorStrategy;
@@ -38,8 +39,7 @@ namespace Akka.Routing
             }
             else
             {
-                throw new ActorInitializationException("RouterPoolActor can only be used with Pool, not " +
-                                                       Cell.RouterConfig.GetType());
+                throw new ActorInitializationException($"RouterPoolActor can only be used with Pool, not {Cell.RouterConfig.GetType()}");
             }
         }
 

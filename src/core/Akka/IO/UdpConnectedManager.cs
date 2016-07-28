@@ -31,7 +31,7 @@ namespace Akka.IO
                     var commander = Sender;
                     return registry => Props.Create(() => new UdpConnection(_udpConn, registry, commander, c));
                 }
-                throw new ArgumentException("The supplied message type is invalid. Only Connect messages are supported.");
+                throw new ArgumentException("The supplied message type is invalid. Only Connect messages are supported.", nameof(m));
             })(m);
         }
 

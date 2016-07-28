@@ -30,6 +30,12 @@ namespace Akka.Routing
         private AtomicCounterLong _resizeCounter;
         private Pool _pool;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ResizablePoolCell"/> class.
+        /// </summary>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if pool's resizer is undefined.
+        /// </exception>
         public ResizablePoolCell(
             ActorSystemImpl system,
             IInternalActorRef self,
@@ -40,7 +46,7 @@ namespace Akka.Routing
             Pool pool)
             : base(system, self, routerProps, dispatcher, routeeProps, supervisor)
         {
-            if (pool.Resizer == null) throw new ArgumentException("RouterConfig must be a Pool with defined resizer");
+            if (pool.Resizer == null) throw new ArgumentException("RouterConfig must be a Pool with defined resizer", nameof(pool));
 
             resizer = pool.Resizer;
             _pool = pool;

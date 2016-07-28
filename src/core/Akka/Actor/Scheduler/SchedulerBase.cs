@@ -76,16 +76,20 @@ namespace Akka.Actor
         protected abstract void InternalScheduleOnce(TimeSpan delay, Action action, ICancelable cancelable);
         protected abstract void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable);
 
+        /// <summary></summary>
+        /// <exception cref="ArgumentOutOfRangeException">This exception is thrown if the given <paramref name="interval"/> is negative or zero.</exception>
         protected static void ValidateInterval(TimeSpan interval, string parameterName)
         {
             if(interval <= TimeSpan.Zero)
-                throw new ArgumentOutOfRangeException(parameterName, "Interval must be >0. It was " + interval);
+                throw new ArgumentOutOfRangeException(nameof(parameterName), $"Interval must be >0. It was {interval}");
         }
 
+        /// <summary></summary>
+        /// <exception cref="ArgumentOutOfRangeException">This exception is thrown if the given <paramref name="delay"/> is negative.</exception>
         protected static void ValidateDelay(TimeSpan delay, string parameterName)
         {
             if(delay < TimeSpan.Zero)
-                throw new ArgumentOutOfRangeException(parameterName, "Delay must be >=0. It was " + delay);
+                throw new ArgumentOutOfRangeException(nameof(parameterName), $"Delay must be >=0. It was {delay}");
         }
     }
 }

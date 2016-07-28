@@ -45,10 +45,12 @@ namespace Akka.Actor.Internal
             return new TerminatingChildrenContainer(InternalChildren, actor, SuspendReason.UserRequest.Instance);
         }
 
+        /// <summary></summary>
+        /// <exception cref="InvalidActorNameException">This exception is thrown if the given <paramref name="name"/> is not unique in the container.</exception>
         public override IChildrenContainer Reserve(string name)
         {
             if (InternalChildren.ContainsKey(name))
-                throw new InvalidActorNameException(string.Format("Actor name \"{0}\" is not unique!", name));
+                throw new InvalidActorNameException($@"Actor name ""{name}"" is not unique!");
             return new NormalChildrenContainer(InternalChildren.SetItem(name, ChildNameReserved.Instance));
         }
 

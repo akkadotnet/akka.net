@@ -46,6 +46,9 @@ namespace Akka.Actor
         ///     Invokes the specified envelope.
         /// </summary>
         /// <param name="envelope">The envelope.</param>
+        /// <exception cref="ActorKilledException">
+        /// This exception is thrown if a <see cref="Akka.Actor.Kill"/> message is included in the given <paramref name="envelope"/>.
+        /// </exception>>
         public void Invoke(Envelope envelope)
         {
             
@@ -117,6 +120,10 @@ namespace Akka.Actor
   }
          */
 
+        /// <summary></summary>
+        /// <exception cref="ActorKilledException">
+        /// This exception is thrown if a <see cref="Akka.Actor.Kill"/> message is included in the given <paramref name="envelope"/>.
+        /// </exception>>
         protected virtual void AutoReceiveMessage(Envelope envelope)
         {
             var message = envelope.Message;
@@ -259,7 +266,7 @@ namespace Akka.Actor
                     }
                     else
                     {
-                        throw new NotSupportedException("Unknown message " + m.GetType().Name);
+                        throw new NotSupportedException($"Unknown message {m.GetType().Name}");
                     }
                 }
                 catch (Exception cause)
@@ -285,6 +292,12 @@ namespace Akka.Actor
         ///   Used to invoke system messages.
         /// </summary>
         /// <param name="envelope">The envelope.</param>
+        /// <exception cref="ActorInitializationException">
+        /// This exception is thrown if a <see cref="Akka.Dispatch.SysMsg.Create"/> system message is included in the given <paramref name="envelope"/>.
+        /// </exception>
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown if an unknown message type is included in the given <paramref name="envelope"/>.
+        /// </exception>
         internal void SystemInvoke(ISystemMessage envelope)
         {
            SysMsgInvokeAll(new EarliestFirstSystemMessageList((SystemMessage)envelope), CalculateState());
@@ -469,10 +482,6 @@ namespace Akka.Actor
             }
         }
 
-        /// <summary>
-        ///     Kills this instance.
-        /// </summary>
-        /// <exception cref="ActorKilledException">Kill</exception>
         private void Kill()
         {
             throw new ActorKilledException("Kill");

@@ -155,8 +155,8 @@ namespace Akka.Configuration.Hocon
         /// Retrieves the boolean value from this <see cref="HoconValue"/>.
         /// </summary>
         /// <returns>The boolean value represented by this <see cref="HoconValue"/>.</returns>
-        /// <exception cref="System.NotSupportedException">
-        /// This exception occurs when the <see cref="HoconValue"/> doesn't
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown if the <see cref="HoconValue"/> doesn't
         /// conform to the standard boolean values: "on", "off", "true", or "false"
         /// </exception>
         public bool GetBoolean()
@@ -173,7 +173,8 @@ namespace Akka.Configuration.Hocon
                 case "false":
                     return false;
                 default:
-                    throw new NotSupportedException("Unknown boolean format: " + v);
+                    throw new NotSupportedException($"Unknown boolean format: {v}");
+
             }
         }
 
@@ -356,12 +357,15 @@ namespace Akka.Configuration.Hocon
         /// Retrieves the time span value from this <see cref="HoconValue"/>.
         /// </summary>
         /// <param name="allowInfinite">A flag used to set inifinite durations.</param>
+        /// <exception cref="FormatException">
+        /// This exception is thrown if the timespan given in the <see cref="HoconValue"/> is negative.
+        /// </exception>
         /// <returns>The time span value represented by this <see cref="HoconValue"/>.</returns>
         public TimeSpan GetTimeSpan(bool allowInfinite = true)
         {
             string res = GetString();
             if (res.EndsWith("ms"))
-            //TODO: Add support for ns, us, and non abbreviated versions (second, seconds and so on) see https://github.com/Lightbendhub/config/blob/master/HOCON.md#duration-format
+            //TODO: Add support for ns, us, and non abbreviated versions (second, seconds and so on) see https://github.com/typesafehub/config/blob/master/HOCON.md#duration-format
             {
                 var v = res.Substring(0, res.Length - 2);
                 return TimeSpan.FromMilliseconds(ParsePositiveValue(v));
@@ -398,7 +402,7 @@ namespace Akka.Configuration.Hocon
         {
             var value = double.Parse(v, NumberFormatInfo.InvariantInfo);
             if(value < 0)
-                throw new FormatException("Expected a positive value instead of " + value);
+                throw new FormatException($"Expected a positive value instead of {value}");
             return value;
         }
 

@@ -21,7 +21,11 @@ namespace Akka.Tools.MatchHandler
         // ReSharper disable once StaticFieldInGenericType
         private static readonly ParameterExpression _extraArgsArrayParameter = Expression.Parameter(typeof(object[]), "extraArgsArray");
 
-
+        /// <summary></summary>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// This exception is thrown if the an unknown <see cref="PredicateAndHandler.HandlerKind"/> is contained
+        /// in a <see cref="TypeHandler.Handlers"/> in the given <paramref name="typeHandlers"/>.
+        /// </exception>
         public MatchExpressionBuilderResult BuildLambdaExpression(IReadOnlyList<TypeHandler> typeHandlers)
         {
             var arguments = typeHandlers.SelectMany(h => h.GetArguments()).ToList();
@@ -254,7 +258,8 @@ namespace Akka.Tools.MatchHandler
                         AddFuncHandlerExpressions(predicateAndHandler, bodyExpressions, valueExpression, returnTarget);
                         break;
                     default:
-                        throw new ArgumentOutOfRangeException("This should not happen. The value " + typeof(HandlerKind) + "." + predicateAndHandler.HandlerKind + " is a new enum value that has been added without updating the code in this method.");
+                        throw new ArgumentOutOfRangeException(
+                            $"This should not happen. The value {typeof(HandlerKind)}.{predicateAndHandler.HandlerKind} is a new enum value that has been added without updating the code in this method.");
                 }
             }
         }

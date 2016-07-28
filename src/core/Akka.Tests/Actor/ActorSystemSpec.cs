@@ -135,7 +135,7 @@ namespace Akka.Tests.Actor
 
             actorSystem.Terminate().Wait(TimeSpan.FromSeconds(10));
             
-            var ex = Assert.Throws<Exception>(() => actorSystem.RegisterOnTermination(() => { }));
+            var ex = Assert.Throws<InvalidOperationException>(() => actorSystem.RegisterOnTermination(() => { }));
             Assert.Equal("ActorSystem already terminated.", ex.Message);
         }
 

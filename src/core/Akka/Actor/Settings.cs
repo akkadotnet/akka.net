@@ -50,10 +50,13 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="system">The system.</param>
         /// <param name="config">The configuration.</param>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown if the 'akka.actor.provider' configuration item is not a valid type name or a valid actor ref provider.
+        /// </exception>
         public Settings(ActorSystem system, Config config)
         {
             _userConfig = config;
-            _fallbackConfig = ConfigurationFactory.Default();            
+            _fallbackConfig = ConfigurationFactory.Default();
             RebuildConfig();
 
             System = system;
@@ -62,9 +65,9 @@ namespace Akka.Actor
             ProviderClass = Config.GetString("akka.actor.provider");
             var providerType = Type.GetType(ProviderClass);
             if (providerType == null)
-                throw new ConfigurationException(string.Format("'akka.actor.provider' is not a valid type name : '{0}'", ProviderClass));
+                throw new ConfigurationException($"'akka.actor.provider' is not a valid type name : '{ProviderClass}'");
             if (!typeof(IActorRefProvider).IsAssignableFrom(providerType))
-                throw new ConfigurationException(string.Format("'akka.actor.provider' is not a valid actor ref provider: '{0}'", ProviderClass));
+                throw new ConfigurationException($"'akka.actor.provider' is not a valid actor ref provider: '{ProviderClass}'");
             
             SupervisorStrategyClass = Config.GetString("akka.actor.guardian-supervisor-strategy");
 

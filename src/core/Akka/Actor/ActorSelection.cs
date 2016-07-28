@@ -112,6 +112,9 @@ namespace Akka.Actor
         /// 
         /// Under the hood it talks to the actor to verify its existence and acquire its <see cref="IActorRef"/>
         /// </summary>
+        /// <exception cref="ActorNotFoundException">
+        /// This exception is thrown if no such actor exists or the identification didn't complete within the supplied <paramref name="timeout"/>.
+        /// </exception>
         public Task<IActorRef> ResolveOne(TimeSpan timeout) => InnerResolveOne(timeout);
 
         private async Task<IActorRef> InnerResolveOne(TimeSpan timeout)
@@ -126,7 +129,7 @@ namespace Akka.Actor
             }
             catch(Exception ex)
             {
-                throw new ActorNotFoundException("Exception ocurred while resolving ActorSelection", ex);
+                throw new ActorNotFoundException("Exception occurred while resolving ActorSelection", ex);
             }
         }
         

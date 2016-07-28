@@ -29,11 +29,17 @@ namespace Akka.Routing
         private readonly SortedDictionary<int, T> _nodes;
         private readonly int _virtualNodesFactor;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConsistentHash{T}"/> class.
+        /// </summary>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if the given <paramref name="virtualNodesFactor"/> is less than one.
+        /// </exception>
         public ConsistentHash(SortedDictionary<int, T> nodes, int virtualNodesFactor)
         {
             _nodes = nodes;
 
-            if (virtualNodesFactor < 1) throw new ArgumentException("virtualNodesFactor must be >= 1");
+            if (virtualNodesFactor < 1) throw new ArgumentException("virtualNodesFactor must be >= 1", nameof(virtualNodesFactor));
 
             _virtualNodesFactor = virtualNodesFactor;
         }
@@ -105,11 +111,13 @@ namespace Akka.Routing
         /// <summary>
         /// Get the node responsible for the data key.
         /// Can only be used if nodes exist in the node ring.
-        /// Otherwise throws <see cref="ArgumentException"/>.
         /// </summary>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is thrown if the node ring is empty.
+        /// </exception>
         public T NodeFor(byte[] key)
         {
-            if (IsEmpty) throw new InvalidOperationException(string.Format("Can't get node for [{0}] from an empty node ring", key));
+            if (IsEmpty) throw new InvalidOperationException($"Can't get node for [{key}] from an empty node ring");
 
             return NodeRing[Idx(Array.BinarySearch(NodeHashRing, ConsistentHash.HashFor(key)))];
         }
@@ -117,11 +125,13 @@ namespace Akka.Routing
         /// <summary>
         /// Get the node responsible for the data key.
         /// Can only be used if nodes exist in the node ring.
-        /// Otherwise throws <see cref="ArgumentException"/>.
         /// </summary>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is thrown if the node ring is empty.
+        /// </exception>
         public T NodeFor(string key)
         {
-            if (IsEmpty) throw new InvalidOperationException(string.Format("Can't get node for [{0}] from an empty node ring", key));
+            if (IsEmpty) throw new InvalidOperationException($"Can't get node for [{key}] from an empty node ring");
 
             return NodeRing[Idx(Array.BinarySearch(NodeHashRing, ConsistentHash.HashFor(key)))];
         }

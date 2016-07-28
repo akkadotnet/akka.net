@@ -61,10 +61,14 @@ namespace Akka.Dispatch
 
         private volatile ActorCell _owner;
 
+        /// <summary></summary>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is thrown if the registering <paramref name="actor"/> is not the <see cref="_owner">owner</see>.
+        /// </exception>
         internal override void Register(ActorCell actor)
         {
             var current = _owner;
-            if(current != null && actor != current) throw new InvalidOperationException("Cannot register to anyone but" + _owner);
+            if(current != null && actor != current) throw new InvalidOperationException($"Cannot register to anyone but {_owner}");
             _owner = actor;
             base.Register(actor);
         }

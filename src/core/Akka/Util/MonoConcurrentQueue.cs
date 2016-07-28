@@ -79,37 +79,63 @@ namespace Akka.Util
             return InternalGetEnumerator();
         }
 
+        /// <summary>
+        /// Copies the elements of the <see cref="T:System.Collections.ICollection" /> to an <see cref="T:System.Array" />, starting at a particular <see cref="T:System.Array" /> index.
+        /// </summary>
+        /// <param name="array">The one-dimensional <see cref="T:System.Array" /> that is the destination of the elements copied from <see cref="T:System.Collections.ICollection" />. The <see cref="T:System.Array" /> must have zero-based indexing.</param>
+        /// <param name="index">The zero-based index in <paramref name="array" /> at which copying begins.</param>
+        /// <exception cref="ArgumentException">
+        /// This excetpion can be thrown fo a number of reasons. These include:
+        /// <ul>
+        /// <li>The given array is multi-dimensional.</li>
+        /// <li>The given array is non-zero based.</li>
+        /// <li> The given array couldn't be cast to the collection element type.</li>
+        /// </ul>
+        /// </exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown if the given <paramref name="array"/> is undefined.
+        /// </exception>
         void ICollection.CopyTo(Array array, int index)
         {
             if (array == null)
-                throw new ArgumentNullException("array");
+                throw new ArgumentNullException(nameof(array), "Array cannot be null");
             if (array.Rank > 1)
-                throw new ArgumentException("The array can't be multidimensional");
+                throw new ArgumentException("The array can't be multidimensional", nameof(array));
             if (array.GetLowerBound(0) != 0)
-                throw new ArgumentException("The array needs to be 0-based");
+                throw new ArgumentException("The array needs to be 0-based", nameof(array));
 
             var dest = array as T[];
             if (dest == null)
-                throw new ArgumentException("The array cannot be cast to the collection element type", "array");
+                throw new ArgumentException("The array cannot be cast to the collection element type", nameof(array));
             CopyTo(dest, index);
         }
 
+        /// <summary></summary>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if the index is greater than the length of the array
+        /// or the number of elements in the collection exceed that array's capactiy.
+        /// </exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown if the given <paramref name="array"/> is undefined.
+        /// </exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// This exception is thrown if the given <paramref name="index"/> is negative.
+        /// </exception>
         public void CopyTo(T[] array, int index)
         {
             if (array == null)
-                throw new ArgumentNullException("array");
+                throw new ArgumentNullException(nameof(array), "Array cannot be null");
             if (index < 0)
-                throw new ArgumentOutOfRangeException("index");
+                throw new ArgumentOutOfRangeException(nameof(index), "Index cannot be less than 0");
             if (index >= array.Length)
-                throw new ArgumentException("index is equals or greater than array length", "index");
+                throw new ArgumentException("index is equals or greater than array length", nameof(index));
 
             var e = InternalGetEnumerator();
             var i = index;
             while (e.MoveNext())
             {
                 if (i == array.Length - index)
-                    throw new ArgumentException(
-                        "The number of elements in the collection exceeds the capacity of array", "array");
+                    throw new ArgumentException("The number of elements in the collection exceeds the capacity of array", nameof(array));
                 array[i++] = e.Current;
             }
         }

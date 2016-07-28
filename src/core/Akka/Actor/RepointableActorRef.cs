@@ -64,13 +64,12 @@ namespace Akka.Actor
 #pragma warning restore 0420
         }
 
-        ///<summary>
-        ///Initialize: make a dummy cell which holds just a mailbox, then tell our
-        ///supervisor that we exist so that he can create the real Cell in
-        ///handleSupervise().
-        ///Call twice on your own peril!
-        ///This is protected so that others can have different initialization.
+        /// <summary>
+        /// Initialize: make a dummy cell which holds just a mailbox, then tell our
+        /// supervisor that we exist so that he can create the real Cell in
+        /// handleSupervise().
         /// </summary>
+        /// <exception cref="IllegalStateException">This exception is thrown if this function is called more than once.</exception>
         public RepointableActorRef Initialize(bool async)
         {
             var underlying = Underlying;
@@ -91,12 +90,13 @@ namespace Akka.Actor
             }
         }
 
-        ///<summary>
-        ///This method is supposed to be called by the supervisor in HandleSupervise()
-        ///to replace the UnstartedCell with the real one. It assumes no concurrent
-        ///modification of the `underlying` field, though it is safe to send messages
-        ///at any time.
+        /// <summary>
+        /// This method is supposed to be called by the supervisor in HandleSupervise()
+        /// to replace the UnstartedCell with the real one. It assumes no concurrent
+        /// modification of the `underlying` field, though it is safe to send messages
+        /// at any time.
         /// </summary>
+        /// <exception cref="IllegalStateException">This exception is thrown if the underlying cell is undefined.</exception>
         public void Point()
         {
             var underlying = Underlying;
@@ -167,6 +167,8 @@ namespace Akka.Actor
             Underlying.Restart(cause);
         }
 
+        /// <summary></summary>
+        /// <exception cref="IllegalStateException">This exception is thrown if this property is called before actor is initialized (<see cref="Initialize(bool)"/>).</exception>
         public bool IsStarted
         {
             get

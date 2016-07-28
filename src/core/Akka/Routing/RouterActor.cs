@@ -16,6 +16,8 @@ namespace Akka.Routing
     /// </summary>
     internal class RouterActor : UntypedActor
     {
+        /// <summary></summary>
+        /// <exception cref="ActorInitializationException"></exception>
         protected RoutedActorCell Cell
         {
             get
@@ -24,7 +26,7 @@ namespace Akka.Routing
                 if (routedActorCell != null)
                     return routedActorCell;
                 else
-                    throw new ActorInitializationException("Router actor can only be used in RoutedActorRef, not in " + Context.GetType());
+                    throw new ActorInitializationException($"Router actor can only be used in RoutedActorRef, not in {Context.GetType()}");
             }
         }
 
