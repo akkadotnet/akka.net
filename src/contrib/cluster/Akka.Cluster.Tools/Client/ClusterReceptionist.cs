@@ -46,7 +46,7 @@ namespace Akka.Cluster.Tools.Client
         #region Messages
 
         [Serializable]
-        internal sealed class GetContacts : IClusterClientMessage
+        internal sealed class GetContacts : IClusterClientMessage, IDeadLetterSuppression
         {
             public static readonly GetContacts Instance = new GetContacts();
             private GetContacts() { }
@@ -64,21 +64,21 @@ namespace Akka.Cluster.Tools.Client
         }
 
         [Serializable]
-        internal sealed class Heartbeat : IClusterClientMessage
+        internal sealed class Heartbeat : IClusterClientMessage, IDeadLetterSuppression
         {
             public static readonly Heartbeat Instance = new Heartbeat();
             private Heartbeat() { }
         }
 
         [Serializable]
-        internal sealed class HeartbeatRsp : IClusterClientMessage
+        internal sealed class HeartbeatRsp : IClusterClientMessage, IDeadLetterSuppression
         {
             public static readonly HeartbeatRsp Instance = new HeartbeatRsp();
             private HeartbeatRsp() { }
         }
 
         [Serializable]
-        internal sealed class Ping
+        internal sealed class Ping : IDeadLetterSuppression
         {
             public static readonly Ping Instance = new Ping();
             private Ping() { }

@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.Serialization;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Pattern;
 using Akka.Util;
 using Reactive.Streams;
@@ -25,7 +26,7 @@ namespace Akka.Streams.Implementation
     }
 
     [Serializable]
-    internal sealed class RequestMore
+    internal sealed class RequestMore : IDeadLetterSuppression
     {
         public readonly IActorSubscription Subscription;
         public readonly long Demand;
@@ -38,7 +39,7 @@ namespace Akka.Streams.Implementation
     }
 
     [Serializable]
-    internal sealed class Cancel
+    internal sealed class Cancel : IDeadLetterSuppression
     {
         public readonly IActorSubscription Subscription;
 
@@ -49,7 +50,7 @@ namespace Akka.Streams.Implementation
     }
 
     [Serializable]
-    internal sealed class ExposedPublisher
+    internal sealed class ExposedPublisher : IDeadLetterSuppression
     {
         public readonly IActorPublisher Publisher;
 

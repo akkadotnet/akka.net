@@ -30,7 +30,7 @@ namespace Akka.Streams.Implementation.IO
             return Actor.Props.Create(()=> new InputStreamPublisher(inputstream, completionSource, chunkSize)).WithDeploy(Deploy.Local);
         }
 
-        private struct Continue
+        private struct Continue : IDeadLetterSuppression
         {
             public static Continue Instance { get; } = new Continue();
         }

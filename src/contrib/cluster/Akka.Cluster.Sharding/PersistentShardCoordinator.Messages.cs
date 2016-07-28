@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using Akka.Actor;
+using Akka.Event;
 
 namespace Akka.Cluster.Sharding
 {
@@ -31,7 +32,7 @@ namespace Akka.Cluster.Sharding
         /// <see cref="Sharding.ShardRegion"/> registers to <see cref="PersistentShardCoordinator"/>, until it receives <see cref="RegisterAck"/>.
         /// </summary>
         [Serializable]
-        public sealed class Register : ICoordinatorCommand
+        public sealed class Register : ICoordinatorCommand, IDeadLetterSuppression
         {
             public readonly IActorRef ShardRegion;
 
@@ -45,7 +46,7 @@ namespace Akka.Cluster.Sharding
         /// <see cref="ShardRegion"/> in proxy only mode registers to <see cref="PersistentShardCoordinator"/>, until it receives <see cref="RegisterAck"/>.
         /// </summary>
         [Serializable]
-        public sealed class RegisterProxy : ICoordinatorCommand
+        public sealed class RegisterProxy : ICoordinatorCommand, IDeadLetterSuppression
         {
             public readonly IActorRef ShardRegionProxy;
 
@@ -73,7 +74,7 @@ namespace Akka.Cluster.Sharding
         /// to the <see cref="PersistentShardCoordinator"/>.
         /// </summary>
         [Serializable]
-        public sealed class GetShardHome : ICoordinatorCommand
+        public sealed class GetShardHome : ICoordinatorCommand, IDeadLetterSuppression
         {
             public readonly ShardId Shard;
 

@@ -354,7 +354,7 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region messages
 
-        public interface IBoundaryEvent : INoSerializationVerificationNeeded
+        public interface IBoundaryEvent : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             GraphInterpreterShell Shell { get; }
         }

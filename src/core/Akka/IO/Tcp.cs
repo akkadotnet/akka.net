@@ -13,6 +13,7 @@ using System.Net;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Event;
 
 namespace Akka.IO
 {
@@ -149,7 +150,7 @@ namespace Akka.IO
         /// <summary>
         /// Common interface for all commands which aim to close down an open connection.
         /// </summary>
-        public abstract class CloseCommand : Command
+        public abstract class CloseCommand : Command, IDeadLetterSuppression
         {
             public abstract ConnectionClosed Event { get; }
         }
@@ -566,7 +567,7 @@ namespace Akka.IO
         /// This is the common interface for all events which indicate that a connection
         /// has been closed or half-closed.
         /// </summary>
-        public class ConnectionClosed : Event
+        public class ConnectionClosed : Event, IDeadLetterSuppression
         {
             public virtual bool IsAborted
             {

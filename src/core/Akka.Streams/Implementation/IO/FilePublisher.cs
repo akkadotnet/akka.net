@@ -40,7 +40,7 @@ namespace Akka.Streams.Implementation.IO
                 .WithDeploy(Deploy.Local);
         }
 
-        private struct Continue
+        private struct Continue : IDeadLetterSuppression
         {
             public static readonly Continue Instance = new Continue();
         }

@@ -324,7 +324,7 @@ namespace Akka.Streams.Implementation
     {
         #region Messages
         
-        public sealed class Materialize : INoSerializationVerificationNeeded
+        public sealed class Materialize : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             public readonly Props Props;
             public readonly string Name;
