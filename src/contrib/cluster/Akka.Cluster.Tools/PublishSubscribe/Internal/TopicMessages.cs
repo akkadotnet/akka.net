@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Routing;
 
 namespace Akka.Cluster.Tools.PublishSubscribe.Internal
@@ -115,7 +116,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     [Serializable]
-    internal sealed class Status : IDistributedPubSubMessage
+    internal sealed class Status : IDistributedPubSubMessage, IDeadLetterSuppression
     {
         public Status(IDictionary<Address, long> versions, bool isReplyToStatus)
         {
@@ -158,7 +159,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     [Serializable]
-    internal sealed class Delta : IDistributedPubSubMessage, IEquatable<Delta>
+    internal sealed class Delta : IDistributedPubSubMessage, IEquatable<Delta>, IDeadLetterSuppression
     {
         public readonly Bucket[] Buckets;
 

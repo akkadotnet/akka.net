@@ -231,7 +231,7 @@ namespace Akka.Streams.Stage
     internal static class TimerMessages
     {
         [Serializable]
-        public sealed class Scheduled
+        public sealed class Scheduled : IDeadLetterSuppression
         {
             public readonly object TimerKey;
             public readonly int TimerId;

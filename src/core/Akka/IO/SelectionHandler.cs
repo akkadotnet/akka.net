@@ -114,14 +114,14 @@ namespace Akka.IO
             private ChannelAcceptable()
             { }
         }
-        public class ChannelReadable
+        public class ChannelReadable : IDeadLetterSuppression
         {
             public static readonly ChannelReadable Instance = new ChannelReadable();
 
             private ChannelReadable()
             { }
         }
-        public class ChannelWritable
+        public class ChannelWritable : IDeadLetterSuppression
         {
             public static readonly ChannelWritable Instance = new ChannelWritable();
 

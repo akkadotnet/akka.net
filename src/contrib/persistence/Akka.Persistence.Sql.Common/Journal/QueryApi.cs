@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Persistence.Journal;
 
 namespace Akka.Persistence.Sql.Common.Journal
@@ -32,7 +33,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     }
 
     [Serializable]
-    public sealed class EventAppended
+    public sealed class EventAppended : IDeadLetterSuppression
     {
         public readonly string PersistenceId;
 
@@ -56,7 +57,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     }
 
     [Serializable]
-    public sealed class CurrentPersistenceIds
+    public sealed class CurrentPersistenceIds : IDeadLetterSuppression
     {
         public readonly IEnumerable<string> AllPersistenceIds;
 
@@ -67,7 +68,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     }
 
     [Serializable]
-    public sealed class PersistenceIdAdded
+    public sealed class PersistenceIdAdded : IDeadLetterSuppression
     {
         public readonly string PersistenceId;
 
@@ -96,7 +97,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     }
 
     [Serializable]
-    public sealed class TaggedEventAppended
+    public sealed class TaggedEventAppended : IDeadLetterSuppression
     {
         public readonly string Tag;
 
@@ -131,7 +132,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     }
 
     [Serializable]
-    public sealed class ReplayedTaggedMessage : INoSerializationVerificationNeeded
+    public sealed class ReplayedTaggedMessage : INoSerializationVerificationNeeded, IDeadLetterSuppression
     {
         public readonly IPersistentRepresentation Persistent;
         public readonly string Tag;

@@ -3276,7 +3276,7 @@ namespace Akka.IO
             public static readonly Akka.IO.Tcp.Close Instance;
             public override Akka.IO.Tcp.ConnectionClosed Event { get; }
         }
-        public abstract class CloseCommand : Akka.IO.Tcp.Command
+        public abstract class CloseCommand : Akka.IO.Tcp.Command, Akka.Event.IDeadLetterSuppression
         {
             protected CloseCommand() { }
             public abstract Akka.IO.Tcp.ConnectionClosed Event { get; }
@@ -3327,7 +3327,7 @@ namespace Akka.IO
             public System.Net.EndPoint LocalAddress { get; }
             public System.Net.EndPoint RemoteAddress { get; }
         }
-        public class ConnectionClosed : Akka.IO.Tcp.Event
+        public class ConnectionClosed : Akka.IO.Tcp.Event, Akka.Event.IDeadLetterSuppression
         {
             public ConnectionClosed() { }
             public virtual bool IsAborted { get; }

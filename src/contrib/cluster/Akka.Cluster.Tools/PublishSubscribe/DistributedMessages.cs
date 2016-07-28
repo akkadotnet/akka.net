@@ -7,6 +7,7 @@
 
 using System;
 using Akka.Actor;
+using Akka.Event;
 
 namespace Akka.Cluster.Tools.PublishSubscribe
 {
@@ -171,7 +172,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     }
 
     [Serializable]
-    public sealed class SubscribeAck : IEquatable<SubscribeAck>
+    public sealed class SubscribeAck : IEquatable<SubscribeAck>, IDeadLetterSuppression
     {
         public readonly Subscribe Subscribe;
 

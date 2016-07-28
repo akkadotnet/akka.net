@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Streams.Implementation;
 using Akka.TestKit;
 using Reactive.Streams;
@@ -21,7 +22,7 @@ namespace Akka.Streams.TestKit
     {
         #region messages
 
-        public interface IPublisherEvent : INoSerializationVerificationNeeded { }
+        public interface IPublisherEvent : INoSerializationVerificationNeeded, IDeadLetterSuppression { }
 
         public struct Subscribe : IPublisherEvent
         {

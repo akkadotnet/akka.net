@@ -290,7 +290,7 @@ namespace Akka.Streams.Implementation
     internal static class FanOut
     {
         [Serializable]
-        public struct SubstreamRequestMore : INoSerializationVerificationNeeded
+        public struct SubstreamRequestMore : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             public readonly int Id;
             public readonly long Demand;
@@ -303,7 +303,7 @@ namespace Akka.Streams.Implementation
         }
 
         [Serializable]
-        public struct SubstreamCancel : INoSerializationVerificationNeeded
+        public struct SubstreamCancel : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             public readonly int Id;
 
@@ -314,7 +314,7 @@ namespace Akka.Streams.Implementation
         }
 
         [Serializable]
-        public struct SubstreamSubscribePending : INoSerializationVerificationNeeded
+        public struct SubstreamSubscribePending : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             public readonly int Id;
 
@@ -343,7 +343,7 @@ namespace Akka.Streams.Implementation
         }
 
         [Serializable]
-        public struct ExposedPublishers<T> : INoSerializationVerificationNeeded
+        public struct ExposedPublishers<T> : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             public readonly ImmutableList<ActorPublisher<T>> Publishers;
 

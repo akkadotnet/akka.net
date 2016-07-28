@@ -287,7 +287,7 @@ namespace Akka.Streams.Implementation
     internal static class FanIn
     {
         [Serializable]
-        public struct OnError : INoSerializationVerificationNeeded
+        public struct OnError : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             public readonly int Id;
             public readonly Exception Cause;
@@ -300,7 +300,7 @@ namespace Akka.Streams.Implementation
         }
 
         [Serializable]
-        public struct OnComplete : INoSerializationVerificationNeeded
+        public struct OnComplete : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             public readonly int Id;
 
@@ -311,7 +311,7 @@ namespace Akka.Streams.Implementation
         }
 
         [Serializable]
-        public struct OnNext : INoSerializationVerificationNeeded
+        public struct OnNext : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             public readonly int Id;
             public readonly object Element;
@@ -324,7 +324,7 @@ namespace Akka.Streams.Implementation
         }
 
         [Serializable]
-        public struct OnSubscribe : INoSerializationVerificationNeeded
+        public struct OnSubscribe : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             public readonly int Id;
             public readonly ISubscription Subscription;

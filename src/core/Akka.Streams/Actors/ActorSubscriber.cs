@@ -8,13 +8,14 @@
 using System;
 using System.Collections.Concurrent;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Streams.Dsl;
 using Reactive.Streams;
 
 namespace Akka.Streams.Actors
 {
     [Serializable]
-    public sealed class OnSubscribe : INoSerializationVerificationNeeded
+    public sealed class OnSubscribe : INoSerializationVerificationNeeded, IDeadLetterSuppression
     {
         public readonly ISubscription Subscription;
 
@@ -24,7 +25,7 @@ namespace Akka.Streams.Actors
         }
     }
 
-    public interface IActorSubscriberMessage : INoSerializationVerificationNeeded { }
+    public interface IActorSubscriberMessage : INoSerializationVerificationNeeded, IDeadLetterSuppression { }
 
     [Serializable]
     public sealed class OnNext : IActorSubscriberMessage

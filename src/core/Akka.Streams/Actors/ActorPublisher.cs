@@ -9,6 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
@@ -18,7 +19,7 @@ namespace Akka.Streams.Actors
 {
     #region Internal messages
 
-    public sealed class Subscribe<T> : INoSerializationVerificationNeeded
+    public sealed class Subscribe<T> : INoSerializationVerificationNeeded, IDeadLetterSuppression
     {
         public readonly ISubscriber<T> Subscriber;
         public Subscribe(ISubscriber<T> subscriber)
@@ -40,7 +41,7 @@ namespace Akka.Streams.Actors
 
     #endregion
 
-    public interface IActorPublisherMessage { }
+    public interface IActorPublisherMessage: IDeadLetterSuppression { }
 
     /// <summary>
     /// This message is delivered to the <see cref="ActorPublisher{T}"/> actor when the stream

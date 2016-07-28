@@ -857,7 +857,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class SubscribeAck : System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.SubscribeAck>
+    public sealed class SubscribeAck : Akka.Event.IDeadLetterSuppression, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.SubscribeAck>
     {
         public readonly Akka.Cluster.Tools.PublishSubscribe.Subscribe Subscribe;
         public SubscribeAck(Akka.Cluster.Tools.PublishSubscribe.Subscribe subscribe) { }
