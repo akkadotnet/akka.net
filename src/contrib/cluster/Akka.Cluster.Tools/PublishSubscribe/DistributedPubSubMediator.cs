@@ -532,7 +532,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
                 if (oldRemoved.Any())
                 {
-                    _registry.Add(owner, new Bucket(bucket.Owner, bucket.Version, bucket.Content.RemoveRange(oldRemoved)));
+                    _registry[owner] = new Bucket(bucket.Owner, bucket.Version, bucket.Content.RemoveRange(oldRemoved));
+                    // todo: suppose that in case content become empty, the bucket should be removed
                 }
             }
         }
