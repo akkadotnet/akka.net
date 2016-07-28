@@ -265,11 +265,10 @@ namespace Akka.Tests.Actor
                 TestActor = testActor;
             }
 
-            protected override void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
+            protected override void ProcessFailure(IActorContext context, bool restart, IActorRef child, Exception cause, ChildRestartStats stats, IReadOnlyCollection<ChildRestartStats> children)
             {
-                var child = failedChildStats.Child;
-                TestActor.Tell(new FF(new Failed(child, cause, failedChildStats.Uid)), child);
-                base.ProcessFailure(context, restart, cause, failedChildStats, allChildren);
+                TestActor.Tell(new FF(new Failed(child, cause, stats.Uid)), child);
+                base.ProcessFailure(context, restart, child, cause, stats, children);
             }
         }
 
