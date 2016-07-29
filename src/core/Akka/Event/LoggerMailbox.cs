@@ -20,6 +20,10 @@ namespace Akka.Event
         {
         }
 
+        /// <summary></summary>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown if the given <paramref name="owner"/> or <paramref name="system"/> is undefined.
+        /// </exception>
         public override IMessageQueue Create(IActorRef owner, ActorSystem system)
         {
             if(owner != null && system != null) return new LoggerMailbox(owner, system);

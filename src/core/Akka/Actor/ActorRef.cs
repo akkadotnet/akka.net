@@ -208,10 +208,20 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// Compares the current instance with another object of the same type and returns an integer that indicates whether the current instance precedes, follows, or occurs in the same position in the sort order as the other object.
+        /// </summary>
+        /// <param name="obj">An object to compare with this instance.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if the given <paramref name="obj"/> isn't an <see cref="IActorRef"/>.
+        /// </exception>
+        /// <returns>
+        /// A value that indicates the relative order of the objects being compared. The return value has these meanings: Value Meaning Less than zero This instance precedes <paramref name="obj" /> in the sort order. Zero This instance occurs in the same position in the sort order as <paramref name="obj" />. Greater than zero This instance follows <paramref name="obj" /> in the sort order.
+        /// </returns>
         public int CompareTo(object obj)
         {
             if (obj != null && !(obj is IActorRef))
-                throw new ArgumentException("Object must be of type IActorRef.");
+                throw new ArgumentException("Object must be of type IActorRef.", nameof(obj));
             return CompareTo((IActorRef) obj);
         }
 
@@ -234,7 +244,6 @@ namespace Akka.Actor
             return new Surrogate(Serialization.Serialization.SerializedActorPath(this));
         }
     }
-
 
     public interface IInternalActorRef : IActorRef, IActorRefScope
     {
@@ -367,6 +376,10 @@ namespace Akka.Actor
 
         public override ActorPath Path { get { return _path; } }
 
+        /// <summary>N/A</summary>
+        /// <exception cref="NotSupportedException">
+        /// This exception is automatically thrown since this actor doesn't have a provider.
+        /// </exception>
         public override IActorRefProvider Provider
         {
             get { throw new NotSupportedException("Nobody does not provide"); }

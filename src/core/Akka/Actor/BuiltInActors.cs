@@ -171,7 +171,8 @@ namespace Akka.Actor
         {
             _eventStream = eventStream;
         }
-
+        /// <summary></summary>
+        /// <exception cref="InvalidMessageException">This exception is thrown if the given <paramref name="message"/> is undefined.</exception>
         protected override void TellInternal(object message, IActorRef sender)
         {
             if (message == null) throw new InvalidMessageException("Message is null");

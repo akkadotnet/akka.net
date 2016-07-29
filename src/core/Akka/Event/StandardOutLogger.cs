@@ -34,11 +34,11 @@ namespace Akka.Event
             ErrorColor = ConsoleColor.Red;
             UseColors = true;
         }
-        
+
         /// <summary>
         /// N/A
         /// </summary>
-        /// <exception cref="System.NotSupportedException">This logger does not provide.</exception>
+        /// <exception cref="NotImplementedException">This exception is automatically thrown since <see cref="StandardOutLogger"/> does not support this property.</exception>
         public override IActorRefProvider Provider
         {
             get { throw new NotSupportedException("This logger does not provide."); }
@@ -57,11 +57,13 @@ namespace Akka.Event
         /// </summary>
         /// <param name="message">The message to print</param>
         /// <param name="sender">The actor that sent the message.</param>
-        /// <exception cref="System.ArgumentNullException">The message to log must not be null.</exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown if the given <paramref name="message"/> is undefined.
+        /// </exception>
         protected override void TellInternal(object message, IActorRef sender)
         {
             if(message == null)
-                throw new ArgumentNullException("message", "The message to log must not be null.");
+                throw new ArgumentNullException(nameof(message), "The message to log must not be null.");
 
             var logEvent = message as LogEvent;
             if (logEvent != null)

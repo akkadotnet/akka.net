@@ -374,6 +374,8 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary></summary>
+        /// <exception cref="NotSupportedException">This exception is thrown if the <see cref="Decider"/> is of type <see cref="LocalOnlyDecider"/>.</exception>
         public override ISurrogate ToSurrogate(ActorSystem system)
         {
             if (Decider is LocalOnlyDecider)
@@ -819,6 +821,10 @@ namespace Akka.Actor
     {
         public abstract SupervisorStrategy Create();
 
+        /// <summary></summary>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown if the given <paramref name="typeName"/> is undefined or references an unknown type.
+        /// </exception>
         public static SupervisorStrategyConfigurator CreateConfigurator(string typeName)
         {
             switch (typeName)
@@ -836,7 +842,7 @@ namespace Akka.Actor
                     Type configuratorType = Type.GetType(typeName);
 
                     if (configuratorType == null)
-                        throw new ConfigurationException("Could not resolve SupervisorStrategyConfigurator type " + typeName);
+                        throw new ConfigurationException($"Could not resolve SupervisorStrategyConfigurator type {typeName}");
 
                     return (SupervisorStrategyConfigurator)Activator.CreateInstance(configuratorType);
             }

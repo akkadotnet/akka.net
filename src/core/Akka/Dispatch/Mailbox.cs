@@ -540,13 +540,20 @@ namespace Akka.Dispatch
         public int Capacity { get; }
         public TimeSpan PushTimeout { get; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BoundedMailbox" /> class.
+        /// </summary>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if the 'mailbox-capacity' in <paramref name="config"/>
+        /// or the 'mailbox-push-timeout-time' in <paramref name="config"/> is negative.
+        /// </exception>>
         public BoundedMailbox(Settings settings, Config config) : base(settings, config)
         {
             Capacity = config.GetInt("mailbox-capacity");
             PushTimeout = config.GetTimeSpan("mailbox-push-timeout-time", TimeSpan.FromSeconds(-1));
 
-            if (Capacity < 0) throw new ArgumentOutOfRangeException(nameof(config), "The capacity for BoundedMailbox cannot be negative");
-            if (PushTimeout.TotalSeconds < 0) throw new ArgumentNullException(nameof(config), "The push time-out for BoundedMailbox cannot be null");
+            if (Capacity < 0) throw new ArgumentException("The capacity for BoundedMailbox cannot be negative", nameof(config));
+            if (PushTimeout.TotalSeconds < 0) throw new ArgumentException("The push time-out for BoundedMailbox cannot be be negative", nameof(config));
         }
 
         public override IMessageQueue Create(IActorRef owner, ActorSystem system)
@@ -603,13 +610,20 @@ namespace Akka.Dispatch
         public int Capacity { get; }
         public TimeSpan PushTimeout { get; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BoundedDequeBasedMailbox" /> class.
+        /// </summary>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if the 'mailbox-capacity' in <paramref name="config"/>
+        /// or the 'mailbox-push-timeout-time' in <paramref name="config"/> is negative.
+        /// </exception>>
         public BoundedDequeBasedMailbox(Settings settings, Config config) : base(settings, config)
         {
             Capacity = config.GetInt("mailbox-capacity");
             PushTimeout = config.GetTimeSpan("mailbox-push-timeout-time", TimeSpan.FromSeconds(-1));
 
-            if (Capacity < 0) throw new ArgumentOutOfRangeException(nameof(config), "The capacity for BoundedMailbox cannot be negative");
-            if (PushTimeout.TotalSeconds < 0) throw new ArgumentNullException(nameof(config), "The push time-out for BoundedMailbox cannot be null");
+            if (Capacity < 0) throw new ArgumentException("The capacity for BoundedMailbox cannot be negative", nameof(config));
+            if (PushTimeout.TotalSeconds < 0) throw new ArgumentException("The push time-out for BoundedMailbox cannot be null", nameof(config));
         }
 
         public override IMessageQueue Create(IActorRef owner, ActorSystem system)

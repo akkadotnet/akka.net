@@ -71,11 +71,11 @@ namespace Akka.Event
         /// Creates an instance of the LoggingAdapterBase.
         /// </summary>
         /// <param name="logMessageFormatter">The log message formatter used by this logging adapter.</param>
-        /// <exception cref="ArgumentNullException">This exception is thrown when the supplied message formatter is null.</exception>
+        /// <exception cref="ArgumentNullException">This exception is thrown when the given <paramref name="logMessageFormatter"/> is undefined.</exception>
         protected LoggingAdapterBase(ILogMessageFormatter logMessageFormatter)
         {
             if(logMessageFormatter == null)
-                throw new ArgumentNullException("logMessageFormatter", "The message formatter must not be null.");
+                throw new ArgumentNullException(nameof(logMessageFormatter), "The message formatter must not be null.");
 
             _logMessageFormatter = logMessageFormatter;
         }
@@ -84,8 +84,8 @@ namespace Akka.Event
         /// Checks the logging adapter to see if the supplied <paramref name="logLevel"/> is enabled.
         /// </summary>
         /// <param name="logLevel">The log level to check if it is enabled in this logging adapter.</param>
+        /// <exception cref="NotSupportedException">This exception is thrown when the given <paramref name="logLevel"/> is unknown.</exception>
         /// <returns><c>true</c> if the supplied log level is enabled; otherwise <c>false</c></returns>
-        /// <exception cref="NotSupportedException">This exception is thrown when the supplied log level is unknown.</exception>
         public bool IsEnabled(LogLevel logLevel)
         {
             switch(logLevel)
@@ -99,7 +99,7 @@ namespace Akka.Event
                 case LogLevel.ErrorLevel:
                     return IsErrorEnabled;
                 default:
-                    throw new NotSupportedException("Unknown LogLevel " + logLevel);
+                    throw new NotSupportedException($"Unknown LogLevel {logLevel}");
             }
         }
 
@@ -108,7 +108,7 @@ namespace Akka.Event
         /// </summary>
         /// <param name="logLevel">The log level associated with the log event.</param>
         /// <param name="message">The message related to the log event.</param>
-        /// <exception cref="NotSupportedException">This exception is thrown when the supplied log level is unknown.</exception>
+        /// <exception cref="NotSupportedException">This exception is thrown when the given <paramref name="logLevel"/> is unknown.</exception>
         protected void NotifyLog(LogLevel logLevel, object message)
         {
             switch(logLevel)
@@ -126,7 +126,7 @@ namespace Akka.Event
                     if(IsErrorEnabled) NotifyError(message);
                     break;
                 default:
-                    throw new NotSupportedException("Unknown LogLevel " + logLevel);
+                    throw new NotSupportedException($"Unknown LogLevel {logLevel}");
             }
         }
 

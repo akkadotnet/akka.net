@@ -266,6 +266,10 @@ namespace Akka.Actor
             return a;
         }
 
+        /// <summary></summary>
+        /// <exception cref="UriFormatException">
+        /// This exception is thrown if the given <paramref name="path"/> cannot be parsed into an <see cref="ActorPath"/>.
+        /// </exception>
         public static ActorPath Parse(string path)
         {
             ActorPath actorPath;
@@ -273,7 +277,7 @@ namespace Akka.Actor
             {
                 return actorPath;
             }
-            throw new UriFormatException("Can not parse an ActorPath: " + path);
+            throw new UriFormatException($"Can not parse an ActorPath: {path}");
         }
 
         /// <summary>
@@ -508,17 +512,13 @@ namespace Akka.Actor
         [JsonIgnore]
         public override ActorPath Root => this;
 
-        /// <summary>
-        /// Withes the uid.
-        /// </summary>
-        /// <param name="uid"> The uid. </param>
-        /// <returns> ActorPath. </returns>
-        /// <exception cref="System.NotSupportedException"> RootActorPath must have undefinedUid </exception>
+        /// <summary></summary>
+        /// <exception cref="NotSupportedException">This exception is thrown if the given <paramref name="uid"/> is not equal to 0.</exception>
         public override ActorPath WithUid(long uid)
         {
             if (uid == 0)
                 return this;
-            throw new NotSupportedException("RootActorPath must have undefinedUid");
+            throw new NotSupportedException("RootActorPath must have undefined Uid");
         }
 
         public override int CompareTo(ActorPath other)

@@ -48,6 +48,13 @@ namespace Helios.Concurrency
             : this(numThreads, DefaultThreadType, name, deadlockTimeout, apartmentState, exceptionHandler, threadMaxStackSize)
         { }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DedicatedThreadPoolSettings"/> class.
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// This exception is thrown if the given <paramref name="deadlockTimeout"/> is set to less than 1ms.
+        /// It can also be thrown if the given <paramref name="numThreads"/> is set to less than one.
+        /// </exception>
         public DedicatedThreadPoolSettings(int numThreads,
                                            ThreadType threadType,
                                            string name = null,
@@ -65,9 +72,9 @@ namespace Helios.Concurrency
             ThreadMaxStackSize = threadMaxStackSize;
 
             if (deadlockTimeout.HasValue && deadlockTimeout.Value.TotalMilliseconds <= 0)
-                throw new ArgumentOutOfRangeException("deadlockTimeout", string.Format("deadlockTimeout must be null or at least 1ms. Was {0}.", deadlockTimeout));
+                throw new ArgumentOutOfRangeException(nameof(deadlockTimeout), $"deadlockTimeout must be null or at least 1ms. Was {deadlockTimeout}.");
             if (numThreads <= 0)
-                throw new ArgumentOutOfRangeException("numThreads", string.Format("numThreads must be at least 1. Was {0}", numThreads));
+                throw new ArgumentOutOfRangeException(nameof(numThreads), $"numThreads must be at least 1. Was {numThreads}");
         }
 
         /// <summary>
@@ -164,6 +171,10 @@ namespace Helios.Concurrency
             get { return _pool.Settings.NumThreads; }
         }
 
+        /// <summary></summary>
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown if can't ensure a thread-safe return of the list of tasks.
+        /// </exception>
         protected override IEnumerable<Task> GetScheduledTasks()
         {
             var lockTaken = false;
@@ -270,10 +281,14 @@ namespace Helios.Concurrency
         private readonly ThreadPoolWorkQueue _workQueue;
         private readonly PoolWorker[] _workers;
 
+        /// <summary></summary>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown if the given <paramref name="work"/> item is undefined.
+        /// </exception>
         public bool QueueUserWorkItem(Action work)
         {
             if (work == null)
-                throw new ArgumentNullException("work");
+                throw new ArgumentNullException(nameof(work), "Work item cannot be null.");
 
             return _workQueue.TryAdd(work);
         }

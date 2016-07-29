@@ -40,6 +40,10 @@ namespace Akka.Actor
             return GracefulStop(target, timeout, PoisonPill.Instance);
         }
 
+        /// <summary></summary>
+        /// <exception cref="TaskCanceledException">
+        /// This exception is thrown if the underlying task is <see cref="TaskStatus.Canceled"/>.
+        /// </exception>
         public static Task<bool> GracefulStop(this IActorRef target, TimeSpan timeout, object stopMessage)
         {
             var internalTarget = target.AsInstanceOf<IInternalActorRef>();

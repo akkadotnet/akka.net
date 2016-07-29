@@ -10,15 +10,21 @@ using System;
 namespace Akka.Actor
 {
     /// <summary>
-    /// Envelope class, represents a message and the sender of the message.    
+    /// Envelope class, represents a message and the sender of the message.
     /// </summary>
     public struct Envelope
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Envelope"/> struct.
+        /// </summary>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown if the given <paramref name="message"/> is undefined.
+        /// </exception>
         public Envelope(object message, IActorRef sender, ActorSystem system)
         {
             if (message == null)
             {
-                throw new ArgumentNullException(nameof(message));
+                throw new ArgumentNullException(nameof(message), "The message cannot be null.");
             }
 
             Message = message;

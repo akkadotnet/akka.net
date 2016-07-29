@@ -623,6 +623,9 @@ namespace Akka.Actor
         /// <summary>
         /// Return next state data (available in <see cref="OnTransition"/> handlers)
         /// </summary>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is thrown if this property is accessed outside of an <see cref="OnTransition"/> handler.
+        /// </exception>
         public TData NextStateData
         {
             get

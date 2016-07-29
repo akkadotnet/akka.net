@@ -28,17 +28,18 @@ namespace Akka.Actor.Internal
         /// Abstract base class for stash support
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
+        /// <exception cref="NotSupportedException">This exception is thrown if the actor's mailbox isn't deque-based (e.g. <see cref="UnboundedDequeBasedMailbox"/>).</exception>
         protected AbstractStash(IActorContext context, int capacity = 100)
         {
             var actorCell = (ActorCell)context;
             Mailbox = actorCell.Mailbox.MessageQueue as IDequeBasedMessageQueueSemantics;
             if(Mailbox == null)
             {
-                string message = @"DequeBasedMailbox required, got: " + actorCell.Mailbox.GetType().Name + @"
+                string message = $@"DequeBasedMailbox required, got: {actorCell.Mailbox.GetType().Name}
 An (unbounded) deque-based mailbox can be configured as follows:
-    my-custom-mailbox {
+    my-custom-mailbox {{
         mailbox-type = ""Akka.Dispatch.UnboundedDequeBasedMailbox""
-    }";
+    }}";
                 throw new NotSupportedException(message);
             }
             _theStash = new LinkedList<Envelope>();
@@ -56,9 +57,10 @@ An (unbounded) deque-based mailbox can be configured as follows:
         /// <summary>
         /// Stashes the current message in the actor's state.
         /// </summary>
-        /// <exception cref="IllegalActorStateException">Thrown if we attempt to stash the same message more than once.</exception>
-        /// <exception cref="StashOverflowException">Thrown in the event that we're using a <see cref="BoundedMessageQueue"/> 
-        /// for the <see cref="IStash"/> and we've exceeded capacity.</exception>
+        /// <exception cref="IllegalActorStateException">This exception is thrown if we attempt to stash the same message more than once.</exception>
+        /// <exception cref="StashOverflowException">
+        /// This exception is thrown in the event that we're using a <see cref="BoundedMessageQueue"/>  for the <see cref="IStash"/> and we've exceeded capacity.
+        /// </exception>
         public void Stash()
         {
             var currMsg = _actorCell.CurrentMessage;
@@ -66,13 +68,13 @@ An (unbounded) deque-based mailbox can be configured as follows:
 
             if (_actorCell.CurrentEnvelopeId == _currentEnvelopeId)
             {
-                 throw new IllegalActorStateException(string.Format("Can't stash the same message {0} more than once", currMsg));
+                throw new IllegalActorStateException($"Can't stash the same message {currMsg} more than once");
             }
             _currentEnvelopeId = _actorCell.CurrentEnvelopeId;
             
             if(_capacity <= 0 || _theStash.Count < _capacity)
                 _theStash.AddLast(new Envelope(currMsg, sender));
-            else throw new StashOverflowException(string.Format("Couldn't enqueue message {0} to stash of {1}", currMsg, _actorCell.Self));
+            else throw new StashOverflowException($"Couldn't enqueue message {currMsg} to stash of {_actorCell.Self}");
         }
 
         /// <summary>

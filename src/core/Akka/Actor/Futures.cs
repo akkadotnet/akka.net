@@ -30,11 +30,15 @@ namespace Akka.Actor
             return self.Ask<object>(message, timeout);
         }
 
+        /// <summary></summary>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if the system can't resolve the target provider.
+        /// </exception>
         public static Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout = null)
         {
             IActorRefProvider provider = ResolveProvider(self);
             if (provider == null)
-                throw new NotSupportedException("Unable to resolve the target Provider");
+                throw new ArgumentException("Unable to resolve the target Provider", nameof(self));
 
             ResolveReplyTo();
             return Ask(self, message, provider, timeout).CastTask<object, T>();
@@ -342,6 +346,10 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary></summary>
+        /// <exception cref="InvalidMessageException">
+        /// This exception is thrown if the given <paramref name="message"/> is undefined.
+        /// </exception>
         protected override void TellInternal(object message, IActorRef sender)
         {
             if (State is Stopped || State is StoppedWithPath) Provider.DeadLetters.Tell(message);

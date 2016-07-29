@@ -97,9 +97,6 @@ namespace Akka.Dispatch
         }
     }
 
-
-
-
     /// <summary>
     /// ForkJoinExecutorService - custom multi-threaded dispatcher that runs on top of a 
     /// <see cref="Helios.Concurrency.DedicatedThreadPool"/>, designed to be used for mission-critical actors
@@ -107,14 +104,14 @@ namespace Akka.Dispatch
     /// 
     /// Relevant configuration options:
     /// <code>
-    ///     my-forkjoin-dispatcher{
-    ///             type = ForkJoinDispatcher
-    ///	            throughput = 100
-    ///	            dedicated-thread-pool{ #settings for Helios.DedicatedThreadPool
-    ///		            thread-count = 3 #number of threads
-    ///		            #deadlock-timeout = 3s #optional timeout for deadlock detection
-    ///		            threadtype = background #values can be "background" or "foreground"
-    ///	            }
+    ///     my-forkjoin-dispatcher {
+    ///         type = ForkJoinDispatcher
+    ///         throughput = 100
+    ///         dedicated-thread-pool { #settings for Helios.DedicatedThreadPool
+    ///             thread-count = 3 #number of threads
+    ///             #deadlock-timeout = 3s #optional timeout for deadlock detection
+    ///             threadtype = background #values can be "background" or "foreground"
+    ///         }
     ///     }
     /// </code>
     /// </summary>
@@ -128,6 +125,10 @@ namespace Akka.Dispatch
             _dedicatedThreadPool = new DedicatedThreadPool(poolSettings);
         }
 
+        /// <summary></summary>
+        /// <exception cref="RejectedExecutionException">
+        /// This exception is thrown if this method is called during the shutdown of this executor.
+        /// </exception>
         public override void Execute(IRunnable run)
         {
             if (Volatile.Read(ref _shuttingDown) == 1)
@@ -221,7 +222,9 @@ namespace Akka.Dispatch
         /// Returns a dispatcher as specified in configuration. Please note that this method _MAY_
         /// create and return a new dispatcher on _EVERY_ call.
         /// </summary>
-        /// <exception cref="ConfigurationException">If the specified dispatcher cannot be found in configuration.</exception>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown if the specified dispatcher cannot be found in the configuration.
+        /// </exception>
         public MessageDispatcher Lookup(string dispatcherName)
         {
             return LookupConfigurator(dispatcherName).Dispatcher();
@@ -253,7 +256,7 @@ namespace Akka.Dispatch
                 }
                 else
                 {
-                    throw new ConfigurationException(string.Format("Dispatcher {0} not configured.", id));
+                    throw new ConfigurationException($"Dispatcher {id} not configured.");
                 }
 
                 return _dispatcherConfigurators.TryAdd(id, newConfigurator) ? newConfigurator : _dispatcherConfigurators[id];
@@ -273,9 +276,11 @@ namespace Akka.Dispatch
         /// The Config must also contain an `id` property, which is the identifier of the dispatcher.
         /// </summary>
         /// <param name="cfg">The provided configuration section.</param>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown if the specified dispatcher cannot be found in <paramref name="cfg"/>.
+        /// It can also be thrown if the dispatcher path or type cannot be resolved.
+        /// </exception>
         /// <returns>An instance of the <see cref="MessageDispatcher"/>, if valid.</returns>
-        /// <exception cref="ConfigurationException">if the `id` property is missing from <paramref name="cfg"/></exception>
-        /// <exception cref="NotSupportedException">thrown if the dispatcher path or type cannot be resolved.</exception>
         internal MessageDispatcher From(Config cfg)
         {
             return ConfiguratorFrom(cfg).Dispatcher();
@@ -331,7 +336,7 @@ namespace Akka.Dispatch
         private static readonly Config TaskExecutorConfig = ConfigurationFactory.ParseString(@"executor=task-executor");
         private MessageDispatcherConfigurator ConfiguratorFrom(Config cfg)
         {
-            if (!cfg.HasPath("id")) throw new ConfigurationException(string.Format("Missing dispatcher `id` property in config: {0}", cfg.Root));
+            if (!cfg.HasPath("id")) throw new ConfigurationException($"Missing dispatcher `id` property in config: {cfg.Root}");
 
             var id = cfg.GetString("id");
             var type = cfg.GetString("type");
@@ -339,7 +344,7 @@ namespace Akka.Dispatch
 
             MessageDispatcherConfigurator dispatcher;
             /*
-             * Fallbacks are added here in order to preserve backwards compatiblity with versions of AKka.NET prior to 1.1,
+             * Fallbacks are added here in order to preserve backwards compatibility with versions of AKka.NET prior to 1.1,
              * before the ExecutorService system was implemented
              */
             switch (type)
@@ -360,12 +365,12 @@ namespace Akka.Dispatch
                     dispatcher = new CurrentSynchronizationContextDispatcherConfigurator(cfg, Prerequisites);
                     break;
                 case null:
-                    throw new ConfigurationException("Could not resolve dispatcher for path " + id + ". type is null");
+                    throw new ConfigurationException($"Could not resolve dispatcher for path {id}. type is null");
                 default:
                     Type dispatcherType = Type.GetType(type);
                     if (dispatcherType == null)
                     {
-                        throw new ConfigurationException("Could not resolve dispatcher type " + type + " for path " + id);
+                        throw new ConfigurationException($"Could not resolve dispatcher type {type} for path {id}");
                     }
                     dispatcher = (MessageDispatcherConfigurator)Activator.CreateInstance(dispatcherType, cfg, Prerequisites);
                     break;

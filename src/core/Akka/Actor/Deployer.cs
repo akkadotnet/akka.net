@@ -56,6 +56,12 @@ namespace Akka.Actor
             return _deployments.Value.Find(path).Data;
         }
 
+        /// <summary></summary>
+        /// <exception cref="IllegalActorNameException">
+        /// This exception is thrown if the actor name in the deployment path is empty or contains invalid ASCII.
+        /// Valid ASCII includes letters and anything from <see cref="ActorPath.ValidSymbols"/>. Note that paths
+        /// cannot start with the <c>$</c>.
+        /// </exception>
         public void SetDeploy(Deploy deploy)
         {
             Action<IList<string>, Deploy> add = (path, d) =>
@@ -68,11 +74,11 @@ namespace Akka.Actor
                     {
                         var curPath = t;
                         if (string.IsNullOrEmpty(curPath))
-                            throw new IllegalActorNameException(string.Format("Actor name in deployment [{0}] must not be empty", d.Path));
+                            throw new IllegalActorNameException($"Actor name in deployment [{d.Path}] must not be empty");
                         if (!ActorPath.IsValidPathElement(t))
                         {
                             throw new IllegalActorNameException(
-                                string.Format("Illegal actor name [{0}] in deployment [${1}]. Actor paths MUST: not start with `$`, include only ASCII letters and can only contain these special characters: ${2}.", t, d.Path, new String(ActorPath.ValidSymbols)));
+                                $"Illegal actor name [{t}] in deployment [${d.Path}]. Actor paths MUST: not start with `$`, include only ASCII letters and can only contain these special characters: ${new string(ActorPath.ValidSymbols)}.");
                         }
                     }
                     set = _deployments.CompareAndSet(w, w.Insert(path.GetEnumerator(), d));

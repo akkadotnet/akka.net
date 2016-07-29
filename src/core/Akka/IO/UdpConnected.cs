@@ -85,7 +85,7 @@ namespace Akka.IO
             public Send(ByteString payload, object ack)
             {
                 if(ack == null)
-                    throw new ArgumentNullException("ack", "ack must be non-null. Use NoAck if you don't want acks.");
+                    throw new ArgumentNullException(nameof(ack), "ack must be non-null. Use NoAck if you don't want acks.");
 
                 Payload = payload;
                 Ack = ack;

@@ -398,7 +398,7 @@ namespace Akka.IO
                         if (readBytes == -1)
                             return EndOfStream.Instance;
 
-                        throw new IllegalStateException("Unexpected value returned from read: " + readBytes);
+                        throw new IllegalStateException($"Unexpected value returned from read: {readBytes}");
                     }
                     return MoreDataWaiting.Instance;
                 };

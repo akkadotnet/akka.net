@@ -27,12 +27,9 @@ namespace Akka.Configuration.Hocon
         /// </summary>
         /// <param name="text">The string that contains a HOCON configuration string.</param>
         /// <param name="includeCallback">Callback used to resolve includes</param>
+        /// <exception cref="FormatException">This exception is thrown if an unresolved substitution or an unknown token is encountered.</exception>
+        /// <exception cref="Exception">This exception is thrown if the end of the file has been reached while trying to read a value.</exception>
         /// <returns>The root element created from the supplied HOCON configuration string.</returns>
-        /// <exception cref="System.Exception">
-        /// This exception is thrown when an unresolved substitution is encountered.
-        /// It also occurs when the end of the file has been reached while trying
-        /// to read a value.
-        /// </exception>
         public static HoconRoot Parse(string text,Func<string,HoconRoot> includeCallback)
         {
             return new Parser().ParseText(text,includeCallback);
@@ -51,7 +48,7 @@ namespace Akka.Configuration.Hocon
             {
                 HoconValue res = c.GetValue(sub.Path);
                 if (res == null)
-                    throw new FormatException("Unresolved substitution:" + sub.Path);
+                    throw new FormatException($"Unresolved substitution: {sub.Path}");
                 sub.ResolvedValue = res;
             }
             return new HoconRoot(_root, _substitutions);
@@ -138,7 +135,7 @@ namespace Akka.Configuration.Hocon
         /// </summary>
         /// <param name="owner">The element to append the next token.</param>
         /// <param name="currentPath">The location in the HOCON object hierarchy that the parser is currently reading.</param>
-        /// <exception cref="System.Exception">End of file reached while trying to read a value</exception>
+        /// <exception cref="Exception">This exception is thrown if the end of the file has been reached while trying to read a value.</exception>
         public void ParseValue(HoconValue owner, string currentPath)
         {
             if (_reader.EoF)
