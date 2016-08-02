@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
@@ -133,6 +134,53 @@ namespace Akka.Cluster.Sharding
 
                 return new State(shards ?? Shards, regions ?? Regions, regionProxies ?? RegionProxies, unallocatedShards ?? UnallocatedShards);
             }
+
+            #region Equals
+
+            public override bool Equals(object obj)
+            {
+                var other = obj as State;
+
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return Shards.SequenceEqual(other.Shards)
+                    && Regions.Keys.SequenceEqual(other.Regions.Keys)
+                    && RegionProxies.SequenceEqual(other.RegionProxies)
+                    && UnallocatedShards.SequenceEqual(other.UnallocatedShards);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hashCode = 13;
+
+                    foreach (var v in Shards)
+                    {
+                        hashCode = (hashCode * 397) ^ (v.Key?.GetHashCode() ?? 0);
+                    }
+
+                    foreach (var v in Regions)
+                    {
+                        hashCode = (hashCode * 397) ^ (v.Key?.GetHashCode() ?? 0);
+                    }
+
+                    foreach (var v in RegionProxies)
+                    {
+                        hashCode = (hashCode * 397) ^ (v?.GetHashCode() ?? 0);
+                    }
+
+                    foreach (var v in UnallocatedShards)
+                    {
+                        hashCode = (hashCode * 397) ^ (v?.GetHashCode() ?? 0);
+                    }
+
+                    return hashCode;
+                }
+            }
+
+            #endregion
         }
 
         #endregion

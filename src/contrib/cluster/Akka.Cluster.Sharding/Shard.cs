@@ -76,6 +76,28 @@ namespace Akka.Cluster.Sharding
             {
                 EntityId = entityId;
             }
+
+            #region Equals
+
+            public override bool Equals(object obj)
+            {
+                var other = obj as StateChange;
+
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return EntityId.Equals(other.EntityId);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return EntityId?.GetHashCode() ?? 0;
+                }
+            }
+
+            #endregion
         }
 
         /// <summary>
@@ -144,6 +166,31 @@ namespace Akka.Cluster.Sharding
                 ShardId = shardId;
                 EntityCount = entityCount;
             }
+
+            #region Equals
+
+            public override bool Equals(object obj)
+            {
+                var other = obj as ShardStats;
+
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return ShardId.Equals(other.ShardId)
+                    && EntityCount.Equals(other.EntityCount);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hashCode = ShardId?.GetHashCode() ?? 0;
+                    hashCode = (hashCode * 397) ^ EntityCount;
+                    return hashCode;
+                }
+            }
+
+            #endregion
         }
 
         #endregion
@@ -155,12 +202,42 @@ namespace Akka.Cluster.Sharding
         internal protected class ShardState : IClusterShardingSerializable
         {
             public static readonly ShardState Empty = new ShardState(ImmutableHashSet<string>.Empty);
+
             public readonly IImmutableSet<EntityId> Entries;
 
             public ShardState(IImmutableSet<EntityId> entries)
             {
                 Entries = entries;
             }
+
+            #region Equals
+
+            public override bool Equals(object obj)
+            {
+                var other = obj as ShardState;
+
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return Entries.SequenceEqual(other.Entries);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hashCode = 13;
+
+                    foreach (var v in Entries)
+                    {
+                        hashCode = (hashCode * 397) ^ (v?.GetHashCode() ?? 0);
+                    }
+
+                    return hashCode;
+                }
+            }
+
+            #endregion
         }
 
         public readonly string TypeName;

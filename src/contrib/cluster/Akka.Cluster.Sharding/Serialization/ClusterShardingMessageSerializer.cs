@@ -91,7 +91,7 @@ namespace Akka.Cluster.Sharding.Serialization
                 {GracefulShutdownReqManifest, bytes => new PersistentShardCoordinator.GracefulShutdownRequest(ActorRefMessageFromBinary(bytes)) },
 
                 {GetShardStatsManifest, bytes => Shard.GetShardStats.Instance },
-                {ShardStatsManifest, bytes => ShardStatsFromBinary(bytes)}
+                {ShardStatsManifest, ShardStatsFromBinary}
             };
         }
 
@@ -140,21 +140,21 @@ namespace Akka.Cluster.Sharding.Serialization
 
         public override string Manifest(object o)
         {
-            if (o is EntityState) return EntityStateManifest;
-            if (o is EntityStarted) return EntityStartedManifest;
-            if (o is EntityStopped) return EntityStoppedManifest;
+            if (o is Shard.ShardState) return EntityStateManifest;
+            if (o is Shard.EntityStarted) return EntityStartedManifest;
+            if (o is Shard.EntityStopped) return EntityStoppedManifest;
             if (o is PersistentShardCoordinator.State) return CoordinatorStateManifest;
             if (o is PersistentShardCoordinator.ShardRegionRegistered) return ShardRegionRegisteredManifest;
             if (o is PersistentShardCoordinator.ShardRegionProxyRegistered) return ShardRegionProxyRegisteredManifest;
             if (o is PersistentShardCoordinator.ShardRegionTerminated) return ShardRegionTerminatedManifest;
             if (o is PersistentShardCoordinator.ShardRegionProxyTerminated) return ShardRegionProxyTerminatedManifest;
-            if (o is ShardHomeAllocated) return ShardHomeAllocatedManifest;
+            if (o is PersistentShardCoordinator.ShardHomeAllocated) return ShardHomeAllocatedManifest;
             if (o is PersistentShardCoordinator.ShardHomeDeallocated) return ShardHomeDeallocatedManifest;
             if (o is PersistentShardCoordinator.Register) return RegisterManifest;
             if (o is PersistentShardCoordinator.RegisterProxy) return RegisterProxyManifest;
             if (o is PersistentShardCoordinator.RegisterAck) return RegisterAckManifest;
             if (o is PersistentShardCoordinator.GetShardHome) return GetShardHomeManifest;
-            if (o is ShardHome) return ShardHomeManifest;
+            if (o is PersistentShardCoordinator.ShardHome) return ShardHomeManifest;
             if (o is PersistentShardCoordinator.HostShard) return HostShardManifest;
             if (o is PersistentShardCoordinator.ShardStarted) return ShardStartedManifest;
             if (o is PersistentShardCoordinator.BeginHandOff) return BeginHandOffManifest;
@@ -248,7 +248,8 @@ namespace Akka.Cluster.Sharding.Serialization
         {
             using (var stream = new MemoryStream(binary, false))
             {
-                return ResolveActorRef(ActorRefMessage.ParseFrom(stream).Ref);
+                var msg = ShardStats.ParseFrom(stream);
+                return new Shard.ShardStats(msg.Shard, msg.EntityCount);
             }
         }
 
