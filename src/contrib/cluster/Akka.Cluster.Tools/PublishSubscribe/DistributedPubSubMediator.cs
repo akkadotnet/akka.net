@@ -521,6 +521,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
         private void HandlePrune()
         {
+            var modifications = new Dictionary<Address, Bucket>();
             foreach (var entry in _registry)
             {
                 var owner = entry.Key;
@@ -532,9 +533,14 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
                 if (oldRemoved.Any())
                 {
-                    _registry[owner] = new Bucket(bucket.Owner, bucket.Version, bucket.Content.RemoveRange(oldRemoved));
-                    // todo: suppose that in case content become empty, the bucket should be removed
+                    modifications.Add(owner, new Bucket(bucket.Owner, bucket.Version, bucket.Content.RemoveRange(oldRemoved)));
                 }
+            }
+
+            foreach (var entry in modifications)
+            {
+                // todo: suppose that in case content become empty, the bucket should be removed
+                _registry[entry.Key] = entry.Value;
             }
         }
 
