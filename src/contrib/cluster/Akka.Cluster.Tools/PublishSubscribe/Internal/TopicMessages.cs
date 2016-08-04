@@ -252,6 +252,54 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
     }
 
+    /// <summary>
+    /// Messages used to encode protocol to make sure that we do not send Subscribe/Unsubscribe message to
+    /// child (mediator -&gt; topic, topic -&gt; group) during a period of transition. Protects from situations like:
+    /// Sending Subscribe/Unsubscribe message to child actor after child has been terminated
+    /// but Terminate message did not yet arrive to parent.
+    /// Sending Subscribe/Unsubscribe message to child actor that has Prune message queued and pruneDeadline set.
+    /// In both of those situation parent actor still thinks that child actor is alive and forwards messages to it resulting in lost ACKs.
+    /// </summary>
+    internal interface IChildActorTerminationProtocol
+    {
+    }
+
+    /// <summary>
+    /// Passivate-like message sent from child to parent, used to signal that sender has no subscribers and no child actors.
+    /// </summary>
+    internal class NoMoreSubscribers : IChildActorTerminationProtocol
+    {
+        public static NoMoreSubscribers Instance = new NoMoreSubscribers();
+        private NoMoreSubscribers()
+        {
+        }
+    }
+
+    /// <summary>
+    /// Sent from parent to child actor to signalize that messages are being buffered. When received by child actor
+    /// if no <see cref="Subscribe"/> message has been received after sending <see cref="NoMoreSubscribers"/> message child actor will stop itself.
+    /// </summary>
+    internal class TerminateRequest : IChildActorTerminationProtocol
+    {
+        public static TerminateRequest Instance = new TerminateRequest();
+        private TerminateRequest()
+        {
+        }
+    }
+
+    /// <summary>
+    /// Sent from child to parent actor as response to <see cref="TerminateRequest"/> in case <see cref="Subscribe"/> message arrived
+    /// after sending <see cref="NoMoreSubscribers"/> but before receiving <see cref="TerminateRequest"/>.
+    /// When received by the parent buffered messages will be forwarded to child actor for processing.
+    /// </summary>
+    internal class NewSubscriberArrived : IChildActorTerminationProtocol
+    {
+        public static NewSubscriberArrived Instance = new NewSubscriberArrived();
+        private NewSubscriberArrived()
+        {
+        }
+    }
+
     [Serializable]
     internal sealed class MediatorRouterEnvelope : RouterEnvelope
     {
