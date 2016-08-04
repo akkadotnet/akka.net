@@ -41,7 +41,7 @@
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
     <Reference Include="Wire, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\..\packages\Wire.0.0.6\lib\Wire.dll</HintPath>
+      <HintPath>..\..\..\packages\Wire.0.7.1\lib\net45\Wire.dll</HintPath>
       <Private>True</Private>
     </Reference>
   </ItemGroup>
@@ -51,7 +51,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Akka.Serialization.Wire.nuspec" />
-    <None Include="packages.config" />
+    <None Include="packages.config">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\Akka\Akka.csproj">

@@ -11,7 +11,7 @@ namespace Akka.Serialization.WireTests
 {
     public class WireTests : AkkaSerializationSpec
     {
-        public WireTests() : base(typeof (WireSerializer))
+        public WireTests() : base(typeof(WireSerializer))
         {            
         }
     }
