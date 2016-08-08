@@ -428,7 +428,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             command.Parameters.Add(parameter);
         }
 
-        public async Task SelectEventsAsync(DbConnection connection, CancellationToken cancellationToken, IEnumerable<IHint> hints, Action<IPersistentRepresentation> callback)
+        public virtual async Task SelectEventsAsync(DbConnection connection, CancellationToken cancellationToken, IEnumerable<IHint> hints, Action<IPersistentRepresentation> callback)
         {
             using (var command = GetCommand(connection, QueryEventsSql))
             {
@@ -445,7 +445,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        private string HintToSql(IHint hint, DbCommand command)
+        protected virtual string HintToSql(IHint hint, DbCommand command)
         {
             if (hint is TimestampRange)
             {
