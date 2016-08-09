@@ -13,6 +13,7 @@ using System.Threading;
 using Akka.Actor.Internal;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
+using Akka.Pattern;
 using Akka.Routing;
 using Akka.Util.Internal;
 
@@ -601,7 +602,10 @@ namespace Akka.Actor
         /// </summary>
         public void Initialize()
         {
-            MakeTransition(_currentState);
+            if (_currentState != null)
+                MakeTransition(_currentState);
+            else
+                throw new IllegalStateException("You must call StartWith before calling Initialize.");
         }
 
         /// <summary>
@@ -609,7 +613,12 @@ namespace Akka.Actor
         /// </summary>
         public TState StateName
         {
-            get { return _currentState.StateName; }
+            get
+            {
+                if (_currentState != null)
+                    return _currentState.StateName;
+                throw new IllegalStateException("You must call StartWith before calling StateName.");
+            }
         }
 
         /// <summary>
@@ -617,7 +626,12 @@ namespace Akka.Actor
         /// </summary>
         public TData StateData
         {
-            get { return _currentState.StateData; }
+            get
+            {
+                if (_currentState != null)
+                    return _currentState.StateData;
+                throw new IllegalStateException("You must call StartWith before calling StateData.");
+            }
         }
 
         /// <summary>

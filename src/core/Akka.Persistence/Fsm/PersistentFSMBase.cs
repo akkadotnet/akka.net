@@ -12,6 +12,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Event;
+using Akka.Pattern;
 using Akka.Persistence.Serialization;
 using Akka.Routing;
 using Akka.Util;
@@ -81,7 +82,12 @@ namespace Akka.Persistence.Fsm
         /// </summary>
         public TState StateName
         {
-            get { return _currentState.StateName; }
+            get
+            {
+                if (_currentState != null)
+                    return _currentState.StateName;
+                throw new IllegalStateException("You must call StartWith before calling StateName.");
+            }
         }
 
         /// <summary>
@@ -89,7 +95,12 @@ namespace Akka.Persistence.Fsm
         /// </summary>
         public TData StateData
         {
-            get { return _currentState.StateData; }
+            get
+            {
+                if (_currentState != null)
+                    return _currentState.StateData;
+                throw new IllegalStateException("You must call StartWith before calling StateData.");
+            }
         }
 
         /// <summary>
@@ -309,13 +320,25 @@ namespace Akka.Persistence.Fsm
         }
 
         /// <summary>
-        ///     Verify the existence of initial state and setup timers. This should be the
-        ///     last call within the constructor or <see cref="ActorBase.PreStart" /> and
-        ///     <see cref="ActorBase.PostRestart" />.
+        ///     <para>
+        ///     Verify the existence of initial state and setup timers. Used in
+        ///     <see cref="PersistentFSM{TState,TData,TEvent}"/> on recovery.
+        ///     </para>
+        ///     <para>
+        ///     An initial _currentState -> _currentState notification will be triggered
+        ///     by calling this method.
+        ///     </para>
+        ///     <para>
+        ///     <see cref="PersistentFSM{TState,TData,TEvent}.ReceiveRecover"/>
+        ///     </para>
         /// </summary>
-        public void Initialize()
+        [Obsolete("Removed from API, called internally.")]
+        protected internal void Initialize()
         {
-            MakeTransition(_currentState);
+            if (_currentState != null)
+                MakeTransition(_currentState);
+            else
+                throw new IllegalStateException("You must call StartWith before calling Initialize.");
         }
 
         public TransformHelper Transform(StateFunction func)
