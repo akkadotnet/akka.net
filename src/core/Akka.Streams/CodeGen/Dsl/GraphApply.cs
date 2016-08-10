@@ -15,14 +15,19 @@ namespace Akka.Streams.Dsl
 		/// <summary>
 		/// Creates a new <see cref="IGraph{TShape, TMat}"/> by passing a <see cref="Builder{TMat}"/> to the given create function.
 		/// </summary>
-		public static IGraph<TShape, NotUsed> Create<TShape>(Func<Builder<NotUsed>, TShape> buildBlock) where TShape: Shape
+		public static IGraph<TShape, TMat> CreateMaterialized<TShape, TMat>(Func<Builder<TMat>, TShape> buildBlock) where TShape: Shape
 		{
-			var builder = new Builder<NotUsed>();
+			var builder = new Builder<TMat>();
 			var shape = buildBlock(builder);
 			var module = builder.Module.ReplaceShape(shape);
 
-			return new GraphImpl<TShape, NotUsed>(shape, module);
+			return new GraphImpl<TShape, TMat>(shape, module);
 		}
+
+        /// <summary>
+        /// Creates a new <see cref="IGraph{TShape}"/> by passing a <see cref="Builder{NotUsed}"/> to the given create function.
+        /// </summary>
+        public static IGraph<TShape, NotUsed> Create<TShape>(Func<Builder<NotUsed>, TShape> buildBlock) where TShape : Shape => CreateMaterialized(buildBlock);
 		
 		/// <summary>
 		/// Creates a new <see cref="IGraph{TShape, TMat}"/> by importing the given graph <paramref name="g1"/> 
