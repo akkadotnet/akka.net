@@ -35,7 +35,7 @@ namespace Akka.Tests.Actor
             return Arb.From(Gen.Elements<EndPoint>(new IPEndPoint(IPAddress.Loopback, 1337),
                new IPEndPoint(IPAddress.IPv6Loopback, 1337),
                new DnsEndPoint("localhost", 1337), new IPEndPoint(IPAddress.Any, 1337), 
-               new IPEndPoint(IPAddress.IPv6Any, 1337), new IPEndPoint(IPAddress.Loopback.MapToIPv6(), 1337)));
+               new IPEndPoint(IPAddress.IPv6Any, 1337)));
         }
 
         public static string ExtractHost(EndPoint endpoint)
