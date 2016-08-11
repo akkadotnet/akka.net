@@ -1022,9 +1022,11 @@ namespace Akka.Remote
     }
     public class DeadlineFailureDetector : Akka.Remote.FailureDetector
     {
+        [System.ObsoleteAttribute("Use DeadlineFailureDetector(acceptableHeartbeatPause, heartbeatInterval, clock) i" +
+            "nstead. (1.1.2)")]
         public DeadlineFailureDetector(System.TimeSpan acceptableHeartbeatPause, Akka.Remote.Clock clock = null) { }
+        public DeadlineFailureDetector(System.TimeSpan acceptableHeartbeatPause, System.TimeSpan heartbeatInterval, Akka.Remote.Clock clock = null) { }
         public DeadlineFailureDetector(Akka.Configuration.Config config, Akka.Event.EventStream ev) { }
-        protected DeadlineFailureDetector(Akka.Remote.Clock clock) { }
         public override bool IsAvailable { get; }
         public override bool IsMonitoring { get; }
         public override void HeartBeat() { }

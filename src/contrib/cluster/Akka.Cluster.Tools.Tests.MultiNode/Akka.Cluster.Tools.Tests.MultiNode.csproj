@@ -78,6 +78,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ClusterClient\ClusterClientStopSpec.cs" />
     <Compile Include="ClusterClient\ClusterClientSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PublishSubscribe\DistributedPubSubMediatorSpec.cs" />

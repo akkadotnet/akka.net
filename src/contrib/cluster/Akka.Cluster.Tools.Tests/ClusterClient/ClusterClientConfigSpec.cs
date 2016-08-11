@@ -6,14 +6,17 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Linq;
+using Akka.Actor;
 using Akka.Cluster.Tools.Client;
-using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Configuration;
+using Akka.TestKit;
 using Xunit;
+using FluentAssertions;
 
-namespace Akka.Cluster.Tools.Tests.Client
+namespace Akka.Cluster.Tools.Tests.ClusterClient
 {
-    public class ClusterClientConfigSpec : TestKit.Xunit2.TestKit
+    public class ClusterClientConfigSpec : AkkaSpec
     {
         public ClusterClientConfigSpec() : base(GetConfig())
         {
@@ -25,34 +28,52 @@ namespace Akka.Cluster.Tools.Tests.Client
         }
 
         [Fact]
-        public void Should_cluster_client_settings_have_default_config()
+        public void ClusterClientSettings_must_have_default_config()
         {
-            ClusterClientSettings.Create(Sys);
-            var config = Sys.Settings.Config.GetConfig("akka.cluster.client");
+            var clusterClientSettings = ClusterClientSettings.Create(Sys);
 
-            Assert.NotNull(config);
-            var initialContacts = config.GetStringList("initial-contacts");
-            Assert.Equal(0, initialContacts.Count);
-            Assert.Equal(TimeSpan.FromSeconds(3), config.GetTimeSpan("establishing-get-contacts-interval"));
-            Assert.Equal(TimeSpan.FromSeconds(60), config.GetTimeSpan("refresh-contacts-interval"));
-            Assert.Equal(TimeSpan.FromSeconds(2), config.GetTimeSpan("heartbeat-interval"));
-            Assert.Equal(TimeSpan.FromSeconds(13), config.GetTimeSpan("acceptable-heartbeat-pause"));
-            Assert.Equal(TimeSpan.FromSeconds(3), config.GetTimeSpan("establishing-get-contacts-interval"));
-            Assert.Equal(1000, config.GetInt("buffer-size"));
+            clusterClientSettings.Should().NotBeNull();
+            clusterClientSettings.InitialContacts.Should().HaveCount(0);
+            clusterClientSettings.EstablishingGetContactsInterval.Should().Be(3.Seconds());
+            clusterClientSettings.RefreshContactsInterval.Should().Be(60.Seconds());
+            clusterClientSettings.HeartbeatInterval.Should().Be(2.Seconds());
+            clusterClientSettings.AcceptableHeartbeatPause.Should().Be(13.Seconds());
+            clusterClientSettings.BufferSize.Should().Be(1000);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(10001)]
+        public void ClusterClientSettings_must_throw_exception_on_wrong_buffer(int bufferSize)
+        {
+            var sys = ActorSystem.Create("test", ConfigurationFactory.ParseString("akka.cluster.client.buffer-size = " + bufferSize));
+            var exception = Assert.Throws<ArgumentException>(() => ClusterClientSettings.Create(sys));
+            exception.Message.Should().Be("BufferSize must be >= 0 and <= 10000");
         }
 
         [Fact]
-        public void Should_cluster_receptionist_settings_have_default_config()
+        public void ClusterClientSettings_must_throw_exception_on_empty_initial_contacts()
         {
-            ClusterClientReceptionist.Get(Sys);
-            var config = Sys.Settings.Config.GetConfig("akka.cluster.client.receptionist");
+            var clusterClientSettings = ClusterClientSettings.Create(Sys);
+            var exception = Assert.Throws<ArgumentException>(() => clusterClientSettings.WithInitialContacts(Enumerable.Empty<ActorPath>()));
+            exception.Message.Should().Be("InitialContacts must be defined");
+        }
 
-            Assert.NotNull(config);
-            Assert.Equal("receptionist", config.GetString("name"));
-            Assert.Equal(string.Empty, config.GetString("role"));
-            Assert.Equal(3, config.GetInt("number-of-contacts"));
-            Assert.Equal(TimeSpan.FromSeconds(30), config.GetTimeSpan("response-tunnel-receive-timeout"));
-            Assert.Equal(string.Empty, config.GetString("use-dispatcher"));
+        [Fact]
+        public void ClusterReceptionistSettings_must_have_default_config()
+        {
+            var clusterReceptionistSettings = ClusterReceptionistSettings.Create(Sys);
+            clusterReceptionistSettings.Should().NotBeNull();
+            clusterReceptionistSettings.Role.Should().BeNull();
+            clusterReceptionistSettings.NumberOfContacts.Should().Be(3);
+            clusterReceptionistSettings.ResponseTunnelReceiveTimeout.Should().Be(30.Seconds());
+            clusterReceptionistSettings.HeartbeatInterval.Should().Be(2.Seconds());
+            clusterReceptionistSettings.AcceptableHeartbeatPause.Should().Be(13.Seconds());
+            clusterReceptionistSettings.FailureDetectionInterval.Should().Be(2.Seconds());
+
+            var config = Sys.Settings.Config.GetConfig("akka.cluster.client.receptionist");
+            config.GetString("name").Should().Be("receptionist");
+            config.GetString("use-dispatcher").Should().Be(string.Empty);
         }
     }
 }
