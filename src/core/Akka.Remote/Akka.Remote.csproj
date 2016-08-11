@@ -107,11 +107,6 @@
     <Compile Include="Serialization\ProtobufSerializer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RemoteActorRefProvider.cs" />
-    <Compile Include="Transport\AkkaIO\AddressConverters.cs" />
-    <Compile Include="Transport\AkkaIO\AkkaIOTransport.cs" />
-    <Compile Include="Transport\AkkaIO\ConnectionAssociation.cs" />
-    <Compile Include="Transport\AkkaIO\TransportListener.cs" />
-    <Compile Include="Transport\AkkaIO\TransportManager.cs" />
     <Compile Include="Transport\AkkaPduCodec.cs" />
     <Compile Include="Transport\FailureInjectorTransportAdapter.cs" />
     <Compile Include="Transport\Helios\HeliosHelpers.cs" />
