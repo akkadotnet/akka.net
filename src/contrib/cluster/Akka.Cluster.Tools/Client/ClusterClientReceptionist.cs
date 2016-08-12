@@ -133,7 +133,7 @@ namespace Akka.Cluster.Tools.Client
         public IActorRef Underlying => _receptionist;
     }
 
-    public class ClusterClientReceptionistExtensionProvider : ExtensionIdProvider<ClusterClientReceptionist>
+    public sealed class ClusterClientReceptionistExtensionProvider : ExtensionIdProvider<ClusterClientReceptionist>
     {
         public override ClusterClientReceptionist CreateExtension(ExtendedActorSystem system)
         {

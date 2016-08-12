@@ -44,41 +44,6 @@ namespace Akka.Cluster.Tools.Client
                 config.GetTimeSpan("failure-detection-interval"));
         }
 
-        /// <summary>
-        /// Start the receptionist on members tagged with this role. All members are used if undefined.
-        /// </summary>
-        public readonly string Role;
-
-        /// <summary>
-        /// The receptionist will send this number of contact points to the client.
-        /// </summary>
-        public readonly int NumberOfContacts;
-
-        /// <summary>
-        /// The actor that tunnel response messages to the client will be stopped after this time of inactivity.
-        /// </summary>
-        public readonly TimeSpan ResponseTunnelReceiveTimeout;
-
-        /// <summary>
-        /// How often failure detection heartbeat messages should be received for each ClusterClient
-        /// </summary>
-        public readonly TimeSpan HeartbeatInterval;
-
-        /// <summary>
-        /// Number of potentially lost/delayed heartbeats that will be
-        /// accepted before considering it to be an anomaly.
-        /// The ClusterReceptionist is using the akka.remote.DeadlineFailureDetector, which
-        /// will trigger if there are no heartbeats within the duration
-        /// heartbeat-interval + acceptable-heartbeat-pause, i.e. 15 seconds with
-        /// the default settings.
-        /// </summary>
-        public readonly TimeSpan AcceptableHeartbeatPause;
-
-        /// <summary>
-        /// Failure detection checking interval for checking all ClusterClients
-        /// </summary>
-        public readonly TimeSpan FailureDetectionInterval;
-
         public ClusterReceptionistSettings(
             string role,
             int numberOfContacts,
@@ -94,6 +59,41 @@ namespace Akka.Cluster.Tools.Client
             AcceptableHeartbeatPause = acceptableHeartbeatPause;
             FailureDetectionInterval = failureDetectionInterval;
         }
+
+        /// <summary>
+        /// Start the receptionist on members tagged with this role. All members are used if undefined.
+        /// </summary>
+        public string Role { get; }
+
+        /// <summary>
+        /// The receptionist will send this number of contact points to the client.
+        /// </summary>
+        public int NumberOfContacts { get; }
+
+        /// <summary>
+        /// The actor that tunnel response messages to the client will be stopped after this time of inactivity.
+        /// </summary>
+        public TimeSpan ResponseTunnelReceiveTimeout { get; }
+
+        /// <summary>
+        /// How often failure detection heartbeat messages should be received for each ClusterClient
+        /// </summary>
+        public TimeSpan HeartbeatInterval { get; }
+
+        /// <summary>
+        /// Number of potentially lost/delayed heartbeats that will be
+        /// accepted before considering it to be an anomaly.
+        /// The ClusterReceptionist is using the akka.remote.DeadlineFailureDetector, which
+        /// will trigger if there are no heartbeats within the duration
+        /// heartbeat-interval + acceptable-heartbeat-pause, i.e. 15 seconds with
+        /// the default settings.
+        /// </summary>
+        public TimeSpan AcceptableHeartbeatPause { get; }
+
+        /// <summary>
+        /// Failure detection checking interval for checking all ClusterClients
+        /// </summary>
+        public TimeSpan FailureDetectionInterval { get; }
 
         public ClusterReceptionistSettings WithRole(string role)
         {

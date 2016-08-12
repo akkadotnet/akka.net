@@ -25,15 +25,15 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
     /**
      * Protobuf serializer of DistributedPubSubMediator messages.
      */
-    public class DistributedPubSubMessageSerializer : SerializerWithStringManifest
+    internal class DistributedPubSubMessageSerializer : SerializerWithStringManifest
     {
-        public const int BufferSize = 1024 * 4;
+        private const int BufferSize = 1024 * 4;
 
-        public const string StatusManifest = "A";
-        public const string DeltaManifest = "B";
-        public const string SendManifest = "C";
-        public const string SendToAllManifest = "D";
-        public const string PublishManifest = "E";
+        private const string StatusManifest = "A";
+        private const string DeltaManifest = "B";
+        private const string SendManifest = "C";
+        private const string SendToAllManifest = "D";
+        private const string PublishManifest = "E";
 
         private readonly IDictionary<string, Func<byte[], object>> _fromBinaryMap;
 
@@ -229,7 +229,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
         {
             return Akka.Cluster.PubSub.Serializers.Proto.SendToAll.CreateBuilder()
                 .SetPath(sendToAll.Path)
-                .SetAllButSelf(sendToAll.ExcludeSelf)
+                .SetAllButSelf(sendToAll.AllButSelf)
                 .SetPayload(PayloadToProto(sendToAll.Message))
                 .Build();
         }

@@ -11,7 +11,6 @@ using Akka.Configuration;
 
 namespace Akka.Cluster.Tools.Singleton
 {
-    [Serializable]
     public sealed class ClusterSingletonManagerSettings : INoSerializationVerificationNeeded
     {
         public static ClusterSingletonManagerSettings Create(ActorSystem system)
@@ -41,41 +40,21 @@ namespace Akka.Cluster.Tools.Singleton
             return role;
         }
 
-        public readonly string SingletonName;
-        public readonly string Role;
-        public readonly TimeSpan RemovalMargin;
-        public readonly TimeSpan HandOverRetryInterval;
-
         /// <summary>
         /// Creates a new instance of the <see cref="ClusterSingletonManagerSettings"/>.
         /// </summary>
         /// <param name="singletonName">The actor name of the child singleton actor.</param>
-        /// <param name="role">
-        /// Singleton among the nodes tagged with specified role. If the role is not specified 
-        /// it's a singleton among all nodes in the cluster.
-        /// </param>
-        /// <param name="removalMargin">
-        /// Margin until the singleton instance that belonged to a downed/removed partition is 
-        /// created in surviving partition. The purpose of  this margin is that in case of 
-        /// a network partition the singleton actors  in the non-surviving partitions must 
-        /// be stopped before corresponding actors are started somewhere else. 
-        /// This is especially important for persistent actors.
-        /// </param>
-        /// <param name="handOverRetryInterval">
-        /// When a node is becoming oldest it sends hand-over
-        /// request to previous oldest, that might be leaving the cluster. This is
-        /// retried with this interval until the previous oldest confirms that the hand
-        /// over has started or the previous oldest member is removed from the cluster
-        /// (+ <paramref name="removalMargin"/>).
-        /// </param>
+        /// <param name="role">Singleton among the nodes tagged with specified role.</param>
+        /// <param name="removalMargin">Margin until the singleton instance that belonged to a downed/removed partition is created in surviving partition.</param>
+        /// <param name="handOverRetryInterval">When a node is becoming oldest it sends hand-over request to previous oldest, that might be leaving the cluster.</param>
         public ClusterSingletonManagerSettings(string singletonName, string role, TimeSpan removalMargin, TimeSpan handOverRetryInterval)
         {
             if (string.IsNullOrWhiteSpace(singletonName))
-                throw new ArgumentNullException("singletonName");
+                throw new ArgumentNullException(nameof(singletonName));
             if (removalMargin < TimeSpan.Zero)
-                throw new ArgumentException("ClusterSingletonManagerSettings.RemovalMargin must be positive", "removalMargin");
+                throw new ArgumentException("ClusterSingletonManagerSettings.RemovalMargin must be positive", nameof(removalMargin));
             if (handOverRetryInterval <= TimeSpan.Zero)
-                throw new ArgumentException("ClusterSingletonManagerSettings.HandOverRetryInterval must be positive", "handOverRetryInterval");
+                throw new ArgumentException("ClusterSingletonManagerSettings.HandOverRetryInterval must be positive", nameof(handOverRetryInterval));
 
             SingletonName = singletonName;
             Role = role;
@@ -83,28 +62,59 @@ namespace Akka.Cluster.Tools.Singleton
             HandOverRetryInterval = handOverRetryInterval;
         }
 
+        /// <summary>
+        /// The actor name of the child singleton actor.
+        /// </summary>
+        public string SingletonName { get; }
+
+        /// <summary>
+        /// Singleton among the nodes tagged with specified role.
+        /// </summary>
+        public string Role { get; }
+
+        /// <summary>
+        /// Margin until the singleton instance that belonged to a downed/removed partition is created in surviving partition.
+        /// </summary>
+        public TimeSpan RemovalMargin { get; }
+
+        /// <summary>
+        /// When a node is becoming oldest it sends hand-over request to previous oldest, that might be leaving the cluster.
+        /// </summary>
+        public TimeSpan HandOverRetryInterval { get; }
+
+        /// <summary>
+        /// Create a singleton manager with specified singleton name.
+        /// </summary>
         public ClusterSingletonManagerSettings WithSingletonName(string singletonName)
         {
             return Copy(singletonName: singletonName);
         }
 
+        /// <summary>
+        /// Create a singleton manager with specified singleton role.
+        /// </summary>
         public ClusterSingletonManagerSettings WithRole(string role)
         {
             return Copy(role: RoleOption(role));
         }
 
+        /// <summary>
+        /// Create a singleton manager with specified singleton remova margin.
+        /// </summary>
         public ClusterSingletonManagerSettings WithRemovalMargin(TimeSpan removalMargin)
         {
             return Copy(removalMargin: removalMargin);
         }
 
+        /// <summary>
+        /// Create a singleton manager with specified singleton remova margin hand-over retry interval.
+        /// </summary>
         public ClusterSingletonManagerSettings WithHandOverRetryInterval(TimeSpan handOverRetryInterval)
         {
             return Copy(handOverRetryInterval: handOverRetryInterval);
         }
 
-        private ClusterSingletonManagerSettings Copy(string singletonName = null, string role = null, TimeSpan? removalMargin = null,
-            TimeSpan? handOverRetryInterval = null)
+        private ClusterSingletonManagerSettings Copy(string singletonName = null, string role = null, TimeSpan? removalMargin = null, TimeSpan? handOverRetryInterval = null)
         {
             return new ClusterSingletonManagerSettings(
                 singletonName: singletonName ?? SingletonName,

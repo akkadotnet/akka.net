@@ -16,8 +16,31 @@ using Akka.Remote;
 
 namespace Akka.Cluster.Tools.Singleton
 {
+    /// <summary>
+    /// Marker interface for remote messages with special serializer.
+    /// </summary>
     public interface IClusterSingletonMessage { }
 
+    [Serializable]
+    public enum ClusterSingletonState
+    {
+        Start,
+        Oldest,
+        Younger,
+        BecomingOldest,
+        WasOldest,
+        HandingOver,
+        TakeOver,
+        End
+    }
+
+    public interface IClusterSingletonData { }
+
+    #region Internal messages
+    /// <summary>
+    /// Sent from new oldest to previous oldest to initiate the hand-over process.
+    /// <see cref="HandOverInProgress"/> and <see cref="HandOverDone"/> are expected replies.
+    /// </summary>
     [Serializable]
     internal sealed class HandOverToMe : IClusterSingletonMessage, IDeadLetterSuppression
     {
@@ -25,6 +48,10 @@ namespace Akka.Cluster.Tools.Singleton
         private HandOverToMe() { }
     }
 
+    /// <summary>
+    /// Confirmation by the previous oldest that the hand over process, shut down of
+    /// the singleton actor, has started.
+    /// </summary>
     [Serializable]
     internal sealed class HandOverInProgress : IClusterSingletonMessage
     {
@@ -32,6 +59,10 @@ namespace Akka.Cluster.Tools.Singleton
         private HandOverInProgress() { }
     }
 
+    /// <summary>
+    /// Confirmation by the previous oldest that the singleton actor has been terminated
+    /// and the hand-over process is completed.
+    /// </summary>
     [Serializable]
     internal sealed class HandOverDone : IClusterSingletonMessage
     {
@@ -39,11 +70,38 @@ namespace Akka.Cluster.Tools.Singleton
         private HandOverDone() { }
     }
 
+    /// <summary>
+    /// Sent from from previous oldest to new oldest to initiate the normal hand-over process.
+    /// Especially useful when new node joins and becomes oldest immediately, without knowing
+    /// who was previous oldest.
+    /// </summary>
     [Serializable]
     internal sealed class TakeOverFromMe : IClusterSingletonMessage, IDeadLetterSuppression
     {
         public static readonly TakeOverFromMe Instance = new TakeOverFromMe();
         private TakeOverFromMe() { }
+    }
+
+    [Serializable]
+    internal sealed class HandOverRetry
+    {
+        public HandOverRetry(int count)
+        {
+            Count = count;
+        }
+
+        public int Count { get; }
+    }
+
+    [Serializable]
+    internal sealed class TakeOverRetry
+    {
+        public TakeOverRetry(int count)
+        {
+            Count = count;
+        }
+
+        public int Count { get; }
     }
 
     [Serializable]
@@ -61,30 +119,6 @@ namespace Akka.Cluster.Tools.Singleton
     }
 
     [Serializable]
-    internal sealed class HandOverRetry
-    {
-        public readonly int Count;
-
-        public HandOverRetry(int count)
-        {
-            Count = count;
-        }
-    }
-
-    [Serializable]
-    internal sealed class TakeOverRetry
-    {
-        public readonly int Count;
-
-        public TakeOverRetry(int count)
-        {
-            Count = count;
-        }
-    }
-
-    public interface IClusterSingletonData { }
-
-    [Serializable]
     internal sealed class Uninitialized : IClusterSingletonData
     {
         public static readonly Uninitialized Instance = new Uninitialized();
@@ -94,110 +128,100 @@ namespace Akka.Cluster.Tools.Singleton
     [Serializable]
     internal sealed class YoungerData : IClusterSingletonData
     {
-        public readonly Address Oldest;
-
         public YoungerData(Address oldest)
         {
             Oldest = oldest;
         }
+
+        public Address Oldest { get; }
     }
 
     [Serializable]
     internal sealed class BecomingOldestData : IClusterSingletonData
     {
-        public readonly Address PreviousOldest;
-
         public BecomingOldestData(Address previousOldest)
         {
             PreviousOldest = previousOldest;
         }
+
+        public Address PreviousOldest { get; }
     }
 
     [Serializable]
     internal sealed class OldestData : IClusterSingletonData
     {
-        public readonly IActorRef Singleton;
-        public readonly bool SingletonTerminated;
-
         public OldestData(IActorRef singleton, bool singletonTerminated)
         {
             Singleton = singleton;
             SingletonTerminated = singletonTerminated;
         }
+
+        public IActorRef Singleton { get; }
+
+        public bool SingletonTerminated { get; }
     }
 
     [Serializable]
     internal sealed class WasOldestData : IClusterSingletonData
     {
-        public readonly IActorRef Singleton;
-        public readonly bool SingletonTerminated;
-        public readonly Address NewOldest;
-
         public WasOldestData(IActorRef singleton, bool singletonTerminated, Address newOldest)
         {
             Singleton = singleton;
             SingletonTerminated = singletonTerminated;
             NewOldest = newOldest;
         }
+
+        public IActorRef Singleton { get; }
+
+        public bool SingletonTerminated { get; }
+
+        public Address NewOldest { get; }
     }
 
     [Serializable]
     internal sealed class HandingOverData : IClusterSingletonData
     {
-        public readonly IActorRef Singleton;
-        public readonly IActorRef HandOverTo;
-
         public HandingOverData(IActorRef singleton, IActorRef handOverTo)
         {
             Singleton = singleton;
             HandOverTo = handOverTo;
         }
+
+        public IActorRef Singleton { get; }
+
+        public IActorRef HandOverTo { get; }
     }
 
     [Serializable]
     internal sealed class EndData : IClusterSingletonData
     {
         public static readonly EndData Instance = new EndData();
-
-        public EndData()
-        {
-        }
+        private EndData() {}
     }
 
     [Serializable]
     internal sealed class DelayedMemberRemoved
     {
-        public readonly Member Member;
-
         public DelayedMemberRemoved(Member member)
         {
             Member = member;
         }
+
+        public Member Member { get; }
     }
 
-    [Serializable]
-    public enum ClusterSingletonState
-    {
-        Start,
-        Oldest,
-        Younger,
-        BecomingOldest,
-        WasOldest,
-        HandingOver,
-        TakeOver,
-        End
-    }
+    #endregion
 
     /// <summary>
     /// Thrown when a consistent state can't be determined within the defined retry limits.
     /// Eventually it will reach a stable state and can continue, and that is simplified 
     /// by starting over with a clean state. Parent supervisor should typically restart the actor, i.e. default decision.
     /// </summary>
-    public sealed class ClusterSingletonManagerIsStuck : AkkaException
+    public sealed class ClusterSingletonManagerIsStuckException : AkkaException
     {
-        public ClusterSingletonManagerIsStuck(string message) : base(message) { }
+        public ClusterSingletonManagerIsStuckException(string message) : base(message) { }
 
-        public ClusterSingletonManagerIsStuck(SerializationInfo info, StreamingContext context) : base(info, context)
+        public ClusterSingletonManagerIsStuckException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
     }
@@ -392,7 +416,7 @@ namespace Akka.Cluster.Tools.Singleton
             }
             else if (_selfExited)
             {
-                return GoTo(ClusterSingletonState.End).Using(new EndData());
+                return GoTo(ClusterSingletonState.End).Using(EndData.Instance);
             }
 
             return GoTo(ClusterSingletonState.Younger).Using(new YoungerData(newOldest));
@@ -408,7 +432,6 @@ namespace Akka.Cluster.Tools.Singleton
 
             return GoTo(ClusterSingletonState.HandingOver).Using(new HandingOverData(singleton, handOverTo));
         }
-
 
         private void InitializeFSM()
         {
@@ -583,7 +606,7 @@ namespace Akka.Cluster.Tools.Singleton
                     }
                     else
                     {
-                        throw new ClusterSingletonManagerIsStuck(string.Format("Becoming singleton oldest was stuck because previous oldest [{0}] is unresponsive", becomingOldest.PreviousOldest));
+                        throw new ClusterSingletonManagerIsStuckException(string.Format("Becoming singleton oldest was stuck because previous oldest [{0}] is unresponsive", becomingOldest.PreviousOldest));
                     }
                 }
                 else return null;
@@ -657,7 +680,7 @@ namespace Akka.Cluster.Tools.Singleton
                         return Stop();
                     }
                     else
-                        throw new ClusterSingletonManagerIsStuck(string.Format("Expected hand-over to [{0}] never occured", wasOldestData.NewOldest));
+                        throw new ClusterSingletonManagerIsStuckException(string.Format("Expected hand-over to [{0}] never occured", wasOldestData.NewOldest));
                 }
                 else if (e.FsmEvent.Equals(HandOverToMe.Instance) && wasOldestData != null)
                 {

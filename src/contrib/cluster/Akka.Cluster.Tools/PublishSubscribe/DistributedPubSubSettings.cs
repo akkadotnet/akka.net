@@ -21,7 +21,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         {
             system.Settings.InjectTopLevelFallback(DistributedPubSub.DefaultConfig());
             var config = system.Settings.Config.GetConfig("akka.cluster.pub-sub");
-            if (config == null) throw new ArgumentException("Actor system settings has no configuration for akka.cluster.pub-sub defined");
+            if (config == null)
+                throw new ArgumentException("Actor system settings has no configuration for akka.cluster.pub-sub defined");
 
             return Create(config);
         }
@@ -60,32 +61,6 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         }
 
         /// <summary>
-        /// The mediator starts on members tagged with this role. Uses all if undefined.
-        /// </summary>
-        public readonly string Role;
-
-        /// <summary>
-        /// The routing logic to use for <see cref="DistributedPubSubMediator.Send"/>.
-        /// </summary>
-        public readonly RoutingLogic RoutingLogic;
-
-        /// <summary>
-        /// How often the <see cref="DistributedPubSubMediator"/> should send out gossip information
-        /// </summary>
-        public readonly TimeSpan GossipInterval;
-
-        /// <summary>
-        /// Removed entries are pruned after this duration.
-        /// </summary>
-        public readonly TimeSpan RemovedTimeToLive;
-
-        /// <summary>
-        /// Maximum number of elements to transfer in one message when synchronizing the registries. 
-        /// Next chunk will be transferred in next round of gossip.
-        /// </summary>
-        public readonly int MaxDeltaElements;
-
-        /// <summary>
         /// Creates a new instance of the <see cref="DistributedPubSubSettings"/>.
         /// </summary>
         public DistributedPubSubSettings(string role, RoutingLogic routingLogic, TimeSpan gossipInterval, TimeSpan removedTimeToLive, int maxDeltaElements)
@@ -101,6 +76,32 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             RemovedTimeToLive = removedTimeToLive;
             MaxDeltaElements = maxDeltaElements;
         }
+
+        /// <summary>
+        /// The mediator starts on members tagged with this role. Uses all if undefined.
+        /// </summary>
+        public string Role { get; }
+
+        /// <summary>
+        /// The routing logic to use for <see cref="Send"/>.
+        /// </summary>
+        public RoutingLogic RoutingLogic { get; }
+
+        /// <summary>
+        /// How often the <see cref="DistributedPubSubMediator"/> should send out gossip information
+        /// </summary>
+        public TimeSpan GossipInterval { get; }
+
+        /// <summary>
+        /// Removed entries are pruned after this duration.
+        /// </summary>
+        public TimeSpan RemovedTimeToLive { get; }
+
+        /// <summary>
+        /// Maximum number of elements to transfer in one message when synchronizing the registries. 
+        /// Next chunk will be transferred in next round of gossip.
+        /// </summary>
+        public int MaxDeltaElements { get; }
 
         public DistributedPubSubSettings WithRole(string role)
         {

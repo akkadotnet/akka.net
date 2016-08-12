@@ -116,12 +116,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
         private ISet<Address> _nodes = new HashSet<Address>();
         private long deltaCount = 0L;
-        private ILoggingAdapter _log;
+        private ILoggingAdapter _log = Context.GetLogger();
         private IDictionary<Address, Bucket> _registry = new Dictionary<Address, Bucket>();
 
-        public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
-
-        public IDictionary<Address, long> OwnVersions
+        internal IDictionary<Address, long> OwnVersions
         {
             get
             {
@@ -182,7 +180,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             });
             Receive<SendToAll>(sendToAll =>
             {
-                PublishMessage(sendToAll.Path, sendToAll.Message, sendToAll.ExcludeSelf);
+                PublishMessage(sendToAll.Path, sendToAll.Message, sendToAll.AllButSelf);
             });
             Receive<Publish>(publish =>
             {
@@ -196,7 +194,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             {
                 if (put.Ref.Path.Address.HasGlobalScope)
                 {
-                    Log.Warning("Registered actor must be local: [{0}]", put.Ref);
+                    _log.Warning("Registered actor must be local: [{0}]", put.Ref);
                 }
                 else
                 {

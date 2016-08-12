@@ -584,7 +584,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                 {
                     _remainingServerRoleNames.Count.Should().Be(1);
                     var remainingContacts = _remainingServerRoleNames.Select(r => Node(r) / "system" / "receptionist").ToList();
-                    var c = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(remainingContacts)), "client4");
+                    var c = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(remainingContacts.ToImmutableHashSet())), "client4");
                     c.Tell(new ClusterClient.Send("/user/service2", "bonjour4", localAffinity: true));
                     var reply = ExpectMsg<ClusterClientSpecConfig.Reply>(10.Seconds());
                     reply.Msg.Should().Be("bonjour4-ack");

@@ -92,7 +92,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
 
         private void Keep_the_RouterEnvelope_when_sending_to_topic_for_group(object msg)
         {
-            mediator.Tell(new Subscribe("topic", TestActor, "group"));
+            mediator.Tell(new Subscribe("topic", "group", TestActor));
             ExpectMsg<SubscribeAck>();
 
             mediator.Tell(new Publish("topic", msg, sendOneMessageToEachGroup: true));

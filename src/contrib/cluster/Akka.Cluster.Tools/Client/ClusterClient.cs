@@ -41,16 +41,19 @@ namespace Akka.Cluster.Tools.Client
         [Serializable]
         public sealed class Send
         {
-            public string Path { get; }
-            public object Message { get; }
-            public bool LocalAffinity { get; }
-
             public Send(string path, object message, bool localAffinity = false)
             {
                 Path = path;
                 Message = message;
                 LocalAffinity = localAffinity;
             }
+
+            public string Path { get; }
+
+            public object Message { get; }
+
+            public bool LocalAffinity { get; }
+
         }
 
         /// <summary>
@@ -59,14 +62,16 @@ namespace Akka.Cluster.Tools.Client
         [Serializable]
         public sealed class SendToAll
         {
-            public string Path { get; }
-            public object Message { get; }
-
             public SendToAll(string path, object message)
             {
                 Path = path;
                 Message = message;
             }
+
+            public string Path { get; }
+
+            public object Message { get; }
+
         }
 
         /// <summary>
@@ -76,14 +81,16 @@ namespace Akka.Cluster.Tools.Client
         [Serializable]
         public sealed class Publish
         {
-            public string Topic { get; }
-            public object Message { get; }
-
             public Publish(string topic, object message)
             {
                 Topic = topic;
                 Message = message;
             }
+
+            public string Topic { get; }
+
+            public object Message { get; }
+
         }
 
         [Serializable]

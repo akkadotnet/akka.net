@@ -12,7 +12,7 @@ using Akka.Serialization;
 
 namespace Akka.Cluster.Tools.Singleton.Serialization
 {
-    public class ClusterSingletonMessageSerializer : SerializerWithStringManifest
+    internal class ClusterSingletonMessageSerializer : SerializerWithStringManifest
     {
         private const string HandOverToMeManifest = "A";
         private const string HandOverInProgressManifest = "B";
@@ -22,12 +22,11 @@ namespace Akka.Cluster.Tools.Singleton.Serialization
         private static readonly byte[] EmptyBytes = new byte[0];
         private readonly IDictionary<string, Func<byte[], IClusterSingletonMessage>> _fromBinaryMap;
 
-        private readonly int _identifier;
-        public override int Identifier { get { return _identifier; } }
+        public override int Identifier { get; }
 
         public ClusterSingletonMessageSerializer(ExtendedActorSystem system) : base(system)
         {
-            _identifier = SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(this.GetType(), system);
+            Identifier = SerializerIdentifierHelper.GetSerializerIdentifierFromConfig(this.GetType(), system);
             _fromBinaryMap = new Dictionary<string, Func<byte[], IClusterSingletonMessage>>
             {
                 {HandOverToMeManifest, _ => HandOverToMe.Instance},
