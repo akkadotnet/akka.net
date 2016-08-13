@@ -32,6 +32,14 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="FluentAssertions, Version=4.6.3.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\FluentAssertions.4.6.3\lib\net45\FluentAssertions.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="FluentAssertions.Core, Version=4.6.3.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\FluentAssertions.4.6.3\lib\net45\FluentAssertions.Core.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Collections.Immutable, Version=1.1.36.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\..\..\packages\System.Collections.Immutable.1.1.36\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
@@ -66,6 +74,7 @@
     <Compile Include="ClusterShardingFailureSpec.cs" />
     <Compile Include="ClusterShardingGracefulShutdownSpec.cs" />
     <Compile Include="ClusterShardingLeavingSpec.cs" />
+    <Compile Include="ClusterShardingMessageSerializerSpec.cs" />
     <Compile Include="ClusterShardingSpec.cs" />
     <Compile Include="LeastShardAllocationStrategySpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -74,6 +83,10 @@
     <ProjectReference Include="..\..\..\core\Akka.Cluster.TestKit\Akka.Cluster.TestKit.csproj">
       <Project>{b32850d2-e9cb-4638-83a4-164907595e56}</Project>
       <Name>Akka.Cluster.TestKit</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\core\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj">
+      <Project>{e636d23c-3432-4aa9-9a5d-5f29d33d3399}</Project>
+      <Name>Akka.Tests.Shared.Internals</Name>
     </ProjectReference>
     <ProjectReference Include="..\Akka.Cluster.Sharding\Akka.Cluster.Sharding.csproj">
       <Project>{a05c31e8-0246-46a1-b3bc-4d6fe7a9aa49}</Project>
