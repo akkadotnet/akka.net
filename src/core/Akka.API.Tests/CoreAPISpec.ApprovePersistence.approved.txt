@@ -528,6 +528,17 @@ namespace Akka.Persistence
         public override int GetHashCode() { }
         public override string ToString() { }
     }
+    public sealed class RecoveryTick
+    {
+        public RecoveryTick(bool snapshot) { }
+        public bool Snapshot { get; }
+    }
+    public sealed class RecoveryTimedOutException : Akka.Actor.AkkaException
+    {
+        public RecoveryTimedOutException() { }
+        public RecoveryTimedOutException(string message, System.Exception cause = null) { }
+        public RecoveryTimedOutException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+    }
     public sealed class ReplayedMessage : Akka.Event.IDeadLetterSuppression, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.ReplayedMessage>
     {
         public readonly Akka.Persistence.IPersistentRepresentation Persistent;
@@ -795,7 +806,8 @@ namespace Akka.Persistence.Fsm
         public void CancelTimer(string name) { }
         public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State GoTo(TState nextStateName) { }
         public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State GoTo(TState nextStateName, TData stateData) { }
-        public void Initialize() { }
+        [System.ObsoleteAttribute("Removed from API, called internally.")]
+        protected internal void Initialize() { }
         public bool IsTimerActive(string name) { }
         protected virtual void LogTermination(Akka.Actor.FSMBase.Reason reason) { }
         public void OnTermination(System.Action<Akka.Actor.FSMBase.StopEvent<TState, TData>> terminationHandler) { }

@@ -90,6 +90,7 @@
     <Compile Include="PersistenceSpec.cs" />
     <Compile Include="PersistentActorBoundedStashingSpec.cs" />
     <Compile Include="PersistentActorDeleteFailureSpec.cs" />
+    <Compile Include="PersistentActorRecoveryTimeoutSpec.cs" />
     <Compile Include="PersistentActorFailureSpec.cs" />
     <Compile Include="PersistentActorJournalProtocolSpec.cs" />
     <Compile Include="PersistentActorSpec.cs" />
