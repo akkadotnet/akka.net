@@ -9,7 +9,7 @@ using System;
 using Akka.Actor;
 using Akka.Configuration;
 
-namespace Akka.Cluster.Tools.Singleton
+namespace Akka.Cluster.Singleton
 {
     public sealed class ClusterSingletonManagerSettings : INoSerializationVerificationNeeded
     {

@@ -13,7 +13,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
 
-namespace Akka.Cluster.Tools.Singleton
+namespace Akka.Cluster.Singleton
 {
     /// <summary>
     /// <para>

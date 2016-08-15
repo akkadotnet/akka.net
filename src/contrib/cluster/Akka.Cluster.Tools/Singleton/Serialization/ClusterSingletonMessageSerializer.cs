@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Serialization;
 
-namespace Akka.Cluster.Tools.Singleton.Serialization
+namespace Akka.Cluster.Singleton.Serialization
 {
     internal class ClusterSingletonMessageSerializer : SerializerWithStringManifest
     {

@@ -14,7 +14,7 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote;
 
-namespace Akka.Cluster.Tools.Singleton
+namespace Akka.Cluster.Singleton
 {
     /// <summary>
     /// Marker interface for remote messages with special serializer.

@@ -10,7 +10,7 @@ using System.Linq;
 using System.Threading;
 using Akka.Actor;
 using Akka.Cluster.Sharding;
-using Akka.Cluster.Tools.Singleton;
+using Akka.Cluster.Singleton;
 using Akka.Configuration;
 using Akka.Util;
 using ClusterSharding.Node.AutomaticJoin;

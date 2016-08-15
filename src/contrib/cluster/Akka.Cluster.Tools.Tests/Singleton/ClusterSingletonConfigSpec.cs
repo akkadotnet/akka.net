@@ -6,12 +6,12 @@
 //-----------------------------------------------------------------------
 
 using System;
-using Akka.Cluster.Tools.Singleton;
+using Akka.Cluster.Singleton;
 using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
 
-namespace Akka.Cluster.Tools.Tests.Singleton
+namespace Akka.Cluster.Tests.Singleton
 {
     public class ClusterSingletonConfigSpec : TestKit.Xunit2.TestKit
     {

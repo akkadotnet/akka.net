@@ -10,7 +10,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 
-namespace Akka.Cluster.Tools.Singleton
+namespace Akka.Cluster.Singleton
 {
     /// <summary>
     /// Notifications of member events that track oldest member is tunneled

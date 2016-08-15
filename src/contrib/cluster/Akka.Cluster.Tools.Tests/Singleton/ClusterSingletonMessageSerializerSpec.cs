@@ -6,13 +6,13 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
-using Akka.Cluster.Tools.Singleton;
-using Akka.Cluster.Tools.Singleton.Serialization;
+using Akka.Cluster.Singleton;
+using Akka.Cluster.Singleton.Serialization;
 using Akka.Serialization;
 using Akka.TestKit;
 using Xunit;
 
-namespace Akka.Cluster.Tools.Tests.Singleton
+namespace Akka.Cluster.Tests.Singleton
 {
     public class ClusterSingletonMessageSerializerSpec : AkkaSpec
     {

@@ -8,7 +8,7 @@
 using System;
 using Akka.Actor;
 using Akka.Cluster.Tools.Client;
-using Akka.Cluster.Tools.Singleton;
+using Akka.Cluster.Singleton;
 using ClusterToolsExample.Shared;
 
 namespace ClusterToolsExample.Node
