@@ -16,7 +16,7 @@ using Akka.Serialization;
 using Google.ProtocolBuffers;
 using Contacts = Akka.Cluster.Client.Serializers.Proto.Contacts;
 
-namespace Akka.Cluster.Tools.Client.Serialization
+namespace Akka.Cluster.Client.Serialization
 {
     internal class ClusterClientMessageSerializer : SerializerWithStringManifest
     {

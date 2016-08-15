@@ -9,14 +9,14 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
-using Akka.Cluster.Tools.Client;
+using Akka.Cluster.Client;
 using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Cluster.Tools.PublishSubscribe.Internal;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using FluentAssertions;
 
-namespace Akka.Cluster.Tools.Tests.MultiNode.Client
+namespace Akka.Cluster.Client.Tests.MultiNode
 {
     public class ClusterClientStopSpecConfig : MultiNodeConfig
     {

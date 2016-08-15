@@ -12,7 +12,7 @@ using System.Linq;
 using System.Threading;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
-using Akka.Cluster.Tools.Client;
+using Akka.Cluster.Client;
 using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Cluster.Tools.PublishSubscribe.Internal;
 using Akka.Configuration;
@@ -21,7 +21,7 @@ using Akka.Remote.Transport;
 using Akka.Util.Internal;
 using FluentAssertions;
 
-namespace Akka.Cluster.Tools.Tests.MultiNode.Client
+namespace Akka.Cluster.Client.Tests.MultiNode
 {
     public class ClusterClientSpecConfig : MultiNodeConfig
     {

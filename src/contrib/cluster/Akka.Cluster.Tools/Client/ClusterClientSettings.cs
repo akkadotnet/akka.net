@@ -13,7 +13,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote;
 
-namespace Akka.Cluster.Tools.Client
+namespace Akka.Cluster.Client
 {
     public sealed class ClusterClientSettings : INoSerializationVerificationNeeded
     {

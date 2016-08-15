@@ -9,13 +9,13 @@ using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
-using Akka.Cluster.Tools.Client;
+using Akka.Cluster.Client;
 using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
 
-namespace Akka.Cluster.Tools.Tests.ClusterClient
+namespace Akka.Cluster.Tests.ClusterClient
 {
     public class ClusterClientConfigSpec : AkkaSpec
     {

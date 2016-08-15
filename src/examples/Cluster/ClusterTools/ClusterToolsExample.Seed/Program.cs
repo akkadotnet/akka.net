@@ -7,7 +7,7 @@
 
 using System;
 using Akka.Actor;
-using Akka.Cluster.Tools.Client;
+using Akka.Cluster.Client;
 using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Cluster.Singleton;
 using ClusterToolsExample.Shared;

@@ -9,7 +9,7 @@ using System;
 using Akka.Actor;
 using Akka.Configuration;
 
-namespace Akka.Cluster.Tools.Client
+namespace Akka.Cluster.Client
 {
     public sealed class ClusterReceptionistSettings : INoSerializationVerificationNeeded
     {

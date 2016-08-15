@@ -1,17 +1,17 @@
 ﻿using System.Collections.Generic;
 using System.Collections.Immutable;
 using Akka.Actor;
-using Akka.Cluster.Tools.Client;
-using Akka.Cluster.Tools.Client.Serialization;
+using Akka.Cluster.Client;
+using Akka.Cluster.Client.Serialization;
 using Akka.Serialization;
 using Akka.TestKit;
 using Xunit;
-using Contact = Akka.Cluster.Tools.Client.ClusterReceptionist.Contacts;
-using GetContacts = Akka.Cluster.Tools.Client.ClusterReceptionist.GetContacts;
-using Heartbeat = Akka.Cluster.Tools.Client.ClusterReceptionist.Heartbeat;
-using HeartbeatRsp = Akka.Cluster.Tools.Client.ClusterReceptionist.HeartbeatRsp;
+using Contact = Akka.Cluster.Client.ClusterReceptionist.Contacts;
+using GetContacts = Akka.Cluster.Client.ClusterReceptionist.GetContacts;
+using Heartbeat = Akka.Cluster.Client.ClusterReceptionist.Heartbeat;
+using HeartbeatRsp = Akka.Cluster.Client.ClusterReceptionist.HeartbeatRsp;
 
-namespace Akka.Cluster.Tools.Tests.ClusterClient
+namespace Akka.Cluster.Tests.ClusterClient
 {
     public class ClusterClientMessageSerializerSpec : AkkaSpec
     {
