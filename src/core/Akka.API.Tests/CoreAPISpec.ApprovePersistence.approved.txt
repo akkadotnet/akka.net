@@ -62,6 +62,24 @@ namespace Akka.Persistence
         public Akka.Persistence.AtLeastOnceDeliverySnapshot GetDeliverySnapshot() { }
         public void OnReplaySuccess() { }
         public void SetDeliverySnapshot(Akka.Persistence.AtLeastOnceDeliverySnapshot snapshot) { }
+        public sealed class Delivery : System.IEquatable<Akka.Persistence.AtLeastOnceDeliverySemantic.Delivery>
+        {
+            public readonly int Attempt;
+            public readonly Akka.Actor.ActorPath Destination;
+            public readonly object Message;
+            public readonly System.DateTime Timestamp;
+            public Delivery(Akka.Actor.ActorPath destination, object message, System.DateTime timestamp, int attempt) { }
+            public bool Equals(Akka.Persistence.AtLeastOnceDeliverySemantic.Delivery other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+            public Akka.Persistence.AtLeastOnceDeliverySemantic.Delivery IncrementedCopy() { }
+            public override string ToString() { }
+        }
+        public sealed class RedeliveryTick
+        {
+            public static readonly Akka.Persistence.AtLeastOnceDeliverySemantic.RedeliveryTick Instance;
+            public override bool Equals(object obj) { }
+        }
     }
     public sealed class AtLeastOnceDeliverySnapshot : Akka.Persistence.Serialization.IMessage, System.IEquatable<Akka.Persistence.AtLeastOnceDeliverySnapshot>
     {
