@@ -26,6 +26,7 @@ src\.nuget\NuGet.exe update -self
 
 src\.nuget\NuGet.exe install FAKE -ConfigFile src\.nuget\Nuget.Config -OutputDirectory src\packages -ExcludeVersion -Version 4.16.1
 
+src\.nuget\NuGet.exe install NUnit.Console -ConfigFile src\.nuget\Nuget.Config -OutputDirectory src\packages\FAKE -ExcludeVersion -Version 3.2.1
 src\.nuget\NuGet.exe install xunit.runner.console -ConfigFile src\.nuget\Nuget.Config -OutputDirectory src\packages\FAKE -ExcludeVersion -Version 2.0.0
 src\.nuget\NuGet.exe install NBench.Runner -OutputDirectory src\packages -ExcludeVersion -Version 0.3.1
 src\.nuget\NuGet.exe install Microsoft.SourceBrowser -OutputDirectory src\packages -ExcludeVersion
