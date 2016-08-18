@@ -269,6 +269,9 @@ Target "RunTests" <| fun _ ->
 
     let nunitTestAssemblies = Seq.filter filterPlatformSpecificAssemblies (!! "src/**/bin/Release/Akka.Streams.Tests.TCK.dll")
 
+    // Debug output
+    xunitTestAssemblies |> Seq.iter (printfn "Executing: %s")
+
     mkdir testOutput
    
     let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/FAKE/xunit.runner.console*/tools"
