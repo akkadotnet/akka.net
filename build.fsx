@@ -275,17 +275,13 @@ Target "RunTests" <| fun _ ->
     let nunitToolPath = findToolInSubPath "nunit3-console.exe" "src/packages/FAKE/NUnit.ConsoleRunner/tools"
 
     printfn "Using XUnit runner: %s" xunitToolPath
-    xUnit2
-        (fun p -> { p with XmlOutputPath = Some (testOutput @@ @"\XUnitTestResults.xml"); HtmlOutputPath = Some (testOutput @@ @"\XUnitTestResults.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization; NoAppDomain = true; MaxThreads = CollectionConcurrencyMode.MaxThreads 200 })
+    let runSingleAssembly assembly =
+        let assemblyName = Path.GetFileNameWithoutExtension(assembly)
+        xUnit2
+            (fun p -> { p with XmlOutputPath = Some (testOutput @@ (assemblyName + "_xunit.xml")); HtmlOutputPath = Some (testOutput @@ (assemblyName + "_xunit.html")); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization; }) 
+            (Seq.singleton assembly)
 
-        xunitTestAssemblies
-//    let runSingleAssembly assembly =
-//        let assemblyName = Path.GetFileNameWithoutExtension(assembly)
-//        xUnit2
-//            (fun p -> { p with XmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.xml"); HtmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization }) 
-//            (Seq.singleton assembly)
-
-    //xunitTestAssemblies |> Seq.iter (runSingleAssembly)
+    xunitTestAssemblies |> Seq.iter (runSingleAssembly)
     
     let runNunitSingleAssembly assembly = 
         let assemblyName = Path.GetFileNameWithoutExtension(assembly)
