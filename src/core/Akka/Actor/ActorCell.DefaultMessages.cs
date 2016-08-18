@@ -310,6 +310,7 @@ namespace Akka.Actor
             CurrentMessage = m.Message;
             if (m.Exception != null)
             {
+                Resume(m.Exception);
                 HandleInvokeFailure(m.Exception);
                 return;
             }
