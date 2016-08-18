@@ -157,7 +157,7 @@ Target "AzureDocsDeploy" (fun _ ->
             pushToAzure docDir azureUrl "stable" azureKey 3
             pushToAzure docDir azureUrl release.NugetVersion azureKey 3
     if(not canPush) then
-        printfn "Missing required paraments to push docs to Azure. Run build HelpDocs to find out!"
+        printfn "Missing required parameters to push docs to Azure. Run build HelpDocs to find out!"
             
 )
 
@@ -248,6 +248,7 @@ open Fake.EnvironmentHelper
 let filterPlatformSpecificAssemblies (assembly:string) =
     match assembly with
     | assembly when (assembly.Contains("Sqlite") && isMono) -> false
+    | assembly when (assembly.Contains(".API") && isMono) -> false
     | _ -> true
 
 //--------------------------------------------------------------------------------
