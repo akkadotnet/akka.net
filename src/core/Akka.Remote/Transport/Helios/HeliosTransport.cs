@@ -73,6 +73,8 @@ namespace Akka.Remote.Transport.Helios
 
         }
 
+        private static readonly bool IsMono = Type.GetType("Mono.Runtime") != null;
+
         private void Init()
         {
             //TransportMode
