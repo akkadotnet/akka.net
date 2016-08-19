@@ -116,12 +116,6 @@ Target "Build" <| fun _ ->
     |> MSBuildRelease "" "Rebuild"
     |> ignore
 
-Target "BuildMono" <| fun _ ->
-
-    !!"src/Akka.sln"
-    |> MSBuild "" "Rebuild" [("Configuration","Release Mono")]
-    |> ignore
-
 //--------------------------------------------------------------------------------
 // Build the docs
 Target "Docs" <| fun _ ->
