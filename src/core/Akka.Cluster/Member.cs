@@ -120,7 +120,7 @@ namespace Akka.Cluster
         /// <summary>
         ///  `Address` ordering type class, sorts addresses by host and port.
         /// </summary>
-        internal static readonly AddressComparer AddressOrdering = new AddressComparer();
+        public static readonly IComparer<Address> AddressOrdering = new AddressComparer();
         internal class AddressComparer : IComparer<Address>
         {
             public int Compare(Address x, Address y)
@@ -254,7 +254,7 @@ namespace Akka.Cluster
     /// The `uid` is needed to be able to distinguish different
     /// incarnations of a member with same hostname and port.
     /// </summary>
-    public class UniqueAddress : IComparable<UniqueAddress>
+    public class UniqueAddress : IComparable<UniqueAddress>, IEquatable<UniqueAddress>
     {
         public Address Address { get; }
 
@@ -266,12 +266,15 @@ namespace Akka.Cluster
             Address = address;
         }
 
-        public override bool Equals(object obj)
+        public bool Equals(UniqueAddress other)
         {
-            var u = obj as UniqueAddress;
-            if (u == null) return false;
-            return Uid.Equals(u.Uid) && Address.Equals(u.Address);
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Uid == other.Uid && Address.Equals(other.Address);
         }
+
+        public override bool Equals(object obj) => obj is UniqueAddress && Equals((UniqueAddress) obj);
 
         public override int GetHashCode()
         {
@@ -288,10 +291,7 @@ namespace Akka.Cluster
             return result;
         }
 
-        public override string ToString()
-        {
-            return string.Format("UniqueAddress: ({0}, {1})", Address, Uid);
-        }
+        public override string ToString() => $"UniqueAddress: ({Address}, {Uid})";
 
         #region operator overloads
 
