@@ -20,7 +20,6 @@ namespace Akka.Remote.TestKit.Tests
             akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
             akka.actor.debug.fsm = on
             akka.actor.debug.lifecycle = on
-			akka.remote.helios.tcp.port = 0
         ";
 
         public ControllerSpec()
@@ -31,7 +30,7 @@ namespace Akka.Remote.TestKit.Tests
         private readonly RoleName A = new RoleName("a");
         private readonly RoleName B = new RoleName("b");
 
-		[Fact()]
+        [Fact]
         public void Controller_must_publish_its_nodes()
         {
             var c = Sys.ActorOf(Props.Create(() => new Controller(1, new IPEndPoint(IPAddress.Loopback, 0))));
