@@ -392,7 +392,13 @@ namespace Akka.Remote.TestKit
 
         protected override void PostStop()
         {
-            RemoteConnection.Shutdown(_connection);
+			try{
+				RemoteConnection.Shutdown(_connection);
+				RemoteConnection.ReleaseAll ().Wait (_settings.ConnectTimeout);
+			}
+			catch(Exception ex){
+				_log.Warning ("Exception thrown while terminating RemoteConnection. Message: {0}; StackTrace: {1}", ex.Message, ex.StackTrace);
+			}            
         }
     }
 }

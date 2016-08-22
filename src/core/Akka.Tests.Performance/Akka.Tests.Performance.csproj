@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -30,17 +30,15 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="NBench, Version=0.3.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\NBench.0.3.0\lib\net45\NBench.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="NBench.PerformanceCounters, Version=0.3.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\NBench.PerformanceCounters.0.3.0\lib\net45\NBench.PerformanceCounters.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="NBench, Version=0.3.0.0, Culture=neutral, PublicKeyToken=null">
+      <HintPath>..\..\packages\NBench.0.3.0\lib\net45\NBench.dll</HintPath>
+    </Reference>
+    <Reference Include="NBench.PerformanceCounters, Version=0.3.0.0, Culture=neutral, PublicKeyToken=null">
+      <HintPath>..\..\packages\NBench.PerformanceCounters.0.3.0\lib\net45\NBench.PerformanceCounters.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Actor\ActorMemoryFootprintSpec.cs" />
@@ -66,11 +64,11 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj">
-      <Project>{0d3cbad0-bbdb-43e5-afc4-ed1d3ecdc224}</Project>
+      <Project>{0D3CBAD0-BBDB-43E5-AFC4-ED1D3ECDC224}</Project>
       <Name>Akka.TestKit</Name>
     </ProjectReference>
     <ProjectReference Include="..\Akka\Akka.csproj">
-      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
+      <Project>{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}</Project>
       <Name>Akka</Name>
     </ProjectReference>
   </ItemGroup>

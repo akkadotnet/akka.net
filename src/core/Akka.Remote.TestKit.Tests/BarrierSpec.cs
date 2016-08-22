@@ -73,6 +73,7 @@ namespace Akka.Remote.TestKit.Tests
             akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
             akka.actor.debug.fsm = on
             akka.actor.debug.lifecycle = on
+			akka.remote.helios.tcp.port = 0
         ";
 
         public BarrierSpec() : base(Config)
