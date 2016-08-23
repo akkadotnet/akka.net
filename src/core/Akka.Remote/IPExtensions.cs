@@ -15,7 +15,7 @@ namespace Akka.Remote
     /// <summary>
     /// Used primarily for Mono support for IP type mapping
     /// </summary>
-    public static class IPExtensions
+    public static class IpExtensions
     {
         internal static object GetInstanceField(Type type, object instance, string fieldName)
         {

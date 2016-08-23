@@ -8,6 +8,7 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
+using Akka.Remote;
 using Akka.Actor;
 
 namespace Akka.Remote.Transport.AkkaIO
