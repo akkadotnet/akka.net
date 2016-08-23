@@ -22,7 +22,7 @@ namespace Akka.Remote.Transport.AkkaIO
                 return new Address(AkkaIOTransport.Protocal, system.Name, dns.Host, dns.Port);
             var ip = endpoint as IPEndPoint;
             if (ip != null)
-                return new Address(AkkaIOTransport.Protocal, system.Name, ip.Address.MapToIPv4().ToString(), ip.Port);
+                return new Address(AkkaIOTransport.Protocal, system.Name, IpExtensions.MapToIPv4(ip.Address).ToString(), ip.Port);
             throw new ArgumentException("endpoint");
         }
 
