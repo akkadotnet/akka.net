@@ -565,6 +565,8 @@ namespace Akka.Dispatch
     /// <summary>
     /// Priority mailbox base class; unbounded mailbox that allows for prioritization of its contents.
     /// Extend this class and implement the <see cref="PriorityGenerator"/> method with your own prioritization.
+    /// The value returned by the <see cref="PriorityGenerator"/> method will be used to order the message in the mailbox.
+    /// Lower values will be delivered first. Messages ordered by the same number will remain in delivery order.
     /// </summary>
     public abstract class UnboundedPriorityMailbox : MailboxType, IProducesMessageQueue<UnboundedPriorityMessageQueue>
     {
