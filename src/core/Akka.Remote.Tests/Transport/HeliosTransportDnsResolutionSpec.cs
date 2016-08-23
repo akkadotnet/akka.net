@@ -128,11 +128,15 @@ namespace Akka.Remote.Tests.Transport
         }
 
         [Property()]
-        public Property HeliosTransport_Should_Resolve_DNS(EndPoint inbound, EndPoint outbound, bool dnsIpv6, bool enforceIpFamily, bool monoRuntime)
+        public Property HeliosTransport_Should_Resolve_DNS(EndPoint inbound, EndPoint outbound, bool dnsIpv6, bool enforceIpFamily)
         {
             // TODO: Mono does not support IPV6 Uris correctly https://bugzilla.xamarin.com/show_bug.cgi?id=43649 (Aaronontheweb 8/22/2016)
             if (HeliosTransportSettings.IsMono)
+            {
                 enforceIpFamily = true;
+                dnsIpv6 = false;
+            }
+
 
             if (IsAnyIp(inbound) || IsAnyIp(outbound)) return true.Label("Can't connect directly to an ANY address");
             try
@@ -211,6 +215,9 @@ namespace Akka.Remote.Tests.Transport
             // TODO: Mono does not support IPV6 Uris correctly https://bugzilla.xamarin.com/show_bug.cgi?id=43649 (Aaronontheweb 8/22/2016)
             if (HeliosTransportSettings.IsMono)
                 enforceIpFamily = true;
+            if (HeliosTransportSettings.IsMono &&
+                (inbound.AddressFamily == AddressFamily.InterNetworkV6 ||
+                (outbound.AddressFamily == AddressFamily.InterNetworkV6))) return true.Label("Mono DNS does not support IPV6 as of 4.4*");
 
             if (dnsUseIpv6 &&
                 (inbound.AddressFamily == AddressFamily.InterNetwork ||
@@ -218,6 +225,7 @@ namespace Akka.Remote.Tests.Transport
             if (!dnsUseIpv6 &&
                 (inbound.AddressFamily == AddressFamily.InterNetworkV6 ||
                  (outbound.AddressFamily == AddressFamily.InterNetworkV6))) return true.Label("Need to apply DNS resolution and IP stack verison consistently.");
+
 
             try
             {
