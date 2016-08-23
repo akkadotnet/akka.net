@@ -215,6 +215,7 @@ namespace Akka.Remote.Tests.Transport
             // TODO: Mono does not support IPV6 Uris correctly https://bugzilla.xamarin.com/show_bug.cgi?id=43649 (Aaronontheweb 8/22/2016)
             if (HeliosTransportSettings.IsMono)
                 enforceIpFamily = true;
+            if(HeliosTransportSettings.IsMono && dnsUseIpv6) return true.Label("Mono DNS does not support IPV6 as of 4.4*");
             if (HeliosTransportSettings.IsMono &&
                 (inbound.AddressFamily == AddressFamily.InterNetworkV6 ||
                 (outbound.AddressFamily == AddressFamily.InterNetworkV6))) return true.Label("Mono DNS does not support IPV6 as of 4.4*");
