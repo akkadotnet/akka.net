@@ -974,7 +974,7 @@ namespace Akka.Actor
     {
         Akka.Actor.Directive Decide(System.Exception cause);
     }
-    public sealed class Identify : Akka.Actor.IAutoReceivedMessage, Akka.Actor.INoSerializationVerificationNeeded
+    public sealed class Identify : Akka.Actor.IAutoReceivedMessage, Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.INotInfluenceReceiveTimeout
     {
         public Identify(object messageId) { }
         public object MessageId { get; }

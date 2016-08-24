@@ -39,7 +39,7 @@ namespace Akka.Actor
     /// <summary>
     /// Request to an <see cref="ICanTell"/> to get back the identity of the underlying actors.
     /// </summary>
-    public sealed class Identify : IAutoReceivedMessage
+    public sealed class Identify : IAutoReceivedMessage, INotInfluenceReceiveTimeout
     {
         public Identify(object messageId)
         {
@@ -49,7 +49,7 @@ namespace Akka.Actor
         /// <summary>
         /// A correlating ID used to distinguish multiple <see cref="Identify"/> requests to the same receiver.
         /// </summary>
-        public object MessageId { get; private set; }
+        public object MessageId { get; }
 
         public override string ToString()
         {
