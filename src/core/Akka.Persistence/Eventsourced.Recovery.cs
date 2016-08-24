@@ -244,8 +244,7 @@ namespace Akka.Persistence
                 _eventBatch = new LinkedList<IPersistentEnvelope>();
             }
 
-            if (_journalBatch.Count > 0)
-                FlushJournalBatch();
+            FlushJournalBatch();
         }
 
         /// <summary>
@@ -360,8 +359,7 @@ namespace Akka.Persistence
             else if (message is WriteMessagesSuccessful)
             {
                 _isWriteInProgress = false;
-                if (_journalBatch.Count > 0)
-                    FlushJournalBatch();
+                FlushJournalBatch();
             }
             else if (message is WriteMessagesFailed)
             {
