@@ -16,10 +16,11 @@ namespace Akka.Persistence.Sqlite.Journal
         public SqliteQueryExecutor(QueryConfiguration configuration, Akka.Serialization.Serialization serialization, ITimestampProvider timestampProvider) 
             : base(configuration, serialization, timestampProvider)
         {
-            ByTagSql = base.ByTagSql + " LIMIT @Take OFFSET @Skip";
+            ByTagSql = base.ByTagSql + " LIMIT @Take";
 
             CreateEventsJournalSql = $@"
                 CREATE TABLE IF NOT EXISTS {configuration.FullJournalTableName} (
+                    {configuration.OrderingColumnName} INTEGER PRIMARY KEY NOT NULL,
                     {configuration.PersistenceIdColumnName} VARCHAR(255) NOT NULL,
                     {configuration.SequenceNrColumnName} INTEGER(8) NOT NULL,
                     {configuration.IsDeletedColumnName} INTEGER(1) NOT NULL,
@@ -27,7 +28,7 @@ namespace Akka.Persistence.Sqlite.Journal
                     {configuration.TimestampColumnName} INTEGER NOT NULL,
                     {configuration.PayloadColumnName} BLOB NOT NULL,
                     {configuration.TagsColumnName} VARCHAR(2000) NULL,
-                    PRIMARY KEY ({configuration.PersistenceIdColumnName}, {configuration.SequenceNrColumnName})
+                    UNIQUE ({configuration.PersistenceIdColumnName}, {configuration.SequenceNrColumnName})
                 );";
 
             CreateMetaTableSql = $@"

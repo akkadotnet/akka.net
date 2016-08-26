@@ -6,12 +6,18 @@
 //-----------------------------------------------------------------------
 
 using System;
+using Akka.Actor;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.Sqlite.Tests
 {
     public class SqliteConfigSpec : Akka.TestKit.Xunit2.TestKit
     {
+        public SqliteConfigSpec(ITestOutputHelper output) : base(output: output)
+        {
+        }
+
         [Fact]
         public void Should_sqlite_journal_has_default_config()
         {

@@ -50,11 +50,11 @@ SQLite persistence plugin defines a default table schema used for both journal a
 
 **EventJournal table**:
 
-    +----------------+-------------+------------+----------------+------------+---------+
-    | persistence_id | sequence_nr | is_deleted |    manifest    | timestamp  | payload |
-    +----------------+-------------+------------+----------------+------------+---------+
-    |  varchar(255)  | integer(8)  | integer(1) |  varchar(255)  | integer(8) |   blob  |
-    +----------------+-------------+------------+----------------+------------+---------+
+    +------------+----------------+-------------+------------+----------------+------------+---------+
+    |  ordering  | persistence_id | sequence_nr | is_deleted |    manifest    | timestamp  | payload |
+    +------------+----------------+-------------+------------+----------------+------------+---------+
+    | integer(8) |  varchar(255)  | integer(8)  | integer(1) |  varchar(255)  | integer(8) |   blob  |
+    +------------+----------------+-------------+------------+----------------+------------+---------+
 
 **SnapshotStore table**:
 

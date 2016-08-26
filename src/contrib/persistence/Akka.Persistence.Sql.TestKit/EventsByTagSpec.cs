@@ -58,17 +58,17 @@ namespace Akka.Persistence.Sql.TestKit
             var greenSrc = _queries.CurrentEventsByTag("green", offset: 0);
             var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), _materializer);
             probe.Request(2)
-                .ExpectNext(new EventEnvelope(1, "a", 2, "a green apple"))
-                .ExpectNext(new EventEnvelope(2, "a", 3, "a green banana"));
+                .ExpectNext(new EventEnvelope(2, "a", 2, "a green apple"))
+                .ExpectNext(new EventEnvelope(4, "a", 3, "a green banana"));
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
             probe.Request(2)
-                .ExpectNext(new EventEnvelope(3, "b", 2, "a green leaf"))
+                .ExpectNext(new EventEnvelope(5, "b", 2, "a green leaf"))
                 .ExpectComplete();
 
             var blackSrc = _queries.CurrentEventsByTag("black", offset: 0);
             probe = blackSrc.RunWith(this.SinkProbe<EventEnvelope>(), _materializer);
             probe.Request(5)
-                .ExpectNext(new EventEnvelope(1, "b", 1, "a black car"))
+                .ExpectNext(new EventEnvelope(3, "b", 1, "a black car"))
                 .ExpectComplete();
         }
 
@@ -81,8 +81,8 @@ namespace Akka.Persistence.Sql.TestKit
             var greenSrc = _queries.CurrentEventsByTag("green", offset: 0);
             var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), _materializer);
             probe.Request(2)
-                .ExpectNext(new EventEnvelope(1, "a", 2, "a green apple"))
-                .ExpectNext(new EventEnvelope(2, "a", 3, "a green banana"))
+                .ExpectNext(new EventEnvelope(2, "a", 2, "a green apple"))
+                .ExpectNext(new EventEnvelope(4, "a", 3, "a green banana"))
                 .ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             c.Tell("a green cucumber");
@@ -90,7 +90,7 @@ namespace Akka.Persistence.Sql.TestKit
 
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
             probe.Request(5)
-                .ExpectNext(new EventEnvelope(3, "b", 2, "a green leaf"))
+                .ExpectNext(new EventEnvelope(5, "b", 2, "a green leaf"))
                 .ExpectComplete();
         }
 
@@ -102,9 +102,9 @@ namespace Akka.Persistence.Sql.TestKit
             var greenSrc = _queries.CurrentEventsByTag("green", offset: 2);
             var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), _materializer);
             probe.Request(10)
-                .ExpectNext(new EventEnvelope(2, "a", 3, "a green banana"))
-                .ExpectNext(new EventEnvelope(3, "b", 2, "a green leaf"))
-                .ExpectNext(new EventEnvelope(4, "c", 1, "a green cucumber"))
+                .ExpectNext(new EventEnvelope(4, "a", 3, "a green banana"))
+                .ExpectNext(new EventEnvelope(5, "b", 2, "a green leaf"))
+                .ExpectNext(new EventEnvelope(6, "c", 1, "a green cucumber"))
                 .ExpectComplete();
         }
 
@@ -118,7 +118,7 @@ namespace Akka.Persistence.Sql.TestKit
             var blackSrc = _queries.EventsByTag("black", offset: 0);
             var probe = blackSrc.RunWith(this.SinkProbe<EventEnvelope>(), _materializer);
             probe.Request(2)
-                .ExpectNext(new EventEnvelope(1, "b", 1, "a black car"))
+                .ExpectNext(new EventEnvelope(3, "b", 1, "a black car"))
                 .ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             d.Tell("a black dog");
@@ -126,10 +126,10 @@ namespace Akka.Persistence.Sql.TestKit
             d.Tell("a black night");
             ExpectMsg("a black night-done");
 
-            probe.ExpectNext(new EventEnvelope(2, "d", 1, "a black dog"))
+            probe.ExpectNext(new EventEnvelope(7, "d", 1, "a black dog"))
                 .ExpectNoMsg(TimeSpan.FromMilliseconds(100));
             probe.Request(10)
-                .ExpectNext(new EventEnvelope(3, "d", 2, "a black night"));
+                .ExpectNext(new EventEnvelope(8, "d", 2, "a black night"));
         }
 
         [Fact]
@@ -137,12 +137,12 @@ namespace Akka.Persistence.Sql.TestKit
         {
             Sql_live_query_EventsByTag_should_find_new_events();
 
-            var greenSrc = _queries.EventsByTag("green", offset: 2L);
+            var greenSrc = _queries.EventsByTag("green", offset: 2);
             var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), _materializer);
             probe.Request(10)
-                .ExpectNext(new EventEnvelope(2L, "a", 3L, "a green banana"))
-                .ExpectNext(new EventEnvelope(3L, "b", 2L, "a green leaf"))
-                .ExpectNext(new EventEnvelope(4L, "c", 1L, "a green cucumber"))
+                .ExpectNext(new EventEnvelope(4, "a", 3L, "a green banana"))
+                .ExpectNext(new EventEnvelope(5, "b", 2L, "a green leaf"))
+                .ExpectNext(new EventEnvelope(6, "c", 1L, "a green cucumber"))
                 .ExpectNoMsg(TimeSpan.FromMilliseconds(100));
         }
 
