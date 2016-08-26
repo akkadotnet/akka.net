@@ -955,7 +955,7 @@ namespace Akka.Persistence.Fsm
                 var events = new List<TEvent>();
                 events.AddRange(DomainEvents);
                 events.Add(e);
-                return Copy(null, null, null, new ArrayLinearSeq<TEvent>(DomainEvents.Concat(events).ToArray()));
+                return Copy(null, null, null, new ArrayLinearSeq<TEvent>(events.ToArray()));
             }
 
 
