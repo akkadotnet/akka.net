@@ -156,7 +156,7 @@ namespace Akka.Streams.Implementation.IO
 
             try
             {
-                _chan?.Close();
+                _chan?.Dispose();
             }
             catch (Exception ex)
             {

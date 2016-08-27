@@ -425,7 +425,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var ex = new SystemException();
+                var ex = new Exception();
                 Source.From(Enumerable.Range(1, 5))
                     .Throttle(2, TimeSpan.FromMilliseconds(200), 0, _ => { throw ex; }, ThrottleMode.Shaping)
                     .Throttle(1, TimeSpan.FromMilliseconds(100), 5, ThrottleMode.Enforcing)

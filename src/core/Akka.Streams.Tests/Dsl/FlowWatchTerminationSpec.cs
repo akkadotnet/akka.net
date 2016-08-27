@@ -69,13 +69,13 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var ex = new SystemException("Stream failed.");
+                var ex = new Exception("Stream failed.");
                 var t = this.SourceProbe<int>().WatchTermination(Keep.Both).To(Sink.Ignore<int>()).Run(Materializer);
                 var p = t.Item1;
                 var future = t.Item2;
                 p.SendNext(1);
                 p.SendError(ex);
-                future.Invoking(f => f.Wait()).ShouldThrow<SystemException>().WithMessage("Stream failed.");
+                future.Invoking(f => f.Wait()).ShouldThrow<Exception>().WithMessage("Stream failed.");
             }, Materializer);
         }
 

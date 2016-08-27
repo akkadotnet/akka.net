@@ -204,7 +204,7 @@ namespace Akka.Streams.Tests.Dsl
                 pSub.SendNext(17);
                 c.ExpectNext(1, TimeSpan.FromMilliseconds(100));
                 // fail will terminate despite of non empty internal buffer
-                pSub.SendError(new SystemException());
+                pSub.SendError(new Exception());
             }, Materializer);
         }
     }

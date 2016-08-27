@@ -41,7 +41,7 @@ namespace Akka.Streams.Tests.Actor
         [Fact]
         public void ActorSubscriber_should_signal_error()
         {
-            var e = new SystemException("simulated");
+            var e = new Exception("simulated");
             var actorRef = Source.FromEnumerator<int>(() => { throw e; })
                     .RunWith(Sink.ActorSubscriber<int>(ManualSubscriber.Props(TestActor)), Sys.Materializer());
             actorRef.Tell("ready");
@@ -161,7 +161,7 @@ namespace Akka.Streams.Tests.Actor
                     if (s.Equals("ready"))
                         Request(2);
                     else if (s.Equals("boom"))
-                        throw new SystemException(s);
+                        throw new Exception(s);
                     else if (s.Equals("requestAndCancel"))
                     {
                         Request(1);

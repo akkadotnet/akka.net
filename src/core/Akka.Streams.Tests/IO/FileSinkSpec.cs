@@ -215,7 +215,7 @@ namespace Akka.Streams.Tests.IO
             if (!create)
                 targetFile.Delete();
             else
-                targetFile.Create().Close();
+                targetFile.Create().Dispose();
 
             try
             {
@@ -233,7 +233,7 @@ namespace Akka.Streams.Tests.IO
         {
             var s = f.OpenText();
             var cont = s.ReadToEnd();
-            s.Close();
+            s.Dispose();
             cont.Should().Be(contents);
         }
     }

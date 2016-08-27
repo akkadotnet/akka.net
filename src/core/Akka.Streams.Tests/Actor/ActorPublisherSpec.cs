@@ -450,11 +450,11 @@ my-dispatcher1 {
             return message.Match()
                 .With<Request>(request => _probe.Tell(new TotalDemand(TotalDemand)))
                 .With<Produce>(produce => OnNext(produce.Elem))
-                .With<Err>(err => OnError(new SystemException(err.Reason)))
-                .With<ErrThenStop>(err => OnErrorThenStop(new SystemException(err.Reason)))
+                .With<Err>(err => OnError(new Exception(err.Reason)))
+                .With<ErrThenStop>(err => OnErrorThenStop(new Exception(err.Reason)))
                 .With<Complete>(OnComplete)
                 .With<CompleteThenStop>(OnCompleteThenStop)
-                .With<Boom>(() => { throw new SystemException("boom"); })
+                .With<Boom>(() => { throw new Exception("boom"); })
                 .With<ThreadName>(()=>_probe.Tell(Context.Props.Dispatcher /*Thread.CurrentThread.Name*/)) // TODO fix me when thread name is set by dispatcher
                 .WasHandled;
         }
