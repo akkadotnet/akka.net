@@ -334,7 +334,7 @@ namespace Akka.Configuration
         public virtual IList<string> GetStringList(string path)
         {
             HoconValue value = GetNode(path);
-            if (value == null) return new string[0];
+            if (value == null) return new List<string>();
             return value.GetStringList();
         }
 
