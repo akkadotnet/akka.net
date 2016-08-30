@@ -101,7 +101,7 @@ namespace Akka.Persistence.Query.Sql
                         sequenceNr: replayed.Persistent.SequenceNr,
                         @event: replayed.Persistent.Payload));
 
-                    CurrentOffset = replayed.Offset + 1;
+                    CurrentOffset = replayed.Offset;
                     Buffer.DeliverBuffer(TotalDemand);
                 })
                 .With<RecoverySuccess>(success =>
