@@ -81,6 +81,7 @@
     <Compile Include="ClusterRemoteWatcher.cs" />
     <Compile Include="ClusterSettings.cs" />
     <Compile Include="Configuration\ClusterConfigFactory.cs" />
+    <Compile Include="DowningProvider.cs" />
     <Compile Include="Gossip.cs" />
     <Compile Include="Member.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

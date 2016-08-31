@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
@@ -77,6 +78,9 @@ namespace Akka.Cluster
                 system));
 
             _scheduler = CreateScheduler(system);
+
+            // it has to be lazy - otherwise if downing provider will init a cluster itself, it will deadlock
+            _downingProvider = new Lazy<IDowningProvider>(() => Akka.Cluster.DowningProvider.Load(Settings.DowningProviderType, system), LazyThreadSafetyMode.ExecutionAndPublication);
 
             //create supervisor for daemons under path "/system/cluster"
             _clusterDaemons = system.SystemActorOf(Props.Create(() => new ClusterDaemon(Settings)).WithDeploy(Deploy.Local), "cluster");
@@ -316,12 +320,15 @@ namespace Akka.Cluster
 
         public ExtendedActorSystem System { get; }
 
+        private Lazy<IDowningProvider> _downingProvider;
         private readonly ILoggingAdapter _log;
         private readonly ClusterReadView _readView;
         internal ClusterReadView ReadView { get { return _readView; } }
 
         private readonly DefaultFailureDetectorRegistry<Address> _failureDetector;
         public DefaultFailureDetectorRegistry<Address> FailureDetector { get { return _failureDetector; } }
+
+        public IDowningProvider DowningProvider => _downingProvider.Value;
 
         // ========================================================
         // ===================== WORK DAEMONS =====================

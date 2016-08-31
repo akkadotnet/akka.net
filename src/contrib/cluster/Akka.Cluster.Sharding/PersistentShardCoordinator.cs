@@ -216,7 +216,7 @@ namespace Akka.Cluster.Sharding
             TypeName = typeName;
             Settings = settings;
             AllocationStrategy = allocationStrategy;
-            DownRemovalMargin = Cluster.Settings.DownRemovalMargin;
+            DownRemovalMargin = Cluster.DowningProvider.DownRemovalMargin;
 
             JournalPluginId = Settings.JournalPluginId;
             SnapshotPluginId = Settings.SnapshotPluginId;
