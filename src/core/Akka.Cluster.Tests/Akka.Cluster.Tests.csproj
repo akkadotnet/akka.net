@@ -90,6 +90,7 @@
     <Compile Include="ClusterHeartBeatSenderStateSpec.cs" />
     <Compile Include="ClusterSpec.cs" />
     <Compile Include="ClusterSpecBase.cs" />
+    <Compile Include="DowningProviderSpec.cs" />
     <Compile Include="GossipSpec.cs" />
     <Compile Include="HeartbeatNodeRingSpec.cs" />
     <Compile Include="MemberOrderingSpec.cs" />

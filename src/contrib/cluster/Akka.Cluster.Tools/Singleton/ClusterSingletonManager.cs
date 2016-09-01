@@ -303,7 +303,7 @@ namespace Akka.Cluster.Tools.Singleton
             _terminationMessage = terminationMessage;
             _settings = settings;
 
-            _removalMargin = (settings.RemovalMargin <= TimeSpan.Zero) ? _cluster.Settings.DownRemovalMargin : settings.RemovalMargin;
+            _removalMargin = (settings.RemovalMargin <= TimeSpan.Zero) ? _cluster.DowningProvider.DownRemovalMargin : settings.RemovalMargin;
 
             var n = (int)(_removalMargin.TotalMilliseconds / _settings.HandOverRetryInterval.TotalMilliseconds);
 

@@ -743,11 +743,15 @@ namespace Akka.Cluster
         {
             Context.System.EventStream.Subscribe(Self, typeof(QuarantinedEvent));
 
-            // TODO: replace to DowningProvider
-            if (_cluster.Settings.AutoDownUnreachableAfter != null)
-                Context.ActorOf(
-                    AutoDown.Props(_cluster.Settings.AutoDownUnreachableAfter.Value),
-                    "autoDown");
+            if (_cluster.DowningProvider.DowningActorProps != null)
+            {
+                var props = _cluster.DowningProvider.DowningActorProps;
+                var propsWithDispatcher = props.Dispatcher == Deploy.NoDispatcherGiven
+                    ? props.WithDispatcher(Context.Props.Dispatcher)
+                    : props;
+
+                Context.ActorOf(propsWithDispatcher, "downingProvider");
+            }
 
             if (_seedNodes.IsEmpty)
             {
