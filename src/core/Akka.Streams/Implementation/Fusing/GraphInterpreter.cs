@@ -166,7 +166,7 @@ namespace Akka.Streams.Implementation.Fusing
             get
             {
                 if (CurrentInterpreter.Value[0] == null)
-                    throw new ApplicationException("Something went terribly wrong!");
+                    throw new InvalidOperationException("Something went terribly wrong!");
                 return (GraphInterpreter) CurrentInterpreter.Value[0];
             }
         }

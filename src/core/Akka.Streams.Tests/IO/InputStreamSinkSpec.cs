@@ -23,7 +23,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.IO
 {
-    public class InputStreamSinkSpec : AkkaSpec
+    public class InputStreamSinkSpec : TestKit.Tests.AkkaSpec
     {
         private static readonly TimeSpan Timeout = TimeSpan.FromMilliseconds(300);
         private readonly ActorMaterializer _materializer;
@@ -43,7 +43,7 @@ namespace Akka.Streams.Tests.IO
             {
                 var inputStream = Source.Single(_byteString).RunWith(StreamConverters.AsInputStream(), _materializer);
                 var result = ReadN(inputStream, _byteString.Count);
-                inputStream.Close();
+                inputStream.Dispose();
                 result.Item1.Should().Be(_byteString.Count);
                 result.Item2.Should().BeEquivalentTo(_byteString);
 
@@ -74,7 +74,7 @@ namespace Akka.Streams.Tests.IO
                 result.Item1.Should().Be(2);
                 result.Item2.Should().BeEquivalentTo(byteString2.Drop(1));
 
-                inputStream.Close();
+                inputStream.Dispose();
 
             }, _materializer);
         }
@@ -88,7 +88,7 @@ namespace Akka.Streams.Tests.IO
 
                 var arr = new byte[_byteString.Count + 1];
                 inputStream.Read(arr, 0, arr.Length).Should().Be(arr.Length - 1);
-                inputStream.Close();
+                inputStream.Dispose();
                 ByteString.Create(arr).ShouldBeEquivalentTo(_byteString.Concat(ByteString.Create(new byte[] { 0 })));
 
             }, _materializer);
@@ -115,7 +115,7 @@ namespace Akka.Streams.Tests.IO
 
                 probe.SendComplete();
                 inputStream.ReadByte().Should().Be(-1);
-                inputStream.Close();
+                inputStream.Dispose();
 
             }, _materializer);
         }
@@ -132,7 +132,7 @@ namespace Akka.Streams.Tests.IO
                 var inputStream = t.Item2;
 
                 probe.SendNext(_byteString);
-                inputStream.Close();
+                inputStream.Dispose();
                 probe.ExpectCancellation();
 
                 Action block = () => inputStream.Read(new byte[1], 0, 1);
@@ -181,7 +181,7 @@ namespace Akka.Streams.Tests.IO
                     result.Item2.ShouldBeEquivalentTo(expected);
                 }
 
-                inputStream.Close();
+                inputStream.Dispose();
             }, _materializer);
         }
 
@@ -221,7 +221,7 @@ namespace Akka.Streams.Tests.IO
                     r.Item2.ShouldBeEquivalentTo(bytes[i * 2].Concat(bytes[i * 2 + 1]));
                 }
 
-                inputStream.Close();
+                inputStream.Dispose();
             }, _materializer);
         }
 
@@ -246,7 +246,7 @@ namespace Akka.Streams.Tests.IO
                 r2.Item1.Should().Be(5);
                 r2.Item2.ShouldBeEquivalentTo(bytes2.Drop(5));
 
-                inputStream.Close();
+                inputStream.Dispose();
             }, _materializer);
         }
 
@@ -262,7 +262,7 @@ namespace Akka.Streams.Tests.IO
                 r.Item2.ShouldBeEquivalentTo(_byteString);
 
                 inputStream.ReadByte().Should().Be(-1);
-                inputStream.Close();
+                inputStream.Dispose();
             }, _materializer);
         }
 
@@ -275,7 +275,7 @@ namespace Akka.Streams.Tests.IO
                 var t = this.SourceProbe<ByteString>().ToMaterialized(TestSink(sinkProbe), Keep.Both).Run(_materializer);
                 var probe = t.Item1;
                 var inputStream = t.Item2;
-                var ex = new SystemException("Stream failed.");
+                var ex = new Exception("Stream failed.");
 
                 probe.SendNext(_byteString);
                 sinkProbe.ExpectMsg<GraphStageMessages.Push>();
@@ -330,7 +330,7 @@ namespace Akka.Streams.Tests.IO
                 r.Item1.Should().Be(_byteString.Count);
                 r.Item2.ShouldBeEquivalentTo(_byteString);
 
-                inputStream.Close();
+                inputStream.Dispose();
             }, _materializer);
         }
 

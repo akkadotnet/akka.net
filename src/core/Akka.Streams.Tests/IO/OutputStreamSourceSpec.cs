@@ -70,7 +70,7 @@ namespace Akka.Streams.Tests.IO
                 outputStream.Write(_bytesArray, 0, _bytesArray.Length);
                 s.Request(1);
                 probe.ExpectNext(_byteString);
-                outputStream.Close();
+                outputStream.Dispose();
                 probe.ExpectComplete();
             }, _materializer);
         }
@@ -101,7 +101,7 @@ namespace Akka.Streams.Tests.IO
                 ExpectSuccess(f, NotUsed.Instance);
                 probe.ExpectNext(_byteString);
 
-                outputStream.Close();
+                outputStream.Dispose();
                 probe.ExpectComplete();
             }, _materializer);
         }
@@ -135,7 +135,7 @@ namespace Akka.Streams.Tests.IO
                 });
                 ExpectSuccess(f2, NotUsed.Instance);
 
-                outputStream.Close();
+                outputStream.Dispose();
                 probe.ExpectComplete();
 
             }, _materializer);
@@ -170,7 +170,7 @@ namespace Akka.Streams.Tests.IO
                 ExpectSuccess(f, NotUsed.Instance);
                 probe.ExpectNextN(Enumerable.Repeat(_byteString, 17).ToList());
 
-                outputStream.Close();
+                outputStream.Dispose();
                 probe.ExpectComplete();
             }, _materializer);
         }
@@ -187,7 +187,7 @@ namespace Akka.Streams.Tests.IO
                 var probe = t.Item2;
 
                 probe.ExpectSubscription();
-                outputStream.Close();
+                outputStream.Dispose();
                 probe.ExpectComplete();
 
                 outputStream.Invoking(s => s.Write(_bytesArray, 0, _byteString.Count)).ShouldThrow<IOException>();

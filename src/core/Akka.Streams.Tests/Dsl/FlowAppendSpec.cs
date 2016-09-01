@@ -20,7 +20,7 @@ using static Akka.Streams.Tests.Dsl.FlowAppendSpec.River;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class FlowAppendSpec : AkkaSpec
+    public class FlowAppendSpec : TestKit.Tests.AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
 

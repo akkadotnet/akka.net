@@ -118,7 +118,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings,
                 (settings, factory) => ActorMaterializer.Create(factory, settings), ToPublisher, this);
-            var weirdError = new SystemException("weird test exception");
+            var weirdError = new Exception("weird test exception");
             setup.UpstreamSubscription.SendError(weirdError);
             setup.Downstream.ExpectError().Should().Be(weirdError);
         }

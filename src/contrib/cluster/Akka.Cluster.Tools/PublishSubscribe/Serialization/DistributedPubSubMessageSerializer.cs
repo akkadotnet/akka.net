@@ -93,7 +93,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
             using (var gzipStream = new GZipStream(bos, CompressionMode.Compress))
             {
                 message.WriteTo(gzipStream);
-                gzipStream.Close();
+                gzipStream.Dispose();
                 return bos.ToArray();
             }
         }

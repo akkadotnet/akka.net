@@ -118,7 +118,7 @@ namespace Akka.Streams.Dsl
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = false, TimeSpan? idleTimeout = null)
         {
             // DnsEnpoint isn't allowed
-            var ipAddresses = System.Net.Dns.GetHostAddresses(host);
+            var ipAddresses = System.Net.Dns.GetHostAddressesAsync(host).Result;
             if (ipAddresses.Length == 0)
                 throw new ArgumentException($"Couldn't resolve IpAdress for host {host}", nameof(host));
 

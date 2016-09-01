@@ -335,8 +335,9 @@ namespace Akka.Streams.Implementation.IO
         public override void Write(byte[] buffer, int offset, int count)
             => SendData(ByteString.Create(buffer, offset, count));
 
-        public override void Close()
+        protected override void Dispose(bool disposing)
         {
+            base.Dispose(disposing);
             SendMessage(OutputStreamSourceStage.Close.Instance, false);
             _isActive = false;
         }

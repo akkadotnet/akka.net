@@ -246,8 +246,9 @@ namespace Akka.Streams.Implementation.IO
             _readTimeout = readTimeout;
         }
 
-        public override void Close()
+        protected override void Dispose(bool disposing)
         {
+            base.Dispose(disposing);
             ExecuteIfNotClosed(() =>
             {
                 // at this point Subscriber may be already terminated

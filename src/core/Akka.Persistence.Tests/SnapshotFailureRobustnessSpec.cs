@@ -168,7 +168,7 @@ namespace Akka.Persistence.Tests
             {
                 base.DeleteAsync(metadata); // we actually delete it properly, but act as if it failed
                 var promise = new TaskCompletionSource<object>();
-                promise.SetException(new ApplicationException("Failed to delete snapshot for some reason."));
+                promise.SetException(new InvalidOperationException("Failed to delete snapshot for some reason."));
                 return promise.Task;
             }
 
@@ -176,7 +176,7 @@ namespace Akka.Persistence.Tests
             {
                 base.DeleteAsync(persistenceId, criteria); // we actually delete it properly, but act as if it failed
                 var promise = new TaskCompletionSource<object>();
-                promise.SetException(new ApplicationException("Failed to delete snapshot for some reason."));
+                promise.SetException(new InvalidOperationException("Failed to delete snapshot for some reason."));
                 return promise.Task;
             }
         }
