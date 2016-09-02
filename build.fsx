@@ -244,6 +244,7 @@ let filterPlatformSpecificAssemblies (assembly:string) =
     | assembly when (assembly.Contains("Sqlite") && isMono) -> false
     | assembly when (assembly.Contains(".API") && isMono) -> false
     | assembly when (assembly.Contains("Akka.Remote.TestKit.Tests") && isMono) -> false
+    | assembly when (assembly.Contains("Akka.Persistence.TestKit.Tests") && isMono) -> false
     | _ -> true
 
 //--------------------------------------------------------------------------------
