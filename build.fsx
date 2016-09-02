@@ -277,7 +277,7 @@ Target "RunTests" <| fun _ ->
     let runSingleAssembly assembly =
         let assemblyName = Path.GetFileNameWithoutExtension(assembly)
         xUnit2
-            (fun p -> { p with XmlOutputPath = Some (testOutput @@ (assemblyName + "_xunit.xml")); HtmlOutputPath = Some (testOutput @@ (assemblyName + "_xunit.html")); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization; }) 
+            (fun p -> { p with XmlOutputPath = Some (testOutput @@ (assemblyName + "_xunit.xml")); HtmlOutputPath = Some (testOutput @@ (assemblyName + "_xunit.html")); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization; NoAppDomain = true; }) 
             (Seq.singleton assembly)
 
     xunitTestAssemblies |> Seq.iter (runSingleAssembly)
