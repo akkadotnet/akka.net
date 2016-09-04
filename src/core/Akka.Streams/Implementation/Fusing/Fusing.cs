@@ -173,8 +173,10 @@ namespace Akka.Streams.Implementation.Fusing
                             inlets.Add(copyInlet);
                         }
                     }
+                    pos++;
                 }
-                pos++;
+                else
+                    throw new ArgumentException("unexpected module structure");
             }
 
             var outsB2 = new Outlet[insB2.Count];
@@ -211,8 +213,10 @@ namespace Akka.Streams.Implementation.Fusing
                             outlets.Add(copyOutlet);
                         }
                     }
+                    pos++;
                 }
-                pos++;
+                else
+                    throw new ArgumentException("unexpected module structure");
             }
 
             /*
@@ -243,6 +247,8 @@ namespace Akka.Streams.Implementation.Fusing
             outOwnersB3.CopyTo(outOwners, outStart);
 
             var firstModule = group.First();
+            if(!(firstModule is CopiedModule))
+                throw new ArgumentException("unexpected module structure");
             var asyncAttrs = IsAsync((CopiedModule) firstModule) ? new Attributes(Attributes.AsyncBoundary.Instance) : Attributes.None;
             var dispatcher = GetDispatcher(firstModule);
             var dispatcherAttrs = dispatcher == null ? Attributes.None : new Attributes(dispatcher);
@@ -348,7 +354,7 @@ namespace Akka.Streams.Implementation.Fusing
                             // need to add the module so that the structural (internal) wirings can be rewritten as well
                             // but these modules must not be added to any of the groups
                             structInfo.AddModule(copy, new HashSet<IModule>(), inheritedAttributes, indent, x.Shape);
-                            structInfo.RegisterInternal(newShape, indent);
+                            structInfo.RegisterInternals(newShape, indent);
                             return copy;
                         }).ToArray();
 
@@ -635,7 +641,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// Register the outlets of the given Shape as sources for internal connections within imported 
         /// (and not dissolved) GraphModules. See also the comment in addModule where this is partially undone.
         /// </summary>
-        public void RegisterInternal(Shape shape, int indent)
+        public void RegisterInternals(Shape shape, int indent)
         {
             if (Fusing.IsDebug) Fusing.Log(indent, $"registerInternals({string.Join(",", shape.Outlets.Select(Hash))}");
             foreach (var outlet in shape.Outlets)

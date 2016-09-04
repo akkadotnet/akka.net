@@ -9,7 +9,7 @@ using System.Linq;
 using System.Threading;
 using Akka.Actor;
 using Akka.Streams.Dsl;
-using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;

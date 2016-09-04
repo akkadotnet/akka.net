@@ -11,6 +11,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Streams.Implementation;
+using Akka.TestKit;
 using Akka.Util.Internal;
 
 namespace Akka.Streams.TestKit.Tests

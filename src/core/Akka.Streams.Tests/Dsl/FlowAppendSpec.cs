@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using FluentAssertions;
 using Reactive.Streams;
@@ -20,7 +19,7 @@ using static Akka.Streams.Tests.Dsl.FlowAppendSpec.River;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class FlowAppendSpec : TestKit.Tests.AkkaSpec
+    public class FlowAppendSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
 

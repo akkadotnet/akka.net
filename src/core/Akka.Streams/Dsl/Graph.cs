@@ -52,11 +52,10 @@ namespace Akka.Streams.Dsl
                     {
                         if (IsAvailable(outlet))
                         {
-                            if (!IsPending)
-                            {
-                                Push(outlet, Grab(inlet));
-                                TryPull(inlet);
-                            }
+                            // isAvailable(out) implies !pending
+                            // -> grab and push immediately
+                            Push(outlet, Grab(inlet));
+                            TryPull(inlet);
                         }
                         else _pendingQueue.Enqueue(inlet);
                     },

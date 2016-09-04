@@ -9,6 +9,7 @@ using System;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.Util;
+using Akka.Util;
 
 namespace Akka.Streams.Implementation
 {
@@ -20,68 +21,43 @@ namespace Akka.Streams.Implementation
         {
             private const string TimerName = "ThrottleTimer";
             private readonly Throttle<T> _stage;
-            private readonly long _speed;
-            private readonly long _scaledMaximumBurst;
+            private readonly TickTimeTokenBucket _tokenBucket;
+            private readonly bool _enforcing;
 
-            private long _previousTime;
             private bool _willStop;
-            private long _lastTokens;
             private Option<T> _currentElement;
 
             public Logic(Throttle<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                _lastTokens = stage._maximumBurst;
-                _previousTime = Now;
-                _speed = (long)(((double)stage._cost/stage._per.Ticks)*1073741824);
-                _scaledMaximumBurst = Scale(_stage._maximumBurst);
+                _tokenBucket = new TickTimeTokenBucket(stage._maximumBurst, stage._ticksBetweenTokens);
+                _enforcing = stage._mode == ThrottleMode.Enforcing;
 
-                SetHandler(_stage.Inlet, onPush: () =>
-                {
-                    var element = Grab(_stage.Inlet);
-                    var elementCost = Scale(_stage._costCalculation(element));
+                SetHandler(_stage.Inlet,
+                    onPush: () =>
+                    {
+                        var element = Grab(stage.Inlet);
+                        var cost = stage._costCalculation(element);
+                        var delayTicks = _tokenBucket.Offer(cost);
 
-                    if (_lastTokens >= elementCost)
-                    {
-                        _lastTokens -= elementCost;
-                        Push(_stage.Outlet, element);
-                    }
-                    else
-                    {
-                        var currentTime = Now;
-                        var currentTokens = Math.Min((currentTime - _previousTime)*_speed + _lastTokens,
-                            _scaledMaximumBurst);
-                        if (currentTokens < elementCost)
-                        {
-                            switch (_stage._mode)
-                            {
-                                case ThrottleMode.Shaping:
-                                    _currentElement = element;
-                                    var waitTime = (elementCost - currentTokens)/_speed;
-                                    _previousTime = currentTime + waitTime;
-                                    ScheduleOnce(TimerName, TimeSpan.FromTicks(waitTime));
-                                    break;
-                                case ThrottleMode.Enforcing:
-                                    FailStage(new OverflowException("Maximum throttle throughput exceeded"));
-                                    break;
-                                default:
-                                    throw new ArgumentOutOfRangeException();
-                            }
-                        }
+                        if (delayTicks == 0)
+                            Push(stage.Outlet, element);
                         else
                         {
-                            _lastTokens = currentTokens - elementCost;
-                            _previousTime = currentTime;
-                            Push(_stage.Outlet, element);
+                            if (_enforcing)
+                                throw new OverflowException("Maximum throttle throughput exceeded.");
+
+                            _currentElement = element;
+                            ScheduleOnce(TimerName, TimeSpan.FromTicks(delayTicks));
                         }
-                    }
-                }, onUpstreamFinish: () =>
-                {
-                    if (IsAvailable(_stage.Outlet) && IsTimerActive(TimerName))
-                        _willStop = true;
-                    else
-                        CompleteStage();
-                });
+                    },
+                    onUpstreamFinish: () =>
+                    {
+                        if (IsAvailable(_stage.Outlet) && IsTimerActive(TimerName))
+                            _willStop = true;
+                        else
+                            CompleteStage();
+                    });
 
                 SetHandler(_stage.Outlet, onPull: () => Pull(_stage.Inlet));
             }
@@ -90,35 +66,35 @@ namespace Akka.Streams.Implementation
             {
                 Push(_stage.Outlet, _currentElement.Value);
                 _currentElement = Option<T>.None;
-                _lastTokens = 0;
+
                 if (_willStop)
                     CompleteStage();
             }
 
-            public override void PreStart() => _previousTime = Now;
-
-            private long Scale(int n) => ((long) n) << 30;
-
-            private long Now => DateTime.Now.Ticks;
+            public override void PreStart() => _tokenBucket.Init();
         }
 
         #endregion
-
-        private readonly int _cost;
-        private readonly TimeSpan _per;
+        
         private readonly int _maximumBurst;
         private readonly Func<T, int> _costCalculation;
         private readonly ThrottleMode _mode;
+        private readonly long _ticksBetweenTokens;
 
         public Throttle(int cost, TimeSpan per, int maximumBurst, Func<T, int> costCalculation, ThrottleMode mode)
         {
-            _cost = cost;
-            _per = per;
             _maximumBurst = maximumBurst;
             _costCalculation = costCalculation;
             _mode = mode;
+
+            // There is some loss of precision here because of rounding, but this only happens if nanosBetweenTokens is very
+            // small which is usually at rates where that precision is highly unlikely anyway as the overhead of this stage
+            // is likely higher than the required accuracy interval.
+            _ticksBetweenTokens = per.Ticks/cost;
         }
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+        public override string ToString() => "Throttle";
     }
 }

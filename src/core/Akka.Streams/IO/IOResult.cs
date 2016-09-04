@@ -48,7 +48,7 @@ namespace Akka.Streams.IO
             get
             {
                 if (WasSuccessful)
-                    throw new NotSupportedException("IO operation was successfull.");
+                    throw new NotSupportedException("IO operation was successful.");
 
                 return _status.Exception;
             }

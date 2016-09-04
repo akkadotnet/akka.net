@@ -78,7 +78,7 @@ namespace Akka.Streams.Implementation.IO
                 return;
 
             ReadAndEmit();
-            if(TotalDemand > 0 )
+            if(TotalDemand > 0 && IsActive)
                 Self.Tell(Continue.Instance);
         }
 

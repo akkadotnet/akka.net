@@ -88,7 +88,7 @@
     <Compile Include="Actor\Cancellation\CancelableExtensions.cs" />
     <Compile Include="Actor\Cancellation\Cancelable.cs" />
     <Compile Include="Actor\Dsl\Act.cs" />
-    <Compile Include="Actor\Cancellation\ICancellable.cs" />
+    <Compile Include="Actor\Cancellation\ICancelable.cs" />
     <Compile Include="Actor\Inbox.Actor.cs" />
     <Compile Include="Actor\Internal\InternalCurrentActorCellKeeper.cs" />
     <Compile Include="Actor\Internal\InternalSupportsTestFSMRef.cs" />
@@ -334,6 +334,7 @@
     <Compile Include="PatternMatch.cs" />
     <Compile Include="Util\Resolver.cs" />
     <Compile Include="Util\ThreadLocalRandom.cs" />
+    <Compile Include="Util\TokenBucket.cs" />
     <Compile Include="Util\Vector.cs" />
     <Compile Include="Util\WildcardTree.cs" />
     <Compile Include="Util\MatchHandler\Argument.cs" />

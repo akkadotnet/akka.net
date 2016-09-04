@@ -12,7 +12,7 @@ using System.Text;
 using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
-using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;

@@ -19,7 +19,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class FlowLogSpec : TestKit.Tests.AkkaSpec
+    public class FlowLogSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
 

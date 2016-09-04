@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Immutable;
 using System.Linq;
 using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Implementation;
@@ -64,12 +65,36 @@ namespace Akka.Streams.Dsl
         /// The <paramref name="combine"/> function is used to compose the materialized values of this flow and that
         /// flow into the materialized value of the resulting Flow.
         /// </summary>
-        public Flow<TIn, TOut2, TMat3> ViaMaterialized<TOut2, TMat2, TMat3>(IGraph<FlowShape<TOut, TOut2>, TMat2> flow, Func<TMat, TMat2, TMat3> combine)
+        public Flow<TIn, TOut2, TMat3> ViaMaterialized<TOut2, TMat2, TMat3>(IGraph<FlowShape<TOut, TOut2>, TMat2> flow,
+            Func<TMat, TMat2, TMat3> combine)
         {
             if (IsIdentity)
             {
-                return Flow.FromGraph((IGraph<FlowShape<TIn, TOut2>, TMat2>)flow)
-                    .MapMaterializedValue(mat2 => combine(default(TMat), mat2));
+                var m = flow.Module;
+                StreamLayout.IMaterializedValueNode materializedValueNode;
+
+                if (Keep.IsLeft(combine))
+                {
+                    if (IgnorableMaterializedValueComposites.Apply(m))
+                    {
+                        materializedValueNode = StreamLayout.Ignore.Instance;
+                    }
+                    else
+                    {
+                        materializedValueNode = new StreamLayout.Transform(_ => NotUsed.Instance,
+                            new StreamLayout.Atomic(m));
+                    }
+                }
+                else
+                {
+                    materializedValueNode = new StreamLayout.Combine((o, o1) => combine((TMat) o, (TMat2) o1),
+                        StreamLayout.Ignore.Instance, new StreamLayout.Atomic(m));
+                }
+
+                return
+                    new Flow<TIn, TOut2, TMat3>(new CompositeModule(ImmutableArray<IModule>.Empty.Add(m), m.Shape,
+                        ImmutableDictionary<OutPort, InPort>.Empty, ImmutableDictionary<InPort, OutPort>.Empty,
+                        materializedValueNode, Attributes.None));
             }
 
             var copy = flow.Module.CarbonCopy();
@@ -139,6 +164,12 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Transform the materialized value of this Flow, leaving all other properties as they were.
         /// </summary>
+        IFlow<TOut, TMat2> IFlow<TOut, TMat>.MapMaterializedValue<TMat2>(Func<TMat, TMat2> mapFunc)
+            => MapMaterializedValue(mapFunc);
+
+        /// <summary>
+        /// Transform the materialized value of this Flow, leaving all other properties as they were.
+        /// </summary>
         public Flow<TIn, TOut, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> mapFunc)
             => new Flow<TIn, TOut, TMat2>(Module.TransformMaterializedValue(mapFunc));
 
@@ -154,6 +185,9 @@ namespace Akka.Streams.Dsl
         /// Connect this <see cref="Flow{TIn,TOut,TMat}"/> to a <see cref="Sink{TIn,TMat}"/>, concatenating the processing steps of both.
         /// The <paramref name="combine"/> function is used to compose the materialized values of this flow and that
         /// Sink into the materialized value of the resulting Sink.
+        /// 
+        /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
+        /// where appropriate instead of manually writing functions that pass through one of the values.
         /// </summary>
         public Sink<TIn, TMat3> ToMaterialized<TMat2, TMat3>(IGraph<SinkShape<TOut>, TMat2> sink, Func<TMat, TMat2, TMat3> combine)
         {
@@ -272,6 +306,8 @@ namespace Akka.Streams.Dsl
                 .Via(this)
                 .ToMaterialized(Sink.AsPublisher<TOut>(false), Keep.Both)
                 .MapMaterializedValue(t => new FlowProcessor<TIn, TOut>(t.Item1, t.Item2) as IProcessor<TIn, TOut>);
+
+        public override string ToString() => $"Flow({Shape}, {Module})";
     }
 
     /// <summary>
@@ -379,6 +415,11 @@ namespace Akka.Streams.Dsl
         /// flow into the materialized value of the resulting Flow.
         /// </summary>
         IFlow<T2, TMat3> ViaMaterialized<T2, TMat2, TMat3>(IGraph<FlowShape<TOut, T2>, TMat2> flow, Func<TMat, TMat2, TMat3> combine);
+
+        /// <summary>
+        /// Transform the materialized value of this Flow, leaving all other properties as they were.
+        /// </summary>
+        IFlow<TOut, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> mapFunc);
 
         #endregion
     }

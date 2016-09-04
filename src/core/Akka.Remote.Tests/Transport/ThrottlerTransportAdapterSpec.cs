@@ -183,7 +183,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public void ThrottlerTransportAdapter_must_maintain_average_message_rate()
         {
-            Throttle(ThrottleTransportAdapter.Direction.Send, new TokenBucket(PingPacketSize*4, BytesPerSecond, 0, 0)).ShouldBeTrue();
+            Throttle(ThrottleTransportAdapter.Direction.Send, new Remote.Transport.TokenBucket(PingPacketSize*4, BytesPerSecond, 0, 0)).ShouldBeTrue();
             var tester = Sys.ActorOf(Props.Create(() => new ThrottlingTester(Here, TestActor)));
             tester.Tell("start");
 

@@ -11,11 +11,13 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -24,7 +26,7 @@ namespace Akka.Streams.Tests.Actor
 {
     public class ActorPublisherSpec : AkkaSpec
     {
-        private const string Config = @"
+        private static readonly Config Config = ConfigurationFactory.ParseString(@"
 my-dispatcher1 {
   type = Dispatcher
   executor = ""fork-join-executor""
@@ -42,9 +44,13 @@ my-dispatcher1 {
     parallelism-max = 8
   }
   mailbox-requirement = ""Akka.Dispatch.IUnboundedMessageQueueSemantics""
-}";
+}");
 
-        public ActorPublisherSpec(ITestOutputHelper output = null) : base(Config, output)
+        public ActorPublisherSpec(ITestOutputHelper output = null)
+            : base(
+                Config.WithFallback(
+                    ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf")),
+                output)
         {
             EventFilter.Exception<IllegalStateException>().Mute();
         }

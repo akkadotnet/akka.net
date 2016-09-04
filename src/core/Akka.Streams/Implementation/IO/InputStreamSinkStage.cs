@@ -296,9 +296,13 @@ namespace Akka.Streams.Implementation.IO
                     _isStageAlive = false;
                     return 0;
                 }
+                if (msg is Failed)
+                {
+                    _isStageAlive = false;
+                    throw ((Failed) msg).Cause;
+                }
 
-                _isStageAlive = false;
-                throw ((Failed) msg).Cause;
+                throw new IllegalStateException("message 'Initialized' must come first");
             });
         }
 

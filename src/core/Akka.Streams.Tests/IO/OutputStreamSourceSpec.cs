@@ -6,8 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -17,6 +19,7 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.IO;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -51,7 +54,7 @@ namespace Akka.Streams.Tests.IO
 
         private void ExpectSuccess<T>(Task<T> f, T value)
         {
-            f.Wait(Timeout).Should().BeTrue();
+            f.Wait(RemainingOrDefault).Should().BeTrue();
             f.Result.Should().Be(value);
         }
 
@@ -262,6 +265,48 @@ namespace Akka.Streams.Tests.IO
              Sink.Ignore is used, the same exception is thrown by
              Materializer.
              */
+        }
+
+        [Fact]
+        public void OutputStreamSource_must_not_leave_blocked_threads()
+        {
+            var tuple =
+                StreamConverters.AsOutputStream(Timeout)
+                    .ToMaterialized(this.SinkProbe<ByteString>(), Keep.Both)
+                    .Run(_materializer);
+            var outputStream = tuple.Item1;
+            var probe = tuple.Item2;
+
+            var sub = probe.ExpectSubscription();
+
+            // triggers a blocking read on the queue
+            // and then cancel the stage before we got anything
+            sub.Request(1);
+            sub.Cancel();
+
+            //we need to make sure that the underling BlockingCollection isn't blocked after the stream has finished, 
+            //the jvm way isn't working so we need to use reflection and check the collection directly
+            //def threadsBlocked =
+            //ManagementFactory.getThreadMXBean.dumpAllThreads(true, true).toSeq
+            //          .filter(t => t.getThreadName.startsWith("OutputStreamSourceSpec") &&
+            //t.getLockName != null &&
+            //t.getLockName.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer"))
+            //awaitAssert(threadsBlocked should === (Seq()), 3.seconds)
+
+            var bindFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic |
+                            BindingFlags.Static;
+            var field = typeof(OutputStreamAdapter).GetField("_dataQueue", bindFlags);
+            var blockingCollection = field.GetValue(outputStream) as BlockingCollection<ByteString>;
+
+            //give the stage enough time to finish, otherwise it may take the hello message
+            Thread.Sleep(1000);
+
+            // if a take operation is pending inside the stage it will steal this one and the next take will not succeed
+            blockingCollection.Add(ByteString.FromString("hello"));
+
+            ByteString result;
+            blockingCollection.TryTake(out result, TimeSpan.FromSeconds(3)).Should().BeTrue();
+            result.DecodeString().Should().Be("hello");
         }
     }
 }
