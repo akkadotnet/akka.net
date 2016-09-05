@@ -58,7 +58,7 @@ namespace Akka.Streams.Tests.Performance
         [PerfBenchmark(Description = "Test the performance of the materialization phase for a flow with 1000 map stages",
             RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
         [TimingMeasurement]
-        [ElapsedTimeAssertion(MaxTimeMilliseconds = 100)]
+        [ElapsedTimeAssertion(MaxTimeMilliseconds = 150)]
         public void Flow_with_1000_map() => FlowWithMapBuilder(1000).Run(_materializer);
 
 
