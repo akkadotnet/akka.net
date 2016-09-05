@@ -27,10 +27,12 @@ namespace Akka.Streams.Tests.Dsl
         private IMaterializer CreateMaterializer(bool autoFusing)
         {
             var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 16).WithAutoFusing(autoFusing);
-            return ActorMaterializer.Create(Sys, settings);
+            return Sys.Materializer(settings);
         }
 
-        [InlineData(true,false)]
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
         public void A_Graph_with_materialized_value_must_expose_the_materialized_value_as_source(bool autoFusing)
         {
             var materializer = CreateMaterializer(autoFusing);
@@ -53,7 +55,9 @@ namespace Akka.Streams.Tests.Dsl
             r1.Should().Be(r2);
         }
 
-        [InlineData(true, false)]
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
         public void A_Graph_with_materialized_value_must_expose_the_materialized_value_as_source_multiple_times(bool autoFusing)
         {
             var materializer = CreateMaterializer(autoFusing);
@@ -92,7 +96,9 @@ namespace Akka.Streams.Tests.Dsl
                 return new SourceShape<Task<int>>(b.MaterializedValue);
             }));
 
-        [InlineData(true, false)]
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
         public void A_Graph_with_materialized_value_must_allow_exposing_the_materialized_value_as_port(bool autoFusing)
         {
             var materializer = CreateMaterializer(autoFusing);
@@ -111,7 +117,9 @@ namespace Akka.Streams.Tests.Dsl
             f2.Result.Should().Be(155);
         }
 
-        [InlineData(true, false)]
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
         public void A_Graph_with_materialized_value_must_allow_exposing_the_materialized_values_as_port_even_if_wrapped_and_the_final_materialized_value_is_unit(bool autoFusing)
         {
             var materializer = CreateMaterializer(autoFusing);
@@ -123,7 +131,9 @@ namespace Akka.Streams.Tests.Dsl
             t.Result.Should().Be(155);
         }
 
-        [InlineData(true, false)]
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
         public void A_Graph_with_materialized_value_must_work_properly_with_nesting_and_reusing(bool autoFusing)
         {
             var materializer = CreateMaterializer(autoFusing);
@@ -160,7 +170,9 @@ namespace Akka.Streams.Tests.Dsl
             task.Result[4].Should().Be(55555555);
         }
 
-        [InlineData(true, false)]
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
         public void A_Graph_with_materialized_value_must_work_also_when_the_sources_module_is_copied(bool autoFusing)
         {
             var materializer = CreateMaterializer(autoFusing);
@@ -176,7 +188,9 @@ namespace Akka.Streams.Tests.Dsl
             t.Result.Should().Be(55);
         }
 
-        [InlineData(true, false)]
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
         public void A_Graph_with_materialized_value_must_perform_side_effecting_transformations_even_when_not_used_as_source(bool autoFusing)
         {
             var materializer = CreateMaterializer(autoFusing);
@@ -204,7 +218,9 @@ namespace Akka.Streams.Tests.Dsl
             done.Should().BeTrue();
         }
 
-        [InlineData(true, false)]
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
         public void A_Graph_with_materialized_value_must_produce_NotUsed_when_not_importing_materialized_value(bool autoFusing)
         {
             var materializer = CreateMaterializer(autoFusing);
@@ -214,7 +230,9 @@ namespace Akka.Streams.Tests.Dsl
             task.Result.ShouldAllBeEquivalentTo(NotUsed.Instance);
         }
 
-        [InlineData(true, false)]
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
         public void A_Graph_with_materialized_value_must_produce_NotUsed_when_starting_from_Flow_Via_with_transformation(bool autoFusing)
         {
             var materializer = CreateMaterializer(autoFusing);

@@ -11,7 +11,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Fusing;
-using Akka.TestKit;
+using Akka.Streams.TestKit.Tests;
 using Akka.Util;
 using NBench;
 using Reactive.Streams;
@@ -54,7 +54,7 @@ akka {
         public void Setup(BenchmarkContext context)
         {
             _actorSystem = ActorSystem.Create("FlowSelectBenchmark", Config.WithFallback(
-                ConfigurationFactory.FromResource<AkkaSpec>("Akka.Streams.TestKit.Tests.reference.conf")));
+                ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf")));
             _actorSystem.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
 
             var buffer8 = ActorMaterializerSettings.Create(_actorSystem).WithInputBuffer(8, 8);

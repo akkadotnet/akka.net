@@ -136,7 +136,7 @@ namespace Akka.Streams.Tests.Implementation
 
         #endregion
 
-        private const int TooDeepForStack = 50000;
+        private const int TooDeepForStack = 5000;
 
         private readonly IMaterializer _materializer;
 

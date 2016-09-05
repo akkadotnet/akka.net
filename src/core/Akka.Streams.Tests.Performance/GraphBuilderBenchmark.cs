@@ -122,7 +122,7 @@ namespace Akka.Streams.Tests.Performance
         [PerfBenchmark(Description = "Test the performance of the GraphBuilder for a graph with 1000 imported flows",
             RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 3)]
         [TimingMeasurement]
-        [ElapsedTimeAssertion(MaxTimeMilliseconds = 70)]
+        [ElapsedTimeAssertion(MaxTimeMilliseconds = 100)]
         public void Graph_with_1000_imported_flows() => MaterializationBenchmark.GraphWithImportedFlowBuilder(1000);
     }
 }

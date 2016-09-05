@@ -1622,7 +1622,7 @@ namespace Akka.Streams.Implementation
                 var transform = (StreamLayout.Transform) node;
                 result = transform.Transformator(ResolveMaterialized(transform.Node, values, spaces + 2));
             }
-            else result = null;
+            else result = NotUsed.Instance;
 
             if (IsDebug) Console.WriteLine($"{indent}result = {result}");
 

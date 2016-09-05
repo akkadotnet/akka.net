@@ -442,9 +442,15 @@ namespace Akka.Streams.Implementation.Fusing
                     {
                         if (IsDebug) Log(indent, $"materialized value source: {structInfo.Hash(c)}");
                         var ms = (IMaterializedValueSource) ((GraphStageModule) c.CopyOf).Stage;
-                        var mapped = ms.Computation is Atomic
-                            ? subMat[((Atomic) ms.Computation).Module]
-                            : matNodeMapping[ms.Computation];
+
+                        IMaterializedValueNode mapped;
+                        var atomic = ms.Computation as Atomic;
+                        if (atomic != null)
+                            mapped = subMat[atomic.Module];
+                        else if (ms.Computation == StreamLayout.Ignore.Instance)
+                            mapped = ms.Computation;
+                        else
+                            mapped = matNodeMapping[ms.Computation];
 
                         var outputType = ms.Outlet.GetType().GetGenericArguments().First();
                         var materializedValueSourceType = typeof(MaterializedValueSource<>).MakeGenericType(outputType);
