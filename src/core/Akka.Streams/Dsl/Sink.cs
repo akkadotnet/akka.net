@@ -271,7 +271,11 @@ namespace Akka.Streams.Dsl
         /// output (from the second element) and the element as input.
         /// The returned <see cref="Task{TIn}"/> will be completed with value of the final
         /// function evaluation when the input stream ends, or completed with `Failure`
-        /// if there is a failure signaled in the stream.
+        /// if there is a failure signaled in the stream. 
+        /// 
+        /// If the stream is empty (i.e. completes before signalling any elements),
+        /// the sum stage will fail its downstream with a <see cref="NoSuchElementException"/>,
+        /// which is semantically in-line with that standard library collections do in such situations.
         /// </summary>
         public static Sink<TIn, Task<TIn>> Sum<TIn>(Func<TIn, TIn, TIn> reduce) => Flow.Create<TIn>()
             .Sum(reduce)

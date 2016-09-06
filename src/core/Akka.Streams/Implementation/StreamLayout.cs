@@ -1641,8 +1641,9 @@ namespace Akka.Streams.Implementation
         protected void AssignPort(InPort inPort, object subscriberOrVirtual)
         {
             Subscribers[inPort] = subscriberOrVirtual;
+            
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
-            if (!CurrentLayout.InPorts.Contains(inPort))
+            if (CurrentLayout.Upstreams.ContainsKey(inPort))
             {
                 IUntypedPublisher publisher;
                 if (Publishers.TryGetValue(CurrentLayout.Upstreams[inPort], out publisher))
@@ -1655,7 +1656,7 @@ namespace Akka.Streams.Implementation
         {
             Publishers[outPort] = publisher;
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
-            if (!CurrentLayout.OutPorts.Contains(outPort))
+            if (CurrentLayout.Downstreams.ContainsKey(outPort))
             {
                 object subscriber;
                 if (Subscribers.TryGetValue(CurrentLayout.Downstreams[outPort], out subscriber))

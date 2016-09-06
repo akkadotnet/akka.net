@@ -451,6 +451,10 @@ namespace Akka.Streams.Dsl
         /// Similar to <see cref="Aggregate{TIn,TOut,TMat}"/> but uses first element as zero element.
         /// Applies the given function <paramref name="reduce"/> towards its current and next value,
         /// yielding the next current value. 
+        /// 
+        /// If the stream is empty (i.e. completes before signalling any elements),
+        /// the sum stage will fail its downstream with a <see cref="NoSuchElementException"/>,
+        /// which is semantically in-line with that standard library collections do in such situations.
         /// <para>
         /// Emits when upstream completes
         /// </para>
