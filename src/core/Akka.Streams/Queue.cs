@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Threading.Tasks;
 using Akka.Streams.Util;
 
@@ -37,6 +38,22 @@ namespace Akka.Streams
         /// when stream failed.
         /// </summary>
         Task WatchCompletionAsync();
+    }
+
+    /// <summary>
+    /// This interface adds completion support to <see cref="ISourceQueue{T}"/>
+    /// </summary>
+    public interface ISourceQueueWithComplete<in T> : ISourceQueue<T>
+    {
+        /// <summary>
+        /// Complete the stream normally. Use <see cref="ISourceQueue{T}.WatchCompletionAsync"/> to be notified of this operation’s success.
+        /// </summary>
+        void Complete();
+
+        /// <summary>
+        /// Complete the stream with a failure. Use <see cref="ISourceQueue{T}.WatchCompletionAsync"/> to be notified of this operation’s success.
+        /// </summary>
+        void Fail(Exception ex);
     }
 
     /// <summary>

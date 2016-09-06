@@ -18,7 +18,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.IO
 {
-    public class OutputStreamSinkSpec : TestKit.Tests.AkkaSpec
+    public class OutputStreamSinkSpec : AkkaSpec
     {
         #region Internal classes
 

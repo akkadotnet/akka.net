@@ -22,7 +22,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class GraphStageTimersSpec : TestKit.Tests.AkkaSpec
+    public class GraphStageTimersSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
 

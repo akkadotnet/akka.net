@@ -22,7 +22,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class FlowConflateSpec : TestKit.Tests.AkkaSpec
+    public class FlowConflateSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
 

@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Pattern;
@@ -18,7 +19,7 @@ using Reactive.Streams;
 // ReSharper disable MemberHidesStaticFromOuterClass
 namespace Akka.Streams.Implementation.Fusing
 {
-    internal class GraphModule : AtomicModule
+    internal sealed class GraphModule : AtomicModule
     {
         public readonly IModule[] MaterializedValueIds;
         public readonly GraphAssembly Assembly;
@@ -32,6 +33,7 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         public override Shape Shape { get; }
+
         public override Attributes Attributes { get; }
         
         public override IModule WithAttributes(Attributes attributes)
@@ -51,7 +53,10 @@ namespace Akka.Streams.Implementation.Fusing
             return this;
         }
 
-        public override string ToString() => $"GraphModule\n  {Assembly.ToString().Replace("\n", "\n  ")}\n  shape={Shape}, attributes={Attributes}";
+        public override string ToString() => "GraphModule\n" +
+                                             $"  {Assembly.ToString().Replace("\n", "\n  ")}\n" +
+                                             $"  shape={Shape}, attributes={Attributes}\n" +
+                                             $"  MaterializedValueIds={string.Join<IModule>("\n   ", MaterializedValueIds)}";
     }
 
     internal sealed class GraphInterpreterShell
@@ -69,6 +74,13 @@ namespace Akka.Streams.Implementation.Fusing
         /// a self-message for fairness with other actors. The basic assumption here is
         /// to give each input buffer slot a chance to run through the whole pipeline
         /// and back (for the elements).
+        /// 
+        /// Considered use case:
+        ///  - assume a composite Sink of one expand and one fold 
+        ///  - assume an infinitely fast source of data
+        ///  - assume maxInputBufferSize == 1
+        ///  - if the event limit is greater than maxInputBufferSize * (ins + outs) than there will always be expand activity
+        ///  because no data can enter “fast enough” from the outside
         /// </summary>
         private readonly int _shellEventLimit;
 
@@ -335,7 +347,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     var asyncInput = new ActorGraphInterpreter.AsyncInput(this, logic, @event, handler);
                     var currentInterpreter = GraphInterpreter.CurrentInterpreterOrNull;
-                    if (currentInterpreter == null || currentInterpreter.Context != Self)
+                    if (currentInterpreter == null || !Equals(currentInterpreter.Context, Self))
                         Self.Tell(new ActorGraphInterpreter.AsyncInput(this, logic, @event, handler));
                     else
                         _enqueueToShourtCircuit(asyncInput);
@@ -1047,19 +1059,22 @@ namespace Akka.Streams.Implementation.Fusing
             }
             else if (message is StreamSupervisor.PrintDebugDump)
             {
-                Console.WriteLine("ActiveShells:");
+                var builder = new StringBuilder($"activeShells (actor: {Self}):\n");
+
                 _activeInterpreters.ForEach(shell =>
                 {
-                    Console.WriteLine("  " + shell.ToString().Replace(@"\n", @"\n "));
-                    shell.Interpreter.DumpWaits();
+                    builder.Append("  " + shell.ToString().Replace("\n", "\n  "));
+                    builder.Append(shell.Interpreter);
                 });
 
-                Console.WriteLine("NewShells:");
+                builder.AppendLine("NewShells:\n");
                 _newShells.ForEach(shell =>
                 {
-                    Console.WriteLine("  " + shell.ToString().Replace(@"\n", @"\n "));
-                    shell.Interpreter.DumpWaits();
+                    builder.Append("  " + shell.ToString().Replace("\n", "\n  "));
+                    builder.Append(shell.Interpreter);
                 });
+
+                Console.WriteLine(builder);
             }
             else
                 return false;
@@ -1069,13 +1084,14 @@ namespace Akka.Streams.Implementation.Fusing
 
         protected override void PostStop()
         {
+            var ex = new AbruptTerminationException(Self);
             foreach (var shell in _activeInterpreters)
-                shell.TryAbort(new AbruptTerminationException(Self));
+                shell.TryAbort(ex);
             _activeInterpreters = new HashSet<GraphInterpreterShell>();
             foreach (var shell in _newShells)
             {
                 if (TryInit(shell))
-                    shell.TryAbort(new AbruptTerminationException(Self));
+                    shell.TryAbort(ex);
             }
         }
     }

@@ -29,7 +29,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class FlowSelectAsyncSpec : TestKit.Tests.AkkaSpec
+    public class FlowSelectAsyncSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
 

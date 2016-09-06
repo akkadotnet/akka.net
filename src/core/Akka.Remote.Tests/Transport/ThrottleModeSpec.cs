@@ -10,6 +10,7 @@ using Akka.Remote.Transport;
 using Akka.TestKit;
 using Akka.Util;
 using Xunit;
+using TokenBucket = Akka.Remote.Transport.TokenBucket;
 
 namespace Akka.Remote.Tests.Transport
 {

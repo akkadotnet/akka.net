@@ -250,7 +250,6 @@ namespace Akka.Streams.Actors
             {
                 case LifecycleState.Active:
                 case LifecycleState.PreSubscriber:
-                case LifecycleState.CompleteThenStop:
                     _lifecycleState = LifecycleState.Completed;
                     _onError = null;
                     if (_subscriber != null)
@@ -267,7 +266,8 @@ namespace Akka.Streams.Actors
                     }
                     break;
                 case LifecycleState.ErrorEmitted: throw new IllegalStateException("OnComplete must not be called after OnError");
-                case LifecycleState.Completed: throw new IllegalStateException("OnComplete must only be called once");
+                case LifecycleState.Completed:
+                case LifecycleState.CompleteThenStop: throw new IllegalStateException("OnComplete must only be called once");
                 case LifecycleState.Canceled: break;
             }
         }
@@ -319,7 +319,6 @@ namespace Akka.Streams.Actors
             {
                 case LifecycleState.Active:
                 case LifecycleState.PreSubscriber:
-                case LifecycleState.CompleteThenStop:
                     _lifecycleState = LifecycleState.ErrorEmitted;
                     _onError = new OnErrorBlock(cause, false);
                     if (_subscriber != null)
@@ -336,7 +335,8 @@ namespace Akka.Streams.Actors
                     }
                     break;
                 case LifecycleState.ErrorEmitted: throw new IllegalStateException("OnError must only be called once");
-                case LifecycleState.Completed: throw new IllegalStateException("OnError must not be called after OnComplete");
+                case LifecycleState.Completed:
+                case LifecycleState.CompleteThenStop: throw new IllegalStateException("OnError must not be called after OnComplete");
                 case LifecycleState.Canceled: break;
             }
         }
@@ -390,8 +390,6 @@ namespace Akka.Streams.Actors
                 {
                     if (_lifecycleState == LifecycleState.Active)
                         OnError(new ArgumentException("Number of requested elements must be positive. Rule 3.9"));
-                    else
-                        base.AroundReceive(receive, message);
                 }
                 else
                 {

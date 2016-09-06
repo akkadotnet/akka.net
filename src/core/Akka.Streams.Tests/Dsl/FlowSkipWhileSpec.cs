@@ -5,17 +5,18 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
+    //JVM: FlowDropWhileSpec
     public class FlowSkipWhileSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
@@ -58,16 +59,36 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var testException = new Exception("test");
                 Source.From(Enumerable.Range(1, 4)).SkipWhile(x =>
                 {
                     if (x < 3)
                         return true;
-                    throw testException;
+                    throw new TestException("");
                 })
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(1)
+                    .ExpectComplete();
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_SkipWhile_must_restart_with_strategy()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                Source.From(Enumerable.Range(1, 4)).SkipWhile(x =>
+                {
+                    if (x == 1 || x == 3)
+                        return true;
+                    if (x == 4)
+                        return false;
+                    throw new TestException("");
+                })
+                    .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
+                    .RunWith(this.SinkProbe<int>(), Materializer)
+                    .Request(1)
+                    .ExpectNext(4)
                     .ExpectComplete();
             }, Materializer);
         }

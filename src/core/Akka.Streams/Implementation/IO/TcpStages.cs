@@ -33,6 +33,7 @@ namespace Akka.Streams.Implementation.IO
         {
             private const string BindShutdownTimer = "BindTimer";
 
+            private readonly AtomicCounterLong _connectionFlowsAwaitingInitialization = new AtomicCounterLong();
             private readonly ConnectionSourceStage _stage;
             private readonly TaskCompletionSource<StreamTcp.ServerBinding> _bindingPromise;
             private readonly TaskCompletionSource<NotUsed> _unbindPromise = new TaskCompletionSource<NotUsed>();
@@ -52,14 +53,14 @@ namespace Akka.Streams.Implementation.IO
             
             private StreamTcp.IncomingConnection ConnectionFor(Tcp.Connected connected, IActorRef connection)
             {
-                _stage._connectionFlowsAwaitingInitialization.IncrementAndGet();
+                _connectionFlowsAwaitingInitialization.IncrementAndGet();
 
                 var tcpFlow =
                     Flow.FromGraph(new IncomingConnectionStage(connection, connected.RemoteAddress, _stage._halfClose))
                     .Via(new Detacher<ByteString>()) // must read ahead for proper completions
                     .MapMaterializedValue(unit =>
                     {
-                        _stage._connectionFlowsAwaitingInitialization.DecrementAndGet();
+                        _connectionFlowsAwaitingInitialization.DecrementAndGet();
                         return unit;
                     });
 
@@ -131,7 +132,7 @@ namespace Akka.Streams.Implementation.IO
                     })
                     .With<Tcp.Unbound>(() => // If we're unbound then just shut down
                     {
-                        if (_stage._connectionFlowsAwaitingInitialization.Current == 0)
+                        if (_connectionFlowsAwaitingInitialization.Current == 0)
                             CompleteStage();
                         else
                             ScheduleOnce(BindShutdownTimer, _stage._bindShutdownTimeout);
@@ -160,7 +161,6 @@ namespace Akka.Streams.Implementation.IO
         private readonly bool _halfClose;
         private readonly TimeSpan? _idleTimeout;
         private readonly TimeSpan _bindShutdownTimeout;
-        private readonly AtomicCounterLong _connectionFlowsAwaitingInitialization = new AtomicCounterLong();
         private readonly Outlet<StreamTcp.IncomingConnection> _out = new Outlet<StreamTcp.IncomingConnection>("IncomingConnections.out");
 
         public ConnectionSourceStage(IActorRef tcpManager, EndPoint endpoint, int backlog,
@@ -368,7 +368,7 @@ namespace Akka.Streams.Implementation.IO
                 if (_role is Outbound)
                 {
                     var outbound = (Outbound) _role;
-                    // Fail if has not been completed with an address eariler
+                    // Fail if has not been completed with an address earlier
                     outbound.LocalAddressPromise.TrySetException(new StreamTcpException("Connection failed"));
                 }
             }

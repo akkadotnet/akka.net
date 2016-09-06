@@ -181,7 +181,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Transform this stream by applying the given function <paramref name="asyncMapper"/> to each of the elements
         /// as they pass through this processing step. The function returns a <see cref="Task"/> and the
-        /// value of that task will be emitted downstreams. As many tasks as requested elements by
+        /// value of that task will be emitted downstream. As many tasks as requested elements by
         /// downstream may run in parallel and each processed element will be emitted dowstream
         /// as soon as it is ready, i.e. it is possible that the elements are not emitted downstream
         /// in the same order as received from upstream.
@@ -808,6 +808,7 @@ namespace Akka.Streams.Dsl
         /// This operator makes it possible to extend the <see cref="Flow"/> API when there is no specialized
         /// operator that performs the transformation.
         /// </summary>
+        [Obsolete("Use Via(GraphStage) instead.")]
         public static SubFlow<TOut2, TMat, TClosed> Transform<TOut1, TOut2, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow, Func<IStage<TOut1, TOut2>> stageFactory)
         {
             return (SubFlow<TOut2, TMat, TClosed>)InternalFlowOperations.Transform(flow, stageFactory);
@@ -947,7 +948,7 @@ namespace Akka.Streams.Dsl
         /// 
         /// Throttle implements the token bucket model. There is a bucket with a given token capacity (burst size or maximumBurst).
         /// Tokens drops into the bucket at a given rate and can be "spared" for later use up to bucket capacity
-        /// to allow some burstyness. Whenever stream wants to send an element, it takes as many
+        /// to allow some burstiness. Whenever stream wants to send an element, it takes as many
         /// tokens from the bucket as number of elements. If there isn't any, throttle waits until the
         /// bucket accumulates enough tokens.
         /// 
@@ -980,7 +981,7 @@ namespace Akka.Streams.Dsl
         /// 
         /// Throttle implements the token bucket model. There is a bucket with a given token capacity (burst size or maximumBurst).
         /// Tokens drops into the bucket at a given rate and can be spared for later use up to bucket capacity
-        /// to allow some burstyness. Whenever stream wants to send an element, it takes as many
+        /// to allow some burstiness. Whenever stream wants to send an element, it takes as many
         /// tokens from the bucket as element cost. If there isn't any, throttle waits until the
         /// bucket accumulates enough tokens. Elements that costs more than the allowed burst will be delayed proportionally
         /// to their cost minus available tokens, meeting the target rate.

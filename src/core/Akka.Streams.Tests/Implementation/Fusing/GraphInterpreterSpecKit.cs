@@ -15,6 +15,7 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Implementation.Fusing
@@ -1194,10 +1195,26 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 spec)
         {
             WithOneBoundedSetup(new[] {op}, spec);
-            
         }
 
         public void WithOneBoundedSetup<TIn, TOut>(IGraphStageWithMaterializedValue<Shape, object>[] ops,
+            Action
+                <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<TIn>, OneBoundedSetup.DownstreamOneBoundedPortProbe<TOut>>
+                spec)
+        {
+            var setup = new OneBoundedSetup<TIn, TOut>(Sys, ops);
+            spec(setup.LastEvents, setup.Upstream, setup.Downstream);
+        }
+
+        public void WithOneBoundedSetup<TIn, TOut>(IGraphStageWithMaterializedValue<FlowShape<TIn, TOut>, object> op,
+            Action
+                <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<TIn>, OneBoundedSetup.DownstreamOneBoundedPortProbe<TOut>>
+                spec)
+        {
+            WithOneBoundedSetup(new[] { op }, spec);
+        }
+
+        public void WithOneBoundedSetup<TIn, TOut>(IGraphStageWithMaterializedValue<FlowShape<TIn, TOut>, object>[] ops,
             Action
                 <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<TIn>, OneBoundedSetup.DownstreamOneBoundedPortProbe<TOut>>
                 spec)

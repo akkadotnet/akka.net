@@ -55,7 +55,17 @@ namespace Akka.Util
         {
             var expectedInt = expected ? _trueValue : _falseValue;
             var newInt = newValue ? _trueValue : _falseValue;
-            return Interlocked.CompareExchange(ref _value, newInt, expectedInt) == expectedInt;           
+            return Interlocked.CompareExchange(ref _value, newInt, expectedInt) == expectedInt;
+        }
+
+        /// <summary>
+        /// Atomically sets the <see cref="Value"/> to <paramref name="newValue"/> and returns the old <see cref="Value"/>.
+        /// </summary>
+        /// <param name="newValue">The new value</param>
+        /// <returns>The old value</returns>
+        public bool GetAndSet(bool newValue)
+        {
+            return Interlocked.Exchange(ref _value, newValue ? _trueValue : _falseValue) == _trueValue;
         }
 
         #region Conversion operators

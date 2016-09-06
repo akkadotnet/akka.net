@@ -11,14 +11,13 @@ using System.Net;
 using Akka.Actor;
 using Akka.IO;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Reactive.Streams;
 using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.IO
 {
-    public abstract class TcpHelper : TestKit.Tests.AkkaSpec
+    public abstract class TcpHelper : AkkaSpec
     {
         protected TcpHelper(string config, ITestOutputHelper helper) : base(config, helper)
         {

@@ -96,6 +96,7 @@
     <Compile Include="Extra\Timed.cs" />
     <Compile Include="FanInShape.cs" />
     <Compile Include="FanOutShape.cs" />
+    <Compile Include="FlowMonitor.cs" />
     <Compile Include="Fusing.cs" />
     <Compile Include="Implementation\ActorMaterializerImpl.cs" />
     <Compile Include="Implementation\ActorRefBackpressureSinkStage.cs" />
@@ -137,12 +138,14 @@
     <Compile Include="Implementation\Throttle.cs" />
     <Compile Include="Implementation\Timers.cs" />
     <Compile Include="Implementation\Unfold.cs" />
+    <Compile Include="Implementation\UntypedVirtualPublisher.cs" />
     <Compile Include="IO\IOResult.cs" />
     <Compile Include="Implementation\UntypedPublisher.cs" />
+    <Compile Include="KillSwitch.cs" />
     <Compile Include="Queue.cs" />
     <Compile Include="Dsl\Flow.cs" />
     <Compile Include="Dsl\Internal\InternalFlowOperations.cs" />
-    <Compile Include="Dsl\Materialization.cs" />
+    <Compile Include="Dsl\Keep.cs" />
     <Compile Include="Dsl\Source.cs" />
     <Compile Include="IMaterializer.cs" />
     <Compile Include="Graph.cs" />

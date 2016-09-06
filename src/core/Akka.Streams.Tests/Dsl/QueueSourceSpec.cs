@@ -13,6 +13,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -32,10 +33,10 @@ namespace Akka.Streams.Tests.Dsl
             _materializer = Sys.Materializer();
         }
 
-        private void AssertSuccess(Task<IQueueOfferResult> task)
+        private static void AssertSuccess(Task<IQueueOfferResult> task)
         {
-            task.PipeTo(TestActor);
-            ExpectMsg<Enqueued>();
+            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            task.Result.Should().Be(Enqueued.Instance);
         }
 
         [Fact]
@@ -53,6 +54,41 @@ namespace Akka.Streams.Tests.Dsl
             s.ExpectNext(2);
             AssertSuccess(queue.OfferAsync(3));
             sub.Cancel();
+        }
+
+        [Fact]
+        public void QueueSource_should_be_reusable()
+        {
+            var source = Source.Queue<int>(0, OverflowStrategy.Backpressure);
+            var q1 = source.To(Sink.Ignore<int>()).Run(_materializer);
+            q1.Complete();
+            var task = q1.WatchCompletionAsync();
+            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            var q2 = source.To(Sink.Ignore<int>()).Run(_materializer);
+            task = q2.WatchCompletionAsync();
+            task.Wait(TimeSpan.FromSeconds(3)).Should().BeFalse();
+        }
+
+        [Fact]
+        public void QueueSource_should_reject_elements_when_backpressuring_with_maxBuffer_0()
+        {
+            var t =
+                Source.Queue<int>(0, OverflowStrategy.Backpressure)
+                    .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                    .Run(_materializer);
+            var source = t.Item1;
+            var probe = t.Item2;
+            var task = source.OfferAsync(42);
+            var ex = source.OfferAsync(43);
+            ex.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3)))
+                .ShouldThrow<IllegalStateException>()
+                .And.Message.Should()
+                .Contain("have to wait");
+
+            probe.RequestNext().Should().Be(42);
+            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            task.Result.Should().Be(Enqueued.Instance);
+
         }
 
         [Fact]
@@ -166,7 +202,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var s = this.CreateManualProbe<int>();
                 var probe = CreateTestProbe();
-                var queue = TestSourceStage<int, ISourceQueue<int>>.Create(
+                var queue = TestSourceStage<int, ISourceQueueWithComplete<int>>.Create(
                     new QueueSource<int>(1, OverflowStrategy.DropHead), probe)
                     .To(Sink.FromSubscriber(s))
                     .Run(_materializer);
@@ -185,26 +221,26 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var s = this.CreateManualProbe<int>();
-                var queue =
+                var tuple =
                     Source.Queue<int>(5, OverflowStrategy.Backpressure)
-                        .To(Sink.FromSubscriber(s))
+                        .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                         .Run(_materializer);
-                var sub = s.ExpectSubscription();
+                var queue = tuple.Item1;
+                var probe = tuple.Item2;
 
                 for (var i = 1; i <= 5; i++)
                     AssertSuccess(queue.OfferAsync(i));
 
                 queue.OfferAsync(6).PipeTo(TestActor);
-                ExpectNoMsg(_pause);
+                queue.OfferAsync(7).PipeTo(TestActor);
+                ExpectMsg<Status.Failure>().Cause.InnerException.Should().BeOfType<IllegalStateException>();
+                probe.RequestNext(1);
+                ExpectMsg(Enqueued.Instance);
+                queue.Complete();
 
-                var task = queue.OfferAsync(7);
-                task.Invoking(t => t.Wait(_pause)).ShouldThrow<IllegalStateException>();
-
-                sub.Request(1);
-                s.ExpectNext(1);
-                ExpectMsg<Enqueued>();
-                sub.Cancel();
+                probe.Request(6)
+                    .ExpectNext(2, 3, 4, 5, 6)
+                    .ExpectComplete();
             }, _materializer);
         }
 
@@ -292,6 +328,205 @@ namespace Akka.Streams.Tests.Dsl
 
                 queue.OfferAsync(1).ContinueWith(t => t.Exception.Should().BeOfType<IllegalStateException>());
             }, _materializer);
+        }
+
+        [Fact]
+        public void QueueSource_should_not_share_future_across_materializations()
+        {
+            var source = Source.Queue<string>(1, OverflowStrategy.Fail);
+
+            var mat1Subscriber = TestSubscriber.CreateProbe<string>(this);
+            var mat2Subscriber = TestSubscriber.CreateProbe<string>(this);
+            var sourceQueue1 = source.To(Sink.FromSubscriber(mat1Subscriber)).Run(_materializer);
+            var sourceQueue2 = source.To(Sink.FromSubscriber(mat2Subscriber)).Run(_materializer);
+
+            mat1Subscriber.EnsureSubscription();
+            mat2Subscriber.EnsureSubscription();
+
+            mat1Subscriber.Request(1);
+            sourceQueue1.OfferAsync("hello");
+            mat1Subscriber.ExpectNext("hello");
+            mat1Subscriber.Cancel();
+            sourceQueue1.WatchCompletionAsync().ContinueWith(task => task.IsCompleted).PipeTo(TestActor);
+            ExpectMsg(true);
+
+            sourceQueue2.WatchCompletionAsync().IsCompleted.Should().BeFalse();
+        }
+
+        [Fact]
+        public void QueueSource_should_complete_the_stream_when_buffer_is_empty()
+        {
+            var tuple =
+                Source.Queue<int>(1, OverflowStrategy.Fail)
+                    .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                    .Run(_materializer);
+            var source = tuple.Item1;
+            var probe = tuple.Item2;
+
+            source.Complete();
+            var task = source.WatchCompletionAsync();
+            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+
+            probe.EnsureSubscription().ExpectComplete();
+        }
+
+        [Fact]
+        public void QueueSource_should_complete_the_stream_when_buffer_is_full()
+        {
+            var tuple =
+                Source.Queue<int>(1, OverflowStrategy.Fail)
+                    .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                    .Run(_materializer);
+            var source = tuple.Item1;
+            var probe = tuple.Item2;
+
+            source.OfferAsync(1);
+            source.Complete();
+            probe.RequestNext(1).ExpectComplete();
+            var task = source.WatchCompletionAsync();
+            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+        }
+
+        [Fact]
+        public void QueueSource_should_complete_the_stream_when_buffer_is_full_and_element_is_pending()
+        {
+            var tuple =
+                Source.Queue<int>(1, OverflowStrategy.Backpressure)
+                    .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                    .Run(_materializer);
+            var source = tuple.Item1;
+            var probe = tuple.Item2;
+
+            source.OfferAsync(1);
+            source.OfferAsync(2);
+            source.Complete();
+            probe.RequestNext(1)
+                .RequestNext(2)
+                .ExpectComplete();
+            var task = source.WatchCompletionAsync();
+            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+
+        }
+
+        [Fact]
+        public void QueueSource_should_complete_the_stream_when_no_buffer_is_used()
+        {
+            var tuple =
+                Source.Queue<int>(0, OverflowStrategy.Fail)
+                    .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                    .Run(_materializer);
+            var source = tuple.Item1;
+            var probe = tuple.Item2;
+
+            source.Complete();
+            var task = source.WatchCompletionAsync();
+            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+
+            probe.EnsureSubscription().ExpectComplete();
+        }
+
+        [Fact]
+        public void QueueSource_should_complete_the_stream_when_no_buffer_is_used_and_element_is_pending()
+        {
+            var tuple =
+                Source.Queue<int>(0, OverflowStrategy.Fail)
+                    .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                    .Run(_materializer);
+            var source = tuple.Item1;
+            var probe = tuple.Item2;
+
+            source.OfferAsync(1);
+            source.Complete();
+            probe.RequestNext(1).ExpectComplete();
+            var task = source.WatchCompletionAsync();
+            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+        }
+
+        private static readonly Exception Ex = new Exception("BUH");
+
+        [Fact]
+        public void QueueSource_should_fail_the_stream_when_buffer_is_empty()
+        {
+            var tuple =
+                Source.Queue<int>(1, OverflowStrategy.Fail)
+                    .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                    .Run(_materializer);
+            var source = tuple.Item1;
+            var probe = tuple.Item2;
+
+            source.Fail(Ex);
+            var task = source.WatchCompletionAsync();
+            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Exception>().And.Should().Be(Ex);
+            probe.EnsureSubscription().ExpectError().Should().Be(Ex);
+        }
+
+        [Fact]
+        public void QueueSource_should_fail_the_stream_when_buffer_is_full()
+        {
+            var tuple =
+                Source.Queue<int>(1, OverflowStrategy.Fail)
+                    .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                    .Run(_materializer);
+            var source = tuple.Item1;
+            var probe = tuple.Item2;
+
+            source.OfferAsync(1);
+            source.Fail(Ex);
+            var task = source.WatchCompletionAsync();
+            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Exception>().And.Should().Be(Ex);
+            probe.EnsureSubscription().ExpectError().Should().Be(Ex);
+        }
+
+        [Fact]
+        public void QueueSource_should_fail_the_stream_when_buffer_is_full_and_element_is_pending()
+        {
+            var tuple =
+                Source.Queue<int>(1, OverflowStrategy.Backpressure)
+                    .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                    .Run(_materializer);
+            var source = tuple.Item1;
+            var probe = tuple.Item2;
+
+            source.OfferAsync(1);
+            source.OfferAsync(2);
+            source.Fail(Ex);
+            var task = source.WatchCompletionAsync();
+            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Exception>().And.Should().Be(Ex);
+            probe.EnsureSubscription().ExpectError().Should().Be(Ex);
+
+        }
+
+        [Fact]
+        public void QueueSource_should_fail_the_stream_when_no_buffer_is_used()
+        {
+            var tuple =
+                Source.Queue<int>(0, OverflowStrategy.Fail)
+                    .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                    .Run(_materializer);
+            var source = tuple.Item1;
+            var probe = tuple.Item2;
+
+            source.Fail(Ex);
+            var task = source.WatchCompletionAsync();
+            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Exception>().And.Should().Be(Ex);
+            probe.EnsureSubscription().ExpectError().Should().Be(Ex);
+        }
+
+        [Fact]
+        public void QueueSource_should_fail_the_stream_when_no_buffer_is_used_and_element_is_pending()
+        {
+            var tuple =
+                Source.Queue<int>(0, OverflowStrategy.Fail)
+                    .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                    .Run(_materializer);
+            var source = tuple.Item1;
+            var probe = tuple.Item2;
+
+            source.OfferAsync(1);
+            source.Fail(Ex);
+            var task = source.WatchCompletionAsync();
+            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Exception>().And.Should().Be(Ex);
+            probe.EnsureSubscription().ExpectError().Should().Be(Ex);
         }
     }
 }

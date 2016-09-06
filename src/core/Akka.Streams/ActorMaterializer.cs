@@ -170,26 +170,23 @@ namespace Akka.Streams
         public static ActorMaterializerSettings Create(ActorSystem system)
         {
             var config = system.Settings.Config.GetConfig("akka.stream.materializer");
-            if(config == null)
-                throw new ArgumentException("Couldn't build an actor materializer settings. `akka.stream.materializer` config path is not defined.");
-
-            return Create(config);
+            return Create(config ?? Config.Empty);
         }
 
         private static ActorMaterializerSettings Create(Config config)
         {
             return new ActorMaterializerSettings(
-                initialInputBufferSize: config.GetInt("initial-input-buffer-size"),
-                maxInputBufferSize: config.GetInt("max-input-buffer-size"),
-                dispatcher: config.GetString("dispatcher"),
+                initialInputBufferSize: config.GetInt("initial-input-buffer-size", 4),
+                maxInputBufferSize: config.GetInt("max-input-buffer-size", 16),
+                dispatcher: config.GetString("dispatcher", string.Empty),
                 supervisionDecider: Deciders.StoppingDecider,
                 subscriptionTimeoutSettings: StreamSubscriptionTimeoutSettings.Create(config),
-                isDebugLogging: config.GetBoolean("debug-logging"),
-                outputBurstLimit: config.GetInt("output-burst-limit"),
-                isFuzzingMode: config.GetBoolean("debug.fuzzing-mode"),
-                isAutoFusing: config.GetBoolean("auto-fusing"),
-                maxFixedBufferSize: config.GetInt("max-fixed-buffer-size"),
-                syncProcessingLimit: config.GetInt("sync-processing-limit"));
+                isDebugLogging: config.GetBoolean("debug-logging", false),
+                outputBurstLimit: config.GetInt("output-burst-limit", 1000),
+                isFuzzingMode: config.GetBoolean("debug.fuzzing-mode", false),
+                isAutoFusing: config.GetBoolean("auto-fusing", true),
+                maxFixedBufferSize: config.GetInt("max-fixed-buffer-size", 1000000000),
+                syncProcessingLimit: config.GetInt("sync-processing-limit", 1000));
         }
 
         private const int DefaultlMaxFixedbufferSize = 1000;
@@ -277,8 +274,8 @@ namespace Akka.Streams
     {
         public static StreamSubscriptionTimeoutSettings Create(Config config)
         {
-            var c = config.GetConfig("subscription-timeout");
-            var configMode = c.GetString("mode").ToLowerInvariant();
+            var c = config.GetConfig("subscription-timeout") ?? Config.Empty;
+            var configMode = c.GetString("mode", "cancel").ToLowerInvariant();
             StreamSubscriptionTimeoutTerminationMode mode;
             switch (configMode)
             {
@@ -290,7 +287,7 @@ namespace Akka.Streams
             
             return new StreamSubscriptionTimeoutSettings(
                 mode: mode,
-                timeout: c.GetTimeSpan("timeout"));
+                timeout: c.GetTimeSpan("timeout", TimeSpan.FromSeconds(5)));
         }
 
         public readonly StreamSubscriptionTimeoutTerminationMode Mode;

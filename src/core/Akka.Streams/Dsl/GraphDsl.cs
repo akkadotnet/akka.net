@@ -91,6 +91,20 @@ namespace Akka.Streams.Dsl
             {
                 get
                 {
+                   /*
+                    * This brings the graph into a homogenous shape: if only one `add` has
+                    * been performed so far, the moduleInProgress will be a CopiedModule
+                    * that upon the next `composeNoMat` will be wrapped together with the
+                    * MaterializedValueSource into a CompositeModule, leading to its
+                    * relevant computation being an Atomic() for the CopiedModule. This is
+                    * what we must reference, and we can only get this reference if we
+                    * create that computation up-front: just making one up will not work
+                    * because that computation node would not be part of the tree and
+                    * the source would not be triggered.
+                    */
+                    if (_moduleInProgress is CopiedModule)
+                        _moduleInProgress = CompositeModule.Create((Module) _moduleInProgress, _moduleInProgress.Shape);
+
                     var source = new MaterializedValueSource<T>(_moduleInProgress.MaterializedValueComputation);
                     _moduleInProgress = _moduleInProgress.ComposeNoMaterialized(source.Module);
                     return source.Outlet;

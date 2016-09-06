@@ -115,6 +115,8 @@ namespace Akka.Streams.Dsl
         /// Put an asynchronous boundary around this Sink.
         /// </summary>
         public Sink<TIn, TMat> Async() => AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
+
+        public override string ToString() => $"Sink({Shape}, {Module})";
     }
 
     public static class Sink
@@ -146,7 +148,7 @@ namespace Akka.Streams.Dsl
                 .WithAttributes(DefaultAttributes.FirstOrDefaultSink)
                 .MapMaterializedValue(e =>
                 {
-                    if (e.IsCompleted && e.Result == null)
+                    if (!e.IsFaulted && e.IsCompleted && e.Result == null)
                         throw new InvalidOperationException("Sink.First materialized on an empty stream");
 
                     return e;
@@ -213,7 +215,7 @@ namespace Akka.Streams.Dsl
             }).ToMaterialized(Ignore<NotUsed>(), Keep.Right).Named("foreachSink");
 
         /// <summary>
-        /// Combine several sinks with fun-out strategy like <see cref="Broadcast{TIn}"/> or <see cref="Balance{TIn}"/> and returns <see cref="Sink{TIn,TMat}"/>.
+        /// Combine several sinks with fan-out strategy like <see cref="Broadcast{TIn}"/> or <see cref="Balance{TIn}"/> and returns <see cref="Sink{TIn,TMat}"/>.
         /// </summary>
         public static Sink<TIn, NotUsed> Combine<TIn, TOut, TMat>(Func<int, IGraph<UniformFanOutShape<TIn, TOut>, TMat>> strategy, Sink<TOut, NotUsed> first, Sink<TOut, NotUsed> second, params Sink<TOut, NotUsed>[] rest)
             => FromGraph(GraphDsl.Create(builder =>
