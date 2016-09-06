@@ -611,7 +611,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         private long _version = 0L;
         private long NextVersion()
         {
-            var current = Math.Max(0L, (long)DateTime.UtcNow.TimeOfDay.TotalMilliseconds);
+            var current = DateTime.UtcNow.Ticks / 10000;
             _version = current > _version ? current : _version + 1;
             return _version;
         }
