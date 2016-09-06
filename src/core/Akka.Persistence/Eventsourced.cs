@@ -475,7 +475,7 @@ namespace Akka.Persistence
 
         private void FlushJournalBatch()
         {
-            if (!_isWriteInProgress)
+            if (!_isWriteInProgress && _journalBatch.Count > 0)
             {
                 Journal.Tell(new WriteMessages(_journalBatch.ToArray(), Self, _instanceId));
                 _journalBatch = new List<IPersistentEnvelope>(0);
