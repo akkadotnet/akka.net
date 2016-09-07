@@ -107,10 +107,11 @@ namespace Akka.Streams.Implementation.IO
                         if (IsAvailable(_stage._out))
                             _listener.Tell(new Tcp.ResumeAccepting(1), StageActorRef);
 
-                        var target = StageActorRef;
+                        var thisStage = StageActorRef;
                         _bindingPromise.TrySetResult(new StreamTcp.ServerBinding(bound.LocalAddress, () =>
                         {
-                            target.Tell(Tcp.Unbind.Instance, StageActorRef);
+                            // Beware, sender must be explicit since stageActor.ref will be invalid to access after the stage stopped
+                            thisStage.Tell(Tcp.Unbind.Instance, thisStage);
                             return _unbindPromise.Task;
                         }));
                     })

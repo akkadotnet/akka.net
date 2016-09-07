@@ -88,6 +88,28 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        public void Throttle_for_single_cost_elements_must_()
+        {
+            var sharedThrottle = Flow.Create<int>().Throttle(1, TimeSpan.FromDays(1), 1, ThrottleMode.Enforcing);
+
+            // If there is accidental shared state then we would not be able to pass through the single element
+            var t = Source.Single(1)
+                .Via(sharedThrottle)
+                .Via(sharedThrottle)
+                .RunWith(Sink.First<int>(), Materializer);
+            t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            t.Result.Should().Be(1);
+
+            // It works with a new stream, too
+            t = Source.Single(2)
+                .Via(sharedThrottle)
+                .Via(sharedThrottle)
+                .RunWith(Sink.First<int>(), Materializer);
+            t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            t.Result.Should().Be(2);
+        }
+
+        [Fact]
         public void Throttle_for_single_cost_elements_must_emit_single_element_per_tick()
         {
             this.AssertAllStagesStopped(() =>

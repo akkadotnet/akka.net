@@ -51,10 +51,21 @@ namespace Akka.Streams.Actors
     public sealed class Request : IActorPublisherMessage
     {
         public readonly long Count;
+
         public Request(long count)
         {
             Count = count;
         }
+
+        /// <summary>
+        /// INTERNAL API: needed for stash support
+        /// </summary>
+        internal void MarkProcessed() => IsProcessed = true;
+
+        /// <summary>
+        /// INTERNAL API: needed for stash support
+        /// </summary>
+        internal bool IsProcessed { get; private set; }
     }
 
     /// <summary>
@@ -386,16 +397,26 @@ namespace Akka.Streams.Actors
             if (message is Request)
             {
                 var req = (Request) message;
-                if (req.Count < 1)
+                if (req.IsProcessed)
                 {
-                    if (_lifecycleState == LifecycleState.Active)
-                        OnError(new ArgumentException("Number of requested elements must be positive. Rule 3.9"));
+                    // it's an unstashed Request, demand is already handled
+                    base.AroundReceive(receive, req);
                 }
                 else
                 {
-                    _demand += req.Count;
-                    if (_demand < 0) _demand = long.MaxValue; // long overflow: effectively unbounded
-                    base.AroundReceive(receive, message);
+                    if (req.Count < 1)
+                    {
+                        if (_lifecycleState == LifecycleState.Active)
+                            OnError(new ArgumentException("Number of requested elements must be positive. Rule 3.9"));
+                    }
+                    else
+                    {
+                        _demand += req.Count;
+                        if (_demand < 0)
+                            _demand = long.MaxValue; // long overflow: effectively unbounded
+                        req.MarkProcessed();
+                        base.AroundReceive(receive, message);
+                    }
                 }
             }
             else if (message is Subscribe<T>)
@@ -435,8 +456,12 @@ namespace Akka.Streams.Actors
             }
             else if (message is Cancel)
             {
-                CancelSelf();
-                base.AroundReceive(receive, message);
+                if (_lifecycleState != LifecycleState.Canceled)
+                {
+                    // possible to receive again in case of stash
+                    CancelSelf();
+                    base.AroundReceive(receive, message);
+                }
             }
             else if (message is SubscriptionTimeoutExceeded)
             {

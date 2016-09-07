@@ -1197,7 +1197,23 @@ namespace Akka.Streams.Implementation.Fusing
         {
             private class Holder<T>
             {
-                public Result<T> Elem { get; set; }
+                private readonly Action<Holder<T>> _callback;
+
+                public Holder(Result<T> element, Action<Holder<T>> callback)
+                {
+                    _callback = callback;
+                    Element = element;
+                }
+
+                public Result<T> Element { get; private set; }
+
+                public void Invoke(Result<T> result)
+                {
+                    Element = result.IsSuccess && result.Value == null
+                        ? Result.Failure<T>(ReactiveStreamsCompliance.ElementMustNotBeNullException)
+                        : result;
+                    _callback(this);
+                }
             }
 
             private static readonly Result<TOut> NotYetThere = Result.Failure<TOut>(new Exception());
@@ -1205,7 +1221,7 @@ namespace Akka.Streams.Implementation.Fusing
             private readonly SelectAsync<TIn, TOut> _stage;
             private readonly Decider _decider;
             private IBuffer<Holder<TOut>> _buffer;
-            private readonly Action<Tuple<Holder<TOut>, Result<TOut>>> _taskCallback;
+            private readonly Action<Holder<TOut>> _taskCallback;
 
             public Logic(Attributes inheritedAttributes, SelectAsync<TIn, TOut> stage) : base(stage.Shape)
             {
@@ -1213,23 +1229,20 @@ namespace Akka.Streams.Implementation.Fusing
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                 _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
 
-                _taskCallback = GetAsyncCallback<Tuple<Holder<TOut>, Result<TOut>>>(t =>
+                _taskCallback = GetAsyncCallback<Holder<TOut>>(t =>
                 {
-                    var holder = t.Item1;
-                    var result = t.Item2;
-                    if (!result.IsSuccess)
-                        FailOrPull(holder, result);
-                    else
+                    var element = t.Element;
+                    if (!element.IsSuccess)
                     {
-                        if (result.Value == null)
-                            FailOrPull(holder, Result.Failure<TOut>(ReactiveStreamsCompliance.ElementMustNotBeNullException));
-                        else
+                        if (_decider(element.Exception) == Directive.Stop)
                         {
-                            holder.Elem = result;
-                            if (IsAvailable(_stage.Out))
-                                PushOne();
+                            FailStage(element.Exception);
+                            return;
                         }
                     }
+
+                    if (IsAvailable(stage.Out))
+                        PushOne();
                 });
 
                 SetHandler(_stage.In, onPush: () =>
@@ -1237,9 +1250,9 @@ namespace Akka.Streams.Implementation.Fusing
                     try
                     {
                         var task = _stage._mapFunc(Grab(_stage.In));
-                        var holder = new Holder<TOut>() {Elem = NotYetThere};
+                        var holder = new Holder<TOut>(NotYetThere, _taskCallback);
                         _buffer.Enqueue(holder);
-                        task.ContinueWith(t => _taskCallback(Tuple.Create(holder, Result.FromTask(t))), TaskContinuationOptions.ExecuteSynchronously);
+                        task.ContinueWith(continuationAction: t => holder.Invoke(Result.FromTask(t)), continuationOptions: TaskContinuationOptions.ExecuteSynchronously);
                     }
                     catch (Exception e)
                     {
@@ -1260,18 +1273,6 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void PreStart() => _buffer = Buffer.Create<Holder<TOut>>(_stage._parallelism, Materializer);
 
-            private void FailOrPull(Holder<TOut> holder, Result<TOut> failure)
-            {
-                if (_decider(failure.Exception) == Directive.Stop)
-                    FailStage(failure.Exception);
-                else
-                {
-                    holder.Elem = failure;
-                    if (IsAvailable(_stage.Out))
-                        PushOne();
-                }
-            }
-
             private void PushOne()
             {
                 var inlet = _stage.In;
@@ -1279,17 +1280,19 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     if (_buffer.IsEmpty)
                     {
-                        if (IsClosed(inlet)) CompleteStage();
-                        else if (!HasBeenPulled(inlet)) Pull(inlet);
+                        if (IsClosed(inlet))
+                            CompleteStage();
+                        else if (!HasBeenPulled(inlet))
+                            Pull(inlet);
                     }
-                    else if (_buffer.Peek().Elem == NotYetThere)
+                    else if (_buffer.Peek().Element == NotYetThere)
                     {
                         if (Todo < _stage._parallelism && !HasBeenPulled(inlet))
                             TryPull(inlet);
                     }
                     else
                     {
-                        var result = _buffer.Dequeue().Elem;
+                        var result = _buffer.Dequeue().Element;
                         if (!result.IsSuccess)
                             continue;
 
@@ -1301,6 +1304,8 @@ namespace Akka.Streams.Implementation.Fusing
                     break;
                 }
             }
+
+            public override string ToString() => $"SelectAsync.Logic(buffer={_buffer})";
         }
 
         #endregion
@@ -1308,8 +1313,8 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly int _parallelism;
         private readonly Func<TIn, Task<TOut>> _mapFunc;
 
-        public readonly Inlet<TIn> In = new Inlet<TIn>("in");
-        public readonly Outlet<TOut> Out = new Outlet<TOut>("out");
+        public readonly Inlet<TIn> In = new Inlet<TIn>("SelectAsync.in");
+        public readonly Outlet<TOut> Out = new Outlet<TOut>("SelectAsync.out");
 
         public SelectAsync(int parallelism, Func<TIn, Task<TOut>> mapFunc)
         {
@@ -1345,24 +1350,32 @@ namespace Akka.Streams.Implementation.Fusing
                 _stage = stage;
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                 _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
+
                 _taskCallback = GetAsyncCallback<Result<TOut>>(result =>
                 {
                     _inFlight--;
-
-                    if (!result.IsSuccess)
-                        FailOrPull(result.Exception);
-                    else
+                    if (result.IsSuccess && result.Value != null)
                     {
-                        if (result.Value == null)
-                            FailOrPull(ReactiveStreamsCompliance.ElementMustNotBeNullException);
-                        else if (IsAvailable(_stage.Out))
+                        if (IsAvailable(stage.Out))
                         {
-                            if (!HasBeenPulled(_stage.In))
-                                TryPull(_stage.In);
-                            Push(_stage.Out, result.Value);
+                            if (!HasBeenPulled(stage.In))
+                                TryPull(stage.In);
+                            Push(stage.Out, result.Value);
                         }
                         else
                             _buffer.Enqueue(result.Value);
+                    }
+                    else
+                    {
+                        var ex = !result.IsSuccess
+                            ? result.Exception
+                            : ReactiveStreamsCompliance.ElementMustNotBeNullException;
+                        if (_decider(ex) == Directive.Stop)
+                            FailStage(ex);
+                        else if (IsClosed(stage.In) && Todo == 0)
+                            CompleteStage();
+                        else if (!HasBeenPulled(stage.In))
+                            TryPull(stage.In);
                     }
                 });
 
@@ -1404,24 +1417,15 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void PreStart() => _buffer = Buffer.Create<TOut>(_stage._parallelism, Materializer);
 
-            private void FailOrPull(Exception failure)
-            {
-                var inlet = _stage.In;
-                if (_decider(failure) == Directive.Stop)
-                    FailStage(failure);
-                else if (IsClosed(inlet) && Todo == 0)
-                    CompleteStage();
-                else if (!HasBeenPulled(inlet))
-                    TryPull(inlet);
-            }
+            public override string ToString() => $"SelectAsyncUnordered.Logic(InFlight={_inFlight}, buffer= {_buffer}";
         }
 
         #endregion
 
         private readonly int _parallelism;
         private readonly Func<TIn, Task<TOut>> _mapFunc;
-        public readonly Inlet<TIn> In = new Inlet<TIn>("in");
-        public readonly Outlet<TOut> Out = new Outlet<TOut>("out");
+        public readonly Inlet<TIn> In = new Inlet<TIn>("SelectAsyncUnordered.in");
+        public readonly Outlet<TOut> Out = new Outlet<TOut>("SelectAsyncUnordered.out");
 
         public SelectAsyncUnordered(int parallelism, Func<TIn, Task<TOut>> mapFunc)
         {
@@ -1548,6 +1552,7 @@ namespace Akka.Streams.Implementation.Fusing
             //       AND
             // - timer fired OR group is full
             private bool _groupClosed;
+            private bool _groupEmitted;
             private bool _finished;
             private int _elements;
 
@@ -1563,17 +1568,17 @@ namespace Akka.Streams.Implementation.Fusing
                 }, onUpstreamFinish: () =>
                 {
                     _finished = true;
-                    if (!_groupClosed && _elements > 0)
-                        CloseGroup();
-                    else
+                    if (_groupEmitted)
                         CompleteStage();
-                }, onUpstreamFailure: FailStage);
+                    else
+                        CloseGroup();
+                });
 
                 SetHandler(_stage._out, onPull: () =>
                 {
                     if (_groupClosed)
                         EmitGroup();
-                }, onDownstreamFinish: CompleteStage);
+                });
             }
 
             public override void PreStart()
@@ -1584,6 +1589,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             private void NextElement(T element)
             {
+                _groupEmitted = false;
                 _buffer.Add(element);
                 _elements++;
                 if (_elements == _stage._count)
@@ -1604,6 +1610,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             private void EmitGroup()
             {
+                _groupEmitted = true;
                 Push(_stage._out, _buffer);
                 _buffer = new List<T>();
                 if (!_finished)
@@ -1890,27 +1897,32 @@ namespace Akka.Streams.Implementation.Fusing
 
             public Logic(Sum<T> stage) : base(stage.Shape)
             {
-                var rest = new LambdaInHandler(onPush: () =>
-                {
-                    _aggregator = stage._reduce(_aggregator, Grab(stage.Inlet));
-                    Pull(stage.Inlet);
-                }, onUpstreamFinish: () =>
-                {
-                    Push(stage.Outlet, _aggregator);
-                    CompleteStage();
-                });
+                var rest = new LambdaInHandler(
+                    onPush: () =>
+                    {
+                        _aggregator = stage._reduce(_aggregator, Grab(stage.Inlet));
+                        Pull(stage.Inlet);
+                    },
+                    onUpstreamFinish: () =>
+                    {
+                        Push(stage.Outlet, _aggregator);
+                        CompleteStage();
+                    });
 
-                SetHandler(stage.Inlet, onPush: () =>
-                {
-                    _aggregator = Grab(stage.Inlet);
-                    Pull(stage.Inlet);
-                    SetHandler(stage.Inlet, rest);
-                });
+                // Initial input handler
+                SetHandler(stage.Inlet,
+                    onPush: () =>
+                    {
+                        _aggregator = Grab(stage.Inlet);
+                        Pull(stage.Inlet);
+                        SetHandler(stage.Inlet, rest);
+                    },
+                    onUpstreamFinish: () => FailStage(new NoSuchElementException("sum over empty stream")));
 
                 SetHandler(stage.Outlet, onPull: () => Pull(stage.Inlet));
             }
 
-            public override string ToString() => $"Reduce.Logic(aggregator={_aggregator}";
+            public override string ToString() => $"Sum.Logic(aggregator={_aggregator}";
         }
 
         #endregion
