@@ -1,0 +1,1 @@
+.\src\packages\NBench.Runner\lib\net45\NBench.Runner.exe .\src\core\Akka.Tests.Performance\bin\Release\Akka.Tests.Performance.dll output-directory=PerfResults include=Akka.Tests.Performance.IO*

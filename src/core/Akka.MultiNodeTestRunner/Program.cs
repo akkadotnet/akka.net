@@ -302,7 +302,7 @@ namespace Akka.MultiNodeTestRunner
 
             Receive<Tcp.Received>(received =>
             {
-                var message = received.Data.DecodeString();
+                var message = received.Data.ToString();
                 _sinkCoordinator.Tell(message);
             });
         }

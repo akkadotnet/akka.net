@@ -125,7 +125,7 @@ namespace Akka.Streams.Implementation.IO
                 {
                     _readBytesTotal += readBytes;
                     // emit immediately, as this is the only chance to do it before we might block again
-                    OnNext(ByteString.Create(_bytes, 0, readBytes));
+                    OnNext(ByteString.CopyFrom(_bytes, 0, readBytes));
                 }
             }
             catch (Exception ex)

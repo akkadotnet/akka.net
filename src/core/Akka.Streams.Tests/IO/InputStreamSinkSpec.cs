@@ -64,15 +64,15 @@ namespace Akka.Streams.Tests.IO
 
                 var result = ReadN(inputStream, 2);
                 result.Item1.Should().Be(2);
-                result.Item2.Should().BeEquivalentTo(_byteString.Take(2));
+                result.Item2.Should().BeEquivalentTo(_byteString.Slice(0, 2));
 
                 result = ReadN(inputStream, 2);
                 result.Item1.Should().Be(2);
-                result.Item2.Should().BeEquivalentTo(_byteString.Drop(2).Concat(byteString2.Take(1)));
+                result.Item2.Should().BeEquivalentTo(Enumerable.Concat(_byteString.Slice(2), byteString2.Slice(0, 1)));
 
                 result = ReadN(inputStream, 2);
                 result.Item1.Should().Be(2);
-                result.Item2.Should().BeEquivalentTo(byteString2.Drop(1));
+                result.Item2.Should().BeEquivalentTo(byteString2.Slice(1));
 
                 inputStream.Dispose();
 
@@ -89,7 +89,7 @@ namespace Akka.Streams.Tests.IO
                 var arr = new byte[_byteString.Count + 1];
                 inputStream.Read(arr, 0, arr.Length).Should().Be(arr.Length - 1);
                 inputStream.Dispose();
-                ByteString.Create(arr).ShouldBeEquivalentTo(_byteString.Concat(ByteString.Create(new byte[] { 0 })));
+                ByteString.FromBytes(arr).ShouldBeEquivalentTo(Enumerable.Concat(_byteString, ByteString.FromBytes(new byte[] { 0 })));
 
             }, _materializer);
         }
@@ -171,10 +171,10 @@ namespace Akka.Streams.Tests.IO
                 var bytes = RandomByteString(10);
                 var inputStream = Source.Single(bytes).RunWith(StreamConverters.AsInputStream(), _materializer);
 
-                while (bytes.NonEmpty)
+                while (!bytes.IsEmpty)
                 {
-                    var expected = bytes.Take(3);
-                    bytes = bytes.Drop(3);
+                    var expected = bytes.Slice(0, 3);
+                    bytes = bytes.Slice(3);
 
                     var result = ReadN(inputStream, 3);
                     result.Item1.Should().Be(expected.Count);
@@ -218,7 +218,7 @@ namespace Akka.Streams.Tests.IO
                 {
                     var r = ReadN(inputStream, 8);
                     r.Item1.Should().Be(8);
-                    r.Item2.ShouldBeEquivalentTo(bytes[i * 2].Concat(bytes[i * 2 + 1]));
+                    r.Item2.ShouldBeEquivalentTo(Enumerable.Concat(bytes[i * 2], bytes[i * 2 + 1]));
                 }
 
                 inputStream.Dispose();
@@ -240,11 +240,11 @@ namespace Akka.Streams.Tests.IO
 
                 var r1 = ReadN(inputStream, 15);
                 r1.Item1.Should().Be(15);
-                r1.Item2.ShouldBeEquivalentTo(bytes1.Concat(bytes2.Take(5)));
+                r1.Item2.ShouldBeEquivalentTo(Enumerable.Concat(bytes1, bytes2.Slice(0, 5)));
 
                 var r2 = ReadN(inputStream, 15);
                 r2.Item1.Should().Be(5);
-                r2.Item2.ShouldBeEquivalentTo(bytes2.Drop(5));
+                r2.Item2.ShouldBeEquivalentTo(bytes2.Slice(5));
 
                 inputStream.Dispose();
             }, _materializer);
@@ -351,14 +351,14 @@ namespace Akka.Streams.Tests.IO
         {
             var a = new byte[size];
             new Random().NextBytes(a);
-            return ByteString.Create(a);
+            return ByteString.FromBytes(a);
         }
 
         private Tuple<int, ByteString> ReadN(Stream s, int n)
         {
             var buf = new byte[n];
             var r = s.Read(buf, 0, n);
-            return new Tuple<int, ByteString>(r, ByteString.Create(buf, 0, r));
+            return new Tuple<int, ByteString>(r, ByteString.FromBytes(buf, 0, r));
         }
 
         private TestSinkStage<ByteString, Stream> TestSink(TestProbe probe)

@@ -189,9 +189,9 @@
     <Compile Include="Event\LoggerMailboxSpec.cs" />
     <Compile Include="Event\LoggerSpec.cs" />
     <Compile Include="IO\SimpleDnsCacheSpec.cs" />
-    <Compile Include="IO\TcpConnectionSpec.cs" />
     <Compile Include="IO\TcpIntegrationSpec.cs" />
     <Compile Include="IO\TcpListenerSpec.cs" />
+    <Compile Include="IO\TestUtils.cs" />
     <Compile Include="IO\UdpConnectedIntegrationSpec.cs" />
     <Compile Include="IO\UdpIntegrationSpec.cs" />
     <Compile Include="MatchHandler\CachedMatchCompilerTests.cs" />
@@ -242,13 +242,13 @@
       <Project>{E636D23C-3432-4AA9-9A5D-5F29D33D3399}</Project>
       <Name>Akka.Tests.Shared.Internals</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Akka\Akka.csproj">
-      <Project>{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}</Project>
-      <Name>Akka</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj">
       <Project>{0D3CBAD0-BBDB-43E5-AFC4-ED1D3ECDC224}</Project>
       <Name>Akka.TestKit</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka\Akka.csproj">
+      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
+      <Name>Akka</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

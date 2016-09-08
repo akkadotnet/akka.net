@@ -52,7 +52,7 @@ namespace Akka.Streams.Tests.IO
             }
 
             public override void Write(byte[] buffer, int offset, int count)
-                => _p.Ref.Tell(ByteString.Create(buffer, offset, count).DecodeString());
+                => _p.Ref.Tell(ByteString.FromBytes(buffer, offset, count).ToString());
 
             public override bool CanRead { get; }
             public override bool CanSeek { get; }
@@ -138,7 +138,7 @@ namespace Akka.Streams.Tests.IO
             }
 
             public override void Write(byte[] buffer, int offset, int count)
-                => _p.Ref.Tell(ByteString.Create(buffer, offset, count).DecodeString());
+                => _p.Ref.Tell(ByteString.FromBytes(buffer, offset, count).ToString());
 
             protected override void Dispose(bool disposing)
             {
@@ -179,9 +179,9 @@ namespace Akka.Streams.Tests.IO
                 var completion = Source.From(datas)
                     .RunWith(StreamConverters.FromOutputStream(() => new VoidOutputStream(p)), _materializer);
 
-                p.ExpectMsg(datas[0].DecodeString());
-                p.ExpectMsg(datas[1].DecodeString());
-                p.ExpectMsg(datas[2].DecodeString());
+                p.ExpectMsg(datas[0].ToString());
+                p.ExpectMsg(datas[1].ToString());
+                p.ExpectMsg(datas[2].ToString());
                 completion.Wait(TimeSpan.FromSeconds(3));
             }, _materializer);
         }
