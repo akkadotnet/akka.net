@@ -367,11 +367,13 @@ namespace Akka.Configuration.Hocon
             string res = GetString();
 
             var match = Regex.Match(res, @"^(?<value>([0-9]+(\.[0-9]+)?))\s*(?<unit>(nanoseconds|nanosecond|nanos|nano|ns|microseconds|microsecond|micros|micro|us|milliseconds|millisecond|millis|milli|ms|seconds|second|s|minutes|minute|m|hours|hour|h|days|day|d))$");
-            if (match.Success) {
+            if (match.Success) 
+            {
                 var u = match.Groups["unit"].Value;
                 var v = ParsePositiveValue(match.Groups["value"].Value);
 
-                switch (u) {
+                switch (u) 
+                {
                     case "nanoseconds":
                     case "nanosecond":
                     case "nanos":
