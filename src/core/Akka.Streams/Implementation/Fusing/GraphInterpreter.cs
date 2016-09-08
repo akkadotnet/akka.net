@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using Akka.Actor;
 using Akka.Event;
@@ -558,7 +559,7 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// Returns true if the given stage is alredy completed
+        /// Returns true if the given stage is already completed
         /// </summary>
         internal bool IsStageCompleted(GraphStageLogic stage) => stage != null && _shutdownCounter[stage.StageId] == 0;
 
@@ -666,11 +667,33 @@ namespace Akka.Streams.Implementation.Fusing
         /// Only invoke this after the interpreter completely settled, otherwise the results might be off. This is a very
         /// simplistic tool, make sure you are understanding what you are doing and then it will serve you well.
         /// </summary>
-        public void DumpWaits()
+        public void DumpWaits() => Console.WriteLine(this);
+
+        public override string ToString()
         {
-            Console.WriteLine("digraph waits {");
+            var builder = new StringBuilder("digraph waits {\n");
+
             for (var i = 0; i < Assembly.Stages.Length; i++)
-                Console.WriteLine($@"N{i} [label=""{Assembly.Stages[i]}""]");
+                builder.AppendLine($"N{i} [label={Assembly.Stages[i]}]");
+
+            for (var i = 0; i < PortStates.Length; i++)
+            {
+                var state = PortStates[i];
+                if (state == InReady)
+                    builder.Append($"  {NameIn(i)} -> {NameOut(i)} [label=shouldPull; color=blue];");
+                else if (state == OutReady)
+                    builder.Append($"  {NameOut(i)} -> {NameIn(i)} [label=shouldPush; color=red];");
+                else if( (state | InClosed | OutClosed) == (InClosed | OutClosed))
+                    builder.Append($"  {NameIn(i)} -> {NameOut(i)} [style=dotted; label=closed dir=both];");
+            }
+
+            builder.AppendLine();
+            builder.AppendLine("}");
+            builder.Append($"// {QueueStatus()} (running={RunningStagesCount}, shutdown={ShutdownCounters()}");
+            return builder.ToString();
         }
-    }
+
+        private string NameIn(int port) => Assembly.InletOwners[port] == Boundary ? "Out" + port : "N" + port;
+
+        private string NameOut(int port) => Assembly.OutletOwners[port] == Boundary ? "Out" + port : "N" + port;}
 }

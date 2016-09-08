@@ -4675,6 +4675,7 @@ namespace Akka.Util
         public AtomicBoolean(bool initialValue = False) { }
         public bool Value { get; set; }
         public bool CompareAndSet(bool expected, bool newValue) { }
+        public bool GetAndSet(bool newValue) { }
     }
     public class AtomicReference<T>
         where T :  class
@@ -4932,6 +4933,18 @@ namespace Akka.Util
     public class static ThreadLocalRandom
     {
         public static System.Random Current { get; }
+    }
+    public sealed class TickTimeTokenBucket : Akka.Util.TokenBucket
+    {
+        public TickTimeTokenBucket(long capacity, long period) { }
+        public override long CurrentTime { get; }
+    }
+    public abstract class TokenBucket
+    {
+        protected TokenBucket(long capacity, long ticksBetweenTokens) { }
+        public abstract long CurrentTime { get; }
+        public void Init() { }
+        public long Offer(long cost) { }
     }
     public class static TypeExtensions
     {

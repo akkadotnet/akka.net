@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -184,7 +185,7 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                task.Wait(RemainingOrDefault).Should().BeTrue();
                 task.Result.ShouldAllBeEquivalentTo(input);
             }, Materializer);
         }

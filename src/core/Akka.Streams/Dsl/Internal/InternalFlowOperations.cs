@@ -281,7 +281,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<T, TMat> TakeWhile<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate)
         {
-            return flow.AndThen(new TakeWhile<T>(predicate));
+            return flow.Via(new Fusing.TakeWhile<T>(predicate));
         }
 
         /// <summary>
@@ -298,7 +298,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<T, TMat> SkipWhile<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate)
         {
-            return flow.AndThen(new SkipWhile<T>(predicate));
+            return flow.Via(new Fusing.SkipWhile<T>(predicate));
         }
 
         /// <summary>
@@ -316,7 +316,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<TOut, TMat> Collect<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> collector)
         {
-            return flow.AndThen(new Collect<TIn, TOut>(collector));
+            return flow.Via(new Fusing.Collect<TIn, TOut>(collector));
         }
 
         /// <summary>
@@ -392,7 +392,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <seealso cref="TakeWhile{T,TMat}"/>
         public static IFlow<T, TMat> LimitWeighted<T, TMat>(this IFlow<T, TMat> flow, long max, Func<T, long> costFunc)
         {
-            return flow.AndThen(new LimitWeighted<T>(max, costFunc));
+            return flow.Via(new Fusing.LimitWeighted<T>(max, costFunc));
         }
 
         /// <summary>
@@ -607,7 +607,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<T, TMat> Skip<T, TMat>(this IFlow<T, TMat> flow, long n)
         {
-            return flow.AndThen(new Skip<T>(n));
+            return flow.Via(new Fusing.Drop<T>(n));
         }
 
         /// <summary>
@@ -645,7 +645,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<T, TMat> Take<T, TMat>(this IFlow<T, TMat> flow, long n)
         {
-            return flow.AndThen(new Take<T>(n));
+            return flow.Via(new Fusing.Take<T>(n));
         }
 
         /// <summary>
@@ -1249,6 +1249,8 @@ namespace Akka.Streams.Dsl.Internal
             if (per == TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be zero", nameof(per));
             if (mode == ThrottleMode.Enforcing && maximumBurst < 0)
                 throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
+            if (per.Ticks < elements)
+                throw new ArgumentException("Rates larger than 1 unit / tick are not supported");
 
             return flow.Via(new Throttle<T>(elements, per, maximumBurst, _ => 1, mode));
         }
@@ -1286,6 +1288,8 @@ namespace Akka.Streams.Dsl.Internal
             if (per == TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be zero", nameof(per));
             if (mode == ThrottleMode.Enforcing && maximumBurst < 0)
                 throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
+            if (per.Ticks < cost)
+                throw new ArgumentException("Rates larger than 1 unit / tick are not supported");
 
             return flow.Via(new Throttle<T>(cost, per, maximumBurst, calculateCost, mode));
         }
@@ -1712,6 +1716,18 @@ namespace Akka.Streams.Dsl.Internal
             Func<TMat, Task, TMat2> materializerFunction)
         {
             return flow.ViaMaterialized(Fusing.GraphStages.TerminationWatcher<T>(), materializerFunction);
+        }
+
+        /// <summary>
+        /// Materializes to <see cref="IFlowMonitor"/> that allows monitoring of the the current flow. All events are propagated
+        /// by the monitor unchanged. Note that the monitor inserts a memory barrier every time it processes an
+        /// event, and may therefor affect performance.
+        /// The <paramref name="combine"/> function is used to combine the <see cref="IFlowMonitor"/> with this flow's materialized value.
+        /// </summary>
+        public static IFlow<T, TMat2> Monitor<T, TMat, TMat2>(this IFlow<T, TMat> flow,
+            Func<TMat, IFlowMonitor, TMat2> combine)
+        {
+            return flow.ViaMaterialized(new Fusing.MonitorFlow<T>(), combine);
         }
 
         //TODO: there is no HKT in .NET, so we cannot simply do `to` method, which evaluates to either Source ⇒ IRunnableGraph, or Flow ⇒ Sink

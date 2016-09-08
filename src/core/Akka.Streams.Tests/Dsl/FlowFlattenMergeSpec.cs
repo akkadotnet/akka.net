@@ -21,7 +21,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class FlowFlattenMergeSpec : TestKit.Tests.AkkaSpec
+    public class FlowFlattenMergeSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
 

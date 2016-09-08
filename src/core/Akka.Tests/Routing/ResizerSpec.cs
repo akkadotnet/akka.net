@@ -216,7 +216,7 @@ namespace Akka.Tests.Routing
             RouteeSize(router).Should().Be(2);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy due to Resizer / Mailbox impl")]
         public void DefaultResizer_must_grow_as_needed_under_pressure()
         {
             var resizer = new DefaultResizer(
@@ -265,7 +265,7 @@ namespace Akka.Tests.Routing
             RouteeSize(router).Should().Be(resizer.UpperBound);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy due to Resizer / Mailbox impl")]
         public void DefaultResizer_must_backoff()
         {
             Within(10.Seconds(), () =>

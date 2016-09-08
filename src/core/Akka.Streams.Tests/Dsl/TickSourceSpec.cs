@@ -10,6 +10,8 @@ using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
 // ReSharper disable InvokeAsExtensionMethod
 
@@ -136,6 +138,39 @@ namespace Akka.Streams.Tests.Dsl
                 cancelable.Cancel();
                 AwaitCondition(() => cancelable.IsCancellationRequested);
                 sub.Request(3);
+                c.ExpectComplete();
+            }, Materializer);
+        }
+        
+        [Fact]
+        public void A_Flow_based_on_a_tick_publisher_must_have_IsCancelled_mirror_the_cancellation_state()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var c = TestSubscriber.CreateManualProbe<string>(this);
+                var tickSource = Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(500), "tick");
+                var cancelable = tickSource.To(Sink.FromSubscriber(c)).Run(Materializer);
+                var sub = c.ExpectSubscription();
+                sub.Request(2);
+                c.ExpectNext("tick");
+                cancelable.IsCancellationRequested.Should().BeFalse();
+                cancelable.Cancel();
+                cancelable.IsCancellationRequested.Should().BeTrue();
+                c.ExpectComplete();
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_Flow_based_on_a_tick_publisher_must_support_being_cancelled_immediately_after_its_materialization()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var c = TestSubscriber.CreateManualProbe<string>(this);
+                var tickSource = Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(500), "tick");
+                var cancelable = tickSource.To(Sink.FromSubscriber(c)).Run(Materializer);
+                cancelable.Cancel();
+                var sub = c.ExpectSubscription();
+                sub.Request(2);
                 c.ExpectComplete();
             }, Materializer);
         }

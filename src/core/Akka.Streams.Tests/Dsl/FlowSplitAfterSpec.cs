@@ -21,7 +21,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class FlowSplitAfterSpec : TestKit.Tests.AkkaSpec
+    public class FlowSplitAfterSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
 

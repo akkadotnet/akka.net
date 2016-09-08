@@ -33,9 +33,13 @@ namespace Akka.Streams.Implementation.IO
             _f = f;
             _chunkSize = chunkSize;
             Attributes = attributes;
+
+            Label = $"FileSource({f}, {chunkSize})";
         }
 
         public override Attributes Attributes { get; }
+
+        protected override string Label { get; } 
 
         public override IModule WithAttributes(Attributes attributes)
             => new FileSource(_f, _chunkSize, attributes, AmendShape(attributes));

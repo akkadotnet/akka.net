@@ -57,7 +57,7 @@ namespace Akka.Persistence.Journal
         /// </summary>
         /// <param name="persistenceId">Persistent actor identifier</param>
         /// <param name="fromSequenceNr">Hint where to start searching for the highest sequence number.
-        /// When a persistent actor is recovering this <paramref name="fromSequenceNr"/> will the the sequence
+        /// When a persistent actor is recovering this <paramref name="fromSequenceNr"/> will the sequence
         /// number of the used snapshot, or `0L` if no snapshot is used.</param>
         /// <returns></returns>
         Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr);

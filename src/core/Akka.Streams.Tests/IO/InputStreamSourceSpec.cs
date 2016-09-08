@@ -9,10 +9,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using Akka.IO;
 using Akka.Streams.Dsl;
-using Akka.Streams.IO;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
@@ -22,7 +20,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.IO
 {
-    public class InputStreamSourceSpec : TestKit.Tests.AkkaSpec
+    public class InputStreamSourceSpec : AkkaSpec
     {
         #region internal classes 
 

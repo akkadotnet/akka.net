@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -239,6 +240,17 @@ namespace Akka.Streams.Tests.Dsl
 
             RandomTestRange(Sys)
                 .ForEach(_ => RunScript(script(), Settings, flow => flow.GroupedWithin(3, TimeSpan.FromMinutes(10))));
+        }
+
+        [Fact]
+        public void A_GroupedWithin_must_group_with_small_groups_with_backpressure()
+        {
+            var t = Source.From(Enumerable.Range(1, 10))
+                .GroupedWithin(1, TimeSpan.FromDays(1))
+                .Throttle(1, TimeSpan.FromMilliseconds(110), 0, ThrottleMode.Shaping)
+                .RunWith(Sink.Seq<IEnumerable<int>>(), Materializer);
+            t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            t.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10).Select(i => new List<int> {i}));
         }
     }
 }

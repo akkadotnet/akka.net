@@ -39,7 +39,7 @@ namespace Akka.Streams.Stage
     /// </para>
     /// <para>
     /// <see cref="AbstractStage{TIn,TOut}.OnPush"/> is called when an element from upstream is available and there is demand from downstream, i.e.
-    /// in <see cref="AbstractStage{TIn,TOut}.OnPush"/> you are allowed to call <see cref="IContext.Push"/> to emit one element downstreams, or you can absorb the
+    /// in <see cref="AbstractStage{TIn,TOut}.OnPush"/> you are allowed to call <see cref="IContext.Push"/> to emit one element downstream, or you can absorb the
     /// element by calling <see cref="IContext.Pull"/>. Note that you can only emit zero or one element downstream from <see cref="AbstractStage{TIn,TOut}.OnPull"/>.
     /// To emit more than one element you have to push the remaining elements from <see cref="AbstractStage{TIn,TOut}.OnPush"/>, one-by-one.
     /// <see cref="AbstractStage{TIn,TOut}.OnPush"/> is not called again until <see cref="AbstractStage{TIn,TOut}.OnPull"/> has requested more elements with <see cref="IContext.Pull"/>.
@@ -49,7 +49,7 @@ namespace Akka.Streams.Stage
     /// </para>
     /// <para>
     /// <see cref="AbstractStage{TIn,TOut}.OnPull"/>> is called when there is demand from downstream, i.e. you are allowed to push one element
-    /// downstreams with <see cref="IContext.Push"/>, or request elements from upstreams with <see cref="IContext.Pull"/>. If you
+    /// downstream with <see cref="IContext.Push"/>, or request elements from upstreams with <see cref="IContext.Pull"/>. If you
     /// always perform transitive pull by calling <see cref="IContext.Pull"/> from <see cref="AbstractStage{TIn,TOut}.OnPull"/> you can use 
     /// <see cref="PushStage{TIn,TOut}"/> instead of <see cref="PushPullStage{TIn,TOut}"/>.
     /// </para>
@@ -235,13 +235,13 @@ namespace Akka.Streams.Stage
 
         /// <summary>
         /// Can be used from <see cref="StageState{TIn,TOut}.OnPush"/> or <see cref="StageState{TIn,TOut}.OnPull"/> to push more than one
-        /// element downstreams.
+        /// element downstream.
         /// </summary>
         public ISyncDirective Emit(IEnumerator<TOut> enumerator, IContext<TOut> context) => Emit(enumerator, context, _current);
 
         /// <summary>
         /// Can be used from <see cref="StageState{TIn,TOut}.OnPush"/> or <see cref="StageState{TIn,TOut}.OnPull"/> to push more than one
-        /// element downstreams and after that change behavior.
+        /// element downstream and after that change behavior.
         /// </summary>
         public ISyncDirective Emit(IEnumerator<TOut> enumerator, IContext<TOut> context, StageState<TIn, TOut> nextState)
         {
@@ -265,7 +265,7 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
-        /// Can be used from <see cref="OnUpstreamFinish"/> to push final elements downstreams
+        /// Can be used from <see cref="OnUpstreamFinish"/> to push final elements downstream
         /// before completing the stream successfully. Note that if this is used from
         /// <see cref="AbstractStage{TIn,TOut}.OnUpstreamFailure"/> the failure will be absorbed and the stream will be completed
         /// successfully.
@@ -285,7 +285,7 @@ namespace Akka.Streams.Stage
 
         /// <summary>
         /// Can be used from <see cref="StageState{TIn,TOut}.OnPush"/> or <see cref="StageState{TIn,TOut}.OnPull"/> to push more than one
-        /// element downstreams and after that finish (complete downstreams, cancel upstreams).
+        /// element downstream and after that finish (complete downstream, cancel upstreams).
         /// </summary>
         public ISyncDirective EmitAndFinish(IEnumerator<TOut> enumerator, IContext<TOut> context)
         {

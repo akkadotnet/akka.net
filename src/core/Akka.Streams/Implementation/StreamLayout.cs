@@ -15,29 +15,28 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Util;
 using Akka.Util;
-using Akka.Util.Internal;
 using Reactive.Streams;
 
 namespace Akka.Streams.Implementation
 {
     public static class StreamLayout
     {
-        //TODO: Materialization order
-        //TODO: Special case linear composites
-        //TODO: Cycles
-
         public static readonly bool IsDebug = false;
 
         #region Materialized Value Node types
 
-        public interface IMaterializedValueNode { }
+        public interface IMaterializedValueNode
+        {
+        }
+
         public sealed class Combine : IMaterializedValueNode
         {
             public readonly Func<object, object, object> Combinator;
             public readonly IMaterializedValueNode Left;
             public readonly IMaterializedValueNode Right;
 
-            public Combine(Func<object, object, object> combinator, IMaterializedValueNode left, IMaterializedValueNode right)
+            public Combine(Func<object, object, object> combinator, IMaterializedValueNode left,
+                IMaterializedValueNode right)
             {
                 Combinator = combinator;
                 Left = left;
@@ -56,7 +55,8 @@ namespace Akka.Streams.Implementation
                 Module = module;
             }
 
-            public override string ToString() => $"Atomic({Module.Attributes.GetNameOrDefault(Module.GetType().Name)}[{Module.GetHashCode()}])";
+            public override string ToString()
+                => $"Atomic({Module.Attributes.GetNameOrDefault(Module.GetType().Name)}[{Module.GetHashCode()}])";
         }
 
         public sealed class Transform : IMaterializedValueNode
@@ -76,14 +76,18 @@ namespace Akka.Streams.Implementation
         public sealed class Ignore : IMaterializedValueNode
         {
             public static readonly Ignore Instance = new Ignore();
-            private Ignore() { }
+
+            private Ignore()
+            {
+            }
 
             public override string ToString() => "Ignore";
         }
 
         #endregion
 
-        public static void Validate(IModule module, int level = 0, bool shouldPrint = false, IDictionary<object, int> idMap = null)
+        public static void Validate(IModule module, int level = 0, bool shouldPrint = false,
+            IDictionary<object, int> idMap = null)
         {
             idMap = idMap ?? new Dictionary<object, int>();
             var currentId = 1;
@@ -116,7 +120,8 @@ namespace Akka.Streams.Implementation
             if (inset.Count != shape.Inlets.Count())
                 problems.Add("shape has duplicate inlets " + ins(shape.Inlets));
             if (!inset.SetEquals(inPorts))
-                problems.Add($"shape has extra {ins(inset.Except(inPorts))}, module has extra {ins(inPorts.Except(inset))}");
+                problems.Add(
+                    $"shape has extra {ins(inset.Except(inPorts))}, module has extra {ins(inPorts.Except(inset))}");
 
             var connectedInlets = inset.Intersect(module.Upstreams.Keys).ToArray();
             if (connectedInlets.Any())
@@ -124,7 +129,8 @@ namespace Akka.Streams.Implementation
             if (outset.Count != shape.Outlets.Count())
                 problems.Add("shape has duplicate outlets " + outs(shape.Outlets));
             if (!outset.SetEquals(outPorts))
-                problems.Add($"shape has extra {outs(outset.Except(outPorts))}, module has extra {outs(outPorts.Except(outset))}");
+                problems.Add(
+                    $"shape has extra {outs(outset.Except(outPorts))}, module has extra {outs(outPorts.Except(outset))}");
 
             var connectedOutlets = outset.Intersect(module.Downstreams.Keys).ToArray();
             if (connectedOutlets.Any())
@@ -176,8 +182,10 @@ namespace Akka.Streams.Implementation
                 problems.Add("unconnected outlets " + outs(unOut));
 
             var atomics = Atomics(module.MaterializedValueComputation);
-            var graphValues = module.SubModules.SelectMany(m => m is GraphModule ? ((GraphModule)m).MaterializedValueIds : Enumerable.Empty<IModule>());
-            var nonExistent = atomics.Except(module.SubModules).Except(graphValues).Except(new[] { module });
+            var graphValues =
+                module.SubModules.SelectMany(
+                    m => m is GraphModule ? ((GraphModule) m).MaterializedValueIds : Enumerable.Empty<IModule>());
+            var nonExistent = atomics.Except(module.SubModules).Except(graphValues).Except(new[] {module});
             if (nonExistent.Any())
                 problems.Add("computation refers to non-existent modules " + string.Join(", ", nonExistent));
 
@@ -185,8 +193,9 @@ namespace Akka.Streams.Implementation
 
             if (print)
             {
-                var indent = string.Empty.PadLeft(level * 2);
-                Console.Out.WriteLine("{0}{1}({2}): {3} {4}", indent, typeof(StreamLayout).Name, shape, ins(inPorts), outs(outPorts));
+                var indent = string.Empty.PadLeft(level*2);
+                Console.Out.WriteLine("{0}{1}({2}): {3} {4}", indent, typeof(StreamLayout).Name, shape, ins(inPorts),
+                    outs(outPorts));
                 foreach (var downstream in module.Downstreams)
                     Console.Out.WriteLine("{0}    {1} -> {2}", indent, outPort(downstream.Key), inPort(downstream.Value));
                 foreach (var problem in problems)
@@ -196,8 +205,9 @@ namespace Akka.Streams.Implementation
             foreach (var subModule in module.SubModules)
                 Validate(subModule, level + 1, print, idMap);
 
-            if (problems.Any() && !shouldPrint) throw new IllegalStateException(
-                $"module inconsistent, found {problems.Count} problems:\n - {string.Join("\n - ", problems)}");
+            if (problems.Any() && !shouldPrint)
+                throw new IllegalStateException(
+                    $"module inconsistent, found {problems.Count} problems:\n - {string.Join("\n - ", problems)}");
         }
 
         private static ImmutableHashSet<IModule> Atomics(IMaterializedValueNode node)
@@ -205,14 +215,44 @@ namespace Akka.Streams.Implementation
             if (node is Ignore)
                 return ImmutableHashSet<IModule>.Empty;
             if (node is Transform)
-                return Atomics(((Transform)node).Node);
+                return Atomics(((Transform) node).Node);
             if (node is Atomic)
-                return ImmutableHashSet.Create(((Atomic)node).Module);
+                return ImmutableHashSet.Create(((Atomic) node).Module);
 
             Combine c;
             if ((c = node as Combine) != null)
                 return Atomics(c.Left).Union(Atomics(c.Right));
             throw new ArgumentException("Couldn't extract atomics for node " + node.GetType());
+        }
+    }
+
+    public static class IgnorableMaterializedValueComposites
+    {
+        public static bool Apply(StreamLayout.IMaterializedValueNode composition)
+        {
+            if (composition is StreamLayout.Combine || composition is StreamLayout.Transform)
+                return false;
+            if (composition is StreamLayout.Ignore)
+                return true;
+
+            var atomic = composition as StreamLayout.Atomic;
+            return atomic != null && Apply(atomic.Module);
+        }
+
+        public static bool Apply(IModule module)
+        {
+            if (module is AtomicModule || module is EmptyModule)
+                return true;
+            var copied = module as CopiedModule;
+            if (copied != null)
+                return Apply(copied.CopyOf);
+
+            var composite = module as CompositeModule;
+            if(composite != null)
+                return Apply(composite.MaterializedValueComputation);
+
+            var fused = module as FusedModule;
+            return fused != null && Apply(fused.MaterializedValueComputation);
         }
     }
 
@@ -334,7 +374,8 @@ namespace Akka.Streams.Implementation
         protected Module()
         {
             _inports = new Lazy<IImmutableSet<InPort>>(() => ImmutableHashSet.CreateRange(Shape.Inlets.Cast<InPort>()));
-            _outports = new Lazy<IImmutableSet<OutPort>>(() => ImmutableHashSet.CreateRange(Shape.Outlets.Cast<OutPort>()));
+            _outports =
+                new Lazy<IImmutableSet<OutPort>>(() => ImmutableHashSet.CreateRange(Shape.Outlets.Cast<OutPort>()));
         }
 
         public IImmutableSet<InPort> InPorts => _inports.Value;
@@ -405,7 +446,7 @@ namespace Akka.Streams.Implementation
                 shape: Shape,
                 downstreams: Downstreams,
                 upstreams: Upstreams,
-                materializedValueComputation: new StreamLayout.Transform(x => mapFunc((TMat)x), IsSealed
+                materializedValueComputation: new StreamLayout.Transform(x => mapFunc((TMat) x), IsSealed
                     ? new StreamLayout.Atomic(this)
                     : MaterializedValueComputation),
                 attributes: Attributes);
@@ -419,26 +460,28 @@ namespace Akka.Streams.Implementation
                 StreamLayout.Validate(this);
 
             if (Equals(other, this))
-                throw new ArgumentException("A module cannot be added to itself. You should pass a separate instance to compose().");
+                throw new ArgumentException(
+                    "A module cannot be added to itself. You should pass a separate instance to compose().");
             if (SubModules.Contains(other))
-                throw new ArgumentException("An existing submodule cannot be added again. All contained modules must be unique.");
+                throw new ArgumentException(
+                    "An existing submodule cannot be added again. All contained modules must be unique.");
 
-            var modules1 = IsSealed ? ImmutableArray.Create<IModule>(this) : SubModules;
-            var modules2 = other.IsSealed ? ImmutableArray.Create(other) : other.SubModules;
+            var modulesLeft = IsSealed ? ImmutableArray.Create<IModule>(this) : SubModules;
+            var modulesRight = other.IsSealed ? ImmutableArray.Create(other) : other.SubModules;
 
             var matComputationLeft = IsSealed ? new StreamLayout.Atomic(this) : MaterializedValueComputation;
-            var matComputationRight = other.IsSealed ? new StreamLayout.Atomic(other) : other.MaterializedValueComputation;
+            var matComputationRight = other.IsSealed
+                ? new StreamLayout.Atomic(other)
+                : other.MaterializedValueComputation;
 
             StreamLayout.IMaterializedValueNode comp;
 
-            // TODO this optimization makes to GraphMatValueSpec tests fail, investigate and un-comment
-            // if (IsKeepLeft(matFunc) && IsIgnorable(matComputationRight)) comp = matComputationLeft;
-            // else if (IsKeepRight(matFunc) && IsIgnorable(matComputationLeft)) comp = matComputationRight;
-            // else comp = new StreamLayout.Combine((x, y) => matFunc((T1)x, (T2)y), matComputationLeft, matComputationRight);
-            comp = new StreamLayout.Combine((x, y) => matFunc((T1)x, (T2)y), matComputationLeft, matComputationRight);
-
+            if (Keep.IsLeft(matFunc) && IsIgnorable(matComputationRight)) comp = matComputationLeft;
+            else if (Keep.IsRight(matFunc) && IsIgnorable(matComputationLeft)) comp = matComputationRight;
+            else comp = new StreamLayout.Combine((x, y) => matFunc((T1)x, (T2)y), matComputationLeft, matComputationRight);
+            
             return new CompositeModule(
-                subModules: modules1.Concat(modules2).ToImmutableArray(),
+                subModules: modulesLeft.Union(modulesRight).ToImmutableArray(),
                 shape: new AmorphousShape(
                     Shape.Inlets.Concat(other.Shape.Inlets).ToImmutableArray(),
                     Shape.Outlets.Concat(other.Shape.Outlets).ToImmutableArray()),
@@ -447,25 +490,16 @@ namespace Akka.Streams.Implementation
                 materializedValueComputation: comp,
                 attributes: Attributes.None);
         }
-        
-        /*
-        // Commented out, part of the optimization mentioned above
-        private static readonly RuntimeMethodHandle KeepRightMethodhandle = typeof (Keep).GetMethod(nameof(Keep.Right)).MethodHandle;
-        private bool IsKeepRight<T1, T2, T3>(Func<T1, T2, T3> fn)
-        {
-            return fn.Method.IsGenericMethod && fn.Method.GetGenericMethodDefinition().MethodHandle.Value == KeepRightMethodhandle.Value;
-        }
-
-        private static readonly RuntimeMethodHandle KeepLeftMethodhandle = typeof(Keep).GetMethod(nameof(Keep.Left)).MethodHandle;
-        private bool IsKeepLeft<T1, T2, T3>(Func<T1, T2, T3> fn)
-        {
-            return fn.Method.IsGenericMethod && fn.Method.GetGenericMethodDefinition().MethodHandle.Value == KeepLeftMethodhandle.Value;
-        }
 
         private bool IsIgnorable(StreamLayout.IMaterializedValueNode computation)
         {
-            if (computation is StreamLayout.Atomic) return IsIgnorable(((StreamLayout.Atomic) computation).Module);
-            return (computation is StreamLayout.Combine || computation is StreamLayout.Transform) || !(computation is StreamLayout.Ignore);
+            if (computation is StreamLayout.Atomic)
+                return IsIgnorable(((StreamLayout.Atomic) computation).Module);
+
+            if (computation is StreamLayout.Combine || computation is StreamLayout.Transform)
+                return false;
+
+            return computation is StreamLayout.Ignore;
         }
 
         private bool IsIgnorable(IModule module)
@@ -476,7 +510,7 @@ namespace Akka.Streams.Implementation
             if (module is FusedModule) return IsIgnorable(((FusedModule) module).MaterializedValueComputation);
 
             throw new NotSupportedException($"Module of type {module.GetType()} is not supported by this method");
-        }*/
+        }
 
         public IModule ComposeNoMaterialized(IModule that)
         {
@@ -484,9 +518,11 @@ namespace Akka.Streams.Implementation
                 StreamLayout.Validate(this);
 
             if (ReferenceEquals(this, that))
-                throw new ArgumentException("A module cannot be added to itself. You should pass a separate instance to Compose().");
+                throw new ArgumentException(
+                    "A module cannot be added to itself. You should pass a separate instance to Compose().");
             if (SubModules.Contains(that))
-                throw new ArgumentException("An existing submodule cannot be added again. All contained modules must be unique.");
+                throw new ArgumentException(
+                    "An existing submodule cannot be added again. All contained modules must be unique.");
 
             var module1 = IsSealed ? ImmutableArray.Create<IModule>(this) : SubModules;
             var module2 = that.IsSealed ? ImmutableArray.Create(that) : that.SubModules;
@@ -531,7 +567,8 @@ namespace Akka.Streams.Implementation
 
         public virtual IImmutableDictionary<InPort, OutPort> Upstreams => ImmutableDictionary<InPort, OutPort>.Empty;
 
-        public virtual StreamLayout.IMaterializedValueNode MaterializedValueComputation => new StreamLayout.Atomic(this);
+        public virtual StreamLayout.IMaterializedValueNode MaterializedValueComputation => new StreamLayout.Atomic(this)
+            ;
 
         public abstract Shape Shape { get; }
 
@@ -552,7 +589,9 @@ namespace Akka.Streams.Implementation
     {
         public static readonly EmptyModule Instance = new EmptyModule();
 
-        private EmptyModule() { }
+        private EmptyModule()
+        {
+        }
 
         public override Shape Shape => ClosedShape.Instance;
 
@@ -560,7 +599,8 @@ namespace Akka.Streams.Implementation
 
         public override bool IsRunnable => false;
 
-        public override StreamLayout.IMaterializedValueNode MaterializedValueComputation => StreamLayout.Ignore.Instance;
+        public override StreamLayout.IMaterializedValueNode MaterializedValueComputation => StreamLayout.Ignore.Instance
+            ;
 
         public override IModule ReplaceShape(Shape shape)
         {
@@ -611,7 +651,8 @@ namespace Akka.Streams.Implementation
 
         public override bool IsCopied => true;
 
-        public override StreamLayout.IMaterializedValueNode MaterializedValueComputation => new StreamLayout.Atomic(CopyOf);
+        public override StreamLayout.IMaterializedValueNode MaterializedValueComputation
+            => new StreamLayout.Atomic(CopyOf);
 
         public override IModule ReplaceShape(Shape shape)
         {
@@ -632,8 +673,8 @@ namespace Akka.Streams.Implementation
                 return new CopiedModule(Shape, attributes, CopyOf);
             return this;
         }
-
-        public override string ToString() => $"Copy({CopyOf})";
+        
+        public override string ToString() => $"{GetHashCode()} copy of {CopyOf}";
     }
 
     public sealed class CompositeModule : Module
@@ -681,7 +722,8 @@ namespace Akka.Streams.Implementation
 
         public override IModule CarbonCopy() => new CopiedModule(Shape.DeepCopy(), Attributes, this);
 
-        public override IModule WithAttributes(Attributes attributes) => new CompositeModule(SubModules, Shape, Downstreams, Upstreams, MaterializedValueComputation, attributes);
+        public override IModule WithAttributes(Attributes attributes)
+            => new CompositeModule(SubModules, Shape, Downstreams, Upstreams, MaterializedValueComputation, attributes);
 
         public static CompositeModule Create(Module module, Shape shape)
         {
@@ -697,11 +739,13 @@ namespace Akka.Streams.Implementation
 
         public override string ToString()
         {
-            return $"\n  Name: {Attributes.GetNameOrDefault("unnamed")}" +
-                   "\n  Modules:" +
+            return $"\n  CompositeModule [{GetHashCode()}%08x]" +
+                   $"\n  Name: {Attributes.GetNameOrDefault("unnamed")}" +
+                    "\n  Modules:" +
                    $"\n    {string.Join("\n    ", SubModules.Select(m => m.Attributes.GetNameLifted() ?? m.ToString().Replace("\n", "\n    ")))}" +
                    $"\n  Downstreams: {string.Join("", Downstreams.Select(kvp => $"\n    {kvp.Key} -> {kvp.Value}"))}" +
-                   $"\n  Upstreams: {string.Join("", Upstreams.Select(kvp => $"\n    {kvp.Key} -> {kvp.Value}"))}";
+                   $"\n  Upstreams: {string.Join("", Upstreams.Select(kvp => $"\n    {kvp.Key} -> {kvp.Value}"))}" +
+                   $"\n  MatValue: {MaterializedValueComputation}";
         }
     }
 
@@ -756,7 +800,10 @@ namespace Akka.Streams.Implementation
 
         public override IModule CarbonCopy() => new CopiedModule(Shape.DeepCopy(), Attributes, this);
 
-        public override IModule WithAttributes(Attributes attributes) => new FusedModule(SubModules, Shape, Downstreams, Upstreams, MaterializedValueComputation, attributes, Info);
+        public override IModule WithAttributes(Attributes attributes)
+            =>
+                new FusedModule(SubModules, Shape, Downstreams, Upstreams, MaterializedValueComputation, attributes,
+                    Info);
 
         public override string ToString()
         {
@@ -764,7 +811,8 @@ namespace Akka.Streams.Implementation
                    "\n  Modules:" +
                    $"\n    {string.Join("\n    ", SubModules.Select(m => m.Attributes.GetNameLifted() ?? m.ToString().Replace("\n", "\n    ")))}" +
                    $"\n  Downstreams: {string.Join("", Downstreams.Select(kvp => $"\n    {kvp.Key} -> {kvp.Value}"))}" +
-                   $"\n  Upstreams: {string.Join("", Upstreams.Select(kvp => $"\n    {kvp.Key} -> {kvp.Value}"))}";
+                   $"\n  Upstreams: {string.Join("", Upstreams.Select(kvp => $"\n    {kvp.Key} -> {kvp.Value}"))}" +
+                   $"\n  MatValue: {MaterializedValueComputation}";
         }
     }
 
@@ -780,175 +828,545 @@ namespace Akka.Streams.Implementation
         public sealed override IImmutableDictionary<InPort, OutPort> Upstreams => base.Upstreams;
     }
 
-    public sealed class VirtualProcessor<T> : IProcessor<T, T>
+    /**
+     * INTERNAL API
+     *
+     * This is a transparent processor that shall consume as little resources as
+     * possible. Due to the possibility of receiving uncoordinated inputs from both
+     * downstream and upstream, this needs an atomic state machine which looks a
+     * little like this:
+     *
+     * <![CDATA[
+     *            +--------------+      (2)    +------------+
+     *            |     null     | ----------> | Subscriber |
+     *            +--------------+             +------------+
+     *                   |                           |
+     *               (1) |                           | (1)
+     *                  \|/                         \|/
+     *            +--------------+      (2)    +------------+ --\
+     *            | Subscription | ----------> |    Both    |    | (4)
+     *            +--------------+             +------------+ <-/
+     *                   |                           |
+     *               (3) |                           | (3)
+     *                  \|/                         \|/
+     *            +--------------+      (2)    +------------+ --\
+     *            |   Publisher  | ----------> |   Inert    |    | (4, *)
+     *            +--------------+             +------------+ <-/
+     * ]]>
+     * The idea is to keep the major state in only one atomic reference. The actions
+     * that can happen are:
+     *
+     *  (1) onSubscribe
+     *  (2) subscribe
+     *  (3) onError / onComplete
+     *  (4) onNext
+     *      (*) Inert can be reached also by cancellation after which onNext is still fine
+     *          so we just silently ignore possible spec violations here
+     *
+     * Any event that occurs in a state where no matching outgoing arrow can be found
+     * is a spec violation, leading to the shutdown of this processor (meaning that
+     * the state is updated such that all following actions match that of a failed
+     * Publisher or a cancelling Subscriber, and the non-guilty party is informed if
+     * already connected).
+     *
+     * request() can only be called after the Subscriber has received the Subscription
+     * and that also means that onNext() will only happen after having transitioned into
+     * the Both state as well. The Publisher state means that if the real
+     * Publisher terminates before we get the Subscriber, we can just forget about the
+     * real one and keep an already finished one around for the Subscriber.
+     *
+     * The Subscription that is offered to the Subscriber must cancel the original
+     * Publisher if things go wrong (like `request(0)` coming in from downstream) and
+     * it must ensure that we drop the Subscriber reference when `cancel` is invoked.
+     */
+    public sealed class VirtualProcessor<T> : AtomicReference<object>, IProcessor<T, T>
     {
+        private const string NoDemand = "spec violation: OnNext was signaled from upstream without demand";
+
         #region internal classes
 
-        internal interface ITermination { }
-        internal struct Allowed : ITermination
+        private sealed class Inert
         {
-            public static readonly Allowed Instance = new Allowed();
-        }
-        internal struct Completed : ITermination
-        {
-            public static readonly Completed Instance = new Completed();
-        }
-        internal struct Failed : ITermination
-        {
-            public readonly Exception Reason;
+            public static readonly ISubscriber<T> Subscriber = new CancellingSubscriber<T>();
 
-            public Failed(Exception reason) : this()
+            public static readonly Inert Instance = new Inert();
+
+            private Inert()
             {
-                Reason = reason;
             }
         }
 
-        private sealed class Sub : AtomicCounterLong, ISubscription
+        private sealed class Both
         {
-            private readonly ISubscription _subscription;
-            private readonly AtomicReference<object> _subscriptionStatus;
-
-            public Sub(ISubscription subscription, AtomicReference<object> subscriptionStatus)
+            public Both(ISubscriber<T> subscriber)
             {
-                _subscription = subscription;
-                _subscriptionStatus = subscriptionStatus;
+                Subscriber = subscriber;
             }
 
-            public void Request(long n)
-            {
-                var current = Current;
-                while (true)
-                {
-                    if (current < 0)
-                        _subscription.Request(n);
-                    else if 
-                        (CompareAndSet(current, current + n)) ;
-                    else
-                        continue;
-                    break;
-                }
-            }
+            public ISubscriber<T> Subscriber { get; }
 
-            public void Cancel()
-            {
-                _subscriptionStatus.Value = InnertSubscriber;
-                _subscription.Cancel();
-            }
-
-            public void CloseLatch()
-            {
-                var requested = GetAndSet(-1);
-                if (requested > 0)
-                    _subscription.Request(requested);
-            }
         }
 
         #endregion
 
-        private static readonly CancellingSubscriber<T> InnertSubscriber = new CancellingSubscriber<T>();
-
-        private readonly AtomicReference<object> _subscriptionStatus = new AtomicReference<object>();
-        private readonly AtomicReference<ITermination> _terminationStatus = new AtomicReference<ITermination>();
-
         public void Subscribe(ISubscriber<T> subscriber)
         {
-            ReactiveStreamsCompliance.RequireNonNullSubscriber(subscriber);
-
-            if (_subscriptionStatus.CompareAndSet(null, subscriber))
+            if (subscriber == null)
             {
-                /* wait for OnSubscribe */
-            }
-            else
-            {
-                var status = _subscriptionStatus.Value;
-                if (status is ISubscriber<T>)
-                    ReactiveStreamsCompliance.RejectAdditionalSubscriber(subscriber, "VirtualProcessor");
-                else if (status is Sub)
+                var ex = ReactiveStreamsCompliance.SubscriberMustNotBeNullException;
+                try
                 {
-                    var sub = (Sub)status;
-                    try
-                    {
-                        _subscriptionStatus.Value = subscriber;
-                        ReactiveStreamsCompliance.TryOnSubscribe(subscriber, sub);
-                        sub.CloseLatch(); // allow onNext only now
-                        var terminationStatus = _terminationStatus.GetAndSet(Allowed.Instance);
-                        if (terminationStatus is Completed)
-                            ReactiveStreamsCompliance.TryOnComplete(subscriber);
-                        else if (terminationStatus is Failed)
-                            ReactiveStreamsCompliance.TryOnError(subscriber, ((Failed)terminationStatus).Reason);
-                    }
-                    catch (Exception)
-                    {
-                        sub.Cancel();
-                    }
+                    TrySubscribe(Inert.Subscriber);
+                }
+                finally
+                {
+                    // must throw ArgumentNullEx, rule 2:13
+                    throw ex;
                 }
             }
+
+            TrySubscribe(subscriber);
+        }
+
+        private void TrySubscribe(ISubscriber<T> subscriber)
+        {
+            if (Value == null)
+            {
+                if (!CompareAndSet(null, subscriber))
+                    TrySubscribe(subscriber);
+                return;
+            }
+
+            var subscription = Value as ISubscription;
+            if (subscription != null)
+            {
+                if (CompareAndSet(subscription, new Both(subscriber)))
+                    EstablishSubscription(subscriber, subscription);
+                else
+                    TrySubscribe(subscriber);
+
+                return;
+            }
+
+            var publisher = Value as IPublisher<T>;
+            if (publisher != null)
+            {
+                if (CompareAndSet(publisher, Inert.Instance))
+                    publisher.Subscribe(subscriber);
+                else
+                    TrySubscribe(subscriber);
+
+                return;
+            }
+
+            ReactiveStreamsCompliance.RejectAdditionalSubscriber(subscriber, "VirtualProcessor");
         }
 
         public void OnSubscribe(ISubscription subscription)
         {
-            ReactiveStreamsCompliance.RequireNonNullSubscription(subscription);
-
-            var wrapped = new Sub(subscription, _subscriptionStatus);
-            if (_subscriptionStatus.CompareAndSet(null, wrapped))
+            if (subscription == null)
             {
-                /* wait for subscriber */
-            }
-            else
-            {
-                var value = _subscriptionStatus.Value;
-                if (value is ISubscriber<T>)
+                var ex = ReactiveStreamsCompliance.SubscriptionMustNotBeNullException;
+                try
                 {
-                    var sub = (ISubscriber<T>)value;
-                    var terminationStatus = _terminationStatus.Value;
-                    if (terminationStatus is Allowed)
-                    {
-                        /*
-                         * There is a race condition here: if this thread reads the subscriptionStatus after
-                         * set set() in subscribe() but then sees the terminationStatus before the getAndSet()
-                         * is published then we will rely upon the downstream Subscriber for cancelling this
-                         * Subscription. I only mention this because the TCK requires that we handle this here
-                         * (since the manualSubscriber used there does not expose this behavior).
-                         */
-                        subscription.Cancel();
-                    }
-                    else
-                    {
-                        ReactiveStreamsCompliance.TryOnSubscribe(sub, wrapped);
-                        wrapped.CloseLatch(); // allow OnNext only now
-                        _terminationStatus.Value = Allowed.Instance;
-                    }
+                    TryOnSubscribe(new ErrorPublisher<T>(ex, "failed-VirtualProcessor"), subscription);
                 }
-                else if (value is ISubscription)
-                    subscription.Cancel(); // reject further Subscriptions
+                finally
+                {
+                    // must throw ArgumentNullEx, rule 2:13
+                    throw ex;
+                }
+            }
+
+            TryOnSubscribe(subscription, subscription);
+        }
+
+        private void TryOnSubscribe(object obj, ISubscription s)
+        {
+            if (Value == null)
+            {
+                if (!CompareAndSet(null, obj))
+                    TryOnSubscribe(obj, s);
+                return;
+            }
+
+            var subscriber = Value as ISubscriber<T>;
+            if (subscriber != null)
+            {
+                var subscription = obj as ISubscription;
+                if (subscription != null)
+                {
+                    if (CompareAndSet(subscriber, new Both(subscriber)))
+                        EstablishSubscription(subscriber, subscription);
+                    else
+                        TryOnSubscribe(obj, s);
+
+                    return;
+                }
+
+                var publisher = Value as IPublisher<T>;
+                if (publisher != null)
+                {
+                    var inert = GetAndSet(Inert.Instance);
+                    if (inert != Inert.Instance)
+                        publisher.Subscribe(subscriber);
+                    return;
+                }
+
+                return;
+            }
+
+            // spec violation
+            ReactiveStreamsCompliance.TryCancel(s);
+        }
+
+        private void EstablishSubscription(ISubscriber<T> subscriber, ISubscription subscription)
+        {
+            var wrapped = new WrappedSubscription(subscription, this);
+            try
+            {
+                subscriber.OnSubscribe(wrapped);
+            }
+            catch (Exception ex)
+            {
+                Value = Inert.Instance;
+                ReactiveStreamsCompliance.TryCancel(subscription);
+                ReactiveStreamsCompliance.TryOnError(subscriber, ex);
+            }
+        }
+
+        public void OnError(Exception cause)
+        {
+            /*
+            * `ex` is always a reasonable Throwable that we should communicate downstream,
+            * but if `t` was `null` then the spec requires us to throw an NPE (which `ex`
+            * will be in this case).
+            */
+            var ex = cause ?? ReactiveStreamsCompliance.ExceptionMustNotBeNullException;
+
+            while (true)
+            {
+                if (Value == null)
+                {
+                    if (!CompareAndSet(null, new ErrorPublisher<T>(ex, "failed-VirtualProcessor")))
+                        continue;
+                    if (cause == null)
+                        throw ex;
+                    return;
+                }
+
+                var subscription = Value as ISubscription;
+                if (subscription != null)
+                {
+                    if (!CompareAndSet(subscription, new ErrorPublisher<T>(ex, "failed-VirtualProcessor")))
+                        continue;
+                    if (cause == null)
+                        throw ex;
+                    return;
+                }
+
+                var both = Value as Both;
+                if (both != null)
+                {
+                    Value = Inert.Instance;
+                    try
+                    {
+                        ReactiveStreamsCompliance.TryOnError(both.Subscriber, ex);
+                    }
+                    finally
+                    {
+                        // must throw ArgumentNullEx, rule 2:13
+                        if (cause == null)
+                            throw ex;
+                    }
+
+                    return;
+                }
+
+                var subscriber = Value as ISubscriber<T>;
+                if (subscriber != null)
+                {
+                    // spec violation
+                    var inert = GetAndSet(Inert.Instance);
+                    if (inert != Inert.Instance)
+                        new ErrorPublisher<T>(ex, "failed-VirtualProcessor").Subscribe(subscriber);
+
+                    return;
+                }
+
+                // spec violation or cancellation race, but nothing we can do
+                return;
+            }
+        }
+
+        public void OnComplete()
+        {
+            while (true)
+            {
+                if (Value == null)
+                {
+                    if (!CompareAndSet(null, EmptyPublisher<T>.Instance))
+                        continue;
+
+                    return;
+                }
+
+                var subscription = Value as ISubscription;
+                if (subscription != null)
+                {
+                    if (!CompareAndSet(subscription, EmptyPublisher<T>.Instance))
+                        continue;
+
+                    return;
+                }
+
+                var both = Value as Both;
+                if (both != null)
+                {
+                    Value = Inert.Instance;
+                    ReactiveStreamsCompliance.TryOnComplete(both.Subscriber);
+                    return;
+                }
+
+                var subscriber = Value as ISubscriber<T>;
+                if (subscriber != null)
+                {
+                    // spec violation
+                    Value = Inert.Instance;
+                    EmptyPublisher<T>.Instance.Subscribe(subscriber);
+                    return;
+                }
+
+                // spec violation or cancellation race, but nothing we can do
+                return;
             }
         }
 
         public void OnNext(T element)
         {
-            ReactiveStreamsCompliance.RequireNonNullElement(element);
-            ReactiveStreamsCompliance.TryOnNext(_subscriptionStatus.Value as ISubscriber<T>, element);
+            if (element == null)
+            {
+                var ex = ReactiveStreamsCompliance.ElementMustNotBeNullException;
+
+                while (true)
+                {
+                    if (Value == null || Value is ISubscription)
+                    {
+                        if (!CompareAndSet(Value, new ErrorPublisher<T>(ex, "failed-VirtualProcessor")))
+                            continue;
+
+                        break;
+                    }
+
+                    var subscriber = Value as ISubscriber<T>;
+                    if (subscriber != null)
+                    {
+                        try
+                        {
+                            subscriber.OnError(ex);
+                        }
+                        finally
+                        {
+                            Value = Inert.Instance;
+                        }
+                        break;
+                    }
+
+                    var both = Value as Both;
+                    if (both != null)
+                    {
+                        try
+                        {
+                            both.Subscriber.OnError(ex);
+                        }
+                        finally
+                        {
+                            Value = Inert.Instance;
+                        }
+                    }
+
+                    // spec violation or cancellation race, but nothing we can do
+                    break;
+                }
+
+                // must throw ArgumentNullEx, rule 2:13
+                throw ex;
+            }
+
+            while (true)
+            {
+                var both = Value as Both;
+                if (both != null)
+                {
+                    try
+                    {
+                        both.Subscriber.OnNext(element);
+                        return;
+                    }
+                    catch (Exception e)
+                    {
+                        Value = Inert.Instance;
+                        throw new IllegalStateException(
+                            "Subscriber threw exception, this is in violation of rule 2:13", e);
+                    }
+                }
+
+                var subscriber = Value as ISubscriber<T>;
+                if (subscriber != null)
+                {
+                    // spec violation
+                    var ex = new IllegalStateException(NoDemand);
+                    var inert = GetAndSet(Inert.Instance);
+                    if (inert != Inert.Instance)
+                        new ErrorPublisher<T>(ex, "failed-VirtualProcessor").Subscribe(subscriber);
+                    throw ex;
+                }
+
+                if (Value == Inert.Instance || Value is IPublisher<T>)
+                {
+                    // nothing to be done
+                    return;
+                }
+
+                var publisher = new ErrorPublisher<T>(new IllegalStateException(NoDemand), "failed-VirtualPublisher");
+                if (!CompareAndSet(Value, publisher))
+                    continue;
+                throw publisher.Cause;
+            }
         }
 
-        public void OnError(Exception cause)
+        private sealed class WrappedSubscription : ISubscription
         {
-            ReactiveStreamsCompliance.RequireNonNullException(cause);
-            if (_terminationStatus.CompareAndSet(null, new Failed(cause)))
+            private readonly ISubscription _real;
+            private readonly VirtualProcessor<T> _processor;
+
+            public WrappedSubscription(ISubscription real, VirtualProcessor<T> processor)
             {
-                //let it be picked up by Subscribe()
+                _real = real;
+                _processor = processor;
             }
-            else
-                ReactiveStreamsCompliance.TryOnError(_subscriptionStatus.Value as ISubscriber<T>, cause);
+
+            public void Request(long n)
+            {
+                if (n < 1)
+                {
+                    ReactiveStreamsCompliance.TryCancel(_real);
+                    var value = _processor.GetAndSet(Inert.Instance);
+                    var both = value as Both;
+                    if (both != null)
+                        ReactiveStreamsCompliance.RejectDueToNonPositiveDemand(both.Subscriber);
+                    else if (value == Inert.Instance)
+                    {
+                        // another failure has won the race
+                    }
+                    else
+                    {
+                        // this cannot possibly happen, but signaling errors is impossible at this point
+                    }
+                }
+                else
+                    _real.Request(n);
+            }
+
+            public void Cancel()
+            {
+                _processor.Value = Inert.Instance;
+                _real.Cancel();
+            }
+        }
+    }
+
+    /**
+     * INTERNAL API
+     *
+     * The implementation of `Sink.AsPublisher` needs to offer a `Publisher` that
+     * defers to the upstream that is connected during materialization. This would
+     * be trivial if it were not for materialized value computations that may even
+     * spawn the code that does `pub.subscribe(sub)` in a Future, running concurrently
+     * with the actual materialization. Therefore we implement a minimial shell here
+     * that plugs the downstream and the upstream together as soon as both are known.
+     * Using a VirtualProcessor would technically also work, but it would defeat the
+     * purpose of subscription timeouts—the subscription would always already be
+     * established from the Actor’s perspective, regardless of whether a downstream
+     * will ever be connected.
+     *
+     * One important consideration is that this `Publisher` must not retain a reference
+     * to the `Subscriber` after having hooked it up with the real `Publisher`, hence
+     * the use of `Inert.subscriber` as a tombstone.
+     */
+    internal sealed class VirtualPublisher<T> : AtomicReference<object>, IPublisher<T>, IUntypedVirtualPublisher
+    {
+        #region internal classes
+
+        private sealed class Inert
+        {
+            public static readonly ISubscriber<T> Subscriber = new CancellingSubscriber<T>();
+
+            public static readonly Inert Instance = new Inert();
+
+            private Inert()
+            {
+            }
         }
 
-        public void OnComplete()
+        #endregion
+
+        public void Subscribe(ISubscriber<T> subscriber)
         {
-            if (_terminationStatus.CompareAndSet(null, Completed.Instance))
+            ReactiveStreamsCompliance.RequireNonNullSubscriber(subscriber);
+
+            while (true)
             {
-                //let it be picked up by Subscribe()
+                if (Value == null)
+                {
+                    if (!CompareAndSet(null, subscriber))
+                        continue;
+                    return;
+                }
+
+                var publisher = Value as IPublisher<T>;
+                if (publisher != null)
+                {
+                    if (CompareAndSet(publisher, Inert.Subscriber))
+                    {
+                        publisher.Subscribe(subscriber);
+                        return;
+                    }
+                    continue;
+                }
+
+                ReactiveStreamsCompliance.RejectAdditionalSubscriber(subscriber, "Sink.AsPublisher(fanout = false)");
+                return;
             }
-            else
-                ReactiveStreamsCompliance.TryOnComplete(_subscriptionStatus.Value as ISubscriber<T>);
+        }
+
+        void IUntypedVirtualPublisher.Subscribe(IUntypedSubscriber subscriber)
+            => Subscribe(UntypedSubscriber.ToTyped<T>(subscriber));
+
+        public void RegisterPublisher(IUntypedPublisher publisher)
+            => RegisterPublisher(UntypedPublisher.ToTyped<T>(publisher));
+
+        public void RegisterPublisher(IPublisher<T> publisher)
+        {
+            while (true)
+            {
+                if (Value == null)
+                {
+                    if (!CompareAndSet(null, publisher))
+                        continue;
+                    return;
+                }
+
+                var subscriber = Value as ISubscriber<T>;
+                if (subscriber != null)
+                {
+                    Value = Inert.Instance;
+                    publisher.Subscribe(subscriber);
+                    return;
+                }
+
+                throw new IllegalStateException("internal error");
+            }
         }
     }
 
@@ -958,11 +1376,13 @@ namespace Akka.Streams.Implementation
 
         public class MaterializationPanicException : Exception
         {
-            public MaterializationPanicException(Exception innerException) : base("Materialization aborted.", innerException)
+            public MaterializationPanicException(Exception innerException)
+                : base("Materialization aborted.", innerException)
             {
             }
 
-            protected MaterializationPanicException(SerializationInfo info, StreamingContext context) : base(info, context)
+            protected MaterializationPanicException(SerializationInfo info, StreamingContext context)
+                : base(info, context)
             {
             }
         }
@@ -970,10 +1390,15 @@ namespace Akka.Streams.Implementation
         protected readonly IModule TopLevel;
         protected readonly Attributes InitialAttributes;
 
-        private readonly LinkedList<IDictionary<InPort, IUntypedSubscriber>> _subscribersStack = new LinkedList<IDictionary<InPort, IUntypedSubscriber>>();
-        private readonly LinkedList<IDictionary<OutPort, IUntypedPublisher>> _publishersStack = new LinkedList<IDictionary<OutPort, IUntypedPublisher>>();
-        private readonly IDictionary<StreamLayout.IMaterializedValueNode, LinkedList<IMaterializedValueSource>> _materializedValueSources =
-            new Dictionary<StreamLayout.IMaterializedValueNode, LinkedList<IMaterializedValueSource>>();
+        private readonly LinkedList<IDictionary<InPort, object>> _subscribersStack =
+            new LinkedList<IDictionary<InPort, object>>();
+
+        private readonly LinkedList<IDictionary<OutPort, IUntypedPublisher>> _publishersStack =
+            new LinkedList<IDictionary<OutPort, IUntypedPublisher>>();
+
+        private readonly LinkedList<IDictionary<StreamLayout.IMaterializedValueNode, LinkedList<IMaterializedValueSource>>>
+            _materializedValueSources =
+                new LinkedList<IDictionary<StreamLayout.IMaterializedValueNode, LinkedList<IMaterializedValueSource>>>();
 
         /// <summary>
         /// Please note that this stack keeps track of the scoped modules wrapped in CopiedModule but not the CopiedModule
@@ -989,15 +1414,18 @@ namespace Akka.Streams.Implementation
         {
             TopLevel = topLevel;
             InitialAttributes = initialAttributes;
-            _subscribersStack.AddFirst(new Dictionary<InPort, IUntypedSubscriber>());
+            _subscribersStack.AddFirst(new Dictionary<InPort, object>());
             _publishersStack.AddFirst(new Dictionary<OutPort, IUntypedPublisher>());
+            _materializedValueSources.AddFirst(
+                new Dictionary<StreamLayout.IMaterializedValueNode, LinkedList<IMaterializedValueSource>>());
             _moduleStack.AddFirst(TopLevel);
         }
 
-        private IDictionary<InPort, IUntypedSubscriber> Subscribers => _subscribersStack.First.Value;
+        private IDictionary<InPort, object> Subscribers => _subscribersStack.First.Value;
         private IDictionary<OutPort, IUntypedPublisher> Publishers => _publishersStack.First.Value;
         private IModule CurrentLayout => _moduleStack.First.Value;
 
+        private IDictionary<StreamLayout.IMaterializedValueNode, LinkedList<IMaterializedValueSource>> MaterializedValueSource => _materializedValueSources.First.Value;
         ///<summary>
         /// Enters a copied module and establishes a scope that prevents internals to leak out and interfere with copies
         /// of the same module.
@@ -1005,8 +1433,11 @@ namespace Akka.Streams.Implementation
         /// </summary>
         private void EnterScope(CopiedModule enclosing)
         {
-            _subscribersStack.AddFirst(new Dictionary<InPort, IUntypedSubscriber>());
+            if(IsDebug)
+                Console.WriteLine($"entering scope [{GetHashCode()}%08x]");
+            _subscribersStack.AddFirst(new Dictionary<InPort, object>());
             _publishersStack.AddFirst(new Dictionary<OutPort, IUntypedPublisher>());
+            _materializedValueSources.AddFirst(new Dictionary<StreamLayout.IMaterializedValueNode, LinkedList<IMaterializedValueSource>>());
             _moduleStack.AddFirst(enclosing.CopyOf);
         }
 
@@ -1023,7 +1454,11 @@ namespace Akka.Streams.Implementation
 
             _subscribersStack.RemoveFirst();
             _publishersStack.RemoveFirst();
+            _materializedValueSources.RemoveFirst();
             _moduleStack.RemoveFirst();
+
+            if(IsDebug)
+                Console.WriteLine($"   subscribers = {scopeSubscribers}\n publishers = {scopePublishers}");
 
             // When we exit the scope of a copied module,  pick up the Subscribers/Publishers belonging to exposed ports of
             // the original module and assign them to the copy ports in the outer scope that we will return to
@@ -1042,11 +1477,15 @@ namespace Akka.Streams.Implementation
 
         public object Materialize()
         {
+            if(IsDebug)
+                Console.WriteLine($"beginning materialization of {TopLevel}");
+
             if (TopLevel is EmptyModule)
                 throw new InvalidOperationException("An empty module cannot be materialized (EmptyModule was given)");
 
             if (!TopLevel.IsRunnable)
-                throw new InvalidOperationException("The top level module cannot be materialized because it has unconnected ports");
+                throw new InvalidOperationException(
+                    "The top level module cannot be materialized because it has unconnected ports");
 
             try
             {
@@ -1060,12 +1499,26 @@ namespace Akka.Streams.Implementation
                 var ex = new MaterializationPanicException(cause);
 
                 foreach (var subMap in _subscribersStack)
-                    foreach (var subscriber in subMap.Values)
+                    foreach (var value in subMap.Values)
                     {
-                        var subscribedType = UntypedSubscriber.ToTyped(subscriber).GetType().GetSubscribedType();
-                        var publisher = typeof(ErrorPublisher<>).Instantiate(subscribedType, ex, string.Empty);
+                        var subscriber = value as IUntypedSubscriber;
+                        if (subscriber != null)
+                        {
+                            var subscribedType = UntypedSubscriber.ToTyped(subscriber).GetType().GetSubscribedType();
+                            var publisher = typeof(ErrorPublisher<>).Instantiate(subscribedType, ex, string.Empty);
 
-                        UntypedPublisher.FromTyped(publisher).Subscribe(subscriber);
+                            UntypedPublisher.FromTyped(publisher).Subscribe(subscriber);
+                            continue;
+                        }
+
+                        var virtualPublisher = value as IUntypedVirtualPublisher;
+                        if (virtualPublisher != null)
+                        {
+                            var publishedType =
+                                UntypedVirtualPublisher.ToTyped(virtualPublisher).GetType().GetPublishedType();
+                            var publisher = typeof(ErrorPublisher<>).Instantiate(publishedType, ex, string.Empty);
+                            virtualPublisher.RegisterPublisher(UntypedPublisher.FromTyped(publisher));
+                        }
                     }
 
                 foreach (var pubMap in _publishersStack)
@@ -1086,32 +1539,28 @@ namespace Akka.Streams.Implementation
         protected void RegisterSource(IMaterializedValueSource materializedSource)
         {
             if (IsDebug) Console.WriteLine($"Registering source {materializedSource}");
-            LinkedList<IMaterializedValueSource> sources;
-            if (_materializedValueSources.TryGetValue(materializedSource.Computation, out sources))
-                sources.AddFirst(materializedSource);
+
+            if (MaterializedValueSource.ContainsKey(materializedSource.Computation))
+                MaterializedValueSource[materializedSource.Computation].AddFirst(materializedSource);
             else
-                _materializedValueSources.Add(materializedSource.Computation, new LinkedList<IMaterializedValueSource>(new[] { materializedSource }));
+                MaterializedValueSource.Add(materializedSource.Computation,
+                    new LinkedList<IMaterializedValueSource>(new[] {materializedSource}));
         }
 
         protected object MaterializeModule(IModule module, Attributes effectiveAttributes)
         {
             var materializedValues = new Dictionary<IModule, object>();
 
+            if(IsDebug)
+                Console.WriteLine($"entering module {module.GetHashCode()}%08x] ({module.GetType().Name})");
+
             foreach (var submodule in module.SubModules)
             {
                 var subEffectiveAttributes = MergeAttributes(effectiveAttributes, submodule.Attributes);
-                GraphStageModule graphStageModule;
-                Type stageType;
-                if (((graphStageModule = submodule as GraphStageModule) != null) &&
-                    (stageType = graphStageModule.Stage.GetType()).IsGenericType &&
-                    stageType.GetGenericTypeDefinition() == typeof(MaterializedValueSource<>))
-                {
-                    var copy = new MaterializedValueSource<object>(graphStageModule.MaterializedValueComputation).CopySource();
-                    RegisterSource(copy);
-                    MaterializeAtomic(copy.Module, subEffectiveAttributes, materializedValues);
-                }
-                else if (submodule.IsAtomic)
-                    MaterializeAtomic(submodule, subEffectiveAttributes, materializedValues);
+
+                var atomic = submodule as AtomicModule;
+                if (atomic != null)
+                    MaterializeAtomic(atomic, subEffectiveAttributes, materializedValues);
                 else if (submodule is CopiedModule)
                 {
                     var copied = submodule as CopiedModule;
@@ -1119,28 +1568,42 @@ namespace Akka.Streams.Implementation
                     materializedValues.Add(copied, MaterializeModule(copied, subEffectiveAttributes));
                     ExitScope(copied);
                 }
-                else
+                else if(submodule is CompositeModule || submodule is FusedModule)
                     materializedValues.Add(submodule, MaterializeComposite(submodule, subEffectiveAttributes));
+                
+                //EmptyModule, nothing to do or say
             }
 
             if (IsDebug)
             {
-                Console.WriteLine("RESOLVING");
-                Console.WriteLine($"  module = {module}");
-                Console.WriteLine($"  computation = {module.MaterializedValueComputation}");
-                Console.WriteLine($"  matValSrc = {_materializedValueSources}");
+                Console.WriteLine($"resolving module [{module.GetHashCode()}%08x] computation {module.MaterializedValueComputation}");
+                Console.WriteLine($"  matValSrc = {MaterializedValueSource}");
                 Console.WriteLine($"  matVals = {materializedValues}");
             }
-            return ResolveMaterialized(module.MaterializedValueComputation, materializedValues, "  ");
+
+            var resolved = ResolveMaterialized(module.MaterializedValueComputation, materializedValues, 2);
+            while (MaterializedValueSource.Count != 0)
+            {
+                var node = MaterializedValueSource.Keys.First();
+                if(IsDebug)
+                    Console.WriteLine($"  delayed computation of {node}");
+                ResolveMaterialized(node, materializedValues, 4);
+            }
+            if(IsDebug)
+                Console.WriteLine($"exiting module [{module.GetHashCode()}%08x]");
+            return resolved;
         }
 
         protected virtual object MaterializeComposite(IModule composite, Attributes effectiveAttributes)
             => MaterializeModule(composite, effectiveAttributes);
 
-        protected abstract object MaterializeAtomic(IModule atomic, Attributes effectiveAttributes, IDictionary<IModule, object> materializedValues);
+        protected abstract object MaterializeAtomic(AtomicModule atomic, Attributes effectiveAttributes,
+            IDictionary<IModule, object> materializedValues);
 
-        private object ResolveMaterialized(StreamLayout.IMaterializedValueNode node, IDictionary<IModule, object> values, string indent)
+        private object ResolveMaterialized(StreamLayout.IMaterializedValueNode node, IDictionary<IModule, object> values,
+            int spaces)
         {
+            var indent = Enumerable.Repeat(" ", spaces).Aggregate("", (s, s1) => s + s1);
             if (IsDebug) Console.WriteLine($"{indent}{node}");
             object result;
             if (node is StreamLayout.Atomic)
@@ -1151,22 +1614,23 @@ namespace Akka.Streams.Implementation
             else if (node is StreamLayout.Combine)
             {
                 var combine = (StreamLayout.Combine) node;
-                result = combine.Combinator(ResolveMaterialized(combine.Left, values, indent + "  "),
-                    ResolveMaterialized(combine.Right, values, indent + "  "));
+                result = combine.Combinator(ResolveMaterialized(combine.Left, values, spaces + 2),
+                    ResolveMaterialized(combine.Right, values, spaces + 2));
             }
             else if (node is StreamLayout.Transform)
             {
                 var transform = (StreamLayout.Transform) node;
-                result = transform.Transformator(ResolveMaterialized(transform.Node, values, indent + "  "));
+                result = transform.Transformator(ResolveMaterialized(transform.Node, values, spaces + 2));
             }
-            else result = null;
+            else result = NotUsed.Instance;
 
             if (IsDebug) Console.WriteLine($"{indent}result = {result}");
-            LinkedList<IMaterializedValueSource> sources;
-            if (_materializedValueSources.TryGetValue(node, out sources))
+
+            if (MaterializedValueSource.ContainsKey(node))
             {
+                var sources = MaterializedValueSource[node];
                 if (IsDebug) Console.WriteLine($"{indent}triggering sources {sources}");
-                _materializedValueSources.Remove(node);
+                MaterializedValueSource.Remove(node);
                 foreach (var source in sources)
                     source.SetValue(result);
             }
@@ -1174,28 +1638,49 @@ namespace Akka.Streams.Implementation
             return result;
         }
 
-        protected void AssignPort(InPort inPort, IUntypedSubscriber subscriber)
+        protected void AssignPort(InPort inPort, object subscriberOrVirtual)
         {
-            Subscribers[inPort] = subscriber;
+            Subscribers[inPort] = subscriberOrVirtual;
+            
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
-            if (!CurrentLayout.InPorts.Contains(inPort))
+            if (CurrentLayout.Upstreams.ContainsKey(inPort))
             {
                 IUntypedPublisher publisher;
                 if (Publishers.TryGetValue(CurrentLayout.Upstreams[inPort], out publisher))
-                    publisher.Subscribe(subscriber);
+                    DoSubscribe(publisher, subscriberOrVirtual);
             }
         }
+
 
         protected void AssignPort(OutPort outPort, IUntypedPublisher publisher)
         {
             Publishers[outPort] = publisher;
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
-            if (!CurrentLayout.OutPorts.Contains(outPort))
+            if (CurrentLayout.Downstreams.ContainsKey(outPort))
             {
-                IUntypedSubscriber subscriber;
+                object subscriber;
                 if (Subscribers.TryGetValue(CurrentLayout.Downstreams[outPort], out subscriber))
-                    publisher.Subscribe(subscriber);
+                    DoSubscribe(publisher, subscriber);
             }
+        }
+
+        private void DoSubscribe(IUntypedPublisher publisher, object subscriberOrVirtual)
+        {
+            var subscriber = subscriberOrVirtual as IUntypedSubscriber;
+            if (subscriber != null)
+            {
+                publisher.Subscribe(subscriber);
+                return;
+            }
+
+            var virtualPublisher = subscriberOrVirtual as IUntypedVirtualPublisher;
+            if (virtualPublisher != null)
+            {
+                virtualPublisher.RegisterPublisher(UntypedPublisher.FromTyped(publisher));
+                return;
+            }
+
+            publisher.Subscribe(UntypedSubscriber.FromTyped(subscriberOrVirtual));
         }
     }
 }

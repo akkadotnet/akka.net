@@ -19,7 +19,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests
 {
-    public class ActorMaterializerSpec : TestKit.Tests.AkkaSpec
+    public class ActorMaterializerSpec : AkkaSpec
     {
         public ActorMaterializerSpec(ITestOutputHelper output) : base(output)
         {
