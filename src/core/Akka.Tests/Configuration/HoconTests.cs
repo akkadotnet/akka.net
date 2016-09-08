@@ -825,6 +825,7 @@ ip = ""::1""
             var hocon = "timespan = 0.05 s";
 
             var res = ConfigurationFactory.ParseString(hocon).GetTimeSpan("timespan");
+            Assert.Equal(0.05, res.TotalSeconds);
         }
     }
 }
