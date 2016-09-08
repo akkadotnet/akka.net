@@ -43,7 +43,7 @@ namespace Akka.IO
         public abstract class Message { }
 
         /// <summary>The common type of all commands supported by the UDP implementation.</summary>
-        public abstract class Command : Message, SelectionHandler.IHasFailureMessage
+        public abstract class Command : Message
         {
             private object _failureMessage;
 
@@ -284,22 +284,18 @@ namespace Akka.IO
             }
         }
 
-        internal class UdpSettings : SelectionHandlerSettings
+        internal class UdpSettings 
         {
             public UdpSettings(Config config) 
-                : base(config)
             {
-                NrOfSelectors = config.GetInt("nr-of-selectors");
+                TraceLogging = config.GetBoolean("trace-logging");
                 DirectBufferSize = config.GetInt("direct-buffer-size");
                 MaxDirectBufferPoolSize = config.GetInt("direct-buffer-pool-limit");
                 BatchReceiveLimit = config.GetInt("receive-throughput");
-
                 ManagementDispatcher = config.GetString("management-dispatcher");
-
-                MaxChannelsPerSelector = MaxChannels == -1 ? -1 : Math.Max(MaxChannels/NrOfSelectors, 1);
             }
 
-            public int NrOfSelectors { get; private set; }
+            public bool TraceLogging { get; private set; }
             public int DirectBufferSize { get; private set; }
             public int MaxDirectBufferPoolSize { get; private set; }
             public int BatchReceiveLimit { get; private set; }
@@ -319,7 +315,7 @@ namespace Akka.IO
                 props: Props.Create(() => new UdpManager(this)).WithDeploy(Deploy.Local), 
                 name: "IO-UDP-FF");
 
-            BufferPool = new DirectByteBufferPool(_settings.DirectBufferSize, _settings.MaxDirectBufferPoolSize);
+            SocketEventArgsPool = new PreallocatedSocketEventAgrsPool(_settings.DirectBufferSize, _settings.MaxDirectBufferPoolSize);
         }
 
         public override IActorRef Manager
@@ -329,7 +325,7 @@ namespace Akka.IO
 
         internal Udp.UdpSettings Setting { get { return _settings; } }
 
-        internal DirectByteBufferPool BufferPool { get; private set; }
+        internal PreallocatedSocketEventAgrsPool SocketEventArgsPool { get; }
     }
 
     public static class UdpExtensions

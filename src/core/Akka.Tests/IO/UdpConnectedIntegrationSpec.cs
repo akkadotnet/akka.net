@@ -37,7 +37,7 @@ namespace Akka.Tests.IO
         {
             var commander = CreateTestProbe();
             commander.Send(Udp.Instance.Apply(Sys).Manager, new Udp.Bind(handler, address));
-            commander.ExpectMsg<Udp.Bound>(x => x.LocalAddress.Equals(address)); 
+            commander.ExpectMsg<Udp.Bound>(x => x.LocalAddress.Is(address)); 
             return commander.Sender;
         }
 
@@ -91,7 +91,7 @@ namespace Akka.Tests.IO
                 if (received != null)
                 {
                     received.Data.ShouldBe(data1);
-                    received.Sender.ShouldBe(clientAddress);
+                    Assert.True(received.Sender.Is(clientAddress));
                     return received.Sender;
                 }
                 throw new Exception();

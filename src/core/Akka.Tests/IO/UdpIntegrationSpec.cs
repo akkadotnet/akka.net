@@ -37,7 +37,7 @@ namespace Akka.Tests.IO
         {
             var commander = CreateTestProbe();
             commander.Send(Udp.Instance.Apply(Sys).Manager, new Udp.Bind(handler, address));
-            commander.ExpectMsg<Udp.Bound>(x => x.LocalAddress.Equals(address));
+            commander.ExpectMsg<Udp.Bound>(x => x.LocalAddress.Is(address));
             return commander.Sender;
         }
 
@@ -75,7 +75,7 @@ namespace Akka.Tests.IO
                 ExpectMsg<Udp.Received>(x =>
                 {
                     x.Data.ShouldBe(data);
-                    x.Sender.ShouldBe(serverAddress);
+                    Assert.True(x.Sender.Is(serverAddress));
                 });
             };
             Action checkSendingToServer = () =>
@@ -84,7 +84,7 @@ namespace Akka.Tests.IO
                 ExpectMsg<Udp.Received>(x =>
                 {
                     x.Data.ShouldBe(data);
-                    x.Sender.ShouldBe(clientAddress);
+                    Assert.True(x.Sender.Is(clientAddress));
                 });
             };
 
@@ -103,7 +103,7 @@ namespace Akka.Tests.IO
             var commander = CreateTestProbe();
             var assertOption = new AssertBeforeBind();
             commander.Send(Udp.Instance.Apply(Sys).Manager, new Udp.Bind(TestActor, _addresses[2], options: new[] {assertOption}));
-            commander.ExpectMsg<Udp.Bound>(x => x.LocalAddress.ShouldBe(_addresses[2]));
+            commander.ExpectMsg<Udp.Bound>(x => x.LocalAddress.Is(_addresses[2]));
             Assert.Equal(1, assertOption.BeforeCalled);
         }
 
@@ -113,7 +113,7 @@ namespace Akka.Tests.IO
             var commander = CreateTestProbe();
             var assertOption = new AssertAfterChannelBind();
             commander.Send(Udp.Instance.Apply(Sys).Manager, new Udp.Bind(TestActor, _addresses[3], options: new[] { assertOption }));
-            commander.ExpectMsg<Udp.Bound>(x => x.LocalAddress.ShouldBe(_addresses[3]));
+            commander.ExpectMsg<Udp.Bound>(x => x.LocalAddress.Is(_addresses[3]));
             Assert.Equal(1, assertOption.AfterCalled);
         }
 
@@ -123,7 +123,7 @@ namespace Akka.Tests.IO
             var commander = CreateTestProbe();
             var assertOption = new AssertOpenDatagramChannel();
             commander.Send(Udp.Instance.Apply(Sys).Manager, new Udp.Bind(TestActor, _addresses[4], options: new[] { assertOption }));
-            commander.ExpectMsg<Udp.Bound>(x => x.LocalAddress.ShouldBe(_addresses[4]));
+            commander.ExpectMsg<Udp.Bound>(x => x.LocalAddress.Is(_addresses[4]));
             Assert.Equal(1, assertOption.OpenCalled);
         }
 
@@ -153,7 +153,8 @@ namespace Akka.Tests.IO
         {
             public int OpenCalled { get; set; }
 
-            public override DatagramChannel Create()
+
+            public override Socket Create()
             {
                 OpenCalled += 1;
                 return base.Create();

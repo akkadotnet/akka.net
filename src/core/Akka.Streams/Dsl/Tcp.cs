@@ -171,7 +171,7 @@ namespace Akka.Streams.Dsl
         public Flow<ByteString, ByteString, Task<Tcp.OutgoingConnection>> OutgoingConnection(EndPoint remoteAddress, EndPoint localAddress = null,
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = true, TimeSpan? connectionTimeout = null, TimeSpan? idleTimeout = null)
         {
-            connectionTimeout = connectionTimeout ?? TimeSpan.MaxValue;
+            //connectionTimeout = connectionTimeout ?? TimeSpan.FromMinutes(60);
 
             var tcpFlow =
                 Flow.FromGraph(new OutgoingConnectionStage(_system.Tcp(), remoteAddress, localAddress, options,

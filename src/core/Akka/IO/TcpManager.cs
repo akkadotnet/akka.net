@@ -7,9 +7,12 @@
 
 using System;
 using Akka.Actor;
+using Akka.Event;
 
 namespace Akka.IO
 {
+    using static Tcp;
+
     /**
      * TODO: CLRify comment
      * 
@@ -49,34 +52,41 @@ namespace Akka.IO
      * with a <see cref="Akka.IO.Tcp.CommandFailed"/> message. This message contains the original command for reference.
      *
      */
-    internal class TcpManager : SelectionHandler.SelectorBasedManager
+    internal class TcpManager : ActorBase
     {
         private readonly TcpExt _tcp;
 
         public TcpManager(TcpExt tcp)
-            : base(tcp.Settings, tcp.Settings.NrOfSelectors)
         {
             _tcp = tcp;
+            Context.System.EventStream.Subscribe(Self, typeof(DeadLetter));
         }
 
-        protected override bool Receive(object m)
+        protected override bool Receive(object message)
         {
-            return WorkerForCommandHandler(message =>
+            var c = message as Connect;
+            if (c != null)
             {
-                var c = message as Tcp.Connect;
-                if (c != null)
-                {
-                    var commander = Sender;
-                    return registry => Props.Create(() => new TcpOutgoingConnection(_tcp, registry, commander, c));
-                }
-                var b = message as Tcp.Bind;
-                if (b != null)
-                {
-                    var commander = Sender;
-                    return registry => Props.Create(() => new TcpListener(SelectorPool, _tcp, registry, commander, b));
-                }
-                throw new ArgumentException("The supplied message type is invalid. Only Connect and Bind messages are supported.", nameof(m));
-            })(m);
+                var commander = Sender;
+                Context.ActorOf(Props.Create(() => new TcpOutgoingConnection(_tcp, commander, c)));
+                return true;
+            }
+            var b = message as Bind;
+            if (b != null)
+            {
+                var commander = Sender;
+                Context.ActorOf(Props.Create(() => new TcpListener(_tcp, commander, b)));
+                return true;
+            }
+            var dl = message as DeadLetter;
+            if (dl != null)
+            {
+                var completed = dl.Message as ISocketCompleted;
+                if (completed != null && completed.Pool == _tcp.SocketEventArgsPool)
+                    completed.Release();
+                return true;
+            }
+            throw new ArgumentException("The supplied message type is invalid. Only Connect and Bind messages are supported.", nameof(message));
         }
     }
 }

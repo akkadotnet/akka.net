@@ -49,34 +49,31 @@ namespace Akka.IO
      * discarded.
      *
      */
-    internal class UdpManager : SelectionHandler.SelectorBasedManager
-    {
+    internal class UdpManager : ActorBase    {
         private readonly UdpExt _udp;
 
         public UdpManager(UdpExt udp) 
-            : base(udp.Setting, udp.Setting.NrOfSelectors)
         {
             _udp = udp;
         }
 
-        protected override bool Receive(object m)
+        protected override bool Receive(object message)
         {
-            return WorkerForCommandHandler(message =>
+            var b = message as Udp.Bind;
+            if (b != null)
             {
-                var b = message as Udp.Bind;
-                if (b != null)
-                {
-                    var commander = Sender;
-                    return registry => Props.Create(() => new UdpListener(_udp, registry, commander, b));
-                }
-                var s = message as Udp.SimpleSender;
-                if (s != null)
-                {
-                    var commander = Sender;
-                    return registry => Props.Create(() => new UdpSender(_udp, registry, commander, s.Options));
-                }
-                throw new ArgumentException("The supplied message type is invalid. Only Bind and SimpleSender messages are supported.");
-            })(m);
+                var commander = Sender;
+                Context.ActorOf(Props.Create(() => new UdpListener(_udp, commander, b)));
+                return true;
+            }
+            var s = message as Udp.SimpleSender;
+            if (s != null)
+            {
+                var commander = Sender;
+                Context.ActorOf(Props.Create(() => new UdpSender(_udp, commander, s.Options)));
+                return true;
+            }
+            throw new ArgumentException("The supplied message type is invalid. Only Bind and SimpleSender messages are supported.");
         }
     }
 }

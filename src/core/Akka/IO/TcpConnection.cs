@@ -17,6 +17,8 @@ using Akka.Util.Internal;
 
 namespace Akka.IO
 {
+    using static Tcp;
+
     /**
     *  Base class for TcpIncomingConnection and TcpOutgoingConnection.
     *
@@ -25,9 +27,11 @@ namespace Akka.IO
     internal abstract class TcpConnection : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         private readonly TcpExt _tcp;
-        private readonly SocketChannel _channel;
+        private readonly Socket _socket;
         private readonly bool _pullMode;
         private readonly ILoggingAdapter _log = Context.GetLogger();
+
+        private bool _isOutputShutdown;
 
         protected TcpExt Tcp
         {
@@ -39,20 +43,21 @@ namespace Akka.IO
             get { return _log; }
         }
 
-        internal SocketChannel Channel
+        internal Socket Socket
         {
-            get { return _channel; }
+            get { return _socket; }
         }
 
-        protected TcpConnection(TcpExt tcp, SocketChannel channel, bool pullMode)
+        protected TcpConnection(TcpExt tcp, Socket socket, bool pullMode)
         {
             _tcp = tcp;
-            _channel = channel;
+            _socket = socket;
             _pullMode = pullMode;
             _readingSuspended = pullMode;
         }
 
         private PendingWrite _pendingWrite = EmptyPendingWrite.Instance;
+        private Tuple<IActorRef, object> _pendingAck = null;
         private bool _peerClosed;
         private bool _writingSuspended;
         private bool _readingSuspended;
@@ -67,11 +72,11 @@ namespace Akka.IO
         // STATES
 
         /** connection established, waiting for registration from user handler */
-        private Receive WaitingForRegistration(ChannelRegistration registration, IActorRef commander)
+        private Receive WaitingForRegistration(IActorRef commander)
         {
             return message =>
             {
-                var register = message as Tcp.Register;
+                var register = message as Register;
                 if (register != null)
                 {
                     // up to this point we've been watching the commander,
@@ -83,29 +88,32 @@ namespace Akka.IO
                     }
                     if (_tcp.Settings.TraceLogging) _log.Debug("[{0}] registered as connection handler", register.Handler);
 
-                    var info = new ConnectionInfo(registration, register.Handler, register.KeepOpenonPeerClosed, register.UseResumeWriting);
-                    
-                    // if we have resumed reading from pullMode while waiting for Register then register OP_READ interest
-                    if (_pullMode && !_readingSuspended) ResumeReading(info);
-                    DoRead(info, null); // immediately try reading, pullMode is handled by readingSuspended
+                    var info = new ConnectionInfo(register.Handler, register.KeepOpenonPeerClosed, register.UseResumeWriting);
+
+                    // if we have resumed reading from pullMode while waiting for Register then read
+                    if (_pullMode && !_readingSuspended)
+                        ResumeReading(info);
+                    else if (!_pullMode)
+                        ReceiveAsync();
+
                     Context.SetReceiveTimeout(null);
                     Context.Become(Connected(info));
                     return true;
                 }
-                if (message is Tcp.ResumeReading)
+                if (message is ResumeReading)
                 {
                     _readingSuspended = false;
                     return true;
                 }
-                if (message is Tcp.SuspendReading)
+                if (message is SuspendReading)
                 {
                     _readingSuspended = true;
                     return false;
                 }
-                var cmd = message as Tcp.CloseCommand;
+                var cmd = message as CloseCommand;
                 if (cmd != null)
                 {
-                    var info = new ConnectionInfo(registration, commander, keepOpenOnPeerClosed: false, useResumeWriting: false);
+                    var info = new ConnectionInfo(commander, keepOpenOnPeerClosed: false, useResumeWriting: false);
                     HandleClose(info, Sender, cmd.Event);
                     return true;
                 }
@@ -128,22 +136,22 @@ namespace Akka.IO
             {
                 if (HandleWriteMessages(info)(message))
                     return true;
-                if (message is Tcp.SuspendReading)
+                if (message is SuspendReading)
                 {
                     SuspendReading(info);
                     return true;
                 }
-                if (message is Tcp.ResumeReading)
+                if (message is ResumeReading)
                 {
                     ResumeReading(info);
                     return true;
                 }
-                if (message is SelectionHandler.ChannelReadable)
+                if (message is SocketReceived)
                 {
-                    DoRead(info, null);
+                    DoRead(info, (SocketReceived)message, null);
                     return true;
                 }
-                var cmd = message as Tcp.CloseCommand;
+                var cmd = message as CloseCommand;
                 if (cmd != null)
                 {
                     HandleClose(info, Sender, cmd.Event);
@@ -159,7 +167,7 @@ namespace Akka.IO
             {
                 if (HandleWriteMessages(info)(message))
                     return true;
-                var cmd = message as Tcp.CloseCommand;
+                var cmd = message as CloseCommand;
                 if (cmd != null)
                 {
                     HandleClose(info, Sender, cmd.Event);
@@ -171,30 +179,38 @@ namespace Akka.IO
 
         /** connection is closing but a write has to be finished first */
         private Receive ClosingWithPendingWrite(ConnectionInfo info, IActorRef closeCommandor,
-            Tcp.ConnectionClosed closedEvent)
+            ConnectionClosed closedEvent)
         {
             return message =>
             {
-                if (message is Tcp.SuspendReading)
+                if (message is SuspendReading)
                 {
                     SuspendReading(info);
                     return true;
                 }
-                if (message is Tcp.ResumeReading)
+                if (message is ResumeReading)
                 {
                     ResumeReading(info);
                     return true;
                 }
-                if (message is SelectionHandler.ChannelReadable)
+                if (message is SocketReceived)
                 {
-                    DoRead(info, closeCommandor);
+                    DoRead(info, (SocketReceived)message, closeCommandor);
                     return true;
                 }
-                if (message is SelectionHandler.ChannelWritable)
+                if (message is SocketSent)
                 {
-                    DoWrite(info);
-                    if (!WritePending())    // writing is now finished
+                    var sent = (SocketSent)message;
+                    if(_pendingAck != null)
+                    {
+                        _pendingAck.Item1.Tell(_pendingAck.Item2);
+                        _pendingAck = null;
+                    }
+                    if (WritePending())    // writing is now finished
+                        DoWrite(info);
+                    else
                         HandleClose(info, closeCommandor, closedEvent);
+                    sent.Release();
                     return true;
                 }
                 var updatePendingWrite = message as UpdatePendingWriteAndThen;
@@ -203,7 +219,7 @@ namespace Akka.IO
                     _pendingWrite = updatePendingWrite.RemainingWrite;
                     updatePendingWrite.Work();
                     if (WritePending())
-                        info.Registration.EnableInterest(SocketAsyncOperation.Send);
+                        DoWrite(info);
                     else
                         HandleClose(info, closeCommandor, closedEvent);
                     return true;
@@ -214,9 +230,9 @@ namespace Akka.IO
                     HandleError(info.Handler, writeFailed.E);  // rethrow exception from dispatcher task
                     return true;
                 }
-                if (message is Tcp.Abort)
+                if (message is Abort)
                 {
-                    HandleClose(info, Sender, IO.Tcp.Aborted.Instance);
+                    HandleClose(info, Sender, Aborted.Instance);
                     return true;
                 }
                 return false;
@@ -228,24 +244,24 @@ namespace Akka.IO
         {
             return message =>
             {
-                if (message is Tcp.SuspendReading)
+                if (message is SuspendReading)
                 {
                     SuspendReading(info);
                     return true;
                 }
-                if (message is Tcp.ResumeReading)
+                if (message is ResumeReading)
                 {
                     ResumeReading(info);
                     return true;
                 }
-                if (message is SelectionHandler.ChannelReadable)
+                if (message is SocketReceived)
                 {
-                    DoRead(info, closeCommandor);
+                    DoRead(info, (SocketReceived)message, closeCommandor);
                     return true;
                 }
-                if (message is Tcp.Abort)
+                if (message is Abort)
                 {
-                    HandleClose(info, Sender, IO.Tcp.Aborted.Instance);
+                    HandleClose(info, Sender, Aborted.Instance);
                     return true;
                 }
                 return false;
@@ -256,20 +272,27 @@ namespace Akka.IO
         {
             return message =>
             {
-                if (message is SelectionHandler.ChannelWritable)
+                if(message is SocketSent)
                 {
+                    var sent = (SocketSent)message;
+                    if(_pendingAck != null)
+                    {
+                        _pendingAck.Item1.Tell(_pendingAck.Item2);
+                        _pendingAck = null;
+                    }
                     if (WritePending())
                     {
                         DoWrite(info);
                         if (!WritePending() && _interestedInResume != null)
                         {
-                            _interestedInResume.Tell(IO.Tcp.WritingResumed.Instance);
+                            _interestedInResume.Tell(WritingResumed.Instance);
                             _interestedInResume = null;
                         }
                     }
+                    sent.Release();
                     return true;
                 }
-                var write = message as Tcp.WriteCommand;
+                var write = message as WriteCommand;
                 if (write != null)
                 {
                     if (_writingSuspended)
@@ -291,7 +314,7 @@ namespace Akka.IO
                     }
                     return true;
                 }
-                if (message is Tcp.ResumeWriting)
+                if (message is ResumeWriting)
                 {
                     /*
                      * If more than one actor sends Writes then the first to send this
@@ -307,9 +330,9 @@ namespace Akka.IO
                     if (WritePending())
                     {
                         if (_interestedInResume == null) _interestedInResume = Sender;
-                        else Sender.Tell(new Tcp.CommandFailed(IO.Tcp.ResumeWriting.Instance));
+                        else Sender.Tell(new CommandFailed(ResumeWriting.Instance));
                     }
-                    else Sender.Tell(IO.Tcp.WritingResumed.Instance);
+                    else Sender.Tell(WritingResumed.Instance);
                     return true;
                 }
                 var updatePendingWrite = message as UpdatePendingWriteAndThen;
@@ -318,7 +341,7 @@ namespace Akka.IO
                     _pendingWrite = updatePendingWrite.RemainingWrite;
                     updatePendingWrite.Work();
                     if (WritePending())
-                        info.Registration.EnableInterest(SocketAsyncOperation.Send);
+                        DoWrite(info);
                     return true;
                 }
                 //TODO: File IO
@@ -329,103 +352,94 @@ namespace Akka.IO
         // AUXILIARIES and IMPLEMENTATION
 
         /** used in subclasses to start the common machinery above once a channel is connected */
-        protected void CompleteConnect(ChannelRegistration registration, IActorRef commander,
+        protected void CompleteConnect(IActorRef commander,
                                        IEnumerable<Inet.SocketOption> options)
         {
             // Turn off Nagle's algorithm by default
             try
             {
-                Channel.Socket.NoDelay = true;
+                _socket.NoDelay = true;
             }
             catch (SocketException e)
             {
                 _log.Debug("Could not enable TcpNoDelay: {0}", e.Message);
             }
-            options.ForEach(x => x.AfterConnect(Channel.Socket));
+            options.ForEach(x => x.AfterConnect(_socket));
 
-            commander.Tell(new Tcp.Connected(
-                Channel.Socket.RemoteEndPoint,
-                Channel.Socket.LocalEndPoint));
+            commander.Tell(new Connected(
+                _socket.RemoteEndPoint,
+                _socket.LocalEndPoint));
 
             Context.SetReceiveTimeout(_tcp.Settings.RegisterTimeout);
-
-            // TODO: Not ported. The following need to be investigated before porting
-            //if (WindowsConnectionAbortWorkaroundEnabled) 
-            //    registration.EnableInterest(SocketAsyncOperation.Connect);
-
-            Context.Become(WaitingForRegistration(registration, commander));
+            Context.Become(WaitingForRegistration(commander));
         }
 
         private void SuspendReading(ConnectionInfo info)
         {
             _readingSuspended = true;
-            info.Registration.DisableInterest(SocketAsyncOperation.Receive);
         }
 
         private void ResumeReading(ConnectionInfo info)
         {
             _readingSuspended = false;
-            info.Registration.EnableInterest(SocketAsyncOperation.Receive);
+
+            ReceiveAsync();
         }
 
-        private void DoRead(ConnectionInfo info, IActorRef closeCommander)
+        private void DoRead(ConnectionInfo info, SocketReceived received, IActorRef closeCommander)
         {
+            //TODO: What should we do if reading is suspended with an oustanding read - this will discard the read
+            //      Should probably have an 'oustanding read'
+            var saea = received.EventArgs;
             if (!_readingSuspended)
             {
-                Func<ByteBuffer, int, ReadResult> innerRead = null;
-                innerRead = (buffer, remainingLimit) =>
+                Func<SocketAsyncEventArgs, int, ReadResult> innerRead = null;
+                innerRead = (ea, remainingLimit) =>
                 {
                     if (remainingLimit > 0)
                     {
-                        buffer.Clear();
                         var maxBufferSpace = Math.Min(_tcp.Settings.DirectBufferSize, remainingLimit);
-                        buffer.Limit(maxBufferSpace);
-                        var readBytes = Channel.Read(buffer);
-                        buffer.Flip();
+                        var readBytes = ea.BytesTransferred;
 
                         if (_tcp.Settings.TraceLogging) _log.Debug("Read [{0}] bytes.", readBytes);
-                        if (readBytes > 0)
-                            info.Handler.Tell(new Tcp.Received(ByteString.Create(buffer)));
+                        if (ea.SocketError == SocketError.Success && readBytes > 0)
+                            info.Handler.Tell(new Received(ByteString.Create(ea.Buffer, ea.Offset, ea.BytesTransferred)));
 
-                        if (readBytes == maxBufferSpace)
-                        {
-                            return _pullMode
-                                ? MoreDataWaiting.Instance
-                                : innerRead(buffer, remainingLimit - maxBufferSpace);
-                        }
-                        if (readBytes >= 0)
+                        //if (ea.SocketError == SocketError.ConnectionReset)
+                        //    return EndOfStream.Instance;
+                        if (ea.SocketError != SocketError.Success)
+                            return new ReadError(ea.SocketError);
+                        if (readBytes > 0)
                             return AllRead.Instance;
-                        if (readBytes == -1)
+                        if (readBytes == 0)
                             return EndOfStream.Instance;
 
                         throw new IllegalStateException($"Unexpected value returned from read: {readBytes}");
                     }
-                    return MoreDataWaiting.Instance;
+                    return AllRead.Instance;
                 };
-                var buffr = _tcp.BufferPool.Acquire();
                 try
                 {
-                    var read = innerRead(buffr, _tcp.Settings.ReceivedMessageSizeLimit);
+                    var read = innerRead(saea, _tcp.Settings.ReceivedMessageSizeLimit);
                     if (read is AllRead)
                     {
                         if (!_pullMode)
-                            info.Registration.EnableInterest(SocketAsyncOperation.Receive);
+                            ReceiveAsync();
                     }
-                    if (read is MoreDataWaiting)
+                    else if(read is EndOfStream && _isOutputShutdown)
                     {
-                        if (!_pullMode)
-                            Self.Tell(SelectionHandler.ChannelReadable.Instance);
+                        if (_tcp.Settings.TraceLogging) _log.Debug("Read returned end-of-stream, our side already closed");
+                        DoCloseConnection(info.Handler, closeCommander, ConfirmedClosed.Instance);
                     }
-
-                    // TODO: Port. Socket does not seem to expose (isOutputShutdown). It is passed as 'how' argument to Socket.Shutdown, but not exposed. 
-                    // case EndOfStream if channel.socket.isOutputShutdown ⇒
-                    //    if (TraceLogging) log.debug("Read returned end-of-stream, our side already closed")
-                    //    doCloseConnection(info.handler, closeCommander, ConfirmedClosed)
-
-                    if (read is EndOfStream)
+                    else if (read is EndOfStream)
                     {
                         if (_tcp.Settings.TraceLogging) _log.Debug("Read returned end-of-stream, our side not yet closed");
-                        HandleClose(info, closeCommander, IO.Tcp.PeerClosed.Instance);
+                        HandleClose(info, closeCommander, PeerClosed.Instance);
+                    }
+                    else if(read is ReadError)
+                    {
+                        var error = read as ReadError;
+                        HandleError(info.Handler, new SocketException((int)error.Error));
                     }
                 }
                 catch (SocketException e)
@@ -434,7 +448,7 @@ namespace Akka.IO
                 }
                 finally
                 {
-                    Tcp.BufferPool.Release(buffr);
+                    received.Release();
                 }
             }
         }
@@ -444,25 +458,24 @@ namespace Akka.IO
             _pendingWrite = _pendingWrite.DoWrite(info);
         }
 
-        private Tcp.ConnectionClosed CloseReason()
+        private ConnectionClosed CloseReason()
         {
-            // TODO: Port. Socket does not seem to expose (isOutputShutdown). It is passed as 'how' argument to Socket.Shutdown, but not exposed. 
-            // if (channel.socket.isOutputShutdown) ConfirmedClosed
-            return IO.Tcp.PeerClosed.Instance;
+            return _isOutputShutdown ? ConfirmedClosed.Instance as ConnectionClosed 
+                                     : PeerClosed.Instance;
         }
 
-        private void HandleClose(ConnectionInfo info, IActorRef closeCommander, Tcp.ConnectionClosed closedEvent)
+        private void HandleClose(ConnectionInfo info, IActorRef closeCommander, ConnectionClosed closedEvent)
         {
-            if (closedEvent is Tcp.Aborted)
+            if (closedEvent is Aborted)
             {
                 if (_tcp.Settings.TraceLogging) _log.Debug("Got Abort command. RESETing connection.");
                 DoCloseConnection(info.Handler, closeCommander, closedEvent);
                 return;
             }
-            if (closedEvent is Tcp.PeerClosed && info.KeepOpenOnPeerClosed)
+            if (closedEvent is PeerClosed && info.KeepOpenOnPeerClosed)
             {
                 // report that peer closed the connection
-                info.Handler.Tell(IO.Tcp.PeerClosed.Instance);
+                info.Handler.Tell(PeerClosed.Instance);
                 // used to check if peer already closed its side later
                 _peerClosed = true;
                 Context.Become(PeerSentEOF(info));
@@ -474,7 +487,7 @@ namespace Akka.IO
                 Context.Become(ClosingWithPendingWrite(info, closeCommander, closedEvent));
                 return;
             }
-            if (closedEvent is Tcp.ConfirmedClosed) // shutdown output and wait for confirmation
+            if (closedEvent is ConfirmedClosed) // shutdown output and wait for confirmation
             {
                 if (_tcp.Settings.TraceLogging) _log.Debug("Got ConfirmedClose command, sending FIN.");
 
@@ -491,24 +504,31 @@ namespace Akka.IO
             DoCloseConnection(info.Handler, closeCommander, closedEvent);
         }
 
-        private void DoCloseConnection(IActorRef handler, IActorRef closeCommander, Tcp.ConnectionClosed closedEvent)
+        private void DoCloseConnection(IActorRef handler, IActorRef closeCommander, ConnectionClosed closedEvent)
         {
-            if (closedEvent is Tcp.Aborted) Abort();
-            else _channel.Close();
+            if (closedEvent is Aborted) Abort();
+            else
+            {
+                //if (!closedEvent.IsPeerClosed || closedEvent.IsConfirmed)
+                //    _socket.Shutdown(SocketShutdown.Send);
+                //_socket.Close();
+                _socket.Shutdown(SocketShutdown.Both);
+            }
             StopWith(new CloseInformation(new HashSet<IActorRef>(new[] { handler, closeCommander }.Where(x => x != null)), closedEvent));
         }
 
         private void HandleError(IActorRef handler, SocketException exception)
         {
             _log.Debug("Closing connection due to IO error {0}", exception);
-            StopWith(new CloseInformation(new HashSet<IActorRef>(new[] {handler}), new Tcp.ErrorClosed(exception.Message)));
+            StopWith(new CloseInformation(new HashSet<IActorRef>(new[] {handler}), new ErrorClosed(exception.Message)));
         }
 
         private bool SafeShutdownOutput()
         {
             try
             {
-                Channel.Socket.Shutdown(SocketShutdown.Send);
+                _isOutputShutdown = true;
+                _socket.Shutdown(SocketShutdown.Send);
                 return true;
             }
             catch (SocketException)
@@ -533,13 +553,14 @@ namespace Akka.IO
         {
             try
             {
-                Channel.Socket.LingerState = new LingerOption(true, 0);  // causes the following close() to send TCP RST
+                _socket.LingerState = new LingerOption(true, 0);  // causes the following close() to send TCP RST
             }
             catch (Exception e)
             {
                 if (_tcp.Settings.TraceLogging) _log.Debug("setSoLinger(true, 0) failed with [{0}]", e);
             }
-            Channel.Close();
+            _socket.Dispose();
+            //_socket.Shutdown(SocketShutdown.Both);
         }
 
         protected void StopWith(CloseInformation closeInfo)
@@ -550,8 +571,9 @@ namespace Akka.IO
 
         protected override void PostStop()
         {
-            if (Channel.IsOpen())
-                Abort();
+            _socket.Dispose();
+            //if (_socket.Connected)
+            //    Abort();
             if (WritePending())
                 _pendingWrite.Release();
             if (_closedMessage != null)
@@ -568,22 +590,22 @@ namespace Akka.IO
             throw new IllegalStateException("Restarting not supported for connection actors.");
         }
 
-        private PendingWrite CreatePendingWrite(IActorRef commander, Tcp.WriteCommand write)
+        private PendingWrite CreatePendingWrite(IActorRef commander, WriteCommand write)
         {
-            Func<Tcp.WriteCommand, Tcp.WriteCommand, PendingWrite> create = null;
+            Func<WriteCommand, WriteCommand, PendingWrite> create = null;
             create = (head, tail) =>
             {
-                if (head == IO.Tcp.Write.Empty)
-                    return tail == IO.Tcp.Write.Empty
+                if (head == Write.Empty)
+                    return tail == Write.Empty
                         ? EmptyPendingWrite.Instance
-                        : create(tail, IO.Tcp.Write.Empty);
-                var w = head as Tcp.Write;
+                        : create(tail, Write.Empty);
+                var w = head as Write;
                 if (w != null && w.Data.NonEmpty)
                 {
                     return CreatePendingBufferWrite(commander, w.Data, w.Ack, tail);
                 }
                 //TODO: Port file IO
-                var cwrite = head as Tcp.CompoundWrite;
+                var cwrite = head as CompoundWrite;
                 if (cwrite != null)
                 {
                     return create(cwrite.Head, cwrite.TailCommand);
@@ -591,25 +613,25 @@ namespace Akka.IO
                 if (w != null)  // empty write with either an ACK or a non-standard NoACK
                 {
                     if (w.WantsAck) commander.Tell(w.Ack);
-                    return create(tail, IO.Tcp.Write.Empty);
+                    return create(tail, Write.Empty);
                 }
                 throw new InvalidOperationException("Non reachable code");
             };
-            return create(write, IO.Tcp.Write.Empty);
+            return create(write, Write.Empty);
         }
 
-        private PendingWrite CreatePendingBufferWrite(IActorRef commander, ByteString data, Tcp.Event ack, Tcp.WriteCommand tail)
+        private PendingWrite CreatePendingBufferWrite(IActorRef commander, ByteString data, Event ack, WriteCommand tail)
         {
-            var buffer = _tcp.BufferPool.Acquire();
+            var saea = _tcp.SocketEventArgsPool.Acquire(Self);
             try
             {
-                var copied = data.CopyToBuffer(buffer);
-                buffer.Flip();
-                return new PendingBufferWrite(this, commander, data.Drop(copied), ack, buffer, tail);
+                var copied = data.CopyTo(saea.Buffer, saea.Offset, saea.Count);
+                saea.SetBuffer(saea.Offset, copied);
+                return new PendingBufferWrite(this, Self, commander, data.Drop(copied), ack, saea, tail);
             }
             catch (Exception)
             {
-                _tcp.BufferPool.Release(buffer);
+                _tcp.SocketEventArgsPool.Release(saea);
                 throw;
             }
         }
@@ -617,25 +639,28 @@ namespace Akka.IO
         private class PendingBufferWrite : PendingWrite
         {
             private readonly TcpConnection _connection;
+            private readonly IActorRef _self;
             private readonly IActorRef _commander;
             private readonly ByteString _remainingData;
             private readonly object _ack;
-            private readonly ByteBuffer _buffer;
-            private readonly Tcp.WriteCommand _tail;
+            private readonly SocketAsyncEventArgs _saea;
+            private readonly WriteCommand _tail;
 
             public PendingBufferWrite(
                 TcpConnection connection,
+                IActorRef self,
                 IActorRef commander,
                 ByteString remainingData,
                 object ack,
-                ByteBuffer buffer,
-                Tcp.WriteCommand tail)
+                SocketAsyncEventArgs saea,
+                WriteCommand tail)
             {
                 _connection = connection;
+                _self = self;
                 _commander = commander;
                 _remainingData = remainingData;
                 _ack = ack;
-                _buffer = buffer;
+                _saea = saea;
                 _tail = tail;
             }
 
@@ -646,35 +671,24 @@ namespace Akka.IO
 
             public override PendingWrite DoWrite(ConnectionInfo info)
             {
-                Func<ByteString, PendingWrite> writeToChannel = null;
-                writeToChannel = data =>
-                {
-                    var writtenBytes = _connection.Channel.Write(_buffer); // at first we try to drain the remaining bytes from the buffer
-                    if (_connection._tcp.Settings.TraceLogging) _connection._log.Debug("Wrote [{0}] bytes to channel", writtenBytes);
-                    if (_buffer.HasRemaining)
-                    {
-                        // we weren't able to write all bytes from the buffer, so we need to try again later
-                        return data == _remainingData
-                            ? this
-                            : new PendingBufferWrite(_connection, _commander, data, _ack, _buffer, _tail); // copy with updated remainingData
-                    }
-                    if (data.NonEmpty)
-                    {
-                        _buffer.Clear();
-                        var copied = data.CopyToBuffer(_buffer);
-                        _buffer.Flip();
-                        return writeToChannel(data.Drop(copied));
-                    }
-                    if (!(_ack is Tcp.NoAck)) _commander.Tell(_ack);
-                    Release();
-                    return _connection.CreatePendingWrite(_commander, _tail);
-                };
                 try
                 {
-                    var next = writeToChannel(_remainingData);
-                    if (next != EmptyPendingWrite.Instance)
-                        info.Registration.EnableInterest(SocketAsyncOperation.Send);
-                    return next;
+                    if (!_connection.Socket.SendAsync(_saea))
+                        _self.Tell(new SocketSent(_saea, _connection.Tcp.SocketEventArgsPool));
+
+
+                    if (_connection._tcp.Settings.TraceLogging) _connection._log.Debug("Wrote [{0}] bytes to channel", _saea.Count);
+
+                    if (_remainingData.NonEmpty)
+                    {
+                        var ea = _connection.Tcp.SocketEventArgsPool.Acquire(_self);
+                        var copied = _remainingData.CopyTo(ea.Buffer, ea.Offset, ea.Count);
+                        ea.SetBuffer(ea.Offset, copied);
+                        return new PendingBufferWrite(_connection, _self, _commander, _remainingData.Drop(copied), _ack, ea, _tail);
+                    }
+                    _connection._pendingAck = _ack == NoAck.Instance ? null : Tuple.Create(_commander, _ack);
+                    return _connection.CreatePendingWrite(_commander, _tail);
+
                 }
                 catch (SocketException e)
                 {
@@ -685,7 +699,7 @@ namespace Akka.IO
 
             public override void Release()
             {
-                _connection.Tcp.BufferPool.Release(_buffer);
+                // _connection.Tcp.BufferPool.Release(_buffer);
             }
         }
 
@@ -709,12 +723,13 @@ namespace Akka.IO
             private AllRead()
             { }
         }
-        private class MoreDataWaiting : ReadResult
+        private class ReadError : ReadResult
         {
-            public static readonly ReadResult Instance = new MoreDataWaiting();
-
-            private MoreDataWaiting()
-            { }
+            public SocketError Error { get; }
+            public ReadError(SocketError error)
+            {
+                Error = error;
+            }
         }
 
         /**
@@ -724,9 +739,9 @@ namespace Akka.IO
         protected class CloseInformation
         {
             public ISet<IActorRef> NotificationsTo { get; private set; }
-            public Tcp.Event ClosedEvent { get; private set; }
+            public Event ClosedEvent { get; private set; }
 
-            public CloseInformation(ISet<IActorRef> notificationsTo, Tcp.Event closedEvent)
+            public CloseInformation(ISet<IActorRef> notificationsTo, Event closedEvent)
             {
                 NotificationsTo = notificationsTo;
                 ClosedEvent = closedEvent;
@@ -738,14 +753,13 @@ namespace Akka.IO
         */
         private class ConnectionInfo
         {
-            public ChannelRegistration Registration { get; private set; }
             public IActorRef Handler { get; private set; }
             public bool KeepOpenOnPeerClosed { get; private set; }
             public bool UseResumeWriting { get; private set; }
 
-            public ConnectionInfo(ChannelRegistration registration, IActorRef handler, bool keepOpenOnPeerClosed, bool useResumeWriting)
+            public ConnectionInfo(IActorRef handler, bool keepOpenOnPeerClosed, bool useResumeWriting)
             {
-                Registration = registration;
+                //Registration = registration;
                 Handler = handler;
                 KeepOpenOnPeerClosed = keepOpenOnPeerClosed;
                 UseResumeWriting = useResumeWriting;
@@ -803,6 +817,16 @@ namespace Akka.IO
             {
                 throw new IllegalStateException(string.Empty);
             }
+        }
+
+
+
+        private void ReceiveAsync()
+        {
+            var saea = Tcp.SocketEventArgsPool.Acquire(Self);
+            if (!_socket.ReceiveAsync(saea))
+                Self.Tell(new SocketReceived(saea, Tcp.SocketEventArgsPool));
+
         }
     }
 }

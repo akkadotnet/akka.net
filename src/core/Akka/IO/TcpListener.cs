@@ -12,75 +12,43 @@ using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util.Internal;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Akka.IO
 {
-    partial class TcpListener
-    {
-        public class RegisterIncoming : SelectionHandler.IHasFailureMessage, INoSerializationVerificationNeeded
-        {
-            public RegisterIncoming(SocketChannel channel)
-            {
-                Channel = channel;
-            }
-
-            public SocketChannel Channel { get; private set; }
-
-            public object FailureMessage
-            {
-                get { return new FailedRegisterIncoming(Channel); }
-            }
-        }
-
-        public class FailedRegisterIncoming
-        {
-            public FailedRegisterIncoming(SocketChannel channel)
-            {
-                Channel = channel;
-            }
-
-            public SocketChannel Channel { get; private set; }
-        }
-    }
-
     partial class TcpListener : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
-        private readonly IActorRef _selectorRouter;
         private readonly TcpExt _tcp;
         private readonly IActorRef _bindCommander;
         private readonly Tcp.Bind _bind;
-        private readonly SocketChannel _channel;
+        private readonly Socket _socket;
         private readonly ILoggingAdapter _log = Context.GetLogger();
+        private int _acceptLimit;
+        private SocketAsyncEventArgs[] _saeas;
 
-        private int acceptLimit;
-
-        public TcpListener(IActorRef selectorRouter, TcpExt tcp, IChannelRegistry channelRegistry, IActorRef bindCommander,
+        public TcpListener(TcpExt tcp, IActorRef bindCommander,
             Tcp.Bind bind)
         {
-            _selectorRouter = selectorRouter;
             _tcp = tcp;
             _bindCommander = bindCommander;
             _bind = bind;
 
             Context.Watch(bind.Handler);
 
-            _channel = SocketChannel.Open().ConfigureBlocking(false);
+            _socket = new Socket(SocketType.Stream, ProtocolType.Tcp) { Blocking = false };
 
-            acceptLimit = bind.PullMode ? 0 : _tcp.Settings.BatchAcceptLimit;
+            _acceptLimit = bind.PullMode ? 0 : _tcp.Settings.BatchAcceptLimit;
             
             var localAddress = new Func<EndPoint>(() =>
             {
                 try
                 {
-                    var socket = _channel.Socket;
-                    bind.Options.ForEach(x => x.BeforeServerSocketBind(socket));
-
-                    socket.Bind(bind.LocalAddress);
-                    socket.Listen(bind.Backlog);
-
-                    channelRegistry.Register(_channel,
-                        bind.PullMode ? SocketAsyncOperation.None : SocketAsyncOperation.Accept, Self);
-                    return socket.LocalEndPoint;
+                    bind.Options.ForEach(x => x.BeforeServerSocketBind(_socket));
+                    _socket.Bind(bind.LocalAddress);
+                    _socket.Listen(bind.Backlog);
+                    _saeas = Accept(_acceptLimit).ToArray();
+                    return _socket.LocalEndPoint;
                 }
                 catch (Exception e)
                 {
@@ -91,101 +59,69 @@ namespace Akka.IO
 
                 return bind.LocalAddress;
             })();
+            bindCommander.Tell(new Tcp.Bound(_socket.LocalEndPoint));
+        }
+
+        private IEnumerable<SocketAsyncEventArgs> Accept(int limit)
+        {
+            for(var i = 0; i < _acceptLimit; i++)
+            {
+                var self = Self;
+                var saea = new SocketAsyncEventArgs();
+                saea.Completed += (s, e) => self.Tell(e);
+                if (!_socket.AcceptAsync(saea))
+                    Self.Tell(saea);
+                yield return saea;
+            }
         }
 
         protected override SupervisorStrategy SupervisorStrategy()
         {
-            return SelectionHandler.ConnectionSupervisorStrategy;
+            return Tcp.ConnectionSupervisorStrategy;
         }
 
         protected override bool Receive(object message)
         {
-            var registration = message as ChannelRegistration;
-            if (registration != null)
+            if (message is SocketAsyncEventArgs)
             {
-                _bindCommander.Tell(new Tcp.Bound(_channel.Socket.LocalEndPoint));
-                Context.Become(Bound(registration));
+                var saea = message as SocketAsyncEventArgs;
+                if (saea.SocketError == SocketError.Success)
+                    Context.ActorOf(Props.Create(() => new TcpIncomingConnection(_tcp, saea.AcceptSocket, _bind.Handler, _bind.Options, _bind.PullMode)));
+                saea.AcceptSocket = null;
+
+                if (!_socket.AcceptAsync(saea))
+                    Self.Tell(saea);
+                return true;
+            }
+            var resumeAccepting = message as Tcp.ResumeAccepting;
+            if (resumeAccepting != null)
+            {
+                _acceptLimit = resumeAccepting.BatchSize;
+                _saeas = Accept(_acceptLimit).ToArray();
+                return true;
+            }
+            if (message is Tcp.Unbind)
+            {
+                _log.Debug("Unbinding endpoint {0}", _bind.LocalAddress);
+                 _socket.Dispose();
+                Sender.Tell(Tcp.Unbound.Instance);
+                _log.Debug("Unbound endpoint {0}, stopping listener", _bind.LocalAddress);
+                Context.Stop(Self);
                 return true;
             }
             return false;
         }
 
-        private Receive Bound(ChannelRegistration registration)
-        {
-            return message =>
-            {
-                if (message is SelectionHandler.ChannelAcceptable)
-                {
-                    acceptLimit = AcceptAllPending(registration, acceptLimit); 
-                    if (acceptLimit > 0)
-                        registration.EnableInterest(SocketAsyncOperation.Accept);
-                    return true;
-                }
-                var resumeAccepting = message as Tcp.ResumeAccepting;
-                if (resumeAccepting != null)
-                {
-                    acceptLimit = resumeAccepting.BatchSize;
-                    registration.EnableInterest(SocketAsyncOperation.Accept);
-                    return true;
-                }
-                var failedRegisterIncoming = message as FailedRegisterIncoming;
-                if (failedRegisterIncoming != null)
-                {
-                    _log.Warning("Could not register incoming connection since selector capacity limit is reached, closing connection");
-                    try
-                    {
-                        failedRegisterIncoming.Channel.Close();
-                    }
-                    catch (Exception ex)
-                    {
-                        //TODO: log.debug("Error closing socket channel: {}", e)
-                    }
-                    return true;
-                }
-                if (message is Tcp.Unbind)
-                {
-                    //TODO: log.debug("Unbinding endpoint {}", localAddress)
-                    _channel.Close();
-                    Sender.Tell(Tcp.Unbound.Instance);
-                    //TODO: log.debug("Unbound endpoint {}, stopping listener", localAddress)
-                    Context.Stop(Self);
-                    return true;
-                }
-                return false;
-            };
-        }
-
-        private int AcceptAllPending(ChannelRegistration registration, int limit)
-        {
-            var socketChannel = new Func<SocketChannel>(() =>
-            {
-                if (limit <= 0) return null;
-                try
-                {
-                    return _channel.Accept();
-                }
-                catch (Exception ex)
-                {
-                    // log.error(e, "Accept error: could not accept new connection")
-                    return null;
-                }
-            })();
-            if (socketChannel != null)
-            {
-                Func<IChannelRegistry, Props> props = registry => Props.Create(
-                    () => new TcpIncomingConnection(_tcp, socketChannel, registry, _bind.Handler, _bind.Options, _bind.PullMode));
-                _selectorRouter.Tell(new SelectionHandler.WorkerForCommand(new RegisterIncoming(socketChannel), Self, props));
-                return AcceptAllPending(registration, limit - 1);
-            }
-            if (_bind.PullMode) return limit;
-            return _tcp.Settings.BatchAcceptLimit; 
-        }
-
         protected override void PostStop()
         {
-            if (_channel.IsOpen())
+            try
             {
-                _channel.Close();
+                _socket.Dispose();
+                _saeas?.ForEach(x => x.Dispose());
+            }
+            catch (Exception e)
+            {
+                _log.Debug("Error closing ServerSocketChannel: {0}", e);
             }
         }
     }

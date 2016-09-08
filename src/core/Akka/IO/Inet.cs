@@ -37,9 +37,9 @@ namespace Akka.IO
 
         public class DatagramChannelCreator : SocketOption
         {
-            public virtual DatagramChannel Create()
+            public virtual Socket Create()
             {
-                return DatagramChannel.Open();
+                return new Socket(SocketType.Dgram, ProtocolType.Udp);
             }
         }
 

@@ -40,7 +40,7 @@ namespace Akka.IO
         /// <summary>
         /// The common type of all commands supported by the UDP implementation.
         /// </summary>
-        public abstract class Command : Message, SelectionHandler.IHasFailureMessage
+        public abstract class Command : Message
         {
             protected Command()
             {
@@ -238,7 +238,7 @@ namespace Akka.IO
         public UdpConnectedExt(ExtendedActorSystem system)
         {
             Settings = new Udp.UdpSettings(system.Settings.Config.GetConfig("akka.io.udp-connected"));
-            BufferPool = new DirectByteBufferPool(Settings.DirectBufferSize, Settings.MaxDirectBufferPoolSize);
+            SocketEventArgsPool = new PreallocatedSocketEventAgrsPool(Settings.DirectBufferSize, Settings.MaxDirectBufferPoolSize);
             _manager = system.SystemActorOf(
                 props: Props.Create(() => new UdpConnectedManager(this)).WithDeploy(Deploy.Local),
                 name: "IO-UDP-CONN");
@@ -249,7 +249,7 @@ namespace Akka.IO
             get { return _manager; }
         }
 
-        internal IBufferPool BufferPool { get; private set; }
+        internal ISocketEventArgsPool SocketEventArgsPool { get; private set; }
         internal Udp.UdpSettings Settings { get; private set; }
     }
 }

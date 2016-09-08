@@ -7,32 +7,39 @@
 
 using System;
 using Akka.Actor;
+using Akka.Event;
 
 namespace Akka.IO
 {
     // INTERNAL API
-    class UdpConnectedManager : SelectionHandler.SelectorBasedManager
+    class UdpConnectedManager : ActorBase
     {
         private readonly UdpConnectedExt _udpConn;
 
         public UdpConnectedManager(UdpConnectedExt udpConn)
-            : base(udpConn.Settings, udpConn.Settings.NrOfSelectors)
         {
             _udpConn = udpConn;
+            Context.System.EventStream.Subscribe(Self, typeof(DeadLetter));
         }
 
-        protected override bool Receive(object m)
+        protected override bool Receive(object message)
         {
-            return WorkerForCommandHandler(message =>
+            var c = message as UdpConnected.Connect;
+            if (c != null)
             {
-                var c = message as UdpConnected.Connect;
-                if (c != null)
-                {
-                    var commander = Sender;
-                    return registry => Props.Create(() => new UdpConnection(_udpConn, registry, commander, c));
-                }
-                throw new ArgumentException("The supplied message type is invalid. Only Connect messages are supported.", nameof(m));
-            })(m);
+                var commander = Sender;
+                Context.ActorOf(Props.Create(() => new UdpConnection(_udpConn, commander, c)));
+                return true;
+            }
+            var dl = message as DeadLetter;
+            if (dl != null)
+            {
+                var completed = dl.Message as ISocketCompleted;
+                if (completed != null && completed.Pool == _udpConn.SocketEventArgsPool)
+                    completed.Pool.Release(completed.EventArgs);
+                return true;
+            }
+            throw new ArgumentException("The supplied message type is invalid. Only Connect messages are supported.", nameof(message));
         }
 
     }

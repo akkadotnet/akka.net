@@ -16,23 +16,20 @@ namespace Akka.IO
 {
     internal class TcpOutgoingConnection : TcpConnection
     {
-        private readonly IChannelRegistry _channelRegistry;
         private readonly IActorRef _commander;
         private readonly Tcp.Connect _connect;
 
-        public TcpOutgoingConnection(TcpExt tcp, IChannelRegistry channelRegistry, IActorRef commander, Tcp.Connect connect)
-            : base(tcp, SocketChannel.Open().ConfigureBlocking(false), connect.PullMode)
+        public TcpOutgoingConnection(TcpExt tcp, IActorRef commander, Tcp.Connect connect)
+            : base(tcp, new Socket(SocketType.Stream, ProtocolType.Tcp) { Blocking = false }, connect.PullMode)
         {
-            _channelRegistry = channelRegistry;
             _commander = commander;
             _connect = connect;
 
             Context.Watch(commander);    // sign death pact
 
-            connect.Options.ForEach(_ => _.BeforeConnect(Channel.Socket));
+            connect.Options.ForEach(_ => _.BeforeConnect(Socket));
             if (connect.LocalAddress != null)
-                Channel.Socket.Bind(connect.LocalAddress);
-            channelRegistry.Register(Channel, SocketAsyncOperation.None, Self);
+                Socket.Bind(connect.LocalAddress);
             if (connect.Timeout.HasValue)
                 Context.SetReceiveTimeout(connect.Timeout.Value);  //Initiate connection timeout if supplied
         }
@@ -55,41 +52,40 @@ namespace Akka.IO
             }
         }
 
-        protected override bool Receive(object message)
+        protected override void PreStart()
         {
-            var registration = message as ChannelRegistration;
-            if (registration != null)
+            ReportConnectFailure(() =>
             {
-                ReportConnectFailure(() =>
+                var remoteAddress = _connect.RemoteAddress as DnsEndPoint;
+                if (remoteAddress != null)
                 {
-                    var remoteAddress = _connect.RemoteAddress as DnsEndPoint;
-                    if (remoteAddress != null)
-                    {
-                        Log.Debug("Resolving {0} before connecting", remoteAddress.Host);
-                        var resolved = Dns.ResolveName(remoteAddress.Host, Context.System, Self);
-                        if(resolved == null) 
-                            Become(Resolving(remoteAddress, registration));
-                        else
-                            Register(new IPEndPoint(resolved.Addr, remoteAddress.Port), registration);
-                    }
+                    Log.Debug("Resolving {0} before connecting", remoteAddress.Host);
+                    var resolved = Dns.ResolveName(remoteAddress.Host, Context.System, Self);
+                    if (resolved == null)
+                        Become(Resolving(remoteAddress));
                     else
-                    {
-                        Register(_connect.RemoteAddress, registration);
-                    }
-                });
-                return true;
-            }
-            return false;
+                        Register(new IPEndPoint(resolved.Addr, remoteAddress.Port));
+                }
+                else
+                {
+                    Register(_connect.RemoteAddress);
+                }
+            });
         }
 
-        private Receive Resolving(DnsEndPoint remoteAddress, ChannelRegistration registration)
+        protected override bool Receive(object message)
+        {
+            throw new NotSupportedException();
+        }
+
+        private Receive Resolving(DnsEndPoint remoteAddress)
         {
             return message =>
             {
                 var resolved = message as Dns.Resolved;
                 if (resolved != null)
                 {
-                    ReportConnectFailure(() => Register(new IPEndPoint(resolved.Addr, remoteAddress.Port), registration));
+                    ReportConnectFailure(() => Register(new IPEndPoint(resolved.Addr, remoteAddress.Port)));
                     return true;
                 }
                 return false;
@@ -97,52 +93,40 @@ namespace Akka.IO
         }
 
 
-        private void Register(EndPoint address, ChannelRegistration registration)
+        private void Register(EndPoint address)
         {
             ReportConnectFailure(() =>
             {
                 Log.Debug("Attempting connection to [{0}]", address);
-                if (Channel.Connect(address))
-                {
-                    CompleteConnect(registration, _commander, _connect.Options);
-                }
-                else
-                {
-                    registration.EnableInterest(SocketAsyncOperation.Connect);
-                    Become(Connecting(registration, Tcp.Settings.FinishConnectRetries));
-                }
+
+                var saea = Tcp.SocketEventArgsPool.Acquire(Self);
+                saea.RemoteEndPoint = address;
+                saea.SetBuffer(saea.Offset, 0);
+                if (!Socket.ConnectAsync(saea))
+                    Self.Tell(new SocketConnected(saea, Tcp.SocketEventArgsPool));
+                Become(Connecting(Tcp.Settings.FinishConnectRetries));
             });
         }
 
-        private Receive Connecting(ChannelRegistration registration, int remainingFinishConnectRetries)
+        private Receive Connecting(int remainingFinishConnectRetries)
         {
             return message =>
             {
-                if (message is SelectionHandler.ChannelConnectable)
+                if (message is SocketConnected)
                 {
-                    ReportConnectFailure(() =>
+                    var connected = (SocketConnected)message;
+                    if (connected.EventArgs.SocketError == SocketError.Success)
                     {
-                        if (Channel.FinishConnect())
-                        {
-                            if(_connect.Timeout.HasValue) Context.SetReceiveTimeout(null);
-                            Log.Debug("Connection established to [{0}]", _connect.RemoteAddress);
-                            CompleteConnect(registration, _commander, _connect.Options);
-                        }
-                        else
-                        {
-                            if (remainingFinishConnectRetries > 0)
-                            {
-                                var self = Self;
-                                Context.System.Scheduler.Advanced.ScheduleOnce(1, () => _channelRegistry.Register(Channel, SocketAsyncOperation.Connect, self));
-                                Context.Become(Connecting(registration, remainingFinishConnectRetries - 1));
-                            }
-                            else
-                            {
-                                Log.Debug("Could not establish connection because finishConnect never returned true (consider increasing akka.io.tcp.finish-connect-retries)");
-                                Stop();
-                            }
-                        }
-                    });
+                        if (_connect.Timeout.HasValue) Context.SetReceiveTimeout(null);
+                        Log.Debug("Connection established to [{0}]", _connect.RemoteAddress);
+                        CompleteConnect(_commander, _connect.Options);
+                    }
+                    else
+                    {
+                        Log.Debug("Could not establish connection because finishConnect never returned true (consider increasing akka.io.tcp.finish-connect-retries)");
+                        Stop();
+                    }
+                    connected.Pool.Release(connected.EventArgs);
                     return true;
                 }
                 if (message is ReceiveTimeout)
