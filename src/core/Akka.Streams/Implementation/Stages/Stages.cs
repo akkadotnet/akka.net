@@ -36,6 +36,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes LimitWeighted = Attributes.CreateName("limitWeighted");
         public static readonly Attributes Sliding = Attributes.CreateName("sliding");
         public static readonly Attributes Take = Attributes.CreateName("take");
+        public static readonly Attributes Drop = Attributes.CreateName("drop");
         public static readonly Attributes Skip = Attributes.CreateName("skip");
         public static readonly Attributes TakeWhile = Attributes.CreateName("takeWhile");
         public static readonly Attributes SkipWhile = Attributes.CreateName("skipWhile");
@@ -67,6 +68,8 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes Unfold = Attributes.CreateName("unfold");
         public static readonly Attributes UnfoldAsync = Attributes.CreateName("unfoldAsync");
         public static readonly Attributes UnfoldInf = Attributes.CreateName("unfoldInf");
+        public static readonly Attributes UnfoldResourceSource = Attributes.CreateName("unfoldResourceSource").And(IODispatcher);
+        public static readonly Attributes UnfoldResourceSourceAsync = Attributes.CreateName("unfoldResourceSourceAsync").And(IODispatcher);
         public static readonly Attributes TerminationWatcher = Attributes.CreateName("terminationWatcher");
         public static readonly Attributes Delay = Attributes.CreateName("delay").And(new Attributes.InputBuffer(16, 16));
 
@@ -195,20 +198,6 @@ namespace Akka.Streams.Implementation.Stages
             => new Fusing.Where<T>(_predicate, Supervision(effectiveAttributes));
     }
 
-
-    internal sealed class Collect<TIn, TOut> : SymbolicStage<TIn, TOut>
-    {
-        private readonly Func<TIn, TOut> _func;
-
-        public Collect(Func<TIn, TOut> func, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Collect)
-        {
-            _func = func;
-        }
-
-        public override IStage<TIn, TOut> Create(Attributes effectiveAttributes)
-            => new Fusing.Collect<TIn, TOut>(_func, Supervision(effectiveAttributes));
-    }
-
     internal sealed class Recover<T> : SymbolicStage<T, Option<T>>
     {
         private readonly Func<Exception, Option<T>> _func;
@@ -234,20 +223,6 @@ namespace Akka.Streams.Implementation.Stages
         public override IStage<T, IEnumerable<T>> Create(Attributes effectiveAttributes) => new Fusing.Grouped<T>(_count);
     }
 
-    internal sealed class LimitWeighted<T> : SymbolicStage<T, T>
-    {
-        private readonly long _max;
-        private readonly Func<T, long> _costFunc;
-
-        public LimitWeighted(long max, Func<T, long> costFunc, Attributes attributes = null) : base(attributes ?? DefaultAttributes.LimitWeighted)
-        {
-            _max = max;
-            _costFunc = costFunc;
-        }
-
-        public override IStage<T, T> Create(Attributes effectiveAttributes) => new Fusing.LimitWeighted<T>(_max, _costFunc);
-    }
-
     internal sealed class Sliding<T> : SymbolicStage<T, IEnumerable<T>>
     {
         private readonly int _count;
@@ -262,56 +237,6 @@ namespace Akka.Streams.Implementation.Stages
         }
 
         public override IStage<T, IEnumerable<T>> Create(Attributes effectiveAttributes) => new Fusing.Sliding<T>(_count, _step);
-    }
-
-    internal sealed class Take<T> : SymbolicStage<T, T>
-    {
-        private readonly long _count;
-
-        public Take(long count, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Take)
-        {
-            _count = count;
-        }
-
-        public override IStage<T, T> Create(Attributes effectiveAttributes) => new Fusing.Take<T>(_count);
-    }
-
-    internal sealed class Skip<T> : SymbolicStage<T, T>
-    {
-        private readonly long _count;
-
-        public Skip(long count, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Skip)
-        {
-            _count = count;
-        }
-
-        public override IStage<T, T> Create(Attributes effectiveAttributes) => new Fusing.Drop<T>(_count);
-    }
-
-    internal sealed class TakeWhile<T> : SymbolicStage<T, T>
-    {
-        private readonly Predicate<T> _predicate;
-
-        public TakeWhile(Predicate<T> predicate, Attributes attributes = null) : base(attributes ?? DefaultAttributes.TakeWhile)
-        {
-            _predicate = predicate;
-        }
-
-        public override IStage<T, T> Create(Attributes effectiveAttributes)
-            => new Fusing.TakeWhile<T>(_predicate, Supervision(effectiveAttributes));
-    }
-
-    internal sealed class SkipWhile<T> : SymbolicStage<T, T>
-    {
-        private readonly Predicate<T> _predicate;
-
-        public SkipWhile(Predicate<T> predicate, Attributes attributes = null) : base(attributes ?? DefaultAttributes.SkipWhile)
-        {
-            _predicate = predicate;
-        }
-
-        public override IStage<T, T> Create(Attributes effectiveAttributes)
-            => new Fusing.SkipWhile<T>(_predicate, Supervision(effectiveAttributes));
     }
 
     internal sealed class Scan<TIn, TOut> : SymbolicStage<TIn, TOut>
@@ -508,6 +433,8 @@ namespace Akka.Streams.Implementation.Stages
             _extractor = extractor;
             _extractorWrapper = _ => _extractor((TIn) _);
             Attributes = attributes ?? DefaultAttributes.GroupBy;
+
+            Label = $"GroupBy({maxSubstreams})";
         }
 
         public int MaxSubstreams { get; }
@@ -522,6 +449,8 @@ namespace Akka.Streams.Implementation.Stages
 
         public override IModule WithAttributes(Attributes attributes)
             => new GroupBy<TIn, TKey>(MaxSubstreams, Extractor, attributes);
+
+        protected override string Label { get; }
     }
 
     internal sealed class DirectProcessor<TIn, TOut> : StageModule<TIn, TOut>

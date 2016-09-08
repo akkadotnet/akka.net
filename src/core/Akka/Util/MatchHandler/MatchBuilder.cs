@@ -213,7 +213,7 @@ namespace Akka.Tools.MatchHandler
                 _signature.Add(handlesType);
             }
 
-            //Store the handler (action or func), the predicate the the type of handler
+            //Store the handler (action or func), the predicate the type of handler
             typeHandler.Handlers.Add(predicateAndHandler);
 
             //The kind of handler (action, action+predicate or fun) is part of the signature

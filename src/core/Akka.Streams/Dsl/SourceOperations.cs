@@ -181,7 +181,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Transform this stream by applying the given function <paramref name="asyncMapper"/> to each of the elements
         /// as they pass through this processing step. The function returns a <see cref="Task"/> and the
-        /// value of that task will be emitted downstreams. As many tasks as requested elements by
+        /// value of that task will be emitted downstream. As many tasks as requested elements by
         /// downstream may run in parallel and each processed element will be emitted dowstream
         /// as soon as it is ready, i.e. it is possible that the elements are not emitted downstream
         /// in the same order as received from upstream.
@@ -451,6 +451,10 @@ namespace Akka.Streams.Dsl
         /// Similar to <see cref="Aggregate{TIn,TOut,TMat}"/> but uses first element as zero element.
         /// Applies the given function <paramref name="reduce"/> towards its current and next value,
         /// yielding the next current value. 
+        /// 
+        /// If the stream is empty (i.e. completes before signalling any elements),
+        /// the sum stage will fail its downstream with a <see cref="NoSuchElementException"/>,
+        /// which is semantically in-line with that standard library collections do in such situations.
         /// <para>
         /// Emits when upstream completes
         /// </para>
@@ -808,6 +812,7 @@ namespace Akka.Streams.Dsl
         /// This operator makes it possible to extend the <see cref="Flow"/> API when there is no specialized
         /// operator that performs the transformation.
         /// </summary>
+        [Obsolete("Use Via(GraphStage) instead.")]
         public static Source<TOut2, TMat> Transform<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, Func<IStage<TOut1, TOut2>> stageFactory)
         {
             return (Source<TOut2, TMat>)InternalFlowOperations.Transform(flow, stageFactory);
@@ -968,7 +973,7 @@ namespace Akka.Streams.Dsl
         /// is <see cref="Directive.Resume"/> or <see cref="Directive.Restart"/>
         /// the element is dropped and the stream and substreams continue.
         /// <para>
-        /// Emits when an element passes through.When the provided predicate is true it emitts the element
+        /// Emits when an element passes through.When the provided predicate is true it emits the element
         /// and opens a new substream for subsequent element
         /// </para>
         /// Backpressures when there is an element pending for the next substream, but the previous
@@ -1109,7 +1114,7 @@ namespace Akka.Streams.Dsl
         /// 
         /// Throttle implements the token bucket model. There is a bucket with a given token capacity (burst size or maximumBurst).
         /// Tokens drops into the bucket at a given rate and can be "spared" for later use up to bucket capacity
-        /// to allow some burstyness. Whenever stream wants to send an element, it takes as many
+        /// to allow some burstiness. Whenever stream wants to send an element, it takes as many
         /// tokens from the bucket as number of elements. If there isn't any, throttle waits until the
         /// bucket accumulates enough tokens.
         /// 
@@ -1142,7 +1147,7 @@ namespace Akka.Streams.Dsl
         /// 
         /// Throttle implements the token bucket model. There is a bucket with a given token capacity (burst size or maximumBurst).
         /// Tokens drops into the bucket at a given rate and can be spared for later use up to bucket capacity
-        /// to allow some burstyness. Whenever stream wants to send an element, it takes as many
+        /// to allow some burstiness. Whenever stream wants to send an element, it takes as many
         /// tokens from the bucket as element cost. If there isn't any, throttle waits until the
         /// bucket accumulates enough tokens. Elements that costs more than the allowed burst will be delayed proportionally
         /// to their cost minus available tokens, meeting the target rate.
@@ -1211,6 +1216,18 @@ namespace Akka.Streams.Dsl
         public static Source<TOut, TMat2> WatchTermination<TOut, TMat, TMat2>(this Source<TOut, TMat> flow, Func<TMat, Task, TMat2> materializerFunction)
         {
             return (Source<TOut, TMat2>) InternalFlowOperations.WatchTermination(flow, materializerFunction);
+        }
+
+        /// <summary>
+        /// Materializes to <see cref="IFlowMonitor"/> that allows monitoring of the the current flow. All events are propagated
+        /// by the monitor unchanged. Note that the monitor inserts a memory barrier every time it processes an
+        /// event, and may therefor affect performance.
+        /// The <paramref name="combine"/> function is used to combine the <see cref="IFlowMonitor"/> with this flow's materialized value.
+        /// </summary>
+        public static Source<TOut, TMat2> Monitor<TOut, TMat, TMat2>(this Source<TOut, TMat> flow,
+            Func<TMat, IFlowMonitor, TMat2> combine)
+        {
+            return (Source<TOut, TMat2>)InternalFlowOperations.Monitor(flow, combine);
         }
 
         /// <summary>

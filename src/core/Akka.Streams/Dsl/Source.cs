@@ -14,6 +14,7 @@ using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
+using Akka.Streams.Supervision;
 using Akka.Streams.Util;
 using Reactive.Streams;
 // ReSharper disable UnusedMember.Global
@@ -172,6 +173,12 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Transform only the materialized value of this Source, leaving all other properties as they were.
         /// </summary>
+        IFlow<TOut, TMat2> IFlow<TOut, TMat>.MapMaterializedValue<TMat2>(Func<TMat, TMat2> mapFunc)
+            => MapMaterializedValue(mapFunc);
+
+        /// <summary>
+        /// Transform only the materialized value of this Source, leaving all other properties as they were.
+        /// </summary>
         public Source<TOut, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> mapFunc)
             => new Source<TOut, TMat2>(Module.TransformMaterializedValue(mapFunc));
 
@@ -236,6 +243,8 @@ namespace Akka.Streams.Dsl
                     b.From(rest[i]).To(c.In(i + 2));
                 return new SourceShape<U>(c.Out);
             }));
+
+        public override string ToString() => $"Source({Shape}, {Module})";
     }
 
     public static class Source
@@ -488,7 +497,7 @@ namespace Akka.Streams.Dsl
 
 
         /// <summary>
-        /// Creates a <see cref="Source{TOut,TMat}"/> that is materialized as an <see cref="ISourceQueue{T}"/>.
+        /// Creates a <see cref="Source{TOut,TMat}"/> that is materialized as an <see cref="ISourceQueueWithComplete{T}"/>.
         /// You can push elements to the queue and they will be emitted to the stream if there is demand from downstream,
         /// otherwise they will be buffered until request for demand is received.
         /// 
@@ -496,11 +505,11 @@ namespace Akka.Streams.Dsl
         /// there is no space available in the buffer.
         /// 
         /// Acknowledgement mechanism is available.
-        /// <see cref="ISourceQueue{T}.OfferAsync"/> returns <see cref="Task"/> which completes with true
+        /// <see cref="ISourceQueueWithComplete{T}.OfferAsync"/> returns <see cref="Task"/> which completes with true
         /// if element was added to buffer or sent downstream. It completes
         /// with false if element was dropped.
         /// 
-        /// The strategy <see cref="OverflowStrategy.Backpressure"/> will not complete <see cref="ISourceQueue{T}.OfferAsync"/> until buffer is full.
+        /// The strategy <see cref="OverflowStrategy.Backpressure"/> will not complete <see cref="ISourceQueueWithComplete{T}.OfferAsync"/> until buffer is full.
         /// 
         /// The buffer can be disabled by using <paramref name="bufferSize"/> of 0 and then received messages are dropped
         /// if there is no demand from downstream. When <paramref name="bufferSize"/> is 0 the <paramref name="overflowStrategy"/> does
@@ -508,11 +517,67 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="bufferSize">The size of the buffer in element count</param>
         /// <param name="overflowStrategy">Strategy that is used when incoming elements cannot fit inside the buffer</param>
-        public static Source<T, ISourceQueue<T>> Queue<T>(int bufferSize, OverflowStrategy overflowStrategy)
+        public static Source<T, ISourceQueueWithComplete<T>> Queue<T>(int bufferSize, OverflowStrategy overflowStrategy)
         {
             if (bufferSize < 0) throw new ArgumentException("Buffer size must be greater than or equal 0", nameof(bufferSize));
 
             return FromGraph(new QueueSource<T>(bufferSize, overflowStrategy).WithAttributes(DefaultAttributes.QueueSource));
+        }
+
+        /// <summary>
+        /// Start a new <see cref="Source{TOut,TMat}"/> from some resource which can be opened, read and closed.
+        /// Interaction with resource happens in a blocking way.
+        ///
+        /// Example:
+        /// {{{
+        /// Source.unfoldResource(
+        ///   () => new BufferedReader(new FileReader("...")),
+        ///   reader => Option(reader.readLine()),
+        ///   reader => reader.close())
+        /// }}}
+        ///
+        /// You can use the supervision strategy to handle exceptions for <paramref name="read"/> function. All exceptions thrown by <paramref name="create"/>
+        /// or <paramref name="close"/> will fail the stream.
+        ///
+        /// <see cref="Supervision.Directive.Restart"/> supervision strategy will close and create blocking IO again. Default strategy is <see cref="Supervision.Directive.Stop"/> which means
+        /// that stream will be terminated on error in `read` function by default.
+        ///
+        /// You can configure the default dispatcher for this Source by changing the `akka.stream.blocking-io-dispatcher` or
+        /// set it for a given Source by using <see cref="ActorAttributes.CreateDispatcher"/>.
+        /// </summary>
+        /// <param name="create">function that is called on stream start and creates/opens resource.</param>
+        /// <param name="read">function that reads data from opened resource. It is called each time backpressure signal
+        /// is received. Stream calls close and completes when <paramref name="read"/> returns <see cref="Option{T}.None"/>.</param>
+        /// <param name="close"></param>
+        /// <returns></returns>
+        public static Source<T, NotUsed> UnfoldResource<T, TSource>(Func<TSource> create,
+            Func<TSource, Option<T>> read, Action<TSource> close)
+        {
+            return FromGraph(new UnfoldResourceSource<T, TSource>(create, read, close));
+        }
+
+        /// <summary>
+        /// Start a new <see cref="Source{TOut,TMat}"/> from some resource which can be opened, read and closed.
+        /// It's similar to <see cref="UnfoldResource{T,TSource}"/> but takes functions that return <see cref="Task"/>s instead of plain values.
+        ///
+        /// You can use the supervision strategy to handle exceptions for <paramref name="read"/> function or failures of produced <see cref="Task"/>s.
+        /// All exceptions thrown by <paramref name="create"/> or <paramref name="close"/> as well as fails of returned futures will fail the stream.
+        ///
+        /// <see cref="Supervision.Directive.Restart"/> supervision strategy will close and create resource .Default strategy is <see cref="Supervision.Directive.Stop"/> which means
+        /// that stream will be terminated on error in <paramref name="read"/> function (or task) by default.
+        ///
+        /// You can configure the default dispatcher for this Source by changing the `akka.stream.blocking-io-dispatcher` or
+        /// set it for a given Source by using <see cref="ActorAttributes.CreateDispatcher"/>.
+        /// </summary>
+        /// <param name="create">function that is called on stream start and creates/opens resource.</param>
+        /// <param name="read">function that reads data from opened resource. It is called each time backpressure signal
+        /// is received. Stream calls close and completes when <see cref="Task"/> from read function returns None.</param>
+        /// <param name="close">function that closes resource</param>
+        /// <returns></returns>
+        public static Source<T, NotUsed> UnfoldResourceAsync<T, TSource>(Func<Task<TSource>> create,
+            Func<TSource, Task<Option<T>>> read, Func<TSource, Task> close)
+        {
+            return FromGraph(new UnfoldResourceSourceAsync<T, TSource>(create, read, close));
         }
     }
 }

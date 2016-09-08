@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -69,7 +70,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         public override IModule WithAttributes(Attributes attributes) => new GraphStageModule(Shape, attributes, Stage);
 
-        public override string ToString() => Stage.ToString();
+        public override string ToString() => $"GraphStage({Stage}) [{GetHashCode()}%08x]";
     }
 
     public abstract class SimpleLinearGraphStage<T> : GraphStage<FlowShape<T, T>>
@@ -229,73 +230,142 @@ namespace Akka.Streams.Implementation.Fusing
         public override string ToString() => "TerminationWatcher";
     }
 
+    internal sealed class FLowMonitorImpl<T> : AtomicReference<object>, IFlowMonitor
+    {
+        public FLowMonitorImpl() : base(FlowMonitor.Initialized.Instance)
+        {
+            
+        }
+
+        public FlowMonitor.IStreamState State
+        {
+            get
+            {
+                var value = Value;
+                if(value is T)
+                    return new FlowMonitor.Received<T>((T)value);
+                
+                return value as FlowMonitor.IStreamState;
+            }
+        }
+    }
+
+    internal sealed class MonitorFlow<T> : GraphStageWithMaterializedValue<FlowShape<T, T>, IFlowMonitor>
+    {
+        #region Logic
+
+        private sealed class Logic : GraphStageLogic
+        {
+            public Logic(MonitorFlow<T> stage, FLowMonitorImpl<T> monitor) : base(stage.Shape)
+            {
+                SetHandler(stage.In,
+                    onPush: () =>
+                    {
+                        var message = Grab(stage.In);
+                        Push(stage.Out, message);
+                        monitor.Value = message is FlowMonitor.IStreamState
+                            ? new FlowMonitor.Received<T>(message)
+                            : (object) message;
+                    },
+                    onUpstreamFinish: () =>
+                    {
+                        CompleteStage();
+                        monitor.Value = FlowMonitor.Finished.Instance;
+                    },
+                    onUpstreamFailure: cause =>
+                    {
+                        FailStage(cause);
+                        monitor.Value = new FlowMonitor.Failed(cause);
+                    });
+
+                SetHandler(stage.Out, 
+                    onPull: () => Pull(stage.In),
+                    onDownstreamFinish: () =>
+                    {
+                        CompleteStage();
+                        monitor.Value = FlowMonitor.Finished.Instance;
+                    });
+            }
+
+            public override string ToString() => "MonitorFlowLogic";
+        }
+
+        #endregion
+
+        public MonitorFlow()
+        {
+            Shape = new FlowShape<T, T>(In, Out);
+        }
+
+        public Inlet<T> In { get; } = new Inlet<T>("MonitorFlow.in");
+
+        public Outlet<T> Out { get; } = new Outlet<T>("MonitorFlow.out");
+
+        public override FlowShape<T, T> Shape { get; }
+
+        public override ILogicAndMaterializedValue<IFlowMonitor> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        {
+            var monitor = new FLowMonitorImpl<T>();
+            var logic = new Logic(this, monitor);
+            return new LogicAndMaterializedValue<IFlowMonitor>(logic, monitor);
+        }
+
+        public override string ToString() => "MonitorFlow";
+    }
+
     internal sealed class TickSource<T> : GraphStageWithMaterializedValue<SourceShape<T>, ICancelable>
     {
         #region internal classes
-
-        private sealed class TickSourceCancellable : ICancelable
+        
+        [SuppressMessage("ReSharper", "MethodSupportsCancellation")]
+        private sealed class Logic : TimerGraphStageLogic, ICancelable
         {
-            internal readonly AtomicBoolean Cancelled;
-            private readonly TaskCompletionSource<NotUsed> _cancelPromise = new TaskCompletionSource<NotUsed>();
-
-            public TickSourceCancellable(AtomicBoolean cancelled)
-            {
-                Cancelled = cancelled;
-            }
-
-            public void Cancel()
-            {
-                if (!IsCancellationRequested)
-                    _cancelPromise.SetResult(NotUsed.Instance);
-            }
-
-            public bool IsCancellationRequested => Cancelled.Value;
-
-            public CancellationToken Token { get; }
-
-            public Task CancelTask => _cancelPromise.Task;
-
-            public void CancelAfter(TimeSpan delay) => Task.Delay(delay).ContinueWith(_ => Cancel(true));
-
-            public void CancelAfter(int millisecondsDelay) => Task.Delay(millisecondsDelay).ContinueWith(_ => Cancel(true));
-
-            public void Cancel(bool throwOnFirstException)
-            {
-                if (!IsCancellationRequested)
-                    _cancelPromise.SetResult(NotUsed.Instance);
-            }
-        }
-
-        private sealed class Logic : TimerGraphStageLogic
-        {
-            private readonly TickSourceCancellable _cancelable;
             private readonly TickSource<T> _stage;
+            private readonly AtomicBoolean _cancelled = new AtomicBoolean();
 
-            public Logic(TickSourceCancellable cancelable, TickSource<T> stage) : base(stage.Shape)
+            private readonly AtomicReference<Action<NotUsed>> _cancelCallback =
+                new AtomicReference<Action<NotUsed>>(null);
+
+            public Logic(TickSource<T> stage) : base(stage.Shape)
             {
-                _cancelable = cancelable;
                 _stage = stage;
 
-                SetHandler(_stage._outlet, EagerTerminateOutput);
+                SetHandler(_stage.Out, EagerTerminateOutput);
             }
 
             public override void PreStart()
             {
-                ScheduleRepeatedly("TickTimer", _stage._initialDelay, _stage._interval);
-                var callback = GetAsyncCallback(() =>
-                {
-                    CompleteStage();
-                    _cancelable.Cancelled.Value = true;
-                });
+                _cancelCallback.Value = GetAsyncCallback<NotUsed>(_ => CompleteStage());
 
-                _cancelable.CancelTask.ContinueWith(t => callback(), TaskContinuationOptions.AttachedToParent | TaskContinuationOptions.ExecuteSynchronously);
+                if(_cancelled)
+                    CompleteStage();
+                else
+                    ScheduleRepeatedly("TickTimer", _stage._initialDelay, _stage._interval);
             }
 
             protected internal override void OnTimer(object timerKey)
             {
-                if (IsAvailable(_stage._outlet))
-                    Push(_stage._outlet, _stage._tick);
+                if (IsAvailable(_stage.Out) && !_cancelled)
+                    Push(_stage.Out, _stage._tick);
             }
+
+            public void Cancel()
+            {
+                if(!_cancelled.GetAndSet(true))
+                    _cancelCallback.Value?.Invoke(NotUsed.Instance);
+            }
+
+            public bool IsCancellationRequested => _cancelled;
+
+            public CancellationToken Token { get; }
+
+            public void CancelAfter(TimeSpan delay) => Task.Delay(delay).ContinueWith(_ => Cancel());
+
+            public void CancelAfter(int millisecondsDelay) => Task.Delay(millisecondsDelay).ContinueWith(_ => Cancel());
+
+            public void Cancel(bool throwOnFirstException) => Cancel();
+
+            public override string ToString() => "TickSourceLogic";
         }
 
         #endregion
@@ -304,27 +374,27 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly TimeSpan _interval;
         private readonly T _tick;
 
-        private readonly Outlet<T> _outlet = new Outlet<T>("TimerSource.out");
-
         public TickSource(TimeSpan initialDelay, TimeSpan interval, T tick)
         {
             _initialDelay = initialDelay;
             _interval = interval;
             _tick = tick;
-            Shape = new SourceShape<T>(_outlet);
+            Shape = new SourceShape<T>(Out);
         }
 
-        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("TickSource");
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.TickSource;
+
+        public Outlet<T> Out { get; } = new Outlet<T>("TimerSource.out");
 
         public override SourceShape<T> Shape { get; }
 
         public override ILogicAndMaterializedValue<ICancelable> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var cancelled = new AtomicBoolean();
-            var c = new TickSourceCancellable(cancelled);
-            var logic = new Logic(c, this);
-            return new LogicAndMaterializedValue<ICancelable>(logic, c);
+            var logic = new Logic(this);
+            return new LogicAndMaterializedValue<ICancelable>(logic, logic);
         }
+
+        public override string ToString() => $"TickSource({_initialDelay}, {_interval}, {_tick})";
     }
 
     public interface IMaterializedValueSource

@@ -283,36 +283,36 @@ namespace Akka.Streams.Stage
             private int _n;
             public readonly IInHandler Previous;
             private readonly Action<T> _andThen;
-            private readonly Action _onClose;
+            private readonly Action _onComplete;
             private readonly GraphStageLogic _logic;
 
-            public Reading(Inlet<T> inlet, int n, IInHandler previous, Action<T> andThen, Action onClose, GraphStageLogic logic)
+            public Reading(Inlet<T> inlet, int n, IInHandler previous, Action<T> andThen, Action onComplete, GraphStageLogic logic)
             {
                 _inlet = inlet;
                 _n = n;
                 Previous = previous;
                 _andThen = andThen;
-                _onClose = onClose;
+                _onComplete = onComplete;
                 _logic = logic;
             }
 
             public override void OnPush()
             {
-                var element = _logic.Grab<T>(_inlet);
-                if (_n == 1)
-                    _logic.SetHandler(_inlet, Previous);
-                else
-                {
-                    _n--;
+                var element = _logic.Grab(_inlet);
+                _n--;
+
+                if(_n > 0)
                     _logic.Pull(_inlet);
-                }
+                else
+                    _logic.SetHandler(_inlet, Previous);
+
                 _andThen(element);
             }
 
             public override void OnUpstreamFinish()
             {
                 _logic.SetHandler(_inlet, Previous);
-                _onClose();
+                _onComplete();
                 Previous.OnUpstreamFinish();
             }
 
@@ -931,9 +931,12 @@ namespace Akka.Streams.Stage
         /// Read a number of elements from the given inlet and continue with the given function,
         /// suspending execution if necessary. This action replaces the <see cref="InHandler"/>
         /// for the given inlet if suspension is needed and reinstalls the current
-        /// handler upon receiving the last <see cref="InHandler.OnPush"/> signal (before invoking the <paramref name="andThen"/> function).
+        /// handler upon receiving the last <see cref="InHandler.OnPush"/> signal.
+        /// 
+        /// If upstream closes before N elements have been read,
+        /// the <paramref name="onComplete"/> function is invoked with the elements which were read.
         /// </summary>
-        protected void ReadMany<T>(Inlet<T> inlet, int n, Action<IEnumerable<T>> andThen, Action<IEnumerable<T>> onClose)
+        protected void ReadMany<T>(Inlet<T> inlet, int n, Action<IEnumerable<T>> andThen, Action<IEnumerable<T>> onComplete)
         {
             if (n < 0)
                 throw new ArgumentException("Cannot read negative number of elements");
@@ -944,36 +947,29 @@ namespace Akka.Streams.Stage
                 var result = new T[n];
                 var pos = 0;
 
-                Action<T> realAndThen = elem =>
-                {
-                    result[pos] = elem;
-                    pos++;
-                    if (pos == n)
-                        andThen(result);
-                };
-                Action realOnClose = () => onClose(result.Take(pos));
-
                 if (IsAvailable(inlet))
                 {
-                    var element = Grab<T>(inlet);
-                    result[0] = element;
-                    if (n == 1)
-                        andThen(result);
-                    else
-                    {
-                        pos = 1;
-                        RequireNotReading(inlet);
-                        Pull(inlet);
-                        SetHandler(inlet, new Reading<T>(inlet, n - 1, GetHandler(inlet), realAndThen, realOnClose, this));
-                    }
+                    //If we already have data available, then shortcircuit and read the first
+                    result[pos] = Grab(inlet);
+                    pos++;
                 }
-                else
+
+                if (n != pos)
                 {
+                    // If we aren't already done
                     RequireNotReading(inlet);
                     if (!HasBeenPulled(inlet))
                         Pull(inlet);
-                    SetHandler(inlet, new Reading<T>(inlet, n, GetHandler(inlet), realAndThen, realOnClose, this));
+                    SetHandler(inlet, new Reading<T>(inlet, n - pos, GetHandler(inlet), element =>
+                    {
+                        result[pos] = element;
+                        pos++;
+                        if (pos == n)
+                            andThen(result);
+                    }, () => onComplete(result.Take(pos)), this));
                 }
+                else
+                    andThen(result);
             }
         }
 

@@ -8,7 +8,6 @@
 using System;
 using System.Linq;
 using Akka.Streams.Dsl;
-using Akka.Streams.Dsl.Internal;
 
 namespace Akka.Streams.Tests.Dsl
 {

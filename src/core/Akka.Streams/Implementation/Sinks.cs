@@ -22,7 +22,7 @@ namespace Akka.Streams.Implementation
     internal interface ISinkModule
     {
         Shape Shape { get; }
-        IUntypedSubscriber Create(MaterializationContext context, out object materializer);
+        object Create(MaterializationContext context, out object materializer);
     }
 
     public abstract class SinkModule<TIn, TMat> : AtomicModule, ISinkModule
@@ -36,16 +36,27 @@ namespace Akka.Streams.Implementation
 
         public override Shape Shape => _shape;
 
+        protected virtual string Label => GetType().Name;
+
+        public sealed override string ToString() => $"{Label} [{GetHashCode()}%08x]";
+
         protected abstract SinkModule<TIn, TMat> NewInstance(SinkShape<TIn> shape);
 
-        public abstract ISubscriber<TIn> Create(MaterializationContext context, out TMat materializer);
+        /// <summary>
+        /// Create the Subscriber or VirtualPublisher that consumes the incoming
+        /// stream, plus the materialized value. Since Subscriber and VirtualPublisher
+        /// do not share a common supertype apart from AnyRef this is what the type
+        /// union devolves into; unfortunately we do not have union types at our
+        /// disposal at this point.
+        /// </summary>
+        public abstract object Create(MaterializationContext context, out TMat materializer);
 
-        IUntypedSubscriber ISinkModule.Create(MaterializationContext context, out object materializer)
+        object ISinkModule.Create(MaterializationContext context, out object materializer)
         {
             TMat m;
             var result = Create(context, out m);
             materializer = m;
-            return UntypedSubscriber.FromTyped(result);
+            return result;
         }
 
         public override IModule ReplaceShape(Shape shape)
@@ -94,14 +105,17 @@ namespace Akka.Streams.Implementation
         protected override SinkModule<TIn, IPublisher<TIn>> NewInstance(SinkShape<TIn> shape) 
             => new PublisherSink<TIn>(Attributes, shape);
 
-        public override ISubscriber<TIn> Create(MaterializationContext context, out IPublisher<TIn> materializer)
+        /// <summary>
+        /// This method is the reason why SinkModule.create may return something that is
+        /// not a Subscriber: a VirtualPublisher is used in order to avoid the immediate
+        /// subscription a VirtualProcessor would perform (and it also saves overhead).
+        /// </summary>
+        public override object Create(MaterializationContext context, out IPublisher<TIn> materializer)
         {
             var processor = new VirtualProcessor<TIn>();
             materializer = processor;
             return processor;
         }
-
-        public override string ToString() => "PublisherSink";
     }
 
     /// <summary>
@@ -122,7 +136,7 @@ namespace Akka.Streams.Implementation
         protected override SinkModule<TIn, IPublisher<TIn>> NewInstance(SinkShape<TIn> shape)
             => new FanoutPublisherSink<TIn>(Attributes, shape);
 
-        public override ISubscriber<TIn> Create(MaterializationContext context, out IPublisher<TIn> materializer)
+        public override object Create(MaterializationContext context, out IPublisher<TIn> materializer)
         {
             var actorMaterializer = ActorMaterializer.Downcast(context.Materializer);
             var settings = actorMaterializer.EffectiveSettings(Attributes);
@@ -153,14 +167,12 @@ namespace Akka.Streams.Implementation
         protected override SinkModule<TIn, Task> NewInstance(SinkShape<TIn> shape)
             => new SinkholeSink<TIn>(shape, Attributes);
 
-        public override ISubscriber<TIn> Create(MaterializationContext context, out Task materializer)
+        public override object Create(MaterializationContext context, out Task materializer)
         {
             var p = new TaskCompletionSource<NotUsed>();
             materializer = p.Task;
             return new SinkholeSubscriber<TIn>(p);
         }
-
-        public override string ToString() => "SinkholeSink";
     }
 
     /// <summary>
@@ -186,13 +198,11 @@ namespace Akka.Streams.Implementation
         protected override SinkModule<TIn, NotUsed> NewInstance(SinkShape<TIn> shape)
             => new SubscriberSink<TIn>(_subscriber, Attributes, shape);
 
-        public override ISubscriber<TIn> Create(MaterializationContext context, out NotUsed materializer)
+        public override object Create(MaterializationContext context, out NotUsed materializer)
         {
             materializer = NotUsed.Instance;
             return _subscriber;
         }
-
-        public override string ToString() => "SubscriberSink";
     }
 
     /// <summary>
@@ -212,7 +222,7 @@ namespace Akka.Streams.Implementation
 
         protected override SinkModule<T, NotUsed> NewInstance(SinkShape<T> shape) => new CancelSink<T>(Attributes, shape);
 
-        public override ISubscriber<T> Create(MaterializationContext context, out NotUsed materializer)
+        public override object Create(MaterializationContext context, out NotUsed materializer)
         {
             materializer = NotUsed.Instance;
             return new CancellingSubscriber<T>();
@@ -220,8 +230,6 @@ namespace Akka.Streams.Implementation
 
         public override IModule WithAttributes(Attributes attributes)
             => new CancelSink<T>(attributes, AmendShape(attributes));
-
-        public override string ToString() => "CancelSink";
     }
 
     /// <summary>
@@ -250,14 +258,12 @@ namespace Akka.Streams.Implementation
         protected override SinkModule<TIn, IActorRef> NewInstance(SinkShape<TIn> shape)
             => new ActorSubscriberSink<TIn>(_props, _attributes, shape);
 
-        public override ISubscriber<TIn> Create(MaterializationContext context, out IActorRef materializer)
+        public override object Create(MaterializationContext context, out IActorRef materializer)
         {
             var subscriberRef = ActorMaterializer.Downcast(context.Materializer).ActorOf(context, _props);
             materializer = subscriberRef;
             return ActorSubscriber.Create<TIn>(subscriberRef);
         }
-
-        public override string ToString() => "ActorSubscriberSink";
     }
 
     /// <summary>
@@ -285,7 +291,7 @@ namespace Akka.Streams.Implementation
         protected override SinkModule<TIn, NotUsed> NewInstance(SinkShape<TIn> shape)
             => new ActorRefSink<TIn>(_ref, _onCompleteMessage, _attributes, shape);
 
-        public override ISubscriber<TIn> Create(MaterializationContext context, out NotUsed materializer)
+        public override object Create(MaterializationContext context, out NotUsed materializer)
         {
             var actorMaterializer = ActorMaterializer.Downcast(context.Materializer);
             var effectiveSettings = actorMaterializer.EffectiveSettings(context.EffectiveAttributes);
@@ -295,8 +301,6 @@ namespace Akka.Streams.Implementation
             materializer = null;
             return new ActorSubscriberImpl<TIn>(subscriberRef);
         }
-
-        public override string ToString() => "ActorRefSink";
     }
 
     internal sealed class LastOrDefaultStage<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<T>>
@@ -582,5 +586,7 @@ namespace Akka.Streams.Implementation
             var logic = new Logic(this, maxBuffer);
             return new LogicAndMaterializedValue<ISinkQueue<T>>(logic, new Materialized(t => logic.Invoke(t)));
         }
+
+        public override string ToString() => "QueueSink";
     }
 }

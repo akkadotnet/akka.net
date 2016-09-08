@@ -464,6 +464,36 @@ namespace Akka.Streams.Tests.IO
             system2.Terminate().Wait();
         }
 
+        [Fact(Skip = "Fix me")]
+        public void Outgoing_TCP_stream_must_not_thrown_on_unbind_after_system_has_been_shut_down()
+        {
+            var sys2 = ActorSystem.Create("shutdown-test-system");
+            var mat2 = sys2.Materializer();
+
+            try
+            {
+                var address = TestUtils.TemporaryServerAddress();
+                var bindingTask = sys2.TcpStream()
+                    .BindAndHandle(Flow.Create<ByteString>(), mat2, address.Address.ToString(), address.Port);
+
+                // Ensure server is running
+                var t = Source.Single(ByteString.FromString(""))
+                    .Via(sys2.TcpStream().OutgoingConnection(address))
+                    .RunWith(Sink.Ignore<ByteString>(), mat2);
+                t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+
+                sys2.Terminate().Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+
+                bindingTask.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                var binding = bindingTask.Result;
+                binding.Unbind().Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            }
+            finally
+            {
+                sys2.Terminate().Wait(TimeSpan.FromSeconds(5));
+            }
+        }
+
         private void ValidateServerClientCommunication(ByteString testData, ServerConnection serverConnection, TcpReadProbe readProbe, TcpWriteProbe writeProbe)
         {
             serverConnection.Write(testData);

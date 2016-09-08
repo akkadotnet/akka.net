@@ -5,11 +5,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Streams.Dsl;
-using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -36,7 +35,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.FirstOrDefault<IEnumerable<int>>(), Materializer);
 
-            future.Wait(TimeSpan.FromMilliseconds(300)).Should().BeTrue();
+            future.Wait(RemainingOrDefault).Should().BeTrue();
             future.Result.Should().BeNull();
         }
 
@@ -50,7 +49,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            future.Wait(TimeSpan.FromMilliseconds(300)).Should().BeTrue();
+            future.Wait(RemainingOrDefault).Should().BeTrue();
             future.Result.ShouldAllBeEquivalentTo(input);
         }
 
@@ -64,7 +63,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            future.Wait(TimeSpan.FromMilliseconds(300)).Should().BeTrue();
+            future.Wait(RemainingOrDefault).Should().BeTrue();
             future.Result.ShouldAllBeEquivalentTo(input);
         }
 
@@ -79,7 +78,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            future.Invoking(f => f.Wait(TimeSpan.FromMilliseconds(300))).ShouldThrow<StreamLimitReachedException>();
+            future.Invoking(f => f.Wait(RemainingOrDefault)).ShouldThrow<StreamLimitReachedException>();
         }
 
         [Fact]
@@ -92,7 +91,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            future.Invoking(f => f.Wait(TimeSpan.FromMilliseconds(300))).ShouldThrow<StreamLimitReachedException>();
+            future.Invoking(f => f.Wait(RemainingOrDefault)).ShouldThrow<StreamLimitReachedException>();
         }
     }
 }

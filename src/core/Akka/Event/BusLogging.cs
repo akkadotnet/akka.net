@@ -82,7 +82,7 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Publishes the the warning message onto the LoggingBus.
+        /// Publishes the warning message onto the LoggingBus.
         /// </summary>
         /// <param name="message">The warning message.</param>
         protected override void NotifyWarning(object message)
@@ -91,7 +91,7 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Publishes the the info message onto the LoggingBus.
+        /// Publishes the info message onto the LoggingBus.
         /// </summary>
         /// <param name="message">The info message.</param>
         protected override void NotifyInfo(object message)
@@ -100,7 +100,7 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Publishes the the debug message onto the LoggingBus.
+        /// Publishes the debug message onto the LoggingBus.
         /// </summary>
         /// <param name="message">The debug message.</param>
         protected override void NotifyDebug(object message)

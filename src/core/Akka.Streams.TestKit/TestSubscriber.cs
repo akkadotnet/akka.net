@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Event;
+using Akka.Streams.Actors;
 using Akka.TestKit;
 using Reactive.Streams;
 
@@ -50,7 +51,7 @@ namespace Akka.Streams.TestKit
             public static readonly OnComplete Instance = new OnComplete();
             private OnComplete() { }
 
-            public override string ToString() => $"TestSubscriber.OnComplete";
+            public override string ToString() => "TestSubscriber.OnComplete";
         }
 
         public struct OnError : ISubscriberEvent
@@ -383,6 +384,14 @@ namespace Akka.Streams.TestKit
             public IEnumerable<TOther> ReceiveWhile<TOther>(TimeSpan? max = null, TimeSpan? idle = null, Func<object, TOther> filter = null, int msgs = int.MaxValue) where TOther : class
             {
                 return _probe.ReceiveWhile(max, idle, filter, msgs);
+            }
+
+            /// <summary>
+            /// Drains a given number of messages
+            /// </summary>
+            public IEnumerable<TOther> ReceiveWithin<TOther>(TimeSpan max, int messages = int.MaxValue) where TOther : class
+            {
+                return _probe.ReceiveWhile(max, max, msg => (msg as OnNext)?.Element as TOther, messages);
             }
 
             public TOther Within<TOther>(TimeSpan max, Func<TOther> func)

@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -169,11 +170,13 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
+                var ms = 300;
+
                 var settings = ActorMaterializerSettings.Create(Sys)
                     .WithSubscriptionTimeoutSettings(
                         new StreamSubscriptionTimeoutSettings(
                             StreamSubscriptionTimeoutTerminationMode.CancelTermination,
-                            TimeSpan.FromMilliseconds(500)));
+                            TimeSpan.FromMilliseconds(ms)));
                 var tightTimeoutMaterializer = ActorMaterializer.Create(Sys, settings);
 
                 var futureSink = NewHeadSink;
@@ -187,7 +190,32 @@ namespace Akka.Streams.Tests.Dsl
                 tail.To(Sink.FromSubscriber(subscriber)).Run(tightTimeoutMaterializer);
                 subscriber.ExpectSubscriptionAndError()
                     .Message.Should()
-                    .Be("Substream Source has not been materialized in 00:00:00.5000000");
+                    .Be("Substream Source has not been materialized in 00:00:00.3000000");
+            }, Materializer);
+        }
+
+        [Fact]
+        public void PrefixAndTail_must_not_fail_the_stream_if_substream_has_not_been_subscribed_in_time_and_configured_subscription_timeout_is_noop()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var settings = ActorMaterializerSettings.Create(Sys)
+                    .WithSubscriptionTimeoutSettings(
+                        new StreamSubscriptionTimeoutSettings(
+                            StreamSubscriptionTimeoutTerminationMode.NoopTermination,
+                            TimeSpan.FromMilliseconds(1)));
+                var tightTimeoutMaterializer = ActorMaterializer.Create(Sys, settings);
+                
+                var futureSink = NewHeadSink;
+                var fut = Source.From(Enumerable.Range(1, 2)).PrefixAndTail(1).RunWith(futureSink, tightTimeoutMaterializer);
+                fut.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                fut.Result.Item1.ShouldAllBeEquivalentTo(Enumerable.Range(1, 1));
+
+                var subscriber = TestSubscriber.CreateProbe<int>(this);
+                Thread.Sleep(200);
+                fut.Result.Item2.To(Sink.FromSubscriber(subscriber)).Run(tightTimeoutMaterializer);
+                subscriber.ExpectSubscription().Request(2);
+                subscriber.ExpectNext(2).ExpectComplete();
             }, Materializer);
         }
 

@@ -204,12 +204,12 @@ namespace Akka.Streams.Implementation.Fusing
         public override string ToString()
         {
             return "GraphAssembly\n  " +
-                   "[" + string.Join<IGraphStageWithMaterializedValue<Shape, object>>(",", Stages) + "]\n  " +
-                   "[" + string.Join<Attributes>(",", OriginalAttributes) + "]\n  " +
-                   "[" + string.Join<Inlet>(",", Inlets) + "]\n  " +
-                   "[" + string.Join(",", InletOwners) + "]\n  " +
-                   "[" + string.Join<Outlet>(",", Outlets) + "]\n  " +
-                   "[" + string.Join(",", OutletOwners) + "]";
+                   "Stages: [" + string.Join<IGraphStageWithMaterializedValue<Shape, object>>(",", Stages) + "]\n  " +
+                   "Attributes: [" + string.Join<Attributes>(",", OriginalAttributes) + "]\n  " +
+                   "Inlets: [" + string.Join<Inlet>(",", Inlets) + "]\n  " +
+                   "InOwners: [" + string.Join(",", InletOwners) + "]\n  " +
+                   "Outlets: [" + string.Join<Outlet>(",", Outlets) + "]\n  " +
+                   "OutOwners: [" + string.Join(",", OutletOwners) + "]";
         }
     }
 }

@@ -9,19 +9,31 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Routing;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Reactive.Streams;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Actor
 {
     public class ActorSubscriberSpec : AkkaSpec
     {
+        public ActorSubscriberSpec(ITestOutputHelper helper)
+            : base(
+                AkkaSpecConfig.WithFallback(
+                    ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf")),
+                helper)
+        {
+
+        }
+
         [Fact]
         public void ActorSubscriber_should_receive_requested_elements()
         {

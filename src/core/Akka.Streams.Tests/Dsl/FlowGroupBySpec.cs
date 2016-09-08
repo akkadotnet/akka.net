@@ -23,7 +23,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class FlowGroupBySpec : TestKit.Tests.AkkaSpec
+    public class FlowGroupBySpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
 

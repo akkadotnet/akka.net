@@ -11,11 +11,13 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -24,7 +26,7 @@ namespace Akka.Streams.Tests.Actor
 {
     public class ActorPublisherSpec : AkkaSpec
     {
-        private const string Config = @"
+        private static readonly Config Config = ConfigurationFactory.ParseString(@"
 my-dispatcher1 {
   type = Dispatcher
   executor = ""fork-join-executor""
@@ -42,9 +44,13 @@ my-dispatcher1 {
     parallelism-max = 8
   }
   mailbox-requirement = ""Akka.Dispatch.IUnboundedMessageQueueSemantics""
-}";
+}");
 
-        public ActorPublisherSpec(ITestOutputHelper output = null) : base(Config, output)
+        public ActorPublisherSpec(ITestOutputHelper output = null)
+            : base(
+                Config.WithFallback(
+                    ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf")),
+                output)
         {
             EventFilter.Exception<IllegalStateException>().Mute();
         }
@@ -428,6 +434,24 @@ my-dispatcher1 {
             actorRef.Tell(ThreadName.Instance);
             ExpectMsg<string>().Should().Contain("my-dispatcher1");
         }
+
+        [Fact]
+        public void ActorPublisher_should_handle_stash()
+        {
+            var probe = this.CreateTestProbe();
+            var actorRef = Sys.ActorOf(TestPublisherWithStash.Props(probe.Ref));
+            var p = new ActorPublisherImpl<string>(actorRef);
+            var s = this.CreateProbe<string>();
+            p.Subscribe(s);
+            s.Request(2);
+            s.Request(3);
+            actorRef.Tell("unstash");
+            probe.ExpectMsg(new TotalDemand(5));
+            probe.ExpectMsg(new TotalDemand(5));
+            s.Request(4);
+            probe.ExpectMsg(new TotalDemand(9));
+            s.Cancel();
+        }
     }
 
     internal class TestPublisher : ActorPublisher<string>
@@ -458,6 +482,34 @@ my-dispatcher1 {
                 .With<ThreadName>(()=>_probe.Tell(Context.Props.Dispatcher /*Thread.CurrentThread.Name*/)) // TODO fix me when thread name is set by dispatcher
                 .WasHandled;
         }
+    }
+
+    internal class TestPublisherWithStash : TestPublisher, IWithUnboundedStash
+    {
+        public TestPublisherWithStash(IActorRef probe) : base(probe)
+        {
+        }
+
+        public new static Props Props(IActorRef probe, bool useTestDispatcher = true)
+        {
+            var p = Akka.Actor.Props.Create(() => new TestPublisherWithStash(probe));
+            return useTestDispatcher ? p.WithDispatcher("akka.test.stream-dispatcher") : p;
+        }
+
+        protected override bool Receive(object message)
+        {
+            if ("unstash".Equals(message))
+            {
+                Stash.UnstashAll();
+                Context.Become(base.Receive);
+            }
+            else
+                Stash.Stash();
+
+            return true;
+        }
+        
+        public IStash Stash { get; set; }
     }
 
     internal class Sender : ActorPublisher<int>
@@ -565,6 +617,17 @@ my-dispatcher1 {
         {
             Elements = elements;
         }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj.GetType() == GetType() && Equals((TotalDemand) obj);
+        }
+
+        protected bool Equals(TotalDemand other) => Elements == other.Elements;
+
+        public override int GetHashCode() => Elements.GetHashCode();
     }
 
     internal class Produce

@@ -27,7 +27,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
     public class InterpreterSpec : GraphInterpreterSpecKit
     {
         /*
-         * These tests were writtern for the previous version of the interpreter, the so called OneBoundedInterpreter.
+         * These tests were written for the previous version of the interpreter, the so called OneBoundedInterpreter.
          * These stages are now properly emulated by the GraphInterpreter and many of the edge cases were relevant to
          * the execution model of the old one. Still, these tests are very valuable, so please do not remove.
          */
@@ -35,6 +35,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         public InterpreterSpec(ITestOutputHelper output = null) : base(output)
         {
         }
+
+        private static readonly Take<int> TakeOne = new Take<int>(1);
+        private static readonly Take<int> TakeTwo = new Take<int>(2);
 
         [Fact]
         public void Interpreter_should_implement_map_correctly()
@@ -177,10 +180,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_implement_take()
         {
-            WithOneBoundedSetup(new IStage<int, int>[]
-            {
-                new Take<int>(2)
-            },
+            WithOneBoundedSetup(TakeTwo,
                 (lastEvents, upstream, downstream) =>
                 {
                     lastEvents().Should().BeEmpty();
@@ -202,11 +202,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_implement_take_inside_a_chain()
         {
-            WithOneBoundedSetup(new IStage<int, int>[]
+            WithOneBoundedSetup<int, int>(new IGraphStageWithMaterializedValue<Shape, object>[]
             {
-                new Where<int>(x => x != 0, Deciders.StoppingDecider),
-                new Take<int>(2),
-                new Select<int, int>(x => x + 1, Deciders.StoppingDecider)
+                ToGraphStage(new Where<int>(x => x != 0, Deciders.StoppingDecider)),
+                TakeTwo,
+                ToGraphStage(new Select<int, int>(x => x + 1, Deciders.StoppingDecider))
             },
                 (lastEvents, upstream, downstream) =>
                 {
@@ -307,7 +307,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_implement_grouped()
         {
-            WithOneBoundedSetup<int, IEnumerable<int>>(ToGraphStage(
+            WithOneBoundedSetup(ToGraphStage(
                 new Grouped<int>(3)
                 ),
                 (lastEvents, upstream, downstream) =>
@@ -661,10 +661,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_implement_take_take()
         {
-            WithOneBoundedSetup(new IStage<int, int>[]
+            WithOneBoundedSetup(new []
             {
-                new Take<int>(1), 
-                new Take<int>(1)
+                TakeOne,
+                TakeOne
             },
                 (lastEvents, upstream, downstream) =>
                 {
@@ -681,10 +681,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_implement_take_take_with_PushAndFinish_from_upstream()
         {
-            WithOneBoundedSetup(new IStage<int, int>[]
+            WithOneBoundedSetup(new []
             {
-                new Take<int>(1), 
-                new Take<int>(1)
+                TakeOne,
+                TakeOne
             },
                 (lastEvents, upstream, downstream) =>
                 {

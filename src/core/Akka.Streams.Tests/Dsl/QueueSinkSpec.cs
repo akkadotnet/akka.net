@@ -15,6 +15,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.Streams.Util;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -69,7 +70,7 @@ namespace Akka.Streams.Tests.Dsl
                 var sub = probe.ExpectSubscription();
                 var future = queue.PullAsync();
                 var future2 = queue.PullAsync();
-                future2.Invoking(t => t.Wait(TimeSpan.FromMilliseconds(300))).ShouldThrow<IllegalStateException>();
+                future2.Invoking(t => t.Wait(RemainingOrDefault)).ShouldThrow<IllegalStateException>();
 
                 sub.SendNext(1);
                 future.PipeTo(TestActor);
@@ -127,7 +128,7 @@ namespace Akka.Streams.Tests.Dsl
                 var sub = probe.ExpectSubscription();
 
                 sub.SendError(TestException());
-                queue.Invoking(q => q.PullAsync().Wait(TimeSpan.FromMilliseconds(300)))
+                queue.Invoking(q => q.PullAsync().Wait(RemainingOrDefault))
                     .ShouldThrow<TestException>();
             }, _materializer);
         }
