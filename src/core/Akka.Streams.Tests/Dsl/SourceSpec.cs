@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -73,7 +74,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Failed_Source_must_emit_error_immediately()
         {
-            var ex = new SystemException();
+            var ex = new Exception();
             var p = Source.Failed<int>(ex).RunWith(Sink.AsPublisher<int>(false), Materializer);
             var c = TestSubscriber.CreateManualProbe<int>(this);
             p.Subscribe(c);
@@ -301,14 +302,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Unfold_Source_must_terminate_with_a_failure_if_there_is_an_exception_thrown()
         {
-            EventFilter.Exception<SystemException>(message: "expected").ExpectOne(() =>
+            EventFilter.Exception<Exception>(message: "expected").ExpectOne(() =>
             {
                 var task = Source.Unfold(Tuple.Create(0, 1), tuple =>
                 {
                     var a = tuple.Item1;
                     var b = tuple.Item2;
                     if (a > 10000000)
-                        throw new SystemException("expected");
+                        throw new Exception("expected");
                     return Tuple.Create(Tuple.Create(b, a + b), a);
                 }).RunAggregate(new LinkedList<int>(), (ints, i) =>
                 {
@@ -316,7 +317,7 @@ namespace Akka.Streams.Tests.Dsl
                     return ints;
                 }, Materializer);
                 task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
-                    .ShouldThrow<SystemException>()
+                    .ShouldThrow<Exception>()
                     .WithMessage("expected");
             });
         }

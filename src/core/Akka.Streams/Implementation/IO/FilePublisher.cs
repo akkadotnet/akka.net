@@ -96,8 +96,8 @@ namespace Akka.Streams.Implementation.IO
         {
             if (IsActive)
             {
-                //Write previously buffered, read into buffer, write newly buffered
-                _availableChunks = SignalOnNexts(ReadAhead(maxReadAhead, SignalOnNexts(_availableChunks)));
+                // Write previously buffered, then refill buffer
+                _availableChunks = ReadAhead(maxReadAhead, SignalOnNexts(_availableChunks));
 
                 if (TotalDemand > 0 && IsActive)
                     Self.Tell(Continue.Instance);
@@ -156,7 +156,7 @@ namespace Akka.Streams.Implementation.IO
 
             try
             {
-                _chan?.Close();
+                _chan?.Dispose();
             }
             catch (Exception ex)
             {

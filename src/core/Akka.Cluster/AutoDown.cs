@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Event;
 
 namespace Akka.Cluster
@@ -204,6 +205,32 @@ namespace Akka.Cluster
         }
 
         public ILoggingAdapter Log { get; private set; }
+    }
+
+    /// <summary>
+    /// Used when no custom provider is configured and 'auto-down-unreachable-after' is enabled.
+    /// </summary>
+    internal sealed class AutoDowning : IDowningProvider
+    {
+        private readonly ClusterSettings _clusterSettings;
+
+        public AutoDowning(ActorSystem system)
+        {
+            _clusterSettings = Cluster.Get(system).Settings;
+        }
+
+        public TimeSpan DownRemovalMargin => _clusterSettings.DownRemovalMargin;
+
+        public Props DowningActorProps
+        {
+            get
+            {
+                if (_clusterSettings.AutoDownUnreachableAfter.HasValue)
+                    return AutoDown.Props(_clusterSettings.AutoDownUnreachableAfter.Value);
+                else 
+                    throw new ConfigurationException("AutoDowning downing provider selected but 'akka.cluster.auto-down-unreachable-after' not set");
+            }
+        }
     }
 }
 

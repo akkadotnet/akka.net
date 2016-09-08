@@ -9,9 +9,8 @@ using System;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
-using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using FluentAssertions;
-using Reactive.Streams;
 using Xunit;
 
 namespace Akka.Streams.Tests.Dsl
@@ -82,7 +81,7 @@ namespace Akka.Streams.Tests.Dsl
             protected override SinkModule<NotUsed, Task<Attributes>> NewInstance(SinkShape<NotUsed> shape)
                 => new AttributesSink(Attributes, shape);
 
-            public override ISubscriber<NotUsed> Create(MaterializationContext context, out Task<Attributes> materializer)
+            public override object Create(MaterializationContext context, out Task<Attributes> materializer)
             {
                 materializer = Task.FromResult(context.EffectiveAttributes);
                 return new SinkholeSubscriber<NotUsed>(new TaskCompletionSource<NotUsed>());

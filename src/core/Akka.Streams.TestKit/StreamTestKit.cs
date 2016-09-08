@@ -100,25 +100,13 @@ namespace Akka.Streams.TestKit
                 });
             }
 
-            public void SendNext(T element)
-            {
-                Subscriber.OnNext(element);
-            }
+            public void SendNext(T element) => Subscriber.OnNext(element);
 
-            public void SendComplete()
-            {
-                Subscriber.OnComplete();
-            }
+            public void SendComplete() => Subscriber.OnComplete();
 
-            public void SendError(Exception cause)
-            {
-                Subscriber.OnError(cause);
-            }
+            public void SendError(Exception cause) => Subscriber.OnError(cause);
 
-            public void SendOnSubscribe()
-            {
-                Subscriber.OnSubscribe(this);
-            }
+            public void SendOnSubscribe() => Subscriber.OnSubscribe(this);
         }
 
         internal sealed class ProbeSource<T> : SourceModule<T, TestPublisher.Probe<T>>
@@ -132,10 +120,7 @@ namespace Akka.Streams.TestKit
                 _attributes = attributes;
             }
 
-            public override Attributes Attributes
-            {
-                get { return _attributes; }
-            }
+            public override Attributes Attributes => _attributes;
 
             public override IModule WithAttributes(Attributes attributes)
             {
@@ -165,23 +150,19 @@ namespace Akka.Streams.TestKit
                 _attributes = attributes;
             }
 
-            public override Attributes Attributes
-            {
-                get { return _attributes; }
-            }
+            public override Attributes Attributes => _attributes;
 
             public override IModule WithAttributes(Attributes attributes)
             {
                 return new ProbeSink<T>(_testKit, attributes, AmendShape(attributes));
             }
 
-
             protected override SinkModule<T, TestSubscriber.Probe<T>> NewInstance(SinkShape<T> shape)
             {
                 return new ProbeSink<T>(_testKit, _attributes, shape);
             }
 
-            public override ISubscriber<T> Create(MaterializationContext context, out TestSubscriber.Probe<T> materializer)
+            public override object Create(MaterializationContext context, out TestSubscriber.Probe<T> materializer)
             {
                 materializer = _testKit.CreateProbe<T>();
                 return materializer;

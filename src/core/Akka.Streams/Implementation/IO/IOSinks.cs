@@ -13,7 +13,6 @@ using Akka.IO;
 using Akka.Streams.Actors;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.IO;
-using Reactive.Streams;
 
 namespace Akka.Streams.Implementation.IO
 {
@@ -32,9 +31,13 @@ namespace Akka.Streams.Implementation.IO
             _f = f;
             _fileMode = fileMode;
             Attributes = attributes;
+
+            Label = $"FileSink({f}, {fileMode})";
         }
 
         public override Attributes Attributes { get; }
+
+        protected override string Label { get; }
 
         public override IModule WithAttributes(Attributes attributes)
             => new FileSink(_f, _fileMode, attributes, AmendShape(attributes));
@@ -43,7 +46,7 @@ namespace Akka.Streams.Implementation.IO
         protected override SinkModule<ByteString, Task<IOResult>> NewInstance(SinkShape<ByteString> shape)
             => new FileSink(_f, _fileMode, Attributes, shape);
 
-        public override ISubscriber<ByteString> Create(MaterializationContext context, out Task<IOResult> materializer)
+        public override object Create(MaterializationContext context, out Task<IOResult> materializer)
         {
             var mat = ActorMaterializer.Downcast(context.Materializer);
             var settings = mat.EffectiveSettings(context.EffectiveAttributes);
@@ -83,7 +86,7 @@ namespace Akka.Streams.Implementation.IO
         protected override SinkModule<ByteString, Task<IOResult>> NewInstance(SinkShape<ByteString> shape)
             => new OutputStreamSink(_createOutput, Attributes, shape, _autoFlush);
 
-        public override ISubscriber<ByteString> Create(MaterializationContext context, out Task<IOResult> materializer)
+        public override object Create(MaterializationContext context, out Task<IOResult> materializer)
         {
             var mat = ActorMaterializer.Downcast(context.Materializer);
             var settings = mat.EffectiveSettings(context.EffectiveAttributes);

@@ -11,7 +11,6 @@ using System.Net;
 using Akka.Actor;
 using Akka.IO;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Reactive.Streams;
 using Xunit.Abstractions;

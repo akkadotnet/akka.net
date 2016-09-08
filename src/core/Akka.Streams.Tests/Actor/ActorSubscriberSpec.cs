@@ -9,19 +9,31 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Routing;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Reactive.Streams;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Actor
 {
     public class ActorSubscriberSpec : AkkaSpec
     {
+        public ActorSubscriberSpec(ITestOutputHelper helper)
+            : base(
+                AkkaSpecConfig.WithFallback(
+                    ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf")),
+                helper)
+        {
+
+        }
+
         [Fact]
         public void ActorSubscriber_should_receive_requested_elements()
         {
@@ -41,7 +53,7 @@ namespace Akka.Streams.Tests.Actor
         [Fact]
         public void ActorSubscriber_should_signal_error()
         {
-            var e = new SystemException("simulated");
+            var e = new Exception("simulated");
             var actorRef = Source.FromEnumerator<int>(() => { throw e; })
                     .RunWith(Sink.ActorSubscriber<int>(ManualSubscriber.Props(TestActor)), Sys.Materializer());
             actorRef.Tell("ready");
@@ -161,7 +173,7 @@ namespace Akka.Streams.Tests.Actor
                     if (s.Equals("ready"))
                         Request(2);
                     else if (s.Equals("boom"))
-                        throw new SystemException(s);
+                        throw new Exception(s);
                     else if (s.Equals("requestAndCancel"))
                     {
                         Request(1);

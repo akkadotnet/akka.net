@@ -11,6 +11,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -80,7 +81,7 @@ namespace Akka.Streams.Tests.Dsl
                 Thread.Sleep(1500);
 
                 // Must be a Sink.seq, otherwise there is a race due to the concat in the `lift` implementation
-                Action action = () => s3.RunWith(Sink.Seq<int>(), Materializer).Wait(TimeSpan.FromMilliseconds(300));
+                Action action = () => s3.RunWith(Sink.Seq<int>(), Materializer).Wait(RemainingOrDefault);
                 action.ShouldThrow<SubscriptionTimeoutException>();
 
                 publisherProbe.SendComplete();

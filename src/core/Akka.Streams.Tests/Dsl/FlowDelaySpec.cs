@@ -11,6 +11,7 @@ using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
@@ -204,7 +205,7 @@ namespace Akka.Streams.Tests.Dsl
                 pSub.SendNext(17);
                 c.ExpectNext(1, TimeSpan.FromMilliseconds(100));
                 // fail will terminate despite of non empty internal buffer
-                pSub.SendError(new SystemException());
+                pSub.SendError(new Exception());
             }, Materializer);
         }
     }

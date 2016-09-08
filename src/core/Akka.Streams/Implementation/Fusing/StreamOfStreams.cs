@@ -15,7 +15,7 @@ using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Streams.Util;
 using Akka.Util;
-using Reactive.Streams;
+using Akka.Util.Internal;
 
 namespace Akka.Streams.Implementation.Fusing
 {
@@ -67,11 +67,7 @@ namespace Akka.Streams.Implementation.Fusing
             public override void PreStart()
                 => _q = Buffer.Create<SubSinkInlet<T>>(_stage._breadth, Interpreter.Materializer);
 
-            public override void PostStop()
-            {
-                foreach (var source in _sources)
-                    source.Cancel();
-            }
+            public override void PostStop() => _sources.ForEach(s => s.Cancel());
 
             private void PushOut()
             {
@@ -193,9 +189,23 @@ namespace Akka.Streams.Implementation.Fusing
                 var timeoutSettings = materializer.Settings.SubscriptionTimeoutSettings;
                 var timeout = timeoutSettings.Timeout;
 
-                _tailSource.Timeout(timeout);
-                if (_tailSource.IsClosed)
-                    CompleteStage();
+                switch (timeoutSettings.Mode)
+                {
+                    case StreamSubscriptionTimeoutTerminationMode.NoopTermination:
+                        //do nothing
+                        break;
+                    case StreamSubscriptionTimeoutTerminationMode.WarnTermination:
+                        materializer.Logger.Warning(
+                            $"Substream subscription timeout triggered after {timeout} in prefixAndTail({_stage._count}).");
+                        break;
+                    case StreamSubscriptionTimeoutTerminationMode.CancelTermination:
+                        _tailSource.Timeout(timeout);
+                        if(_tailSource.IsClosed)
+                            CompleteStage();
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
             }
 
             private bool IsPrefixComplete => ReferenceEquals(_builder, null);
@@ -213,7 +223,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             private void OnPush()
             {
-                if (IsPrefixComplete) 
+                if (IsPrefixComplete)
                     _tailSource.Push(Grab(_stage._in));
                 else
                 {
@@ -249,7 +259,7 @@ namespace Akka.Streams.Implementation.Fusing
                 }
                 else
                 {
-                    if(!_tailSource.IsClosed)
+                    if (!_tailSource.IsClosed)
                         _tailSource.Complete();
                     CompleteStage();
                 }
@@ -537,18 +547,26 @@ namespace Akka.Streams.Implementation.Fusing
     /// </summary>
     internal static class SubSink
     {
-        internal interface ICommand { }
+        internal interface ICommand
+        {
+        }
 
         internal class RequestOne : ICommand
         {
             public static readonly RequestOne Instance = new RequestOne();
-            private RequestOne() { }
+
+            private RequestOne()
+            {
+            }
         }
 
         internal class Cancel : ICommand
         {
             public static readonly Cancel Instance = new Cancel();
-            private Cancel() { }
+
+            private Cancel()
+            {
+            }
         }
     }
 
@@ -567,10 +585,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 _stage = stage;
 
-                SetHandler(stage._in,
-                    onPush: () => _stage._externalCallback(new OnNext(Grab(_stage._in))),
-                    onUpstreamFinish: () => _stage._externalCallback(OnComplete.Instance),
-                    onUpstreamFailure: ex => _stage._externalCallback(new OnError(ex)));
+                SetHandler(stage._in, onPush: () => _stage._externalCallback(new OnNext(Grab(_stage._in))), onUpstreamFinish: () => _stage._externalCallback(OnComplete.Instance), onUpstreamFailure: ex => _stage._externalCallback(new OnError(ex)));
             }
 
             private void SetCallback(Action<SubSink.ICommand> cb)
@@ -713,9 +728,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 _stage = stage;
 
-                SetHandler(stage._out,
-                    onPull: () => _stage.ExternalCallback(SubSink.RequestOne.Instance),
-                    onDownstreamFinish: () => _stage.ExternalCallback(SubSink.Cancel.Instance));
+                SetHandler(stage._out, onPull: () => _stage.ExternalCallback(SubSink.RequestOne.Instance), onDownstreamFinish: () => _stage.ExternalCallback(SubSink.Cancel.Instance));
             }
 
             private void SetCallback(Action<IActorSubscriberMessage> callback)

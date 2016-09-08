@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
@@ -19,6 +20,7 @@ using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using Akka.TestKit.Internal;
 using Akka.TestKit.TestEvent;
 using FluentAssertions;
@@ -36,15 +38,15 @@ namespace Akka.Streams.Tests.Dsl
         private sealed class Apple : IFruit { };
         private static IEnumerable<Apple> Apples() => Enumerable.Range(1, 1000).Select(_ => new Apple()); 
 
-        private static readonly string Config = @"
+        private static readonly Config Config = ConfigurationFactory.ParseString(@"
                 akka.actor.debug.receive=off
                 akka.loglevel=INFO
-                ";
+                ");
 
         public ActorMaterializerSettings Settings { get; }
         private ActorMaterializer Materializer { get; }
 
-        public FlowSpec(ITestOutputHelper helper) : base(Config, helper)
+        public FlowSpec(ITestOutputHelper helper) : base(Config.WithFallback(ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf")), helper)
         {
             Settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 2);
             Materializer = ActorMaterializer.Create(Sys, Settings);
@@ -118,7 +120,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var setup = new ChainSetup<string, string, NotUsed>(Identity, Settings,
                 (settings, factory) => ActorMaterializer.Create(factory, settings), ToPublisher, this);
-            var weirdError = new SystemException("weird test exception");
+            var weirdError = new Exception("weird test exception");
             setup.UpstreamSubscription.SendError(weirdError);
             setup.Downstream.ExpectError().Should().Be(weirdError);
         }

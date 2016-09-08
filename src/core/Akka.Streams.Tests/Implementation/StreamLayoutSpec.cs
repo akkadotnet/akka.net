@@ -23,7 +23,7 @@ namespace Akka.Streams.Tests.Implementation
     {
         #region internal classes
 
-        private class TestAtomicModule : Module
+        private class TestAtomicModule : AtomicModule
         {
             public TestAtomicModule(int inportCount, int outportCount)
             {
@@ -38,9 +38,7 @@ namespace Akka.Streams.Tests.Implementation
             {
                 throw new System.NotImplementedException();
             }
-
-            public override ImmutableArray<IModule> SubModules => ImmutableArray<IModule>.Empty;
-
+            
             public override IModule CarbonCopy()
             {
                 throw new System.NotImplementedException();
@@ -117,7 +115,7 @@ namespace Akka.Streams.Tests.Implementation
             {
             }
 
-            protected override object MaterializeAtomic(IModule atomic, Attributes effectiveAttributes, IDictionary<IModule, object> materializedValues)
+            protected override object MaterializeAtomic(AtomicModule atomic, Attributes effectiveAttributes, IDictionary<IModule, object> materializedValues)
             {
                 foreach (var inPort in atomic.InPorts)
                 {
@@ -138,9 +136,9 @@ namespace Akka.Streams.Tests.Implementation
 
         #endregion
 
-        const int TooDeepForStack = 200;
+        private const int TooDeepForStack = 5000;
 
-        private readonly IMaterializer materializer;
+        private readonly IMaterializer _materializer;
 
         private static TestAtomicModule TestStage() => new TestAtomicModule(1, 1);
         private static TestAtomicModule TestSource() => new TestAtomicModule(0, 1);
@@ -149,7 +147,7 @@ namespace Akka.Streams.Tests.Implementation
         public StreamLayoutSpec(ITestOutputHelper output) : base(output: output)
         {
             Sys.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
-            materializer = ActorMaterializer.Create(Sys, ActorMaterializerSettings.Create(Sys).WithAutoFusing(false));
+            _materializer = ActorMaterializer.Create(Sys, ActorMaterializerSettings.Create(Sys).WithAutoFusing(false));
         }
 
         [Fact]
@@ -240,13 +238,23 @@ namespace Akka.Streams.Tests.Implementation
             CheckMaterialized(runnable);
         }
 
+        [Fact(Skip = "We can't catch a StackOverflowException")]
+        public void StreamLayout_should_fail_fusing_when_value_computation_is_too_complex()
+        {
+            // this tests that the canary in to coal mine actually works
+            var g = Enumerable.Range(1, TooDeepForStack)
+                .Aggregate(Flow.Create<int>().MapMaterializedValue(_ => 1),
+                    (flow, i) => flow.MapMaterializedValue(x => x + i));
+            g.Invoking(flow => Streams.Fusing.Aggressive(flow)).ShouldThrow<StackOverflowException>();
+        }
+
         [Fact]
         public void StreamLayout_should_not_fail_materialization_when_building_a_large_graph_with_simple_computation_when_starting_from_a_Source()
         {
             var g = Enumerable.Range(1, TooDeepForStack)
                 .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x));
 
-            var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(materializer);
+            var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(_materializer);
             var materialized = t.Item1;
             var result = t.Item2.Result;
 
@@ -261,7 +269,7 @@ namespace Akka.Streams.Tests.Implementation
             var g = Enumerable.Range(1, TooDeepForStack)
                 .Aggregate(Flow.Create<int>().MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x));
 
-            var t = g.RunWith(Source.Single(42).MapMaterializedValue(_ => 1), Sink.Seq<int>(), materializer);
+            var t = g.RunWith(Source.Single(42).MapMaterializedValue(_ => 1), Sink.Seq<int>(), _materializer);
             var materialized = t.Item1;
             var result = t.Item2.Result;
 
@@ -276,7 +284,7 @@ namespace Akka.Streams.Tests.Implementation
             var g = Enumerable.Range(1, TooDeepForStack)
                 .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x));
 
-            var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(materializer);
+            var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(_materializer);
             var materialized = t.Item1;
             var result = t.Item2.Result;
 
@@ -292,7 +300,7 @@ namespace Akka.Streams.Tests.Implementation
                 .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x))));
 
             var m = g.ToMaterialized(Sink.Seq<int>(), Keep.Both);
-            var t = m.Run(materializer);
+            var t = m.Run(_materializer);
             var materialized = t.Item1;
             var result = t.Item2.Result;
 
@@ -307,7 +315,7 @@ namespace Akka.Streams.Tests.Implementation
             var g = Flow.FromGraph(Fuse.Aggressive(Enumerable.Range(1, TooDeepForStack)
                 .Aggregate(Flow.Create<int>().MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x))));
 
-            var t = g.RunWith(Source.Single(42).MapMaterializedValue(_ => 1), Sink.Seq<int>(), materializer);
+            var t = g.RunWith(Source.Single(42).MapMaterializedValue(_ => 1), Sink.Seq<int>(), _materializer);
             var materialized = t.Item1;
             var result = t.Item2.Result;
 
@@ -322,7 +330,7 @@ namespace Akka.Streams.Tests.Implementation
             var g = Source.FromGraph(Fuse.Aggressive(Enumerable.Range(1, TooDeepForStack)
                 .Aggregate(Source.Single(42).MapMaterializedValue(_ => 1), (source, i) => source.Select(x => x))));
 
-            var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(materializer);
+            var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(_materializer);
             var materialized = t.Item1;
             var result = t.Item2.Result;
 

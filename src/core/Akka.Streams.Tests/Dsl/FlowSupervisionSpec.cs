@@ -11,7 +11,7 @@ using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
-using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -20,7 +20,7 @@ namespace Akka.Streams.Tests.Dsl
 {
     public class FlowSupervisionSpec : AkkaSpec
     {
-        private static readonly SystemException Exception = new SystemException("simulated exception");
+        private static readonly Exception Exception = new Exception("simulated exception");
         private static Flow<int, int, NotUsed> FailingMap => Flow.Create<int>().Select(n =>
         {
             if (n == 3)
@@ -51,7 +51,7 @@ namespace Akka.Streams.Tests.Dsl
         public void Stream_supervision_must_stop_and_complete_stream_with_failure_by_default()
         {
             Action action = () => Run(FailingMap);
-            action.ShouldThrow<SystemException>().And.ShouldBeEquivalentTo(Exception);
+            action.ShouldThrow<Exception>().And.ShouldBeEquivalentTo(Exception);
         }
 
         [Fact]

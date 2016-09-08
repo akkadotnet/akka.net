@@ -116,12 +116,6 @@ Target "Build" <| fun _ ->
     |> MSBuildRelease "" "Rebuild"
     |> ignore
 
-Target "BuildMono" <| fun _ ->
-
-    !!"src/Akka.sln"
-    |> MSBuild "" "Rebuild" [("Configuration","Release Mono")]
-    |> ignore
-
 //--------------------------------------------------------------------------------
 // Build the docs
 Target "Docs" <| fun _ ->
@@ -249,6 +243,8 @@ let filterPlatformSpecificAssemblies (assembly:string) =
     match assembly with
     | assembly when (assembly.Contains("Sqlite") && isMono) -> false
     | assembly when (assembly.Contains(".API") && isMono) -> false
+    | assembly when (assembly.Contains("Akka.Remote.TestKit.Tests") && isMono) -> false
+    | assembly when (assembly.Contains("Akka.Persistence.TestKit.Tests") && isMono) -> false
     | _ -> true
 
 //--------------------------------------------------------------------------------
@@ -281,7 +277,7 @@ Target "RunTests" <| fun _ ->
     let runSingleAssembly assembly =
         let assemblyName = Path.GetFileNameWithoutExtension(assembly)
         xUnit2
-            (fun p -> { p with XmlOutputPath = Some (testOutput @@ (assemblyName + "_xunit.xml")); HtmlOutputPath = Some (testOutput @@ (assemblyName + "_xunit.html")); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization; }) 
+            (fun p -> { p with XmlOutputPath = Some (testOutput @@ (assemblyName + "_xunit.xml")); HtmlOutputPath = Some (testOutput @@ (assemblyName + "_xunit.html")); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization; NoAppDomain = true; ForceTeamCity = true; }) 
             (Seq.singleton assembly)
 
     xunitTestAssemblies |> Seq.iter (runSingleAssembly)

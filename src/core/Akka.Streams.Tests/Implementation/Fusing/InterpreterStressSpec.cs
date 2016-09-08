@@ -29,7 +29,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         private readonly ITestOutputHelper _helper;
 
-        private readonly Select<int,int> _select = new Select<int, int>(x=>x+1, Deciders.StoppingDecider);
+        // GraphStages can be reused
+        private static readonly Select<int,int> Select = new Select<int, int>(x=>x+1, Deciders.StoppingDecider);
+        private static readonly Drop<int> DropOne = new Drop<int>(1);
+        private static readonly Take<int> TakeOne = new Take<int>(1);
+        private static readonly Take<int> TakeHalfOfRepetition = new Take<int>(Repetition/2);
 
         public InterpreterStressSpec(ITestOutputHelper helper = null) : base(helper)
         {
@@ -40,7 +44,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_must_work_with_a_massive_chain_of_maps()
         {
-            var ops = Enumerable.Range(1, ChainLength).Select(_ => _select)
+            var ops = Enumerable.Range(1, ChainLength).Select(_ => Select)
                 .Cast<IStage<int, int>>().ToArray();
             WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>
                 {
@@ -72,9 +76,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_must_work_with_a_massive_chain_of_maps_with_early_complete()
         {
-            var ops = Enumerable.Range(1, HalfLength).Select(_ => _select).ToList<IStage<int, int>>();
-            ops.Add(new Take<int>(Repetition/2));
-            ops.AddRange(Enumerable.Range(1, HalfLength).Select(_ => _select));
+            var ops =
+                Enumerable.Range(1, HalfLength)
+                    .Select(_ => Select)
+                    .Select(ToGraphStage)
+                    .ToList<IGraphStageWithMaterializedValue<FlowShape<int,int>, object>>();
+            ops.Add(TakeHalfOfRepetition);
+            ops.AddRange(Enumerable.Range(1, HalfLength).Select(_ => Select).Select(ToGraphStage));
 
             WithOneBoundedSetup(ops.ToArray(), (lastEvents, upstream, downstream) =>
             {
@@ -110,8 +118,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_must_work_with_a_massive_chain_of_takes()
         {
-            var ops = Enumerable.Range(1, ChainLength / 10).Select(_ => new Take<int>(1))
-                .Cast<IStage<int, int>>().ToArray();
+            var ops = Enumerable.Range(1, ChainLength / 10).Select(_ => TakeOne).ToArray();
             WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>
             {
                 lastEvents().Should().BeEmpty();
@@ -127,8 +134,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_must_work_with_a_massive_chain_of_drops()
         {
-            var ops = Enumerable.Range(1, ChainLength / 1000).Select(_ => new Drop<int>(1))
-                .Cast<IStage<int, int>>().ToArray();
+            var ops = Enumerable.Range(1, ChainLength/1000).Select(_ => DropOne).ToArray();
+
             WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>
             {
                 lastEvents().Should().BeEmpty();
@@ -154,10 +161,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         public void Interpreter_must_work_with_a_massive_chain_of_batches_of_overflowing_to_the_heap()
         {
             var batch = new Batch<int, int>(0, _ => 0, i => i, (agg, i) => agg + i);
-            var ops = Enumerable.Range(1, ChainLength/10).Select(_ => batch)
-                .Cast<IGraphStageWithMaterializedValue<Shape, object>>().ToArray();
+            var ops = Enumerable.Range(1, ChainLength/10).Select(_ => batch).ToArray();
 
-            WithOneBoundedSetup<int, int>(ops, (lastEvents, upstream, downstream) =>
+            WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>
             {
                 lastEvents().Should().BeEquivalentTo(new RequestOne());
 

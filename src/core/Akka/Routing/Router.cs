@@ -188,13 +188,14 @@ namespace Akka.Routing
         //So in order to not confuse the compiler we demand at least one ActorRef. /@hcanber
         public Router(RoutingLogic logic, IActorRef routee, params IActorRef[] routees)
         {
-            var routeesLength = routees.Length;
-            if (routees == null || routeesLength == 0)
+            if (routees == null || routees.Length == 0)
             {
                 _routees = new[] { Routee.FromActorRef(routee) };
             }
             else
             {
+                var routeesLength = routees.Length;
+
                 //Convert and put routee first in a new array
                 var rts = new Routee[routeesLength + 1];
                 rts[0] = Routee.FromActorRef(routee);

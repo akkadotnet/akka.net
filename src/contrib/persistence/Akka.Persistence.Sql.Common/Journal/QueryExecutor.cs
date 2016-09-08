@@ -88,6 +88,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         public readonly string ManifestColumnName;
         public readonly string TimestampColumnName;
         public readonly string IsDeletedColumnName;
+        public readonly string OrderingColumnName;
 
         public readonly TimeSpan Timeout;
 
@@ -102,6 +103,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             string timestampColumnName,
             string isDeletedColumnName,
             string tagsColumnName,
+            string orderingColumnName,
             TimeSpan timeout)
         {
             SchemaName = schemaName;
@@ -115,6 +117,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             IsDeletedColumnName = isDeletedColumnName;
             Timeout = timeout;
             TagsColumnName = tagsColumnName;
+            OrderingColumnName = orderingColumnName;
         }
 
         public string FullJournalTableName => string.IsNullOrEmpty(SchemaName) ? JournalEventsTableName : SchemaName + "." + JournalEventsTableName;
@@ -131,6 +134,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected const int IsDeletedIndex = 3;
         protected const int ManifestIndex = 4;
         protected const int PayloadIndex = 5;
+        protected const int OrderingIndex = 6;
 
         protected static readonly string LongTypeName = typeof(long).FullName;
 
@@ -180,10 +184,10 @@ namespace Akka.Persistence.Sql.Common.Journal
 
             ByTagSql =
                 $@"
-                SELECT {allEventColumnNames}
+                SELECT {allEventColumnNames}, e.{Configuration.OrderingColumnName} as Ordering
                 FROM {Configuration.FullJournalTableName} e
-                WHERE e.{Configuration.TagsColumnName} LIKE @Tag
-                ORDER BY {Configuration.PersistenceIdColumnName}, {Configuration.SequenceNrColumnName}";
+                WHERE e.{Configuration.OrderingColumnName} > @Ordering AND e.{Configuration.TagsColumnName} LIKE @Tag
+                ORDER BY {Configuration.OrderingColumnName} ASC";
 
             InsertEventSql = $@"
                 INSERT INTO {Configuration.FullJournalTableName} (
@@ -266,10 +270,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             using (var command = GetCommand(connection, ByTagSql))
             {
-                fromOffset = Math.Max(1, fromOffset);
                 var take = Math.Min(toOffset - fromOffset, max);
                 AddParameter(command, "@Tag", DbType.String, "%;" + tag + ";%");
-                AddParameter(command, "@Skip", DbType.Int64, fromOffset - 1);
+                AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
                 AddParameter(command, "@Take", DbType.Int64, take);
 
                 using (var reader = await command.ExecuteReaderAsync(cancellationToken))
@@ -278,9 +281,9 @@ namespace Akka.Persistence.Sql.Common.Journal
                     while (await reader.ReadAsync(cancellationToken))
                     {
                         var persistent = ReadEvent(reader);
+                        var ordering = reader.GetInt64(OrderingIndex);
                         maxSequenceNr = Math.Max(maxSequenceNr, persistent.SequenceNr);
-                        callback(new ReplayedTaggedMessage(persistent, tag, fromOffset));
-                        fromOffset++;
+                        callback(new ReplayedTaggedMessage(persistent, tag, ordering));
                     }
 
                     return maxSequenceNr;
@@ -428,7 +431,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             command.Parameters.Add(parameter);
         }
 
-        public async Task SelectEventsAsync(DbConnection connection, CancellationToken cancellationToken, IEnumerable<IHint> hints, Action<IPersistentRepresentation> callback)
+        public virtual async Task SelectEventsAsync(DbConnection connection, CancellationToken cancellationToken, IEnumerable<IHint> hints, Action<IPersistentRepresentation> callback)
         {
             using (var command = GetCommand(connection, QueryEventsSql))
             {
@@ -445,7 +448,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        private string HintToSql(IHint hint, DbCommand command)
+        protected virtual string HintToSql(IHint hint, DbCommand command)
         {
             if (hint is TimestampRange)
             {

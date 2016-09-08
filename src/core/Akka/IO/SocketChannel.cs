@@ -112,7 +112,7 @@ namespace Akka.IO
         public void Close()
         {
             _connected = false;
-            _socket.Close();
+            _socket.Dispose();
         }
         internal IActorRef Connection { get { return _connection; } }
     }

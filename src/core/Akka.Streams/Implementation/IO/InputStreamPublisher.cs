@@ -63,7 +63,7 @@ namespace Akka.Streams.Implementation.IO
             base.PostStop();
             try
             {
-                _inputstream?.Close();
+                _inputstream?.Dispose();
             }
             catch (Exception ex)
             {
@@ -78,7 +78,7 @@ namespace Akka.Streams.Implementation.IO
                 return;
 
             ReadAndEmit();
-            if(TotalDemand > 0 )
+            if(TotalDemand > 0 && IsActive)
                 Self.Tell(Continue.Instance);
         }
 

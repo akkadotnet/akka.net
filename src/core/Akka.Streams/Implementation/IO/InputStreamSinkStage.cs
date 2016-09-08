@@ -246,8 +246,9 @@ namespace Akka.Streams.Implementation.IO
             _readTimeout = readTimeout;
         }
 
-        public override void Close()
+        protected override void Dispose(bool disposing)
         {
+            base.Dispose(disposing);
             ExecuteIfNotClosed(() =>
             {
                 // at this point Subscriber may be already terminated
@@ -295,9 +296,13 @@ namespace Akka.Streams.Implementation.IO
                     _isStageAlive = false;
                     return 0;
                 }
+                if (msg is Failed)
+                {
+                    _isStageAlive = false;
+                    throw ((Failed) msg).Cause;
+                }
 
-                _isStageAlive = false;
-                throw ((Failed) msg).Cause;
+                throw new IllegalStateException("message 'Initialized' must come first");
             });
         }
 

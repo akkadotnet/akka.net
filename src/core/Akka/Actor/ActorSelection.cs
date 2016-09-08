@@ -348,7 +348,7 @@ namespace Akka.Actor
         /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>A <see cref="string" /> that represents this instance.</returns>
-        public override string ToString() => PatternStr.ToString(CultureInfo.InvariantCulture);
+        public override string ToString() => PatternStr.ToString();
     }
 
 
