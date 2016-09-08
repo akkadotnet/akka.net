@@ -819,6 +819,13 @@ ip = ""::1""
             var res = ConfigurationFactory.ParseString(hocon).GetTimeSpan("timespan");
             Assert.Equal(10, res.TotalSeconds);
         }
+
+        [Fact]
+        public void Can_parse_abbreviated_timespan2() {
+            var hocon = "timespan = 0.05 s";
+
+            var res = ConfigurationFactory.ParseString(hocon).GetTimeSpan("timespan");
+        }
     }
 }
 
