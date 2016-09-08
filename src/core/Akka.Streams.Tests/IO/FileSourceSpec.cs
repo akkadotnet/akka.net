@@ -81,16 +81,16 @@ namespace Akka.Streams.Tests.IO
                 });
 
                 sub.Request(1);
-                c.ExpectNext().DecodeString(Encoding.UTF8).Should().Be(nextChunk());
+                c.ExpectNext().ToString(Encoding.UTF8).Should().Be(nextChunk());
                 sub.Request(1);
-                c.ExpectNext().DecodeString(Encoding.UTF8).Should().Be(nextChunk());
+                c.ExpectNext().ToString(Encoding.UTF8).Should().Be(nextChunk());
                 c.ExpectNoMsg(TimeSpan.FromMilliseconds(300));
 
                 sub.Request(200);
                 var expectedChunk = nextChunk();
                 while (!string.IsNullOrEmpty(expectedChunk))
                 {
-                    var actual = c.ExpectNext().DecodeString(Encoding.UTF8);
+                    var actual = c.ExpectNext().ToString(Encoding.UTF8);
                     actual.Should().Be(expectedChunk);
                     expectedChunk = nextChunk();
                 }
@@ -137,15 +137,15 @@ namespace Akka.Streams.Tests.IO
 
                 sub.Request(demandAllButOnechunks);
                 for (var i = 0; i < demandAllButOnechunks; i++)
-                    c.ExpectNext().DecodeString(Encoding.UTF8).Should().Be(nextChunk());
+                    c.ExpectNext().ToString(Encoding.UTF8).Should().Be(nextChunk());
                 c.ExpectNoMsg(TimeSpan.FromMilliseconds(300));
 
                 sub.Request(1);
-                c.ExpectNext().DecodeString(Encoding.UTF8).Should().Be(nextChunk());
+                c.ExpectNext().ToString(Encoding.UTF8).Should().Be(nextChunk());
                 c.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
 
                 sub.Request(1);
-                c.ExpectNext().DecodeString(Encoding.UTF8).Should().Be(nextChunk());
+                c.ExpectNext().ToString(Encoding.UTF8).Should().Be(nextChunk());
                 c.ExpectComplete();
             }, _materializer);
         }
@@ -180,7 +180,7 @@ namespace Akka.Streams.Tests.IO
             var s = FileIO.FromFile(ManyLines(), chunkSize)
                 .WithAttributes(Attributes.CreateInputBuffer(readAhead, readAhead));
             var f = s.RunWith(
-                Sink.Aggregate<ByteString, int>(0, (acc, l) => acc + l.DecodeString(Encoding.UTF8).Count(c => c == '\n')),
+                Sink.Aggregate<ByteString, int>(0, (acc, l) => acc + l.ToString(Encoding.UTF8).Count(c => c == '\n')),
                 _materializer);
 
             f.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();

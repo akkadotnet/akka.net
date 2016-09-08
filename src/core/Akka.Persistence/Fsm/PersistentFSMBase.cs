@@ -906,7 +906,7 @@ namespace Akka.Persistence.Fsm
                 TimeSpan? timeout = null,
                 FSMBase.Reason stopReason = null,
                 List<object> replies = null,
-                ILinearSeq<TEvent> domainEvents = null,
+                IEnumerable<TEvent> domainEvents = null,
                 Action<TData> afterTransitionDo = null)
             {
                 _state = new State(stateName, stateData, timeout, stopReason, replies, domainEvents, afterTransitionDo);
@@ -948,7 +948,7 @@ namespace Akka.Persistence.Fsm
             /// <summary>
             /// TBD
             /// </summary>
-            public ILinearSeq<TEvent> DomainEvents
+            public IEnumerable<TEvent> DomainEvents
             {
                 get
                 {
@@ -977,7 +977,7 @@ namespace Akka.Persistence.Fsm
             /// </summary>
             /// <param name="events">TBD</param>
             /// <returns>TBD</returns>
-            public State Applying(ILinearSeq<TEvent> events)
+            public State Applying(IEnumerable<TEvent> events)
             {
                 return _state.Applying(events);
             }
@@ -1015,7 +1015,7 @@ namespace Akka.Persistence.Fsm
                 TimeSpan? timeout,
                 FSMBase.Reason stopReason = null,
                 List<object> replies = null,
-                ILinearSeq<TEvent> domainEvents = null,
+                IEnumerable<TEvent> domainEvents = null,
                 Action<TData> afterTransitionDo = null)
             {
                 return _state.Copy(timeout, stopReason, replies, domainEvents, afterTransitionDo);
@@ -1133,7 +1133,7 @@ namespace Akka.Persistence.Fsm
             /// <param name="domainEvents">TBD</param>
             /// <param name="afterTransitionDo">TBD</param>
             public State(TState stateName, TData stateData, TimeSpan? timeout = null, FSMBase.Reason stopReason = null,
-                IReadOnlyList<object> replies = null, ILinearSeq<TEvent> domainEvents = null, Action<TData> afterTransitionDo = null)
+                IReadOnlyList<object> replies = null, IEnumerable<TEvent> domainEvents = null, Action<TData> afterTransitionDo = null)
                 : base(stateName, stateData, timeout, stopReason, replies)
             {
                 AfterTransitionHandler = afterTransitionDo;
@@ -1144,7 +1144,7 @@ namespace Akka.Persistence.Fsm
             /// <summary>
             /// TBD
             /// </summary>
-            public ILinearSeq<TEvent> DomainEvents { get; private set; }
+            public IEnumerable<TEvent> DomainEvents { get; private set; }
 
             /// <summary>
             /// TBD
@@ -1156,13 +1156,13 @@ namespace Akka.Persistence.Fsm
             /// </summary>
             /// <param name="events">TBD</param>
             /// <returns>TBD</returns>
-            public State Applying(ILinearSeq<TEvent> events)
+            public State Applying(IEnumerable<TEvent> events)
             {
                 if (DomainEvents == null)
                 {
                     return Copy(null, null, null, events);
                 }
-                return Copy(null, null, null, new ArrayLinearSeq<TEvent>(DomainEvents.Concat(events).ToArray()));
+                return Copy(null, null, null, DomainEvents.Concat(events).ToArray());
             }
 
 
@@ -1175,12 +1175,12 @@ namespace Akka.Persistence.Fsm
             {
                 if (DomainEvents == null)
                 {
-                    return Copy(null, null, null, new ArrayLinearSeq<TEvent>(new[] {e}));
+                    return Copy(null, null, null, new[] {e});
                 }
                 var events = new List<TEvent>();
                 events.AddRange(DomainEvents);
                 events.Add(e);
-                return Copy(null, null, null, new ArrayLinearSeq<TEvent>(events.ToArray()));
+                return Copy(null, null, null, events.ToArray());
             }
 
 
@@ -1204,7 +1204,7 @@ namespace Akka.Persistence.Fsm
             /// <param name="afterTransitionDo">TBD</param>
             /// <returns>TBD</returns>
             public State Copy(TimeSpan? timeout, FSMBase.Reason stopReason = null,
-                IReadOnlyList<object> replies = null, ILinearSeq<TEvent> domainEvents = null, Action<TData> afterTransitionDo = null)
+                IReadOnlyList<object> replies = null, IEnumerable<TEvent> domainEvents = null, Action<TData> afterTransitionDo = null)
             {
                 return new State(StateName, StateData, timeout ?? Timeout, stopReason ?? StopReason,
                     replies ?? Replies,

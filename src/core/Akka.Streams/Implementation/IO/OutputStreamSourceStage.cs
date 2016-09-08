@@ -461,7 +461,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="offset">TBD</param>
         /// <param name="count">TBD</param>
         public override void Write(byte[] buffer, int offset, int count)
-            => SendData(ByteString.Create(buffer, offset, count));
+            => SendData(ByteString.FromBytes(buffer, offset, count));
 
         /// <summary>
         /// TBD

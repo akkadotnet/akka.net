@@ -98,7 +98,7 @@ namespace Akka.Streams.Implementation.IO
                     try
                     {
                         var byteString = (ByteString) next.Element;
-                        var bytes = (byteString.AsByteBuffer()).Array();
+                        var bytes = byteString.ToArray();
                          _chan.Write(bytes, 0, bytes.Length);
                         _bytesWritten += bytes.Length;
                     }

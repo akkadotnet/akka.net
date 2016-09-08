@@ -10,6 +10,22 @@ open Fake.DotNetCli
 
 // Variables
 let configuration = "Release"
+let product = "Akka.NET"
+let authors = [ "Akka.NET Team" ]
+let copyright = "Copyright © 2013-2017 Akka.NET Team"
+let company = "Akka.NET Team"
+let description = "Akka.NET is a port of the popular Java/Scala framework Akka to .NET"
+let tags = ["akka";"actors";"actor";"model";"Akka";"concurrency"]
+let configuration = if isMono then "Release Mono" else "Release"
+let toolDir = "tools"
+let CloudCopyDir = toolDir @@ "CloudCopy"
+let AzCopyDir = toolDir @@ "AzCopy"
+
+// Read release notes and version
+
+let parsedRelease =
+    File.ReadLines "RELEASE_NOTES.md"
+    |> ReleaseNotesHelper.parseReleaseNotes
 
 // Directories
 let toolsDir = __SOURCE_DIRECTORY__ @@ "tools"

@@ -92,7 +92,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var a = new byte[size];
             ThreadLocalRandom.Current.NextBytes(a);
-            return ByteString.Create(a);
+            return ByteString.FromBytes(a);
         }
 
         [Fact]
@@ -457,7 +457,7 @@ namespace Akka.Streams.Tests.Dsl
                 var subscriber = this.CreateManualSubscriberProbe<IEnumerable<byte>>();
 
                 var firstGroup = (Source<IEnumerable<byte>, NotUsed>)Source.FromPublisher(publisherProbe)
-                    .GroupBy(256, element => element.Head)
+                    .GroupBy(256, element => element[0])
                     .Select(b => b.Reverse())
                     .MergeSubstreams();
                 var secondGroup = (Source<IEnumerable<byte>, NotUsed>)firstGroup.GroupBy(256, bytes => bytes.First())
@@ -539,7 +539,7 @@ namespace Akka.Streams.Tests.Dsl
                 var probeShape = new SinkShape<ByteString>(new Inlet<ByteString>("ProbeSink.in"));
                 var probeSink = new ProbeSink(probeShape, props, Attributes.None);
                 Source.FromPublisher(publisherProbe)
-                    .GroupBy(100, element => Math.Abs(element.Head % 100))
+                    .GroupBy(100, element => Math.Abs(element[0] % 100))
                     .To(new Sink<ByteString, TestSubscriber.Probe<ByteString>>(probeSink))
                     .Run(materializer);
 
@@ -548,7 +548,7 @@ namespace Akka.Streams.Tests.Dsl
                 for (var i = 1; i <= 400; i++)
                 {
                     var byteString = RandomByteString(10);
-                    var index = Math.Abs(byteString.Head % 100);
+                    var index = Math.Abs(byteString[0] % 100);
 
                     upstreamSubscription.ExpectRequest();
                     upstreamSubscription.SendNext(byteString);
@@ -675,7 +675,7 @@ namespace Akka.Streams.Tests.Dsl
                         state.Probe.ExpectNext().ShouldBeEquivalentTo(state.FirstElement);
                         map[key] = new SubFlowState(state.Probe, false, null);
                     }
-                    else if (props.BlockingNextElement != null && Math.Abs(props.BlockingNextElement.Head % 100) == key)
+                    else if (props.BlockingNextElement != null && Math.Abs(props.BlockingNextElement[0] % 100) == key)
                     {
                         state.Probe.ExpectNext().ShouldBeEquivalentTo(props.BlockingNextElement);
                         props.BlockingNextElement = null;

@@ -16,6 +16,56 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\..\SharedAssemblyInfo.cs">
+      <Link>Properties\SharedAssemblyInfo.cs</Link>
+    </Compile>
+    <Compile Include="AckedDelivery.cs" />
+    <Compile Include="AddressUidExtension.cs" />
+    <Compile Include="AkkaProtocolSettings.cs" />
+    <Compile Include="AssociationEvent.cs" />
+    <Compile Include="Configuration\RemoteConfigFactory.cs" />
+    <Compile Include="Deadline.cs" />
+    <Compile Include="DeadlineFailureDetector.cs" />
+    <Compile Include="DefaultFailureDetectorRegistry.cs" />
+    <Compile Include="Endpoint.cs" />
+    <Compile Include="EndpointManager.cs" />
+    <Compile Include="EndpointRegistry.cs" />
+    <Compile Include="FailureDetector.cs" />
+    <Compile Include="FailureDetectorRegistry.cs" />
+    <Compile Include="MessageSerializer.cs" />
+    <Compile Include="PhiAccrualFailureDetector.cs" />
+    <Compile Include="Proto\Containerformats.cs" />
+    <Compile Include="Proto\Wireformats.cs" />
+    <Compile Include="RemoteActorRef.cs" />
+    <Compile Include="RemoteDeploymentWatcher.cs" />
+    <Compile Include="RemoteMetricsExtension.cs" />
+    <Compile Include="RemoteSystemDaemon.cs" />
+    <Compile Include="RemoteDeployer.cs" />
+    <Compile Include="RemoteSettings.cs" />
+    <Compile Include="RemoteTransport.cs" />
+    <Compile Include="RemoteWatcher.cs" />
+    <Compile Include="Remoting.cs" />
+    <Compile Include="RemotingLifecycleEvent.cs" />
+    <Compile Include="Routing\RemoteRouterConfig.cs" />
+    <Compile Include="Serialization\DaemonMsgCreateSerializer.cs" />
+    <Compile Include="Serialization\MessageContainerSerializer.cs" />
+    <Compile Include="Serialization\ProtobufSerializer.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RemoteActorRefProvider.cs" />
+    <Compile Include="Transport\AkkaPduCodec.cs" />
+    <Compile Include="Transport\DotNetty\AkkaLoggingHandler.cs" />
+    <Compile Include="Transport\DotNetty\DotNettyTransportSettings.cs" />
+    <Compile Include="Transport\DotNetty\DotNettyTransport.cs" />
+    <Compile Include="Transport\DotNetty\TcpTransport.cs" />
+    <Compile Include="Transport\FailureInjectorTransportAdapter.cs" />
+    <Compile Include="Transport\ThrottleTransportAdapter.cs" />
+    <Compile Include="Transport\TransportAdapters.cs" />
+    <Compile Include="Transport\AkkaProtocolTransport.cs" />
+    <Compile Include="Transport\TestTransport.cs" />
+    <Compile Include="Transport\Transport.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Akka.Remote.nuspec" />
     <EmbeddedResource Include="Configuration\Remote.conf" />
     <ProjectReference Include="..\Akka\Akka.csproj" />
   </ItemGroup>

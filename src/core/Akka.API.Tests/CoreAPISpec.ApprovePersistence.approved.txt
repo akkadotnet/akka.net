@@ -809,14 +809,14 @@ namespace Akka.Persistence.Fsm
         public void WhenUnhandled(Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.StateFunction stateFunction) { }
         public class State<TState, TData, TEvent> : Akka.Actor.FSMBase.State<TState, TData>
         {
-            public State(TState stateName, TData stateData, System.Nullable<System.TimeSpan> timeout = null, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.IReadOnlyList<object> replies = null, Akka.Util.ILinearSeq<TEvent> domainEvents = null, System.Action<TData> afterTransitionDo = null) { }
+            public State(TState stateName, TData stateData, System.Nullable<System.TimeSpan> timeout = null, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.IReadOnlyList<object> replies = null, System.Collections.Generic.IEnumerable<TEvent> domainEvents = null, System.Action<TData> afterTransitionDo = null) { }
             public System.Action<TData> AfterTransitionHandler { get; }
-            public Akka.Util.ILinearSeq<TEvent> DomainEvents { get; }
+            public System.Collections.Generic.IEnumerable<TEvent> DomainEvents { get; }
             public new bool Notifies { get; set; }
             public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State AndThen(System.Action<TData> handler) { }
-            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Applying(Akka.Util.ILinearSeq<TEvent> events) { }
+            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Applying(System.Collections.Generic.IEnumerable<TEvent> events) { }
             public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Applying(TEvent e) { }
-            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Copy(System.Nullable<System.TimeSpan> timeout, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.IReadOnlyList<object> replies = null, Akka.Util.ILinearSeq<TEvent> domainEvents = null, System.Action<TData> afterTransitionDo = null) { }
+            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Copy(System.Nullable<System.TimeSpan> timeout, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.IReadOnlyList<object> replies = null, System.Collections.Generic.IEnumerable<TEvent> domainEvents = null, System.Action<TData> afterTransitionDo = null) { }
             public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State ForMax(System.TimeSpan timeout) { }
             public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Replying(object replyValue) { }
             public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Using(TData nextStateData) { }
@@ -829,9 +829,9 @@ namespace Akka.Persistence.Fsm
             where TE : TEvent
         {
             public State(Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State state) { }
-            public State(TState stateName, TData stateData, System.Nullable<System.TimeSpan> timeout = null, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.List<object> replies = null, Akka.Util.ILinearSeq<TEvent> domainEvents = null, System.Action<TData> afterTransitionDo = null) { }
+            public State(TState stateName, TData stateData, System.Nullable<System.TimeSpan> timeout = null, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.List<object> replies = null, System.Collections.Generic.IEnumerable<TEvent> domainEvents = null, System.Action<TData> afterTransitionDo = null) { }
             public System.Action<TData> AfterTransitionHandler { get; }
-            public Akka.Util.ILinearSeq<TEvent> DomainEvents { get; }
+            public System.Collections.Generic.IEnumerable<TEvent> DomainEvents { get; }
             public bool Notifies { get; set; }
             public System.Collections.Generic.IReadOnlyList<object> Replies { get; }
             public TData StateData { get; }
@@ -839,9 +839,9 @@ namespace Akka.Persistence.Fsm
             public Akka.Actor.FSMBase.Reason StopReason { get; }
             public System.Nullable<System.TimeSpan> Timeout { get; }
             public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State AndThen(System.Action<TData> handler) { }
-            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Applying(Akka.Util.ILinearSeq<TEvent> events) { }
+            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Applying(System.Collections.Generic.IEnumerable<TEvent> events) { }
             public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Applying(TEvent e) { }
-            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Copy(System.Nullable<System.TimeSpan> timeout, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.List<object> replies = null, Akka.Util.ILinearSeq<TEvent> domainEvents = null, System.Action<TData> afterTransitionDo = null) { }
+            public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Copy(System.Nullable<System.TimeSpan> timeout, Akka.Actor.FSMBase.Reason stopReason = null, System.Collections.Generic.List<object> replies = null, System.Collections.Generic.IEnumerable<TEvent> domainEvents = null, System.Action<TData> afterTransitionDo = null) { }
             public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State ForMax(System.TimeSpan timeout) { }
             public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Replying(object replyValue) { }
             public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State Using(TData nextStateData) { }

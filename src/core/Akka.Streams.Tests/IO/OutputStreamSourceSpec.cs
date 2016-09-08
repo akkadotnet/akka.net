@@ -47,7 +47,7 @@ namespace Akka.Streams.Tests.IO
                 Convert.ToByte(new Random().Next(256))
             };
 
-            _byteString = ByteString.Create(_bytesArray);
+            _byteString = ByteString.FromBytes(_bytesArray);
         }
 
         private void ExpectTimeout(Task f, TimeSpan duration) => f.Wait(duration).Should().BeFalse();
@@ -306,7 +306,7 @@ namespace Akka.Streams.Tests.IO
 
             ByteString result;
             blockingCollection.TryTake(out result, TimeSpan.FromSeconds(3)).Should().BeTrue();
-            result.DecodeString().Should().Be("hello");
+            result.ToString().Should().Be("hello");
         }
     }
 }
