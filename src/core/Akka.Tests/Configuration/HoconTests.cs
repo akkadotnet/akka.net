@@ -803,6 +803,33 @@ ip = ""::1""
             var res = ConfigurationFactory.ParseString(hocon).GetString("ip");
             Assert.Equal("::1", res);
         }
+
+        [Fact]
+        public void Can_parse_non_abbreviated_timespan()
+        {
+            var hocon = "timespan = 10 seconds";
+
+            var res = ConfigurationFactory.ParseString(hocon).GetTimeSpan("timespan");
+            Assert.Equal(10, res.TotalSeconds);
+        }
+
+        [Fact]
+        public void Can_parse_abbreviated_timespan() 
+        {
+            var hocon = "timespan = 10 s";
+
+            var res = ConfigurationFactory.ParseString(hocon).GetTimeSpan("timespan");
+            Assert.Equal(10, res.TotalSeconds);
+        }
+
+        [Fact]
+        public void Can_parse_abbreviated_timespan2()
+        {
+            var hocon = "timespan = 0.05 s";
+
+            var res = ConfigurationFactory.ParseString(hocon).GetTimeSpan("timespan");
+            Assert.Equal(50, res.TotalMilliseconds);
+        }
     }
 }
 
