@@ -97,8 +97,8 @@ namespace Akka.Remote.Tests.Transport
             _inbound.ActorOf(Props.Create(() => new AssociationAcker()), "ack");
             _outbound.ActorOf(Props.Create(() => new AssociationAcker()), "ack");
 
-            var addrInbound = RARP.For(_inbound).Provider.DefaultAddress; 
-            var addrOutbound = RARP.For(_outbound).Provider.DefaultAddress; 
+            var addrInbound = RARP.For(_inbound).Provider.DefaultAddress;
+            var addrOutbound = RARP.For(_outbound).Provider.DefaultAddress;
 
             _inboundAck = new RootActorPath(addrInbound) / "user" / "ack";
             _outboundAck = new RootActorPath(addrOutbound) / "user" / "ack";
@@ -128,14 +128,22 @@ namespace Akka.Remote.Tests.Transport
         }
 
         [Property()]
-        public Property HeliosTransport_Should_Resolve_DNS(EndPoint inbound, EndPoint outbound, bool dnsIpv6, bool enforceIpFamily, bool monoRuntime)
+        public Property HeliosTransport_Should_Resolve_DNS(EndPoint inbound, EndPoint outbound, bool dnsIpv6, bool enforceIpFamily)
         {
+            // TODO: Mono does not support IPV6 Uris correctly https://bugzilla.xamarin.com/show_bug.cgi?id=43649 (Aaronontheweb 8/22/2016)
+            if (HeliosTransportSettings.IsMono)
+            {
+                enforceIpFamily = true;
+                dnsIpv6 = false;
+            }
+
+
             if (IsAnyIp(inbound) || IsAnyIp(outbound)) return true.Label("Can't connect directly to an ANY address");
             try
             {
                 try
                 {
-                    Setup(EndpointGenerators.ParseAddress(inbound), 
+                    Setup(EndpointGenerators.ParseAddress(inbound),
                           EndpointGenerators.ParseAddress(outbound),
                           useIpv6Dns: dnsIpv6,
                           enforceIpFamily: enforceIpFamily);
@@ -145,7 +153,7 @@ namespace Akka.Remote.Tests.Transport
                     //if ip family is enforced, there are some special cases when it is normal to unable 
                     //to create actor system
                     if (enforceIpFamily && IsExpectedFailure(inbound, outbound, dnsIpv6))
-                    return true.ToProperty();
+                        return true.ToProperty();
                     throw;
                 }
 
@@ -161,7 +169,7 @@ namespace Akka.Remote.Tests.Transport
                 {
                     outboundReceivedAck = false;
                 }
-                
+
                 _inbound.ActorSelection(_outboundAck).Tell("ping", _inboundProbe.Ref);
                 try
                 {
@@ -172,30 +180,28 @@ namespace Akka.Remote.Tests.Transport
                     inboundReceivedAck = false;
                 }
 
-                return   outboundReceivedAck.Label($"Expected (outbound: {RARP.For(_outbound).Provider.DefaultAddress}) to be able to successfully message and receive reply from (inbound: {RARP.For(_inbound).Provider.DefaultAddress})")
+                return outboundReceivedAck.Label($"Expected (outbound: {RARP.For(_outbound).Provider.DefaultAddress}) to be able to successfully message and receive reply from (inbound: {RARP.For(_inbound).Provider.DefaultAddress})")
                           .And(inboundReceivedAck.Label($"Expected (inbound: {RARP.For(_inbound).Provider.DefaultAddress}) to be able to successfully message and receive reply from (outbound: {RARP.For(_outbound).Provider.DefaultAddress})"));
-           }
-           finally
-           {
-               Cleanup();
-           }
-       }
+            }
+            finally
+            {
+                Cleanup();
+            }
+        }
 
+        private static bool IsExpectedFailure(EndPoint inbound,
+                                              EndPoint outbound,
+                                              bool dnsIpv6)
+        {
+            /*if ip family is enforced, 
+                  it is normal to unable to connect between ips
+                  if any of them has not-enforced family 
+                  examples: 
+                   trying to use ipv4 on both sides when ipv6 is enforced
+                   trying to use ipv4 + ipv6 when ipv4 or ipv6 is enforced
+                */
 
-       
-       private static bool IsExpectedFailure(EndPoint inbound, 
-                                             EndPoint outbound,
-                                             bool dnsIpv6)
-       {
-           /*if ip family is enforced, 
-                 it is normal to unable to connect between ips
-                 if any of them has not-enforced family 
-                 examples: 
-                  trying to use ipv4 on both sides when ipv6 is enforced
-                  trying to use ipv4 + ipv6 when ipv4 or ipv6 is enforced
-               */
-
-                var enforcedFamily = dnsIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
+            var enforcedFamily = dnsIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
             var endpointsIpFamilyMismatch = inbound.AddressFamily != enforcedFamily ||
                                             outbound.AddressFamily != enforcedFamily;
 
@@ -206,12 +212,21 @@ namespace Akka.Remote.Tests.Transport
         public Property HeliosTransport_Should_Resolve_DNS_with_PublicHostname(IPEndPoint inbound, DnsEndPoint publicInbound,
             IPEndPoint outbound, DnsEndPoint publicOutbound, bool dnsUseIpv6, bool enforceIpFamily)
         {
+            // TODO: Mono does not support IPV6 Uris correctly https://bugzilla.xamarin.com/show_bug.cgi?id=43649 (Aaronontheweb 8/22/2016)
+            if (HeliosTransportSettings.IsMono)
+                enforceIpFamily = true;
+            if(HeliosTransportSettings.IsMono && dnsUseIpv6) return true.Label("Mono DNS does not support IPV6 as of 4.4*");
+            if (HeliosTransportSettings.IsMono &&
+                (inbound.AddressFamily == AddressFamily.InterNetworkV6 ||
+                (outbound.AddressFamily == AddressFamily.InterNetworkV6))) return true.Label("Mono DNS does not support IPV6 as of 4.4*");
+
             if (dnsUseIpv6 &&
                 (inbound.AddressFamily == AddressFamily.InterNetwork ||
                  (outbound.AddressFamily == AddressFamily.InterNetwork))) return true.Label("Can't connect to IPV4 socket using IPV6 DNS resolution");
             if (!dnsUseIpv6 &&
                 (inbound.AddressFamily == AddressFamily.InterNetworkV6 ||
                  (outbound.AddressFamily == AddressFamily.InterNetworkV6))) return true.Label("Need to apply DNS resolution and IP stack verison consistently.");
+
 
             try
             {
@@ -286,6 +301,9 @@ namespace Akka.Remote.Tests.Transport
         [Property]
         public Property HeliosTransport_should_map_valid_IPEndpoints_to_ActorPath(IPEndPoint endpoint)
         {
+            // TODO: remove this once Mono Uris support IPV6 https://bugzilla.xamarin.com/show_bug.cgi?id=43649 (8/22/2016 Aaronontheweb)
+            if (HeliosTransportSettings.IsMono && endpoint.AddressFamily == AddressFamily.InterNetworkV6)
+                return true.Label("Mono does not currently support Uri.TryParse for IPV6");
             var addr = HeliosTransport.MapSocketToAddress(endpoint, "akka.tcp", "foo");
             var actorPath = new RootActorPath(addr) / "user" / "foo";
             var serializationFormat = actorPath.ToSerializationFormat();

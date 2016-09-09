@@ -1069,6 +1069,11 @@ namespace Akka.Remote
         void Remove(T resource);
         void Reset();
     }
+    public class static IPExtensions
+    {
+        public static System.Net.IPAddress MapToIPv4(this System.Net.IPAddress ipa) { }
+        public static System.Net.IPAddress MapToIPv6(this System.Net.IPAddress ipa) { }
+    }
     public class static MessageSerializer
     {
         public static object Deserialize(Akka.Actor.ActorSystem system, SerializedMessage messageProtocol) { }
