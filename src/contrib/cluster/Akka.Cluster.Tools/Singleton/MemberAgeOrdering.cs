@@ -7,11 +7,12 @@
 
 using System.Collections.Generic;
 
-namespace Akka.Cluster.Tools.Singleton
+namespace Akka.Cluster.Singleton
 {
     internal sealed class MemberAgeOrdering : IComparer<Member>
     {
         private readonly bool _ascending;
+
         private MemberAgeOrdering(bool ascending)
         {
             _ascending = ascending;
@@ -24,7 +25,9 @@ namespace Akka.Cluster.Tools.Singleton
                 ? (_ascending ? 1 : -1)
                 : (_ascending ? -1 : 1);
         }
+
         public static readonly MemberAgeOrdering Ascending = new MemberAgeOrdering(true);
+
         public static readonly MemberAgeOrdering Descending = new MemberAgeOrdering(false);
     }
 }

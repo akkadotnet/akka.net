@@ -15,7 +15,7 @@ using Akka.Remote.TestKit;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Cluster.Tests.MultiNode;
-using Akka.Cluster.Tools.Singleton;
+using Akka.Cluster.Singleton;
 using Akka.Pattern;
 using Akka.Persistence.Journal;
 using Akka.TestKit;

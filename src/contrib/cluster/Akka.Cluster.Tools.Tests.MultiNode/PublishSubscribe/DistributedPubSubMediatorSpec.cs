@@ -152,8 +152,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 Receive<TalkToOthers>(t => mediator.Tell(new SendToAll(t.Path, t.Message, true)));
                 Receive<Shout>(s => mediator.Tell(new Publish(s.Topic, s.Message)));
                 Receive<ShoutToGroup>(s => mediator.Tell(new Publish(s.Topic, s.Message, true)));
-                Receive<JoinGroup>(j => mediator.Tell(new Subscribe(j.Topic, Self, j.Group)));
-                Receive<ExitGroup>(j => mediator.Tell(new Unsubscribe(j.Topic, Self, j.Group)));
+                Receive<JoinGroup>(j => mediator.Tell(new Subscribe(j.Topic, j.Group, Self)));
+                Receive<ExitGroup>(j => mediator.Tell(new Unsubscribe(j.Topic, j.Group, Self)));
                 ReceiveAny(msg => testActorRef.Tell(msg));
             }
         }

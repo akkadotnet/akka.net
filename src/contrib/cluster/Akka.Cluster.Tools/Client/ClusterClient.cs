@@ -14,7 +14,7 @@ using Akka.Event;
 using Akka.Remote;
 using Akka.Util.Internal;
 
-namespace Akka.Cluster.Tools.Client
+namespace Akka.Cluster.Client
 {
     /// <summary>
     /// This actor is intended to be used on an external node that is not member
@@ -41,16 +41,19 @@ namespace Akka.Cluster.Tools.Client
         [Serializable]
         public sealed class Send
         {
-            public string Path { get; }
-            public object Message { get; }
-            public bool LocalAffinity { get; }
-
             public Send(string path, object message, bool localAffinity = false)
             {
                 Path = path;
                 Message = message;
                 LocalAffinity = localAffinity;
             }
+
+            public string Path { get; }
+
+            public object Message { get; }
+
+            public bool LocalAffinity { get; }
+
         }
 
         /// <summary>
@@ -59,14 +62,16 @@ namespace Akka.Cluster.Tools.Client
         [Serializable]
         public sealed class SendToAll
         {
-            public string Path { get; }
-            public object Message { get; }
-
             public SendToAll(string path, object message)
             {
                 Path = path;
                 Message = message;
             }
+
+            public string Path { get; }
+
+            public object Message { get; }
+
         }
 
         /// <summary>
@@ -76,14 +81,16 @@ namespace Akka.Cluster.Tools.Client
         [Serializable]
         public sealed class Publish
         {
-            public string Topic { get; }
-            public object Message { get; }
-
             public Publish(string topic, object message)
             {
                 Topic = topic;
                 Message = message;
             }
+
+            public string Topic { get; }
+
+            public object Message { get; }
+
         }
 
         [Serializable]
@@ -253,17 +260,17 @@ namespace Akka.Cluster.Tools.Client
             else if (message is Send)
             {
                 var send = (Send)message;
-                Buffer(new PublishSubscribe.Send(send.Path, send.Message, send.LocalAffinity));
+                Buffer(new Akka.Cluster.Tools.PublishSubscribe.Send(send.Path, send.Message, send.LocalAffinity));
             }
             else if (message is SendToAll)
             {
                 var sendToAll = (SendToAll)message;
-                Buffer(new PublishSubscribe.SendToAll(sendToAll.Path, sendToAll.Message));
+                Buffer(new Akka.Cluster.Tools.PublishSubscribe.SendToAll(sendToAll.Path, sendToAll.Message));
             }
             else if (message is Publish)
             {
                 var publish = (Publish)message;
-                Buffer(new PublishSubscribe.Publish(publish.Topic, publish.Message));
+                Buffer(new Akka.Cluster.Tools.PublishSubscribe.Publish(publish.Topic, publish.Message));
             }
             else if (message is ReconnectTimeout)
             {
@@ -285,17 +292,17 @@ namespace Akka.Cluster.Tools.Client
                 if (message is Send)
                 {
                     var send = (Send)message;
-                    receptionist.Forward(new PublishSubscribe.Send(send.Path, send.Message, send.LocalAffinity));
+                    receptionist.Forward(new Akka.Cluster.Tools.PublishSubscribe.Send(send.Path, send.Message, send.LocalAffinity));
                 }
                 else if (message is SendToAll)
                 {
                     var sendToAll = (SendToAll)message;
-                    receptionist.Forward(new PublishSubscribe.SendToAll(sendToAll.Path, sendToAll.Message));
+                    receptionist.Forward(new Akka.Cluster.Tools.PublishSubscribe.SendToAll(sendToAll.Path, sendToAll.Message));
                 }
                 else if (message is Publish)
                 {
                     var publish = (Publish)message;
-                    receptionist.Forward(new PublishSubscribe.Publish(publish.Topic, publish.Message));
+                    receptionist.Forward(new Akka.Cluster.Tools.PublishSubscribe.Publish(publish.Topic, publish.Message));
                 }
                 else if (message is HeartbeatTick)
                 {

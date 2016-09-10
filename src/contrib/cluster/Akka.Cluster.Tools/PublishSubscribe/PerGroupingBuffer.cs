@@ -19,7 +19,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
         public void BufferOr(string grouping, object message, IActorRef originalSender, Action action)
         {
-            BufferedMessages messages = null;
+            BufferedMessages messages;
             if (_buffers.TryGetValue(grouping, out messages))
             {
                 _buffers[grouping].Add(new KeyValuePair<object, IActorRef>(message, originalSender));

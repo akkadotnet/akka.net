@@ -18,7 +18,7 @@ using Akka.Routing;
 using Akka.Util;
 using Akka.Util.Internal;
 
-namespace Akka.Cluster.Tools.Client
+namespace Akka.Cluster.Client
 {
     /// <summary>
     /// Marker trait for remote messages with special serializer.
@@ -319,9 +319,9 @@ namespace Akka.Cluster.Tools.Client
 
         protected override bool Receive(object message)
         {
-            if (message is PublishSubscribe.Send
-                || message is PublishSubscribe.SendToAll
-                || message is PublishSubscribe.Publish)
+            if (message is Akka.Cluster.Tools.PublishSubscribe.Send
+                || message is Akka.Cluster.Tools.PublishSubscribe.SendToAll
+                || message is Akka.Cluster.Tools.PublishSubscribe.Publish)
             {
                 var tunnel = ResponseTunnel(Sender);
                 tunnel.Tell(Ping.Instance); // keep alive

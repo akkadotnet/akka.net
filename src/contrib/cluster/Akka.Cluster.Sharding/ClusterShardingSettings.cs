@@ -7,7 +7,7 @@
 
 using System;
 using Akka.Actor;
-using Akka.Cluster.Tools.Singleton;
+using Akka.Cluster.Singleton;
 using Akka.Configuration;
 
 namespace Akka.Cluster.Sharding

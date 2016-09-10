@@ -9,7 +9,7 @@ using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
-using Akka.Cluster.Tools.Singleton;
+using Akka.Cluster.Singleton;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote.TestKit;
@@ -18,7 +18,7 @@ using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
 using FluentAssertions;
 
-namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
+namespace Akka.Cluster.Tests.MultiNode.Singleton
 {
     public class ClusterSingletonManagerSpecConfig : MultiNodeConfig
     {

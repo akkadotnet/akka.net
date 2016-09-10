@@ -10,7 +10,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 
-namespace Akka.Cluster.Tools.Singleton
+namespace Akka.Cluster.Singleton
 {
     /// <summary>
     /// Notifications of member events that track oldest member is tunneled
@@ -35,25 +35,26 @@ namespace Akka.Cluster.Tools.Singleton
         [Serializable]
         public sealed class InitialOldestState
         {
-            public readonly Address Oldest;
-            public readonly bool SafeToBeOldest;
-
             public InitialOldestState(Address oldest, bool safeToBeOldest)
             {
                 Oldest = oldest;
                 SafeToBeOldest = safeToBeOldest;
             }
+
+            public Address Oldest { get; }
+
+            public bool SafeToBeOldest { get; }
         }
 
         [Serializable]
         public sealed class OldestChanged
         {
-            public readonly Address Oldest;
-
             public OldestChanged(Address oldest)
             {
                 Oldest = oldest;
             }
+
+            public Address Oldest { get; }
         }
 
         #endregion
@@ -63,7 +64,7 @@ namespace Akka.Cluster.Tools.Singleton
             _role = role;
         }
 
-        private string _role;
+        private readonly string _role;
         private ImmutableSortedSet<Member> _membersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(MemberAgeOrdering.Descending);
         private ImmutableQueue<object> _changes = ImmutableQueue<object>.Empty;
 
@@ -75,7 +76,6 @@ namespace Akka.Cluster.Tools.Singleton
             block();
             var after = _membersByAge.FirstOrDefault();
 
-            // todo: fix neq comparison
             if (!Equals(before, after))
                 _changes = _changes.Enqueue(new OldestChanged(MemberAddressOrDefault(after)));
         }
@@ -87,7 +87,7 @@ namespace Akka.Cluster.Tools.Singleton
 
         private Address MemberAddressOrDefault(Member member)
         {
-            return (member == null) ? null : member.Address;
+            return member?.Address;
         }
 
         private void HandleInitial(ClusterEvent.CurrentClusterState state)
@@ -122,7 +122,7 @@ namespace Akka.Cluster.Tools.Singleton
 
         protected override void PreStart()
         {
-            _cluster.Subscribe(Self, new[] { typeof(ClusterEvent.IMemberEvent) });
+            _cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent));
         }
 
         protected override void PostStop()

@@ -10,7 +10,7 @@ using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Configuration;
 using Akka.Dispatch;
 
-namespace Akka.Cluster.Tools.Client
+namespace Akka.Cluster.Client
 {
     /// <summary>
     /// Extension that starts <see cref="ClusterReceptionist"/> and accompanying <see cref="DistributedPubSubMediator"/>
@@ -72,7 +72,7 @@ namespace Akka.Cluster.Tools.Client
         /// </summary>
         public void RegisterService(IActorRef actorRef)
         {
-            PubSubMediator.Tell(new PublishSubscribe.Put(actorRef));
+            PubSubMediator.Tell(new Akka.Cluster.Tools.PublishSubscribe.Put(actorRef));
         }
 
         /// <summary>
@@ -81,7 +81,7 @@ namespace Akka.Cluster.Tools.Client
         /// </summary>
         public void UnregisterService(IActorRef actorRef)
         {
-            PubSubMediator.Tell(new PublishSubscribe.Remove(actorRef.Path.ToStringWithoutAddress()));
+            PubSubMediator.Tell(new Akka.Cluster.Tools.PublishSubscribe.Remove(actorRef.Path.ToStringWithoutAddress()));
         }
 
         /// <summary>
@@ -92,7 +92,7 @@ namespace Akka.Cluster.Tools.Client
         /// </summary>
         public void RegisterSubscriber(string topic, IActorRef actorRef)
         {
-            PubSubMediator.Tell(new PublishSubscribe.Subscribe(topic, actorRef));
+            PubSubMediator.Tell(new Akka.Cluster.Tools.PublishSubscribe.Subscribe(topic, actorRef));
         }
 
         /// <summary>
@@ -101,7 +101,7 @@ namespace Akka.Cluster.Tools.Client
         /// </summary>
         public void UnregisterSubscriber(string topic, IActorRef actorRef)
         {
-            PubSubMediator.Tell(new PublishSubscribe.Unsubscribe(topic, actorRef));
+            PubSubMediator.Tell(new Akka.Cluster.Tools.PublishSubscribe.Unsubscribe(topic, actorRef));
         }
 
         private IActorRef CreateReceptionist()
@@ -133,7 +133,7 @@ namespace Akka.Cluster.Tools.Client
         public IActorRef Underlying => _receptionist;
     }
 
-    public class ClusterClientReceptionistExtensionProvider : ExtensionIdProvider<ClusterClientReceptionist>
+    public sealed class ClusterClientReceptionistExtensionProvider : ExtensionIdProvider<ClusterClientReceptionist>
     {
         public override ClusterClientReceptionist CreateExtension(ExtendedActorSystem system)
         {

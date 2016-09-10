@@ -10,7 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Akka.Cluster;
-using Akka.Cluster.Tools.Singleton;
+using Akka.Cluster.Singleton;
 using Akka.Persistence;
 using Akka.Remote;
 using ApiApprover;

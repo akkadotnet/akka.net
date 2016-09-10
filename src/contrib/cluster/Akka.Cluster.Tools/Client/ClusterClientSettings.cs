@@ -13,7 +13,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote;
 
-namespace Akka.Cluster.Tools.Client
+namespace Akka.Cluster.Client
 {
     public sealed class ClusterClientSettings : INoSerializationVerificationNeeded
     {
@@ -32,7 +32,7 @@ namespace Akka.Cluster.Tools.Client
         }
 
         /// <summary>
-        /// Java API: Create settings from a configuration with the same layout as the default configuration 'akka.cluster.client'.
+        /// Create settings from a configuration with the same layout as the default configuration 'akka.cluster.client'.
         /// </summary>
         public static ClusterClientSettings Create(Config config)
         {
@@ -51,50 +51,8 @@ namespace Akka.Cluster.Tools.Client
                 reconnectTimeout);
         }
 
-        /// <summary>
-        /// Actor paths of the <see cref="ClusterReceptionist"/> actors on the servers (cluster nodes) that the client will try to contact initially.
-        /// </summary>
-        public readonly IImmutableSet<ActorPath> InitialContacts;
-
-        /// <summary>
-        /// Interval at which the client retries to establish contact with one of ClusterReceptionist on the servers (cluster nodes)
-        /// </summary>
-        public readonly TimeSpan EstablishingGetContactsInterval;
-
-        /// <summary>
-        /// Interval at which the client will ask the <see cref="ClusterReceptionist"/> for new contact points to be used for next reconnect.
-        /// </summary>
-        public readonly TimeSpan RefreshContactsInterval;
-
-        /// <summary>
-        /// How often failure detection heartbeat messages for detection of failed connections should be sent.
-        /// </summary>
-        public readonly TimeSpan HeartbeatInterval;
-
-        /// <summary>
-        /// Number of potentially lost/delayed heartbeats that will be accepted before considering it to be an anomaly. 
-        /// The ClusterClient is using the <see cref="DeadlineFailureDetector"/>, which will trigger if there are 
-        /// no heartbeats within the duration <see cref="HeartbeatInterval"/> + <see cref="AcceptableHeartbeatPause"/>.
-        /// </summary>
-        public readonly TimeSpan AcceptableHeartbeatPause;
-
-        /// <summary>
-        /// If connection to the receptionist is not established the client will buffer this number of messages and deliver 
-        /// them the connection is established. When the buffer is full old messages will be dropped when new messages are sent via the client. 
-        /// Use 0 to disable buffering, i.e. messages will be dropped immediately if the location of the receptionist is unavailable.
-        /// </summary>
-        public readonly int BufferSize;
-
-        /// <summary>
-        /// If the connection to the receptionist is lost and cannot
-        /// be re-established within this duration the cluster client will be stopped. This makes it possible
-        /// to watch it from another actor and possibly acquire a new list of InitialContacts from some
-        /// external service registry
-        /// </summary>
-        public readonly TimeSpan? ReconnectTimeout;
-
         public ClusterClientSettings(
-            IImmutableSet<ActorPath> initialContacts,
+            ISet<ActorPath> initialContacts,
             TimeSpan establishingGetContactsInterval,
             TimeSpan refreshContactsInterval,
             TimeSpan heartbeatInterval,
@@ -116,7 +74,49 @@ namespace Akka.Cluster.Tools.Client
             ReconnectTimeout = reconnectTimeout;
         }
 
-        public ClusterClientSettings WithInitialContacts(IImmutableSet<ActorPath> initialContacts)
+        /// <summary>
+        /// Actor paths of the <see cref="ClusterReceptionist"/> actors on the servers (cluster nodes) that the client will try to contact initially.
+        /// </summary>
+        public ISet<ActorPath> InitialContacts { get; }
+
+        /// <summary>
+        /// Interval at which the client retries to establish contact with one of ClusterReceptionist on the servers (cluster nodes)
+        /// </summary>
+        public TimeSpan EstablishingGetContactsInterval { get; }
+
+        /// <summary>
+        /// Interval at which the client will ask the <see cref="ClusterReceptionist"/> for new contact points to be used for next reconnect.
+        /// </summary>
+        public TimeSpan RefreshContactsInterval { get; }
+
+        /// <summary>
+        /// How often failure detection heartbeat messages for detection of failed connections should be sent.
+        /// </summary>
+        public TimeSpan HeartbeatInterval { get; }
+
+        /// <summary>
+        /// Number of potentially lost/delayed heartbeats that will be accepted before considering it to be an anomaly. 
+        /// The ClusterClient is using the <see cref="DeadlineFailureDetector"/>, which will trigger if there are 
+        /// no heartbeats within the duration <see cref="HeartbeatInterval"/> + <see cref="AcceptableHeartbeatPause"/>.
+        /// </summary>
+        public TimeSpan AcceptableHeartbeatPause { get; }
+
+        /// <summary>
+        /// If connection to the receptionist is not established the client will buffer this number of messages and deliver 
+        /// them the connection is established. When the buffer is full old messages will be dropped when new messages are sent via the client. 
+        /// Use 0 to disable buffering, i.e. messages will be dropped immediately if the location of the receptionist is unavailable.
+        /// </summary>
+        public int BufferSize { get; }
+
+        /// <summary>
+        /// If the connection to the receptionist is lost and cannot
+        /// be re-established within this duration the cluster client will be stopped. This makes it possible
+        /// to watch it from another actor and possibly acquire a new list of InitialContacts from some
+        /// external service registry
+        /// </summary>
+        public TimeSpan? ReconnectTimeout { get; }
+
+        public ClusterClientSettings WithInitialContacts(ISet<ActorPath> initialContacts)
         {
             if (initialContacts.Count == 0)
             {
@@ -124,12 +124,6 @@ namespace Akka.Cluster.Tools.Client
             }
 
             return Copy(initialContacts: initialContacts);
-        }
-
-        [Obsolete("Use WithInitialContacts(IImmutableSet<ActorPath> initialContacts) instead")]
-        public ClusterClientSettings WithInitialContacts(IEnumerable<ActorPath> initialContacts)
-        {
-            return WithInitialContacts(initialContacts.ToImmutableHashSet());
         }
 
         public ClusterClientSettings WithEstablishingGetContactsInterval(TimeSpan value)
@@ -158,7 +152,7 @@ namespace Akka.Cluster.Tools.Client
         }
 
         private ClusterClientSettings Copy(
-            IImmutableSet<ActorPath> initialContacts = null,
+            ISet<ActorPath> initialContacts = null,
             TimeSpan? establishingGetContactsInterval = null,
             TimeSpan? refreshContactsInterval = null,
             TimeSpan? heartbeatInterval = null,

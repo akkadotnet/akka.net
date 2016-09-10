@@ -10,7 +10,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Cluster.Tests.MultiNode;
-using Akka.Cluster.Tools.Singleton;
+using Akka.Cluster.Singleton;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
@@ -19,7 +19,7 @@ using Akka.TestKit.TestEvent;
 using FluentAssertions;
 using Xunit;
 
-namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
+namespace Akka.Cluster.Tests.MultiNode.Singleton
 {
     public class ClusterSingletonManagerChaos2Config : MultiNodeConfig
     {
