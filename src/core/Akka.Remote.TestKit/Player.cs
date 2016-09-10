@@ -402,7 +402,7 @@ namespace Akka.Remote.TestKit
                     {
                         if (@event.StateData.RunningOp == null)
                         {
-                            _log.Warning("did not expect {1}", @event.FsmEvent);
+                            _log.Warning("did not expect {0}", @event.FsmEvent);
                         }
                         else
                         {
