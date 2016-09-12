@@ -308,13 +308,12 @@ Target "PrintMultiNodeTests" <| fun _ ->
 
 
 Target "MultiNodeTests" <| fun _ ->
-    let testSearchPath =
-        let assemblyFilter = getBuildParamOrDefault "spec-assembly" String.Empty
-        sprintf "src/**/bin/Release/*%s*.Tests.MultiNode.dll" assemblyFilter
-
     mkdir testOutput
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" "bin/core/Akka.MultiNodeTestRunner*"
-    let multiNodeTestAssemblies = !! testSearchPath
+    let multiNodeTestAssemblies = !! "src/**/bin/Release/Akka.Remote.Tests.MultiNode.dll" ++
+                                     "src/**/bin/Release/Akka.Cluster.Tests.MultiNode.dll" ++
+                                     "src/**/bin/Release/Akka.Cluster.Tools.Tests.MultiNode.dll"
+
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
     let runMultiNodeSpec assembly =
