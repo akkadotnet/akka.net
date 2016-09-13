@@ -29,6 +29,9 @@ namespace Akka.Tests.Event
             system.EventStream.Subscribe(TestActor, typeof(Debug));
             await system.Terminate();
 
+            var shutdownInitiated = ExpectMsg<Debug>(TestKitSettings.DefaultTimeout);
+            shutdownInitiated.Message.ShouldBe("System shutdown initiated");
+
             var loggerStarted = ExpectMsg<Debug>(TestKitSettings.DefaultTimeout);
             loggerStarted.Message.ShouldBe("Shutting down: StandardOutLogger started");
             loggerStarted.LogClass.ShouldBe(typeof(EventStream));

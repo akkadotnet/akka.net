@@ -62,7 +62,7 @@ namespace Akka.Tests.Configuration
             settings.DebugUnhandledMessage.ShouldBeFalse();
             settings.DebugRouterMisconfiguration.ShouldBeFalse();
 
-            settings.SchedulerClass.ShouldBe(typeof(DedicatedThreadScheduler).FullName);
+            settings.SchedulerClass.ShouldBe(typeof(HashedWheelTimerScheduler).FullName);
         }
 
         [Fact]
