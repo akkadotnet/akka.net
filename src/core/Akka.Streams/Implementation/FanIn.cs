@@ -261,7 +261,7 @@ namespace Akka.Streams.Implementation
 
         public bool IsCancelled(int index) => HasState(index, FanIn.Cancelled);
 
-        private void Cancelled(int index, bool on) => SetState(index, FanIn.Cancelled, @on);
+        private void Cancelled(int index, bool on) => SetState(index, FanIn.Cancelled, on);
 
         public bool IsCompleted(int index) => HasState(index, FanIn.Completed);
 
@@ -273,15 +273,15 @@ namespace Akka.Streams.Implementation
 
         public bool IsDepleted(int index) => HasState(index, FanIn.Depleted);
 
-        private void Depleted(int index, bool on) => SetState(index, FanIn.Depleted, @on);
+        private void Depleted(int index, bool on) => SetState(index, FanIn.Depleted, on);
 
         public bool IsPending(int index) => HasState(index, FanIn.Pending);
 
-        private void Pending(int index, bool on) => SetState(index, FanIn.Pending, @on);
+        private void Pending(int index, bool on) => SetState(index, FanIn.Pending, on);
 
         private bool IsMarked(int index) => HasState(index, FanIn.Marked);
 
-        private void Marked(int index, bool on) => SetState(index, FanIn.Marked, @on);
+        private void Marked(int index, bool on) => SetState(index, FanIn.Marked, on);
     }
 
     internal static class FanIn

@@ -36,7 +36,7 @@ namespace Akka.Streams.Implementation.IO
             if (maxBuffer < initialBuffer)
                 throw new ArgumentException($"maxBuffer must be >= initialBuffer (was {maxBuffer})");
 
-            return Actor.Props.Create(() => new FilePublisher(f, completionPromise, chunkSize, initialBuffer, maxBuffer))
+            return Actor.Props.Create(() => new FilePublisher(f, completionPromise, chunkSize, maxBuffer))
                 .WithDeploy(Deploy.Local);
         }
 
@@ -48,7 +48,6 @@ namespace Akka.Streams.Implementation.IO
         private readonly FileInfo _f;
         private readonly TaskCompletionSource<IOResult> _completionPromise;
         private readonly int _chunkSize;
-        private readonly int _initialBuffer;
         private readonly int _maxBuffer;
         private readonly byte[] _buffer;
         private readonly ILoggingAdapter _log;
@@ -57,12 +56,11 @@ namespace Akka.Streams.Implementation.IO
         private IImmutableList<ByteString> _availableChunks = ImmutableList<ByteString>.Empty;
         private FileStream _chan;
 
-        public FilePublisher(FileInfo f, TaskCompletionSource<IOResult> completionPromise, int chunkSize, int initialBuffer, int maxBuffer)
+        public FilePublisher(FileInfo f, TaskCompletionSource<IOResult> completionPromise, int chunkSize, int maxBuffer)
         {
             _f = f;
             _completionPromise = completionPromise;
             _chunkSize = chunkSize;
-            _initialBuffer = initialBuffer;
             _maxBuffer = maxBuffer;
 
             _log = Context.GetLogger();

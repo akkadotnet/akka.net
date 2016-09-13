@@ -97,7 +97,7 @@
     <Compile Include="Dsl\FlowAggregateSpec.cs" />
     <Compile Include="Dsl\FlowForeachSpec.cs" />
     <Compile Include="Dsl\FlowFromTaskSpec.cs" />
-    <Compile Include="Dsl\FlowGraphCompileSpec.cs" />
+    <Compile Include="Dsl\GraphDslCompileSpec.cs" />
     <Compile Include="Dsl\FlowGroupBySpec.cs" />
     <Compile Include="Dsl\FlowGroupedSpec.cs" />
     <Compile Include="Dsl\FlowGroupedWithinSpec.cs" />
@@ -141,6 +141,8 @@
     <Compile Include="Dsl\GraphUnzipSpec.cs" />
     <Compile Include="Dsl\GraphUnzipWithSpec.cs" />
     <Compile Include="Dsl\GraphZipSpec.cs" />
+    <Compile Include="Dsl\GraphZipNSpec.cs" />
+    <Compile Include="Dsl\GraphZipWithNSpec.cs" />
     <Compile Include="Dsl\GraphZipWithSpec.cs" />
     <Compile Include="Dsl\LiftExtensions.cs" />
     <Compile Include="Dsl\PublisherSinkSpec.cs" />

@@ -77,8 +77,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c = TestSubscriber.CreateManualProbe<int>(this);
-                var p = TestPublisher.CreateManualProbe<int>(this);
+                var c = this.CreateManualSubscriberProbe<int>();
+                var p = this.CreateManualPublisherProbe<int>();
 
                 Source.FromPublisher(p)
                     .Delay(TimeSpan.FromMilliseconds(300))
@@ -188,8 +188,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c = TestSubscriber.CreateManualProbe<int>(this);
-                var p = TestPublisher.CreateManualProbe<int>(this);
+                var c = this.CreateManualSubscriberProbe<int>();
+                var p = this.CreateManualPublisherProbe<int>();
 
                 Source.FromPublisher(p)
                     .Delay(TimeSpan.FromSeconds(10), DelayOverflowStrategy.EmitEarly)

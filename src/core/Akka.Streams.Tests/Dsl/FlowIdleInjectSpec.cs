@@ -69,8 +69,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void KeepAlive_must_immediately_pull_upstream()
         {
-            var upstream = TestPublisher.CreateProbe<int>(this);
-            var downstream = TestSubscriber.CreateProbe<int>(this);
+            var upstream = this.CreatePublisherProbe<int>();
+            var downstream = this.CreateSubscriberProbe<int>();
 
             Source.FromPublisher(upstream)
                 .KeepAlive(TimeSpan.FromSeconds(1), () => 0)
@@ -88,8 +88,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void KeepAlive_must_immediately_pull_upstream_after_busy_period()
         {
-            var upstream = TestPublisher.CreateProbe<int>(this);
-            var downstream = TestSubscriber.CreateProbe<int>(this);
+            var upstream = this.CreatePublisherProbe<int>();
+            var downstream = this.CreateSubscriberProbe<int>();
 
             Source.Combine(Source.From(Enumerable.Range(1, 10)), Source.FromPublisher(upstream),
                 i => new Merge<int, int>(i))
@@ -111,8 +111,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void KeepAlive_must_work_if_timer_fires_before_initial_request()
         {
-            var upstream = TestPublisher.CreateProbe<int>(this);
-            var downstream = TestSubscriber.CreateProbe<int>(this);
+            var upstream = this.CreatePublisherProbe<int>();
+            var downstream = this.CreateSubscriberProbe<int>();
 
             Source.FromPublisher(upstream)
                 .KeepAlive(TimeSpan.FromSeconds(1), () => 0)
@@ -130,8 +130,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void KeepAlive_must_work_if_timer_fires_before_initial_request_after_busy_period()
         {
-            var upstream = TestPublisher.CreateProbe<int>(this);
-            var downstream = TestSubscriber.CreateProbe<int>(this);
+            var upstream = this.CreatePublisherProbe<int>();
+            var downstream = this.CreateSubscriberProbe<int>();
 
             Source.Combine(Source.From(Enumerable.Range(1, 10)), Source.FromPublisher(upstream),
                 i => new Merge<int, int>(i))
@@ -152,8 +152,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void KeepAlive_must_prefer_upstream_element_over_injected()
         {
-            var upstream = TestPublisher.CreateProbe<int>(this);
-            var downstream = TestSubscriber.CreateProbe<int>(this);
+            var upstream = this.CreatePublisherProbe<int>();
+            var downstream = this.CreateSubscriberProbe<int>();
 
             Source.FromPublisher(upstream)
                 .KeepAlive(TimeSpan.FromSeconds(1), () => 0)
@@ -174,8 +174,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void KeepAlive_must_prefer_upstream_element_over_injected_after_busy_period()
         {
-            var upstream = TestPublisher.CreateProbe<int>(this);
-            var downstream = TestSubscriber.CreateProbe<int>(this);
+            var upstream = this.CreatePublisherProbe<int>();
+            var downstream = this.CreateSubscriberProbe<int>();
 
             Source.Combine(Source.From(Enumerable.Range(1, 10)), Source.FromPublisher(upstream),
                 i => new Merge<int, int>(i))
@@ -199,8 +199,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void KeepAlive_must_reset_deadline_properly_after_injected_element()
         {
-            var upstream = TestPublisher.CreateProbe<int>(this);
-            var downstream = TestSubscriber.CreateProbe<int>(this);
+            var upstream = this.CreatePublisherProbe<int>();
+            var downstream = this.CreateSubscriberProbe<int>();
 
             Source.FromPublisher(upstream)
                 .KeepAlive(TimeSpan.FromSeconds(1), () => 0)

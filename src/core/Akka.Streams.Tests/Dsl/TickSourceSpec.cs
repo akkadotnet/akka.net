@@ -32,7 +32,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c = TestSubscriber.CreateManualProbe<string>(this);
+                var c = this.CreateManualSubscriberProbe<string>();
                 Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(500), "tick")
                     .To(Sink.FromSubscriber(c))
                     .Run(Materializer);
@@ -52,7 +52,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_based_on_a_tick_publisher_must_drop_ticks_when_not_requested()
         {
-            var c = TestSubscriber.CreateManualProbe<string>(this);
+            var c = this.CreateManualSubscriberProbe<string>();
             Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), "tick")
                 .To(Sink.FromSubscriber(c))
                 .Run(Materializer);
@@ -77,8 +77,8 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var p = Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), "tick")
                     .RunWith(Sink.AsPublisher<string>(false), Materializer);
-                var c1 = TestSubscriber.CreateManualProbe<string>(this);
-                var c2 = TestSubscriber.CreateManualProbe<string>(this);
+                var c1 = this.CreateManualSubscriberProbe<string>();
+                var c2 = this.CreateManualSubscriberProbe<string>();
                 p.Subscribe(c1);
                 p.Subscribe(c2);
                 var sub1 = c1.ExpectSubscription();
@@ -97,7 +97,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c = TestSubscriber.CreateManualProbe<int>(this);
+                var c = this.CreateManualSubscriberProbe<int>();
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
                     var zip = b.Add(new Zip<int, string>());
@@ -124,7 +124,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c = TestSubscriber.CreateManualProbe<string>(this);
+                var c = this.CreateManualSubscriberProbe<string>();
                 var tickSource = Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(500), "tick");
                 var cancelable = tickSource.To(Sink.FromSubscriber(c)).Run(Materializer);
                 var sub = c.ExpectSubscription();
@@ -147,7 +147,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c = TestSubscriber.CreateManualProbe<string>(this);
+                var c = this.CreateManualSubscriberProbe<string>();
                 var tickSource = Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(500), "tick");
                 var cancelable = tickSource.To(Sink.FromSubscriber(c)).Run(Materializer);
                 var sub = c.ExpectSubscription();
@@ -165,7 +165,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c = TestSubscriber.CreateManualProbe<string>(this);
+                var c = this.CreateManualSubscriberProbe<string>();
                 var tickSource = Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(500), "tick");
                 var cancelable = tickSource.To(Sink.FromSubscriber(c)).Run(Materializer);
                 cancelable.Cancel();

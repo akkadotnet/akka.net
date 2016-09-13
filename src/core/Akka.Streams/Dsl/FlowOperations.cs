@@ -36,9 +36,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
-        public static Flow<TIn, Option<TOut>, TMat> Recover<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Func<Exception, Option<TOut>> partialFunc)
+        public static Flow<TIn, TOut, TMat> Recover<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Func<Exception, Option<TOut>> partialFunc)
         {
-            return (Flow<TIn, Option<TOut>, TMat>)InternalFlowOperations.Recover(flow, partialFunc);
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.Recover(flow, partialFunc);
         }
 
         /// <summary>
@@ -60,10 +60,36 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
+        [Obsolete("Use RecoverWithRetries instead.")]
         public static Flow<TIn, TOut, TMat> RecoverWith<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow,
             Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc)
         {
-            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.RecoverWith(flow, partialFunc);
+            return RecoverWithRetries(flow, partialFunc, -1);
+        }
+
+        /// <summary>
+        /// RecoverWithRetries  allows to switch to alternative Source on flow failure. It will stay in effect after
+        /// a failure has been recovered up to <paramref name="attempts"/> number of times so that each time there is a failure it is fed into the <paramref name="partialFunc"/> and a new
+        /// Source may be materialized. Note that if you pass in 0, this won't attempt to recover at all. Passing in a negative number will behave exactly the same as  <see cref="RecoverWithRetries{TIn,TOut,TMat}"/>.
+        /// <para>
+        /// Since the underlying failure signal onError arrives out-of-band, it might jump over existing elements.
+        /// This stage can recover the failure signal, but not the skipped elements, which will be dropped.
+        /// </para>
+        /// <para>
+        /// Emits when element is available from the upstream or upstream is failed and element is available from alternative Source
+        /// </para>
+        /// <para>
+        /// Backpressures when downstream backpressures
+        /// </para>
+        /// <para>
+        /// Completes when upstream completes or upstream failed with exception <paramref name="partialFunc"/> can handle
+        /// </para>
+        /// Cancels when downstream cancels 
+        /// </summary>
+        public static Flow<TIn, TOut, TMat> RecoverWithRetries<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow,
+            Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc, int attempts)
+        {
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.RecoverWithRetries(flow, partialFunc, attempts);
         }
 
         /// <summary>
@@ -1071,7 +1097,8 @@ namespace Akka.Streams.Dsl
 
         /// <summary>
         /// If the time between two processed elements exceed the provided timeout, the stream is failed
-        /// with a <see cref="TimeoutException"/>.
+        /// with a <see cref="TimeoutException"/>. 
+        /// The timeout is checked periodically, so the resolution of the check is one period (equals to timeout value).
         /// <para>
         /// Emits when upstream emits an element
         /// </para>
@@ -1084,6 +1111,24 @@ namespace Akka.Streams.Dsl
         public static Flow<TIn, TOut, TMat> IdleTimeout<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, TimeSpan timeout)
         {
             return (Flow<TIn, TOut, TMat>)InternalFlowOperations.IdleTimeout(flow, timeout);
+        }
+
+        /// <summary>
+        /// If the time between the emission of an element and the following downstream demand exceeds the provided timeout,
+        /// the stream is failed with a <see cref="TimeoutException"/>. The timeout is checked periodically,
+        /// so the resolution of the check is one period (equals to timeout value).
+        /// <para>
+        /// Emits when upstream emits an element
+        /// </para>
+        /// Backpressures when downstream backpressures
+        /// <para>
+        /// Completes when upstream completes or fails if timeout elapses between element emission and downstream demand.
+        /// </para>
+        /// Cancels when downstream cancels
+        /// </summary>
+        public static Flow<TIn, TOut, TMat> BackpressureTimeout<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, TimeSpan timeout)
+        {
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.BackpressureTimeout(flow, timeout);
         }
 
         /// <summary>
@@ -1250,9 +1295,9 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Delays the initial element by the specified duration.
         /// <para>
-        /// Emits when upstream emits an element if the initial delay already elapsed
+        /// Emits when upstream emits an element if the initial delay is already elapsed
         /// </para>
-        /// Backpressures when downstream backpressures or initial delay not yet elapsed
+        /// Backpressures when downstream backpressures or initial delay is not yet elapsed
         /// <para>
         /// Completes when upstream completes
         /// </para>

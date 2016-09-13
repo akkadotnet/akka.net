@@ -114,8 +114,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var upstream = TestPublisher.CreateProbe<int>(this);
-                var downstream = TestSubscriber.CreateProbe<int>(this);
+                var upstream = this.CreatePublisherProbe<int>();
+                var downstream = this.CreateSubscriberProbe<int>();
 
                 Source.FromPublisher(upstream)
                     .Throttle(1, TimeSpan.FromMilliseconds(300), 0, ThrottleMode.Shaping)
@@ -140,8 +140,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var upstream = TestPublisher.CreateProbe<int>(this);
-                var downstream = TestSubscriber.CreateProbe<int>(this);
+                var upstream = this.CreatePublisherProbe<int>();
+                var downstream = this.CreateSubscriberProbe<int>();
 
                 Source.FromPublisher(upstream)
                     .Throttle(1, TimeSpan.FromMilliseconds(300), 0, ThrottleMode.Shaping)
@@ -165,7 +165,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var downstream = TestSubscriber.CreateProbe<int>(this);
+                var downstream = this.CreateSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 10))
                     .Throttle(1, TimeSpan.FromMilliseconds(300), 0, ThrottleMode.Shaping)
                     .RunWith(Sink.FromSubscriber(downstream), Materializer);
@@ -180,13 +180,13 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var probe =
                     Source.From(Enumerable.Range(1, 10))
-                        .Throttle(2, TimeSpan.FromMilliseconds(500), 0, ThrottleMode.Shaping)
+                        .Throttle(2, TimeSpan.FromMilliseconds(750), 0, ThrottleMode.Shaping)
                         .RunWith(this.SinkProbe<int>(), Materializer);
                 probe.Request(5);
-                var result = probe.ReceiveWhile(TimeSpan.FromMilliseconds(600), filter: x => x);
-                probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100))
+                var result = probe.ReceiveWhile(TimeSpan.FromMilliseconds(950), filter: x => x);
+                probe.ExpectNoMsg(TimeSpan.FromMilliseconds(150))
                     .ExpectNext(3)
-                    .ExpectNoMsg(TimeSpan.FromMilliseconds(100))
+                    .ExpectNoMsg(TimeSpan.FromMilliseconds(150))
                     .ExpectNext(4);
                 probe.Cancel();
                 // assertion may take longer then the throttle and therefore the next assertion fails
@@ -200,8 +200,8 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var ms = TimeSpan.FromMilliseconds(300);
-                var upstream = TestPublisher.CreateProbe<int>(this);
-                var downstream = TestSubscriber.CreateProbe<int>(this);
+                var upstream = this.CreatePublisherProbe<int>();
+                var downstream = this.CreateSubscriberProbe<int>();
 
                 Source.FromPublisher(upstream)
                     .Throttle(1, TimeSpan.FromMilliseconds(200), 5, ThrottleMode.Shaping)
@@ -241,8 +241,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var upstream = TestPublisher.CreateProbe<int>(this);
-                var downstream = TestSubscriber.CreateProbe<int>(this);
+                var upstream = this.CreatePublisherProbe<int>();
+                var downstream = this.CreateSubscriberProbe<int>();
 
                 Source.FromPublisher(upstream)
                     .Throttle(1, TimeSpan.FromMilliseconds(200), 5, ThrottleMode.Shaping)
@@ -356,8 +356,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var upstream = TestPublisher.CreateProbe<int>(this);
-                var downstream = TestSubscriber.CreateProbe<int>(this);
+                var upstream = this.CreatePublisherProbe<int>();
+                var downstream = this.CreateSubscriberProbe<int>();
 
                 Source.FromPublisher(upstream)
                     .Throttle(1, TimeSpan.FromMilliseconds(300), 0, x => x, ThrottleMode.Shaping)
@@ -381,7 +381,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var downstream = TestSubscriber.CreateProbe<int>(this);
+                var downstream = this.CreateSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 10))
                     .Throttle(2, TimeSpan.FromMilliseconds(200), 0, x => x, ThrottleMode.Shaping)
                     .RunWith(Sink.FromSubscriber(downstream), Materializer);
@@ -415,8 +415,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var upstream = TestPublisher.CreateProbe<int>(this);
-                var downstream = TestSubscriber.CreateProbe<int>(this);
+                var upstream = this.CreatePublisherProbe<int>();
+                var downstream = this.CreateSubscriberProbe<int>();
 
                 Source.FromPublisher(upstream)
                     .Throttle(2, TimeSpan.FromMilliseconds(400), 5, x => 1, ThrottleMode.Shaping)
@@ -457,8 +457,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var upstream = TestPublisher.CreateProbe<int>(this);
-                var downstream = TestSubscriber.CreateProbe<int>(this);
+                var upstream = this.CreatePublisherProbe<int>();
+                var downstream = this.CreateSubscriberProbe<int>();
 
                 Source.FromPublisher(upstream)
                     .Throttle(2, TimeSpan.FromMilliseconds(400), 5, e => e < 9 ? 1 : 20, ThrottleMode.Shaping)

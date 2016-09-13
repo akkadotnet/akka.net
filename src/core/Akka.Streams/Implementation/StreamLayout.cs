@@ -398,13 +398,13 @@ namespace Akka.Streams.Implementation
 
         public virtual bool IsFused => false;
 
-        public virtual IModule Fuse(IModule other, OutPort @from, InPort to)
-            => Fuse<object, object, object>(other, @from, to, Keep.Left);
+        public virtual IModule Fuse(IModule other, OutPort from, InPort to)
+            => Fuse<object, object, object>(other, from, to, Keep.Left);
 
-        public virtual IModule Fuse<T1, T2, T3>(IModule other, OutPort @from, InPort to, Func<T1, T2, T3> matFunc)
-            => Compose(other, matFunc).Wire(@from, to);
+        public virtual IModule Fuse<T1, T2, T3>(IModule other, OutPort from, InPort to, Func<T1, T2, T3> matFunc)
+            => Compose(other, matFunc).Wire(from, to);
 
-        public virtual IModule Wire(OutPort @from, InPort to)
+        public virtual IModule Wire(OutPort from, InPort to)
         {
             if (StreamLayout.IsDebug)
                 StreamLayout.Validate(this);
@@ -412,8 +412,8 @@ namespace Akka.Streams.Implementation
             if (!OutPorts.Contains(from))
             {
                 var message = Downstreams.ContainsKey(from)
-                    ? $"The output port [{@from}] is already connected"
-                    : $"The output port [{@from}] is not part of underlying graph";
+                    ? $"The output port [{from}] is already connected"
+                    : $"The output port [{from}] is not part of underlying graph";
                 throw new ArgumentException(message);
             }
 

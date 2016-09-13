@@ -24,7 +24,7 @@ namespace Akka.Streams.Tests.Dsl
     {
         protected override TestSubscriber.Probe<int> Setup(IPublisher<int> p1, IPublisher<int> p2)
         {
-            var subscriber = TestSubscriber.CreateProbe<int>(this);
+            var subscriber = this.CreateSubscriberProbe<int>();
             Source.FromPublisher(p1)
                 .Interleave(Source.FromPublisher(p2), 2)
                 .RunWith(Sink.FromSubscriber(subscriber), Materializer);
@@ -36,7 +36,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var probe = TestSubscriber.CreateManualProbe<int>(this);
+                var probe = this.CreateManualSubscriberProbe<int>();
 
                 Source.From(Enumerable.Range(0, 4))
                     .Interleave(Source.From(Enumerable.Range(4, 3)), 2)
@@ -62,7 +62,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var probe = TestSubscriber.CreateManualProbe<int>(this);
+                var probe = this.CreateManualSubscriberProbe<int>();
 
                 Source.From(Enumerable.Range(0, 3))
                     .Interleave(Source.From(Enumerable.Range(3, 3)), 2)
@@ -79,7 +79,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var probe = TestSubscriber.CreateManualProbe<int>(this);
+                var probe = this.CreateManualSubscriberProbe<int>();
 
                 Source.From(Enumerable.Range(0, 3))
                     .Interleave(Source.From(Enumerable.Range(3, 3)), 1)
@@ -107,7 +107,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var probe = TestSubscriber.CreateManualProbe<int>(this);
+                var probe = this.CreateManualSubscriberProbe<int>();
                 Source.From(Enumerable.Range(0, 3))
                     .Interleave(Source.From(Enumerable.Range(3, 13)), 10)
                     .RunWith(Sink.FromSubscriber(probe), Materializer);
@@ -116,7 +116,7 @@ namespace Akka.Streams.Tests.Dsl
                 Enumerable.Range(0, 16).ForEach(i => probe.ExpectNext(i));
                 probe.ExpectComplete();
 
-                var probe2 = TestSubscriber.CreateManualProbe<int>(this);
+                var probe2 = this.CreateManualSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 20))
                     .Interleave(Source.From(Enumerable.Range(21, 5)), 10)
                     .RunWith(Sink.FromSubscriber(probe2), Materializer);
@@ -213,9 +213,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var up1 = TestPublisher.CreateManualProbe<int>(this);
-                var up2 = TestPublisher.CreateManualProbe<int>(this);
-                var down = TestSubscriber.CreateManualProbe<int>(this);
+                var up1 = this.CreateManualPublisherProbe<int>();
+                var up2 = this.CreateManualPublisherProbe<int>();
+                var down = this.CreateManualSubscriberProbe<int>();
 
                 var t = Source.AsSubscriber<int>()
                     .InterleaveMaterialized(Source.AsSubscriber<int>(), 2, Tuple.Create)

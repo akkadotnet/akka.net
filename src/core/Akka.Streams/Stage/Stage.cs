@@ -85,7 +85,7 @@ namespace Akka.Streams.Stage
     /// <seealso cref="StatefulStage{TIn,TOut}"/>
     /// <seealso cref="PushStage{TIn,TOut}"/>
     [Obsolete("Please use GraphStage instead.")]
-    public abstract class PushPullStage<TIn, TOut> : AbstractStage<TIn, TOut, ISyncDirective, ISyncDirective, IContext<TOut>, ILifecycleContext> { }
+    public abstract class PushPullStage<TIn, TOut> : AbstractStage<TIn, TOut, ISyncDirective, ISyncDirective, IContext<TOut>> { }
 
     /// <summary>
     /// <see cref="PushStage{TIn,TOut}"/> is a <see cref="PushPullStage{TIn,TOut}"/> that always perform transitive pull by calling <see cref="IContext.Pull"/> from <see cref="OnPull"/>.
@@ -122,7 +122,7 @@ namespace Akka.Streams.Stage
     /// @see <see cref="PushPullStage{TIn,TOut}"/>
     /// </summary>
     [Obsolete("Please use GraphStage instead.")]
-    public abstract class DetachedStage<TIn, TOut> : AbstractStage<TIn, TOut, IUpstreamDirective, IDownstreamDirective, IDetachedContext<TOut>, ILifecycleContext>
+    public abstract class DetachedStage<TIn, TOut> : AbstractStage<TIn, TOut, IUpstreamDirective, IDownstreamDirective, IDetachedContext<TOut>>
     {
         protected internal override bool IsDetached => true;
     }

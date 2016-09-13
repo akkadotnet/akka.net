@@ -39,7 +39,7 @@ namespace Akka.Streams.Tests.Dsl
                     if (x == 3)
                         throw Ex;
                     return x;
-                }).RecoverWith(_ => Source.From(new[] {0, -1})).RunWith(this.SinkProbe<int>(), Materializer);
+                }).RecoverWithRetries(_ => Source.From(new[] {0, -1}), -1).RunWith(this.SinkProbe<int>(), Materializer);
 
                 probe
                     .Request(2)
@@ -67,7 +67,7 @@ namespace Akka.Streams.Tests.Dsl
                     if (x == 3)
                         throw Ex;
                     return x;
-                }).RecoverWith(_ => Source.From(new[] {0, -1})).RunWith(this.SinkProbe<int>(), Materializer);
+                }).RecoverWithRetries(_ => Source.From(new[] {0, -1}), -1).RunWith(this.SinkProbe<int>(), Materializer);
 
                 probe
                     .Request(2)
@@ -91,7 +91,7 @@ namespace Akka.Streams.Tests.Dsl
                     if (x == 2)
                         throw Ex;
                     return x;
-                }).RecoverWith(_ => null).RunWith(this.SinkProbe<int>(), Materializer);
+                }).RecoverWithRetries(_ => null, -1).RunWith(this.SinkProbe<int>(), Materializer);
 
                 probe
                     .Request(1)
@@ -114,7 +114,7 @@ namespace Akka.Streams.Tests.Dsl
                         throw Ex;
                     return x;
                 });
-                var probe = src.RecoverWith(_ => src).RunWith(this.SinkProbe<int>(), Materializer);
+                var probe = src.RecoverWithRetries(_ => src, -1).RunWith(this.SinkProbe<int>(), Materializer);
 
                 probe
                     .Request(2)
@@ -139,7 +139,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 Source.From(Enumerable.Range(1, 3))
                     .Select(x => x)
-                    .RecoverWith(_ => Source.Single(0))
+                    .RecoverWithRetries(_ => Source.Single(0), -1)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(3)
                     .ExpectNext(1, 2, 3)
@@ -154,7 +154,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 Source.Empty<int>()
                     .Select(x => x)
-                    .RecoverWith(_ => Source.Single(0))
+                    .RecoverWithRetries(_ => Source.Single(0), -1)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(3)
                     .ExpectComplete();
@@ -171,7 +171,7 @@ namespace Akka.Streams.Tests.Dsl
                     if (x == 3)
                         throw new IndexOutOfRangeException();
                     return x;
-                }).RecoverWith(ex =>
+                }).RecoverWithRetries(ex =>
                 {
                     if (ex is IndexOutOfRangeException)
                         return Source.From(new [] {11,22}).Select(x =>
@@ -183,7 +183,7 @@ namespace Akka.Streams.Tests.Dsl
                     if (ex is ArgumentException)
                         return Source.From(new[] { 33, 44 });
                     return null;
-                }).RunWith(this.SinkProbe<int>(), Materializer);
+                }, -1).RunWith(this.SinkProbe<int>(), Materializer);
 
                 probe
                     .Request(2)
@@ -201,7 +201,7 @@ namespace Akka.Streams.Tests.Dsl
         }
         
         [Fact]
-        public void A_RecoverWith_must_terminate_with_exception_if_alternative_source_failed()
+        public void A_RecoverWith_must_terminate_with_exception_if_partial_function_fails_to_match_after_an_alternative_source_failure()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -212,7 +212,7 @@ namespace Akka.Streams.Tests.Dsl
                             throw new IndexOutOfRangeException();
                         return x;
                     })
-                    .RecoverWith(ex =>
+                    .RecoverWithRetries(ex =>
                     {
                         if (ex is IndexOutOfRangeException)
                             return Source.From(new[] {11, 22}).Select(x =>
@@ -222,7 +222,7 @@ namespace Akka.Streams.Tests.Dsl
                                 return x;
                             });
                         return null;
-                    })
+                    }, -1)
                     .RunWith(this.SinkProbe<int>(), Materializer);
 
                 probe
@@ -236,6 +236,29 @@ namespace Akka.Streams.Tests.Dsl
                 probe
                     .Request(1)
                     .ExpectError().Should().Be(Ex);
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_RecoverWith_must_terminate_with_exception_after_set_number_of_retries()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var probe = Source.From(Enumerable.Range(1, 3))
+                    .Select(x =>
+                    {
+                        if (x == 3)
+                            throw new IndexOutOfRangeException();
+                        return x;
+                    })
+                    .RecoverWithRetries(_ => Source.From(new[] {11, 22}).Concat(Source.Failed<int>(Ex)), 3)
+                    .RunWith(this.SinkProbe<int>(), Materializer);
+
+                probe.Request(2).ExpectNext(1,2);
+                probe.Request(2).ExpectNext(11, 22);
+                probe.Request(2).ExpectNext(11, 22);
+                probe.Request(2).ExpectNext(11, 22);
+                probe.Request(1).ExpectError().Should().Be(Ex);
             }, Materializer);
         }
     }

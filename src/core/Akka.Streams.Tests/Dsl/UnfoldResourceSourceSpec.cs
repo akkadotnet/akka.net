@@ -71,7 +71,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var p = Source.UnfoldResource(_open, Read, Close).RunWith(Sink.AsPublisher<string>(false), Materializer);
 
-                var c = this.CreateManualProbe<string>();
+                var c = this.CreateManualSubscriberProbe<string>();
                 p.Subscribe(c);
                 var sub = c.ExpectSubscription();
 
@@ -106,7 +106,7 @@ namespace Akka.Streams.Tests.Dsl
                 }, Close)
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                 .RunWith(Sink.AsPublisher<string>(false), Materializer);
-                var c = this.CreateManualProbe<string>();
+                var c = this.CreateManualSubscriberProbe<string>();
                 
                 p.Subscribe(c);
                 var sub = c.ExpectSubscription();
@@ -135,7 +135,7 @@ namespace Akka.Streams.Tests.Dsl
                 }, Close)
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
                 .RunWith(Sink.AsPublisher<string>(false), Materializer);
-                var c = this.CreateManualProbe<string>();
+                var c = this.CreateManualSubscriberProbe<string>();
 
                 p.Subscribe(c);
                 var sub = c.ExpectSubscription();
@@ -166,7 +166,7 @@ namespace Akka.Streams.Tests.Dsl
                         : Option<ByteString>.None;
                 }, reader => reader.Close())
                 .RunWith(Sink.AsPublisher<ByteString>(false), Materializer);
-                var c = this.CreateManualProbe<ByteString>();
+                var c = this.CreateManualSubscriberProbe<ByteString>();
 
                 var remaining = ManyLines;
                 Func<string> nextChunk = () =>
@@ -235,7 +235,7 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     throw testException;
                 }, Read, Close).RunWith(Sink.AsPublisher<string>(false), Materializer);
-                var c = this.CreateManualProbe<string>();
+                var c = this.CreateManualSubscriberProbe<string>();
                 p.Subscribe(c);
 
                 c.ExpectSubscription();
@@ -254,7 +254,7 @@ namespace Akka.Streams.Tests.Dsl
                     reader.Close();
                     throw testException;
                 }).RunWith(Sink.AsPublisher<string>(false), Materializer);
-                var c = this.CreateManualProbe<string>();
+                var c = this.CreateManualSubscriberProbe<string>();
                 p.Subscribe(c);
 
                 var sub = c.ExpectSubscription();

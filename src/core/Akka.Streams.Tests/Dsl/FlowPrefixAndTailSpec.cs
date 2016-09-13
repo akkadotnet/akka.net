@@ -48,7 +48,7 @@ namespace Akka.Streams.Tests.Dsl
                 var fut = Source.Empty<int>().PrefixAndTail(10).RunWith(futureSink, Materializer);
                 fut.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 var tailFlow = fut.Result.Item2;
-                var tailSubscriber = TestSubscriber.CreateManualProbe<int>(this);
+                var tailSubscriber = this.CreateManualSubscriberProbe<int>();
                 tailFlow.To(Sink.FromSubscriber(tailSubscriber)).Run(Materializer);
                 tailSubscriber.ExpectSubscriptionAndComplete();
             }, Materializer);
@@ -64,7 +64,7 @@ namespace Akka.Streams.Tests.Dsl
                 fut.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 fut.Result.Item1.ShouldAllBeEquivalentTo(new[] {1, 2, 3});
                 var tailFlow = fut.Result.Item2;
-                var tailSubscriber = TestSubscriber.CreateManualProbe<int>(this);
+                var tailSubscriber = this.CreateManualSubscriberProbe<int>();
                 tailFlow.To(Sink.FromSubscriber(tailSubscriber)).Run(Materializer);
                 tailSubscriber.ExpectSubscriptionAndComplete();
             }, Materializer);
@@ -135,7 +135,7 @@ namespace Akka.Streams.Tests.Dsl
                 fut.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 fut.Result.Item1.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
                 var tail = fut.Result.Item2;
-                var subscriber = TestSubscriber.CreateManualProbe<int>(this);
+                var subscriber = this.CreateManualSubscriberProbe<int>();
                 tail.To(Sink.FromSubscriber(subscriber)).Run(Materializer);
                 subscriber.ExpectSubscriptionAndComplete();
             }, Materializer);
@@ -152,10 +152,10 @@ namespace Akka.Streams.Tests.Dsl
                 fut.Result.Item1.ShouldAllBeEquivalentTo(Enumerable.Range(1, 1));
                 var tail = fut.Result.Item2;
 
-                var subscriber1 = TestSubscriber.CreateProbe<int>(this);
+                var subscriber1 = this.CreateSubscriberProbe<int>();
                 tail.To(Sink.FromSubscriber(subscriber1)).Run(Materializer);
 
-                var subscriber2 = TestSubscriber.CreateProbe<int>(this);
+                var subscriber2 = this.CreateSubscriberProbe<int>();
                 tail.To(Sink.FromSubscriber(subscriber2)).Run(Materializer);
 
                 subscriber2.ExpectSubscriptionAndError()
@@ -185,7 +185,7 @@ namespace Akka.Streams.Tests.Dsl
                 fut.Result.Item1.ShouldAllBeEquivalentTo(Enumerable.Range(1, 1));
                 var tail = fut.Result.Item2;
 
-                var subscriber = TestSubscriber.CreateProbe<int>(this);
+                var subscriber = this.CreateSubscriberProbe<int>();
                 Thread.Sleep(1000);
                 tail.To(Sink.FromSubscriber(subscriber)).Run(tightTimeoutMaterializer);
                 subscriber.ExpectSubscriptionAndError()
@@ -211,7 +211,7 @@ namespace Akka.Streams.Tests.Dsl
                 fut.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 fut.Result.Item1.ShouldAllBeEquivalentTo(Enumerable.Range(1, 1));
 
-                var subscriber = TestSubscriber.CreateProbe<int>(this);
+                var subscriber = this.CreateSubscriberProbe<int>();
                 Thread.Sleep(200);
                 fut.Result.Item2.To(Sink.FromSubscriber(subscriber)).Run(tightTimeoutMaterializer);
                 subscriber.ExpectSubscription().Request(2);
@@ -236,8 +236,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var publisher = TestPublisher.CreateManualProbe<int>(this);
-                var subscriber = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, NotUsed>>>(this);
+                var publisher = this.CreateManualPublisherProbe<int>();
+                var subscriber = this.CreateManualSubscriberProbe<Tuple<IImmutableList<int>, Source<int, NotUsed>>>();
 
                 Source.FromPublisher(publisher)
                     .PrefixAndTail(3)
@@ -262,8 +262,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var publisher = TestPublisher.CreateManualProbe<int>(this);
-                var subscriber = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, NotUsed>>>(this);
+                var publisher = this.CreateManualPublisherProbe<int>();
+                var subscriber = this.CreateManualSubscriberProbe<Tuple<IImmutableList<int>, Source<int, NotUsed>>>();
 
                 Source.FromPublisher(publisher)
                     .PrefixAndTail(1)
@@ -283,7 +283,7 @@ namespace Akka.Streams.Tests.Dsl
                 var tail = t.Item2;
                 subscriber.ExpectComplete();
 
-                var substreamSubscriber = TestSubscriber.CreateManualProbe<int>(this);
+                var substreamSubscriber = this.CreateManualSubscriberProbe<int>();
                 tail.To(Sink.FromSubscriber(substreamSubscriber)).Run(Materializer);
                 substreamSubscriber.ExpectSubscription();
                 upstream.SendError(TestException);
@@ -296,8 +296,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var publisher = TestPublisher.CreateManualProbe<int>(this);
-                var subscriber = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, NotUsed>>>(this);
+                var publisher = this.CreateManualPublisherProbe<int>();
+                var subscriber = this.CreateManualSubscriberProbe<Tuple<IImmutableList<int>, Source<int, NotUsed>>>();
 
                 Source.FromPublisher(publisher)
                     .PrefixAndTail(3)
@@ -322,8 +322,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var publisher = TestPublisher.CreateManualProbe<int>(this);
-                var subscriber = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, NotUsed>>>(this);
+                var publisher = this.CreateManualPublisherProbe<int>();
+                var subscriber = this.CreateManualSubscriberProbe<Tuple<IImmutableList<int>, Source<int, NotUsed>>>();
 
                 Source.FromPublisher(publisher)
                     .PrefixAndTail(1)
@@ -343,7 +343,7 @@ namespace Akka.Streams.Tests.Dsl
                 var tail = t.Item2;
                 subscriber.ExpectComplete();
 
-                var substreamSubscriber = TestSubscriber.CreateManualProbe<int>(this);
+                var substreamSubscriber = this.CreateManualSubscriberProbe<int>();
                 tail.To(Sink.FromSubscriber(substreamSubscriber)).Run(Materializer);
                 substreamSubscriber.ExpectSubscription().Cancel();
 
@@ -356,8 +356,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var up = TestPublisher.CreateManualProbe<int>(this);
-                var down = TestSubscriber.CreateManualProbe<Tuple<IImmutableList<int>, Source<int, NotUsed>>>(this);
+                var up = this.CreateManualPublisherProbe<int>();
+                var down = this.CreateManualSubscriberProbe<Tuple<IImmutableList<int>, Source<int, NotUsed>>>();
 
                 var flowSubscriber = Source.AsSubscriber<int>()
                     .PrefixAndTail(1)
@@ -375,8 +375,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void PrefixAndTail_must_work_even_if_tail_subscriber_arrives_after_substream_completion()
         {
-            var pub = TestPublisher.CreateManualProbe<int>(this);
-            var sub = TestSubscriber.CreateManualProbe<int>(this);
+            var pub = this.CreateManualPublisherProbe<int>();
+            var sub = this.CreateManualSubscriberProbe<int>();
 
             var f =
                 Source.FromPublisher(pub)

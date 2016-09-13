@@ -30,8 +30,8 @@ namespace Akka.Streams.Tests.Dsl
         public void A_TakeWithin_must_deliver_elements_within_the_duration_but_not_afterwards()
         {
             var input = 1;
-            var p = TestPublisher.CreateManualProbe<int>(this);
-            var c = TestSubscriber.CreateManualProbe<int>(this);
+            var p = this.CreateManualPublisherProbe<int>();
+            var c = this.CreateManualSubscriberProbe<int>();
             Source.FromPublisher(p)
                 .TakeWithin(TimeSpan.FromSeconds(1))
                 .To(Sink.FromSubscriber(c))
@@ -56,7 +56,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c = TestSubscriber.CreateManualProbe<int>(this);
+                var c = this.CreateManualSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 3))
                     .TakeWithin(TimeSpan.FromSeconds(1))
                     .To(Sink.FromSubscriber(c))

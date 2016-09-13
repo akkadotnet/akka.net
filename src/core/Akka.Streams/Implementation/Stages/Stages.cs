@@ -12,7 +12,6 @@ using Akka.Event;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
-using Akka.Streams.Util;
 using Reactive.Streams;
 
 namespace Akka.Streams.Implementation.Stages
@@ -56,6 +55,14 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes ProcessorWithKey = Attributes.CreateName("processorWithKey");
         public static readonly Attributes IdentityOp = Attributes.CreateName("identityOp");
 
+        public static readonly Attributes Initial = Attributes.CreateName("initial");
+        public static readonly Attributes Completion = Attributes.CreateName("completion");
+        public static readonly Attributes Idle = Attributes.CreateName("idle");
+        public static readonly Attributes IdleTimeoutBidi = Attributes.CreateName("idleTimeoutBidi");
+        public static readonly Attributes DelayInitial = Attributes.CreateName("delayInitial");
+        public static readonly Attributes IdleInject = Attributes.CreateName("idleInject");
+        public static readonly Attributes BackpressureTimeout = Attributes.CreateName("backpressureTimeout");
+
         public static readonly Attributes Merge = Attributes.CreateName("merge");
         public static readonly Attributes MergePreferred = Attributes.CreateName("mergePreferred");
         public static readonly Attributes FlattenMerge = Attributes.CreateName("flattenMerge");
@@ -72,9 +79,12 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes UnfoldResourceSourceAsync = Attributes.CreateName("unfoldResourceSourceAsync").And(IODispatcher);
         public static readonly Attributes TerminationWatcher = Attributes.CreateName("terminationWatcher");
         public static readonly Attributes Delay = Attributes.CreateName("delay").And(new Attributes.InputBuffer(16, 16));
+        public static readonly Attributes ZipN = Attributes.CreateName("zipN");
+        public static readonly Attributes ZipWithN = Attributes.CreateName("zipWithN");
 
         public static readonly Attributes PublisherSource = Attributes.CreateName("publisherSource");
         public static readonly Attributes EnumerableSource = Attributes.CreateName("enumerableSource");
+        public static readonly Attributes CycledSource = Attributes.CreateName("cycledSource");
         public static readonly Attributes TaskSource = Attributes.CreateName("taskSource");
         public static readonly Attributes TickSource = Attributes.CreateName("tickSource");
         public static readonly Attributes SingleSource = Attributes.CreateName("singleSource");
@@ -185,31 +195,6 @@ namespace Akka.Streams.Implementation.Stages
             => new Fusing.Log<T>(_name, _extract, _loggingAdapter, Supervision(effectiveAttributes));
     }
 
-    internal sealed class Where<T> : SymbolicStage<T, T>
-    {
-        private readonly Predicate<T> _predicate;
-
-        public Where(Predicate<T> predicate, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Where)
-        {
-            _predicate = predicate;
-        }
-
-        public override IStage<T, T> Create(Attributes effectiveAttributes)
-            => new Fusing.Where<T>(_predicate, Supervision(effectiveAttributes));
-    }
-
-    internal sealed class Recover<T> : SymbolicStage<T, Option<T>>
-    {
-        private readonly Func<Exception, Option<T>> _func;
-
-        public Recover(Func<Exception, Option<T>> func, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Recover)
-        {
-            _func = func;
-        }
-
-        public override IStage<T, Option<T>> Create(Attributes effectiveAttributes) => new Fusing.Recover<T>(_func);
-    }
-
     internal sealed class Grouped<T> : SymbolicStage<T, IEnumerable<T>>
     {
         private readonly int _count;
@@ -237,21 +222,6 @@ namespace Akka.Streams.Implementation.Stages
         }
 
         public override IStage<T, IEnumerable<T>> Create(Attributes effectiveAttributes) => new Fusing.Sliding<T>(_count, _step);
-    }
-
-    internal sealed class Scan<TIn, TOut> : SymbolicStage<TIn, TOut>
-    {
-        private readonly TOut _zero;
-        private readonly Func<TOut, TIn, TOut> _aggregate;
-
-        public Scan(TOut zero, Func<TOut, TIn, TOut> aggregate, Attributes attributes = null) : base(attributes ?? DefaultAttributes.Scan)
-        {
-            _zero = zero;
-            _aggregate = aggregate;
-        }
-
-        public override IStage<TIn, TOut> Create(Attributes effectiveAttributes)
-            => new Fusing.Scan<TIn, TOut>(_zero, _aggregate, Supervision(effectiveAttributes));
     }
 
     internal sealed class Aggregate<TIn, TOut> : SymbolicStage<TIn, TOut>

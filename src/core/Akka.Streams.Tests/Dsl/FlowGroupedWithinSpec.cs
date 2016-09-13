@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -40,8 +39,8 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var input = new Iterator<int>(Enumerable.Range(1, 10000));
-                var p = TestPublisher.CreateManualProbe<int>(this);
-                var c = TestSubscriber.CreateManualProbe<IEnumerable<int>>(this);
+                var p = this.CreateManualPublisherProbe<int>();
+                var c = this.CreateManualSubscriberProbe<IEnumerable<int>>();
 
                 Source.FromPublisher(p)
                     .GroupedWithin(1000, TimeSpan.FromSeconds(1))
@@ -86,7 +85,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_GroupedWithin_must_deliver_buffered_elements_OnComplete_before_the_timeout()
         {
-            var c = TestSubscriber.CreateManualProbe<IEnumerable<int>>(this);
+            var c = this.CreateManualSubscriberProbe<IEnumerable<int>>();
 
             Source.From(Enumerable.Range(1, 3))
                 .GroupedWithin(1000, TimeSpan.FromSeconds(10))
@@ -105,8 +104,8 @@ namespace Akka.Streams.Tests.Dsl
         public void A_GroupedWithin_must_buffer_groups_until_requested_from_downstream()
         {
             var input = new Iterator<int>(Enumerable.Range(1, 10000));
-            var p = TestPublisher.CreateManualProbe<int>(this);
-            var c = TestSubscriber.CreateManualProbe<IEnumerable<int>>(this);
+            var p = this.CreateManualPublisherProbe<int>();
+            var c = this.CreateManualSubscriberProbe<IEnumerable<int>>();
 
             Source.FromPublisher(p)
                 .GroupedWithin(1000, TimeSpan.FromSeconds(1))
@@ -138,8 +137,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_GroupedWithin_must_drop_empty_groups()
         {
-            var p = TestPublisher.CreateManualProbe<int>(this);
-            var c = TestSubscriber.CreateManualProbe<IEnumerable<int>>(this);
+            var p = this.CreateManualPublisherProbe<int>();
+            var c = this.CreateManualSubscriberProbe<IEnumerable<int>>();
 
             Source.FromPublisher(p)
                 .GroupedWithin(1000, TimeSpan.FromMilliseconds(500))
@@ -169,8 +168,8 @@ namespace Akka.Streams.Tests.Dsl
         public void A_GroupedWithin_must_reset_time_window_when_max_elements_reached()
         {
             var input = new Iterator<int>(Enumerable.Range(1, 10000));
-            var upstream = TestPublisher.CreateProbe<int>(this);
-            var downstream = TestSubscriber.CreateProbe<IEnumerable<int>>(this);
+            var upstream = this.CreatePublisherProbe<int>();
+            var downstream = this.CreateSubscriberProbe<IEnumerable<int>>();
 
             Source.FromPublisher(upstream)
                 .GroupedWithin(3, TimeSpan.FromSeconds(2))

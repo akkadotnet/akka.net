@@ -31,7 +31,7 @@ namespace Akka.Streams
 
 		public Inlet<T1> In(int n)
 		{
-			if (n <= 0) throw new ArgumentException("n must be > 0", "n");
+			if (n <= 0) throw new ArgumentException("n must be > 0", nameof(n));
 			return In1s[n-1];
 		}
 		

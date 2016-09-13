@@ -343,7 +343,7 @@ namespace Akka.Streams.Dsl
 
         /// <summary>
         /// Creates a <see cref="Flow{TIn,TOut,TMat}"/> which will use the given function to transform its inputs to outputs. It is equivalent
-        /// to <see cref="Flow.Create{TIn}.Select(function)"/>
+        /// to <see cref="Implementation.Fusing.Select{TIn,TOut}"/>
         /// </summary>
         public static Flow<TIn, TOut, NotUsed> FromFunction<TIn, TOut>(Func<TIn, TOut> function)
             => Create<TIn>().Select(function);
