@@ -9,8 +9,10 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.IO;
 using Akka.Streams.TestKit;
+using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Reactive.Streams;
 using Xunit.Abstractions;
@@ -19,7 +21,12 @@ namespace Akka.Streams.Tests.IO
 {
     public abstract class TcpHelper : AkkaSpec
     {
-        protected TcpHelper(string config, ITestOutputHelper helper) : base(config, helper)
+        protected TcpHelper(string config, ITestOutputHelper helper)
+            : base(
+                ConfigurationFactory.ParseString(config)
+                    .WithFallback(
+                        ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf")),
+                helper)
         {
             Settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(4, 4);
             Materializer = Sys.Materializer(Settings);
