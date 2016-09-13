@@ -517,12 +517,17 @@ namespace Akka.Actor
         public static Akka.Actor.DeployableDecider From(Akka.Actor.Directive defaultDirective, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<System.Type, Akka.Actor.Directive>> pairs) { }
         public static Akka.Actor.LocalOnlyDecider From(System.Func<System.Exception, Akka.Actor.Directive> localOnlyDecider) { }
     }
-    public class DedicatedThreadScheduler : Akka.Actor.SchedulerBase, Akka.Actor.IDateTimeOffsetNowTimeProvider, Akka.Actor.ITimeProvider
+    [System.ObsoleteAttribute("Replaced with HashedWheelTimerScheduler")]
+    public class DedicatedThreadScheduler : Akka.Actor.SchedulerBase, Akka.Actor.IDateTimeOffsetNowTimeProvider, Akka.Actor.ITimeProvider, System.IDisposable
     {
-        public DedicatedThreadScheduler(Akka.Actor.ActorSystem system) { }
+        [System.ObsoleteAttribute("Dangerous and bad. Use DedicatedThreadScheduler(Config config, ILoggingAdapter lo" +
+            "g) instead.")]
+        public DedicatedThreadScheduler(Akka.Actor.ActorSystem sys) { }
+        public DedicatedThreadScheduler(Akka.Configuration.Config config, Akka.Event.ILoggingAdapter log) { }
         public override System.TimeSpan HighResMonotonicClock { get; }
         public override System.TimeSpan MonotonicClock { get; }
         protected override System.DateTimeOffset TimeNow { get; }
+        public void Dispose() { }
         protected override void InternalScheduleOnce(System.TimeSpan delay, System.Action action, Akka.Actor.ICancelable cancelable) { }
         protected override void InternalScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, System.Action action, Akka.Actor.ICancelable cancelable) { }
         protected override void InternalScheduleTellOnce(System.TimeSpan delay, Akka.Actor.ICanTell receiver, object message, Akka.Actor.IActorRef sender, Akka.Actor.ICancelable cancelable) { }
@@ -843,6 +848,18 @@ namespace Akka.Actor
         public GuardianActor() { }
         protected override void PreStart() { }
         protected override bool Receive(object message) { }
+    }
+    public class HashedWheelTimerScheduler : Akka.Actor.SchedulerBase, Akka.Actor.IDateTimeOffsetNowTimeProvider, Akka.Actor.ITimeProvider, System.IDisposable
+    {
+        public HashedWheelTimerScheduler(Akka.Configuration.Config scheduler, Akka.Event.ILoggingAdapter log) { }
+        public override System.TimeSpan HighResMonotonicClock { get; }
+        public override System.TimeSpan MonotonicClock { get; }
+        protected override System.DateTimeOffset TimeNow { get; }
+        public void Dispose() { }
+        protected override void InternalScheduleOnce(System.TimeSpan delay, System.Action action, Akka.Actor.ICancelable cancelable) { }
+        protected override void InternalScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, System.Action action, Akka.Actor.ICancelable cancelable) { }
+        protected override void InternalScheduleTellOnce(System.TimeSpan delay, Akka.Actor.ICanTell receiver, object message, Akka.Actor.IActorRef sender, Akka.Actor.ICancelable cancelable) { }
+        protected override void InternalScheduleTellRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Actor.ICanTell receiver, object message, Akka.Actor.IActorRef sender, Akka.Actor.ICancelable cancelable) { }
     }
     public interface IActionScheduler
     {
@@ -1470,7 +1487,9 @@ namespace Akka.Actor
     }
     public abstract class SchedulerBase : Akka.Actor.IActionScheduler, Akka.Actor.IAdvancedScheduler, Akka.Actor.IScheduler, Akka.Actor.ITellScheduler, Akka.Actor.ITimeProvider
     {
-        protected SchedulerBase() { }
+        protected readonly Akka.Event.ILoggingAdapter Log;
+        protected readonly Akka.Configuration.Config SchedulerConfig;
+        protected SchedulerBase(Akka.Configuration.Config scheduler, Akka.Event.ILoggingAdapter log) { }
         public abstract System.TimeSpan HighResMonotonicClock { get; }
         public abstract System.TimeSpan MonotonicClock { get; }
         protected abstract System.DateTimeOffset TimeNow { get; }
@@ -1480,6 +1499,10 @@ namespace Akka.Actor
         protected abstract void InternalScheduleTellRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Actor.ICanTell receiver, object message, Akka.Actor.IActorRef sender, Akka.Actor.ICancelable cancelable);
         protected static void ValidateDelay(System.TimeSpan delay, string parameterName) { }
         protected static void ValidateInterval(System.TimeSpan interval, string parameterName) { }
+    }
+    public sealed class SchedulerException : Akka.Actor.AkkaException
+    {
+        public SchedulerException(string message) { }
     }
     public class static SchedulerExtensions
     {
@@ -1550,6 +1573,7 @@ namespace Akka.Actor
         public string LogLevel { get; }
         public string ProviderClass { get; }
         public string SchedulerClass { get; }
+        public System.TimeSpan SchedulerShutdownTimeout { get; }
         public bool SerializeAllCreators { get; }
         public bool SerializeAllMessages { get; }
         public string StdoutLogLevel { get; }

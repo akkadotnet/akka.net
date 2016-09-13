@@ -51,6 +51,7 @@
     <Compile Include="Actor\MinimalActorRefThroughputSpec.cs" />
     <Compile Include="Actor\Pattern\AskSpec.cs" />
     <Compile Include="Actor\ReceiveActorThroughputSpec.cs" />
+    <Compile Include="Actor\Scheduler\DefaultSchedulerPerformanceTests.cs" />
     <Compile Include="Actor\UntypedActorThroughputSpec.cs" />
     <Compile Include="Dispatch\CallingThreadExecutor.cs" />
     <Compile Include="Dispatch\DefaultDispatcherColdThroughputSpec.cs" />

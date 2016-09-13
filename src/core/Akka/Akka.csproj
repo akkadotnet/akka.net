@@ -141,7 +141,9 @@
     <Compile Include="Actor\PipeToSupport.cs" />
     <Compile Include="Actor\Receive.cs" />
     <Compile Include="Actor\Scheduler\ITellScheduler.cs" />
+    <Compile Include="Actor\Scheduler\HashedWheelTimerScheduler.cs" />
     <Compile Include="Actor\Scheduler\SchedulerBase.cs" />
+    <Compile Include="Actor\Scheduler\SchedulerException.cs" />
     <Compile Include="Actor\Scheduler\SchedulerExtensions.cs" />
     <Compile Include="Actor\Scope.cs" />
     <Compile Include="Actor\Settings.cs" />

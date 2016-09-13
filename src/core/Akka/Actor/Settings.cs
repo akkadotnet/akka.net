@@ -113,6 +113,7 @@ namespace Akka.Actor
             DefaultVirtualNodesFactor = Config.GetInt("akka.actor.deployment.default.virtual-nodes-factor");
 
             SchedulerClass = Config.GetString("akka.scheduler.implementation");
+            SchedulerShutdownTimeout = Config.GetTimeSpan("akka.scheduler.shutdown-timeout");
             //TODO: dunno.. we dont have FiniteStateMachines, dont know what the rest is
             /*              
                 final val SchedulerClass: String = getString("akka.scheduler.implementation")
@@ -282,6 +283,8 @@ namespace Akka.Actor
         /// Gets the scheduler implementation used by this system.
         /// </summary>
         public string SchedulerClass { get; private set; }
+
+        public TimeSpan SchedulerShutdownTimeout { get; private set; }
 
         /// <summary>
         ///     Returns a <see cref="string" /> that represents this instance.

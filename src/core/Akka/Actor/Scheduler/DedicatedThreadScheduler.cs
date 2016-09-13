@@ -9,37 +9,51 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
+using Akka.Configuration;
 using Akka.Event;
+using Akka.Util;
 
 namespace Akka.Actor
 {
-    public class DedicatedThreadScheduler : SchedulerBase, IDateTimeOffsetNowTimeProvider
+    [Obsolete("Replaced with HashedWheelTimerScheduler")]
+    public class DedicatedThreadScheduler : SchedulerBase, IDateTimeOffsetNowTimeProvider, IDisposable
     {
         private readonly ConcurrentQueue<ScheduledWork> _workQueue = new ConcurrentQueue<ScheduledWork>();
-        private ILoggingAdapter _log;
-        protected override DateTimeOffset TimeNow { get { return DateTimeOffset.Now; } }
-        public override TimeSpan MonotonicClock { get { return Util.MonotonicClock.Elapsed; } }
-        public override TimeSpan HighResMonotonicClock { get { return Util.MonotonicClock.ElapsedHighRes; } }
 
-        //TODO: use some more efficient approach to handle future work
-        public DedicatedThreadScheduler(ActorSystem system)
+        protected override DateTimeOffset TimeNow
         {
-            _log = Logging.GetLogger(system, this);
-            var precision = system.Settings.Config.GetTimeSpan("akka.scheduler.tick-duration");
+            get { return DateTimeOffset.Now; }
+        }
+
+        public override TimeSpan MonotonicClock
+        {
+            get { return Util.MonotonicClock.Elapsed; }
+        }
+
+        public override TimeSpan HighResMonotonicClock
+        {
+            get { return Util.MonotonicClock.ElapsedHighRes; }
+        }
+
+        private TimeSpan _shutdownTimeout;
+
+        [Obsolete("Dangerous and bad. Use DedicatedThreadScheduler(Config config, ILoggingAdapter log) instead.")]
+        public DedicatedThreadScheduler(ActorSystem sys) : this(sys.Settings.Config, sys.Log) { }
+
+        public DedicatedThreadScheduler(Config config, ILoggingAdapter log) : base(config, log)
+        {
+            var precision = SchedulerConfig.GetTimeSpan("akka.scheduler.tick-duration");
+            _shutdownTimeout = SchedulerConfig.GetTimeSpan("akka.scheduler.shutdown-timeout");
             var thread = new Thread(_ =>
             {
                 var allWork = new List<ScheduledWork>();
-                while (true)
+                while (_stopped.Value == null)
                 {
-                    if (system.WhenTerminated.IsCompleted)
-                    {
-                        return;
-                    }
-
                     Thread.Sleep(precision);
                     var now = HighResMonotonicClock.Ticks;
                     ScheduledWork work;
-                    while(_workQueue.TryDequeue(out work))
+                    while (_workQueue.TryDequeue(out work))
                     {
                         //has work already expired?
                         if (work.TickExpires < now)
@@ -70,12 +84,16 @@ namespace Akka.Actor
                         }
                     }
                 }
+
+                // shutdown has been signaled
+               FireStopSignal();
             }) {IsBackground = true};
 
             thread.Start();
         }
 
-        protected override void InternalScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable)
+        protected override void InternalScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message,
+            IActorRef sender, ICancelable cancelable)
         {
             var cancellationToken = cancelable == null ? CancellationToken.None : cancelable.Token;
             InternalScheduleOnce(delay, () =>
@@ -84,7 +102,8 @@ namespace Akka.Actor
             }, cancellationToken);
         }
 
-        protected override void InternalScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable)
+        protected override void InternalScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval,
+            ICanTell receiver, object message, IActorRef sender, ICancelable cancelable)
         {
             var cancellationToken = cancelable == null ? CancellationToken.None : cancelable.Token;
             InternalScheduleRepeatedly(initialDelay, interval, () => receiver.Tell(message, sender), cancellationToken);
@@ -96,7 +115,8 @@ namespace Akka.Actor
             InternalScheduleOnce(delay, action, cancellationToken);
         }
 
-        protected override void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable)
+        protected override void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action,
+            ICancelable cancelable)
         {
             var cancellationToken = cancelable == null ? CancellationToken.None : cancelable.Token;
             InternalScheduleRepeatedly(initialDelay, interval, action, cancellationToken);
@@ -114,23 +134,26 @@ namespace Akka.Actor
                 {
                     action();
                 }
-                catch (OperationCanceledException) { }
+                catch (OperationCanceledException)
+                {
+                }
                 catch (Exception x)
                 {
-                    _log.Error(x, "DedicatedThreadScheduler failed to execute action");
-                }                
+                    Log.Error(x, "DedicatedThreadScheduler failed to execute action");
+                }
             };
             AddWork(initialDelay, executeAction, token);
 
         }
 
 
-        private void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action, CancellationToken token)
+        private void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action,
+            CancellationToken token)
         {
             Action executeAction = null;
             executeAction = () =>
             {
-                if (token.IsCancellationRequested) 
+                if (token.IsCancellationRequested)
                     return;
 
                 try
@@ -141,22 +164,61 @@ namespace Akka.Actor
 
                     AddWork(interval, executeAction, token);
                 }
-                catch (OperationCanceledException) { }
+                catch (OperationCanceledException)
+                {
+                }
                 catch (Exception x)
                 {
-                    _log.Error(x,"DedicatedThreadScheduler failed to execute action");
+                    Log.Error(x, "DedicatedThreadScheduler failed to execute action");
                 }
             };
             AddWork(initialDelay, executeAction, token);
 
         }
 
-        private void AddWork(TimeSpan delay, Action work,CancellationToken token)
+        private void AddWork(TimeSpan delay, Action work, CancellationToken token)
         {
+            if (_stopped.Value != null)
+                throw new SchedulerException("cannot enque after timer shutdown");
             var expected = HighResMonotonicClock + delay;
-            var scheduledWord = new ScheduledWork(expected.Ticks, work,token);
+            var scheduledWord = new ScheduledWork(expected.Ticks, work, token);
             _workQueue.Enqueue(scheduledWord);
-        }               
+        }
+
+        private AtomicReference<TaskCompletionSource<bool>> _stopped = new AtomicReference<TaskCompletionSource<bool>>();
+
+        private void FireStopSignal()
+        {
+            try
+            {
+                _stopped.Value.TrySetResult(true);
+            }
+            catch (Exception)
+            {
+                
+            }
+        }
+
+        public void Dispose()
+        {
+            if (!Stop().Wait(_shutdownTimeout))
+            {    
+                Log.Warning("Failed to shutdown DedicatedThreadScheduler within {0}", _shutdownTimeout);   
+            }
+        }
+
+        private static readonly Task Completed = Task.FromResult(true);
+
+        private Task Stop()
+        {
+            var p = new TaskCompletionSource<bool>();
+            if (_stopped.CompareAndSet(null, p))
+            {
+                // Let remaining work that is already being processed finished. The termination task will complete afterwards
+                return p.Task;
+            }
+            return Completed;
+        }
     }
 
     public class ScheduledWork

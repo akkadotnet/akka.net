@@ -518,8 +518,6 @@ namespace Akka.Dispatch
 
         private void ScheduleShutdownAction()
         {
-            // InvalidOperationException if scheduler has been shutdown
-            // TODO: apparently the default scheduler implementations don't throw ANYTHING if you try to queue work when shutdown. Need to fix that
             try
             {
                 Configurator.Prerequisites.Scheduler.Advanced.ScheduleOnce(ShutdownTimeout, () =>
@@ -534,7 +532,7 @@ namespace Akka.Dispatch
                     }
                 });
             }
-            catch (InvalidOperationException)
+            catch (SchedulerException) // Scheduler has been shut down already. Need to just cleanup synchronously then.
             {
                 Shutdown();
             }
