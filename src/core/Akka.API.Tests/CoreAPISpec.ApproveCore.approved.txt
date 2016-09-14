@@ -3004,6 +3004,7 @@ namespace Akka.IO
         public abstract Akka.IO.ByteBuffer AsByteBuffer();
         public abstract Akka.IO.CompactByteString Compact();
         public abstract Akka.IO.ByteString Concat(Akka.IO.ByteString that);
+        public int CopyTo(byte[] buffer, int offset, int count) { }
         public int CopyToBuffer(Akka.IO.ByteBuffer buffer) { }
         public static Akka.IO.ByteString Create(Akka.IO.ByteBuffer buffer) { }
         public static Akka.IO.ByteString Create(byte[] buffer, int offset, int length) { }
@@ -3060,13 +3061,6 @@ namespace Akka.IO
         public static Akka.IO.CompactByteString FromString(string str, System.Text.Encoding encoding) { }
         public override bool IsCompact() { }
     }
-    public class DatagramChannel : Akka.IO.SocketChannel
-    {
-        public override bool IsOpen() { }
-        public static Akka.IO.DatagramChannel Open() { }
-        public System.Net.EndPoint Receive(Akka.IO.ByteBuffer buffer) { }
-        public int Send(Akka.IO.ByteBuffer buffer, System.Net.EndPoint target) { }
-    }
     public class Dns : Akka.Actor.ExtensionIdProvider<Akka.IO.DnsExt>
     {
         public static readonly Akka.IO.Dns Instance;
@@ -3117,11 +3111,6 @@ namespace Akka.IO
             public Akka.Configuration.Config ResolverConfig { get; }
         }
     }
-    public interface IBufferPool
-    {
-        Akka.IO.ByteBuffer Acquire();
-        void Release(Akka.IO.ByteBuffer buf);
-    }
     public interface IDnsProvider
     {
         System.Type ActorClass { get; }
@@ -3142,7 +3131,7 @@ namespace Akka.IO
         public class DatagramChannelCreator : Akka.IO.Inet.SocketOption
         {
             public DatagramChannelCreator() { }
-            public virtual Akka.IO.DatagramChannel Create() { }
+            public virtual System.Net.Sockets.Socket Create() { }
         }
         public class static SO
         {
@@ -3206,15 +3195,10 @@ namespace Akka.IO
         protected IOExtension() { }
         public abstract Akka.Actor.IActorRef Manager { get; }
     }
-    public abstract class SelectionHandlerSettings
+    public interface ISocketEventArgsPool
     {
-        protected SelectionHandlerSettings(Akka.Configuration.Config config) { }
-        public int MaxChannels { get; }
-        public int MaxChannelsPerSelector { get; set; }
-        public int SelectorAssociationRetries { get; }
-        public string SelectorDispatcher { get; }
-        public bool TraceLogging { get; }
-        public string WorkerDispatcher { get; }
+        System.Net.Sockets.SocketAsyncEventArgs Acquire(Akka.Actor.IActorRef actor);
+        void Release(System.Net.Sockets.SocketAsyncEventArgs buf);
     }
     public class SimpleDnsCache : Akka.IO.DnsBase, Akka.IO.IPeriodicCacheCleanup
     {
@@ -3236,23 +3220,9 @@ namespace Akka.IO
         public System.Net.Sockets.SocketAsyncEventArgs Request(object token) { }
         public void Return(System.Net.Sockets.SocketAsyncEventArgs saea) { }
     }
-    public class SocketChannel
-    {
-        public SocketChannel(System.Net.Sockets.Socket socket) { }
-        public System.Net.Sockets.Socket Socket { get; }
-        public Akka.IO.SocketChannel Accept() { }
-        public void Close() { }
-        public Akka.IO.SocketChannel ConfigureBlocking(bool block) { }
-        public bool Connect(System.Net.EndPoint address) { }
-        public bool FinishConnect() { }
-        public virtual bool IsOpen() { }
-        public static Akka.IO.SocketChannel Open() { }
-        public int Read(Akka.IO.ByteBuffer buffer) { }
-        public void Register(Akka.Actor.IActorRef connection, System.Nullable<System.Net.Sockets.SocketAsyncOperation> initialOps) { }
-        public int Write(Akka.IO.ByteBuffer buffer) { }
-    }
     public class Tcp : Akka.Actor.ExtensionIdProvider<Akka.IO.TcpExt>
     {
+        public static readonly Akka.Actor.SupervisorStrategy ConnectionSupervisorStrategy;
         public static readonly Akka.IO.Tcp Instance;
         public Tcp() { }
         public override Akka.IO.TcpExt CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
@@ -3295,7 +3265,7 @@ namespace Akka.IO
         {
             public static readonly Akka.IO.Tcp.Closed Instance;
         }
-        public class Command : Akka.IO.Tcp.Message, Akka.IO.SelectionHandler.IHasFailureMessage
+        public class Command : Akka.IO.Tcp.Message
         {
             public Command() { }
             public Akka.IO.Tcp.CommandFailed FailureMessage { get; }
@@ -3453,7 +3423,7 @@ namespace Akka.IO
         public override Akka.Actor.IActorRef Manager { get; }
         public Akka.IO.TcpExt.TcpSettings Settings { get; }
         public Akka.Actor.IActorRef GetManager() { }
-        public class TcpSettings : Akka.IO.SelectionHandlerSettings
+        public class TcpSettings
         {
             public TcpSettings(Akka.Configuration.Config config) { }
             public int BatchAcceptLimit { get; }
@@ -3462,9 +3432,9 @@ namespace Akka.IO
             public int FinishConnectRetries { get; }
             public string ManagementDispatcher { get; }
             public int MaxDirectBufferPoolSize { get; }
-            public int NrOfSelectors { get; }
             public int ReceivedMessageSizeLimit { get; }
             public System.Nullable<System.TimeSpan> RegisterTimeout { get; }
+            public bool TraceLogging { get; }
             public int TransferToLimit { get; set; }
         }
     }
@@ -3509,7 +3479,7 @@ namespace Akka.IO
             public Bound(System.Net.EndPoint localAddress) { }
             public System.Net.EndPoint LocalAddress { get; }
         }
-        public abstract class Command : Akka.IO.Udp.Message, Akka.IO.SelectionHandler.IHasFailureMessage
+        public abstract class Command : Akka.IO.Udp.Message
         {
             protected Command() { }
             public object FailureMessage { get; }
@@ -3590,7 +3560,7 @@ namespace Akka.IO
         public static readonly Akka.IO.UdpConnected Instance;
         public UdpConnected() { }
         public override Akka.IO.UdpConnectedExt CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
-        public abstract class Command : Akka.IO.UdpConnected.Message, Akka.IO.SelectionHandler.IHasFailureMessage
+        public abstract class Command : Akka.IO.UdpConnected.Message
         {
             protected Command() { }
             public object FailureMessage { get; }
@@ -4705,6 +4675,7 @@ namespace Akka.Util
         public abstract int Len { get; }
         protected abstract void Clear();
         public virtual Akka.Util.ByteIterator Clone() { }
+        public abstract int CopyTo(byte[] buffer, int offset, int count);
         public abstract int CopyToBuffer(Akka.IO.ByteBuffer buffer);
         public abstract Akka.Util.ByteIterator Drop(int n);
         public virtual Akka.Util.ByteIterator DropWhile(System.Func<byte, bool> p) { }
