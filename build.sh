@@ -29,11 +29,10 @@ mono $SCRIPT_PATH/src/.nuget/NuGet.exe update -self
 
 mono $SCRIPT_PATH/src/.nuget/NuGet.exe install FAKE -OutputDirectory $SCRIPT_PATH/src/packages -ExcludeVersion -Version 4.16.1
 
-mono $SCRIPT_PATH/src/.nuget/NuGet.exe install xunit.runners -OutputDirectory $SCRIPT_PATH/src/packages/FAKE -ExcludeVersion -Version 2.0.0
-mono $SCRIPT_PATH/src/.nuget/NuGet.exe install nunit.runners -OutputDirectory $SCRIPT_PATH/src/packages/FAKE -ExcludeVersion -Version 2.6.4
-mono $SCRIPT_PATH/src/.nuget/NuGet.exe install NUnit.Console -OutputDirectory $SCRIPT_PATH/src/packages/FAKE -ExcludeVersion -Version 3.0.0
+mono $SCRIPT_PATH/src/.nuget/NuGet.exe install xunit.runner.console -OutputDirectory $SCRIPT_PATH/src/packages/FAKE -ExcludeVersion -Version 2.0.0
+mono $SCRIPT_PATH/src/.nuget/NuGet.exe install NUnit.Console -OutputDirectory $SCRIPT_PATH/src/packages/FAKE -ExcludeVersion -Version 3.2.1
 
-mono $SCRIPT_PATH/src/.nuget/NuGet.exe install NBench.Runner -OutputDirectory $SCRIPT_PATH/src/packages -ExcludeVersion -Version 0.3.0
+mono $SCRIPT_PATH/src/.nuget/NuGet.exe install NBench.Runner -OutputDirectory $SCRIPT_PATH/src/packages -ExcludeVersion -Version 0.3.1
  
 
 if ! [ -e $SCRIPT_PATH/src/packages/SourceLink.Fake/tools/SourceLink.fsx ] ; then

@@ -624,6 +624,7 @@ namespace Akka.Remote.TestKit
             Task.Factory.StartNew(() =>
             {
                 RemoteConnection.Shutdown(context.Channel);
+                RemoteConnection.ReleaseAll(); // yep, let it run asynchronously.
             }, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
             context.FireChannelInactive();
         }
