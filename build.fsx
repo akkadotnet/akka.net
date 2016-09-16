@@ -318,7 +318,7 @@ Target "MultiNodeTests" <| fun _ ->
                 |> append assembly
                 |> append "-Dmultinode.enable-filesink=on"
                 |> append (sprintf "-Dmultinode.output-directory=\"%s\"" testOutput)
-                |> appendIfNotNullOrEmpty spec "-Dmultinode.test-spec="
+                |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
                 |> toText
 
         let result = ExecProcess(fun info -> 

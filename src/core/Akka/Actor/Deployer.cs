@@ -16,9 +16,12 @@ using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
+    /// <summary>
+    /// Used to configure and deploy actors.
+    /// </summary>
     public class Deployer
     {
-        private readonly Config _default;
+        protected readonly Config Default;
         private readonly Settings _settings;
         private readonly AtomicReference<WildcardTree<Deploy>> _deployments = new AtomicReference<WildcardTree<Deploy>>(new WildcardTree<Deploy>());
 
@@ -26,7 +29,7 @@ namespace Akka.Actor
         {
             _settings = settings;
             var config = settings.Config.GetConfig("akka.actor.deployment");
-            _default = config.GetConfig("default");
+            Default = config.GetConfig("default");
 
             var rootObj = config.Root.GetObject();
             if (rootObj == null) return;
@@ -90,7 +93,7 @@ namespace Akka.Actor
 
         public virtual Deploy ParseConfig(string key, Config config)
         {
-            var deployment = config.WithFallback(_default);
+            var deployment = config.WithFallback(Default);
             var routerType = deployment.GetString("router");
             var router = CreateRouterConfig(routerType, deployment);
             var dispatcher = deployment.GetString("dispatcher");

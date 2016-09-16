@@ -121,7 +121,7 @@ namespace Akka.Cluster
                 && !config.HasPath("nr-of-instances"))
             {
                 var maxTotalNrOfInstances = config
-                    .WithFallback(ClusterConfigFactory.Default())
+                    .WithFallback(Default)
                     .GetInt("cluster.max-total-nr-of-instances");
                 config2 = ConfigurationFactory.ParseString("nr-of-instances=" + maxTotalNrOfInstances)
                     .WithFallback(config);

@@ -591,6 +591,7 @@ namespace Akka.Actor
     }
     public class Deployer
     {
+        protected readonly Akka.Configuration.Config Default;
         public Deployer(Akka.Actor.Settings settings) { }
         public Akka.Actor.Deploy Lookup(Akka.Actor.ActorPath path) { }
         public Akka.Actor.Deploy Lookup(System.Collections.Generic.IEnumerable<string> path) { }
