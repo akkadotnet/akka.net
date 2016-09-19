@@ -136,7 +136,7 @@ namespace Akka.Remote.TestKit
                     var askTimeout = barrierTimeout + Settings.QueryTimeout;
                     // Need to force barrier to wait here, so we can pass along a "fail barrier" message in the event
                     // of a failed operation
-                    _client.Ask(new ToServer<EnterBarrier>(new EnterBarrier(name, barrierTimeout)), askTimeout).Wait();
+                    var result = _client.Ask(new ToServer<EnterBarrier>(new EnterBarrier(name, barrierTimeout)), askTimeout).Result;
                 }
                 catch (AggregateException)
                 {
