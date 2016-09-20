@@ -33,8 +33,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Batch_must_pass_through_elements_unchanged_when_there_is_no_rate_difference()
         {
-            var publisher = TestPublisher.CreateProbe<int>(this);
-            var subscriber = TestSubscriber.CreateProbe<int>(this);
+            var publisher = this.CreatePublisherProbe<int>();
+            var subscriber = this.CreateSubscriberProbe<int>();
 
             Source.FromPublisher(publisher)
                 .Batch(max: 2, seed: i => i, aggregate: (sum, i) => sum + i)
@@ -56,8 +56,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Batch_must_aggregate_elements_while_downstream_is_silent()
         {
-            var publisher = TestPublisher.CreateProbe<int>(this);
-            var subscriber = TestSubscriber.CreateProbe<List<int>>(this);
+            var publisher = this.CreatePublisherProbe<int>();
+            var subscriber = this.CreateSubscriberProbe<List<int>>();
 
             Source.FromPublisher(publisher).Batch(long.MaxValue, i => new List<int> {i}, (ints, i) =>
             {
@@ -91,8 +91,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Batch_must_backpressure_subscriber_when_upstream_is_slower()
         {
-            var publisher = TestPublisher.CreateProbe<int>(this);
-            var subscriber = TestSubscriber.CreateProbe<int>(this);
+            var publisher = this.CreatePublisherProbe<int>();
+            var subscriber = this.CreateSubscriberProbe<int>();
 
             Source.FromPublisher(publisher)
                 .Batch(2, i => i, (sum, i) => sum + i)

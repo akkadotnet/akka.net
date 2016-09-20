@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Dispatch;
 using Akka.IO;
@@ -83,7 +82,7 @@ namespace Akka.Streams.Implementation.IO
             private readonly AtomicReference<IDownstreamStatus> _downstreamStatus;
             private TaskCompletionSource<NotUsed> _flush;
             private TaskCompletionSource<NotUsed> _close;
-            private Action<Tuple<IAdapterToStageMessage, TaskCompletionSource<NotUsed>>> _upstreamCallback;
+            private readonly Action<Tuple<IAdapterToStageMessage, TaskCompletionSource<NotUsed>>> _upstreamCallback;
             private readonly OnPullRunnable _pullTask;
 
             public Logic(OutputStreamSourceStage stage, BlockingCollection<ByteString> dataQueue,
@@ -180,21 +179,20 @@ namespace Akka.Streams.Implementation.IO
                 }
             }
 
-            private bool UnblockUpsteam()
+            private void UnblockUpsteam()
             {
                 if (_flush != null)
                 {
                     _flush.TrySetResult(NotUsed.Instance);
                     _flush = null;
-                    return true;
+                    return;
                 }
 
                 if (_close == null)
-                    return false;
+                    return;
 
                 _close.TrySetResult(NotUsed.Instance);
                 _close = null;
-                return true;
             }
 
             private void SendResponseIfNeeded()

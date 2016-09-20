@@ -393,7 +393,7 @@ namespace Akka.Streams.Tests.IO
 
                 var task =
                     Sys.TcpStream()
-                        .Bind(serverAddress.Address.ToString(), serverAddress.Port, halfClose: false)
+                        .Bind(serverAddress.Address.ToString(), serverAddress.Port)
                         .ToMaterialized(
                             Sink.ForEach<Tcp.IncomingConnection>(conn => conn.Flow.Join(writeButIgnoreRead).Run(Materializer)),
                             Keep.Left)
@@ -423,7 +423,7 @@ namespace Akka.Streams.Tests.IO
             var serverAddress = TestUtils.TemporaryServerAddress();
 
             var task = Sys.TcpStream()
-                    .Bind(serverAddress.Address.ToString(), serverAddress.Port, halfClose: false)
+                    .Bind(serverAddress.Address.ToString(), serverAddress.Port)
                     .ToMaterialized(
                         Sink.ForEach<Tcp.IncomingConnection>(conn => conn.Flow.Join(Flow.Create<ByteString>())),
                         Keep.Left)

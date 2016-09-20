@@ -49,7 +49,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var probe = TestSubscriber.CreateManualProbe<int>(this);
+                var probe = this.CreateManualSubscriberProbe<int>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -176,7 +176,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var promise = new TaskCompletionSource<int>();
-                var subscriber = TestSubscriber.CreateManualProbe<int>(this);
+                var subscriber = this.CreateManualSubscriberProbe<int>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {

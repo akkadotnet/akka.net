@@ -51,7 +51,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Select_should_not_blow_up_with_high_request_counts()
         {
-            var probe = this.CreateManualProbe<int>();
+            var probe = this.CreateManualSubscriberProbe<int>();
 
             Source.From(new [] {1})
                 .Select(x => x + 1)
@@ -63,11 +63,9 @@ namespace Akka.Streams.Tests.Dsl
                 .Subscribe(probe);
 
             var subscription = probe.ExpectSubscription();
-            // TODO increase to 10000 once performance is improved
-            for (int i = 1; i <= 1000; i++)
-            {
+
+            for (int i = 1; i <= 10000; i++)
                 subscription.Request(int.MaxValue);
-            }
 
             probe.ExpectNext(6);
             probe.ExpectComplete();

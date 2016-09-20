@@ -37,7 +37,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var materializer = CreateMaterializer(autoFusing);
 
-            var sub = TestSubscriber.CreateManualProbe<int>(this);
+            var sub = this.CreateManualSubscriberProbe<int>();
             var f = RunnableGraph.FromGraph(GraphDsl.Create(FoldSink, (b, fold) =>
             {
                 var source = Source.From(Enumerable.Range(1, 10)).MapMaterializedValue(_ => Task.FromResult(0));
@@ -62,7 +62,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var materializer = CreateMaterializer(autoFusing);
 
-            var sub = TestSubscriber.CreateManualProbe<int>(this);
+            var sub = this.CreateManualSubscriberProbe<int>();
             var f = RunnableGraph.FromGraph(GraphDsl.Create(FoldSink, (b, fold) =>
             {
                 var zip = b.Add(new ZipWith<int, int, int>((i, i1) => i + i1));

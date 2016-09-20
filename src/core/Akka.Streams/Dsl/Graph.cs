@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
+using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Util.Internal;
 // ReSharper disable MemberCanBePrivate.Global
@@ -307,7 +308,7 @@ namespace Akka.Streams.Dsl
         public static IGraph<UniformFanInShape<T, T>, NotUsed> Create<T>(int inputPorts, int segmentSize,
             bool eagerClose = false)
         {
-            return GraphStages.WithDetachedInputs<T>(new Interleave<T, T>(inputPorts, segmentSize, eagerClose));
+            return GraphStages.WithDetachedInputs(new Interleave<T, T>(inputPorts, segmentSize, eagerClose));
         }
     }
 
@@ -978,11 +979,145 @@ namespace Akka.Streams.Dsl
         private UnzipWith() { }
     }
 
+    public static class ZipN
+    {
+        /// <summary>
+        /// Create a new <see cref="ZipN{T}"/>.
+        /// </summary>
+        public static IGraph<UniformFanInShape<T, IImmutableList<T>>> Create<T>(int n) => new ZipN<T>(n);
+    }
+
+    /// <summary>
+    /// Combine the elements of multiple streams into a stream of sequences.
+    /// A <see cref="ZipN{T}"/> has a n input ports and one out port
+    /// 
+    /// <para>
+    /// Emits when all of the inputs has an element available
+    /// </para>
+    /// Backpressures when downstream backpressures
+    /// <para>
+    /// Completes when any upstream completes
+    /// </para>
+    /// Cancels when downstream cancels
+    /// </summary>
+    public sealed class ZipN<T> : ZipWithN<T, IImmutableList<T>>
+    {
+        public ZipN(int n) : base(x => x, n)
+        {
+        }
+
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.ZipN;
+
+        public override string ToString() => "ZipN";
+    }
+
+    public static class ZipWithN
+    {
+        /// <summary>
+        /// Creates a new <see cref="ZipWithN{TIn,TOut}"/>
+        /// </summary>
+        public static IGraph<UniformFanInShape<TIn, TOut>> Create<TIn, TOut>(Func<IImmutableList<TIn>, TOut> zipper,
+            int n) => new ZipWithN<TIn, TOut>(zipper, n);
+    }
+
+    /// <summary>
+    /// Combine the elements of multiple streams into a stream of sequences using a combiner function.
+    /// A <see cref="ZipWithN{TIn,TOut}"/> has a n input ports and one out port
+    /// <para>
+    /// Emits when all of the inputs has an element available
+    /// </para>
+    /// Backpressures when downstream backpressures
+    /// <para>
+    /// Completes when any upstream completes
+    /// </para>
+    /// Cancels when downstream cancels
+    /// </summary>
+    public class ZipWithN<TIn, TOut> : GraphStage<UniformFanInShape<TIn, TOut>>
+    {
+        #region Logic 
+
+        private sealed class Logic : GraphStageLogic
+        {
+            private readonly ZipWithN<TIn, TOut> _stage;
+            private int _pending;
+            // Without this field the completion signalling would take one extra pull
+            private bool _willShutDown;
+
+            public Logic(ZipWithN<TIn, TOut> stage) : base(stage.Shape)
+            {
+                _stage = stage;
+
+                stage.Inlets.ForEach(i =>
+                {
+                    SetHandler(i, onPush: () =>
+                    {
+                        _pending--;
+                        if(_pending == 0)
+                            PushAll();
+                    }, onUpstreamFinish: () =>
+                    {
+                        if(!IsAvailable(i))
+                            CompleteStage();
+                        _willShutDown = true;
+                    });
+                });
+
+                SetHandler(stage.Out, onPull: () =>
+                {
+                    _pending += stage._n;
+                    if(_pending == 0)
+                        PushAll();
+                });
+            }
+
+            private void PushAll()
+            {
+                Push(_stage.Out, _stage._zipper(_stage.Inlets.Select(i => Grab((i))).ToImmutableList()));
+                if(_willShutDown)
+                    CompleteStage();
+                else
+                    _stage.Inlets.ForEach(Pull);
+            }
+
+            public override void PreStart() => _stage.Inlets.ForEach(Pull);
+
+            public override string ToString() => "ZipWithNLogic";
+        }
+
+        #endregion
+
+        private readonly Func<IImmutableList<TIn>, TOut> _zipper;
+        private readonly int _n;
+        
+        public ZipWithN(Func<IImmutableList<TIn>, TOut> zipper, int n)
+        {
+            _zipper = zipper;
+            _n = n;
+            Shape = new UniformFanInShape<TIn, TOut>(n);
+            Out = Shape.Out;
+            Inlets = Shape.Ins;
+        }
+
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.ZipWithN;
+
+        public Outlet<TOut> Out { get; }
+
+        public IImmutableList<Inlet<TIn>> Inlets { get; }
+
+        public Inlet<TIn> In(int i) => Inlets[i];
+
+        public override UniformFanInShape<TIn, TOut> Shape { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+        public override string ToString() => "ZipWithN";
+    }
+
     public static class Concat
     {
         public static IGraph<UniformFanInShape<T, T>, NotUsed> Create<T>(int inputPorts = 2)
         {
-            return GraphStages.WithDetachedInputs<T>(new Concat<T, T>(inputPorts));
+            return GraphStages.WithDetachedInputs(new Concat<T, T>(inputPorts));
         }
     }
 

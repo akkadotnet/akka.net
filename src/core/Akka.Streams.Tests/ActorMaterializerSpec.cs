@@ -10,7 +10,6 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
-using Akka.Streams.TestKit.Tests;
 using Akka.Streams.Implementation;
 using Akka.TestKit;
 using FluentAssertions;

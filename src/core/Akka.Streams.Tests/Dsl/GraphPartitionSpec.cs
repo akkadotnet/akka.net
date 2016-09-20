@@ -67,8 +67,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c1 = TestSubscriber.CreateProbe<string>(this);
-                var c2 = TestSubscriber.CreateProbe<string>(this);
+                var c1 = this.CreateSubscriberProbe<string>();
+                var c2 = this.CreateSubscriberProbe<string>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -96,8 +96,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c1 = TestSubscriber.CreateProbe<int>(this);
-                var c2 = TestSubscriber.CreateProbe<int>(this);
+                var c1 = this.CreateSubscriberProbe<int>();
+                var c2 = this.CreateSubscriberProbe<int>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -126,9 +126,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var p1 = TestPublisher.CreateProbe<int>(this);
-                var c1 = TestSubscriber.CreateProbe<int>(this);
-                var c2 = TestSubscriber.CreateProbe<int>(this);
+                var p1 = this.CreatePublisherProbe<int>();
+                var c1 = this.CreateSubscriberProbe<int>();
+                var c2 = this.CreateSubscriberProbe<int>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -195,8 +195,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c1 = TestSubscriber.CreateProbe<int>(this);
-                var c2 = TestSubscriber.CreateProbe<int>(this);
+                var c1 = this.CreateSubscriberProbe<int>();
+                var c2 = this.CreateSubscriberProbe<int>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -224,7 +224,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c1 = TestSubscriber.CreateProbe<int>(this);
+                var c1 = this.CreateSubscriberProbe<int>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {

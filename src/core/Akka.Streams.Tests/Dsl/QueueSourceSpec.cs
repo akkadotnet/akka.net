@@ -42,7 +42,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void QueueSource_should_emit_received_message_to_the_stream()
         {
-            var s = this.CreateManualProbe<int>();
+            var s = this.CreateManualSubscriberProbe<int>();
             var queue =
                 Source.Queue<int>(10, OverflowStrategy.Fail).To(Sink.FromSubscriber(s)).Run(_materializer);
             var sub = s.ExpectSubscription();
@@ -94,7 +94,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void QueueSource_should_buffer_when_needed()
         {
-            var s = this.CreateManualProbe<int>();
+            var s = this.CreateManualSubscriberProbe<int>();
             var queue =
                 Source.Queue<int>(100, OverflowStrategy.DropHead)
                     .To(Sink.FromSubscriber(s))
@@ -118,7 +118,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var s = this.CreateManualProbe<int>();
+                var s = this.CreateManualSubscriberProbe<int>();
                 var queue =
                     Source.Queue<int>(0, OverflowStrategy.DropHead)
                         .To(Sink.FromSubscriber(s))
@@ -137,7 +137,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var s = this.CreateManualProbe<int>();
+                var s = this.CreateManualSubscriberProbe<int>();
                 var queue =
                     Source.Queue<int>(0, OverflowStrategy.DropHead)
                         .To(Sink.FromSubscriber(s))
@@ -158,7 +158,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var s = this.CreateManualProbe<int>();
+                var s = this.CreateManualSubscriberProbe<int>();
                 var queue =
                     Source.Queue<int>(0, OverflowStrategy.DropHead)
                         .To(Sink.FromSubscriber(s))
@@ -182,7 +182,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var s = this.CreateManualProbe<int>();
+                var s = this.CreateManualSubscriberProbe<int>();
                 var queue =
                     Source.Queue<int>(1, OverflowStrategy.Fail)
                         .To(Sink.FromSubscriber(s))
@@ -200,7 +200,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var s = this.CreateManualProbe<int>();
+                var s = this.CreateManualSubscriberProbe<int>();
                 var probe = CreateTestProbe();
                 var queue = TestSourceStage<int, ISourceQueueWithComplete<int>>.Create(
                     new QueueSource<int>(1, OverflowStrategy.DropHead), probe)
@@ -249,7 +249,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var s = this.CreateManualProbe<int>();
+                var s = this.CreateManualSubscriberProbe<int>();
                 var queue =
                     Source.Queue<int>(1, OverflowStrategy.Fail)
                         .To(Sink.FromSubscriber(s))
@@ -266,7 +266,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var s = this.CreateManualProbe<int>();
+                var s = this.CreateManualSubscriberProbe<int>();
                 var queue =
                     Source.Queue<int>(1, OverflowStrategy.DropNew)
                         .To(Sink.FromSubscriber(s))
@@ -288,7 +288,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var s = this.CreateManualProbe<int>();
+                var s = this.CreateManualSubscriberProbe<int>();
                 var queue =
                     Source.Queue<int>(1, OverflowStrategy.Backpressure)
                         .To(Sink.FromSubscriber(s))
@@ -315,7 +315,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var s = this.CreateManualProbe<int>();
+                var s = this.CreateManualSubscriberProbe<int>();
                 var queue =
                     Source.Queue<int>(1, OverflowStrategy.DropNew)
                         .To(Sink.FromSubscriber(s))
@@ -335,8 +335,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             var source = Source.Queue<string>(1, OverflowStrategy.Fail);
 
-            var mat1Subscriber = TestSubscriber.CreateProbe<string>(this);
-            var mat2Subscriber = TestSubscriber.CreateProbe<string>(this);
+            var mat1Subscriber = this.CreateSubscriberProbe<string>();
+            var mat2Subscriber = this.CreateSubscriberProbe<string>();
             var sourceQueue1 = source.To(Sink.FromSubscriber(mat1Subscriber)).Run(_materializer);
             var sourceQueue2 = source.To(Sink.FromSubscriber(mat2Subscriber)).Run(_materializer);
 

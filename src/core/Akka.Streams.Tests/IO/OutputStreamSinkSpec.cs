@@ -33,22 +33,22 @@ namespace Akka.Streams.Tests.IO
 
             public override void Flush()
             {
-                throw new System.NotImplementedException();
+                throw new NotImplementedException();
             }
 
             public override long Seek(long offset, SeekOrigin origin)
             {
-                throw new System.NotImplementedException();
+                throw new NotImplementedException();
             }
 
             public override void SetLength(long value)
             {
-                throw new System.NotImplementedException();
+                throw new NotImplementedException();
             }
 
             public override int Read(byte[] buffer, int offset, int count)
             {
-                throw new System.NotImplementedException();
+                throw new NotImplementedException();
             }
 
             public override void Write(byte[] buffer, int offset, int count)
@@ -72,27 +72,27 @@ namespace Akka.Streams.Tests.IO
 
             public override void Flush()
             {
-                throw new System.NotImplementedException();
+                throw new NotImplementedException();
             }
 
             public override long Seek(long offset, SeekOrigin origin)
             {
-                throw new System.NotImplementedException();
+                throw new NotImplementedException();
             }
 
             public override void SetLength(long value)
             {
-                throw new System.NotImplementedException();
+                throw new NotImplementedException();
             }
 
             public override int Read(byte[] buffer, int offset, int count)
             {
-                throw new System.NotImplementedException();
+                throw new NotImplementedException();
             }
 
             public override void Write(byte[] buffer, int offset, int count)
             {
-                throw new System.NotImplementedException();
+                throw new NotImplementedException();
             }
 
             protected override void Dispose(bool disposing)
@@ -119,22 +119,22 @@ namespace Akka.Streams.Tests.IO
 
             public override void Flush()
             {
-                throw new System.NotImplementedException();
+                throw new NotImplementedException();
             }
 
             public override long Seek(long offset, SeekOrigin origin)
             {
-                throw new System.NotImplementedException();
+                throw new NotImplementedException();
             }
 
             public override void SetLength(long value)
             {
-                throw new System.NotImplementedException();
+                throw new NotImplementedException();
             }
 
             public override int Read(byte[] buffer, int offset, int count)
             {
-                throw new System.NotImplementedException();
+                throw new NotImplementedException();
             }
 
             public override void Write(byte[] buffer, int offset, int count)

@@ -8,6 +8,7 @@
 using System;
 using System.Diagnostics;
 using Akka.Streams.Dsl;
+using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using static Akka.Streams.Extra.Timed;
 
@@ -29,8 +30,8 @@ namespace Akka.Streams.Extra
         {
             var ctx = new TimedFlowContext();
 
-            var startTimed = Flow.Create<TIn>().Transform(() => new StartTimed<TIn>(ctx)).Named("startTimed");
-            var stopTimed = Flow.Create<TOut>().Transform(() => new StopTime<TOut>(ctx, onComplete)).Named("stopTimed");
+            var startTimed = Flow.Create<TIn>().Via(new StartTimed<TIn>(ctx)).Named("startTimed");
+            var stopTimed = Flow.Create<TOut>().Via(new StopTime<TOut>(ctx, onComplete)).Named("stopTimed");
 
             return measuredOps(source.Via(startTimed)).Via(stopTimed);
         }
@@ -46,8 +47,8 @@ namespace Akka.Streams.Extra
             // they do share a super-type (FlowOps), but all operations of FlowOps return path dependant type
             var ctx = new TimedFlowContext();
 
-            var startTimed = Flow.Create<TOut>().Transform(() => new StartTimed<TOut>(ctx)).Named("startTimed");
-            var stopTimed = Flow.Create<TOut2>().Transform(() => new StopTime<TOut2>(ctx, onComplete)).Named("stopTimed");
+            var startTimed = Flow.Create<TOut>().Via(new StartTimed<TOut>(ctx)).Named("startTimed");
+            var stopTimed = Flow.Create<TOut2>().Via(new StopTime<TOut2>(ctx, onComplete)).Named("stopTimed");
 
             return measuredOps(flow.Via(startTimed)).Via(stopTimed);
         }
@@ -69,7 +70,7 @@ namespace Akka.Streams.Extra
         {
             var timedInterval =
                 Flow.Create<TIn>()
-                    .Transform(() => new TimedIntervall<TIn>(matching, onInterval))
+                    .Via(new TimedIntervall<TIn>(matching, onInterval))
                     .Named("timedInterval");
 
             return flow.Via(timedInterval);
@@ -91,30 +92,76 @@ namespace Akka.Streams.Extra
             }
         }
 
-        internal sealed class StartTimed<T> : PushStage<T, T>
+        internal sealed class StartTimed<T> : SimpleLinearGraphStage<T>
         {
+            #region Loigc 
+
+            private sealed class Logic : GraphStageLogic
+            {
+                public Logic(StartTimed<T> stage) : base(stage.Shape)
+                {
+                    var started = false;
+                    SetHandler(stage.Outlet, onPull:()=> Pull(stage.Inlet));
+                    SetHandler(stage.Inlet, onPush: () =>
+                    {
+                        if (!started)
+                        {
+                            stage._timedContext.Start();
+                            started = true;
+                        }
+
+                        Push(stage.Outlet, Grab(stage.Inlet));
+                    });
+                }
+            }
+
+            #endregion  
+
             private readonly TimedFlowContext _timedContext;
-            private bool _started;
 
             public StartTimed(TimedFlowContext timedContext)
             {
                 _timedContext = timedContext;
             }
 
-            public override ISyncDirective OnPush(T element, IContext<T> context)
-            {
-                if (!_started)
-                {
-                    _timedContext.Start();
-                    _started = true;
-                }
-
-                return context.Push(element);
-            }
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
         }
 
-        internal sealed class StopTime<T> : PushStage<T, T>
+        internal sealed class StopTime<T> : SimpleLinearGraphStage<T>
         {
+            #region Loigc 
+
+            private sealed class Logic : GraphStageLogic
+            {
+                private readonly StopTime<T> _stage;
+
+                public Logic(StopTime<T> stage) : base(stage.Shape)
+                {
+                    _stage = stage;
+
+                    SetHandler(stage.Outlet, onPull: () => Pull(stage.Inlet));
+                    SetHandler(stage.Inlet, onPush: () => Push(stage.Outlet, Grab(stage.Inlet)),
+                        onUpstreamFailure: ex =>
+                        {
+                            StopTime();
+                            FailStage(ex);
+                        },
+                        onUpstreamFinish: () =>
+                        {
+                            StopTime();
+                            CompleteStage();
+                        });
+                }
+
+                private void StopTime()
+                {
+                    var d = _stage._timedContext.Stop();
+                    _stage._onComplete(d);
+                }
+            }
+
+            #endregion  
+
             private readonly TimedFlowContext _timedContext;
             private readonly Action<TimeSpan> _onComplete;
 
@@ -123,58 +170,58 @@ namespace Akka.Streams.Extra
                 _timedContext = timedContext;
                 _onComplete = onComplete;
             }
-
-            public override ISyncDirective OnPush(T element, IContext<T> context) => context.Push(element);
-
-            public override ITerminationDirective OnUpstreamFailure(Exception cause, IContext<T> context)
-            {
-                Complete();
-                return context.Fail(cause);
-            }
-
-            public override ITerminationDirective OnUpstreamFinish(IContext<T> context)
-            {
-                Complete();
-                return context.Finish();
-            }
-
-            private void Complete() => _onComplete(_timedContext.Stop());
+            
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
         }
 
-        internal sealed class TimedIntervall<T> : PushStage<T, T>
+        internal sealed class TimedIntervall<T> : SimpleLinearGraphStage<T>
         {
+            #region Loigc 
+
+            private sealed class Logic : GraphStageLogic
+            {
+                private long _previousTicks;
+                private long _matched;
+
+                public Logic(TimedIntervall<T> stage) : base(stage.Shape)
+                {
+                    SetHandler(stage.Outlet, onPull: () => Pull(stage.Inlet));
+                    SetHandler(stage.Inlet, onPush: () =>
+                        {
+                            var element = Grab(stage.Inlet);
+                            if (stage._matching(element))
+                            {
+                                var d = UpdateInterval();
+                                if (_matched > 1)
+                                    stage._onInterval(d);
+                            }
+
+                            Push(stage.Outlet, element);
+                        });
+                }
+
+                private TimeSpan UpdateInterval()
+                {
+                    _matched += 1;
+                    var nowTicks = DateTime.Now.Ticks;
+                    var d = nowTicks - _previousTicks;
+                    _previousTicks = nowTicks;
+                    return TimeSpan.FromTicks(d);
+                }
+            }
+
+            #endregion  
+            
             private readonly Func<T, bool> _matching;
             private readonly Action<TimeSpan> _onInterval;
-            private long _prevTicks;
-            private long _matched;
-
+            
             public TimedIntervall(Func<T, bool> matching, Action<TimeSpan> onInterval)
             {
                 _matching = matching;
                 _onInterval = onInterval;
             }
 
-            public override ISyncDirective OnPush(T element, IContext<T> context)
-            {
-                if (_matching(element))
-                {
-                    var d = UpdateInterval(element);
-
-                    if (_matched > 1)
-                        _onInterval(d);
-                }
-
-                return context.Push(element);
-            }
-
-            private TimeSpan UpdateInterval(T elem)
-            {
-                _matched++;
-                var nowTicks = DateTime.Now.Ticks;
-                var d = nowTicks - _prevTicks;
-                _prevTicks = nowTicks;
-                return TimeSpan.FromTicks(d);
-            }
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
         }
     }
 }

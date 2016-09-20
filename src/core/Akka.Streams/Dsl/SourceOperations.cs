@@ -36,9 +36,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
-        public static Source<Option<TOut>, TMat> Recover<TOut, TMat>(this Source<TOut, TMat> flow, Func<Exception, Option<TOut>> partialFunc)
+        public static Source<TOut, TMat> Recover<TOut, TMat>(this Source<TOut, TMat> flow, Func<Exception, Option<TOut>> partialFunc)
         {
-            return (Source<Option<TOut>, TMat>)InternalFlowOperations.Recover(flow, partialFunc);
+            return (Source<TOut, TMat>)InternalFlowOperations.Recover(flow, partialFunc);
         }
 
         /// <summary>
@@ -60,10 +60,36 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
+        [Obsolete("Use RecoverWithRetries instead.")]
         public static Source<TOut, TMat> RecoverWith<TOut, TMat>(this Source<TOut, TMat> flow,
             Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc)
         {
-            return (Source<TOut, TMat>)InternalFlowOperations.RecoverWith(flow, partialFunc);
+            return RecoverWithRetries(flow, partialFunc, -1);
+        }
+
+        /// <summary>
+        /// RecoverWithRetries  allows to switch to alternative Source on flow failure. It will stay in effect after
+        /// a failure has been recovered up to <paramref name="attempts"/> number of times so that each time there is a failure it is fed into the <paramref name="partialFunc"/> and a new
+        /// Source may be materialized. Note that if you pass in 0, this won't attempt to recover at all. Passing in a negative number will behave exactly the same as  <see cref="RecoverWithRetries{TOut,TMat}"/>.
+        /// <para>
+        /// Since the underlying failure signal onError arrives out-of-band, it might jump over existing elements.
+        /// This stage can recover the failure signal, but not the skipped elements, which will be dropped.
+        /// </para>
+        /// <para>
+        /// Emits when element is available from the upstream or upstream is failed and element is available from alternative Source
+        /// </para>
+        /// <para>
+        /// Backpressures when downstream backpressures
+        /// </para>
+        /// <para>
+        /// Completes when upstream completes or upstream failed with exception <paramref name="partialFunc"/> can handle
+        /// </para>
+        /// Cancels when downstream cancels 
+        /// </summary>
+        public static Source<TOut, TMat> RecoverWithRetries<TOut, TMat>(this Source<TOut, TMat> flow,
+            Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc, int attempts)
+        {
+            return (Source<TOut, TMat>)InternalFlowOperations.RecoverWithRetries(flow, partialFunc, attempts);
         }
 
         /// <summary>
@@ -903,8 +929,8 @@ namespace Akka.Streams.Dsl
         /// on <see cref="SubFlow{TOut,TMat,TClosed}"/> for more information.
         /// 
         /// It is important to note that the substreams also propagate back-pressure as
-        /// any other stream, which means that blocking one substream will block the <see cref="SplitWhen{T,TMat,TClosed}"/>
-        /// operator itself—and thereby all substreams—once all internal or
+        /// any other stream, which means that blocking one substream will block the <see cref="SplitWhen{TOut,TMat}(Source{TOut,TMat},SubstreamCancelStrategy,Func{TOut,bool})"/>
+        ///     operator itself—and thereby all substreams—once all internal or
         /// explicit buffers are filled.
         /// 
         /// If the split <paramref name="predicate"/> throws an exception and the supervision decision
@@ -961,9 +987,8 @@ namespace Akka.Streams.Dsl
         /// on <see cref="SubFlow{TOut,TMat,TClosed}"/> for more information.
         ///
         /// It is important to note that the substreams also propagate back-pressure as
-        /// any other stream, which means that blocking one substream will block the <see cref="SplitAfter{T,TMat,TClosed}"/>
-        /// operator itself—and thereby all substreams—once all internal or
-        /// explicit buffers are filled.
+        /// any other stream, which means that blocking one substream will block the <see cref="SplitAfter{TOut,TMat}(Source{TOut,TMat},SubstreamCancelStrategy,Func{TOut,bool})"/> 
+        /// operator itself—and thereby all substreams—once all internal or explicit buffers are filled.
         ///
         /// If the split <paramref name="predicate"/> throws an exception and the supervision decision
         /// is <see cref="Directive.Stop"/> the stream and substreams will be completed
@@ -1071,7 +1096,8 @@ namespace Akka.Streams.Dsl
 
         /// <summary>
         /// If the time between two processed elements exceed the provided timeout, the stream is failed
-        /// with a <see cref="TimeoutException"/>.
+        /// with a <see cref="TimeoutException"/>. 
+        /// The timeout is checked periodically, so the resolution of the check is one period (equals to timeout value).
         /// <para>
         /// Emits when upstream emits an element
         /// </para>
@@ -1084,6 +1110,24 @@ namespace Akka.Streams.Dsl
         public static Source<TOut, TMat> IdleTimeout<TOut, TMat>(this Source<TOut, TMat> flow, TimeSpan timeout)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.IdleTimeout(flow, timeout);
+        }
+
+        /// <summary>
+        /// If the time between the emission of an element and the following downstream demand exceeds the provided timeout,
+        /// the stream is failed with a <see cref="TimeoutException"/>. The timeout is checked periodically,
+        /// so the resolution of the check is one period (equals to timeout value).
+        /// <para>
+        /// Emits when upstream emits an element
+        /// </para>
+        /// Backpressures when downstream backpressures
+        /// <para>
+        /// Completes when upstream completes or fails if timeout elapses between element emission and downstream demand.
+        /// </para>
+        /// Cancels when downstream cancels
+        /// </summary>
+        public static Source<TOut, TMat> BackpressureTimeout<TOut, TMat>(this Source<TOut, TMat> flow, TimeSpan timeout)
+        {
+            return (Source<TOut, TMat>)InternalFlowOperations.BackpressureTimeout(flow, timeout);
         }
 
         /// <summary>
@@ -1250,9 +1294,9 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Delays the initial element by the specified duration.
         /// <para>
-        /// Emits when upstream emits an element if the initial delay already elapsed
+        /// Emits when upstream emits an element if the initial delay is already elapsed
         /// </para>
-        /// Backpressures when downstream backpressures or initial delay not yet elapsed
+        /// Backpressures when downstream backpressures or initial delay is not yet elapsed
         /// <para>
         /// Completes when upstream completes
         /// </para>
@@ -1317,7 +1361,7 @@ namespace Akka.Streams.Dsl
 
         /// <summary>
         /// Interleave is a deterministic merge of the given <see cref="Source{TOut,TMat}"/> with elements of this <see cref="IFlow{TOut,TMat}"/>.
-        /// It first emits <paramref name="segmentSize"/> number of elements from this flow to downstream, then - same amount for <paramref name="graph"/>
+        /// It first emits <paramref name="segmentSize"/> number of elements from this flow to downstream, then - same amount for <paramref name="other"/>
         /// source, then repeat process.
         ///  
         /// After one of upstreams is complete than all the rest elements will be emitted from the second one

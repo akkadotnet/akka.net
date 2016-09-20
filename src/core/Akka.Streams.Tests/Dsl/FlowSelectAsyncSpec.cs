@@ -44,7 +44,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c = TestSubscriber.CreateManualProbe<int>(this);
+                var c = this.CreateManualSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 3))
                     .SelectAsync(4, Task.FromResult)
                     .RunWith(Sink.FromSubscriber(c), Materializer);
@@ -64,7 +64,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_with_SelectAsync_must_produce_task_elements_in_order()
         {
-            var c = TestSubscriber.CreateManualProbe<int>(this);
+            var c = this.CreateManualSubscriberProbe<int>();
             Source.From(Enumerable.Range(1, 50))
                 .SelectAsync(4, i => Task.Run(()=>
                 {
@@ -82,7 +82,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Flow_with_SelectAsync_must_not_run_more_futures_than_requested_parallelism()
         {
             var probe = CreateTestProbe();
-            var c = TestSubscriber.CreateManualProbe<int>(this);
+            var c = this.CreateManualSubscriberProbe<int>();
             Source.From(Enumerable.Range(1, 20))
                 .SelectAsync(8, n => Task.Run(() => 
                 {
@@ -112,7 +112,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var latch = new TestLatch(1);
-                var c = TestSubscriber.CreateManualProbe<int>(this);
+                var c = this.CreateManualSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 5))
                     .SelectAsync(4, n => Task.Run(() =>
                     {
@@ -136,7 +136,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var latch = new TestLatch(1);
-                var c = TestSubscriber.CreateManualProbe<int>(this);
+                var c = this.CreateManualSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 5))
                     .SelectAsync(4, n =>
                     {
@@ -164,7 +164,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 this.AssertAllStagesStopped(() =>
                 {
-                    var c = TestSubscriber.CreateManualProbe<int>(this);
+                    var c = this.CreateManualSubscriberProbe<int>();
                     Source.From(Enumerable.Range(1, 5))
                         .SelectAsync(4, n => Task.Run(() =>
                         {
@@ -231,7 +231,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_with_SelectAsync_must_resume_when_SelectAsync_throws()
         {
-            var c = TestSubscriber.CreateManualProbe<int>(this);
+            var c = this.CreateManualSubscriberProbe<int>();
             Source.From(Enumerable.Range(1, 5))
                 .SelectAsync(4, n =>
                 {
@@ -250,7 +250,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_with_SelectAsync_must_signal_NPE_when_task_is_completed_with_null()
         {
-            var c = TestSubscriber.CreateManualProbe<string>(this);
+            var c = this.CreateManualSubscriberProbe<string>();
 
             Source.From(new[] {"a", "b"})
                 .SelectAsync(4, _ => Task.FromResult(null as string))
@@ -264,7 +264,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_with_SelectAsync_must_resume_when_task_is_completed_with_null()
         {
-            var c = TestSubscriber.CreateManualProbe<string>(this);
+            var c = this.CreateManualSubscriberProbe<string>();
             Source.From(new[] { "a", "b", "c" })
                 .SelectAsync(4, s => s.Equals("b") ? Task.FromResult(null as string) : Task.FromResult(s))
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
@@ -281,8 +281,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var pub = TestPublisher.CreateManualProbe<int>(this);
-                var sub = TestSubscriber.CreateManualProbe<int>(this);
+                var pub = this.CreateManualPublisherProbe<int>();
+                var sub = this.CreateManualSubscriberProbe<int>();
 
                 Source.FromPublisher(pub)
                     .SelectAsync(4, _ => Task.FromResult(0))

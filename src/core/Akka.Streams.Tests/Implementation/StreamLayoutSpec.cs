@@ -36,12 +36,12 @@ namespace Akka.Streams.Tests.Implementation
             public override Shape Shape { get; }
             public override IModule ReplaceShape(Shape shape)
             {
-                throw new System.NotImplementedException();
+                throw new NotImplementedException();
             }
             
             public override IModule CarbonCopy()
             {
-                throw new System.NotImplementedException();
+                throw new NotImplementedException();
             }
 
             public override Attributes Attributes => Attributes.None;
@@ -208,18 +208,18 @@ namespace Akka.Streams.Tests.Implementation
             sink123.IsSink.Should().Be(true);
             sink123.IsSource.Should().Be(false);
 
-            var runnable0123a = source0.Compose<object, object, NotUsed>(sink123, Keep.None).Wire(source0.OutPorts.First(), sink123.InPorts.First());
-            var runnable0123b = source012.Compose<object, object, NotUsed>(sink3, Keep.None).Wire(source012.OutPorts.First(), sink3.InPorts.First());
-            var runnable0123c = source0
+            var runnable0123A = source0.Compose<object, object, NotUsed>(sink123, Keep.None).Wire(source0.OutPorts.First(), sink123.InPorts.First());
+            source012.Compose<object, object, NotUsed>(sink3, Keep.None).Wire(source012.OutPorts.First(), sink3.InPorts.First());
+            source0
                 .Compose<object, object, NotUsed>(flow12, Keep.None).Wire(source0.OutPorts.First(), flow12.InPorts.First())
                 .Compose<object, object, NotUsed>(sink3, Keep.None).Wire(flow12.OutPorts.First(), sink3.InPorts.First());
 
-            runnable0123a.InPorts.Count.Should().Be(0);
-            runnable0123a.OutPorts.Count.Should().Be(0);
-            runnable0123a.IsRunnable.Should().Be(true);
-            runnable0123a.IsFlow.Should().Be(false);
-            runnable0123a.IsSink.Should().Be(false);
-            runnable0123a.IsSource.Should().Be(false);
+            runnable0123A.InPorts.Count.Should().Be(0);
+            runnable0123A.OutPorts.Count.Should().Be(0);
+            runnable0123A.IsRunnable.Should().Be(true);
+            runnable0123A.IsFlow.Should().Be(false);
+            runnable0123A.IsSink.Should().Be(false);
+            runnable0123A.IsSource.Should().Be(false);
         }
 
         [Fact]

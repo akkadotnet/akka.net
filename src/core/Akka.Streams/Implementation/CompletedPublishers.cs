@@ -118,20 +118,12 @@ namespace Akka.Streams.Implementation
 
         public void Subscribe(ISubscriber<T> subscriber)
         {
-            try
+            ReactiveStreamsCompliance.RequireNonNullSubscriber(subscriber);
+            ReactiveStreamsCompliance.TryOnSubscribe(subscriber, new MaybeSubscription(subscriber, Promise));
+            Promise.Task.ContinueWith(t =>
             {
-                ReactiveStreamsCompliance.RequireNonNullSubscriber(subscriber);
-                ReactiveStreamsCompliance.TryOnSubscribe(subscriber, new MaybeSubscription(subscriber, Promise));
-                Promise.Task.ContinueWith(t =>
-                {
-                    ReactiveStreamsCompliance.TryOnError(subscriber, t.Exception);
-                }, TaskContinuationOptions.NotOnRanToCompletion);
-            }
-            catch (Exception)
-            {
-                //case sv: SpecViolation ⇒ ec.reportFailure(sv)
-                throw;
-            }
+                ReactiveStreamsCompliance.TryOnError(subscriber, t.Exception);
+            }, TaskContinuationOptions.NotOnRanToCompletion);
         }
 
         public override string ToString() => Name;

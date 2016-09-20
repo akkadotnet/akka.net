@@ -42,7 +42,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c = TestSubscriber.CreateManualProbe<int>(this);
+                var c = this.CreateManualSubscriberProbe<int>();
                 var latch = Enumerable.Range(0, 4).Select(_ => new TestLatch(1)).ToArray();
 
                 Source.From(Enumerable.Range(0, 4)).SelectAsyncUnordered(4, n => Task.Run(() =>
@@ -74,7 +74,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Flow_with_SelectAsyncUnordered_must_not_run_more_futures_than_requested_elements()
         {
             var probe = CreateTestProbe();
-            var c = TestSubscriber.CreateManualProbe<int>(this);
+            var c = this.CreateManualSubscriberProbe<int>();
             Source.From(Enumerable.Range(1, 20))
                 .SelectAsyncUnordered(4, n => Task.Run(() =>
                 {
@@ -106,7 +106,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var latch = new TestLatch(1);
-                var c = TestSubscriber.CreateManualProbe<int>(this);
+                var c = this.CreateManualSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 5))
                     .SelectAsyncUnordered(4, n => Task.Run(() =>
                     {
@@ -130,7 +130,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var latch = new TestLatch(1);
-                var c = TestSubscriber.CreateManualProbe<int>(this);
+                var c = this.CreateManualSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 5))
                     .SelectAsyncUnordered(4, n =>
                     {
@@ -240,7 +240,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_with_SelectAsyncUnordered_must_signal_NPE_when_task_is_completed_with_null()
         {
-            var c = TestSubscriber.CreateManualProbe<string>(this);
+            var c = this.CreateManualSubscriberProbe<string>();
 
             Source.From(new[] {"a", "b"})
                 .SelectAsyncUnordered(4, _ => Task.FromResult(null as string))
@@ -254,7 +254,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_with_SelectAsyncUnordered_must_resume_when_task_is_completed_with_null()
         {
-            var c = TestSubscriber.CreateManualProbe<string>(this);
+            var c = this.CreateManualSubscriberProbe<string>();
             Source.From(new[] { "a", "b", "c" })
                 .SelectAsyncUnordered(4, s => s.Equals("b") ? Task.FromResult(null as string) : Task.FromResult(s))
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
@@ -270,8 +270,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var pub = TestPublisher.CreateManualProbe<int>(this);
-                var sub = TestSubscriber.CreateManualProbe<int>(this);
+                var pub = this.CreateManualPublisherProbe<int>();
+                var sub = this.CreateManualSubscriberProbe<int>();
 
                 Source.FromPublisher(pub)
                     .SelectAsyncUnordered(4, _ => Task.FromResult(0))

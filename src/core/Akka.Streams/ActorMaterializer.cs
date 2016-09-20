@@ -181,9 +181,9 @@ namespace Akka.Streams
                 dispatcher: config.GetString("dispatcher", string.Empty),
                 supervisionDecider: Deciders.StoppingDecider,
                 subscriptionTimeoutSettings: StreamSubscriptionTimeoutSettings.Create(config),
-                isDebugLogging: config.GetBoolean("debug-logging", false),
+                isDebugLogging: config.GetBoolean("debug-logging"),
                 outputBurstLimit: config.GetInt("output-burst-limit", 1000),
-                isFuzzingMode: config.GetBoolean("debug.fuzzing-mode", false),
+                isFuzzingMode: config.GetBoolean("debug.fuzzing-mode"),
                 isAutoFusing: config.GetBoolean("auto-fusing", true),
                 maxFixedBufferSize: config.GetInt("max-fixed-buffer-size", 1000000000),
                 syncProcessingLimit: config.GetInt("sync-processing-limit", 1000));

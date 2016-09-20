@@ -97,7 +97,7 @@ namespace Akka.Streams.Tests.Extra
                 var flow =
                     Flow.Create<int>().Select(x => (long) x).TimedIntervalBetween(i => i%2 == 1, d => probe.Tell(d));
 
-                var c1 = TestSubscriber.CreateManualProbe<long>(this);
+                var c1 = this.CreateManualSubscriberProbe<long>();
                 Source.From(Enumerable.Range(1, 3)).Via(flow).RunWith(Sink.FromSubscriber(c1), Materializer);
 
                 var s = c1.ExpectSubscription();
@@ -129,7 +129,7 @@ namespace Akka.Streams.Tests.Extra
                 var flowIn = t.Item1;
                 var flowOut = t.Item2;
 
-                var c1 = TestSubscriber.CreateManualProbe<string>(this);
+                var c1 = this.CreateManualSubscriberProbe<string>();
                 flowOut.Subscribe(c1);
 
                 var p = Source.From(Enumerable.Range(0, 101)).RunWith(Sink.AsPublisher<int>(false), Materializer);

@@ -1,5 +1,5 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="FlowGraphCompileSpec.cs" company="Akka.NET Project">
+// <copyright file="GraphDslCompileSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -11,7 +11,6 @@ using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using FluentAssertions;
 using Microsoft.CSharp.RuntimeBinder;
@@ -23,11 +22,11 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class FlowGraphCompileSpec : AkkaSpec
+    public class GraphDslCompileSpec : AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
 
-        public FlowGraphCompileSpec(ITestOutputHelper helper) : base(helper)
+        public GraphDslCompileSpec(ITestOutputHelper helper) : base(helper)
         {
             var settings = ActorMaterializerSettings.Create(Sys);
             Materializer = ActorMaterializer.Create(Sys, settings);
@@ -341,7 +340,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 b.From(merge.Out)
                     .Via(Flow.Create<IFruit>().Select(x => x))
-                    .To(Sink.FromSubscriber(TestSubscriber.CreateManualProbe<IFruit>(this)));
+                    .To(Sink.FromSubscriber(this.CreateManualSubscriberProbe<IFruit>()));
 
                 return ClosedShape.Instance;
             })).Run(Materializer);

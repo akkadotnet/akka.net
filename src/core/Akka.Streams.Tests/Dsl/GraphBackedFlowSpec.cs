@@ -70,9 +70,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void FlowGraphs_when_turned_into_flows_should_work_with_a_Source_and_Sink()
+        public void GraphDSLs_when_turned_into_flows_should_work_with_a_Source_and_Sink()
         {
-            var probe = TestSubscriber.CreateManualProbe<int>(this);
+            var probe = this.CreateManualSubscriberProbe<int>();
 
             var flow = Flow.FromGraph(GraphDsl.Create(PartialGraph(), (b, partial) =>
             {
@@ -86,9 +86,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void FlowGraphs_when_turned_into_flows_should_be_transformable_with_a_Pipe()
+        public void GraphDSLs_when_turned_into_flows_should_be_transformable_with_a_Pipe()
         {
-            var probe = TestSubscriber.CreateManualProbe<int>(this);
+            var probe = this.CreateManualSubscriberProbe<int>();
 
             var flow =
                 Flow.FromGraph(GraphDsl.Create(PartialGraph(),
@@ -100,9 +100,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void FlowGraphs_when_turned_into_flows_should_work_with_another_GraphFlow()
+        public void GraphDSLs_when_turned_into_flows_should_work_with_another_GraphFlow()
         {
-            var probe = TestSubscriber.CreateManualProbe<int>(this);
+            var probe = this.CreateManualSubscriberProbe<int>();
 
             var flow1 =
                 Flow.FromGraph(GraphDsl.Create(PartialGraph(),
@@ -118,9 +118,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void FlowGraphs_when_turned_into_flows_should_be_reusable_multiple_times()
+        public void GraphDSLs_when_turned_into_flows_should_be_reusable_multiple_times()
         {
-            var probe = TestSubscriber.CreateManualProbe<int>(this);
+            var probe = this.CreateManualSubscriberProbe<int>();
 
             var flow =
                 Flow.FromGraph(GraphDsl.Create(Flow.Create<int>().Select(x=>x*2),
@@ -139,9 +139,9 @@ namespace Akka.Streams.Tests.Dsl
         
 
         [Fact]
-        public void FlowGraphs_when_turned_into_sources_should_work_with_a_Sink()
+        public void GraphDSLs_when_turned_into_sources_should_work_with_a_Sink()
         {
-            var probe = TestSubscriber.CreateManualProbe<int>(this);
+            var probe = this.CreateManualSubscriberProbe<int>();
 
             var source = Source.FromGraph(GraphDsl.Create(PartialGraph(), (b, partial) =>
             {
@@ -156,9 +156,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void FlowGraphs_when_turned_into_sources_should_work_with_a_Sink_when_having_KeyedSource_inside()
+        public void GraphDSLs_when_turned_into_sources_should_work_with_a_Sink_when_having_KeyedSource_inside()
         {
-            var probe = TestSubscriber.CreateManualProbe<int>(this);
+            var probe = this.CreateManualSubscriberProbe<int>();
             var source = Source.AsSubscriber<int>();
             var mm = source.To(Sink.FromSubscriber(probe)).Run(Materializer);
             Source1.To(Sink.FromSubscriber(mm)).Run(Materializer);
@@ -167,9 +167,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void FlowGraphs_when_turned_into_sources_should_be_transformable_with_a_Pipe()
+        public void GraphDSLs_when_turned_into_sources_should_be_transformable_with_a_Pipe()
         {
-            var probe = TestSubscriber.CreateManualProbe<int>(this);
+            var probe = this.CreateManualSubscriberProbe<int>();
 
             var source =
                 Source.FromGraph(GraphDsl.Create(PartialGraph(),
@@ -185,9 +185,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void FlowGraphs_when_turned_into_sources_should_work_with_an_GraphFlow()
+        public void GraphDSLs_when_turned_into_sources_should_work_with_an_GraphFlow()
         {
-            var probe = TestSubscriber.CreateManualProbe<int>(this);
+            var probe = this.CreateManualSubscriberProbe<int>();
 
             var source =
                 Source.FromGraph(GraphDsl.Create(PartialGraph(),
@@ -207,9 +207,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void FlowGraphs_when_turned_into_sources_should_be_reusable_multiple_times()
+        public void GraphDSLs_when_turned_into_sources_should_be_reusable_multiple_times()
         {
-            var probe = TestSubscriber.CreateManualProbe<int>(this);
+            var probe = this.CreateManualSubscriberProbe<int>();
 
             var source =
                 Source.FromGraph(GraphDsl.Create(Source.From(Enumerable.Range(1, 5)),
@@ -235,9 +235,9 @@ namespace Akka.Streams.Tests.Dsl
         
 
         [Fact]
-        public void FlowGraphs_when_turned_into_sinks_should_work_with_a_Source()
+        public void GraphDSLs_when_turned_into_sinks_should_work_with_a_Source()
         {
-            var probe = TestSubscriber.CreateManualProbe<int>(this);
+            var probe = this.CreateManualSubscriberProbe<int>();
 
             var sink = Sink.FromGraph(GraphDsl.Create(PartialGraph(), (b, partial) =>
             {
@@ -251,9 +251,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void FlowGraphs_when_turned_into_sinks_should_work_with_a_Source_when_having_KeyedSink_inside()
+        public void GraphDSLs_when_turned_into_sinks_should_work_with_a_Source_when_having_KeyedSink_inside()
         {
-            var probe = TestSubscriber.CreateManualProbe<int>(this);
+            var probe = this.CreateManualSubscriberProbe<int>();
             var pubSink = Sink.AsPublisher<int>(false);
 
             var sink = Sink.FromGraph(GraphDsl.Create(pubSink, (b, p) => new SinkShape<int>(p.Inlet)));
@@ -264,9 +264,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void FlowGraphs_when_turned_into_sinks_should_be_transformable_with_a_Pipe()
+        public void GraphDSLs_when_turned_into_sinks_should_be_transformable_with_a_Pipe()
         {
-            var probe = TestSubscriber.CreateManualProbe<int>(this);
+            var probe = this.CreateManualSubscriberProbe<int>();
 
             var sink =
                 Sink.FromGraph(GraphDsl.Create(PartialGraph(), Flow.Create<string>().Select(int.Parse), Keep.Both,
@@ -287,9 +287,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void FlowGraphs_when_turned_into_sinks_should_work_with_a_GraphFlow()
+        public void GraphDSLs_when_turned_into_sinks_should_work_with_a_GraphFlow()
         {
-            var probe = TestSubscriber.CreateManualProbe<int>(this);
+            var probe = this.CreateManualSubscriberProbe<int>();
 
             var flow =
                 Flow.FromGraph(GraphDsl.Create(PartialGraph(),
@@ -307,9 +307,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void FlowGraphs_when_used_together_should_materialize_properly()
+        public void GraphDSLs_when_used_together_should_materialize_properly()
         {
-            var probe = TestSubscriber.CreateManualProbe<int>(this);
+            var probe = this.CreateManualSubscriberProbe<int>();
             var inSource = Source.AsSubscriber<int>();
             var outSink = Sink.AsPublisher<int>(false);
 
@@ -351,9 +351,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void FlowGraphs_when_used_together_should_allow_connecting_source_to_sink_directly()
+        public void GraphDSLs_when_used_together_should_allow_connecting_source_to_sink_directly()
         {
-            var probe = TestSubscriber.CreateManualProbe<int>(this);
+            var probe = this.CreateManualSubscriberProbe<int>();
             var inSource = Source.AsSubscriber<int>();
             var outSink = Sink.AsPublisher<int>(false);
 

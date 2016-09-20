@@ -281,7 +281,7 @@ namespace Akka.Streams.Tests.IO
         {
             public TcpReadProbe(TestKitBase testkit)
             {
-                SubscriberProbe = testkit.CreateManualProbe<ByteString>();
+                SubscriberProbe = testkit.CreateManualSubscriberProbe<ByteString>();
                 TcpReadSubscription = new Lazy<ISubscription>(() => SubscriberProbe.ExpectSubscription());
             }
 
@@ -311,7 +311,7 @@ namespace Akka.Streams.Tests.IO
 
             public TcpWriteProbe(TestKitBase testkit)
             {
-                PublisherProbe = TestPublisher.CreateManualProbe<ByteString>(testkit);
+                PublisherProbe = testkit.CreateManualPublisherProbe<ByteString>();
                 TcpWriteSubscription =
                     new Lazy<StreamTestKit.PublisherProbeSubscription<ByteString>>(
                         () => PublisherProbe.ExpectSubscription());

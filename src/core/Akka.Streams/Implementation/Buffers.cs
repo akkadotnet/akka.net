@@ -33,7 +33,6 @@ namespace Akka.Streams.Implementation
     internal static class Buffer
     {
         private const int FixedQueueSize = 128;
-        private const int FixedQueueMask = 127;
 
         public static IBuffer<T> Create<T>(int size, ActorMaterializerSettings settings) 
             => Create<T>(size, settings.MaxFixedBufferSize);
@@ -41,7 +40,7 @@ namespace Akka.Streams.Implementation
         public static IBuffer<T> Create<T>(int size, IMaterializer materializer)
         {
             var m = materializer as ActorMaterializer;
-            return Create<T>(size, m != null ? m.Settings.MaxFixedBufferSize : 1000000000);
+            return Create<T>(size, m?.Settings.MaxFixedBufferSize ?? 1000000000);
         }
 
         public static IBuffer<T> Create<T>(int size, int max)

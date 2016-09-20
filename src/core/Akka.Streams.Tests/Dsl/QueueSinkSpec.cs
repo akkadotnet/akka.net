@@ -65,7 +65,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var probe = TestPublisher.CreateManualProbe<int>(this);
+                var probe = this.CreateManualPublisherProbe<int>();
                 var queue = Source.FromPublisher(probe).RunWith(Sink.Queue<int>(), _materializer);
                 var sub = probe.ExpectSubscription();
                 var future = queue.PullAsync();
@@ -86,7 +86,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var probe = TestPublisher.CreateManualProbe<int>(this);
+                var probe = this.CreateManualPublisherProbe<int>();
                 var queue = Source.FromPublisher(probe).RunWith(Sink.Queue<int>(), _materializer);
                 var sub = probe.ExpectSubscription();
 
@@ -105,7 +105,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var probe = TestPublisher.CreateManualProbe<int>(this);
+                var probe = this.CreateManualPublisherProbe<int>();
                 var queue = Source.FromPublisher(probe).RunWith(Sink.Queue<int>(), _materializer);
                 var sub = probe.ExpectSubscription();
 
@@ -123,7 +123,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var probe = TestPublisher.CreateManualProbe<int>(this);
+                var probe = this.CreateManualPublisherProbe<int>();
                 var queue = Source.FromPublisher(probe).RunWith(Sink.Queue<int>(), _materializer);
                 var sub = probe.ExpectSubscription();
 
@@ -138,7 +138,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var probe = TestPublisher.CreateManualProbe<int>(this);
+                var probe = this.CreateManualPublisherProbe<int>();
                 var queue = Source.FromPublisher(probe).RunWith(Sink.Queue<int>(), _materializer);
                 var sub = probe.ExpectSubscription();
 
@@ -157,7 +157,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var probe = TestPublisher.CreateManualProbe<int>(this);
+                var probe = this.CreateManualPublisherProbe<int>();
                 var queue = Source.FromPublisher(probe).RunWith(Sink.Queue<int>(), _materializer);
                 var sub = probe.ExpectSubscription();
 
@@ -211,7 +211,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var sink = Sink.Queue<int>().WithAttributes(Attributes.CreateInputBuffer(1, 1));
-                var probe = TestPublisher.CreateManualProbe<int>(this);
+                var probe = this.CreateManualPublisherProbe<int>();
                 var queue = Source.FromPublisher(probe).RunWith(sink, _materializer);
                 var sub = probe.ExpectSubscription();
 

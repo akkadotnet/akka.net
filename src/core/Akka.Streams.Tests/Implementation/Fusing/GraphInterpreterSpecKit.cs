@@ -532,7 +532,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 {
                     if (GraphInterpreter.IsDebug)
                         Console.WriteLine($"----- REQ: {this}");
-                    Pull<T>(In);
+                    Pull(In);
                     Interpreter.Execute(eventLimit);
                 }
 
@@ -640,7 +640,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 public void Pull()
                 {
-                    Pull<T>(In);
+                    Pull(In);
                 }
 
                 public void Cancel()
@@ -657,8 +657,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         public class FailingStageSetup : TestSetup
         {
-            public UpstreamPortProbe<int> Upstream { get; }
-            public DownstreamPortProbe<int> Downstream { get; }
+            public new UpstreamPortProbe<int> Upstream { get; }
+            public new DownstreamPortProbe<int> Downstream { get; }
 
             private bool _failOnNextEvent;
             private bool _failOnPostStop;
@@ -806,7 +806,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 public void Pull()
                 {
-                    Pull<T>(In);
+                    Pull(In);
                 }
 
                 public void Cancel()
@@ -1048,7 +1048,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 public void RequestOne()
                 {
-                    Pull<T>(In);
+                    Pull(In);
                     _setup.Run();
                 }
 

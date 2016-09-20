@@ -57,7 +57,7 @@ namespace Akka.Streams.Tests.IO
                     .WithAttributes(bufferAttributes)
                     .RunWith(Sink.AsPublisher<ByteString>(false), _materializer);
 
-                var c = this.CreateManualProbe<ByteString>();
+                var c = this.CreateManualSubscriberProbe<ByteString>();
                 p.Subscribe(c);
                 var sub = c.ExpectSubscription();
 
@@ -112,7 +112,7 @@ namespace Akka.Streams.Tests.IO
                     .WithAttributes(bufferAttributes)
                     .RunWith(Sink.AsPublisher<ByteString>(false), _materializer);
 
-                var c = this.CreateManualProbe<ByteString>();
+                var c = this.CreateManualSubscriberProbe<ByteString>();
                 p.Subscribe(c);
                 var sub = c.ExpectSubscription();
 
@@ -156,7 +156,7 @@ namespace Akka.Streams.Tests.IO
             this.AssertAllStagesStopped(() =>
             {
                 var p = FileIO.FromFile(NotExistingFile()).RunWith(Sink.AsPublisher<ByteString>(false), _materializer);
-                var c = this.CreateManualProbe<ByteString>();
+                var c = this.CreateManualSubscriberProbe<ByteString>();
                 p.Subscribe(c);
 
                 c.ExpectSubscription();

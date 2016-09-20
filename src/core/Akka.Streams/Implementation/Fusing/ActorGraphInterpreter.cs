@@ -96,7 +96,7 @@ namespace Akka.Streams.Implementation.Fusing
         private bool _resumeScheduled;
         private bool _waitingForShutdown;
         private Action<object> _enqueueToShourtCircuit;
-
+        private bool _interpreterCompleted;
         private readonly ActorGraphInterpreter.Resume _resume;
 
         public GraphInterpreterShell(GraphAssembly assembly, IInHandler[] inHandlers, IOutHandler[] outHandlers, GraphStageLogic[] logics, Shape shape, ActorMaterializerSettings settings, ActorMaterializerImpl materializer)
@@ -117,12 +117,10 @@ namespace Akka.Streams.Implementation.Fusing
             _abortLimit = _shellEventLimit * 2;
 
             _resume = new ActorGraphInterpreter.Resume(this);
-
-            IsTerminated = false;
         }
 
         public bool IsInitialized => Self != null;
-        public bool IsTerminated { get; private set; }
+        public bool IsTerminated => _interpreterCompleted && CanShutdown;
         public bool CanShutdown => _subscribersPending + _publishersPending == 0;
         public IActorRef Self { get; private set; }
         public ILoggingAdapter Log => _log ?? (_log = GetLogger());
@@ -164,14 +162,16 @@ namespace Akka.Streams.Implementation.Fusing
                     var exposedPublisher = (ActorGraphInterpreter.ExposedPublisher) e;
                     _outputs[exposedPublisher.Id].ExposedPublisher(exposedPublisher.Publisher);
                     _publishersPending--;
-                    if (CanShutdown) IsTerminated = true;
+                    if (CanShutdown)
+                        _interpreterCompleted = true;
                 }
                 else if (e is ActorGraphInterpreter.OnSubscribe)
                 {
                     var onSubscribe = (ActorGraphInterpreter.OnSubscribe) e;
                     ReactiveStreamsCompliance.TryCancel(onSubscribe.Subscription);
                     _subscribersPending--;
-                    if (CanShutdown) IsTerminated = true;
+                    if (CanShutdown)
+                        _interpreterCompleted = true;
                 }
                 else if (e is ActorGraphInterpreter.Abort)
                 {
@@ -280,12 +280,17 @@ namespace Akka.Streams.Implementation.Fusing
          */
         public void TryAbort(Exception reason)
         {
+            var ex = reason is ISpecViolation
+                ? new IllegalStateException("Shutting down because of violation of the Reactive Streams specification",
+                    reason)
+                : reason;
+
             // This should handle termination while interpreter is running. If the upstream have been closed already this
-            // call has no effect and therefore do the right thing: nothing.
+            // call has no effect and therefore does the right thing: nothing.
             try
             {
                 foreach (var input in _inputs)
-                    input.OnInternalError(reason);
+                    input.OnInternalError(ex);
 
                 Interpreter.Execute(_abortLimit);
                 Interpreter.Finish();
@@ -293,11 +298,13 @@ namespace Akka.Streams.Implementation.Fusing
             catch (Exception) { /* swallow? */ }
             finally
             {
-                IsTerminated = true;
+                _interpreterCompleted = true;
                 // Will only have an effect if the above call to the interpreter failed to emit a proper failure to the downstream
                 // otherwise this will have no effect
-                foreach (var output in _outputs) output.Fail(reason);
-                foreach (var input in _inputs) input.Cancel();
+                foreach (var output in _outputs)
+                    output.Fail(ex);
+                foreach (var input in _inputs)
+                    input.Cancel();
             }
         }
 
@@ -311,7 +318,8 @@ namespace Akka.Streams.Implementation.Fusing
                 if (Interpreter.IsCompleted)
                 {
                     // Cannot stop right away if not completely subscribed
-                    if (CanShutdown) IsTerminated = true;
+                    if (CanShutdown)
+                        _interpreterCompleted = true;
                     else
                     {
                         _waitingForShutdown = true;
@@ -785,7 +793,7 @@ namespace Akka.Streams.Implementation.Fusing
                     if (_that._downstreamCompleted)
                         _that.Cancel(_that.In);
                     else if (_that._downstreamDemand > 0)
-                        _that.Pull<T>(_that.In);
+                        _that.Pull(_that.In);
                 }
 
                 public override void OnUpstreamFinish() => _that.Complete();
@@ -837,7 +845,7 @@ namespace Akka.Streams.Implementation.Fusing
                     if (_downstreamDemand < 0)
                         _downstreamDemand = long.MaxValue; // Long overflow, Reactive Streams Spec 3:17: effectively unbounded
                     if (!HasBeenPulled(In) && !IsClosed(In))
-                        Pull<T>(In);
+                        Pull(In);
                 }
             }
 
@@ -1032,7 +1040,15 @@ namespace Akka.Streams.Implementation.Fusing
             var shell = b.Shell;
             if (!shell.IsTerminated && (shell.IsInitialized || TryInit(shell)))
             {
-                _currentLimit = shell.Receive(b, _currentLimit);
+                try
+                {
+                    _currentLimit = shell.Receive(b, _currentLimit);
+                }
+                catch (Exception ex)
+                {
+                    shell.TryAbort(ex);
+                }
+
                 if (shell.IsTerminated)
                 {
                     _activeInterpreters.Remove(shell);

@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using Akka.Event;
 
 namespace Akka.Streams.Implementation
 {

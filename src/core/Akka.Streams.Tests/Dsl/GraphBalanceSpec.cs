@@ -35,8 +35,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c1 = TestSubscriber.CreateManualProbe<int>(this);
-                var c2 = TestSubscriber.CreateManualProbe<int>(this);
+                var c1 = this.CreateManualSubscriberProbe<int>();
+                var c2 = this.CreateManualSubscriberProbe<int>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -66,7 +66,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var s1 = TestSubscriber.CreateManualProbe<int>(this);
+                var s1 = this.CreateManualSubscriberProbe<int>();
 
                 var p2 = RunnableGraph.FromGraph(GraphDsl.Create(Sink.AsPublisher<int>(false), (b, p2Sink) =>
                 {
@@ -83,7 +83,7 @@ namespace Akka.Streams.Tests.Dsl
                 sub1.Request(1);
                 s1.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
 
-                var s2 = TestSubscriber.CreateManualProbe<int>(this);
+                var s2 = this.CreateManualSubscriberProbe<int>();
                 p2.Subscribe(s2);
                 var sub2 = s2.ExpectSubscription();
 
@@ -103,7 +103,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var s1 = TestSubscriber.CreateManualProbe<int>(this);
+                var s1 = this.CreateManualSubscriberProbe<int>();
 
                 var t = RunnableGraph.FromGraph(GraphDsl.Create(Sink.AsPublisher<int>(false),
                     Sink.AsPublisher<int>(false), Keep.Both, (b, p2Sink, p3Sink) =>
@@ -127,11 +127,11 @@ namespace Akka.Streams.Tests.Dsl
                 var sub1 = s1.ExpectSubscription();
                 sub1.Request(1);
 
-                var s2 = TestSubscriber.CreateManualProbe<int>(this);
+                var s2 = this.CreateManualSubscriberProbe<int>();
                 p2.Subscribe(s2);
                 var sub2 = s2.ExpectSubscription();
 
-                var s3 = TestSubscriber.CreateManualProbe<int>(this);
+                var s3 = this.CreateManualSubscriberProbe<int>();
                 p3.Subscribe(s3);
                 var sub3 = s3.ExpectSubscription();
 
@@ -266,8 +266,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c1 = TestSubscriber.CreateManualProbe<int>(this);
-                var c2 = TestSubscriber.CreateManualProbe<int>(this);
+                var c1 = this.CreateManualSubscriberProbe<int>();
+                var c2 = this.CreateManualSubscriberProbe<int>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -293,8 +293,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c1 = TestSubscriber.CreateManualProbe<int>(this);
-                var c2 = TestSubscriber.CreateManualProbe<int>(this);
+                var c1 = this.CreateManualSubscriberProbe<int>();
+                var c2 = this.CreateManualSubscriberProbe<int>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -320,9 +320,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var p1 = TestPublisher.CreateManualProbe<int>(this);
-                var c1 = TestSubscriber.CreateManualProbe<int>(this);
-                var c2 = TestSubscriber.CreateManualProbe<int>(this);
+                var p1 = this.CreateManualPublisherProbe<int>();
+                var c1 = this.CreateManualSubscriberProbe<int>();
+                var c2 = this.CreateManualSubscriberProbe<int>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {

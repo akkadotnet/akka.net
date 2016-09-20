@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Streams.Dsl;
+using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.Util.Internal;
@@ -19,13 +20,16 @@ using static Akka.Streams.Tests.Dsl.TestConfig;
 
 namespace Akka.Streams.Tests.Dsl
 {
+    // JVM: FlowFilterSpec
     public class FlowWhereSpec : ScriptedTest
     {
+        private ActorMaterializer Materializer { get; }
         private ActorMaterializerSettings Settings { get; }
 
         public FlowWhereSpec(ITestOutputHelper helper) : base(helper)
         {
             Settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 16);
+            Materializer = ActorMaterializer.Create(Sys, Settings);
         }
 
         [Fact]
@@ -47,7 +51,7 @@ namespace Akka.Streams.Tests.Dsl
             var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(1, 1);
             var materializer = ActorMaterializer.Create(Sys, settings);
 
-            var probe = TestSubscriber.CreateManualProbe<int>(this);
+            var probe = this.CreateManualSubscriberProbe<int>();
             Source.From(Enumerable.Repeat(0, 1000).Concat(new[] {1}))
                 .Where(x => x != 0)
                 .RunWith(Sink.FromSubscriber(probe), materializer);
@@ -61,7 +65,29 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_FilterNot_must_filter_based_on_inverted_predicate()
+        public void A_Where_must_continue_if_error()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var ex = new TestException("Test");
+
+                Source.From(Enumerable.Range(1, 3))
+                    .Where(x =>
+                    {
+                        if (x == 2)
+                            throw ex;
+                        return true;
+                    })
+                    .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
+                    .RunWith(this.SinkProbe<int>(), Materializer)
+                    .Request(3)
+                    .ExpectNext(1, 3)
+                    .ExpectComplete();
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_WhereNot_must_filter_based_on_inverted_predicate()
         {
             var random = new Random();
             Script<int, int> script = Script.Create(RandomTestRange(Sys).Select(_ =>

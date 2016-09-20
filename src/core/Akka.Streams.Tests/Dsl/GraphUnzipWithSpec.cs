@@ -75,8 +75,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var leftProbe = TestSubscriber.CreateManualProbe<int>(this);
-                var rightProbe = TestSubscriber.CreateManualProbe<string>(this);
+                var leftProbe = this.CreateManualSubscriberProbe<int>();
+                var rightProbe = this.CreateManualSubscriberProbe<string>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -131,8 +131,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var leftProbe = TestSubscriber.CreateManualProbe<int>(this);
-                var rightProbe = TestSubscriber.CreateManualProbe<string>(this);
+                var leftProbe = this.CreateManualSubscriberProbe<int>();
+                var rightProbe = this.CreateManualSubscriberProbe<string>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -178,9 +178,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var probe0 = TestSubscriber.CreateManualProbe<string>(this);
-                var probe1 = TestSubscriber.CreateManualProbe<string>(this);
-                var probe2 = TestSubscriber.CreateManualProbe<int>(this);
+                var probe0 = this.CreateManualSubscriberProbe<string>();
+                var probe1 = this.CreateManualSubscriberProbe<string>();
+                var probe2 = this.CreateManualSubscriberProbe<int>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -220,12 +220,12 @@ namespace Akka.Streams.Tests.Dsl
 
             this.AssertAllStagesStopped(() =>
             {
-                var probe0 = TestSubscriber.CreateManualProbe<int>(this);
-                var probe1 = TestSubscriber.CreateManualProbe<string>(this);
-                var probe2 = TestSubscriber.CreateManualProbe<int>(this);
-                var probe3 = TestSubscriber.CreateManualProbe<string>(this);
-                var probe4 = TestSubscriber.CreateManualProbe<int>(this);
-                var probe5 = TestSubscriber.CreateManualProbe<string>(this);
+                var probe0 = this.CreateManualSubscriberProbe<int>();
+                var probe1 = this.CreateManualSubscriberProbe<string>();
+                var probe2 = this.CreateManualSubscriberProbe<int>();
+                var probe3 = this.CreateManualSubscriberProbe<string>();
+                var probe4 = this.CreateManualSubscriberProbe<int>();
+                var probe5 = this.CreateManualSubscriberProbe<string>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -296,8 +296,8 @@ namespace Akka.Streams.Tests.Dsl
 
         private Tuple<TestSubscriber.ManualProbe<int>, TestSubscriber.ManualProbe<string>> Setup(IPublisher<int> p)
         {
-            var leftSubscriber = TestSubscriber.CreateManualProbe<int>(this);
-            var rightSubscriber = TestSubscriber.CreateManualProbe<string>(this);
+            var leftSubscriber = this.CreateManualSubscriberProbe<int>();
+            var rightSubscriber = this.CreateManualSubscriberProbe<string>();
 
             RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {

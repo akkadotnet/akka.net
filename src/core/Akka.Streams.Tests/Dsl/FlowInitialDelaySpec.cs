@@ -62,7 +62,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var probe = TestSubscriber.CreateProbe<int>(this);
+                var probe = this.CreateSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 10))
                     .InitialDelay(TimeSpan.FromSeconds(0.5))
                     .RunWith(Sink.FromSubscriber(probe), Materializer);

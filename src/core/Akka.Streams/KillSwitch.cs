@@ -214,7 +214,7 @@ namespace Akka.Streams
     /// 
     /// It is also possible to individually cancel, complete or fail upstream and downstream parts by calling the corresponding methods.
     /// </summary>
-    public sealed class UniqueKillSwitch
+    public sealed class UniqueKillSwitch : IKillSwitch
     {
         private readonly TaskCompletionSource<NotUsed> _promise;
 
@@ -265,7 +265,7 @@ namespace Akka.Streams
     ///
     /// This class is thread-safe, the instance can be passed safely among threads and its methods may be invoked concurrently.
     /// </summary>
-    public sealed class SharedKillSwitch
+    public sealed class SharedKillSwitch : IKillSwitch
     {
         #region Flow
 

@@ -32,8 +32,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c1 = TestSubscriber.CreateManualProbe<int>(this);
-                var c2 = TestSubscriber.CreateManualProbe<string>(this);
+                var c1 = this.CreateManualSubscriberProbe<int>();
+                var c2 = this.CreateManualSubscriberProbe<string>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -80,8 +80,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c1 = TestSubscriber.CreateManualProbe<int>(this);
-                var c2 = TestSubscriber.CreateManualProbe<string>(this);
+                var c1 = this.CreateManualSubscriberProbe<int>();
+                var c2 = this.CreateManualSubscriberProbe<string>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -116,8 +116,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c1 = TestSubscriber.CreateManualProbe<int>(this);
-                var c2 = TestSubscriber.CreateManualProbe<string>(this);
+                var c1 = this.CreateManualSubscriberProbe<int>();
+                var c2 = this.CreateManualSubscriberProbe<string>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -151,8 +151,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Unzip_must_not_push_twice_when_pull_is_followed_by_cancel_before_element_has_been_pushed()
         {
-            var c1 = TestSubscriber.CreateManualProbe<int>(this);
-            var c2 = TestSubscriber.CreateManualProbe<string>(this);
+            var c1 = this.CreateManualSubscriberProbe<int>();
+            var c2 = this.CreateManualSubscriberProbe<string>();
 
             RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
@@ -182,8 +182,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Unzip_must_not_loose_elements_when_pull_is_followed_by_cancel_before_other_sink_has_requested()
         {
-            var c1 = TestSubscriber.CreateManualProbe<int>(this);
-            var c2 = TestSubscriber.CreateManualProbe<string>(this);
+            var c1 = this.CreateManualSubscriberProbe<int>();
+            var c2 = this.CreateManualSubscriberProbe<string>();
 
             RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
@@ -215,9 +215,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var p1 = TestPublisher.CreateManualProbe<KeyValuePair<int, string>>(this);
-                var c1 = TestSubscriber.CreateManualProbe<int>(this);
-                var c2 = TestSubscriber.CreateManualProbe<string>(this);
+                var p1 = this.CreateManualPublisherProbe<KeyValuePair<int, string>>();
+                var c1 = this.CreateManualSubscriberProbe<int>();
+                var c2 = this.CreateManualSubscriberProbe<string>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -255,7 +255,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c1 = TestSubscriber.CreateManualProbe<Tuple<int, string>>(this);
+                var c1 = this.CreateManualSubscriberProbe<Tuple<int, string>>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {

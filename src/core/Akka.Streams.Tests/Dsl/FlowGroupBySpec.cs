@@ -40,7 +40,7 @@ namespace Akka.Streams.Tests.Dsl
 
             public StreamPuppet(IPublisher<int> p, TestKitBase kit)
             {
-                _probe = TestSubscriber.CreateManualProbe<int>(kit);
+                _probe = kit.CreateManualSubscriberProbe<int>();
                 p.Subscribe(_probe);
                 _subscription = _probe.ExpectSubscription();
             }
@@ -69,7 +69,7 @@ namespace Akka.Streams.Tests.Dsl
                     .GroupBy(max, x => x%groupCount)
                     .Lift(x => x%groupCount)
                     .RunWith(Sink.AsPublisher<Tuple<int, Source<int, NotUsed>>>(false), Materializer);
-            var masterSubscriber = TestSubscriber.CreateManualProbe<Tuple<int, Source<int, NotUsed>>>(this);
+            var masterSubscriber = this.CreateManualSubscriberProbe<Tuple<int, Source<int, NotUsed>>>();
 
             groupStream.Subscribe(masterSubscriber);
             var masterSubscription = masterSubscriber.ExpectSubscription();
@@ -170,13 +170,13 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var publisherProbe = TestPublisher.CreateManualProbe<int>(this);
+                var publisherProbe = this.CreateManualPublisherProbe<int>();
                 var publisher =
                     Source.FromPublisher(publisherProbe)
                         .GroupBy(2, x => x%2)
                         .Lift(x => x%2)
                         .RunWith(Sink.AsPublisher<Tuple<int, Source<int, NotUsed>>>(false), Materializer);
-                var subscriber = TestSubscriber.CreateManualProbe<Tuple<int, Source<int, NotUsed>>>(this);
+                var subscriber = this.CreateManualSubscriberProbe<Tuple<int, Source<int, NotUsed>>>();
                 publisher.Subscribe(subscriber);
 
                 var upstreamSubscription = publisherProbe.ExpectSubscription();
@@ -196,7 +196,7 @@ namespace Akka.Streams.Tests.Dsl
                         .GroupBy(2, x => x%2)
                         .Lift(x => x%2)
                         .RunWith(Sink.AsPublisher<Tuple<int, Source<int, NotUsed>>>(false), Materializer);
-                var subscriber = TestSubscriber.CreateManualProbe<Tuple<int, Source<int, NotUsed>>>(this);
+                var subscriber = this.CreateManualSubscriberProbe<Tuple<int, Source<int, NotUsed>>>();
                 publisher.Subscribe(subscriber);
 
                 subscriber.ExpectSubscriptionAndComplete();
@@ -208,13 +208,13 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var publisherProbe = TestPublisher.CreateManualProbe<int>(this);
+                var publisherProbe = this.CreateManualPublisherProbe<int>();
                 var publisher =
                     Source.FromPublisher(publisherProbe)
                         .GroupBy(2, x => x % 2)
                         .Lift(x => x % 2)
                         .RunWith(Sink.AsPublisher<Tuple<int, Source<int, NotUsed>>>(false), Materializer);
-                var subscriber = TestSubscriber.CreateManualProbe<Tuple<int, Source<int, NotUsed>>>(this);
+                var subscriber = this.CreateManualSubscriberProbe<Tuple<int, Source<int, NotUsed>>>();
                 publisher.Subscribe(subscriber);
 
                 var upstreamSubscription = publisherProbe.ExpectSubscription();
@@ -232,13 +232,13 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var publisherProbe = TestPublisher.CreateManualProbe<int>(this);
+                var publisherProbe = this.CreateManualPublisherProbe<int>();
                 var publisher =
                     Source.FromPublisher(publisherProbe)
                         .GroupBy(2, x => x % 2)
                         .Lift(x => x % 2)
                         .RunWith(Sink.AsPublisher<Tuple<int, Source<int, NotUsed>>>(false), Materializer);
-                var subscriber = TestSubscriber.CreateManualProbe<Tuple<int, Source<int, NotUsed>>>(this);
+                var subscriber = this.CreateManualSubscriberProbe<Tuple<int, Source<int, NotUsed>>>();
                 publisher.Subscribe(subscriber);
 
                 var upstreamSubscription = publisherProbe.ExpectSubscription();
@@ -264,7 +264,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var publisherProbe = TestPublisher.CreateManualProbe<int>(this);
+                var publisherProbe = this.CreateManualPublisherProbe<int>();
                 var ex = new TestException("test");
                 var publisher = Source.FromPublisher(publisherProbe).GroupBy(2, i =>
                 {
@@ -276,7 +276,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.AsPublisher<Tuple<int, Source<int, NotUsed>>>(false), Materializer);
 
 
-                var subscriber = TestSubscriber.CreateManualProbe<Tuple<int, Source<int, NotUsed>>>(this);
+                var subscriber = this.CreateManualSubscriberProbe<Tuple<int, Source<int, NotUsed>>>();
                 publisher.Subscribe(subscriber);
 
                 var upstreamSubscription = publisherProbe.ExpectSubscription();
@@ -303,7 +303,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var publisherProbe = TestPublisher.CreateManualProbe<int>(this);
+                var publisherProbe = this.CreateManualPublisherProbe<int>();
                 var ex = new TestException("test");
                 var publisher = Source.FromPublisher(publisherProbe).GroupBy(2, i =>
                 {
@@ -315,7 +315,7 @@ namespace Akka.Streams.Tests.Dsl
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                     .RunWith(Sink.AsPublisher<Tuple<int, Source<int, NotUsed>>>(false), Materializer);
 
-                var subscriber = TestSubscriber.CreateManualProbe<Tuple<int, Source<int, NotUsed>>>(this);
+                var subscriber = this.CreateManualSubscriberProbe<Tuple<int, Source<int, NotUsed>>>();
                 publisher.Subscribe(subscriber);
 
                 var upstreamSubscription = publisherProbe.ExpectSubscription();
@@ -357,8 +357,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var up = TestPublisher.CreateManualProbe<int>(this);
-                var down = TestSubscriber.CreateManualProbe<Tuple<int, Source<int, NotUsed>>>(this);
+                var up = this.CreateManualPublisherProbe<int>();
+                var down = this.CreateManualSubscriberProbe<Tuple<int, Source<int, NotUsed>>>();
 
                 var flowSubscriber =
                     Source.AsSubscriber<int>()
@@ -381,7 +381,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var f = Flow.Create<int>().GroupBy(1, x => x%2).PrefixAndTail(0).MergeSubstreams();
                 var t = ((Flow<int, Tuple<IImmutableList<int>, Source<int, NotUsed>>, NotUsed>) f)
-                    .RunWith(TestSource.SourceProbe<int>(this), TestSink.SinkProbe<Tuple<IImmutableList<int>, Source<int, NotUsed>>>(this), Materializer);
+                    .RunWith(this.SourceProbe<int>(), this.SinkProbe<Tuple<IImmutableList<int>, Source<int, NotUsed>>>(), Materializer);
                 var up = t.Item1;
                 var down = t.Item2;
 
