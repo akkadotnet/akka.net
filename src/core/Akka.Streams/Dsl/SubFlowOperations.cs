@@ -60,6 +60,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
+        [Obsolete("Use RecoverWithRetries instead.")]
         public static SubFlow<TOut, TMat, TClosed> RecoverWith<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow,
             Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc)
         {
@@ -69,7 +70,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// RecoverWithRetries  allows to switch to alternative Source on flow failure. It will stay in effect after
         /// a failure has been recovered up to <paramref name="attempts"/> number of times so that each time there is a failure it is fed into the <paramref name="partialFunc"/> and a new
-        /// Source may be materialized. Note that if you pass in 0, this won't attempt to recover at all. Passing in a negative number will behave exactly the same as  <see cref="RecoverWithRetries{TOut,TMat,TClosed}"/>.
+        /// Source may be materialized. Note that if you pass in 0, this won't attempt to recover at all. Passing in -1 will behave exactly the same as  <see cref="RecoverWithRetries{TOut,TMat,TClosed}"/>.
         /// <para>
         /// Since the underlying failure signal onError arrives out-of-band, it might jump over existing elements.
         /// This stage can recover the failure signal, but not the skipped elements, which will be dropped.
@@ -85,6 +86,9 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
+        /// <param name="partialFunc">Receives the failure cause and returns the new Source to be materialized if any</param>
+        /// <param name="attempts">Maximum number of retries or -1 to retry indefinitely</param>
+        /// <exception cref="ArgumentException">if <paramref name="attempts"/> is a negative number other than -1</exception>
         public static SubFlow<TOut, TMat, TClosed> RecoverWithRetries<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow,
             Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc, int attempts)
         {

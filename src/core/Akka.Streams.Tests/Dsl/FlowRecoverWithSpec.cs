@@ -261,5 +261,16 @@ namespace Akka.Streams.Tests.Dsl
                 probe.Request(1).ExpectError().Should().Be(Ex);
             }, Materializer);
         }
+
+        [Fact]
+        public void A_RecoverWith_must_throw_ArgumentException_if_number_of_retries_is_less_than_minus_one()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                Flow.Create<int>()
+                    .Invoking(f => f.RecoverWithRetries(exception => Source.Empty<int>(), -2))
+                    .ShouldThrow<ArgumentException>();
+            }, Materializer);
+        }
     }
 }
