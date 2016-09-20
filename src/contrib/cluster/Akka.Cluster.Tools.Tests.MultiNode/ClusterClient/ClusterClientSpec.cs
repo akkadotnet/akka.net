@@ -503,6 +503,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                     if (msg.Equals("hi again")) return msg;
                     else throw new Exception("Unexpected message: " + msg);
                 });
+                EnterBarrier("verified-4");
 
                 RunOn(() =>
                 {
