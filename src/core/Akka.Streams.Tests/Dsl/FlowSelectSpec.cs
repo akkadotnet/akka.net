@@ -63,7 +63,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Subscribe(probe);
 
             var subscription = probe.ExpectSubscription();
-            // TODO increase to 10000 once performance is improved
+
             for (int i = 1; i <= 10000; i++)
                 subscription.Request(int.MaxValue);
 
