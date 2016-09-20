@@ -152,7 +152,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.Xunit", "contr
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DependencyInjection", "DependencyInjection", "{B1D10183-8FAE-4506-B935-403FCED89BDB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DI.Core", "contrib\dependencyInjection\Akka.DI.Core\Akka.DI.Core.csproj", "{FDF09D18-B68E-4B95-B1F6-B89D9C6C3AE9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DI.Core", "contrib\dependencyinjection\Akka.DI.Core\Akka.DI.Core.csproj", "{FDF09D18-B68E-4B95-B1F6-B89D9C6C3AE9}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Persistence", "Persistence", "{264C22A4-CAFC-41F6-B82C-4DDC5C196767}"
 EndProject
@@ -164,7 +164,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TcpEchoService", "TcpEchoSe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TcpEchoService.Server", "examples\TcpEchoService.Server\TcpEchoService.Server.csproj", "{825196A4-4B08-401F-8994-E2DB7C77A8B7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DI.TestKit", "contrib\dependencyInjection\Akka.DI.TestKit\Akka.DI.TestKit.csproj", "{D8DB14A5-6147-4512-BF5C-683FDCA6190C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DI.TestKit", "contrib\dependencyinjection\Akka.DI.TestKit\Akka.DI.TestKit.csproj", "{D8DB14A5-6147-4512-BF5C-683FDCA6190C}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TestKit", "TestKit", "{46116E52-BF96-4B76-8C81-2104C74487DF}"
 EndProject

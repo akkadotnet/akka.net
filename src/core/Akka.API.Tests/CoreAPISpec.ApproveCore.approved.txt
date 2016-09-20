@@ -4929,6 +4929,10 @@ namespace Akka.Util
         public override bool IsRight { get; }
         public TB Value { get; }
     }
+    public class static RuntimeDetector
+    {
+        public static readonly bool IsMono;
+    }
     public class static StandardOutWriter
     {
         public static void Write(string message, System.Nullable<System.ConsoleColor> foregroundColor = null, System.Nullable<System.ConsoleColor> backgroundColor = null) { }

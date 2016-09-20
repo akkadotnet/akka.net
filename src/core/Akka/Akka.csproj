@@ -285,6 +285,7 @@
     <Compile Include="Util\Internal\StringBuilderExtensions.cs" />
     <Compile Include="Util\Internal\TaskExtensions.cs" />
     <Compile Include="Util\ISurrogate.cs" />
+    <Compile Include="Util\RuntimeDetector.cs" />
     <Compile Include="Util\MonotonicClock.cs" />
     <Compile Include="Util\Result.cs" />
     <Compile Include="Util\Reflection\TypeCache.cs" />

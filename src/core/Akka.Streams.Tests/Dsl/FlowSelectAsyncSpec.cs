@@ -23,6 +23,7 @@ using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using static Akka.Util.RuntimeDetector;
 
 // ReSharper disable InvokeAsExtensionMethod
 #pragma warning disable 162
@@ -299,6 +300,11 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Flow_with_SelectAsync_must_not_run_more_futures_than_configured()
         {
+            // TODO: 9/14/2016: Mono 4.4.2 blows up the XUnit test runner upon calling Thread.Interrupt below (@Aaronontheweb) 
+            // SEE: https://github.com/xunit/xunit/issues/979
+            if (IsMono) 
+                return; 
+
             this.AssertAllStagesStopped(() =>
             {
                 const int parallelism = 8;

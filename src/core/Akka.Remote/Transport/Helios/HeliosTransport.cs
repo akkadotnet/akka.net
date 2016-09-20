@@ -57,7 +57,6 @@ namespace Akka.Remote.Transport.Helios
     internal class HeliosTransportSettings
     {
         internal readonly Config Config;
-        internal static bool IsMono = Type.GetType("Mono.Runtime") != null;
 
         public HeliosTransportSettings(Config config)
         {
@@ -97,7 +96,7 @@ namespace Akka.Remote.Transport.Helios
             var publicConfigHost = Config.GetString("public-hostname");
             DnsUseIpv6 = Config.GetBoolean("dns-use-ipv6");
             EnforceIpFamily = string.IsNullOrEmpty(Config.GetString("enforce-ip-family")) ?
-                                                   IsMono : Config.GetBoolean("enforce-ip-family");
+                                                   RuntimeDetector.IsMono : Config.GetBoolean("enforce-ip-family");
             Hostname = string.IsNullOrEmpty(configHost) ? IPAddress.Any.ToString() : configHost;
             PublicHostname = string.IsNullOrEmpty(publicConfigHost) ? Hostname : publicConfigHost;
             ServerSocketWorkerPoolSize = ComputeWps(Config.GetConfig("server-socket-worker-pool"));
