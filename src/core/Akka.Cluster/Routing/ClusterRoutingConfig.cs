@@ -399,7 +399,8 @@ namespace Akka.Cluster.Routing
             }
 
             Cluster = Cluster.Get(Context.System);
-            Nodes = ImmutableSortedSet.Create(Member.AddressOrdering, Cluster.ReadView.Members.Where(IsAvailable).Select(x => x.Address).ToArray());
+            Nodes = ImmutableSortedSet.Create(Member.AddressOrdering,
+                    Cluster.ReadView.Members.Where(IsAvailable).Select(x => x.Address).ToArray());
         }
 
         public ClusterRouterSettingsBase Settings { get; protected set; }
