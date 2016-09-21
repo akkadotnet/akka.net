@@ -312,10 +312,11 @@ namespace Akka.Actor
         private Task<IEnumerable<SchedulerRegistration>> Stop()
         {
             var p = new TaskCompletionSource<IEnumerable<SchedulerRegistration>>();
+
+            if (_stopped.CompareAndSet(null, p)
 #pragma warning disable 420
-            if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_SHUTDOWN, WORKER_STATE_STARTED) == WORKER_STATE_STARTED
+                && Interlocked.CompareExchange(ref _workerState, WORKER_STATE_SHUTDOWN, WORKER_STATE_STARTED) == WORKER_STATE_STARTED)
 #pragma warning restore 420
-                && _stopped.CompareAndSet(null, p))
             {
                 // Let remaining work that is already being processed finished. The termination task will complete afterwards
                 return p.Task;
