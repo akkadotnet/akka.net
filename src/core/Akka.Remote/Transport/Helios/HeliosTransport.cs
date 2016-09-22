@@ -95,8 +95,7 @@ namespace Akka.Remote.Transport.Helios
             var configHost = Config.GetString("hostname");
             var publicConfigHost = Config.GetString("public-hostname");
             DnsUseIpv6 = Config.GetBoolean("dns-use-ipv6");
-            EnforceIpFamily = string.IsNullOrEmpty(Config.GetString("enforce-ip-family")) ?
-                                                   RuntimeDetector.IsMono : Config.GetBoolean("enforce-ip-family");
+            EnforceIpFamily = RuntimeDetector.IsMono || Config.GetBoolean("enforce-ip-family");
             Hostname = string.IsNullOrEmpty(configHost) ? IPAddress.Any.ToString() : configHost;
             PublicHostname = string.IsNullOrEmpty(publicConfigHost) ? Hostname : publicConfigHost;
             ServerSocketWorkerPoolSize = ComputeWps(Config.GetConfig("server-socket-worker-pool"));
