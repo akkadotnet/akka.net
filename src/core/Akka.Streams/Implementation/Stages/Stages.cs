@@ -54,6 +54,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Attributes Processor = Attributes.CreateName("processor");
         public static readonly Attributes ProcessorWithKey = Attributes.CreateName("processorWithKey");
         public static readonly Attributes IdentityOp = Attributes.CreateName("identityOp");
+        public static readonly Attributes DelimiterFraming = Attributes.CreateName("delimiterFraming");
 
         public static readonly Attributes Initial = Attributes.CreateName("initial");
         public static readonly Attributes Completion = Attributes.CreateName("completion");
