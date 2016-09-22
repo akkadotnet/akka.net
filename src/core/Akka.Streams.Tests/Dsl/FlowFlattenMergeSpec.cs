@@ -131,8 +131,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_FlattenMerge_must_cancel_substreams_when_failing_from_main_stream()
         {
-            var p1 = TestPublisher.CreateProbe<int>(this);
-            var p2 = TestPublisher.CreateProbe<int>(this);
+            var p1 = this.CreatePublisherProbe<int>();
+            var p2 = this.CreatePublisherProbe<int>();
             var ex = new TestException("buh");
             var p = new TaskCompletionSource<Source<int, NotUsed>>();
 
@@ -152,8 +152,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_FlattenMerge_must_cancel_substreams_when_failing_from_substream()
         {
-            var p1 = TestPublisher.CreateProbe<int>(this);
-            var p2 = TestPublisher.CreateProbe<int>(this);
+            var p1 = this.CreatePublisherProbe<int>();
+            var p2 = this.CreatePublisherProbe<int>();
             var ex = new TestException("buh");
             var p = new TaskCompletionSource<int>();
 
@@ -173,9 +173,9 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_FlattenMerge_must_cancel_substreams_when_failing_map_function()
         {
-            var settings = ActorMaterializerSettings.Create(Sys).WithSyncProcessingLimit(1);
+            var settings = ActorMaterializerSettings.Create(Sys).WithSyncProcessingLimit(1).WithInputBuffer(1, 1);
             var materializer = ActorMaterializer.Create(Sys, settings);
-            var p = TestPublisher.CreateProbe<int>(this);
+            var p = this.CreatePublisherProbe<int>();
             var ex = new TestException("buh");
             var latch = new TestLatch();
 
@@ -195,8 +195,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_FlattenMerge_must_cancel_substreams_when_being_cancelled()
         {
-            var p1 = TestPublisher.CreateProbe<int>(this);
-            var p2 = TestPublisher.CreateProbe<int>(this);
+            var p1 = this.CreatePublisherProbe<int>();
+            var p2 = this.CreatePublisherProbe<int>();
 
             var sink = Source.From(new[] {Source.FromPublisher(p1), Source.FromPublisher(p2)})
                 .MergeMany(5, x => x)

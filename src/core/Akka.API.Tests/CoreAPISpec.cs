@@ -13,6 +13,7 @@ using Akka.Cluster;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Persistence;
 using Akka.Remote;
+using Akka.Streams.Dsl;
 using ApiApprover;
 using ApprovalTests;
 using Mono.Cecil;
@@ -67,6 +68,15 @@ namespace Akka.API.Tests
         public void ApproveClusterTools()
         {
             var assemblyPath = Path.GetFullPath(typeof(ClusterSingletonManager).Assembly.Location);
+            var asm = AssemblyDefinition.ReadAssembly(assemblyPath);
+            var publicApi = Filter(PublicApiGenerator.CreatePublicApiForAssembly(asm));
+            Approvals.Verify(publicApi);
+        }
+        [Fact]
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public void ApproveStreams()
+        {
+            var assemblyPath = Path.GetFullPath(typeof(Source).Assembly.Location);
             var asm = AssemblyDefinition.ReadAssembly(assemblyPath);
             var publicApi = Filter(PublicApiGenerator.CreatePublicApiForAssembly(asm));
             Approvals.Verify(publicApi);

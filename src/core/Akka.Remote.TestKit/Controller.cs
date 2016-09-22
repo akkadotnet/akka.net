@@ -25,7 +25,7 @@ namespace Akka.Remote.TestKit
     /// </summary>
     class Controller : UntypedActor, ILogReceive
     {
-        public sealed class ClientDisconnected
+        public sealed class ClientDisconnected : IDeadLetterSuppression
         {
             private readonly RoleName _name;
 
@@ -392,7 +392,15 @@ namespace Akka.Remote.TestKit
 
         protected override void PostStop()
         {
-            RemoteConnection.Shutdown(_connection);
+            try
+            {
+                RemoteConnection.Shutdown(_connection);
+                RemoteConnection.ReleaseAll().Wait(_settings.ConnectTimeout);
+            }
+            catch (Exception ex)
+            {
+                _log.Error(ex, "Error while terminating RemoteConnection.");
+            }
         }
     }
 }

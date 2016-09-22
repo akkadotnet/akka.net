@@ -30,8 +30,13 @@ namespace Akka.Streams.Implementation
 
         public override Shape Shape => _shape;
 
+        protected virtual string Label => GetType().Name;
+
+        public sealed override string ToString() => $"{Label} [{GetHashCode()}%08x]";
+
         // This is okay since the only caller of this method is right below.
         protected abstract SourceModule<TOut, TMat> NewInstance(SourceShape<TOut> shape);
+
         public abstract IPublisher<TOut> Create(MaterializationContext context, out TMat materializer);
 
         IUntypedPublisher ISourceModule.Create(MaterializationContext context, out object materializer)
@@ -41,6 +46,7 @@ namespace Akka.Streams.Implementation
             materializer = m;
             return UntypedPublisher.FromTyped(result);
         }
+
 
         public override IModule ReplaceShape(Shape shape)
         {
@@ -105,9 +111,13 @@ namespace Akka.Streams.Implementation
         {
             _publisher = publisher;
             Attributes = attributes;
+
+            Label = $"PublisherSource({publisher})";
         }
 
         public override Attributes Attributes { get; }
+
+        protected override string Label { get; }
 
         public override IModule WithAttributes(Attributes attributes)
             => new PublisherSource<TOut>(_publisher, attributes, AmendShape(attributes));
@@ -184,9 +194,13 @@ namespace Akka.Streams.Implementation
             _bufferSize = bufferSize;
             _overflowStrategy = overflowStrategy;
             Attributes = attributes;
+
+            Label = $"ActorRefSource({bufferSize}, {overflowStrategy})";
         }
 
         public override Attributes Attributes { get; }
+
+        protected override string Label { get; }
 
         public override IModule WithAttributes(Attributes attributes) 
             => new ActorRefSource<TOut>(_bufferSize, _overflowStrategy, attributes, AmendShape(attributes));

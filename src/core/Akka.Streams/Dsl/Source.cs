@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -172,6 +173,12 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Transform only the materialized value of this Source, leaving all other properties as they were.
         /// </summary>
+        IFlow<TOut, TMat2> IFlow<TOut, TMat>.MapMaterializedValue<TMat2>(Func<TMat, TMat2> mapFunc)
+            => MapMaterializedValue(mapFunc);
+
+        /// <summary>
+        /// Transform only the materialized value of this Source, leaving all other properties as they were.
+        /// </summary>
         public Source<TOut, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> mapFunc)
             => new Source<TOut, TMat2>(Module.TransformMaterializedValue(mapFunc));
 
@@ -225,7 +232,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Combines several sources with fun-in strategy like <see cref="Merge{TIn,TOut}"/> or <see cref="Concat{TIn,TOut}"/> and returns <see cref="Source{TOut,TMat}"/>.
         /// </summary>
-        public Source<U, NotUsed> Combine<T, U>(Source<T, NotUsed> first, Source<T, NotUsed> second, Source<T, NotUsed>[] rest, Func<int, IGraph<UniformFanInShape<T, U>, NotUsed>> strategy)
+        public Source<TOut2, NotUsed> Combine<T, TOut2>(Source<T, NotUsed> first, Source<T, NotUsed> second, Func<int, IGraph<UniformFanInShape<T, TOut2>, NotUsed>> strategy, params Source<T, NotUsed>[] rest)
             => Source.FromGraph(GraphDsl.Create(b =>
             {
                 var c = b.Add(strategy(rest.Length + 2));
@@ -234,8 +241,35 @@ namespace Akka.Streams.Dsl
 
                 for (var i = 0; i < rest.Length; i++)
                     b.From(rest[i]).To(c.In(i + 2));
-                return new SourceShape<U>(c.Out);
+                return new SourceShape<TOut2>(c.Out);
             }));
+
+        /// <summary>
+        /// Combine the elements of multiple streams into a stream of lists.
+        /// </summary>
+        public Source<IImmutableList<T>, NotUsed> ZipN<T>(IEnumerable<Source<T, NotUsed>> sources)
+            => ZipWithN(x => x, sources);
+
+        /// <summary>
+        /// Combine the elements of multiple streams into a stream of sequences using a combiner function.
+        /// </summary>
+        public Source<TOut2, NotUsed> ZipWithN<T, TOut2>(Func<IImmutableList<T>, TOut2> zipper,
+            IEnumerable<Source<T, NotUsed>> sources)
+        {
+            var s = sources.ToList();
+            Source<TOut2, NotUsed> source;
+
+            if (s.Count == 0)
+                source = Source.Empty<TOut2>();
+            else if (s.Count == 1)
+                source = s[0].Select(t => zipper(ImmutableList<T>.Empty.Add(t)));
+            else
+                source = Combine(s[0], s[1], i => new ZipWithN<T, TOut2>(zipper, i), s.Skip(2).ToArray());
+
+            return source.AddAttributes(DefaultAttributes.ZipWithN);
+        }
+
+        public override string ToString() => $"Source({Shape}, {Module})";
     }
 
     public static class Source
@@ -259,12 +293,23 @@ namespace Akka.Streams.Dsl
         /// 
         /// Start a new <see cref="Source{TOut,TMat}"/> from the given function that produces an <see cref="IEnumerable{T}"/>.
         /// The produced stream of elements will continue until the enumerator runs empty
-        /// or fails during evaluation of the <see cref="IEnumerator.MoveNext"/> method.
+        /// or fails during evaluation of the <see cref="IEnumerator{T}.MoveNext"/> method.
         /// Elements are pulled out of the enumerator in accordance with the demand coming
         /// from the downstream transformation steps.
         /// </summary>
         public static Source<T, NotUsed> FromEnumerator<T>(Func<IEnumerator<T>> enumeratorFactory)
             => From(new EnumeratorEnumerable<T>(enumeratorFactory));
+
+        /// <summary>
+        /// Create <see cref="Source{TOut,TMat}"/> that will continually produce given elements in specified order.
+        /// Start a new cycled <see cref="Source{TOut,TMat}"/> from the given elements. The producer stream of elements
+        /// will continue infinitely by repeating the sequence of elements provided by function parameter.
+        /// </summary>
+        public static Source<T, NotUsed> Cycle<T>(Func<IEnumerator<T>> enumeratorFactory)
+        {
+            var continualEnumerator = new ContinuallyEnumerable<T>(enumeratorFactory).GetEnumerator();
+            return FromEnumerator(() => continualEnumerator).WithAttributes(DefaultAttributes.CycledSource);
+        }
 
         /// <summary>
         /// Helper to create <see cref="Source{TOut,TMat}"/> from <see cref="IEnumerable{T}"/>.
@@ -446,15 +491,15 @@ namespace Akka.Streams.Dsl
         /// 
         /// The buffer can be disabled by using <paramref name="bufferSize"/> of 0 and then received messages are dropped
         /// if there is no demand from downstream. When <paramref name="bufferSize"/> is 0 the <paramref name="overflowStrategy"/> does
-        /// not matter.
+        /// not matter. An async boundary is added after this Source; as such, it is never safe to assume the downstream will always generate demand.
         /// 
-        /// The stream can be completed successfully by sending the actor reference an <see cref="Status.Success"/>
-        /// message in which case already buffered elements will be signaled before signaling completion,
-        /// or by sending a <see cref="PoisonPill"/> in which case completion will be signaled immediately.
+        /// The stream can be completed successfully by sending the actor reference a <see cref="Status.Success"/>
+        /// message (whose content will be ignored) in which case already buffered elements will be signaled before signaling completion,
+        /// or by sending <see cref="PoisonPill"/> in which case completion will be signaled immediately.
         /// 
-        /// The stream can be completed with failure by sending <see cref="Status.Failure"/> to the
+        /// The stream can be completed with failure by sending a <see cref="Status.Failure"/> to the
         /// actor reference. In case the Actor is still draining its internal buffer (after having received
-        /// an <see cref="Status.Success"/>) before signaling completion and it receives a <see cref="Status.Failure"/>,
+        /// a <see cref="Status.Success"/>) before signaling completion and it receives a <see cref="Status.Failure"/>,
         /// the failure will be signaled downstream immediately (instead of the completion signal).
         /// 
         /// The actor will be stopped when the stream is completed, failed or canceled from downstream,
@@ -462,6 +507,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="bufferSize">The size of the buffer in element count</param>
         /// <param name="overflowStrategy">Strategy that is used when incoming elements cannot fit inside the buffer</param>
+        /// <seealso cref="Queue{T}"/>
         public static Source<T, IActorRef> ActorRef<T>(int bufferSize, OverflowStrategy overflowStrategy)
         {
             if (bufferSize < 0) throw new ArgumentException("Buffer size must be greater than or equal 0", nameof(bufferSize));
@@ -474,7 +520,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Combines several sources with fun-in strategy like <see cref="Merge{TIn,TOut}"/> or <see cref="Concat{TIn,TOut}"/> and returns <see cref="Source{TOut,TMat}"/>.
         /// </summary>
-        public static Source<U, NotUsed> Combine<T, U>(Source<T, NotUsed> first, Source<T, NotUsed> second, Func<int, IGraph<UniformFanInShape<T, U>, NotUsed>> strategy, params Source<T, NotUsed>[] rest)
+        public static Source<TOut2, NotUsed> Combine<T, TOut2>(Source<T, NotUsed> first, Source<T, NotUsed> second, Func<int, IGraph<UniformFanInShape<T, TOut2>, NotUsed>> strategy, params Source<T, NotUsed>[] rest)
             => FromGraph(GraphDsl.Create(b =>
             {
                 var c = b.Add(strategy(rest.Length + 2));
@@ -483,12 +529,37 @@ namespace Akka.Streams.Dsl
 
                 for (var i = 0; i < rest.Length; i++)
                     b.From(rest[i]).To(c.In(i + 2));
-                return new SourceShape<U>(c.Out);
+                return new SourceShape<TOut2>(c.Out);
             }));
 
 
         /// <summary>
-        /// Creates a <see cref="Source{TOut,TMat}"/> that is materialized as an <see cref="ISourceQueue{T}"/>.
+        /// Combine the elements of multiple streams into a stream of lists.
+        /// </summary>
+        public static Source<IImmutableList<T>, NotUsed> ZipN<T>(IEnumerable<Source<T, NotUsed>> sources)
+            => ZipWithN(x => x, sources);
+
+        /// <summary>
+        /// Combine the elements of multiple streams into a stream of sequences using a combiner function.
+        /// </summary>
+        public static Source<TOut2, NotUsed> ZipWithN<T, TOut2>(Func<IImmutableList<T>, TOut2> zipper,
+            IEnumerable<Source<T, NotUsed>> sources)
+        {
+            var s = sources.ToList();
+            Source<TOut2, NotUsed> source;
+
+            if (s.Count == 0)
+                source = Empty<TOut2>();
+            else if (s.Count == 1)
+                source = s[0].Select(t => zipper(ImmutableList<T>.Empty.Add(t)));
+            else
+                source = Combine(s[0], s[1], i => new ZipWithN<T, TOut2>(zipper, i), s.Skip(2).ToArray());
+
+            return source.AddAttributes(DefaultAttributes.ZipWithN);
+        }
+
+        /// <summary>
+        /// Creates a <see cref="Source{TOut,TMat}"/> that is materialized as an <see cref="ISourceQueueWithComplete{T}"/>.
         /// You can push elements to the queue and they will be emitted to the stream if there is demand from downstream,
         /// otherwise they will be buffered until request for demand is received.
         /// 
@@ -496,11 +567,11 @@ namespace Akka.Streams.Dsl
         /// there is no space available in the buffer.
         /// 
         /// Acknowledgement mechanism is available.
-        /// <see cref="ISourceQueue{T}.OfferAsync"/> returns <see cref="Task"/> which completes with true
+        /// <see cref="ISourceQueueWithComplete{T}.OfferAsync"/> returns <see cref="Task"/> which completes with true
         /// if element was added to buffer or sent downstream. It completes
         /// with false if element was dropped.
         /// 
-        /// The strategy <see cref="OverflowStrategy.Backpressure"/> will not complete <see cref="ISourceQueue{T}.OfferAsync"/> until buffer is full.
+        /// The strategy <see cref="OverflowStrategy.Backpressure"/> will not complete <see cref="ISourceQueueWithComplete{T}.OfferAsync"/> until buffer is full.
         /// 
         /// The buffer can be disabled by using <paramref name="bufferSize"/> of 0 and then received messages are dropped
         /// if there is no demand from downstream. When <paramref name="bufferSize"/> is 0 the <paramref name="overflowStrategy"/> does
@@ -508,11 +579,67 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="bufferSize">The size of the buffer in element count</param>
         /// <param name="overflowStrategy">Strategy that is used when incoming elements cannot fit inside the buffer</param>
-        public static Source<T, ISourceQueue<T>> Queue<T>(int bufferSize, OverflowStrategy overflowStrategy)
+        public static Source<T, ISourceQueueWithComplete<T>> Queue<T>(int bufferSize, OverflowStrategy overflowStrategy)
         {
             if (bufferSize < 0) throw new ArgumentException("Buffer size must be greater than or equal 0", nameof(bufferSize));
 
             return FromGraph(new QueueSource<T>(bufferSize, overflowStrategy).WithAttributes(DefaultAttributes.QueueSource));
+        }
+
+        /// <summary>
+        /// Start a new <see cref="Source{TOut,TMat}"/> from some resource which can be opened, read and closed.
+        /// Interaction with resource happens in a blocking way.
+        ///
+        /// Example:
+        /// {{{
+        /// Source.unfoldResource(
+        ///   () => new BufferedReader(new FileReader("...")),
+        ///   reader => Option(reader.readLine()),
+        ///   reader => reader.close())
+        /// }}}
+        ///
+        /// You can use the supervision strategy to handle exceptions for <paramref name="read"/> function. All exceptions thrown by <paramref name="create"/>
+        /// or <paramref name="close"/> will fail the stream.
+        ///
+        /// <see cref="Supervision.Directive.Restart"/> supervision strategy will close and create blocking IO again. Default strategy is <see cref="Supervision.Directive.Stop"/> which means
+        /// that stream will be terminated on error in `read` function by default.
+        ///
+        /// You can configure the default dispatcher for this Source by changing the `akka.stream.blocking-io-dispatcher` or
+        /// set it for a given Source by using <see cref="ActorAttributes.CreateDispatcher"/>.
+        /// </summary>
+        /// <param name="create">function that is called on stream start and creates/opens resource.</param>
+        /// <param name="read">function that reads data from opened resource. It is called each time backpressure signal
+        /// is received. Stream calls close and completes when <paramref name="read"/> returns <see cref="Option{T}.None"/>.</param>
+        /// <param name="close"></param>
+        /// <returns></returns>
+        public static Source<T, NotUsed> UnfoldResource<T, TSource>(Func<TSource> create,
+            Func<TSource, Option<T>> read, Action<TSource> close)
+        {
+            return FromGraph(new UnfoldResourceSource<T, TSource>(create, read, close));
+        }
+
+        /// <summary>
+        /// Start a new <see cref="Source{TOut,TMat}"/> from some resource which can be opened, read and closed.
+        /// It's similar to <see cref="UnfoldResource{T,TSource}"/> but takes functions that return <see cref="Task"/>s instead of plain values.
+        ///
+        /// You can use the supervision strategy to handle exceptions for <paramref name="read"/> function or failures of produced <see cref="Task"/>s.
+        /// All exceptions thrown by <paramref name="create"/> or <paramref name="close"/> as well as fails of returned futures will fail the stream.
+        ///
+        /// <see cref="Supervision.Directive.Restart"/> supervision strategy will close and create resource .Default strategy is <see cref="Supervision.Directive.Stop"/> which means
+        /// that stream will be terminated on error in <paramref name="read"/> function (or task) by default.
+        ///
+        /// You can configure the default dispatcher for this Source by changing the `akka.stream.blocking-io-dispatcher` or
+        /// set it for a given Source by using <see cref="ActorAttributes.CreateDispatcher"/>.
+        /// </summary>
+        /// <param name="create">function that is called on stream start and creates/opens resource.</param>
+        /// <param name="read">function that reads data from opened resource. It is called each time backpressure signal
+        /// is received. Stream calls close and completes when <see cref="Task"/> from read function returns None.</param>
+        /// <param name="close">function that closes resource</param>
+        /// <returns></returns>
+        public static Source<T, NotUsed> UnfoldResourceAsync<T, TSource>(Func<Task<TSource>> create,
+            Func<TSource, Task<Option<T>>> read, Func<TSource, Task> close)
+        {
+            return FromGraph(new UnfoldResourceSourceAsync<T, TSource>(create, read, close));
         }
     }
 }

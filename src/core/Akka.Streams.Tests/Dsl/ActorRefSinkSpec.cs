@@ -6,9 +6,11 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,17 +26,17 @@ namespace Akka.Streams.Tests.Dsl
             }
         }
 
-        private readonly ActorMaterializer materializer;
+        public ActorMaterializer Materializer { get; }
 
-        public ActorRefSinkSpec(ITestOutputHelper output) : base(output)
+        public ActorRefSinkSpec(ITestOutputHelper output) : base(output, ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf"))
         {
-            materializer = Sys.Materializer();
+            Materializer = Sys.Materializer();
         }
 
         [Fact]
         public void ActorRefSink_should_send_elements_to_the_ActorRef()
         {
-            Source.From(new[] { 1, 2, 3 }).RunWith(Sink.ActorRef<int>(TestActor, onCompleteMessage: "done"), materializer);
+            Source.From(new[] { 1, 2, 3 }).RunWith(Sink.ActorRef<int>(TestActor, onCompleteMessage: "done"), Materializer);
 
             ExpectMsg(1);
             ExpectMsg(2);
@@ -47,7 +49,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var fw = Sys.ActorOf(Props.Create(() => new Fw(TestActor)).WithDispatcher("akka.test.stream-dispatcher"));
             var publisher = this.SourceProbe<int>().To(Sink.ActorRef<int>(fw, onCompleteMessage: "done"))
-                    .Run(materializer)
+                    .Run(Materializer)
                     .SendNext(1)
                     .SendNext(2);
 

@@ -37,7 +37,7 @@ namespace Akka.IO
                     try
                     {
                         //TODO: IP6
-                        answer = Dns.Resolved.Create(resolve.Name, System.Net.Dns.GetHostEntry(resolve.Name).AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork));
+                        answer = Dns.Resolved.Create(resolve.Name, System.Net.Dns.GetHostEntryAsync(resolve.Name).Result.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork));
                         _cache.Put(answer, _positiveTtl);
                     }
                     catch (SocketException ex)

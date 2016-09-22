@@ -62,6 +62,24 @@ namespace Akka.Persistence
         public Akka.Persistence.AtLeastOnceDeliverySnapshot GetDeliverySnapshot() { }
         public void OnReplaySuccess() { }
         public void SetDeliverySnapshot(Akka.Persistence.AtLeastOnceDeliverySnapshot snapshot) { }
+        public sealed class Delivery : System.IEquatable<Akka.Persistence.AtLeastOnceDeliverySemantic.Delivery>
+        {
+            public readonly int Attempt;
+            public readonly Akka.Actor.ActorPath Destination;
+            public readonly object Message;
+            public readonly System.DateTime Timestamp;
+            public Delivery(Akka.Actor.ActorPath destination, object message, System.DateTime timestamp, int attempt) { }
+            public bool Equals(Akka.Persistence.AtLeastOnceDeliverySemantic.Delivery other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+            public Akka.Persistence.AtLeastOnceDeliverySemantic.Delivery IncrementedCopy() { }
+            public override string ToString() { }
+        }
+        public sealed class RedeliveryTick
+        {
+            public static readonly Akka.Persistence.AtLeastOnceDeliverySemantic.RedeliveryTick Instance;
+            public override bool Equals(object obj) { }
+        }
     }
     public sealed class AtLeastOnceDeliverySnapshot : Akka.Persistence.Serialization.IMessage, System.IEquatable<Akka.Persistence.AtLeastOnceDeliverySnapshot>
     {
@@ -519,7 +537,7 @@ namespace Akka.Persistence
         public static readonly Akka.Persistence.RecoveryCompleted Instance;
         public override bool Equals(object obj) { }
     }
-    public class RecoverySuccess : Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.RecoverySuccess>
+    public class RecoverySuccess : Akka.Event.IDeadLetterSuppression, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.RecoverySuccess>
     {
         public readonly long HighestSequenceNr;
         public RecoverySuccess(long highestSequenceNr) { }
@@ -528,7 +546,18 @@ namespace Akka.Persistence
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class ReplayedMessage : Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.ReplayedMessage>
+    public sealed class RecoveryTick
+    {
+        public RecoveryTick(bool snapshot) { }
+        public bool Snapshot { get; }
+    }
+    public sealed class RecoveryTimedOutException : Akka.Actor.AkkaException
+    {
+        public RecoveryTimedOutException() { }
+        public RecoveryTimedOutException(string message, System.Exception cause = null) { }
+        public RecoveryTimedOutException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+    }
+    public sealed class ReplayedMessage : Akka.Event.IDeadLetterSuppression, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.ReplayedMessage>
     {
         public readonly Akka.Persistence.IPersistentRepresentation Persistent;
         public ReplayedMessage(Akka.Persistence.IPersistentRepresentation persistent) { }
@@ -549,7 +578,7 @@ namespace Akka.Persistence
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
     }
-    public sealed class ReplayMessagesFailure : Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.ReplayMessagesFailure>
+    public sealed class ReplayMessagesFailure : Akka.Event.IDeadLetterSuppression, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.ReplayMessagesFailure>
     {
         public readonly System.Exception Cause;
         public ReplayMessagesFailure(System.Exception cause) { }
@@ -637,9 +666,11 @@ namespace Akka.Persistence
         public static readonly Akka.Persistence.SnapshotSelectionCriteria Latest;
         public readonly long MaxSequenceNr;
         public readonly System.DateTime MaxTimeStamp;
+        public readonly long MinSequenceNr;
+        public readonly System.Nullable<System.DateTime> MinTimestamp;
         public static readonly Akka.Persistence.SnapshotSelectionCriteria None;
         [Newtonsoft.Json.JsonConstructorAttribute()]
-        public SnapshotSelectionCriteria(long maxSequenceNr, System.DateTime maxTimeStamp) { }
+        public SnapshotSelectionCriteria(long maxSequenceNr, System.DateTime maxTimeStamp, long minSequenceNr = 0, System.Nullable<System.DateTime> minTimestamp = null) { }
         public SnapshotSelectionCriteria(long maxSequenceNr) { }
         public bool Equals(Akka.Persistence.SnapshotSelectionCriteria other) { }
         public override bool Equals(object obj) { }
@@ -793,7 +824,8 @@ namespace Akka.Persistence.Fsm
         public void CancelTimer(string name) { }
         public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State GoTo(TState nextStateName) { }
         public Akka.Persistence.Fsm.PersistentFSMBase<TState, TData, TEvent>.State GoTo(TState nextStateName, TData stateData) { }
-        public void Initialize() { }
+        [System.ObsoleteAttribute("Removed from API, called internally.")]
+        protected internal void Initialize() { }
         public bool IsTimerActive(string name) { }
         protected virtual void LogTermination(Akka.Actor.FSMBase.Reason reason) { }
         public void OnTermination(System.Action<Akka.Actor.FSMBase.StopEvent<TState, TData>> terminationHandler) { }

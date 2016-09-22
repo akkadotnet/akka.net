@@ -7,7 +7,7 @@
 
 using System.Linq;
 using Akka.Streams.Dsl;
-using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -27,9 +27,9 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Sink_ToSeq_must_return_a_SeqT_from_a_Source()
         {
-            var input = Enumerable.Range(1, 6);
+            var input = Enumerable.Range(1, 6).ToList();
             var future = Source.From(input).RunWith(Sink.Seq<int>(), Materializer);
-            future.Wait(300).Should().BeTrue();
+            future.Wait(RemainingOrDefault).Should().BeTrue();
             future.Result.ShouldAllBeEquivalentTo(input);
         }
 
@@ -38,7 +38,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var input = Enumerable.Empty<int>();
             var future = Source.FromEnumerator(() => input.GetEnumerator()).RunWith(Sink.Seq<int>(), Materializer);
-            future.Wait(300).Should().BeTrue();
+            future.Wait(RemainingOrDefault).Should().BeTrue();
             future.Result.ShouldAllBeEquivalentTo(input);
         }
     }

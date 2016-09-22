@@ -63,11 +63,14 @@ namespace Akka.Actor.Internal
             return new TerminatingChildrenContainer(InternalChildren, _toDie.Add(actor), _reason);
         }
 
+        /// <summary></summary>
+        /// <exception cref="InvalidOperationException">This exception is thrown if the given <paramref name="name"/> belongs to an actor that is terminating.</exception>
+        /// <exception cref="InvalidActorNameException">This exception is thrown if the given <paramref name="name"/> is not unique in the container.</exception>
         public override IChildrenContainer Reserve(string name)
         {
-            if (_reason is SuspendReason.Termination) throw new InvalidOperationException(string.Format("Cannot reserve actor name\"{0}\". Is terminating.", name));
+            if (_reason is SuspendReason.Termination) throw new InvalidOperationException($@"Cannot reserve actor name ""{name}"". It is terminating.");
             if (InternalChildren.ContainsKey(name))
-                throw new InvalidActorNameException(string.Format("Actor name \"{0}\" is not unique!", name));
+                throw new InvalidActorNameException($@"Actor name ""{name}"" is not unique!");
             else
                 return new TerminatingChildrenContainer(InternalChildren.SetItem(name, ChildNameReserved.Instance), _toDie, _reason);
         }

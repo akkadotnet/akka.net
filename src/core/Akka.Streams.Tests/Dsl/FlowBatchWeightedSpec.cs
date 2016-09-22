@@ -8,7 +8,7 @@
 using System;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
 // ReSharper disable InvokeAsExtensionMethod
@@ -28,8 +28,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void BatchWeighted_must_not_aggregate_heavy_elements()
         {
-            var publisher = TestPublisher.CreateProbe<int>(this);
-            var subscriber = TestSubscriber.CreateProbe<int>(this);
+            var publisher = this.CreatePublisherProbe<int>();
+            var subscriber = this.CreateSubscriberProbe<int>();
 
             Source.FromPublisher(publisher)
                 .BatchWeighted(3, _ => 4, i => i, (sum, i) => sum + i)

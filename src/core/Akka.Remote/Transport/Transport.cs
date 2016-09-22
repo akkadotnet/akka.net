@@ -11,6 +11,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Google.ProtocolBuffers;
 using System.Runtime.Serialization;
+using Akka.Event;
 
 namespace Akka.Remote.Transport
 {
@@ -108,7 +109,7 @@ namespace Akka.Remote.Transport
         }
     }
 
-    public sealed class Disassociated : IHandleEvent
+    public sealed class Disassociated : IHandleEvent, IDeadLetterSuppression
     {
         internal readonly DisassociateInfo Info;
 

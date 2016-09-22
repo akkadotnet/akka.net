@@ -136,7 +136,7 @@ namespace Akka.Remote.TestKit
                     var askTimeout = barrierTimeout + Settings.QueryTimeout;
                     // Need to force barrier to wait here, so we can pass along a "fail barrier" message in the event
                     // of a failed operation
-                    _client.Ask(new ToServer<EnterBarrier>(new EnterBarrier(name, barrierTimeout)), askTimeout).Wait();
+                    var result = _client.Ask(new ToServer<EnterBarrier>(new EnterBarrier(name, barrierTimeout)), askTimeout).Result;
                 }
                 catch (AggregateException)
                 {
@@ -402,7 +402,7 @@ namespace Akka.Remote.TestKit
                     {
                         if (@event.StateData.RunningOp == null)
                         {
-                            _log.Warning("did not expect {1}", @event.FsmEvent);
+                            _log.Warning("did not expect {0}", @event.FsmEvent);
                         }
                         else
                         {
@@ -447,7 +447,7 @@ namespace Akka.Remote.TestKit
                         ThrottleMode mode;
                         if (throttleMsg.RateMBit < 0.0f) mode = Unthrottled.Instance;
                         else if (throttleMsg.RateMBit == 0.0f) mode = Blackhole.Instance;
-                        else mode = new TokenBucket(1000, throttleMsg.RateMBit*125000, 0, 0);
+                        else mode = new Transport.TokenBucket(1000, throttleMsg.RateMBit*125000, 0, 0);
                         var cmdTask =
                             TestConductor.Get(Context.System)
                                 .Transport.ManagementCommand(new SetThrottle(throttleMsg.Target, throttleMsg.Direction,
@@ -624,6 +624,7 @@ namespace Akka.Remote.TestKit
             Task.Factory.StartNew(() =>
             {
                 RemoteConnection.Shutdown(context.Channel);
+                RemoteConnection.ReleaseAll(); // yep, let it run asynchronously.
             }, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
             context.FireChannelInactive();
         }

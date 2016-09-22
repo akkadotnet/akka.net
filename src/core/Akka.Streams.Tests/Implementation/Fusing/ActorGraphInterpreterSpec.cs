@@ -10,12 +10,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Akka.Pattern;
 using Akka.Streams.Dsl;
+using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using FluentAssertions;
+using Reactive.Streams;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,11 +27,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 {
     public class ActorGraphInterpreterSpec : AkkaSpec
     {
-         private readonly ActorMaterializer _materializer;
+        public ActorMaterializer Materializer { get; }
 
         public ActorGraphInterpreterSpec(ITestOutputHelper output = null) : base(output)
         {
-            _materializer = ActorMaterializer.Create(Sys);
+            Materializer = ActorMaterializer.Create(Sys);
         }
 
         [Fact]
@@ -40,11 +44,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 var task = Source.From(Enumerable.Range(1, 100))
                     .Via(identity)
                     .Grouped(200)
-                    .RunWith(Sink.First<IEnumerable<int>>(), _materializer);
+                    .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 task.Result.Should().Equal(Enumerable.Range(1, 100));
-            }, _materializer);
+            }, Materializer);
         }
 
         [Fact]
@@ -59,11 +63,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     .Via(identity)
                     .Via(identity)
                     .Grouped(200)
-                    .RunWith(Sink.First<IEnumerable<int>>(), _materializer);
+                    .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 task.Result.Should().Equal(Enumerable.Range(1, 100));
-            }, _materializer);
+            }, Materializer);
         }
 
         [Fact]
@@ -77,11 +81,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 var task = Source.From(Enumerable.Range(1, 10))
                     .Via(identity)
                     .Grouped(100)
-                    .RunWith(Sink.First<IEnumerable<int>>(), _materializer);
+                    .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 task.Result.Should().Equal(Enumerable.Range(1, 10));
-            }, _materializer);
+            }, Materializer);
         }
 
         [Fact]
@@ -96,11 +100,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 var task = Source.From(Enumerable.Range(1, 10))
                     .Via(identity)
                     .Grouped(100)
-                    .RunWith(Sink.First<IEnumerable<int>>(), _materializer);
+                    .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 task.Result.Should().Equal(Enumerable.Range(1, 10));
-            }, _materializer);
+            }, Materializer);
         }
 
         [Fact]
@@ -128,14 +132,14 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                             .To(shape1.Inlet).From(bidi.Outlet1);
 
                         return ClosedShape.Instance;
-                    })).Run(_materializer);
+                    })).Run(Materializer);
 
                 tasks.Item1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 tasks.Item2.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
 
                 tasks.Item1.Result.Should().Equal(Enumerable.Range(1, 100));
                 tasks.Item2.Result.Should().Equal(Enumerable.Range(1, 10));
-            }, _materializer);
+            }, Materializer);
         }
 
         [Fact]
@@ -145,7 +149,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             EventFilter.Exception<ArgumentException>(new Regex("Error in stage.*")).ExpectOne(() =>
             {
-                Source.FromGraph(failyStage).RunWith(Sink.Ignore<int>(), _materializer).Wait(TimeSpan.FromSeconds(3));
+                Source.FromGraph(failyStage).RunWith(Sink.Ignore<int>(), Materializer).Wait(TimeSpan.FromSeconds(3));
             });
         }
 
@@ -173,10 +177,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 // latch to delay the preStart() (which in turn delays the enclosing actor's preStart).
                 var failyStage = new FailyInPreStartGraphStage(evilLatch);
 
-                var downstream0 = TestSubscriber.CreateProbe<int>(this);
-                var downstream1 = TestSubscriber.CreateProbe<int>(this);
+                var downstream0 = this.CreateSubscriberProbe<int>();
+                var downstream1 = this.CreateSubscriberProbe<int>();
 
-                var upstream = TestPublisher.CreateProbe<int>(this);
+                var upstream = this.CreatePublisherProbe<int>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -203,6 +207,87 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 upstream.SendComplete();
                 downstream1.ExpectComplete();
             }, noFuzzMaterializer);
+        }
+        
+        [Fact]
+        public void ActorGraphInterpreter_should_be_to_handle_Publisher_spec_violations_without_leaking()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var upstream = this.CreatePublisherProbe<int>();
+                var downstream = this.CreateSubscriberProbe<int>();
+
+                Source.Combine(Source.FromPublisher(new FilthyPublisher()), Source.FromPublisher(upstream),
+                    count => new Merge<int, int>(count)).RunWith(Sink.FromSubscriber(downstream), Materializer);
+
+                upstream.EnsureSubscription();
+                upstream.ExpectCancellation();
+
+                downstream.EnsureSubscription();
+
+                var ex = downstream.ExpectError();
+                ex.Should().BeOfType<IllegalStateException>();
+                ex.InnerException.Should().BeAssignableTo<ISpecViolation>();
+                ex.InnerException.InnerException.Should().BeOfType<TestException>();
+                ex.InnerException.InnerException.Message.Should().Be("violating your spec");
+            }, Materializer);
+        }
+
+        private sealed class FilthyPublisher : IPublisher<int>
+        {
+            private sealed class Subscription : ISubscription
+            {
+                public void Request(long n)
+                {
+                    throw new TestException("violating your spec");
+                }
+
+                public void Cancel()
+                {
+                }
+            }
+
+            public void Subscribe(ISubscriber<int> subscriber) => subscriber.OnSubscribe(new Subscription());
+        }
+
+        [Fact]
+        public void ActorGraphInterpreter_should_be_to_handle_Subscriber_spec_violations_without_leaking()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var upstream = this.CreatePublisherProbe<int>();
+                var downstream = this.CreateSubscriberProbe<int>();
+
+                Source.FromPublisher(upstream)
+                    .AlsoTo(Sink.FromSubscriber(downstream))
+                    .RunWith(Sink.FromSubscriber(new FilthySubscriber()), Materializer);
+                upstream.SendNext(0);
+                downstream.RequestNext(0);
+
+                var ex = downstream.ExpectError();
+                ex.Should().BeOfType<IllegalStateException>();
+                ex.InnerException.Should().BeAssignableTo<ISpecViolation>();
+                ex.InnerException.InnerException.Should().BeOfType<TestException>();
+                ex.InnerException.InnerException.Message.Should().Be("violating your spec");
+            }, Materializer);
+        }
+
+        private sealed class FilthySubscriber : ISubscriber<int>
+        {
+            public void OnSubscribe(ISubscription subscription) => subscription.Request(1);
+
+            public void OnNext(int element)
+            {
+                throw new TestException("violating your spec");
+            }
+
+            public void OnError(Exception cause)
+            {
+            }
+
+            public void OnComplete()
+            {
+            }
         }
 
         public class IdentityBidiGraphStage : GraphStage<BidiShape<int, int, int, int>>

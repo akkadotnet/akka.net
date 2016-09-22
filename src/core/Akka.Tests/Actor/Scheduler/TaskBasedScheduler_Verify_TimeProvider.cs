@@ -8,20 +8,29 @@
 using System;
 using Akka.Actor;
 using Akka.TestKit;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Tests.Actor.Scheduler
 {
     // ReSharper disable once InconsistentNaming
-    public class DedicatedThreadScheduler_Verify_TimeProvider
+    public class DefaultScheduler_Verify_TimeProvider
     {
         [Fact]
         public void Now_Should_be_accurate()
         {
             using (var sys = ActorSystem.Create("Foo"))
             {
-                ITimeProvider timeProvider = new DedicatedThreadScheduler(sys);
-                Math.Abs((timeProvider.Now - DateTimeOffset.Now).TotalMilliseconds).ShouldBeLessThan(20);
+                
+                ITimeProvider timeProvider = new HashedWheelTimerScheduler(sys.Settings.Config, sys.Log);
+                try
+                {
+                    Math.Abs((timeProvider.Now - DateTimeOffset.Now).TotalMilliseconds).ShouldBeLessThan(20);
+                }
+                finally
+                {
+                    timeProvider.AsInstanceOf<IDisposable>().Dispose();
+                }
             }
         }
     }

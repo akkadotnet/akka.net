@@ -5,10 +5,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
 using Akka.Streams.Implementation;
-using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Buffer = Akka.Streams.Implementation.Buffer;
@@ -18,7 +17,7 @@ namespace Akka.Streams.Tests.Implementation
     public class FixedBufferSpec : AkkaSpec
     {
         [Theory]
-        [MemberData("Sizes")]
+        [MemberData(nameof(Sizes))]
         public void FixedSizeBuffer_must_start_as_empty(int size)
         {
             var buf = FixedSizeBuffer.Create<NotUsed>(size);
@@ -27,7 +26,7 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Theory]
-        [MemberData("Sizes")]
+        [MemberData(nameof(Sizes))]
         public void FixedSizeBuffer_must_become_nonempty_after_enqueueing(int size)
         {
             var buf = FixedSizeBuffer.Create<string>(size);
@@ -37,7 +36,7 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Theory]
-        [MemberData("Sizes")]
+        [MemberData(nameof(Sizes))]
         public void FixedSizeBuffer_must_become_full_after_size_elements_are_enqueued(int size)
         {
             var buf = FixedSizeBuffer.Create<string>(size);
@@ -48,7 +47,7 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Theory]
-        [MemberData("Sizes")]
+        [MemberData(nameof(Sizes))]
         public void FixedSizeBuffer_must_become_empty_after_enqueueing_and_tail_drop(int size)
         {
             var buf = FixedSizeBuffer.Create<string>(size);
@@ -59,7 +58,7 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Theory]
-        [MemberData("Sizes")]
+        [MemberData(nameof(Sizes))]
         public void FixedSizeBuffer_must_become_empty_after_enqueueing_and_head_drop(int size)
         {
             var buf = FixedSizeBuffer.Create<string>(size);
@@ -70,7 +69,7 @@ namespace Akka.Streams.Tests.Implementation
         }
         
         [Theory]
-        [MemberData("Sizes")]
+        [MemberData(nameof(Sizes))]
         public void FixedSizeBuffer_must_drop_head_properly(int size)
         {
             var buf = FixedSizeBuffer.Create<int>(size);
@@ -83,7 +82,7 @@ namespace Akka.Streams.Tests.Implementation
         }
         
         [Theory]
-        [MemberData("Sizes")]
+        [MemberData(nameof(Sizes))]
         public void FixedSizeBuffer_must_drop_tail_properly(int size)
         {
             var buf = FixedSizeBuffer.Create<int>(size);
@@ -97,7 +96,7 @@ namespace Akka.Streams.Tests.Implementation
         }
         
         [Theory]
-        [MemberData("Sizes")]
+        [MemberData(nameof(Sizes))]
         public void FixedSizeBuffer_must_become_non_full_after_tail_dropped_from_full_buffer(int size)
         {
             var buf = FixedSizeBuffer.Create<string>(size);
@@ -111,7 +110,7 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Theory]
-        [MemberData("Sizes")]
+        [MemberData(nameof(Sizes))]
         public void FixedSizeBuffer_must_become_non_full_after_head_dropped_from_full_buffer(int size)
         {
             var buf = FixedSizeBuffer.Create<string>(size);
@@ -125,7 +124,7 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Theory]
-        [MemberData("Sizes")]
+        [MemberData(nameof(Sizes))]
         public void FixedSizeBuffer_must_work_properly_with_full_range_filling_draining_cycles(int size)
         {
             var buf = FixedSizeBuffer.Create<int>(size);
@@ -143,7 +142,7 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Theory]
-        [MemberData("Sizes")]
+        [MemberData(nameof(Sizes))]
         public void FixedSizeBuffer_must_work_when_indexes_wrap_around_at_Int_MaxValue(int size)
         {
             IBuffer<int> buf;
@@ -170,8 +169,8 @@ namespace Akka.Streams.Tests.Implementation
         {
             public CheatPowerOfTwoFixedSizeBuffer(int size) : base(size)
             {
-                ReadIndex = Int32.MaxValue;
-                WriteIndex = Int32.MaxValue;
+                ReadIndex = int.MaxValue;
+                WriteIndex = int.MaxValue;
             }
         }
 
@@ -179,8 +178,8 @@ namespace Akka.Streams.Tests.Implementation
         {
             public CheatModuloFixedSizeBuffer(int size) : base(size)
             {
-                ReadIndex = Int32.MaxValue;
-                WriteIndex = Int32.MaxValue;
+                ReadIndex = int.MaxValue;
+                WriteIndex = int.MaxValue;
             }
         }
 
@@ -205,7 +204,7 @@ namespace Akka.Streams.Tests.Implementation
         [Fact]
         public void Buffer_factory_must_produce_BoundedBuffers_when_capacity_greather_than_MaxFixedBufferSize()
         {
-            Buffer.Create<int>(Int32.MaxValue, Default).Should().BeOfType<BoundedBuffer<int>>();
+            Buffer.Create<int>(int.MaxValue, Default).Should().BeOfType<BoundedBuffer<int>>();
         }
 
         [Fact]

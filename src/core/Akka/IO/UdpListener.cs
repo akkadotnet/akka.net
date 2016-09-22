@@ -53,7 +53,7 @@ namespace Akka.IO
                     socket.Bind(bind.LocalAddress);
                     var ret = socket.LocalEndPoint;
                     if (ret == null)
-                        throw new ArgumentException(string.Format("bound to unknown SocketAddress [{0}]", socket.LocalEndPoint));
+                        throw new ArgumentException($"bound to unknown SocketAddress [{socket.LocalEndPoint}]");
                     channelRegistry.Register(Channel, SocketAsyncOperation.Receive, Self);
                     _log.Debug("Successfully bound to [{0}]", ret);
                     bind.Options.OfType<Inet.SocketOptionV2>().ForEach(x => x.AfterBind(socket));

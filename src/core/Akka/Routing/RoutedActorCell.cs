@@ -162,14 +162,12 @@ namespace Akka.Routing
         /// </summary>
         protected virtual void PreSuperStart() { }
 
-        public override void SendMessage(IActorRef sender, object message)
+        public override void SendMessage(Envelope envelope)
         {
-            if (RouterConfig.IsManagementMessage(message))
-                base.SendMessage(sender, message);
+            if (RouterConfig.IsManagementMessage(envelope.Message))
+                base.SendMessage(envelope);
             else
-            {
-                Router.Route(message, sender);
-            }
+                Router.Route(envelope.Message, envelope.Sender);
         }
 
         protected override ActorBase CreateNewActorInstance()

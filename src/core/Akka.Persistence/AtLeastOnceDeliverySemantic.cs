@@ -193,7 +193,7 @@ namespace Akka.Persistence
     {
 
         [Serializable]
-        internal sealed class Delivery : IEquatable<Delivery>
+        public sealed class Delivery : IEquatable<Delivery>
         {
             public readonly int Attempt;
             public readonly ActorPath Destination;
@@ -250,7 +250,7 @@ namespace Akka.Persistence
         }
 
         [Serializable]
-        internal sealed class RedeliveryTick
+        public sealed class RedeliveryTick
         {
             public static readonly RedeliveryTick Instance = new RedeliveryTick();
 

@@ -35,8 +35,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Conflate_must_pass_through_elements_unchanged_when_there_is_no_rate_difference()
         {
-            var publisher = TestPublisher.CreateProbe<int>(this);
-            var subscriber = TestSubscriber.CreateManualProbe<int>(this);
+            var publisher = this.CreatePublisherProbe<int>();
+            var subscriber = this.CreateManualSubscriberProbe<int>();
 
             Source.FromPublisher(publisher)
                 .ConflateWithSeed(i => i, (sum, i) => sum + i)
@@ -57,8 +57,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Conflate_must_pass_through_elements_unchanged_when_there_is_no_rate_difference_simple_conflate()
         {
-            var publisher = TestPublisher.CreateProbe<int>(this);
-            var subscriber = TestSubscriber.CreateManualProbe<int>(this);
+            var publisher = this.CreatePublisherProbe<int>();
+            var subscriber = this.CreateManualSubscriberProbe<int>();
 
             Source.FromPublisher(publisher)
                 .Conflate((sum, i) => sum + i)
@@ -79,8 +79,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Conflate_must_conflate_elements_while_downstream_is_silent()
         {
-            var publisher = TestPublisher.CreateProbe<int>(this);
-            var subscriber = TestSubscriber.CreateManualProbe<int>(this);
+            var publisher = this.CreatePublisherProbe<int>();
+            var subscriber = this.CreateManualSubscriberProbe<int>();
 
             Source.FromPublisher(publisher)
                 .ConflateWithSeed(i=>i,(sum, i) => sum + i)
@@ -101,8 +101,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Conflate_must_conflate_elements_while_downstream_is_silent_simple_conflate()
         {
-            var publisher = TestPublisher.CreateProbe<int>(this);
-            var subscriber = TestSubscriber.CreateManualProbe<int>(this);
+            var publisher = this.CreatePublisherProbe<int>();
+            var subscriber = this.CreateManualSubscriberProbe<int>();
 
             Source.FromPublisher(publisher)
                 .Conflate((sum, i) => sum + i)
@@ -149,8 +149,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Conflate_must_backpressure_subscriber_when_upstream_is_slower()
         {
-            var publisher = TestPublisher.CreateProbe<int>(this);
-            var subscriber = TestSubscriber.CreateManualProbe<int>(this);
+            var publisher = this.CreatePublisherProbe<int>();
+            var subscriber = this.CreateManualSubscriberProbe<int>();
 
             Source.FromPublisher(publisher)
                 .ConflateWithSeed(i=>i, (sum, i) => sum + i)
@@ -194,8 +194,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Conflate_must_restart_when_seed_throws_and_a_RestartDescider_is_used()
         {
-            var sourceProbe = TestPublisher.CreateProbe<int>(this);
-            var sinkProbe = TestSubscriber.CreateManualProbe<int>(this);
+            var sourceProbe = this.CreatePublisherProbe<int>();
+            var sinkProbe = this.CreateManualSubscriberProbe<int>();
             var exceptionlath = new TestLatch();
 
             var graph = Source.FromPublisher(sourceProbe).ConflateWithSeed(i =>
@@ -242,8 +242,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Conflate_must_restart_when_aggregate_throws_and_a_RestartingDecider_is_used()
         {
-            var sourceProbe = TestPublisher.CreateProbe<string>(this);
-            var sinkProbe = TestSubscriber.CreateProbe<string>(this);
+            var sourceProbe = this.CreatePublisherProbe<string>();
+            var sinkProbe = this.CreateSubscriberProbe<string>();
             var latch = new TestLatch();
 
             var conflate = Flow.Create<string>().ConflateWithSeed(i => i, (state, elem) =>
@@ -279,8 +279,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Conflate_must_restart_when_aggregate_throws_and_a_ResumingDecider_is_used()
         {
-            var sourceProbe = TestPublisher.CreateProbe<int>(this);
-            var sinkProbe = TestSubscriber.CreateManualProbe<List<int>>(this);
+            var sourceProbe = this.CreatePublisherProbe<int>();
+            var sinkProbe = this.CreateManualSubscriberProbe<List<int>>();
             var saw4Latch = new TestLatch();
 
             var graph = Source.FromPublisher(sourceProbe).ConflateWithSeed(i => new List<int> { i },

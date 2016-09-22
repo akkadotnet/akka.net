@@ -8,9 +8,11 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Streams.Implementation;
+using Akka.TestKit;
 using Akka.Util.Internal;
 
 namespace Akka.Streams.TestKit.Tests
@@ -72,6 +74,12 @@ namespace Akka.Streams.TestKit.Tests
 
             if (r.Underlying.Props.Dispatcher != dispatcher)
                 throw new Exception($"Expected {@ref} to use dispatcher [{dispatcher}], yet used : [{r.Underlying.Props.Dispatcher}]");
+        }
+
+        public static T AwaitResult<T>(this Task<T> task, TimeSpan? timeout = null)
+        {
+            task.Wait(timeout??TimeSpan.FromSeconds(3)).ShouldBeTrue();
+            return task.Result;
         }
     }
 }

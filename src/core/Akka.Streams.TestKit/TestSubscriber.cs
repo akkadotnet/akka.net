@@ -9,6 +9,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Event;
+using Akka.Streams.Actors;
 using Akka.TestKit;
 using Reactive.Streams;
 
@@ -18,7 +20,7 @@ namespace Akka.Streams.TestKit
     {
         #region messages
 
-        public interface ISubscriberEvent : INoSerializationVerificationNeeded { }
+        public interface ISubscriberEvent : INoSerializationVerificationNeeded, IDeadLetterSuppression { }
 
         public struct OnSubscribe : ISubscriberEvent
         {
@@ -49,7 +51,7 @@ namespace Akka.Streams.TestKit
             public static readonly OnComplete Instance = new OnComplete();
             private OnComplete() { }
 
-            public override string ToString() => $"TestSubscriber.OnComplete";
+            public override string ToString() => "TestSubscriber.OnComplete";
         }
 
         public struct OnError : ISubscriberEvent
@@ -384,6 +386,14 @@ namespace Akka.Streams.TestKit
                 return _probe.ReceiveWhile(max, idle, filter, msgs);
             }
 
+            /// <summary>
+            /// Drains a given number of messages
+            /// </summary>
+            public IEnumerable<TOther> ReceiveWithin<TOther>(TimeSpan max, int messages = int.MaxValue) where TOther : class
+            {
+                return _probe.ReceiveWhile(max, max, msg => (msg as OnNext)?.Element as TOther, messages);
+            }
+
             public TOther Within<TOther>(TimeSpan max, Func<TOther> func)
             {
                 return _probe.Within(TimeSpan.Zero, max, func);
@@ -476,12 +486,12 @@ namespace Akka.Streams.TestKit
             }
         }
 
-        public static ManualProbe<T> CreateManualProbe<T>(this TestKitBase testKit)
+        public static ManualProbe<T> CreateManualSubscriberProbe<T>(this TestKitBase testKit)
         {
             return new ManualProbe<T>(testKit);
         }
 
-        public static Probe<T> CreateProbe<T>(this TestKitBase testKit)
+        public static Probe<T> CreateSubscriberProbe<T>(this TestKitBase testKit)
         {
             return new Probe<T>(testKit);
         }

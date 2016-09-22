@@ -46,10 +46,10 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
-        public static IFlow<Option<TOut>, TMat> Recover<TOut, TMat>(this IFlow<TOut, TMat> flow,
+        public static IFlow<TOut, TMat> Recover<TOut, TMat>(this IFlow<TOut, TMat> flow,
             Func<Exception, Option<TOut>> partialFunc)
         {
-            return flow.AndThen(new Recover<TOut>(partialFunc));
+            return flow.Via(new Fusing.Recover<TOut>(partialFunc));
         }
 
         /// <summary>
@@ -71,10 +71,36 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
+        [Obsolete("Use RecoverWithRetries instead.")]
         public static IFlow<TOut, TMat> RecoverWith<TOut, TMat>(this IFlow<TOut, TMat> flow,
             Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc)
         {
-            return flow.Via(new Fusing.RecoverWith<TOut,TMat>(partialFunc));
+            return RecoverWithRetries(flow, partialFunc, -1);
+        }
+
+        /// <summary>
+        /// RecoverWithRetries allows to switch to alternative Source on flow failure. It will stay in effect after
+        /// a failure has been recovered up to <paramref name="attempts"/> number of times so that each time there is a failure it is fed into the <paramref name="partialFunc"/> and a new
+        /// Source may be materialized. Note that if you pass in 0, this won't attempt to recover at all. Passing in a negative number will behave exactly the same as  <see cref="RecoverWith{TOut,TMat}"/>.
+        /// <para>
+        /// Since the underlying failure signal onError arrives out-of-band, it might jump over existing elements.
+        /// This stage can recover the failure signal, but not the skipped elements, which will be dropped.
+        /// </para>
+        /// <para>
+        /// Emits when element is available from the upstream or upstream is failed and element is available from alternative Source
+        /// </para>
+        /// <para>
+        /// Backpressures when downstream backpressures
+        /// </para>
+        /// <para>
+        /// Completes when upstream completes or upstream failed with exception <paramref name="partialFunc"/> can handle
+        /// </para>
+        /// Cancels when downstream cancels 
+        /// </summary>
+        public static IFlow<TOut, TMat> RecoverWithRetries<TOut, TMat>(this IFlow<TOut, TMat> flow,
+            Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc, int attempts)
+        {
+            return flow.Via(new Fusing.RecoverWith<TOut, TMat>(partialFunc, attempts));
         }
 
         /// <summary>
@@ -241,7 +267,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<T, TMat> Where<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate)
         {
-            return flow.AndThen(new Where<T>(predicate));
+            return flow.Via(new Fusing.Where<T>(predicate));
         }
 
         /// <summary>
@@ -259,7 +285,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<T, TMat> WhereNot<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate)
         {
-            return flow.AndThen(new Where<T>(e => !predicate(e)));
+            return flow.Via(new Fusing.Where<T>(e => !predicate(e)));
         }
 
         /// <summary>
@@ -281,7 +307,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<T, TMat> TakeWhile<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate)
         {
-            return flow.AndThen(new TakeWhile<T>(predicate));
+            return flow.Via(new Fusing.TakeWhile<T>(predicate));
         }
 
         /// <summary>
@@ -298,7 +324,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<T, TMat> SkipWhile<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate)
         {
-            return flow.AndThen(new SkipWhile<T>(predicate));
+            return flow.Via(new Fusing.SkipWhile<T>(predicate));
         }
 
         /// <summary>
@@ -316,7 +342,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<TOut, TMat> Collect<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> collector)
         {
-            return flow.AndThen(new Collect<TIn, TOut>(collector));
+            return flow.Via(new Fusing.Collect<TIn, TOut>(collector));
         }
 
         /// <summary>
@@ -392,7 +418,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <seealso cref="TakeWhile{T,TMat}"/>
         public static IFlow<T, TMat> LimitWeighted<T, TMat>(this IFlow<T, TMat> flow, long max, Func<T, long> costFunc)
         {
-            return flow.AndThen(new LimitWeighted<T>(max, costFunc));
+            return flow.Via(new Fusing.LimitWeighted<T>(max, costFunc));
         }
 
         /// <summary>
@@ -437,7 +463,7 @@ namespace Akka.Streams.Dsl.Internal
         public static IFlow<TOut, TMat> Scan<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, TOut zero,
             Func<TOut, TIn, TOut> scan)
         {
-            return flow.AndThen(new Scan<TIn, TOut>(zero, scan));
+            return flow.Via(new Fusing.Scan<TIn, TOut>(zero, scan));
         }
 
         /// <summary>
@@ -607,7 +633,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<T, TMat> Skip<T, TMat>(this IFlow<T, TMat> flow, long n)
         {
-            return flow.AndThen(new Skip<T>(n));
+            return flow.Via(new Fusing.Drop<T>(n));
         }
 
         /// <summary>
@@ -645,7 +671,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<T, TMat> Take<T, TMat>(this IFlow<T, TMat> flow, long n)
         {
-            return flow.AndThen(new Take<T>(n));
+            return flow.Via(new Fusing.Take<T>(n));
         }
 
         /// <summary>
@@ -1178,7 +1204,8 @@ namespace Akka.Streams.Dsl.Internal
 
         /// <summary>
         /// If the time between two processed elements exceed the provided timeout, the stream is failed
-        /// with a <see cref="TimeoutException"/>.
+        /// with a <see cref="TimeoutException"/>. 
+        /// The timeout is checked periodically, so the resolution of the check is one period (equals to timeout value).
         /// <para>
         /// Emits when upstream emits an element
         /// </para>
@@ -1191,6 +1218,24 @@ namespace Akka.Streams.Dsl.Internal
         public static IFlow<T, TMat> IdleTimeout<T, TMat>(this IFlow<T, TMat> flow, TimeSpan timeout)
         {
             return flow.Via(new Idle<T>(timeout));
+        }
+
+        /// <summary>
+        /// If the time between the emission of an element and the following downstream demand exceeds the provided timeout,
+        /// the stream is failed with a <see cref="TimeoutException"/>. The timeout is checked periodically,
+        /// so the resolution of the check is one period (equals to timeout value).
+        /// <para>
+        /// Emits when upstream emits an element
+        /// </para>
+        /// Backpressures when downstream backpressures
+        /// <para>
+        /// Completes when upstream completes or fails if timeout elapses between element emission and downstream demand.
+        /// </para>
+        /// Cancels when downstream cancels
+        /// </summary>
+        public static IFlow<T, TMat> BackpressureTimeout<T, TMat>(this IFlow<T, TMat> flow, TimeSpan timeout)
+        {
+            return flow.Via(new BackpressureTimeout<T>(timeout));
         }
 
         /// <summary>
@@ -1249,6 +1294,8 @@ namespace Akka.Streams.Dsl.Internal
             if (per == TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be zero", nameof(per));
             if (mode == ThrottleMode.Enforcing && maximumBurst < 0)
                 throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
+            if (per.Ticks < elements)
+                throw new ArgumentException("Rates larger than 1 unit / tick are not supported");
 
             return flow.Via(new Throttle<T>(elements, per, maximumBurst, _ => 1, mode));
         }
@@ -1286,6 +1333,8 @@ namespace Akka.Streams.Dsl.Internal
             if (per == TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be zero", nameof(per));
             if (mode == ThrottleMode.Enforcing && maximumBurst < 0)
                 throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
+            if (per.Ticks < cost)
+                throw new ArgumentException("Rates larger than 1 unit / tick are not supported");
 
             return flow.Via(new Throttle<T>(cost, per, maximumBurst, calculateCost, mode));
         }
@@ -1310,9 +1359,9 @@ namespace Akka.Streams.Dsl.Internal
         /// <summary>
         /// Delays the initial element by the specified duration.
         /// <para>
-        /// Emits when upstream emits an element if the initial delay already elapsed
+        /// Emits when upstream emits an element if the initial delay is already elapsed
         /// </para>
-        /// Backpressures when downstream backpressures or initial delay not yet elapsed
+        /// Backpressures when downstream backpressures or initial delay is not yet elapsed
         /// <para>
         /// Completes when upstream completes
         /// </para>
@@ -1712,6 +1761,18 @@ namespace Akka.Streams.Dsl.Internal
             Func<TMat, Task, TMat2> materializerFunction)
         {
             return flow.ViaMaterialized(Fusing.GraphStages.TerminationWatcher<T>(), materializerFunction);
+        }
+
+        /// <summary>
+        /// Materializes to <see cref="IFlowMonitor"/> that allows monitoring of the the current flow. All events are propagated
+        /// by the monitor unchanged. Note that the monitor inserts a memory barrier every time it processes an
+        /// event, and may therefor affect performance.
+        /// The <paramref name="combine"/> function is used to combine the <see cref="IFlowMonitor"/> with this flow's materialized value.
+        /// </summary>
+        public static IFlow<T, TMat2> Monitor<T, TMat, TMat2>(this IFlow<T, TMat> flow,
+            Func<TMat, IFlowMonitor, TMat2> combine)
+        {
+            return flow.ViaMaterialized(new Fusing.MonitorFlow<T>(), combine);
         }
 
         //TODO: there is no HKT in .NET, so we cannot simply do `to` method, which evaluates to either Source ⇒ IRunnableGraph, or Flow ⇒ Sink

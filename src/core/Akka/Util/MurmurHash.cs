@@ -240,14 +240,17 @@ namespace Akka.Util
         /// <summary>
         /// Converts a <see cref="BitArray"/> into an array of <see cref="byte"/>
         /// </summary>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if there aren't enough bits in the given <paramref name="arr"/> to make a byte.
+        /// </exception>
         public static byte[] ToBytes(this BitArray arr)
         {
-            if (arr.Count != 8)
+            if (arr.Length != 8)
             {
-                throw new ArgumentException("Not enough bits to make a byte!");
+                throw new ArgumentException("Not enough bits to make a byte!", nameof(arr));
             }
             var bytes = new byte[(arr.Length - 1) / 8 + 1];
-            arr.CopyTo(bytes, 0);
+            ((ICollection)arr).CopyTo(bytes, 0);
             return bytes;
         }
     }

@@ -30,11 +30,31 @@ namespace Akka.Actor
             get { return ChildrenContainer.Children; }
         }
 
+        /// <summary></summary>
+        /// <exception cref="InvalidActorNameException">
+        /// This exception is thrown if the given <paramref name="name"/> is an invalid actor name.
+        /// </exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if a pre-creation serialization occurred.
+        /// </exception>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is thrown if the actor tries to create a child while it is terminating or is terminated.
+        /// </exception>
         public virtual IActorRef AttachChild(Props props, bool isSystemService, string name = null)
         {
             return MakeChild(props, name == null ? GetRandomActorName() : CheckName(name), true, isSystemService);
         }
-        
+
+        /// <summary></summary>
+        /// <exception cref="InvalidActorNameException">
+        /// This exception is thrown if the given <paramref name="name"/> is an invalid actor name.
+        /// </exception>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if a pre-creation serialization occurred.
+        /// </exception>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is thrown if the actor tries to create a child while it is terminating or is terminated.
+        /// </exception>
         public virtual IActorRef ActorOf(Props props, string name = null)
         {
             return ActorOf(props, name, false, false);
@@ -310,7 +330,7 @@ namespace Akka.Actor
             if (name.Length == 0) throw new InvalidActorNameException("Actor name must not be empty.");
             if (!ActorPath.IsValidPathElement(name))
             {
-                throw new InvalidActorNameException(string.Format("Illegal actor name [{0}]. Actor paths MUST: not start with `$`, include only ASCII letters and can only contain these special characters: ${1}.", name, new String(ActorPath.ValidSymbols)));
+                throw new InvalidActorNameException($"Illegal actor name [{name}]. Actor paths MUST: not start with `$`, include only ASCII letters and can only contain these special characters: ${new string(ActorPath.ValidSymbols)}.");
             }
             return name;
         }
@@ -335,14 +355,14 @@ namespace Akka.Actor
                                 var manifest = manifestSerializer.Manifest(objectType);
                                 if (ser.Deserialize(bytes, manifestSerializer.Identifier, manifest) == null)
                                 {
-                                    throw new ArgumentException(string.Format("Pre-creation serialization check failed at [${0}/{1}]", _self.Path, name));
+                                    throw new ArgumentException($"Pre-creation serialization check failed at [${_self.Path}/{name}]", nameof(name));
                                 }
                             }
                             else
                             {
                                 if (ser.Deserialize(bytes, serializer.Identifier, argument.GetType().AssemblyQualifiedName) == null)
                                 {
-                                    throw new ArgumentException(string.Format("Pre-creation serialization check failed at [${0}/{1}]", _self.Path, name));
+                                    throw new ArgumentException($"Pre-creation serialization check failed at [${_self.Path}/{name}]", nameof(name));
                                 }
                             }
                         }

@@ -63,7 +63,32 @@ namespace Akka.Streams.Dsl
         public static SubFlow<TOut, TMat, TClosed> RecoverWith<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow,
             Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc)
         {
-            return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.RecoverWith(flow, partialFunc);
+            return RecoverWithRetries(flow, partialFunc, -1);
+        }
+
+        /// <summary>
+        /// RecoverWithRetries  allows to switch to alternative Source on flow failure. It will stay in effect after
+        /// a failure has been recovered up to <paramref name="attempts"/> number of times so that each time there is a failure it is fed into the <paramref name="partialFunc"/> and a new
+        /// Source may be materialized. Note that if you pass in 0, this won't attempt to recover at all. Passing in a negative number will behave exactly the same as  <see cref="RecoverWithRetries{TOut,TMat,TClosed}"/>.
+        /// <para>
+        /// Since the underlying failure signal onError arrives out-of-band, it might jump over existing elements.
+        /// This stage can recover the failure signal, but not the skipped elements, which will be dropped.
+        /// </para>
+        /// <para>
+        /// Emits when element is available from the upstream or upstream is failed and element is available from alternative Source
+        /// </para>
+        /// <para>
+        /// Backpressures when downstream backpressures
+        /// </para>
+        /// <para>
+        /// Completes when upstream completes or upstream failed with exception <paramref name="partialFunc"/> can handle
+        /// </para>
+        /// Cancels when downstream cancels 
+        /// </summary>
+        public static SubFlow<TOut, TMat, TClosed> RecoverWithRetries<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow,
+            Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc, int attempts)
+        {
+            return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.RecoverWithRetries(flow, partialFunc, attempts);
         }
 
         /// <summary>
@@ -181,7 +206,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Transform this stream by applying the given function <paramref name="asyncMapper"/> to each of the elements
         /// as they pass through this processing step. The function returns a <see cref="Task"/> and the
-        /// value of that task will be emitted downstreams. As many tasks as requested elements by
+        /// value of that task will be emitted downstream. As many tasks as requested elements by
         /// downstream may run in parallel and each processed element will be emitted dowstream
         /// as soon as it is ready, i.e. it is possible that the elements are not emitted downstream
         /// in the same order as received from upstream.
@@ -451,6 +476,10 @@ namespace Akka.Streams.Dsl
         /// Similar to <see cref="Aggregate{TOut1,TOut2,TMat,TClosed}"/> but uses first element as zero element.
         /// Applies the given function <paramref name="reduce"/> towards its current and next value,
         /// yielding the next current value. 
+        /// 
+        /// If the stream is empty (i.e. completes before signalling any elements),
+        /// the sum stage will fail its downstream with a <see cref="NoSuchElementException"/>,
+        /// which is semantically in-line with that standard library collections do in such situations.
         /// <para>
         /// Emits when upstream completes
         /// </para>
@@ -808,6 +837,7 @@ namespace Akka.Streams.Dsl
         /// This operator makes it possible to extend the <see cref="Flow"/> API when there is no specialized
         /// operator that performs the transformation.
         /// </summary>
+        [Obsolete("Use Via(GraphStage) instead.")]
         public static SubFlow<TOut2, TMat, TClosed> Transform<TOut1, TOut2, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow, Func<IStage<TOut1, TOut2>> stageFactory)
         {
             return (SubFlow<TOut2, TMat, TClosed>)InternalFlowOperations.Transform(flow, stageFactory);
@@ -904,7 +934,8 @@ namespace Akka.Streams.Dsl
 
         /// <summary>
         /// If the time between two processed elements exceed the provided timeout, the stream is failed
-        /// with a <see cref="TimeoutException"/>.
+        /// with a <see cref="TimeoutException"/>. 
+        /// The timeout is checked periodically, so the resolution of the check is one period (equals to timeout value).
         /// <para>
         /// Emits when upstream emits an element
         /// </para>
@@ -917,6 +948,24 @@ namespace Akka.Streams.Dsl
         public static SubFlow<TOut, TMat, TClosed> IdleTimeout<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, TimeSpan timeout)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.IdleTimeout(flow, timeout);
+        }
+
+        /// <summary>
+        /// If the time between the emission of an element and the following downstream demand exceeds the provided timeout,
+        /// the stream is failed with a <see cref="TimeoutException"/>. The timeout is checked periodically,
+        /// so the resolution of the check is one period (equals to timeout value).
+        /// <para>
+        /// Emits when upstream emits an element
+        /// </para>
+        /// Backpressures when downstream backpressures
+        /// <para>
+        /// Completes when upstream completes or fails if timeout elapses between element emission and downstream demand.
+        /// </para>
+        /// Cancels when downstream cancels
+        /// </summary>
+        public static SubFlow<TOut, TMat, TClosed> BackpressureTimeout<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, TimeSpan timeout)
+        {
+            return (SubFlow<TOut, TMat, TClosed>) InternalFlowOperations.BackpressureTimeout(flow, timeout);
         }
 
         /// <summary>
@@ -947,7 +996,7 @@ namespace Akka.Streams.Dsl
         /// 
         /// Throttle implements the token bucket model. There is a bucket with a given token capacity (burst size or maximumBurst).
         /// Tokens drops into the bucket at a given rate and can be "spared" for later use up to bucket capacity
-        /// to allow some burstyness. Whenever stream wants to send an element, it takes as many
+        /// to allow some burstiness. Whenever stream wants to send an element, it takes as many
         /// tokens from the bucket as number of elements. If there isn't any, throttle waits until the
         /// bucket accumulates enough tokens.
         /// 
@@ -980,7 +1029,7 @@ namespace Akka.Streams.Dsl
         /// 
         /// Throttle implements the token bucket model. There is a bucket with a given token capacity (burst size or maximumBurst).
         /// Tokens drops into the bucket at a given rate and can be spared for later use up to bucket capacity
-        /// to allow some burstyness. Whenever stream wants to send an element, it takes as many
+        /// to allow some burstiness. Whenever stream wants to send an element, it takes as many
         /// tokens from the bucket as element cost. If there isn't any, throttle waits until the
         /// bucket accumulates enough tokens. Elements that costs more than the allowed burst will be delayed proportionally
         /// to their cost minus available tokens, meeting the target rate.
@@ -1071,9 +1120,9 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Delays the initial element by the specified duration.
         /// <para>
-        /// Emits when upstream emits an element if the initial delay already elapsed
+        /// Emits when upstream emits an element if the initial delay is already elapsed
         /// </para>
-        /// Backpressures when downstream backpressures or initial delay not yet elapsed
+        /// Backpressures when downstream backpressures or initial delay is not yet elapsed
         /// <para>
         /// Completes when upstream completes
         /// </para>

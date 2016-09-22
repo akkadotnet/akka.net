@@ -82,6 +82,9 @@ namespace Akka.Remote.TestKit
         }
     }
 
+    /// <summary>
+    /// Settings used to operate the <see cref="TestConductor"/>.
+    /// </summary>
     public class TestConductorSettings
     {
         readonly TimeSpan _connectTimeout;

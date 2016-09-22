@@ -10,6 +10,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Configuration;
+using Akka.Event;
 
 namespace Akka.TestKit
 {
@@ -19,7 +21,7 @@ namespace Akka.TestKit
         private DateTimeOffset _now;
         private readonly ConcurrentDictionary<long, Queue<ScheduledItem>>  _scheduledWork; 
 
-        public TestScheduler(ActorSystem system)
+        public TestScheduler(Config schedulerConfig, ILoggingAdapter log)
         {
             _now = DateTimeOffset.UtcNow;
             _scheduledWork = new ConcurrentDictionary<long, Queue<ScheduledItem>>();

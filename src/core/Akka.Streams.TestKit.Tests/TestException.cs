@@ -9,7 +9,7 @@ using System;
 
 namespace Akka.Streams.TestKit.Tests
 {
-    public class TestException : SystemException
+    public class TestException : Exception
     {
         public TestException(string message) : base(message) { }
 

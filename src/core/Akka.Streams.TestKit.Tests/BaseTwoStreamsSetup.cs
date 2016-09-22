@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using Akka.Streams.Dsl;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -19,7 +20,7 @@ namespace Akka.Streams.TestKit.Tests
     {
         protected readonly ActorMaterializer Materializer;
 
-        public BaseTwoStreamsSetup(ITestOutputHelper output = null) : base(output)
+        protected BaseTwoStreamsSetup(ITestOutputHelper output = null) : base(output)
         {
             var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(initialSize: 2, maxSize: 2);
             Materializer = ActorMaterializer.Create(Sys, settings);
@@ -32,7 +33,7 @@ namespace Akka.Streams.TestKit.Tests
 
         protected virtual TestSubscriber.Probe<TOutputs> Setup(IPublisher<int> p1, IPublisher<int> p2)
         {
-            return TestSubscriber.CreateProbe<TOutputs>(this);
+            return this.CreateSubscriberProbe<TOutputs>();
         }
 
         protected IPublisher<T> FailedPublisher<T>()

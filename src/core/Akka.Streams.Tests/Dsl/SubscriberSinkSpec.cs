@@ -9,6 +9,7 @@ using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace Akka.Streams.Tests.Dsl
     {
         private ActorMaterializer Materializer { get; }
 
-        public SubscriberSinkSpec(ITestOutputHelper helper = null) : base(null)
+        public SubscriberSinkSpec(ITestOutputHelper helper = null) : base(helper)
         {
             var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 16);
             Materializer = ActorMaterializer.Create(Sys,settings);
@@ -29,7 +30,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c = this.CreateManualProbe<int>();
+                var c = this.CreateManualSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 3)).To(Sink.FromSubscriber(c)).Run(Materializer);
 
                 var s = c.ExpectSubscription();

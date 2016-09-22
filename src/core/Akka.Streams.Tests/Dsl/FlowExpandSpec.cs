@@ -11,7 +11,7 @@ using System.Linq;
 using System.Threading;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
@@ -37,8 +37,8 @@ namespace Akka.Streams.Tests.Dsl
             // Shadow the fuzzed materializer (see the ordering guarantee needed by the for loop below).
             var materializer = ActorMaterializer.Create(Sys, Settings.WithFuzzingMode(false));
 
-            var publisher = TestPublisher.CreateProbe<int>(this);
-            var subscriber = TestSubscriber.CreateProbe<int>(this);
+            var subscriber = this.CreateSubscriberProbe<int>();
+            var publisher = this.CreatePublisherProbe<int>();
 
             // Simply repeat the last element as an extrapolation step
             Source.FromPublisher(publisher)
@@ -59,8 +59,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Expand_musst_expand_elements_while_upstream_is_silent()
         {
-            var publisher = TestPublisher.CreateProbe<int>(this);
-            var subscriber = TestSubscriber.CreateProbe<int>(this);
+            var subscriber = this.CreateSubscriberProbe<int>();
+            var publisher = this.CreatePublisherProbe<int>();
 
             // Simply repeat the last element as an extrapolation step
             Source.FromPublisher(publisher)
@@ -85,8 +85,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Expand_musst_do_not_drop_last_element()
         {
-            var publisher = TestPublisher.CreateProbe<int>(this);
-            var subscriber = TestSubscriber.CreateProbe<int>(this);
+            var subscriber = this.CreateSubscriberProbe<int>();
+            var publisher = this.CreatePublisherProbe<int>();
 
             // Simply repeat the last element as an extrapolation step
             Source.FromPublisher(publisher)
@@ -131,8 +131,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Expand_musst_backpressure_publisher_when_subscriber_is_slower()
         {
-            var publisher = TestPublisher.CreateProbe<int>(this);
-            var subscriber = TestSubscriber.CreateProbe<int>(this);
+            var subscriber = this.CreateSubscriberProbe<int>();
+            var publisher = this.CreatePublisherProbe<int>();
 
             // Simply repeat the last element as an extrapolation step
             Source.FromPublisher(publisher)

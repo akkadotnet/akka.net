@@ -63,7 +63,6 @@ namespace Akka.Remote.Transport.Helios
             Config = config;
             Init();
         }
-
         static HeliosTransportSettings()
         {
             // Disable STDOUT logging for Helios in release mode
@@ -96,6 +95,7 @@ namespace Akka.Remote.Transport.Helios
             var configHost = Config.GetString("hostname");
             var publicConfigHost = Config.GetString("public-hostname");
             DnsUseIpv6 = Config.GetBoolean("dns-use-ipv6");
+            EnforceIpFamily = RuntimeDetector.IsMono || Config.GetBoolean("enforce-ip-family");
             Hostname = string.IsNullOrEmpty(configHost) ? IPAddress.Any.ToString() : configHost;
             PublicHostname = string.IsNullOrEmpty(publicConfigHost) ? Hostname : publicConfigHost;
             ServerSocketWorkerPoolSize = ComputeWps(Config.GetConfig("server-socket-worker-pool"));
@@ -133,6 +133,8 @@ namespace Akka.Remote.Transport.Helios
         public bool TcpReuseAddr { get; private set; }
 
         public bool DnsUseIpv6 { get; private set; }
+
+        public bool EnforceIpFamily { get; private set; }
 
         /// <summary>
         /// The hostname that this server binds to
@@ -283,6 +285,8 @@ namespace Akka.Remote.Transport.Helios
         {
             if (InternalTransport == TransportType.Tcp)
             {
+                var addressFamily = Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
+
                 var client = new ClientBootstrap()
                     .Group(_clientEventLoopGroup)
                     .Option(ChannelOption.SoReuseaddr, Settings.TcpReuseAddr)
@@ -290,8 +294,10 @@ namespace Akka.Remote.Transport.Helios
                     .Option(ChannelOption.TcpNodelay, Settings.TcpNoDelay)
                     .Option(ChannelOption.ConnectTimeout, Settings.ConnectTimeout)
                     .Option(ChannelOption.AutoRead, false)
-                    .PreferredDnsResolutionFamily(Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork)
-                    .Channel<TcpSocketChannel>()
+                    .PreferredDnsResolutionFamily(addressFamily)
+                    .ChannelFactory(() => Settings.EnforceIpFamily ? 
+                                        new TcpSocketChannel(addressFamily):
+                                        new TcpSocketChannel())
                     .Handler(
                         new ActionChannelInitializer<TcpSocketChannel>(
                             channel => SetClientPipeline(channel, remoteAddres)));
@@ -321,15 +327,19 @@ namespace Akka.Remote.Transport.Helios
             {
                 if (InternalTransport == TransportType.Tcp)
                 {
+                    var addressFamily = Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
+
                     var client = new ServerBootstrap()
-                     .Channel<TcpServerSocketChannel>()
                      .Group(_serverEventLoopGroup)
                      .Option(ChannelOption.SoReuseaddr, Settings.TcpReuseAddr)
                      .ChildOption(ChannelOption.SoKeepalive, Settings.TcpKeepAlive)
                      .ChildOption(ChannelOption.TcpNodelay, Settings.TcpNoDelay)
                      .ChildOption(ChannelOption.AutoRead, false)
                      .Option(ChannelOption.SoBacklog, Settings.Backlog)
-                     .PreferredDnsResolutionFamily(Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork)
+                     .PreferredDnsResolutionFamily(addressFamily)
+                     .ChannelFactory(() => Settings.EnforceIpFamily ? 
+                                            new TcpServerSocketChannel(addressFamily):
+                                            new TcpServerSocketChannel())
                      .ChildHandler(
                          new ActionChannelInitializer<TcpSocketChannel>(
                              SetServerPipeline));

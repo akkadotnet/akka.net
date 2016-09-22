@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Akka.Actor;
 using Akka.Remote;
 using Akka.Routing;
@@ -63,7 +64,22 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             }
             else if (message is Prune)
             {
-                if (PruneDeadline != null && PruneDeadline.IsOverdue) Context.Stop(Self);
+                if (PruneDeadline != null && PruneDeadline.IsOverdue)
+                {
+                    PruneDeadline = null;
+                    Context.Parent.Tell(NoMoreSubscribers.Instance);
+                }
+            }
+            else if (message is TerminateRequest)
+            {
+                if (Subscribers.Count == 0 && !Context.GetChildren().Any())
+                {
+                    Context.Stop(Self);
+                }
+                else
+                {
+                    Context.Parent.Tell(NewSubscriberArrived.Instance);
+                }
             }
             else
             {
@@ -95,10 +111,12 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     internal class Topic : TopicLike
     {
         private readonly RoutingLogic _routingLogic;
+        private readonly PerGroupingBuffer _buffer;
 
         public Topic(TimeSpan emptyTimeToLive, RoutingLogic routingLogic) : base(emptyTimeToLive)
         {
             _routingLogic = routingLogic;
+            _buffer = new PerGroupingBuffer();
         }
 
         protected override bool Business(object message)
@@ -107,32 +125,36 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             Unsubscribe unsubscribe;
             if ((subscribe = message as Subscribe) != null && subscribe.Group != null)
             {
-                var encodedGroup = Encode(subscribe.Group);
-                var child = encodedGroup == null ? ActorRefs.Nobody : Context.Child(encodedGroup);
-
-                if (!ActorRefs.Nobody.Equals(child))
+                var encodedGroup = Utils.EncodeName(subscribe.Group);
+                _buffer.BufferOr(Utils.MakeKey(Self.Path / encodedGroup), subscribe, Sender, () =>
                 {
-                    child.Forward(message);
-                }
-                else
-                {
-                    var group = Context.ActorOf(Props.Create(() => new Group(EmptyTimeToLive, _routingLogic)), encodedGroup);
-                    group.Forward(message);
-                    Context.Watch(group);
-                    Context.Parent.Tell(new RegisterTopic(group));
-                }
-
+                    var child = Context.Child(encodedGroup);
+                    if (!child.IsNobody())
+                    {
+                        child.Forward(message);
+                    }
+                    else
+                    {
+                        NewGroupActor(encodedGroup).Forward(message);
+                    }
+                });
                 PruneDeadline = null;
             }
             else if ((unsubscribe = message as Unsubscribe) != null && unsubscribe.Group != null)
             {
-                var encodedGroup = Encode(unsubscribe.Group);
-                var child = encodedGroup == null ? ActorRefs.Nobody : Context.Child(encodedGroup);
-
-                if (!child.Equals(ActorRefs.Nobody))
+                var encodedGroup = Utils.EncodeName(unsubscribe.Group);
+                _buffer.BufferOr(Utils.MakeKey(Self.Path / encodedGroup), unsubscribe, Sender, () =>
                 {
-                    child.Forward(message);
-                }
+                    var child = Context.Child(encodedGroup);
+                    if (!child.IsNobody())
+                    {
+                        child.Forward(message);
+                    }
+                    else
+                    {
+                        // no such group here
+                    }
+                });
             }
             else if (message is Subscribed)
             {
@@ -142,13 +164,33 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             {
                 Context.Parent.Forward(message);
             }
+            else if (message is NoMoreSubscribers)
+            {
+                var key = Utils.MakeKey(Sender);
+                _buffer.InitializeGrouping(key);
+                Sender.Tell(TerminateRequest.Instance);
+            }
+            else if (message is NewSubscriberArrived)
+            {
+                var key = Utils.MakeKey(Sender);
+                _buffer.ForwardMessages(key, Sender);
+            }
+            else if (message is Terminated)
+            {
+                var terminated = (Terminated)message;
+                var key = Utils.MakeKey(terminated.ActorRef);
+                _buffer.RecreateAndForwardMessagesIfNeeded(key, () => NewGroupActor(terminated.ActorRef.Path.Name));
+            }
             else return false;
             return true;
         }
 
-        private static string Encode(string name)
+        private IActorRef NewGroupActor(string encodedGroup)
         {
-            return name == null ? null : Uri.EscapeDataString(name);
+            var g = Context.ActorOf(Props.Create(() => new Group(EmptyTimeToLive, _routingLogic)), encodedGroup);
+            Context.Watch(g);
+            Context.Parent.Tell(new RegisterTopic(g));
+            return g;
         }
     }
 
@@ -194,6 +236,21 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         public static object WrapIfNeeded(object message)
         {
             return message is RouterEnvelope ? new MediatorRouterEnvelope(message) : message;
+        }
+
+        public static string MakeKey(IActorRef actorRef)
+        {
+            return MakeKey(actorRef.Path);
+        }
+
+        public static string EncodeName(string name)
+        {
+            return name == null ? null : Uri.EscapeDataString(name);
+        }
+
+        public static string MakeKey(ActorPath path)
+        {
+            return path.ToStringWithoutAddress();
         }
     }
 }

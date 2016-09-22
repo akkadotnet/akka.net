@@ -45,21 +45,32 @@ namespace Akka.Actor.Internal
             : this(name, ConfigurationFactory.Load())
         {
         }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ActorSystemImpl"/> class.
+        /// </summary>
+        /// <param name="name">The name given to the actor system.</param>
+        /// <param name="config">The configuration used to configure the actor system.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if the given <paramref name="name"/> is an invalid name for an actor system.
+        ///  Note that the name must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-').
+        /// </exception>
+        /// <exception cref="ArgumentNullException">This exception is thrown if the given <paramref name="config"/> is undefined.</exception>
         public ActorSystemImpl(string name, Config config)
         {
             if(!Regex.Match(name, "^[a-zA-Z0-9][a-zA-Z0-9-]*$").Success)
                 throw new ArgumentException(
-                    "invalid ActorSystem name [" + name +
-                    "], must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-')");
+                    $"Invalid ActorSystem name [{name}], must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-')");
             if(config == null)
-                throw new ArgumentNullException("config");
+                throw new ArgumentNullException(nameof(config), "Configuration must not be null.");
 
             _name = name;            
             ConfigureSettings(config);
             ConfigureEventStream();
+            ConfigureLoggers();
+            ConfigureScheduler();
             ConfigureProvider();
             ConfigureTerminationCallbacks();
-            ConfigureScheduler();
             ConfigureSerialization();
             ConfigureMailboxes();
             ConfigureDispatchers();
@@ -109,20 +120,39 @@ namespace Akka.Actor.Internal
         /// <summary>Starts this system</summary>
         public void Start()
         {
-            _provider.Init(this);
-            ConfigureLoggers();
-            LoadExtensions();
-
-            if(_settings.LogDeadLetters > 0)
-                _logDeadLetterListener = SystemActorOf<DeadLetterListener>("deadLetterListener");
-
-            _eventStream.StartUnsubscriber(this);
-            
-            WarnIfJsonIsDefaultSerializer();
-
-            if (_settings.LogConfigOnStart)
+            try
             {
-                _log.Warning(Settings.ToString());
+                RegisterOnTermination(StopScheduler);
+                _provider.Init(this);
+                LoadExtensions();
+
+                if (_settings.LogDeadLetters > 0)
+                    _logDeadLetterListener = SystemActorOf<DeadLetterListener>("deadLetterListener");
+
+                _eventStream.StartUnsubscriber(this);
+
+                WarnIfJsonIsDefaultSerializer();
+
+                if (_settings.LogConfigOnStart)
+                {
+                    _log.Warning(Settings.ToString());
+                }
+            }
+            catch (Exception)
+            {
+                try
+                {
+                    Terminate();
+                }
+                catch (Exception)
+                {
+                    try { StopScheduler();}
+                    catch
+                    {
+                        // ignored
+                    }
+                }
+                throw;
             }
         }
 
@@ -160,7 +190,13 @@ namespace Akka.Actor.Internal
         private void ConfigureScheduler()
         {
             var schedulerType = Type.GetType(_settings.SchedulerClass, true);
-            _scheduler = (IScheduler) Activator.CreateInstance(schedulerType, this);
+            _scheduler = (IScheduler) Activator.CreateInstance(schedulerType, _settings.Config, Log);
+        }
+
+        private void StopScheduler()
+        {
+            var sched = Scheduler as IDisposable;
+            sched?.Dispose();
         }
 
         /// <summary>
@@ -293,10 +329,23 @@ namespace Akka.Actor.Internal
         /// </summary>
         private void ConfigureProvider()
         {
-            Type providerType = Type.GetType(_settings.ProviderClass);
-            global::System.Diagnostics.Debug.Assert(providerType != null, "providerType != null");
-            var provider = (IActorRefProvider)Activator.CreateInstance(providerType, _name, _settings, _eventStream);
-            _provider = provider;
+            try
+            {
+                Type providerType = Type.GetType(_settings.ProviderClass);
+                global::System.Diagnostics.Debug.Assert(providerType != null, "providerType != null");
+                var provider =
+                    (IActorRefProvider) Activator.CreateInstance(providerType, _name, _settings, _eventStream);
+                _provider = provider;
+            }
+            catch (Exception)
+            {
+                try { StopScheduler(); }
+                catch
+                {
+                    // ignored
+                }
+                throw;
+            }
         }
 
         /// <summary>
@@ -440,13 +489,15 @@ namespace Akka.Actor.Internal
                 _terminationTask.Start();
             });
         }
-        
+
+        /// <summary></summary>
+        /// <exception cref="InvalidOperationException">This exception is thrown if the actor system has been terminated.</exception>
         public void Add(Action code)
         {
             var previous = _atomicRef.Value;
 
             if (_atomicRef.Value == null)
-                throw new Exception("ActorSystem already terminated.");
+                throw new InvalidOperationException("ActorSystem already terminated.");
 
             var t = new Task(code);
 

@@ -14,7 +14,7 @@ namespace Akka.Actor
     }
 
     public sealed class
-        Terminated : IAutoReceivedMessage, IPossiblyHarmful
+        Terminated : IAutoReceivedMessage, IPossiblyHarmful, IDeadLetterSuppression
     {
         public Terminated(IActorRef actorRef, bool existenceConfirmed, bool addressTerminated)
         {
@@ -39,7 +39,7 @@ namespace Akka.Actor
     /// <summary>
     /// Request to an <see cref="ICanTell"/> to get back the identity of the underlying actors.
     /// </summary>
-    public sealed class Identify : IAutoReceivedMessage
+    public sealed class Identify : IAutoReceivedMessage, INotInfluenceReceiveTimeout
     {
         public Identify(object messageId)
         {
@@ -49,7 +49,7 @@ namespace Akka.Actor
         /// <summary>
         /// A correlating ID used to distinguish multiple <see cref="Identify"/> requests to the same receiver.
         /// </summary>
-        public object MessageId { get; private set; }
+        public object MessageId { get; }
 
         public override string ToString()
         {
@@ -93,7 +93,7 @@ namespace Akka.Actor
     /// it processes the message, which gets handled using the normal supervisor mechanism, and
     /// <see cref="IActorContext.Stop"/> which causes the actor to stop without processing any more messages. </para>
     /// </summary>
-    public sealed class PoisonPill : IAutoReceivedMessage , IPossiblyHarmful
+    public sealed class PoisonPill : IAutoReceivedMessage, IPossiblyHarmful, IDeadLetterSuppression
     {
         private PoisonPill() { }
         private static readonly PoisonPill _instance = new PoisonPill();
@@ -150,7 +150,7 @@ namespace Akka.Actor
     /// The watcher <see cref="DeathWatch"/> subscribes to the <see cref="AddressTerminatedTopic"/> and translates this
     /// event to <see cref="Terminated"/>, which is sent to itself.
     /// </summary>
-    internal class AddressTerminated : IAutoReceivedMessage, IPossiblyHarmful
+    internal class AddressTerminated : IAutoReceivedMessage, IPossiblyHarmful, IDeadLetterSuppression
     {
         public AddressTerminated(Address address)
         {

@@ -75,8 +75,8 @@
       <HintPath>..\..\packages\FSharp.Core.3.1.2.5\lib\net40\FSharp.Core.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=7.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -126,6 +126,7 @@
     <Compile Include="Actor\Dispatch\ActorModelSpec.cs" />
     <Compile Include="Actor\Dispatch\CurrentSynchronizationContextDispatcherSpecs.cs" />
     <Compile Include="Actor\HotSwapSpec.cs" />
+    <Compile Include="Actor\DeadLetterSupressionSpec.cs" />
     <Compile Include="Actor\InboxSpec.cs" />
     <Compile Include="Actor\LocalActorRefProviderSpec.cs" />
     <Compile Include="Actor\PipeToSupportSpec.cs" />
@@ -147,6 +148,7 @@
     <Compile Include="Actor\RemotePathParsingSpec.cs" />
     <Compile Include="Actor\RepointableActorRefSpecs.cs" />
     <Compile Include="Actor\RootGuardianActorRef_Tests.cs" />
+    <Compile Include="Actor\Scheduler\SchedulerShutdownSpec.cs" />
     <Compile Include="Actor\Scheduler\TaskBasedScheduler_TellScheduler_Schedule_Tests.cs" />
     <Compile Include="Actor\Scheduler\TaskBasedScheduler_TellScheduler_Cancellation_Tests.cs" />
     <Compile Include="Actor\Scheduler\TaskBasedScheduler_ActionScheduler_Schedule_Tests.cs" />
@@ -211,6 +213,7 @@
     <Compile Include="Util\Internal\InterlockedSpinTests.cs" />
     <Compile Include="Util\PatternSpec.cs" />
     <Compile Include="Util\SwitchTests.cs" />
+    <Compile Include="Util\TokenBucketSpec.cs" />
     <Compile Include="Util\TypeExtensionsTests.cs" />
   </ItemGroup>
   <ItemGroup>

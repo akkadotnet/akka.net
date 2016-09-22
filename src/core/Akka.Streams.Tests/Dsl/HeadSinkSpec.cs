@@ -30,7 +30,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var p = TestPublisher.CreateManualProbe<int>(this);
+                var p = this.CreateManualPublisherProbe<int>();
                 var task = Source.FromPublisher(p).Select(x=>x).RunWith(Sink.First<int>(), Materializer);
                 var proc = p.ExpectSubscription();
                 proc.ExpectRequest();
@@ -44,7 +44,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_FLow_with_a_Sink_Head_must_yield_the_first_value_when_actively_constructing()
         {
-            var p = TestPublisher.CreateManualProbe<int>(this);
+            var p = this.CreateManualPublisherProbe<int>();
             var f = Sink.First<int>();
             var s = Source.AsSubscriber<int>();
             var t = s.ToMaterialized(f, Keep.Both).Run(Materializer);
@@ -65,10 +65,10 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                Source.Failed<int>(new SystemException("ex"))
+                Source.Failed<int>(new Exception("ex"))
                     .Invoking(s => s.RunWith(Sink.First<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))
                     .ShouldThrow<AggregateException>()
-                    .WithInnerException<SystemException>()
+                    .WithInnerException<Exception>()
                     .WithInnerMessage("ex");
             }, Materializer);
         }
@@ -93,7 +93,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var p = TestPublisher.CreateManualProbe<int>(this);
+                var p = this.CreateManualPublisherProbe<int>();
                 var task = Source.FromPublisher(p).Select(x => x).RunWith(Sink.FirstOrDefault<int>(), Materializer);
                 var proc = p.ExpectSubscription();
                 proc.ExpectRequest();
@@ -109,10 +109,10 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                Source.Failed<int>(new SystemException("ex"))
+                Source.Failed<int>(new Exception("ex"))
                     .Invoking(s => s.RunWith(Sink.FirstOrDefault<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))
                     .ShouldThrow<AggregateException>()
-                    .WithInnerException<SystemException>()
+                    .WithInnerException<Exception>()
                     .WithInnerMessage("ex");
             }, Materializer);
         }

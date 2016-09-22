@@ -101,6 +101,7 @@
     <Compile Include="RestartNode2Spec.cs" />
     <Compile Include="RestartNode3Spec.cs" />
     <Compile Include="RestartNodeSpec.cs" />
+    <Compile Include="Routing\ClusterBroadcastRouter2266BugfixSpec.cs" />
     <Compile Include="Routing\ClusterConsistentHashingGroupSpec.cs" />
     <Compile Include="Routing\ClusterConsistentHashingRouterSpec.cs" />
     <Compile Include="Routing\ClusterRoundRobinSpec.cs" />

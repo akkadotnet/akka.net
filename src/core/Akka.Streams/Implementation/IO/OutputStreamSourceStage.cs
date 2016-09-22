@@ -78,32 +78,38 @@ namespace Akka.Streams.Implementation.IO
         private sealed class Logic : GraphStageLogic, IStageWithCallback
         {
             private readonly OutputStreamSourceStage _stage;
+            private BlockingCollection<ByteString> _dataQueue;
+            private readonly AtomicReference<IDownstreamStatus> _downstreamStatus;
             private TaskCompletionSource<NotUsed> _flush;
             private TaskCompletionSource<NotUsed> _close;
-            private Action<Either<ByteString, Exception>> _downstreamCallback;
-            private Action<Tuple<IAdapterToStageMessage, TaskCompletionSource<NotUsed>>> _upstreamCallback;
+            private readonly Action<Tuple<IAdapterToStageMessage, TaskCompletionSource<NotUsed>>> _upstreamCallback;
             private readonly OnPullRunnable _pullTask;
 
-            public Logic(OutputStreamSourceStage stage) : base(stage.Shape)
+            public Logic(OutputStreamSourceStage stage, BlockingCollection<ByteString> dataQueue,
+                AtomicReference<IDownstreamStatus> downstreamStatus) : base(stage.Shape)
             {
                 _stage = stage;
-                _downstreamCallback = GetAsyncCallback((Either<ByteString, Exception> result) =>
+                _dataQueue = dataQueue;
+                _downstreamStatus = downstreamStatus;
+                var downstreamCallback = GetAsyncCallback((Either<ByteString, Exception> result) =>
                 {
-                    if(result.IsLeft)
+                    if (result.IsLeft)
                         OnPush(result.Value as ByteString);
                     else
                         FailStage(result.Value as Exception);
                 });
-                _upstreamCallback = GetAsyncCallback<Tuple<IAdapterToStageMessage, TaskCompletionSource<NotUsed>>>(OnAsyncMessage);
-                _pullTask = new OnPullRunnable(_downstreamCallback, stage._dataQueue);
+                _upstreamCallback =
+                    GetAsyncCallback<Tuple<IAdapterToStageMessage, TaskCompletionSource<NotUsed>>>(OnAsyncMessage);
+                _pullTask = new OnPullRunnable(downstreamCallback, dataQueue);
                 SetHandler(_stage._out, onPull: OnPull, onDownstreamFinish: OnDownstreamFinish);
             }
 
             private void OnDownstreamFinish()
             {
                 //assuming there can be no further in messages
-                _stage._downstreamStatus.Value = Canceled.Instance;
-                _stage._dataQueue = null;
+                _downstreamStatus.Value = Canceled.Instance;
+                _dataQueue.Add(ByteString.Empty);
+                _dataQueue = null;
                 CompleteStage();
             }
 
@@ -138,7 +144,7 @@ namespace Akka.Streams.Implementation.IO
 
             private void OnPush(ByteString data)
             {
-                if (_stage._downstreamStatus.Value is Ok)
+                if (_downstreamStatus.Value is Ok)
                 {
                     Push(_stage._out, data);
                     SendResponseIfNeeded();
@@ -162,9 +168,9 @@ namespace Akka.Streams.Implementation.IO
                 else if (@event.Item1 is Close)
                 {
                     _close = @event.Item2;
-                    if (_stage._dataQueue.Count == 0)
+                    if (_dataQueue.Count == 0)
                     {
-                        _stage._downstreamStatus.Value = Canceled.Instance;
+                        _downstreamStatus.Value = Canceled.Instance;
                         CompleteStage();
                         UnblockUpsteam();
                     }
@@ -173,26 +179,25 @@ namespace Akka.Streams.Implementation.IO
                 }
             }
 
-            private bool UnblockUpsteam()
+            private void UnblockUpsteam()
             {
                 if (_flush != null)
                 {
                     _flush.TrySetResult(NotUsed.Instance);
                     _flush = null;
-                    return true;
+                    return;
                 }
 
                 if (_close == null)
-                    return false;
+                    return;
 
                 _close.TrySetResult(NotUsed.Instance);
                 _close = null;
-                return true;
             }
 
             private void SendResponseIfNeeded()
             {
-                if (_stage._downstreamStatus.Value is Canceled || _stage._dataQueue.Count == 0)
+                if (_downstreamStatus.Value is Canceled || _dataQueue.Count == 0)
                     UnblockUpsteam();
             }
         }
@@ -200,9 +205,8 @@ namespace Akka.Streams.Implementation.IO
         #endregion
 
         private readonly TimeSpan _writeTimeout;
-        private readonly AtomicReference<IDownstreamStatus> _downstreamStatus = new AtomicReference<IDownstreamStatus>(Ok.Instance);
         private readonly Outlet<ByteString> _out = new Outlet<ByteString>("OutputStreamSource.out");
-        private BlockingCollection<ByteString> _dataQueue;
+
 
         public OutputStreamSourceStage(TimeSpan writeTimeout)
         {
@@ -221,11 +225,12 @@ namespace Akka.Streams.Implementation.IO
             if (maxBuffer <= 0)
                 throw new ArgumentException("Buffer size must be greather than 0");
 
-            _dataQueue = new BlockingCollection<ByteString>(maxBuffer);
-
-            var logic = new Logic(this);
+            var dataQueue = new BlockingCollection<ByteString>(maxBuffer);
+            var downstreamStatus = new AtomicReference<IDownstreamStatus>(Ok.Instance);
+            
+            var logic = new Logic(this, dataQueue, downstreamStatus);
             return new LogicAndMaterializedValue<Stream>(logic,
-                new OutputStreamAdapter(_dataQueue, _downstreamStatus, logic, _writeTimeout));
+                new OutputStreamAdapter(dataQueue, downstreamStatus, logic, _writeTimeout));
         }
     }
 
@@ -335,8 +340,9 @@ namespace Akka.Streams.Implementation.IO
         public override void Write(byte[] buffer, int offset, int count)
             => SendData(ByteString.Create(buffer, offset, count));
 
-        public override void Close()
+        protected override void Dispose(bool disposing)
         {
+            base.Dispose(disposing);
             SendMessage(OutputStreamSourceStage.Close.Instance, false);
             _isActive = false;
         }

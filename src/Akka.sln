@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.25123.0
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{69279534-1DBA-4115-BF8B-03F77FC8125E}"
 EndProject
@@ -152,7 +152,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.Xunit", "contr
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DependencyInjection", "DependencyInjection", "{B1D10183-8FAE-4506-B935-403FCED89BDB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DI.Core", "contrib\dependencyInjection\Akka.DI.Core\Akka.DI.Core.csproj", "{FDF09D18-B68E-4B95-B1F6-B89D9C6C3AE9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DI.Core", "contrib\dependencyinjection\Akka.DI.Core\Akka.DI.Core.csproj", "{FDF09D18-B68E-4B95-B1F6-B89D9C6C3AE9}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Persistence", "Persistence", "{264C22A4-CAFC-41F6-B82C-4DDC5C196767}"
 EndProject
@@ -164,7 +164,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TcpEchoService", "TcpEchoSe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TcpEchoService.Server", "examples\TcpEchoService.Server\TcpEchoService.Server.csproj", "{825196A4-4B08-401F-8994-E2DB7C77A8B7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DI.TestKit", "contrib\dependencyInjection\Akka.DI.TestKit\Akka.DI.TestKit.csproj", "{D8DB14A5-6147-4512-BF5C-683FDCA6190C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DI.TestKit", "contrib\dependencyinjection\Akka.DI.TestKit\Akka.DI.TestKit.csproj", "{D8DB14A5-6147-4512-BF5C-683FDCA6190C}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TestKit", "TestKit", "{46116E52-BF96-4B76-8C81-2104C74487DF}"
 EndProject
@@ -243,6 +243,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Sql.TestKit", "contrib\persistence\Akka.Persistence.Sql.TestKit\Akka.Persistence.Sql.TestKit.csproj", "{14502A16-2B6F-4728-8A98-ED5AF45FC515}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Streams.Tests.TCK", "core\Akka.Streams.Tests.TCK\Akka.Streams.Tests.TCK.csproj", "{805908F6-8792-47C0-8E4F-4DB4C5736A47}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster.Sharding.Tests.MultiNode", "contrib\cluster\Akka.Cluster.Sharding.Tests.MultiNode\Akka.Cluster.Sharding.Tests.MultiNode.csproj", "{F79A5E87-1DB5-4D76-9B14-382F8C536DA6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -909,6 +911,14 @@ Global
 		{805908F6-8792-47C0-8E4F-4DB4C5736A47}.Release Mono|Any CPU.Build.0 = Release|Any CPU
 		{805908F6-8792-47C0-8E4F-4DB4C5736A47}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{805908F6-8792-47C0-8E4F-4DB4C5736A47}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F79A5E87-1DB5-4D76-9B14-382F8C536DA6}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
+		{F79A5E87-1DB5-4D76-9B14-382F8C536DA6}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
+		{F79A5E87-1DB5-4D76-9B14-382F8C536DA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F79A5E87-1DB5-4D76-9B14-382F8C536DA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F79A5E87-1DB5-4D76-9B14-382F8C536DA6}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
+		{F79A5E87-1DB5-4D76-9B14-382F8C536DA6}.Release Mono|Any CPU.Build.0 = Release|Any CPU
+		{F79A5E87-1DB5-4D76-9B14-382F8C536DA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F79A5E87-1DB5-4D76-9B14-382F8C536DA6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1019,5 +1029,6 @@ Global
 		{666698AB-85BC-4C91-894C-CBB4316DC1A4} = {76F58DC4-19F1-43EF-A6E2-EC1CC8395AC5}
 		{14502A16-2B6F-4728-8A98-ED5AF45FC515} = {264C22A4-CAFC-41F6-B82C-4DDC5C196767}
 		{805908F6-8792-47C0-8E4F-4DB4C5736A47} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
+		{F79A5E87-1DB5-4D76-9B14-382F8C536DA6} = {76F58DC4-19F1-43EF-A6E2-EC1CC8395AC5}
 	EndGlobalSection
 EndGlobal

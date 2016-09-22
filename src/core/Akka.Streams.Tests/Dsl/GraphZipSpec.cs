@@ -48,7 +48,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var probe = TestSubscriber.CreateManualProbe<Tuple<int, string>>(this);
+                var probe = this.CreateManualSubscriberProbe<Tuple<int, string>>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -81,8 +81,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var upstream1 = TestPublisher.CreateProbe<int>(this);
-                var upstream2 = TestPublisher.CreateProbe<string>(this);
+                var upstream1 = this.CreatePublisherProbe<int>();
+                var upstream2 = this.CreatePublisherProbe<string>();
 
                 var completed = RunnableGraph.FromGraph(GraphDsl.Create(Sink.Ignore<Tuple<int, string>>(), (b, sink) =>
                 {
@@ -112,9 +112,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var upstream1 = TestPublisher.CreateProbe<int>(this);
-                var upstream2 = TestPublisher.CreateProbe<string>(this);
-                var downstream = TestSubscriber.CreateProbe<Tuple<int, string>>(this);
+                var upstream1 = this.CreatePublisherProbe<int>();
+                var upstream2 = this.CreatePublisherProbe<string>();
+                var downstream = this.CreateSubscriberProbe<Tuple<int, string>>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(Sink.FromSubscriber(downstream), (b, sink) =>
                 {
@@ -146,9 +146,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var upstream1 = TestPublisher.CreateProbe<int>(this);
-                var upstream2 = TestPublisher.CreateProbe<string>(this);
-                var downstream = TestSubscriber.CreateProbe<Tuple<int, string>>(this);
+                var upstream1 = this.CreatePublisherProbe<int>();
+                var upstream2 = this.CreatePublisherProbe<string>();
+                var downstream = this.CreateSubscriberProbe<Tuple<int, string>>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(Sink.FromSubscriber(downstream), (b, sink) =>
                 {
@@ -179,9 +179,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var upstream1 = TestPublisher.CreateProbe<int>(this);
-                var upstream2 = TestPublisher.CreateProbe<string>(this);
-                var downstream = TestSubscriber.CreateProbe<Tuple<int, string>>(this);
+                var upstream1 = this.CreatePublisherProbe<int>();
+                var upstream2 = this.CreatePublisherProbe<string>();
+                var downstream = this.CreateSubscriberProbe<Tuple<int, string>>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(Sink.FromSubscriber(downstream), (b, sink) =>
                 {
@@ -213,9 +213,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var upstream1 = TestPublisher.CreateProbe<int>(this);
-                var upstream2 = TestPublisher.CreateProbe<string>(this);
-                var downstream = TestSubscriber.CreateProbe<Tuple<int, string>>(this);
+                var upstream1 = this.CreatePublisherProbe<int>();
+                var upstream2 = this.CreatePublisherProbe<string>();
+                var downstream = this.CreateSubscriberProbe<Tuple<int, string>>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(Sink.FromSubscriber(downstream), (b, sink) =>
                 {

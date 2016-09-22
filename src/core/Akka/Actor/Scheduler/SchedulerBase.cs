@@ -6,11 +6,35 @@
 //-----------------------------------------------------------------------
 
 using System;
+using Akka.Configuration;
+using Akka.Event;
 
 namespace Akka.Actor
 {
+    /// <summary>
+    /// Abstract base class for implementing any custom <see cref="IScheduler"/> implementation used by Akka.NET.
+    /// 
+    /// All constructed schedulers are expected to support the <see cref="Config"/> and <see cref="ILoggingAdapter"/> arguments
+    /// provided on the default constructor for this class.
+    /// </summary>
     public abstract class SchedulerBase : IScheduler, IAdvancedScheduler
     {
+        /// <summary>
+        /// The configuration section for a specific <see cref="IScheduler"/> implementation.
+        /// </summary>
+        protected readonly Config SchedulerConfig;
+
+        /// <summary>
+        /// The <see cref="ILoggingAdapter"/> provided by the <see cref="ActorSystem"/> at startup.
+        /// </summary>
+        protected readonly ILoggingAdapter Log;
+
+        protected SchedulerBase(Config scheduler, ILoggingAdapter log)
+        {
+            SchedulerConfig = scheduler;
+            Log = log;
+        }
+
         void ITellScheduler.ScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, IActorRef sender)
         {
             ValidateDelay(delay, "delay");
@@ -67,7 +91,23 @@ namespace Akka.Actor
         DateTimeOffset ITimeProvider.Now { get { return TimeNow; } }
         
         protected abstract DateTimeOffset TimeNow { get; }
+
+        /// <summary>
+        /// The current time since startup, as determined by the monotonic clock implementation.
+        /// </summary>
+        /// <remarks>
+        /// Typically uses <see cref="MonotonicClock"/> in most implementations, but in some cases a 
+        /// custom implementation is used - such as when we need to do virtual time scheduling in the Akka.TestKit.
+        /// </remarks>
         public abstract TimeSpan MonotonicClock { get; }
+
+        /// <summary>
+        /// The current time since startup, as determined by the high resolution monotonic clock implementation.
+        /// </summary>
+        /// <remarks>
+        /// Typically uses <see cref="MonotonicClock"/> in most implementations, but in some cases a 
+        /// custom implementation is used - such as when we need to do virtual time scheduling in the Akka.TestKit.
+        /// </remarks>
         public abstract TimeSpan HighResMonotonicClock { get; }
 
         protected abstract void InternalScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable);
@@ -76,16 +116,20 @@ namespace Akka.Actor
         protected abstract void InternalScheduleOnce(TimeSpan delay, Action action, ICancelable cancelable);
         protected abstract void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable);
 
+        /// <summary></summary>
+        /// <exception cref="ArgumentOutOfRangeException">This exception is thrown if the given <paramref name="interval"/> is negative or zero.</exception>
         protected static void ValidateInterval(TimeSpan interval, string parameterName)
         {
             if(interval <= TimeSpan.Zero)
-                throw new ArgumentOutOfRangeException(parameterName, "Interval must be >0. It was " + interval);
+                throw new ArgumentOutOfRangeException(nameof(parameterName), $"Interval must be >0. It was {interval}");
         }
 
+        /// <summary></summary>
+        /// <exception cref="ArgumentOutOfRangeException">This exception is thrown if the given <paramref name="delay"/> is negative.</exception>
         protected static void ValidateDelay(TimeSpan delay, string parameterName)
         {
             if(delay < TimeSpan.Zero)
-                throw new ArgumentOutOfRangeException(parameterName, "Delay must be >=0. It was " + delay);
+                throw new ArgumentOutOfRangeException(nameof(parameterName), $"Delay must be >=0. It was {delay}");
         }
     }
 }

@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
 // ReSharper disable InvokeAsExtensionMethod
@@ -31,8 +32,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c1 = TestSubscriber.CreateManualProbe<int>(this);
-                var c2 = TestSubscriber.CreateManualProbe<string>(this);
+                var c1 = this.CreateManualSubscriberProbe<int>();
+                var c2 = this.CreateManualSubscriberProbe<string>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -79,8 +80,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c1 = TestSubscriber.CreateManualProbe<int>(this);
-                var c2 = TestSubscriber.CreateManualProbe<string>(this);
+                var c1 = this.CreateManualSubscriberProbe<int>();
+                var c2 = this.CreateManualSubscriberProbe<string>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -115,8 +116,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c1 = TestSubscriber.CreateManualProbe<int>(this);
-                var c2 = TestSubscriber.CreateManualProbe<string>(this);
+                var c1 = this.CreateManualSubscriberProbe<int>();
+                var c2 = this.CreateManualSubscriberProbe<string>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -146,14 +147,77 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
+
+        [Fact]
+        public void A_Unzip_must_not_push_twice_when_pull_is_followed_by_cancel_before_element_has_been_pushed()
+        {
+            var c1 = this.CreateManualSubscriberProbe<int>();
+            var c2 = this.CreateManualSubscriberProbe<string>();
+
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
+            {
+                var unzip = b.Add(new UnZip<int, string>());
+                var source = Source.From(new[]
+                {
+                    new KeyValuePair<int, string>(1, "a"),
+                    new KeyValuePair<int, string>(2, "b"),
+                    new KeyValuePair<int, string>(3, "c")
+                });
+
+                b.From(source).To(unzip.In);
+                b.From(unzip.Out0).To(Sink.FromSubscriber(c1));
+                b.From(unzip.Out1).To(Sink.FromSubscriber(c2));
+                return ClosedShape.Instance;
+            })).Run(Materializer);
+
+            var sub1 = c1.ExpectSubscription();
+            var sub2 = c2.ExpectSubscription();
+            sub2.Request(3);
+            sub1.Request(3);
+            sub2.Cancel();
+            c1.ExpectNext(1,2,3);
+            c1.ExpectComplete();
+        }
+
+        [Fact]
+        public void A_Unzip_must_not_loose_elements_when_pull_is_followed_by_cancel_before_other_sink_has_requested()
+        {
+            var c1 = this.CreateManualSubscriberProbe<int>();
+            var c2 = this.CreateManualSubscriberProbe<string>();
+
+            RunnableGraph.FromGraph(GraphDsl.Create(b =>
+            {
+                var unzip = b.Add(new UnZip<int, string>());
+                var source = Source.From(new[]
+                {
+                    new KeyValuePair<int, string>(1, "a"),
+                    new KeyValuePair<int, string>(2, "b"),
+                    new KeyValuePair<int, string>(3, "c")
+                });
+
+                b.From(source).To(unzip.In);
+                b.From(unzip.Out0).To(Sink.FromSubscriber(c1));
+                b.From(unzip.Out1).To(Sink.FromSubscriber(c2));
+                return ClosedShape.Instance;
+            })).Run(Materializer);
+
+            var sub1 = c1.ExpectSubscription();
+            var sub2 = c2.ExpectSubscription();
+            sub2.Request(3);
+            sub2.Cancel();
+            sub1.Request(3);
+            c1.ExpectNext(1, 2, 3);
+            c1.ExpectComplete();
+        }
+
         [Fact]
         public void A_Unzip_must_cancel_upstream_when_downstream_cancel()
         {
             this.AssertAllStagesStopped(() =>
             {
-                var p1 = TestPublisher.CreateManualProbe<KeyValuePair<int, string>>(this);
-                var c1 = TestSubscriber.CreateManualProbe<int>(this);
-                var c2 = TestSubscriber.CreateManualProbe<string>(this);
+                var p1 = this.CreateManualPublisherProbe<KeyValuePair<int, string>>();
+                var c1 = this.CreateManualSubscriberProbe<int>();
+                var c2 = this.CreateManualSubscriberProbe<string>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -191,7 +255,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c1 = TestSubscriber.CreateManualProbe<Tuple<int, string>>(this);
+                var c1 = this.CreateManualSubscriberProbe<Tuple<int, string>>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {

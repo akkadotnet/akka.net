@@ -11,6 +11,7 @@ using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
@@ -75,8 +76,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Buffer_must_accept_elements_that_fit_in_the_buffer_while_downstream_is_silent()
         {
-            var publisher = TestPublisher.CreateProbe<int>(this);
-            var subscriber = TestSubscriber.CreateManualProbe<int>(this);
+            var publisher = this.CreatePublisherProbe<int>();
+            var subscriber = this.CreateManualSubscriberProbe<int>();
 
             Source.FromPublisher(publisher)
                 .Buffer(100, OverflowStrategy.Backpressure)
@@ -101,8 +102,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Buffer_must_drop_head_elements_if_buffer_is_full_and_configured_so()
         {
-            var publisher = TestPublisher.CreateProbe<int>(this);
-            var subscriber = TestSubscriber.CreateManualProbe<int>(this);
+            var publisher = this.CreatePublisherProbe<int>();
+            var subscriber = this.CreateManualSubscriberProbe<int>();
 
             Source.FromPublisher(publisher)
                 .Buffer(100, OverflowStrategy.DropHead)
@@ -137,8 +138,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Buffer_must_drop_tail_elements_if_buffer_is_full_and_configured_so()
         {
-            var publisher = TestPublisher.CreateProbe<int>(this);
-            var subscriber = TestSubscriber.CreateManualProbe<int>(this);
+            var publisher = this.CreatePublisherProbe<int>();
+            var subscriber = this.CreateManualSubscriberProbe<int>();
 
             Source.FromPublisher(publisher)
                 .Buffer(100, OverflowStrategy.DropTail)
@@ -176,8 +177,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Buffer_must_drop_all_elements_if_buffer_is_full_and_configured_so()
         {
-            var publisher = TestPublisher.CreateProbe<int>(this);
-            var subscriber = TestSubscriber.CreateManualProbe<int>(this);
+            var publisher = this.CreatePublisherProbe<int>();
+            var subscriber = this.CreateManualSubscriberProbe<int>();
 
             Source.FromPublisher(publisher)
                 .Buffer(100, OverflowStrategy.DropBuffer)
@@ -246,8 +247,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var publisher = TestPublisher.CreateProbe<int>(this);
-                var subscriber = TestSubscriber.CreateManualProbe<int>(this);
+                var publisher = this.CreatePublisherProbe<int>();
+                var subscriber = this.CreateManualSubscriberProbe<int>();
 
                 Source.FromPublisher(publisher)
                     .Buffer(100, OverflowStrategy.Fail)
@@ -284,8 +285,8 @@ namespace Akka.Streams.Tests.Dsl
         [InlineData(OverflowStrategy.DropBuffer)]
         public void Buffer_must_work_with_strategy_if_bugger_size_of_one(OverflowStrategy strategy)
         {
-            var publisher = TestPublisher.CreateProbe<int>(this);
-            var subscriber = TestSubscriber.CreateManualProbe<int>(this);
+            var publisher = this.CreatePublisherProbe<int>();
+            var subscriber = this.CreateManualSubscriberProbe<int>();
 
             Source.FromPublisher(publisher)
                 .Buffer(1, strategy)

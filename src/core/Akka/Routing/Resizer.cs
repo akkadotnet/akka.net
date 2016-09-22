@@ -68,6 +68,21 @@ namespace Akka.Routing
     /// </summary>
     public class DefaultResizer : Resizer, IEquatable<DefaultResizer>
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DefaultResizer"/> class.
+        /// </summary>
+        /// <exception cref="ArgumentException">
+        /// This exception can be thrown for a number of reasons. These include:
+        /// <ul>
+        /// <li>The given <paramref name="lower"/> bound was negative.</li>
+        /// <li>The given <paramref name="upper"/> bound was negative.</li>
+        /// <li>The given <paramref name="upper"/> bound was below the <paramref name="lower"/>bound.</li>
+        /// <li>The given <paramref name="rampupRate"/> was negative.</li>
+        /// <li>The given <paramref name="backoffThreshold"/> was greater than one.</li>
+        /// <li>The given <paramref name="backoffRate"/> was negative.</li>
+        /// <li>The given <paramref name="messagesPerResize"/> was less than one.</li>
+        /// </ul>
+        /// </exception>
         public DefaultResizer(
             int lower,
             int upper,
@@ -78,19 +93,19 @@ namespace Akka.Routing
             int messagesPerResize = 10)
         {
             if (lower < 0)
-                throw new ArgumentException(string.Format("lowerBound must be >= 0, was: {0}", lower));
+                throw new ArgumentException($"lowerBound must be >= 0, was: {lower}", nameof(lower));
             if (upper < 0)
-                throw new ArgumentException(string.Format("upperBound must be >= 0, was: {0}", upper));
+                throw new ArgumentException($"upperBound must be >= 0, was: {upper}", nameof(upper));
             if (upper < lower)
-                throw new ArgumentException(string.Format("upperBound must be >= lowerBound, was: {0} < {1}", upper, lower));
+                throw new ArgumentException($"upperBound must be >= lowerBound, was: {upper} < {lower}", nameof(upper));
             if (rampupRate < 0.0)
-                throw new ArgumentException(string.Format("rampupRate must be >= 0.0, was {0}", rampupRate));
+                throw new ArgumentException($"rampupRate must be >= 0.0, was {rampupRate}", nameof(rampupRate));
             if (backoffThreshold > 1.0)
-                throw new ArgumentException(string.Format("backoffThreshold must be <= 1.0, was {0}", backoffThreshold));
+                throw new ArgumentException($"backoffThreshold must be <= 1.0, was {backoffThreshold}", nameof(backoffThreshold));
             if (backoffRate < 0.0)
-                throw new ArgumentException(string.Format("backoffRate must be >= 0.0, was {0}", backoffRate));
+                throw new ArgumentException($"backoffRate must be >= 0.0, was {backoffRate}", nameof(backoffRate));
             if (messagesPerResize <= 0)
-                throw new ArgumentException(string.Format("messagesPerResize must be > 0, was {0}", messagesPerResize));
+                throw new ArgumentException($"messagesPerResize must be > 0, was {messagesPerResize}", nameof(messagesPerResize));
 
             LowerBound = lower;
             UpperBound = upper;

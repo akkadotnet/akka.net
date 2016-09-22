@@ -54,9 +54,9 @@
     <Optimize>false</Optimize>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=7.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Collections.Immutable, Version=1.1.36.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
@@ -88,7 +88,7 @@
     <Compile Include="Actor\Cancellation\CancelableExtensions.cs" />
     <Compile Include="Actor\Cancellation\Cancelable.cs" />
     <Compile Include="Actor\Dsl\Act.cs" />
-    <Compile Include="Actor\Cancellation\ICancellable.cs" />
+    <Compile Include="Actor\Cancellation\ICancelable.cs" />
     <Compile Include="Actor\Inbox.Actor.cs" />
     <Compile Include="Actor\Internal\InternalCurrentActorCellKeeper.cs" />
     <Compile Include="Actor\Internal\InternalSupportsTestFSMRef.cs" />
@@ -141,7 +141,9 @@
     <Compile Include="Actor\PipeToSupport.cs" />
     <Compile Include="Actor\Receive.cs" />
     <Compile Include="Actor\Scheduler\ITellScheduler.cs" />
+    <Compile Include="Actor\Scheduler\HashedWheelTimerScheduler.cs" />
     <Compile Include="Actor\Scheduler\SchedulerBase.cs" />
+    <Compile Include="Actor\Scheduler\SchedulerException.cs" />
     <Compile Include="Actor\Scheduler\SchedulerExtensions.cs" />
     <Compile Include="Actor\Scope.cs" />
     <Compile Include="Actor\Settings.cs" />
@@ -283,6 +285,7 @@
     <Compile Include="Util\Internal\StringBuilderExtensions.cs" />
     <Compile Include="Util\Internal\TaskExtensions.cs" />
     <Compile Include="Util\ISurrogate.cs" />
+    <Compile Include="Util\RuntimeDetector.cs" />
     <Compile Include="Util\MonotonicClock.cs" />
     <Compile Include="Util\Result.cs" />
     <Compile Include="Util\Reflection\TypeCache.cs" />
@@ -334,6 +337,7 @@
     <Compile Include="PatternMatch.cs" />
     <Compile Include="Util\Resolver.cs" />
     <Compile Include="Util\ThreadLocalRandom.cs" />
+    <Compile Include="Util\TokenBucket.cs" />
     <Compile Include="Util\Vector.cs" />
     <Compile Include="Util\WildcardTree.cs" />
     <Compile Include="Util\MatchHandler\Argument.cs" />

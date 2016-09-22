@@ -25,43 +25,77 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 {
     public class LifecycleInterpreterSpec : GraphInterpreterSpec
     {
-        private sealed class PreStartAndPostStopIdentity<T> : PushStage<T, T>
+        private sealed class PreStartAndPostStopIdentity<T> : SimpleLinearGraphStage<T>
         {
-            private readonly Action<ILifecycleContext> _onStart;
+            #region Logic 
+
+            private sealed class Logic : GraphStageLogic
+            {
+                private readonly PreStartAndPostStopIdentity<T> _stage;
+
+                public Logic(PreStartAndPostStopIdentity<T> stage) : base(stage.Shape)
+                {
+                    _stage = stage;
+
+                    SetHandler(stage.Outlet, ()=>Pull(stage.Inlet));
+                    SetHandler(stage.Inlet, () => Push(stage.Outlet, Grab(stage.Inlet)), () =>
+                    {
+                        stage._onUpstreamCompleted();
+                        CompleteStage();
+                    }, ex =>
+                    {
+                        stage._onUpstreamFailed(ex);
+                        FailStage(ex);
+                    });
+                }
+
+                public override void PreStart() => _stage._onStart();
+
+                public override void PostStop() => _stage._onStop();
+            }
+
+            #endregion
+
+            private readonly Action _onStart;
             private readonly Action _onStop;
             private readonly Action _onUpstreamCompleted;
             private readonly Action<Exception> _onUpstreamFailed;
 
-            public PreStartAndPostStopIdentity(Action<ILifecycleContext> onStart = null, Action onStop = null,
+            public PreStartAndPostStopIdentity(Action onStart = null, Action onStop = null,
                 Action onUpstreamCompleted = null, Action<Exception> onUpstreamFailed = null)
             {
-                _onStart = onStart ?? (_ => {});
+                _onStart = onStart ?? (() => {});
                 _onStop = onStop ?? (() => { });
                 _onUpstreamCompleted = onUpstreamCompleted ?? (() => { });
                 _onUpstreamFailed = onUpstreamFailed ?? (_ => { });
             }
 
-            public override void PreStart(ILifecycleContext context) => _onStart(context);
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
-            public override ITerminationDirective OnUpstreamFinish(IContext<T> context)
-            {
-                _onUpstreamCompleted();
-                return base.OnUpstreamFinish(context);
-            }
-
-            public override ITerminationDirective OnUpstreamFailure(Exception cause, IContext<T> context)
-            {
-                _onUpstreamFailed(cause);
-                return base.OnUpstreamFailure(cause, context);
-            }
-
-            public override void PostStop() => _onStop();
-
-            public override ISyncDirective OnPush(T element, IContext<T> context) => context.Push(element);
+            public override string ToString() => "PreStartAndPostStopIdentity";
         }
 
-        private sealed class PreStartFailer<T> : PushStage<T, T>
+        private sealed class PreStartFailer<T> : SimpleLinearGraphStage<T>
         {
+            #region Logic 
+
+            private sealed class Logic : GraphStageLogic
+            {
+                private readonly PreStartFailer<T> _stage;
+
+                public Logic(PreStartFailer<T> stage) : base(stage.Shape)
+                {
+                    _stage = stage;
+
+                    SetHandler(stage.Outlet, () => Pull(stage.Inlet));
+                    SetHandler(stage.Inlet, () => Push(stage.Outlet, Grab(stage.Inlet)));
+                }
+
+                public override void PreStart() => _stage._pleaseThrow();
+            }
+
+            #endregion
+
             private readonly Action _pleaseThrow;
 
             public PreStartFailer(Action pleaseThrow = null)
@@ -69,13 +103,32 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 _pleaseThrow = pleaseThrow ?? (()=> {});
             }
 
-            public override void PreStart(ILifecycleContext context) => _pleaseThrow();
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
-            public override ISyncDirective OnPush(T element, IContext<T> context) => context.Push(element);
+            public override string ToString() => "PreStartFailer";
         }
 
-        private sealed class PostStopFailer<T> : PushStage<T, T>
+        private sealed class PostStopFailer<T> : SimpleLinearGraphStage<T>
         {
+            #region Logic 
+
+            private sealed class Logic : GraphStageLogic
+            {
+                private readonly PostStopFailer<T> _stage;
+
+                public Logic(PostStopFailer<T> stage) : base(stage.Shape)
+                {
+                    _stage = stage;
+
+                    SetHandler(stage.Outlet, () => Pull(stage.Inlet));
+                    SetHandler(stage.Inlet, () => Push(stage.Outlet, Grab(stage.Inlet)));
+                }
+
+                public override void PostStop() => _stage._ex();
+            }
+
+            #endregion
+
             private readonly Func<Exception> _ex;
 
             public PostStopFailer(Func<Exception> ex = null)
@@ -83,40 +136,56 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 _ex = ex ?? (() => new Exception());
             }
 
-            public override ITerminationDirective OnUpstreamFinish(IContext<T> context) => context.Finish();
-            
-            public override ISyncDirective OnPush(T element, IContext<T> context) => context.Push(element);
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
-            public override void PostStop()
-            {
-                throw _ex();
-            }
+            public override string ToString() => "PostStopFailer";
         }
 
         // This test is related to issue #17351 (jvm)
-        private sealed class PushFinishStage<T> : PushStage<T, T>
+        private sealed class PushFinishStage<T> : SimpleLinearGraphStage<T>
         {
-            private readonly Action _onPostSTop;
+            #region Logic 
+
+            private sealed class Logic : GraphStageLogic
+            {
+                private readonly PushFinishStage<T> _stage;
+
+                public Logic(PushFinishStage<T> stage) : base(stage.Shape)
+                {
+                    _stage = stage;
+
+                    SetHandler(stage.Outlet, () => Pull(stage.Inlet));
+                    SetHandler(stage.Inlet, () =>
+                    {
+                        Push(stage.Outlet, Grab(stage.Inlet));
+                        CompleteStage();
+                    }, () => FailStage(new TestException("Cannot happen")));
+                }
+
+                public override void PostStop() => _stage._onPostStop();
+            }
+
+            #endregion
+
+            private readonly Action _onPostStop;
 
             public PushFinishStage(Action onPostSTop = null)
             {
-                _onPostSTop = onPostSTop ?? (()=> {});
+                _onPostStop = onPostSTop ?? (()=> {});
             }
 
-            public override ITerminationDirective OnUpstreamFinish(IContext<T> context) => context.Fail(new TestException("Cannot happen"));
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
-            public override void PostStop() => _onPostSTop();
-
-            public override ISyncDirective OnPush(T element, IContext<T> context) => context.PushAndFinish(element);
+            public override string ToString() => "PushFinish";
         }
 
         [Fact]
         public void Interpreter_must_call_PreStart_in_order_on_stages()
         {
-            IStage<string, string>[] ops = {
-                new PreStartAndPostStopIdentity<string>(onStart: _ => TestActor.Tell("start-a")),
-                new PreStartAndPostStopIdentity<string>(onStart: _ => TestActor.Tell("start-b")),
-                new PreStartAndPostStopIdentity<string>(onStart: _ => TestActor.Tell("start-c")),
+            var ops = new []{
+                new PreStartAndPostStopIdentity<string>(onStart: () => TestActor.Tell("start-a")),
+                new PreStartAndPostStopIdentity<string>(onStart: () => TestActor.Tell("start-b")),
+                new PreStartAndPostStopIdentity<string>(onStart: () => TestActor.Tell("start-c")),
             };
 
             WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>
@@ -132,7 +201,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_must_call_PostStop_in_order_on_stages_when_upstream_completes()
         {
-            IStage<string, string>[] ops = {
+            var ops = new []{
                 new PreStartAndPostStopIdentity<string>(onUpstreamCompleted: () => TestActor.Tell("complete-a"), onStop: ()=> TestActor.Tell("stop-a")),
                 new PreStartAndPostStopIdentity<string>(onUpstreamCompleted: () => TestActor.Tell("complete-b"), onStop: ()=> TestActor.Tell("stop-b")),
                 new PreStartAndPostStopIdentity<string>(onUpstreamCompleted: () => TestActor.Tell("complete-c"), onStop: ()=> TestActor.Tell("stop-c")),
@@ -171,7 +240,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_must_call_PostStop_in_order_on_stages_when_downstream_cancels()
         {
-            IStage<string, string>[] ops = {
+            var ops = new []{
                 new PreStartAndPostStopIdentity<string>(onStop: ()=> TestActor.Tell("stop-a")),
                 new PreStartAndPostStopIdentity<string>(onStop: ()=> TestActor.Tell("stop-b")),
                 new PreStartAndPostStopIdentity<string>(onStop: ()=> TestActor.Tell("stop-c")),
@@ -190,7 +259,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_must_call_PreStart_before_PostStop()
         {
-            var op = new PreStartAndPostStopIdentity<string>(onStart: _ => TestActor.Tell("start-a"),
+            var op = new PreStartAndPostStopIdentity<string>(onStart: () => TestActor.Tell("start-a"),
                 onStop: () => TestActor.Tell("stop-a"));
 
 
@@ -240,14 +309,14 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_must_call_OnError_when_PreStart_fails_with_stages_after()
         {
-            var ops = new IStage<string, string>[]
+            var ops = new IGraphStageWithMaterializedValue<FlowShape<string, string>, object>[]
             {
-                new Select<string, string>(x => x, Deciders.StoppingDecider),
+                ToGraphStage(new Select<string, string>(x => x, Deciders.StoppingDecider)),
                 new PreStartFailer<string>(() =>
                 {
                     throw new TestException("Boom!");
                 }),
-                new Select<string, string>(x => x, Deciders.StoppingDecider),
+                ToGraphStage(new Select<string, string>(x => x, Deciders.StoppingDecider)),
             };
 
             WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>
@@ -298,11 +367,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_must_call_PostStop_when_PushAndFinish_called_with_PushAndFinish_if_indirect_upsteam_completes_with_PushAndFinish()
         {
-            var ops = new IStage<string, string>[]
+            var ops = new IGraphStageWithMaterializedValue<FlowShape<string, string>, object>[]
             {
-                new Select<string, string>(x => x, Deciders.StoppingDecider),
+                ToGraphStage(new Select<string, string>(x => x, Deciders.StoppingDecider)),
                 new PushFinishStage<string>(() => TestActor.Tell("stop")), 
-                new Select<string, string>(x => x, Deciders.StoppingDecider)
+                ToGraphStage(new Select<string, string>(x => x, Deciders.StoppingDecider))
             };
 
             WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>
@@ -321,10 +390,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_must_call_PostStop_when_PushAndFinish_called_with_PushAndFinish_if_upsteam_completes_with_PushAndFinish_and_downstream_immediately_pulls()
         {
-            var ops = new IStage<string, string>[]
+            var ops = new IGraphStageWithMaterializedValue<FlowShape<string, string>, object>[]
             {
                 new PushFinishStage<string>(() => TestActor.Tell("stop")),
-                new Aggregate<string, string>("", (x, y) => x+y, Deciders.StoppingDecider) 
+                ToGraphStage(new Aggregate<string, string>("", (x, y) => x+y, Deciders.StoppingDecider))
             };
 
             WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>

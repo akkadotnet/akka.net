@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -40,7 +41,7 @@ namespace Akka.Streams.Tests.Dsl
                 var odd = t.First(x => !x.Key).ToList();
                 var source = Source.From(Enumerable.Range(0, end + 1));
                 var result = even.Concat(odd).Concat(odd.Select(x => x*10));
-                var probe = TestSubscriber.CreateManualProbe<IEnumerable<int>>(this);
+                var probe = this.CreateManualSubscriberProbe<IEnumerable<int>>();
 
                 var flow1 = Flow.FromGraph(GraphDsl.Create(b =>
                 {
@@ -163,7 +164,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var flow = Flow.FromGraph(GraphDsl.Create(TestSource.SourceProbe<string>(this), Sink.First<string>(), Keep.Both, (b, source, sink) =>
                 {
-                    var concat = b.Add(Concat.Create<string>(2));
+                    var concat = b.Add(Concat.Create<string>());
                     var broadcast = b.Add(new Broadcast<string>(2, true));
 
                     b.From(source).To(concat.In(0));

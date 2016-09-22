@@ -27,6 +27,10 @@ namespace Akka.Streams.Implementation
                 return this;
             throw new NotSupportedException("cannot replace the shape of a FlowModule");
         }
+
+        protected virtual string Label => GetType().Name;
+
+        public sealed override string ToString() => $"{Label} [{GetHashCode()}%08x]";
     }
 
 }

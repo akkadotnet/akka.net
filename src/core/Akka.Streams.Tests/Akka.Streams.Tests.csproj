@@ -90,12 +90,14 @@
     <Compile Include="Dsl\FlowDetacherSpec.cs" />
     <Compile Include="Dsl\FlowDispatcherSpec.cs" />
     <Compile Include="Dsl\FlowExpandSpec.cs" />
+    <Compile Include="Dsl\FlowKillSwitchSpec.cs" />
+    <Compile Include="Dsl\FlowMonitorSpec.cs" />
     <Compile Include="Dsl\FlowWhereSpec.cs" />
     <Compile Include="Dsl\FlowFlattenMergeSpec.cs" />
     <Compile Include="Dsl\FlowAggregateSpec.cs" />
     <Compile Include="Dsl\FlowForeachSpec.cs" />
     <Compile Include="Dsl\FlowFromTaskSpec.cs" />
-    <Compile Include="Dsl\FlowGraphCompileSpec.cs" />
+    <Compile Include="Dsl\GraphDslCompileSpec.cs" />
     <Compile Include="Dsl\FlowGroupBySpec.cs" />
     <Compile Include="Dsl\FlowGroupedSpec.cs" />
     <Compile Include="Dsl\FlowGroupedWithinSpec.cs" />
@@ -108,7 +110,7 @@
     <Compile Include="Dsl\FlowLimitSpec.cs" />
     <Compile Include="Dsl\FlowLimitWeightedSpec.cs" />
     <Compile Include="Dsl\FlowLogSpec.cs" />
-    <Compile Include="Dsl\FlowSelectAsyncUnorderedSpec .cs" />
+    <Compile Include="Dsl\FlowSelectAsyncUnorderedSpec.cs" />
     <Compile Include="Dsl\FlowSelectAsyncSpec.cs" />
     <Compile Include="Dsl\FlowMergeSpec.cs" />
     <Compile Include="Dsl\FlowOnCompleteSpec.cs" />
@@ -139,6 +141,8 @@
     <Compile Include="Dsl\GraphUnzipSpec.cs" />
     <Compile Include="Dsl\GraphUnzipWithSpec.cs" />
     <Compile Include="Dsl\GraphZipSpec.cs" />
+    <Compile Include="Dsl\GraphZipNSpec.cs" />
+    <Compile Include="Dsl\GraphZipWithNSpec.cs" />
     <Compile Include="Dsl\GraphZipWithSpec.cs" />
     <Compile Include="Dsl\LiftExtensions.cs" />
     <Compile Include="Dsl\PublisherSinkSpec.cs" />
@@ -174,6 +178,8 @@
     <Compile Include="Dsl\SubstreamSubscriptionTimeoutSpec.cs" />
     <Compile Include="Dsl\TestConfig.cs" />
     <Compile Include="Dsl\TickSourceSpec.cs" />
+    <Compile Include="Dsl\UnfoldResourceSourceSpec.cs" />
+    <Compile Include="Dsl\UnfoldResourceAsyncSourceSpec.cs" />
     <Compile Include="Extra\FlowTimedSpec.cs" />
     <Compile Include="FusingSpec.cs" />
     <Compile Include="Implementation\Fusing\ActorGraphInterpreterSpec.cs" />
@@ -223,6 +229,10 @@
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj">
       <Project>{0d3cbad0-bbdb-43e5-afc4-ed1d3ecdc224}</Project>
       <Name>Akka.TestKit</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj">
+      <Project>{E636D23C-3432-4AA9-9A5D-5F29D33D3399}</Project>
+      <Name>Akka.Tests.Shared.Internals</Name>
     </ProjectReference>
     <ProjectReference Include="..\Akka\Akka.csproj">
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>

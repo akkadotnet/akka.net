@@ -20,7 +20,7 @@ using static Akka.Streams.Tests.Dsl.FlowAppendSpec.River;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class FlowAppendSpec : AkkaSpec
+    public class FlowAppendSpec : Akka.TestKit.AkkaSpec
     {
         private ActorMaterializer Materializer { get; }
 
@@ -73,7 +73,7 @@ namespace Akka.Streams.Tests.Dsl
             
             public static void RiverOf<T>(Action<ISubscriber<T>, Flow<int, string, NotUsed>, IEnumerable<int>> flowConstructor, TestKitBase kit)
             {
-                var subscriber = TestSubscriber.CreateManualProbe<T>(kit);
+                var subscriber = kit.CreateManualSubscriberProbe<T>();
 
                 var elements = Enumerable.Range(1, 10).ToList();
                 flowConstructor(subscriber, OtherFlow, elements);

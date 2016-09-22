@@ -331,7 +331,7 @@ namespace Akka.Streams.Stage
     }
 
     [Obsolete("Please use GraphStage instead.")]
-    public abstract class AbstractStage<TIn, TOut, TPushDirective, TPullDirective, TContext, TLifecycleContext> : AbstractStage<TIn, TOut> where TPushDirective : IDirective where TPullDirective : IDirective where TContext : IContext where TLifecycleContext : ILifecycleContext
+    public abstract class AbstractStage<TIn, TOut, TPushDirective, TPullDirective, TContext> : AbstractStage<TIn, TOut> where TPushDirective : IDirective where TPullDirective : IDirective where TContext : IContext
     {
         protected TContext Context;
 

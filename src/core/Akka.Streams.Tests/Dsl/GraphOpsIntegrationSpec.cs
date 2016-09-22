@@ -12,7 +12,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -89,7 +89,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void FlowGraphs_must_support_broadcast_merge_layouts()
+        public void GraphDSLs_must_support_broadcast_merge_layouts()
         {
             var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink.First<IEnumerable<int>>(), (b, sink) =>
             {
@@ -110,7 +110,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void FlowGraphs_must_support_balance_merge_parallelization_layouts()
+        public void GraphDSLs_must_support_balance_merge_parallelization_layouts()
         {
             var elements = Enumerable.Range(0, 11).ToList();
             var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink.First<IEnumerable<int>>(), (b, sink) =>
@@ -134,7 +134,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void FlowGraphs_must_support_wikipedia_Topological_sorting_2()
+        public void GraphDSLs_must_support_wikipedia_Topological_sorting_2()
         {
             Func<int, Source<int, Tuple<Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>>>> source =
                 i =>
@@ -193,7 +193,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void FlowGraphs_must_allow_adding_of_flows_to_sources_and_sinks_to_flows()
+        public void GraphDSLs_must_allow_adding_of_flows_to_sources_and_sinks_to_flows()
         {
             var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink.First<IEnumerable<int>>(), (b, sink) =>
             {
@@ -214,10 +214,10 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void FlowGraphs_must_be_able_to_run_plain_flow()
+        public void GraphDSLs_must_be_able_to_run_plain_flow()
         {
             var p = Source.From(Enumerable.Range(1, 3)).RunWith(Sink.AsPublisher<int>(false), Materializer);
-            var s = TestSubscriber.CreateManualProbe<int>(this);
+            var s = this.CreateManualSubscriberProbe<int>();
             var flow = Flow.Create<int>().Select(x => x*2);
 
             RunnableGraph.FromGraph(GraphDsl.Create(b =>
@@ -232,7 +232,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void FlowGraphs_must_be_possibe_to_use_as_lego_bricks()
+        public void GraphDSLs_must_be_possibe_to_use_as_lego_bricks()
         {
             Func<int, Source<int, Tuple<NotUsed, NotUsed, NotUsed, Task<IEnumerable<int>>>>> source =
                 i =>

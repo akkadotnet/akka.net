@@ -85,12 +85,16 @@ namespace Akka.Dispatch
             });
         }
 
+        /// <summary></summary>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is thrown if this method is called outside an actor context.
+        /// </exception>
         public static void RunTask(Func<Task> asyncAction)
         {
             var context = ActorCell.Current;
 
             if (context == null)
-                throw new InvalidOperationException("RunTask must be call from an actor context.");
+                throw new InvalidOperationException("RunTask must be called from an actor context.");
 
             var dispatcher = context.Dispatcher;
 

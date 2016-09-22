@@ -416,10 +416,12 @@ namespace Akka.Persistence
         public static readonly SnapshotSelectionCriteria None = new SnapshotSelectionCriteria(0L, DateTime.MinValue);
 
         [JsonConstructor]
-        public SnapshotSelectionCriteria(long maxSequenceNr, DateTime maxTimeStamp)
+        public SnapshotSelectionCriteria(long maxSequenceNr, DateTime maxTimeStamp, long minSequenceNr = 0L, DateTime? minTimestamp = null)
         {
             MaxSequenceNr = maxSequenceNr;
             MaxTimeStamp = maxTimeStamp;
+            MinSequenceNr = minSequenceNr;
+            MinTimestamp = minTimestamp ?? DateTime.MinValue;
         }
 
         public SnapshotSelectionCriteria(long maxSequenceNr) : this(maxSequenceNr, DateTime.MaxValue)
@@ -436,6 +438,16 @@ namespace Akka.Persistence
         /// </summary>
         public readonly DateTime MaxTimeStamp;
 
+        /// <summary>
+        /// Lower bound for a selected snapshot's sequence number
+        /// </summary>
+        public readonly long MinSequenceNr;
+
+        /// <summary>
+        /// Lower bound for a selected snapshot's timestamp
+        /// </summary>
+        public readonly DateTime? MinTimestamp;
+
         internal SnapshotSelectionCriteria Limit(long toSequenceNr)
         {
             return toSequenceNr < MaxSequenceNr
@@ -445,7 +457,8 @@ namespace Akka.Persistence
 
         internal bool IsMatch(SnapshotMetadata metadata)
         {
-            return metadata.SequenceNr <= MaxSequenceNr && metadata.Timestamp <= MaxTimeStamp;
+            return metadata.SequenceNr <= MaxSequenceNr && metadata.Timestamp <= MaxTimeStamp &&
+                metadata.SequenceNr >= MinSequenceNr && metadata.Timestamp >= MinTimestamp;
         }
 
         public bool Equals(SnapshotSelectionCriteria other)
@@ -453,7 +466,8 @@ namespace Akka.Persistence
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return MaxSequenceNr == other.MaxSequenceNr && MaxTimeStamp == other.MaxTimeStamp;
+            return MaxSequenceNr == other.MaxSequenceNr && MaxTimeStamp == other.MaxTimeStamp &&
+                MinSequenceNr == other.MinSequenceNr && MinTimestamp == other.MinTimestamp;
         }
 
         public override bool Equals(object obj)
@@ -465,13 +479,20 @@ namespace Akka.Persistence
         {
             unchecked
             {
-                return (MaxSequenceNr.GetHashCode() * 397) ^ MaxTimeStamp.GetHashCode();
+                int hash = 17;
+                hash = hash * 23 + MaxSequenceNr.GetHashCode();
+                hash = hash * 23 + MaxTimeStamp.GetHashCode();
+                hash = hash * 23 + MinSequenceNr.GetHashCode();
+                hash = hash * 23 + MinTimestamp.GetHashCode();
+                return hash;
             }
         }
 
         public override string ToString()
         {
-            return string.Format("SnapshotSelectionCriteria<maxSeqNr: {0}, maxTimestamp: {1:yyyy/MM/dd}", MaxSequenceNr, MaxTimeStamp);
+            return string.Format(
+                "SnapshotSelectionCriteria<maxSeqNr: {0}, maxTimestamp: {1:yyyy/MM/dd}, minSeqNr: {2}, minTimestamp: {3:yyyy/MM/dd}>",
+                MaxSequenceNr, MaxTimeStamp, MinSequenceNr, MinTimestamp);
         }
     }
 

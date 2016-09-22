@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Streams.Dsl;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -27,8 +28,8 @@ namespace Akka.Streams.TestKit.Tests
         {
             this.AssertAllStagesStopped(() =>
             {
-                var upstream = TestPublisher.CreateManualProbe<int>(this);
-                var downstream = TestSubscriber.CreateManualProbe<int>(this);
+                var upstream = this.CreateManualPublisherProbe<int>();
+                var downstream = this.CreateManualSubscriberProbe<int>();
                 Source.FromPublisher(upstream)
                     .RunWith(Sink.AsPublisher<int>(false), Materializer)
                     .Subscribe(downstream);

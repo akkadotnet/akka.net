@@ -1,3 +1,66 @@
+#### 1.1.2 September 21 2016 ####
+**Maintenance release for Akka.NET v1.1**
+
+Akka.NET 1.1.2 introduces some exciting developments for Akka.NET users.
+
+**Mono Support and Improved IPV4/6 Configuration**
+First, Akka.NET 1.1.2 is the first release of Akka.NET to be production-certified for Mono. We've made some changes to Akka.Remote, in particular, to design it to work within some of the confines of Mono 4.4.2. For instance, we now support the following HOCON configuration value for the default Helios TCP transport:
+
+```
+ helios.tcp {
+	  # Omitted for brevity
+      transport-protocol = tcp
+
+      port = 2552
+
+      hostname = ""
+
+	  public-hostname = ""
+
+	  dns-use-ipv6 = false
+	  enforce-ip-family = false
+}
+```
+
+`helios.tcp.enforce-ip-family` is a new setting added to the `helios.tcp` transport designed to allow Akka.Remote to function in environments that don't support IPV6. This includes Mono 4.4.2, Windows Azure WebApps, and possibly others. When this setting is turned on and `dns-use-ipv6 = false`, all sockets will be forced to use IPV4 only instead of dual mode. If this setting is turned on and `dns-use-ipv6 = true`, all sockets opened by the Helios transport will be forced to use IPV6 instead of dual-mode.
+
+Currently, as of Mono 4.4.2, this setting is turned on by default. Mono 4.6, when it's released, will allow dual-mode to work consistently again in the future.
+
+We run the entire Akka.NET test suite on Mono and all modules pass.
+
+**Akka.Cluster Downing Providers**
+We've added a new feature to Akka.Cluster known as a "downing provider" - this is a pluggable strategy that you can configure via HOCON to specify how nodes in your Akka.NET cluster may automatically mark unreachable nodes as down.
+
+Out of the box Akka.Cluster only provides the default "auto-down" strategy that's been included as part of Akka.Cluster in the past. However, you can now subclass the `Akka.Cluster.IDowningProvider` interface to implement your own strategies, which you can then load through HOCON:
+
+```
+# i.e.: akka.cluster.downing-provider-class = "Akka.Cluster.Tests.FailingDowningProvider, Akka.Cluster.Tests"
+akka.cluster.downing-provider-class = "Fully-qualified-type-name, Assembly"
+```
+
+**Other Fixes**
+We've also made significant improvements to the Akka.NET scheduler, more than doubling its performance and an significantly decreasing its memory allocation and garbage collection; updated Akka.Streams; fixed bugs in Akka.Cluster routers; and more. You [can read the full list of changes in 1.1.2 here](https://github.com/akkadotnet/akka.net/milestone/11).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 16 | 3913 | 1440 | ravengerUA |
+| 9 | 2323 | 467 | Aaron Stannard |
+| 9 | 12568 | 2865 | Marc Piechura |
+| 4 | 12 | 5 | Michael Kantarovsky |
+| 3 | 381 | 196 | Bartosz Sypytkowski |
+| 2 | 99 | 0 | rogeralsing |
+| 2 | 359 | 17 | Chris Constantin |
+| 2 | 29 | 6 | Denys Zhuravel |
+| 2 | 11 | 11 | Ismael Hamed |
+| 1 | 74 | 25 | mrrd |
+| 1 | 5 | 2 | Szymon Kulec |
+| 1 | 48 | 65 | alexpantyukhin |
+| 1 | 3 | 2 | Tamas Vajk |
+| 1 | 2 | 0 | Julien Adam |
+| 1 | 121 | 26 | andrey.leskov |
+| 1 | 1020 | 458 | Sean Gilliam |
+| 1 | 1 | 1 | Maciej Misztal |
+
 #### 1.1.1 July 15 2016 ####
 **Maintenance release for Akka.NET v1.1**
 

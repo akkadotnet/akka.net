@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
@@ -167,11 +168,18 @@ namespace Akka.Tests.Actor
             var timeoutLatch = new TestLatch();
             var timeoutActor = Sys.ActorOf(Props.Create(() => new TimeoutActor(timeoutLatch, TimeSpan.FromSeconds(1))));
 
-            var ticks = Sys.Scheduler.ScheduleTellRepeatedlyCancelable(TimeSpan.FromMilliseconds(100),
-                TimeSpan.FromMilliseconds(100), timeoutActor, new TransperentTick(), TestActor);
+            var cancellationToken = new CancellationTokenSource();
+            Sys.Scheduler.Schedule(
+                TimeSpan.FromMilliseconds(100),
+                TimeSpan.FromMilliseconds(100),
+                () =>
+                {
+                    timeoutActor.Tell(new TransperentTick());
+                    timeoutActor.Tell(new Identify(null));
+                }, cancellationToken.Token);
 
             timeoutLatch.Ready(TestKitSettings.DefaultTimeout);
-            ticks.Cancel();
+            cancellationToken.Cancel();
             Sys.Stop(timeoutActor);
         }
 

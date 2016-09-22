@@ -88,7 +88,7 @@ namespace Akka.Streams.Implementation.IO
         {
             try
             {
-                _outputStream?.Close();
+                _outputStream?.Dispose();
             }
             catch (Exception ex)
             {

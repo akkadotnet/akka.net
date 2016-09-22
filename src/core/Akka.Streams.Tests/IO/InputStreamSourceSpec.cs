@@ -9,10 +9,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using Akka.IO;
 using Akka.Streams.Dsl;
-using Akka.Streams.IO;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
@@ -30,17 +28,17 @@ namespace Akka.Streams.Tests.IO
         {
             public override void Flush()
             {
-                throw new System.NotImplementedException();
+                throw new NotImplementedException();
             }
 
             public override long Seek(long offset, SeekOrigin origin)
             {
-                throw new System.NotImplementedException();
+                throw new NotImplementedException();
             }
 
             public override void SetLength(long value)
             {
-                throw new System.NotImplementedException();
+                throw new NotImplementedException();
             }
 
             public override int Read(byte[] buffer, int offset, int count)
@@ -51,7 +49,7 @@ namespace Akka.Streams.Tests.IO
 
             public override void Write(byte[] buffer, int offset, int count)
             {
-                throw new System.NotImplementedException();
+                throw new NotImplementedException();
             }
 
             public override bool CanRead { get; } = true;

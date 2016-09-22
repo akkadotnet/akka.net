@@ -77,10 +77,24 @@ namespace Akka.Streams.Dsl
         /// <returns></returns>
         public static BidiFlow<ByteString, ByteString, ByteString, ByteString, NotUsed> SimpleFramingProtocol(int maximumMessageLength)
         {
-            var decoder = LengthField(4, maximumMessageLength + 4, 0, ByteOrder.BigEndian).Select(b => b.Drop(4));
-            var encoder = Flow.Create<ByteString>().Transform(() => new FramingDecoderStage(maximumMessageLength));
+            return BidiFlow.FromFlowsMat(SimpleFramingProtocolEncoder(maximumMessageLength),
+                SimpleFramingProtocolDecoder(maximumMessageLength), Keep.Left);
+        }
 
-            return BidiFlow.FromFlowsMat(encoder, decoder, Keep.Left);
+        /// <summary>
+        /// Protocol decoder that is used by <see cref="SimpleFramingProtocol"/>
+        /// </summary>
+        public static Flow<ByteString, ByteString, NotUsed> SimpleFramingProtocolDecoder(int maximumMessageLength)
+        {
+            return LengthField(4, maximumMessageLength + 4, 0, ByteOrder.BigEndian).Select(b => b.Drop(4));
+        }
+
+        /// <summary>
+        /// Protocol encoder that is used by <see cref="SimpleFramingProtocol"/>
+        /// </summary>
+        public static Flow<ByteString, ByteString, NotUsed> SimpleFramingProtocolEncoder(int maximumMessageLength)
+        {
+            return Flow.Create<ByteString>().Transform(() => new FramingDecoderStage(maximumMessageLength));
         }
 
         public class FramingException : Exception

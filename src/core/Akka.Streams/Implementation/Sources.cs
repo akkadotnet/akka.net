@@ -8,34 +8,80 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Pattern;
+using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
-using Offered = System.Threading.Tasks.TaskCompletionSource<Akka.Streams.IQueueOfferResult>;
+using Akka.Streams.Supervision;
+using Akka.Streams.Util;
+using Akka.Util;
 
 namespace Akka.Streams.Implementation
 {
-    internal sealed class QueueSource<TOut> : GraphStageWithMaterializedValue<SourceShape<TOut>, ISourceQueue<TOut>>
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal sealed class QueueSource<TOut> : GraphStageWithMaterializedValue<SourceShape<TOut>, ISourceQueueWithComplete<TOut>>
     {
-        public sealed class Logic : GraphStageLogicWithCallbackWrapper<Tuple<TOut, Offered>>
+        #region internal classes
+
+        internal interface IInput { }
+
+        internal sealed class Offer<T> : IInput
         {
+            public Offer(T element, TaskCompletionSource<IQueueOfferResult> completionSource)
+            {
+                Element = element;
+                CompletionSource = completionSource;
+            }
+
+            public T Element { get; }
+
+            public TaskCompletionSource<IQueueOfferResult> CompletionSource { get; }
+        }
+
+        internal sealed class Completion : IInput
+        {
+            public static Completion Instance { get; } = new Completion();
+
+            private Completion()
+            {
+                
+            }
+        }
+
+        internal sealed class Failure : IInput
+        {
+            public Failure(Exception ex)
+            {
+                Ex = ex;
+            }
+
+            public Exception Ex { get; }
+        }
+
+        #endregion  
+
+        private sealed class Logic : GraphStageLogicWithCallbackWrapper<IInput>
+        {
+            private readonly TaskCompletionSource<object> _completion;
             private readonly QueueSource<TOut> _source;
             private IBuffer<TOut> _buffer;
-            private Tuple<TOut, Offered> _pendingOffer;
-            private bool _pulled;
+            private Offer<TOut> _pendingOffer;
+            private bool _terminating;
 
-            public Logic(QueueSource<TOut> source) : base(source.Shape)
+            public Logic(QueueSource<TOut> source, TaskCompletionSource<object> completion) : base(source.Shape)
             {
+                _completion = completion;
                 _source = source;
 
-                SetHandler(source.Shape.Outlet,
+                SetHandler(source.Out,
                     onDownstreamFinish: () =>
                     {
                         if (_pendingOffer != null)
                         {
-                            var promise = _pendingOffer.Item2;
-                            promise.SetResult(QueueOfferResult.QueueClosed.Instance);
+                            _pendingOffer.CompletionSource.SetResult(QueueOfferResult.QueueClosed.Instance);
                             _pendingOffer = null;
                         }
-                        _source._completion.SetResult(new object());
+                        _completion.SetResult(new object());
                         CompleteStage();
                     },
                     onPull: () =>
@@ -44,27 +90,31 @@ namespace Akka.Streams.Implementation
                         {
                             if (_pendingOffer != null)
                             {
-                                var element = _pendingOffer.Item1;
-                                var promise = _pendingOffer.Item2;
-                                Push(source.Shape.Outlet, element);
-                                promise.SetResult(QueueOfferResult.Enqueued.Instance);
+                                Push(source.Out, _pendingOffer.Element);
+                                _pendingOffer.CompletionSource.SetResult(QueueOfferResult.Enqueued.Instance);
                                 _pendingOffer = null;
+                                if (_terminating)
+                                {
+                                    _completion.SetResult(new object());
+                                    CompleteStage();
+                                }
                             }
-                            else
-                                _pulled = true;
                         }
-                        else if (!_buffer.IsEmpty)
+                        else if (_buffer.NonEmpty)
                         {
-                            Push(source.Shape.Outlet, _buffer.Dequeue());
+                            Push(source.Out, _buffer.Dequeue());
                             if (_pendingOffer != null)
                             {
-                                var element = _pendingOffer.Item1;
-                                var promise = _pendingOffer.Item2;
-                                EnqueueAndSuccess(element, promise);
+                                EnqueueAndSuccess(_pendingOffer);
+                                _pendingOffer = null;
                             }
                         }
-                        else
-                            _pulled = true;
+
+                        if (_terminating && _buffer.IsEmpty)
+                        {
+                            _completion.SetResult(new object());
+                            CompleteStage();
+                        }
                     });
             }
 
@@ -77,132 +127,493 @@ namespace Akka.Streams.Implementation
 
             public override void PostStop()
             {
-                StopCallback(tuple =>
+                StopCallback(input =>
                 {
-                    if (tuple != null)
+                    var offer = input as Offer<TOut>;
+                    if (offer != null)
                     {
-                        var promise = tuple.Item2;
+                        var promise = offer.CompletionSource;
                         promise.SetException(new IllegalStateException("Stream is terminated. SourceQueue is detached."));
                     }
                 });
             }
 
-            private void EnqueueAndSuccess(TOut element, Offered promise)
+            private void EnqueueAndSuccess(Offer<TOut> offer)
             {
-                _buffer.Enqueue(element);
-                promise.SetResult(QueueOfferResult.Enqueued.Instance);
+                _buffer.Enqueue(offer.Element);
+                offer.CompletionSource.SetResult(QueueOfferResult.Enqueued.Instance);
             }
 
-            private void BufferElement(TOut element, Offered promise)
+            private void BufferElement(Offer<TOut> offer)
             {
                 if (!_buffer.IsFull)
-                    EnqueueAndSuccess(element, promise);
+                    EnqueueAndSuccess(offer);
                 else
                 {
                     switch (_source._overflowStrategy)
                     {
                         case OverflowStrategy.DropHead:
                             _buffer.DropHead();
-                            EnqueueAndSuccess(element, promise);
+                            EnqueueAndSuccess(offer);
                             break;
                         case OverflowStrategy.DropTail:
                             _buffer.DropTail();
-                            EnqueueAndSuccess(element, promise);
+                            EnqueueAndSuccess(offer);
                             break;
                         case OverflowStrategy.DropBuffer:
                             _buffer.Clear();
-                            EnqueueAndSuccess(element, promise);
+                            EnqueueAndSuccess(offer);
                             break;
                         case OverflowStrategy.DropNew:
-                            promise.SetResult(QueueOfferResult.Dropped.Instance);
+                            offer.CompletionSource.SetResult(QueueOfferResult.Dropped.Instance);
                             break;
                         case OverflowStrategy.Fail:
                             var bufferOverflowException =
                                 new BufferOverflowException($"Buffer overflow (max capacity was: {_source._maxBuffer})!");
-                            promise.SetResult(new QueueOfferResult.Failure(bufferOverflowException));
-                            _source._completion.SetException(bufferOverflowException);
+                            offer.CompletionSource.SetResult(new QueueOfferResult.Failure(bufferOverflowException));
+                            _completion.SetException(bufferOverflowException);
                             FailStage(bufferOverflowException);
                             break;
                         case OverflowStrategy.Backpressure:
                             if (_pendingOffer != null)
-                                promise.SetException(
+                                offer.CompletionSource.SetException(
                                     new IllegalStateException(
                                         "You have to wait for previous offer to be resolved to send another request."));
                             else
-                                _pendingOffer = new Tuple<TOut, Offered>(element, promise);
+                                _pendingOffer = offer;
                             break;
                     }
                 }
             }
 
-            private Action<Tuple<TOut, Offered>> Callback()
+            private Action<IInput> Callback()
             {
-                return GetAsyncCallback<Tuple<TOut, Offered>>(
-                    tuple =>
+                return GetAsyncCallback<IInput>(
+                    input =>
                     {
-                        var element = tuple.Item1;
-                        var promise = tuple.Item2;
-                        if (_source._maxBuffer != 0)
+                        var offer = input as Offer<TOut>;
+                        if (offer != null)
                         {
-                            BufferElement(element, promise);
-                            if (_pulled)
+                            if (_source._maxBuffer != 0)
                             {
-                                Push(_source.Shape.Outlet, _buffer.Dequeue());
-                                _pulled = false;
+                                BufferElement(offer);
+                                if (IsAvailable(_source.Out))
+                                    Push(_source.Out, _buffer.Dequeue());
+                            }
+                            else if (IsAvailable(_source.Out))
+                            {
+                                Push(_source.Out, offer.Element);
+                                offer.CompletionSource.SetResult(QueueOfferResult.Enqueued.Instance);
+                            }
+                            else if (_pendingOffer == null)
+                                _pendingOffer = offer;
+                            else
+                            {
+                                switch (_source._overflowStrategy)
+                                {
+                                    case OverflowStrategy.DropHead:
+                                    case OverflowStrategy.DropBuffer:
+                                        _pendingOffer.CompletionSource.SetResult(QueueOfferResult.Dropped.Instance);
+                                        _pendingOffer = offer;
+                                        break;
+                                    case OverflowStrategy.DropTail:
+                                    case OverflowStrategy.DropNew:
+                                        offer.CompletionSource.SetResult(QueueOfferResult.Dropped.Instance);
+                                        break;
+                                    case OverflowStrategy.Backpressure:
+                                        offer.CompletionSource.SetException(
+                                            new IllegalStateException(
+                                                "You have to wait for previous offer to be resolved to send another request"));
+                                        break;
+                                    case OverflowStrategy.Fail:
+                                        var bufferOverflowException =
+                                            new BufferOverflowException(
+                                                $"Buffer overflow (max capacity was: {_source._maxBuffer})!");
+                                        offer.CompletionSource.SetResult(new QueueOfferResult.Failure(bufferOverflowException));
+                                        _completion.SetException(bufferOverflowException);
+                                        FailStage(bufferOverflowException);
+                                        break;
+                                    default:
+                                        throw new ArgumentOutOfRangeException();
+                                }
                             }
                         }
-                        else if (_pulled)
+
+                        var completion = input as Completion;
+                        if (completion != null)
                         {
-                            Push(_source.Shape.Outlet, element);
-                            _pulled = false;
-                            promise.SetResult(QueueOfferResult.Enqueued.Instance);
+                            if (_source._maxBuffer != 0 && _buffer.NonEmpty || _pendingOffer != null)
+                                _terminating = true;
+                            else
+                            {
+                                _completion.SetResult(new object());
+                                CompleteStage();
+                            }
                         }
-                        else
-                            _pendingOffer = tuple;
+
+                        var failure = input as Failure;
+                        if (failure != null)
+                        {
+                            _completion.SetException(failure.Ex);
+                            FailStage(failure.Ex);
+                        }
                     });
             }
 
-            internal void Invoke(Tuple<TOut, Offered> tuple) => InvokeCallbacks(tuple);
+            internal void Invoke(IInput offer) => InvokeCallbacks(offer);
         }
 
-        public sealed class Materialized : ISourceQueue<TOut>
+        public sealed class Materialized : ISourceQueueWithComplete<TOut>
         {
-            private readonly QueueSource<TOut> _source;
-            private readonly Action<Tuple<TOut, Offered>> _invokeLogic;
+            private readonly Action<IInput> _invokeLogic;
+            private readonly TaskCompletionSource<object> _completion;
+
+            public Materialized(Action<IInput> invokeLogic, TaskCompletionSource<object> completion)
+            {
+                _invokeLogic = invokeLogic;
+                _completion = completion;
+            }
 
             public Task<IQueueOfferResult> OfferAsync(TOut element)
             {
                 var promise = new TaskCompletionSource<IQueueOfferResult>();
-                _invokeLogic(new Tuple<TOut, Offered>(element, promise));
+                _invokeLogic(new Offer<TOut>(element, promise));
                 return promise.Task;
             }
 
-            public Task WatchCompletionAsync() => _source._completion.Task;
+            public Task WatchCompletionAsync() => _completion.Task;
 
-            public Materialized(QueueSource<TOut> source, Action<Tuple<TOut, Offered>> invokeLogic)
-            {
-                _source = source;
-                _invokeLogic = invokeLogic;
-            }
+            public void Complete() => _invokeLogic(Completion.Instance);
+
+            public void Fail(Exception ex) => _invokeLogic(new Failure(ex));
         }
 
         private readonly int _maxBuffer;
         private readonly OverflowStrategy _overflowStrategy;
-        private readonly TaskCompletionSource<object> _completion = new TaskCompletionSource<object>();
 
         public QueueSource(int maxBuffer, OverflowStrategy overflowStrategy)
         {
             _maxBuffer = maxBuffer;
             _overflowStrategy = overflowStrategy;
-            Shape = new SourceShape<TOut>(new Outlet<TOut>("queueSource.out"));
+            Shape = new SourceShape<TOut>(Out);
         }
+
+        public Outlet<TOut> Out { get; } = new Outlet<TOut>("queueSource.out");
 
         public override SourceShape<TOut> Shape { get; }
 
-        public override ILogicAndMaterializedValue<ISourceQueue<TOut>>  CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        public override ILogicAndMaterializedValue<ISourceQueueWithComplete<TOut>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var logic = new Logic(this);
-            return new LogicAndMaterializedValue<ISourceQueue<TOut>>(logic, new Materialized(this, t => logic.Invoke(t)));
+            var completion = new TaskCompletionSource<object>();
+            var logic = new Logic(this, completion);
+            return new LogicAndMaterializedValue<ISourceQueueWithComplete<TOut>>(logic, new Materialized(t => logic.Invoke(t), completion));
         }
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal sealed class UnfoldResourceSource<TOut, TSource> : GraphStage<SourceShape<TOut>>
+    {
+        #region Logic
+
+        private sealed class Logic : GraphStageLogic
+        {
+            private readonly UnfoldResourceSource<TOut, TSource> _source;
+            private readonly Attributes _inheritedAttributes;
+            private readonly Lazy<Decider> _decider;
+            private TSource _blockingStream;
+
+            public Logic(UnfoldResourceSource<TOut, TSource> source, Attributes inheritedAttributes) : base(source.Shape)
+            {
+                _source = source;
+                _inheritedAttributes = inheritedAttributes;
+                _decider = new Lazy<Decider>(() =>
+                {
+                    var strategy = _inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
+                    return strategy != null ? strategy.Decider : Deciders.StoppingDecider;
+                });
+
+                SetHandler(source.Out,
+                    onPull: () =>
+                    {
+                        var stop = false;
+                        while (!stop)
+                        {
+                            try
+                            {
+                                var data = source._readData(_blockingStream);
+                                if (data.HasValue)
+                                    Push(source.Out, data.Value);
+                                else
+                                    CloseStage();
+
+                                break;
+                            }
+                            catch (Exception ex)
+                            {
+                                var directive = _decider.Value(ex);
+                                switch (directive)
+                                {
+                                    case Directive.Stop:
+                                        _source._close(_blockingStream);
+                                        FailStage(ex);
+                                        stop = true;
+                                        break;
+                                    case Directive.Restart:
+                                        RestartState();
+                                        break;
+                                    case Directive.Resume:
+                                        break;
+                                    default:
+                                        throw new ArgumentOutOfRangeException();
+                                }
+                            }
+                        }
+                    },
+                    onDownstreamFinish: CloseStage);
+            }
+
+            public override void PreStart() => _blockingStream = _source._create();
+
+            private void RestartState()
+            {
+                _source._close(_blockingStream);
+                _blockingStream = _source._create();
+            }
+
+            private void CloseStage()
+            {
+                try
+                {
+                    _source._close(_blockingStream);
+                    CompleteStage();
+                }
+                catch (Exception ex)
+                {
+                    FailStage(ex);
+                }
+            }
+        }
+
+        #endregion
+
+        private readonly Func<TSource> _create;
+        private readonly Func<TSource, Option<TOut>> _readData;
+        private readonly Action<TSource> _close;
+
+
+        public UnfoldResourceSource(Func<TSource> create, Func<TSource, Option<TOut>> readData, Action<TSource> close)
+        {
+            _create = create;
+            _readData = readData;
+            _close = close;
+
+            Shape = new SourceShape<TOut>(Out);
+        }
+
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.UnfoldResourceSource;
+
+        public Outlet<TOut> Out { get; } = new Outlet<TOut>("UnfoldResourceSource.out");
+
+        public override SourceShape<TOut> Shape { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
+
+        public override string ToString() => "UnfoldResourceSource";
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal sealed class UnfoldResourceSourceAsync<TOut, TSource> : GraphStage<SourceShape<TOut>>
+    {
+        #region Logic
+
+        private sealed class Logic : GraphStageLogic
+        {
+            private readonly UnfoldResourceSourceAsync<TOut, TSource> _source;
+            private readonly Attributes _inheritedAttributes;
+            private readonly Lazy<Decider> _decider;
+            private TaskCompletionSource<TSource> _resource;
+            private Action<Either<Option<TOut>, Exception>> _callback;
+            private Action<Tuple<Action, Task>> _closeCallback;
+            private Action<Tuple<TSource, Action<TSource>>> _onResourceReadyCallback;
+
+            public Logic(UnfoldResourceSourceAsync<TOut, TSource> source, Attributes inheritedAttributes) : base(source.Shape)
+            {
+                _source = source;
+                _inheritedAttributes = inheritedAttributes;
+                _resource = new TaskCompletionSource<TSource>();
+                _decider = new Lazy<Decider>(() =>
+                {
+                    var strategy = _inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
+                    return strategy != null ? strategy.Decider : Deciders.StoppingDecider;
+                });
+
+                SetHandler(source.Out, onPull: OnPull, onDownstreamFinish: CloseStage);
+            }
+
+            public override void PreStart()
+            {
+                CreateStream(false);
+                _callback = GetAsyncCallback<Either<Option<TOut>, Exception>>(either =>
+                {
+                    if (either.IsLeft)
+                    {
+                        var element = either.ToLeft().Value;
+                        if (element.HasValue)
+                            Push(_source.Out, element.Value);
+                        else
+                            CloseStage();
+                    }
+                    else
+                        ErrorHandler(either.ToRight().Value);
+                });
+
+                _closeCallback = GetAsyncCallback<Tuple<Action, Task>>(t =>
+                {
+                    if (t.Item2.IsCompleted && !t.Item2.IsFaulted)
+                        t.Item1();
+                    else
+                        FailStage(t.Item2.Exception);
+                });
+
+                _onResourceReadyCallback = GetAsyncCallback<Tuple<TSource, Action<TSource>>>(t => t.Item2(t.Item1));
+            }
+
+            private void CreateStream(bool withPull)
+            {
+                var cb = GetAsyncCallback<Either<TSource, Exception>>(either =>
+                {
+                    if (either.IsLeft)
+                    {
+                        _resource.SetResult(either.ToLeft().Value);
+                        if(withPull)
+                            OnPull();
+                    }
+                    else
+                        FailStage(either.ToRight().Value);
+                });
+
+                try
+                {
+                    _source._create().ContinueWith(t =>
+                    {
+                        if(t.IsCompleted && !t.IsFaulted && t.Result != null)
+                            cb(new Left<TSource, Exception>(t.Result));
+                        else
+                            cb(new Right<TSource, Exception>(t.Exception));
+                    });
+                }
+                catch (Exception ex)
+                {
+                    FailStage(ex);
+                }
+            }
+
+            private void OnResourceReady(Action<TSource> action)
+            {
+                _resource.Task.ContinueWith(t =>
+                {
+                    if (t.IsCompleted && !t.IsFaulted && t.Result != null)
+                        _onResourceReadyCallback(Tuple.Create(t.Result, action));
+                });
+            }
+
+            private void ErrorHandler(Exception ex)
+            {
+                var directive = _decider.Value(ex);
+                switch (directive)
+                {
+                    case Directive.Stop:
+                        OnResourceReady(s=>_source._close(s));
+                        FailStage(ex);
+                        break;
+                    case Directive.Resume:
+                        OnPull();
+                        break;
+                    case Directive.Restart:
+                        RestartState();
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+
+            private void OnPull()
+            {
+                OnResourceReady(source =>
+                {
+                    try
+                    {
+                        _source._readData(source).ContinueWith(t =>
+                        {
+                            if(t.IsCompleted && !t.IsCanceled)
+                                _callback(new Left<Option<TOut>, Exception>(t.Result));
+                            else
+                                _callback(new Right<Option<TOut>, Exception>(t.Exception));
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        ErrorHandler(ex);
+                    }
+                });
+            }
+
+            private void CloseAndThen(Action action)
+            {
+                SetKeepGoing(true);
+                OnResourceReady(source =>
+                {
+                    try
+                    {
+                        _source._close(source).ContinueWith(t => _closeCallback(Tuple.Create(action, t)));
+                    }
+                    catch (Exception ex)
+                    {
+                        FailStage(ex);
+                    }
+                });
+            }
+
+            private void RestartState()
+            {
+                CloseAndThen(() =>
+                {
+                    _resource = new TaskCompletionSource<TSource>();
+                    CreateStream(true);
+                });
+            }
+
+            private void CloseStage() => CloseAndThen(CompleteStage);
+        }
+
+        #endregion
+
+        private readonly Func<Task<TSource>> _create;
+        private readonly Func<TSource, Task<Option<TOut>>> _readData;
+        private readonly Func<TSource, Task> _close;
+
+
+        public UnfoldResourceSourceAsync(Func<Task<TSource>> create, Func<TSource, Task<Option<TOut>>> readData, Func<TSource, Task> close)
+        {
+            _create = create;
+            _readData = readData;
+            _close = close;
+
+            Shape = new SourceShape<TOut>(Out);
+        }
+
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.UnfoldResourceSourceAsync;
+
+        public Outlet<TOut> Out { get; } = new Outlet<TOut>("UnfoldResourceSourceAsync.out");
+
+        public override SourceShape<TOut> Shape { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
+
+        public override string ToString() => "UnfoldResourceSourceAsync";
     }
 }

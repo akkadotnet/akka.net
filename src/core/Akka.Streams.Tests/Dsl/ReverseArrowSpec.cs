@@ -11,7 +11,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using FluentAssertions;
 using Microsoft.CSharp.RuntimeBinder;
 using Xunit;
@@ -65,7 +65,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Reverse_Arrows_in_the_GraphDsl_must_work_from_Sink()
         {
-            var sub = TestSubscriber.CreateManualProbe<int>(this);
+            var sub = this.CreateManualSubscriberProbe<int>();
             RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
                 b.To(Streams.Dsl.Sink.FromSubscriber(sub))

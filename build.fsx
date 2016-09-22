@@ -116,12 +116,6 @@ Target "Build" <| fun _ ->
     |> MSBuildRelease "" "Rebuild"
     |> ignore
 
-Target "BuildMono" <| fun _ ->
-
-    !!"src/Akka.sln"
-    |> MSBuild "" "Rebuild" [("Configuration","Release Mono")]
-    |> ignore
-
 //--------------------------------------------------------------------------------
 // Build the docs
 Target "Docs" <| fun _ ->
@@ -157,7 +151,7 @@ Target "AzureDocsDeploy" (fun _ ->
             pushToAzure docDir azureUrl "stable" azureKey 3
             pushToAzure docDir azureUrl release.NugetVersion azureKey 3
     if(not canPush) then
-        printfn "Missing required paraments to push docs to Azure. Run build HelpDocs to find out!"
+        printfn "Missing required parameters to push docs to Azure. Run build HelpDocs to find out!"
             
 )
 
@@ -242,6 +236,19 @@ Target "BuildRelease" DoNothing
 //--------------------------------------------------------------------------------
 
 //--------------------------------------------------------------------------------
+// Filter out assemblies which can't run on Linux, Mono, .NET Core, etc...
+
+open Fake.EnvironmentHelper
+let filterPlatformSpecificAssemblies (assembly:string) =
+    match assembly with
+    | assembly when (assembly.Contains("Sqlite") && isMono) -> false
+    | assembly when (assembly.Contains(".API") && isMono) -> false
+    | assembly when (assembly.Contains("Akka.Remote.TestKit.Tests") && isMono) -> false
+    | assembly when (assembly.Contains("Akka.Persistence.TestKit.Tests") && isMono) -> false
+    | assembly when (assembly.Contains("Akka.Streams.Tests.TCK") && isMono) -> false
+    | _ -> true
+
+//--------------------------------------------------------------------------------
 // Clean test output
 
 Target "CleanTests" <| fun _ ->
@@ -251,13 +258,16 @@ Target "CleanTests" <| fun _ ->
 
 open Fake.Testing
 Target "RunTests" <| fun _ ->  
-    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- 
+    let xunitTestAssemblies = Seq.filter filterPlatformSpecificAssemblies (!! "src/**/bin/Release/*.Tests.dll" -- 
                                  // Akka.Streams.Tests is referencing Akka.Streams.TestKit.Tests
                                  "src/**/Akka.Streams.Tests/bin/Release/Akka.Streams.TestKit.Tests.dll" --
                                  // Akka.Streams.Tests.Performance is referencing Akka.Streams.Tests and Akka.Streams.TestKit.Tests
-                                 "src/**/Akka.Streams.Tests.Performance/bin/Release/*.Tests.dll"
+                                 "src/**/Akka.Streams.Tests.Performance/bin/Release/*.Tests.dll")
 
-    let nunitTestAssemblies = !! "src/**/bin/Release/Akka.Streams.Tests.TCK.dll"
+    let nunitTestAssemblies = Seq.filter filterPlatformSpecificAssemblies (!! "src/**/bin/Release/Akka.Streams.Tests.TCK.dll")
+
+    // Debug output
+    xunitTestAssemblies |> Seq.iter (printfn "Executing: %s")
 
     mkdir testOutput
    
@@ -268,7 +278,7 @@ Target "RunTests" <| fun _ ->
     let runSingleAssembly assembly =
         let assemblyName = Path.GetFileNameWithoutExtension(assembly)
         xUnit2
-            (fun p -> { p with XmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.xml"); HtmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization }) 
+            (fun p -> { p with XmlOutputPath = Some (testOutput @@ (assemblyName + "_xunit.xml")); HtmlOutputPath = Some (testOutput @@ (assemblyName + "_xunit.html")); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization; NoAppDomain = true; ForceTeamCity = true; }) 
             (Seq.singleton assembly)
 
     xunitTestAssemblies |> Seq.iter (runSingleAssembly)
@@ -276,26 +286,11 @@ Target "RunTests" <| fun _ ->
     let runNunitSingleAssembly assembly = 
         let assemblyName = Path.GetFileNameWithoutExtension(assembly)
         NUnit3
-             (fun p -> { p with ToolPath = nunitToolPath; WorkingDir = testOutput})
+             (fun p -> { p with ToolPath = nunitToolPath; WorkingDir = testOutput; TeamCity = true;})
              (Seq.singleton assembly)
         
     printfn "Using NUnit runner: %s" nunitToolPath
     nunitTestAssemblies |> Seq.iter (runNunitSingleAssembly)
-
-Target "RunTestsMono" <| fun _ ->  
-    let xunitTestAssemblies = !! "src/**/bin/Release Mono/*.Tests.dll"
-
-    mkdir testOutput
-
-    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
-    printfn "Using XUnit runner: %s" xunitToolPath
-    let runSingleAssembly assembly =
-        let assemblyName = Path.GetFileNameWithoutExtension(assembly)
-        xUnit2
-            (fun p -> { p with XmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.xml"); HtmlOutputPath = Some (testOutput + @"\" + assemblyName + "_xunit.HTML"); ToolPath = xunitToolPath; TimeOut = System.TimeSpan.FromMinutes 30.0; Parallel = ParallelMode.NoParallelization }) 
-            (Seq.singleton assembly)
-
-    xunitTestAssemblies |> Seq.iter (runSingleAssembly)
 
 
 (* Debug helper for troubleshooting an issue we had when we were running multi-node tests multiple times *)
@@ -308,13 +303,12 @@ Target "PrintMultiNodeTests" <| fun _ ->
 
 
 Target "MultiNodeTests" <| fun _ ->
-    let testSearchPath =
-        let assemblyFilter = getBuildParamOrDefault "spec-assembly" String.Empty
-        sprintf "src/**/bin/Release/*%s*.Tests.MultiNode.dll" assemblyFilter
-
     mkdir testOutput
-    let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" "bin/core/Akka.MultiNodeTestRunner*"
-    let multiNodeTestAssemblies = !! testSearchPath
+    let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "bin" @@ "core" @@ "Akka.MultiNodeTestRunner*")
+    let multiNodeTestAssemblies = !! "src/**/bin/Release/Akka.Remote.Tests.MultiNode.dll" ++
+                                     "src/**/bin/Release/Akka.Cluster.Tests.MultiNode.dll" ++
+                                     "src/**/bin/Release/Akka.Cluster.Tools.Tests.MultiNode.dll"
+
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
     let runMultiNodeSpec assembly =
@@ -324,7 +318,7 @@ Target "MultiNodeTests" <| fun _ ->
                 |> append assembly
                 |> append "-Dmultinode.enable-filesink=on"
                 |> append (sprintf "-Dmultinode.output-directory=\"%s\"" testOutput)
-                |> appendIfNotNullOrEmpty spec "-Dmultinode.test-spec="
+                |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
                 |> toText
 
         let result = ExecProcess(fun info -> 
@@ -345,7 +339,7 @@ Target "NBench" <| fun _ ->
 
     mkdir perfOutput
     let nbenchTestPath = findToolInSubPath "NBench.Runner.exe" "src/packges/NBench.Runner*"
-    let nbenchTestAssemblies = !! testSearchPath
+    let nbenchTestAssemblies = Seq.filter filterPlatformSpecificAssemblies (!! testSearchPath)
     printfn "Using NBench.Runner: %s" nbenchTestPath
 
     let runNBench assembly =

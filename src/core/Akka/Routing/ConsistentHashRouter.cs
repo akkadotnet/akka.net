@@ -238,12 +238,14 @@ namespace Akka.Routing
         /// </note>
         /// </summary>
         /// <param name="mapping">The <see cref="ConsistentHashMapping"/> used to configure the new router.</param>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown if the given <paramref name="mapping"/> is undefined.
+        /// </exception>
         /// <returns>A new router logic with the provided <paramref name="mapping"/>.</returns>
-        /// <exception cref="ArgumentNullException">The mapping can not be null.</exception>
         public ConsistentHashingRoutingLogic WithHashMapping(ConsistentHashMapping mapping)
         {
             if (mapping == null)
-                throw new ArgumentNullException("mapping");
+                throw new ArgumentNullException(nameof(mapping), "The mapping cannot be null.");
 
             return new ConsistentHashingRoutingLogic(_system, _vnodes, mapping);
         }
@@ -479,8 +481,10 @@ namespace Akka.Routing
         /// Configure the current router with an auxiliary router for routes that it does not know how to handle.
         /// </summary>
         /// <param name="routerConfig">The router to use as an auxiliary source.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if the given <paramref name="routerConfig"/> is not a <see cref="ConsistentHashingPool"/>.
+        /// </exception>
         /// <returns>The router configured with the auxiliary information.</returns>
-        /// <exception cref="System.ArgumentException">routerConfig</exception>
         public override RouterConfig WithFallback(RouterConfig routerConfig)
         {
             if (routerConfig is FromConfig || routerConfig is NoRouter)
@@ -494,8 +498,7 @@ namespace Akka.Routing
             }
             else
             {
-                throw new ArgumentException(string.Format("Expected ConsistentHashingPool, got {0}", routerConfig),
-                    nameof(routerConfig));
+                throw new ArgumentException($"Expected ConsistentHashingPool, got {routerConfig}", nameof(routerConfig));
             }
         }
 
@@ -739,8 +742,10 @@ namespace Akka.Routing
         /// Configure the current router with an auxiliary router for routes that it does not know how to handle.
         /// </summary>
         /// <param name="routerConfig">The router to use as an auxiliary source.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if the given <paramref name="routerConfig"/> is not a <see cref="ConsistentHashingGroup"/>.
+        /// </exception>
         /// <returns>The router configured with the auxiliary information.</returns>
-        /// <exception cref="ArgumentException">Expected ConsistentHashingGroup, got <paramref name="routerConfig"/>.</exception>
         public override RouterConfig WithFallback(RouterConfig routerConfig)
         {
             if (routerConfig is FromConfig || routerConfig is NoRouter)
@@ -754,8 +759,7 @@ namespace Akka.Routing
             }
             else
             {
-                throw new ArgumentException(string.Format("Expected ConsistentHashingGroup, got {0}", routerConfig),
-                    nameof(routerConfig));
+                throw new ArgumentException($"Expected ConsistentHashingGroup, got {routerConfig}", nameof(routerConfig));
             }
         }
 

@@ -15,7 +15,7 @@ namespace Akka.Util
 	internal static class MonotonicClock
 	{
 		private static readonly Stopwatch Stopwatch = Stopwatch.StartNew();
-		private static readonly bool IsMono = Type.GetType("Mono.Runtime") != null;
+
 		[DllImport("kernel32")]
 		private static extern ulong GetTickCount64();
 
@@ -39,7 +39,7 @@ namespace Akka.Util
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 	    public static long GetMilliseconds()
 	    {
-            return IsMono
+            return RuntimeDetector.IsMono
                 ? Stopwatch.ElapsedMilliseconds
                 : (long)GetTickCount64();
         }

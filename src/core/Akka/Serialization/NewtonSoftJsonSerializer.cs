@@ -41,7 +41,7 @@ namespace Akka.Serialization
             _settings = new JsonSerializerSettings
             {
                 PreserveReferencesHandling = PreserveReferencesHandling.Objects,
-                Converters = new List<JsonConverter> { new SurrogateConverter(this),new DiscriminatedUnionConverter()},
+                Converters = new List<JsonConverter> { new SurrogateConverter(this), new DiscriminatedUnionConverter() },
                 NullValueHandling = NullValueHandling.Ignore,
                 DefaultValueHandling = DefaultValueHandling.Ignore,
                 MissingMemberHandling = MissingMemberHandling.Ignore,
@@ -115,7 +115,7 @@ namespace Akka.Serialization
             return TranslateSurrogate(res, this, type);
         }
 
-        private static object TranslateSurrogate(object deserializedValue,NewtonSoftJsonSerializer parent,Type type)
+        private static object TranslateSurrogate(object deserializedValue, NewtonSoftJsonSerializer parent, Type type)
         {
             var j = deserializedValue as JObject;
             if (j != null)
@@ -168,13 +168,13 @@ namespace Akka.Serialization
             /// <returns><c>true</c> if this instance can convert the specified object type; otherwise, <c>false</c>.</returns>
             public override bool CanConvert(Type objectType)
             {
-                if (objectType == typeof (int) || objectType == typeof (float) || objectType == typeof (decimal))
+                if (objectType == typeof(int) || objectType == typeof(float) || objectType == typeof(decimal))
                     return true;
 
-                if (typeof (ISurrogated).IsAssignableFrom(objectType))
+                if (typeof(ISurrogated).IsAssignableFrom(objectType))
                     return true;
 
-                if (objectType == typeof (object))
+                if (objectType == typeof(object))
                     return true;
 
                 return false;
@@ -196,7 +196,7 @@ namespace Akka.Serialization
 
 
 
-            private object DeserializeFromReader(JsonReader reader, JsonSerializer serializer,Type objecType)
+            private object DeserializeFromReader(JsonReader reader, JsonSerializer serializer, Type objecType)
             {
                 var surrogate = serializer.Deserialize(reader);
                 return TranslateSurrogate(surrogate, _parent, objecType);
@@ -231,12 +231,12 @@ namespace Akka.Serialization
                         serializer.Serialize(writer, value);
                     }
                 }
-            }           
+            }
 
             private object GetString(object value)
             {
                 if (value is int)
-                    return "I" + ((int) value).ToString(NumberFormatInfo.InvariantInfo);
+                    return "I" + ((int)value).ToString(NumberFormatInfo.InvariantInfo);
                 if (value is float)
                     return "F" + ((float)value).ToString(NumberFormatInfo.InvariantInfo);
                 if (value is decimal)

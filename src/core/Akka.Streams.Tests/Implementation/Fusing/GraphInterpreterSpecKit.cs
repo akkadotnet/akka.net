@@ -15,6 +15,7 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Implementation.Fusing
@@ -142,7 +143,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     var inHandlers = mat.Item1;
                     var outHandlers = mat.Item2;
                     var logics = mat.Item3;
-                    var interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, inHandlers, outHandlers, logics, (l, o, a) => {}, false);
+                    var interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, inHandlers, outHandlers, logics, (l, o, a) => {}, false, null);
 
                     var i = 0;
                     foreach (var upstream in _upstreams)
@@ -166,7 +167,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 var inHandlers = mat.Item1;
                 var outHandlers = mat.Item2;
                 var logics = mat.Item3;
-                _interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, inHandlers, outHandlers, logics, (l, o, a) => {}, false);
+                _interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, inHandlers, outHandlers, logics, (l, o, a) => {}, false, null);
             }
 
             public AssemblyBuilder Builder(params IGraphStageWithMaterializedValue<Shape, object>[] stages)
@@ -531,7 +532,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 {
                     if (GraphInterpreter.IsDebug)
                         Console.WriteLine($"----- REQ: {this}");
-                    Pull<T>(In);
+                    Pull(In);
                     Interpreter.Execute(eventLimit);
                 }
 
@@ -639,7 +640,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 public void Pull()
                 {
-                    Pull<T>(In);
+                    Pull(In);
                 }
 
                 public void Cancel()
@@ -656,8 +657,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         public class FailingStageSetup : TestSetup
         {
-            public UpstreamPortProbe<int> Upstream { get; }
-            public DownstreamPortProbe<int> Downstream { get; }
+            public new UpstreamPortProbe<int> Upstream { get; }
+            public new DownstreamPortProbe<int> Downstream { get; }
 
             private bool _failOnNextEvent;
             private bool _failOnPostStop;
@@ -805,7 +806,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 public void Pull()
                 {
-                    Pull<T>(In);
+                    Pull(In);
                 }
 
                 public void Cancel()
@@ -1047,7 +1048,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 public void RequestOne()
                 {
-                    Pull<T>(In);
+                    Pull(In);
                     _setup.Run();
                 }
 
@@ -1194,10 +1195,26 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 spec)
         {
             WithOneBoundedSetup(new[] {op}, spec);
-            
         }
 
         public void WithOneBoundedSetup<TIn, TOut>(IGraphStageWithMaterializedValue<Shape, object>[] ops,
+            Action
+                <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<TIn>, OneBoundedSetup.DownstreamOneBoundedPortProbe<TOut>>
+                spec)
+        {
+            var setup = new OneBoundedSetup<TIn, TOut>(Sys, ops);
+            spec(setup.LastEvents, setup.Upstream, setup.Downstream);
+        }
+
+        public void WithOneBoundedSetup<TIn, TOut>(IGraphStageWithMaterializedValue<FlowShape<TIn, TOut>, object> op,
+            Action
+                <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<TIn>, OneBoundedSetup.DownstreamOneBoundedPortProbe<TOut>>
+                spec)
+        {
+            WithOneBoundedSetup(new[] { op }, spec);
+        }
+
+        public void WithOneBoundedSetup<TIn, TOut>(IGraphStageWithMaterializedValue<FlowShape<TIn, TOut>, object>[] ops,
             Action
                 <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<TIn>, OneBoundedSetup.DownstreamOneBoundedPortProbe<TOut>>
                 spec)

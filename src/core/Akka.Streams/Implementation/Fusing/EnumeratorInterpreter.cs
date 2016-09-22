@@ -114,7 +114,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 if (NeedsPull)
                 {
-                    Pull<TOut>(In);
+                    Pull(In);
                     Interpreter.Execute(int.MaxValue);
                 }
             }
@@ -123,14 +123,11 @@ namespace Akka.Streams.Implementation.Fusing
 
     internal sealed class EnumeratorInterpreter<TIn, TOut> : IEnumerable<TOut>
     {
-
-        private readonly IEnumerator<TIn> _input;
         private readonly IEnumerable<PushPullStage<TIn, TOut>> _ops;
         private readonly EnumeratorInterpreter.EnumeratorUpstream<TIn> _upstream;
         private readonly EnumeratorInterpreter.EnumeratorDownstream<TOut> _downstream = new EnumeratorInterpreter.EnumeratorDownstream<TOut>();
         public EnumeratorInterpreter(IEnumerator<TIn> input, IEnumerable<PushPullStage<TIn, TOut>> ops)
         {
-            _input = input;
             _ops = ops;
             _upstream = new EnumeratorInterpreter.EnumeratorUpstream<TIn>(input);
 
@@ -182,7 +179,8 @@ namespace Akka.Streams.Implementation.Fusing
                 outHandlers: outHandlers,
                 logics: logics,
                 onAsyncInput: (_1, _2, _3) => { throw new NotSupportedException("IteratorInterpreter does not support asynchronous events.");},
-                fuzzingMode: false);
+                fuzzingMode: false,
+                context: null);
             interpreter.AttachUpstreamBoundary(0, _upstream);
             interpreter.AttachDownstreamBoundary(length, _downstream);
             interpreter.Init(null);

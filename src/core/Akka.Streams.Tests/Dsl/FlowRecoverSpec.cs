@@ -10,6 +10,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.Streams.Util;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -40,7 +41,6 @@ namespace Akka.Streams.Tests.Dsl
                     return x;
                 })
                     .Recover(_ => new Option<int>(0))
-                    .Select(x => x.Value)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .RequestNext(1)
                     .RequestNext(2)
@@ -63,7 +63,6 @@ namespace Akka.Streams.Tests.Dsl
                     return x;
                 })
                     .Recover(_ => Option<int>.None)
-                    .Select(x=>x.Value)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .RequestNext(1)
                     .Request(1)
@@ -79,7 +78,6 @@ namespace Akka.Streams.Tests.Dsl
                 Source.From(Enumerable.Range(1, 3))
                     .Select(x => x)
                     .Recover(_ => new Option<int>(0))
-                    .Select(x => x.Value)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(3)
                     .ExpectNext(1, 2, 3)
@@ -95,7 +93,6 @@ namespace Akka.Streams.Tests.Dsl
                 Source.Empty<int>()
                     .Select(x => x)
                     .Recover(_ => new Option<int>(0))
-                    .Select(x=>x.Value)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(1)
                     .ExpectComplete();

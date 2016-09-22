@@ -540,13 +540,20 @@ namespace Akka.Dispatch
         public int Capacity { get; }
         public TimeSpan PushTimeout { get; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BoundedMailbox" /> class.
+        /// </summary>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if the 'mailbox-capacity' in <paramref name="config"/>
+        /// or the 'mailbox-push-timeout-time' in <paramref name="config"/> is negative.
+        /// </exception>>
         public BoundedMailbox(Settings settings, Config config) : base(settings, config)
         {
             Capacity = config.GetInt("mailbox-capacity");
             PushTimeout = config.GetTimeSpan("mailbox-push-timeout-time", TimeSpan.FromSeconds(-1));
 
-            if (Capacity < 0) throw new ArgumentOutOfRangeException(nameof(config), "The capacity for BoundedMailbox cannot be negative");
-            if (PushTimeout.TotalSeconds < 0) throw new ArgumentNullException(nameof(config), "The push time-out for BoundedMailbox cannot be null");
+            if (Capacity < 0) throw new ArgumentException("The capacity for BoundedMailbox cannot be negative", nameof(config));
+            if (PushTimeout.TotalSeconds < 0) throw new ArgumentException("The push time-out for BoundedMailbox cannot be be negative", nameof(config));
         }
 
         public override IMessageQueue Create(IActorRef owner, ActorSystem system)
@@ -558,6 +565,8 @@ namespace Akka.Dispatch
     /// <summary>
     /// Priority mailbox base class; unbounded mailbox that allows for prioritization of its contents.
     /// Extend this class and implement the <see cref="PriorityGenerator"/> method with your own prioritization.
+    /// The value returned by the <see cref="PriorityGenerator"/> method will be used to order the message in the mailbox.
+    /// Lower values will be delivered first. Messages ordered by the same number will remain in delivery order.
     /// </summary>
     public abstract class UnboundedPriorityMailbox : MailboxType, IProducesMessageQueue<UnboundedPriorityMessageQueue>
     {
@@ -603,13 +612,20 @@ namespace Akka.Dispatch
         public int Capacity { get; }
         public TimeSpan PushTimeout { get; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BoundedDequeBasedMailbox" /> class.
+        /// </summary>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if the 'mailbox-capacity' in <paramref name="config"/>
+        /// or the 'mailbox-push-timeout-time' in <paramref name="config"/> is negative.
+        /// </exception>>
         public BoundedDequeBasedMailbox(Settings settings, Config config) : base(settings, config)
         {
             Capacity = config.GetInt("mailbox-capacity");
             PushTimeout = config.GetTimeSpan("mailbox-push-timeout-time", TimeSpan.FromSeconds(-1));
 
-            if (Capacity < 0) throw new ArgumentOutOfRangeException(nameof(config), "The capacity for BoundedMailbox cannot be negative");
-            if (PushTimeout.TotalSeconds < 0) throw new ArgumentNullException(nameof(config), "The push time-out for BoundedMailbox cannot be null");
+            if (Capacity < 0) throw new ArgumentException("The capacity for BoundedMailbox cannot be negative", nameof(config));
+            if (PushTimeout.TotalSeconds < 0) throw new ArgumentException("The push time-out for BoundedMailbox cannot be null", nameof(config));
         }
 
         public override IMessageQueue Create(IActorRef owner, ActorSystem system)

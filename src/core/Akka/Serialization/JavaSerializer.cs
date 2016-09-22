@@ -33,32 +33,41 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// Returns whether this serializer needs a manifest in the fromBinary method
+        /// N/A
         /// </summary>
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown automatically since this is an unsupported serializer here only as a placeholder.
+        /// </exception>
         public override bool IncludeManifest
         {
-            get { throw new NotSupportedException(); }
+            get { throw new NotSupportedException("This serializer is unsupported here only as a placeholder. Thus this property is not implemented."); }
         }
 
         /// <summary>
-        /// Serializes the given object into a byte array
+        /// N/A
         /// </summary>
-        /// <param name="obj">The object to serialize </param>
-        /// <returns>A byte array containing the serialized object</returns>
+        /// <param name="obj">N/A</param>
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown automatically since this is an unsupported serializer here only as a placeholder.
+        /// </exception>
+        /// <returns>N/A</returns>
         public override byte[] ToBinary(object obj)
         {
-            throw new NotSupportedException();
+            throw new NotSupportedException("This serializer is unsupported here only as a placeholder. Thus this function is not implemented.");
         }
 
         /// <summary>
-        /// Deserializes a byte array into an object of type <paramref name="type"/>
+        /// N/A
         /// </summary>
-        /// <param name="bytes">The array containing the serialized object</param>
-        /// <param name="type">The type of object contained in the array</param>
-        /// <returns>The object contained in the array</returns>
+        /// <param name="bytes">N/A</param>
+        /// <param name="type">N/A</param>
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown automatically since this is an unsupported serializer here only as a placeholder.
+        /// </exception>
+        /// <returns>N/A</returns>
         public override object FromBinary(byte[] bytes, Type type)
         {
-            throw new NotSupportedException();
+            throw new NotSupportedException("This serializer is unsupported here only as a placeholder. Thus this function is not implemented.");
         }
     }
 }

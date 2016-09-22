@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace Akka.Configuration.Hocon
@@ -155,8 +156,8 @@ namespace Akka.Configuration.Hocon
         /// Retrieves the boolean value from this <see cref="HoconValue"/>.
         /// </summary>
         /// <returns>The boolean value represented by this <see cref="HoconValue"/>.</returns>
-        /// <exception cref="System.NotSupportedException">
-        /// This exception occurs when the <see cref="HoconValue"/> doesn't
+        /// <exception cref="NotSupportedException">
+        /// This exception is thrown if the <see cref="HoconValue"/> doesn't
         /// conform to the standard boolean values: "on", "off", "true", or "false"
         /// </exception>
         public bool GetBoolean()
@@ -173,7 +174,8 @@ namespace Akka.Configuration.Hocon
                 case "false":
                     return false;
                 default:
-                    throw new NotSupportedException("Unknown boolean format: " + v);
+                    throw new NotSupportedException($"Unknown boolean format: {v}");
+
             }
         }
 
@@ -356,37 +358,61 @@ namespace Akka.Configuration.Hocon
         /// Retrieves the time span value from this <see cref="HoconValue"/>.
         /// </summary>
         /// <param name="allowInfinite">A flag used to set inifinite durations.</param>
+        /// <exception cref="FormatException">
+        /// This exception is thrown if the timespan given in the <see cref="HoconValue"/> is negative.
+        /// </exception>
         /// <returns>The time span value represented by this <see cref="HoconValue"/>.</returns>
         public TimeSpan GetTimeSpan(bool allowInfinite = true)
         {
             string res = GetString();
-            if (res.EndsWith("ms"))
-            //TODO: Add support for ns, us, and non abbreviated versions (second, seconds and so on) see https://github.com/Lightbendhub/config/blob/master/HOCON.md#duration-format
+
+            var match = Regex.Match(res, @"^(?<value>([0-9]+(\.[0-9]+)?))\s*(?<unit>(nanoseconds|nanosecond|nanos|nano|ns|microseconds|microsecond|micros|micro|us|milliseconds|millisecond|millis|milli|ms|seconds|second|s|minutes|minute|m|hours|hour|h|days|day|d))$");
+            if (match.Success) 
             {
-                var v = res.Substring(0, res.Length - 2);
-                return TimeSpan.FromMilliseconds(ParsePositiveValue(v));
+                var u = match.Groups["unit"].Value;
+                var v = ParsePositiveValue(match.Groups["value"].Value);
+
+                switch (u) 
+                {
+                    case "nanoseconds":
+                    case "nanosecond":
+                    case "nanos":
+                    case "nano":
+                    case "ns":
+                        //TODO: add support for nanoseconds
+                        throw new NotImplementedException();
+                    case "microseconds":
+                    case "microsecond":
+                    case "micros":
+                    case "micro":
+                        //TODO: add support for microseconds
+                        throw new NotImplementedException();
+                    case "milliseconds":
+                    case "millisecond":
+                    case "millis":
+                    case "milli":
+                    case "ms":
+                        return TimeSpan.FromMilliseconds(v);
+                    case "seconds":
+                    case "second":
+                    case "s":
+                        return TimeSpan.FromSeconds(v);
+                    case "minutes":
+                    case "minute":
+                    case "m":
+                        return TimeSpan.FromMinutes(v);
+                    case "hours":
+                    case "hour":
+                    case "h":
+                        return TimeSpan.FromHours(v);
+                    case "days":
+                    case "day":
+                    case "d":
+                        return TimeSpan.FromDays(v);
+                }
             }
-            if (res.EndsWith("s"))
-            {
-                var v = res.Substring(0, res.Length - 1);
-                return TimeSpan.FromSeconds(ParsePositiveValue(v));
-            }
-            if(res.EndsWith("m"))
-            {
-                var v = res.Substring(0, res.Length - 1);
-                return TimeSpan.FromMinutes(ParsePositiveValue(v));
-            }
-            if(res.EndsWith("h"))
-            {
-                var v = res.Substring(0, res.Length - 1);
-                return TimeSpan.FromHours(ParsePositiveValue(v));
-            }
-            if (res.EndsWith("d"))
-            {
-                var v = res.Substring(0, res.Length - 1);
-                return TimeSpan.FromDays(ParsePositiveValue(v));
-            }
-            if(allowInfinite && res.Equals("infinite", StringComparison.OrdinalIgnoreCase))  //Not in Hocon spec
+
+            if (allowInfinite && res.Equals("infinite", StringComparison.OrdinalIgnoreCase))  //Not in Hocon spec
             {
                 return Timeout.InfiniteTimeSpan;
             }
@@ -398,7 +424,7 @@ namespace Akka.Configuration.Hocon
         {
             var value = double.Parse(v, NumberFormatInfo.InvariantInfo);
             if(value < 0)
-                throw new FormatException("Expected a positive value instead of " + value);
+                throw new FormatException($"Expected a positive value instead of {value}");
             return value;
         }
 

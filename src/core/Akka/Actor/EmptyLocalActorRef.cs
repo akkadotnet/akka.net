@@ -32,9 +32,11 @@ namespace Akka.Actor
         [Obsolete("Use Context.Watch and Receive<Terminated>")]
         public override bool IsTerminated { get { return true; } }
 
+        /// <summary></summary>
+        /// <exception cref="InvalidMessageException">This exception is thrown if the given <paramref name="message"/> is undefined.</exception>
         protected override void TellInternal(object message, IActorRef sender)
         {
-            if(message == null) throw new InvalidMessageException("Message is null");
+            if (message == null) throw new InvalidMessageException("Message is null");
             var d = message as DeadLetter;
             if (d != null) SpecialHandle(d.Message, d.Sender);
             else if (!SpecialHandle(message, sender))
@@ -76,7 +78,7 @@ namespace Akka.Actor
                 var selectionIdentify = actorSelectionMessage.Message as Identify;
                 if (selectionIdentify != null)
                 {
-                    if(!actorSelectionMessage.WildCardFanOut)
+                    if (!actorSelectionMessage.WildCardFanOut)
                         sender.Tell(new ActorIdentity(selectionIdentify.MessageId, null));
                 }
                 else
@@ -86,10 +88,14 @@ namespace Akka.Actor
                 return true;
             }
 
-            // TODO: DeadLetterSupression
+            var deadLetterSuppression = message as IDeadLetterSuppression;
+            if (deadLetterSuppression != null)
+            {
+                _eventStream.Publish(new SuppressedDeadLetter(deadLetterSuppression, sender.IsNobody() ? _provider.DeadLetters : sender, this));
+                return true;
+            }
 
             return false;
         }
     }
 }
-

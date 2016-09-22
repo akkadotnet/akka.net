@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using Akka.Actor;
+using Akka.Event;
 
 namespace Akka.Persistence
 {
@@ -565,7 +566,7 @@ namespace Akka.Persistence
     /// Reply message to a <see cref="ReplayMessages"/> request. A separate reply is sent to the requestor for each replayed message.
     /// </summary>
     [Serializable]
-    public sealed class ReplayedMessage : IJournalResponse, IEquatable<ReplayedMessage>
+    public sealed class ReplayedMessage : IJournalResponse, IEquatable<ReplayedMessage>, IDeadLetterSuppression
     {
         public ReplayedMessage(IPersistentRepresentation persistent)
         {
@@ -606,7 +607,7 @@ namespace Akka.Persistence
     /// Note that the replay might have been limited to a lower sequence number.
     /// </summary>
     [Serializable]
-    public class RecoverySuccess : IJournalResponse, IEquatable<RecoverySuccess>
+    public class RecoverySuccess : IJournalResponse, IEquatable<RecoverySuccess>, IDeadLetterSuppression
     {
         public RecoverySuccess(long highestSequenceNr)
         {
@@ -640,7 +641,7 @@ namespace Akka.Persistence
     }
 
     [Serializable]
-    public sealed class ReplayMessagesFailure : IJournalResponse, IEquatable<ReplayMessagesFailure>
+    public sealed class ReplayMessagesFailure : IJournalResponse, IEquatable<ReplayMessagesFailure>, IDeadLetterSuppression
     {
         public ReplayMessagesFailure(Exception cause)
         {

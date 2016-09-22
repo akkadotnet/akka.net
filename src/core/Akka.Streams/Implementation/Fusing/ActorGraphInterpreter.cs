@@ -8,19 +8,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
+using System.Text;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Streams.Stage;
-using Akka.Util;
 using Akka.Util.Internal;
 using Reactive.Streams;
 
 // ReSharper disable MemberHidesStaticFromOuterClass
 namespace Akka.Streams.Implementation.Fusing
 {
-    internal class GraphModule : AtomicModule
+    internal sealed class GraphModule : AtomicModule
     {
         public readonly IModule[] MaterializedValueIds;
         public readonly GraphAssembly Assembly;
@@ -34,6 +33,7 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         public override Shape Shape { get; }
+
         public override Attributes Attributes { get; }
         
         public override IModule WithAttributes(Attributes attributes)
@@ -53,7 +53,10 @@ namespace Akka.Streams.Implementation.Fusing
             return this;
         }
 
-        public override string ToString() => $"GraphModule\n  {Assembly.ToString().Replace("\n", "\n  ")}\n  shape={Shape}, attributes={Attributes}";
+        public override string ToString() => "GraphModule\n" +
+                                             $"  {Assembly.ToString().Replace("\n", "\n  ")}\n" +
+                                             $"  shape={Shape}, attributes={Attributes}\n" +
+                                             $"  MaterializedValueIds={string.Join<IModule>("\n   ", MaterializedValueIds)}";
     }
 
     internal sealed class GraphInterpreterShell
@@ -71,8 +74,15 @@ namespace Akka.Streams.Implementation.Fusing
         /// a self-message for fairness with other actors. The basic assumption here is
         /// to give each input buffer slot a chance to run through the whole pipeline
         /// and back (for the elements).
+        /// 
+        /// Considered use case:
+        ///  - assume a composite Sink of one expand and one fold 
+        ///  - assume an infinitely fast source of data
+        ///  - assume maxInputBufferSize == 1
+        ///  - if the event limit is greater than maxInputBufferSize * (ins + outs) than there will always be expand activity
+        ///  because no data can enter “fast enough” from the outside
         /// </summary>
-        private readonly int _eventLimit;
+        private readonly int _shellEventLimit;
 
         // Limits the number of events processed by the interpreter on an abort event.
         private readonly int _abortLimit;
@@ -85,7 +95,8 @@ namespace Akka.Streams.Implementation.Fusing
         private int _publishersPending;
         private bool _resumeScheduled;
         private bool _waitingForShutdown;
-
+        private Action<object> _enqueueToShourtCircuit;
+        private bool _interpreterCompleted;
         private readonly ActorGraphInterpreter.Resume _resume;
 
         public GraphInterpreterShell(GraphAssembly assembly, IInHandler[] inHandlers, IOutHandler[] outHandlers, GraphStageLogic[] logics, Shape shape, ActorMaterializerSettings settings, ActorMaterializerImpl materializer)
@@ -102,24 +113,24 @@ namespace Akka.Streams.Implementation.Fusing
             _outputs = new ActorGraphInterpreter.IActorOutputBoundary[shape.Outlets.Count()];
             _subscribersPending = _inputs.Length;
             _publishersPending = _outputs.Length;
-            _eventLimit = settings.MaxInputBufferSize * (assembly.Inlets.Length + assembly.Outlets.Length);
-            _abortLimit = _eventLimit * 2;
+            _shellEventLimit = settings.MaxInputBufferSize * (assembly.Inlets.Length + assembly.Outlets.Length);
+            _abortLimit = _shellEventLimit * 2;
 
             _resume = new ActorGraphInterpreter.Resume(this);
-
-            IsTerminated = false;
         }
 
         public bool IsInitialized => Self != null;
-        public bool IsTerminated { get; private set; }
+        public bool IsTerminated => _interpreterCompleted && CanShutdown;
         public bool CanShutdown => _subscribersPending + _publishersPending == 0;
         public IActorRef Self { get; private set; }
         public ILoggingAdapter Log => _log ?? (_log = GetLogger());
         public GraphInterpreter Interpreter => _interpreter ?? (_interpreter = GetInterpreter());
 
-        public void Init(IActorRef self, SubFusingActorMaterializerImpl subMat)
+        public int Init(IActorRef self, SubFusingActorMaterializerImpl subMat, Action<object> enqueueToShourtCircuit, int eventLimit)
         {
             Self = self;
+            _enqueueToShourtCircuit = enqueueToShourtCircuit;
+
             for (int i = 0; i < _inputs.Length; i++)
             {
                 var input = new ActorGraphInterpreter.BatchingActorInputBoundary(_settings.MaxInputBufferSize, i);
@@ -137,11 +148,13 @@ namespace Akka.Streams.Implementation.Fusing
             }
 
             Interpreter.Init(subMat);
-            RunBatch();
+            return RunBatch(eventLimit);
         }
 
-        public void Receive(ActorGraphInterpreter.IBoundaryEvent e)
+        public int Receive(ActorGraphInterpreter.IBoundaryEvent e, int eventLimit)
         {
+            _resumeScheduled = false;
+
             if (_waitingForShutdown)
             {
                 if (e is ActorGraphInterpreter.ExposedPublisher)
@@ -149,93 +162,114 @@ namespace Akka.Streams.Implementation.Fusing
                     var exposedPublisher = (ActorGraphInterpreter.ExposedPublisher) e;
                     _outputs[exposedPublisher.Id].ExposedPublisher(exposedPublisher.Publisher);
                     _publishersPending--;
-                    if (CanShutdown) IsTerminated = true;
+                    if (CanShutdown)
+                        _interpreterCompleted = true;
                 }
                 else if (e is ActorGraphInterpreter.OnSubscribe)
                 {
                     var onSubscribe = (ActorGraphInterpreter.OnSubscribe) e;
                     ReactiveStreamsCompliance.TryCancel(onSubscribe.Subscription);
                     _subscribersPending--;
-                    if (CanShutdown) IsTerminated = true;
+                    if (CanShutdown)
+                        _interpreterCompleted = true;
                 }
                 else if (e is ActorGraphInterpreter.Abort)
                 {
-
                     TryAbort(new TimeoutException(
                         $"Streaming actor has been already stopped processing (normally), but not all of its inputs or outputs have been subscribed in [{_settings.SubscriptionTimeoutSettings.Timeout}]. Aborting actor now."));
                 }
+                return eventLimit;
             }
-            else
+
+            // Cases that are most likely on the hot path, in decreasing order of frequency
+            if (e is ActorGraphInterpreter.OnNext)
             {
-                // Cases that are most likely on the hot path, in decreasing order of frequency
-                if (e is ActorGraphInterpreter.OnNext)
-                {
-                    var onNext = (ActorGraphInterpreter.OnNext) e;
-                    if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  OnNext {onNext.Event} id={onNext.Id}");
-                    _inputs[onNext.Id].OnNext(onNext.Event);
-                    RunBatch();
-                }
-                else if (e is ActorGraphInterpreter.RequestMore)
-                {
-                    var requestMore = (ActorGraphInterpreter.RequestMore) e;
-                    if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  Request {requestMore.Demand} id={requestMore.Id}");
-                    _outputs[requestMore.Id].RequestMore(requestMore.Demand);
-                    RunBatch();
-                }
-                else if (e is ActorGraphInterpreter.Resume)
-                {
-                    if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  Resume");
-                    _resumeScheduled = false;
-                    if (Interpreter.IsSuspended) RunBatch();
-                }
-                else if (e is ActorGraphInterpreter.AsyncInput)
-                {
-                    var asyncInput = (ActorGraphInterpreter.AsyncInput) e;
-                    Interpreter.RunAsyncInput(asyncInput.Logic, asyncInput.Event, asyncInput.Handler);
-                    RunBatch();
-                }
-                // Initialization and completion messages
-                else if (e is ActorGraphInterpreter.OnError)
-                {
-                    var onError = (ActorGraphInterpreter.OnError) e;
-                    if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  OnError id={onError.Id}");
-                    _inputs[onError.Id].OnError(onError.Cause);
-                    RunBatch();
-                }
-                else if (e is ActorGraphInterpreter.OnComplete)
-                {
-                    var onComplete = (ActorGraphInterpreter.OnComplete) e;
-                    if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  OnComplete id={onComplete.Id}");
-                    _inputs[onComplete.Id].OnComplete();
-                    RunBatch();
-                }
-                else if (e is ActorGraphInterpreter.OnSubscribe)
-                {
-                    var onSubscribe = (ActorGraphInterpreter.OnSubscribe) e;
-                    if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  OnSubscribe id={onSubscribe.Id}");
-                    _subscribersPending--;
-                    _inputs[onSubscribe.Id].OnSubscribe(onSubscribe.Subscription);
-                    RunBatch();
-                }
-                else if (e is ActorGraphInterpreter.Cancel)
-                {
-                    var cancel = (ActorGraphInterpreter.Cancel) e;
-                    if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  Cancel id={cancel.Id}");
-                    _outputs[cancel.Id].Cancel();
-                    RunBatch();
-                }
-                else if (e is ActorGraphInterpreter.SubscribePending)
-                {
-                    var subscribePending = (ActorGraphInterpreter.SubscribePending) e;
-                    _outputs[subscribePending.Id].SubscribePending();
-                }
-                else if (e is ActorGraphInterpreter.ExposedPublisher)
-                {
-                    var exposedPublisher = (ActorGraphInterpreter.ExposedPublisher) e;
-                    _publishersPending--;
-                    _outputs[exposedPublisher.Id].ExposedPublisher(exposedPublisher.Publisher);
-                }
+                var onNext = (ActorGraphInterpreter.OnNext) e;
+                if (GraphInterpreter.IsDebug)
+                    Console.WriteLine($"{Interpreter.Name}  OnNext {onNext.Event} id={onNext.Id}");
+                _inputs[onNext.Id].OnNext(onNext.Event);
+                return RunBatch(eventLimit);
             }
+
+            if (e is ActorGraphInterpreter.RequestMore)
+            {
+                var requestMore = (ActorGraphInterpreter.RequestMore) e;
+                if (GraphInterpreter.IsDebug)
+                    Console.WriteLine($"{Interpreter.Name}  Request {requestMore.Demand} id={requestMore.Id}");
+                _outputs[requestMore.Id].RequestMore(requestMore.Demand);
+                return RunBatch(eventLimit);
+            }
+
+            if (e is ActorGraphInterpreter.Resume)
+            {
+                if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  Resume");
+                if (Interpreter.IsSuspended)
+                    return RunBatch(eventLimit);
+                return eventLimit;
+            }
+
+            if (e is ActorGraphInterpreter.AsyncInput)
+            {
+                var asyncInput = (ActorGraphInterpreter.AsyncInput) e;
+                Interpreter.RunAsyncInput(asyncInput.Logic, asyncInput.Event, asyncInput.Handler);
+                if (eventLimit == 1 && _interpreter.IsSuspended)
+                {
+                    SendResume(true);
+                    return 0;
+                }
+                return RunBatch(eventLimit - 1);
+            }
+
+            // Initialization and completion messages
+            if (e is ActorGraphInterpreter.OnError)
+            {
+                var onError = (ActorGraphInterpreter.OnError) e;
+                if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  OnError id={onError.Id}");
+                _inputs[onError.Id].OnError(onError.Cause);
+                return RunBatch(eventLimit);
+            }
+
+            if (e is ActorGraphInterpreter.OnComplete)
+            {
+                var onComplete = (ActorGraphInterpreter.OnComplete) e;
+                if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  OnComplete id={onComplete.Id}");
+                _inputs[onComplete.Id].OnComplete();
+                return RunBatch(eventLimit);
+            }
+
+            if (e is ActorGraphInterpreter.OnSubscribe)
+            {
+                var onSubscribe = (ActorGraphInterpreter.OnSubscribe) e;
+                if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  OnSubscribe id={onSubscribe.Id}");
+                _subscribersPending--;
+                _inputs[onSubscribe.Id].OnSubscribe(onSubscribe.Subscription);
+                return RunBatch(eventLimit);
+            }
+
+            if (e is ActorGraphInterpreter.Cancel)
+            {
+                var cancel = (ActorGraphInterpreter.Cancel) e;
+                if (GraphInterpreter.IsDebug) Console.WriteLine($"{Interpreter.Name}  Cancel id={cancel.Id}");
+                _outputs[cancel.Id].Cancel();
+                return RunBatch(eventLimit);
+            }
+
+            if (e is ActorGraphInterpreter.SubscribePending)
+            {
+                var subscribePending = (ActorGraphInterpreter.SubscribePending) e;
+                _outputs[subscribePending.Id].SubscribePending();
+                return eventLimit;
+            }
+
+            if (e is ActorGraphInterpreter.ExposedPublisher)
+            {
+                var exposedPublisher = (ActorGraphInterpreter.ExposedPublisher) e;
+                _publishersPending--;
+                _outputs[exposedPublisher.Id].ExposedPublisher(exposedPublisher.Publisher);
+                return eventLimit;
+            }
+
+            return eventLimit;
         }
 
         /**
@@ -246,12 +280,17 @@ namespace Akka.Streams.Implementation.Fusing
          */
         public void TryAbort(Exception reason)
         {
+            var ex = reason is ISpecViolation
+                ? new IllegalStateException("Shutting down because of violation of the Reactive Streams specification",
+                    reason)
+                : reason;
+
             // This should handle termination while interpreter is running. If the upstream have been closed already this
-            // call has no effect and therefore do the right thing: nothing.
+            // call has no effect and therefore does the right thing: nothing.
             try
             {
                 foreach (var input in _inputs)
-                    input.OnInternalError(reason);
+                    input.OnInternalError(ex);
 
                 Interpreter.Execute(_abortLimit);
                 Interpreter.Finish();
@@ -259,51 +298,68 @@ namespace Akka.Streams.Implementation.Fusing
             catch (Exception) { /* swallow? */ }
             finally
             {
-                IsTerminated = true;
+                _interpreterCompleted = true;
                 // Will only have an effect if the above call to the interpreter failed to emit a proper failure to the downstream
                 // otherwise this will have no effect
-                foreach (var output in _outputs) output.Fail(reason);
-                foreach (var input in _inputs) input.Cancel();
+                foreach (var output in _outputs)
+                    output.Fail(ex);
+                foreach (var input in _inputs)
+                    input.Cancel();
             }
         }
 
-        private void RunBatch()
+        private int RunBatch(int actorEventLimit)
         {
             try
             {
-                var effectiveLimit = !_settings.IsFuzzingMode
-                    ? _eventLimit
-                    : (ThreadLocalRandom.Current.Next(2) == 0
-                        ? (Thread.Yield() ? 1 : 0)
-                        : ThreadLocalRandom.Current.Next(2));  // 1 or 0 events to be processed
+                var usingShellLimit = _shellEventLimit < actorEventLimit;
+                var remainingQuota = _interpreter.Execute(Math.Min(actorEventLimit, _shellEventLimit));
 
-                Interpreter.Execute(effectiveLimit);
                 if (Interpreter.IsCompleted)
                 {
                     // Cannot stop right away if not completely subscribed
-                    if (CanShutdown) IsTerminated = true;
+                    if (CanShutdown)
+                        _interpreterCompleted = true;
                     else
                     {
                         _waitingForShutdown = true;
-                        Materializer.ScheduleOnce(_settings.SubscriptionTimeoutSettings.Timeout, () => Self.Tell(new ActorGraphInterpreter.Abort(this)));
+                        Materializer.ScheduleOnce(_settings.SubscriptionTimeoutSettings.Timeout,
+                            () => Self.Tell(new ActorGraphInterpreter.Abort(this)));
                     }
                 }
                 else if (Interpreter.IsSuspended && !_resumeScheduled)
-                {
-                    _resumeScheduled = true;
-                    Self.Tell(_resume);
-                }
+                    SendResume(!usingShellLimit);
+
+                return usingShellLimit ? actorEventLimit - _shellEventLimit + remainingQuota : remainingQuota;
             }
             catch (Exception reason)
             {
                 TryAbort(reason);
+                return actorEventLimit - 1;
             }
+        }
+
+        private void SendResume(bool sendResume)
+        {
+            _resumeScheduled = true;
+            if (sendResume)
+                Self.Tell(_resume);
+            else
+                _enqueueToShourtCircuit(_resume);
         }
 
         private GraphInterpreter GetInterpreter()
         {
-            return new GraphInterpreter(_assembly, Materializer, Log, _inHandlers, _outHandlers, _logics, (logic, @event, handler) =>
-                Self.Tell(new ActorGraphInterpreter.AsyncInput(this, logic, @event, handler)), _settings.IsFuzzingMode);
+            return new GraphInterpreter(_assembly, Materializer, Log, _inHandlers, _outHandlers, _logics,
+                (logic, @event, handler) =>
+                {
+                    var asyncInput = new ActorGraphInterpreter.AsyncInput(this, logic, @event, handler);
+                    var currentInterpreter = GraphInterpreter.CurrentInterpreterOrNull;
+                    if (currentInterpreter == null || !Equals(currentInterpreter.Context, Self))
+                        Self.Tell(new ActorGraphInterpreter.AsyncInput(this, logic, @event, handler));
+                    else
+                        _enqueueToShourtCircuit(asyncInput);
+                }, _settings.IsFuzzingMode, Self);
         }
 
         private BusLogging GetLogger()
@@ -318,7 +374,7 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region messages
 
-        public interface IBoundaryEvent : INoSerializationVerificationNeeded
+        public interface IBoundaryEvent : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             GraphInterpreterShell Shell { get; }
         }
@@ -737,7 +793,7 @@ namespace Akka.Streams.Implementation.Fusing
                     if (_that._downstreamCompleted)
                         _that.Cancel(_that.In);
                     else if (_that._downstreamDemand > 0)
-                        _that.Pull<T>(_that.In);
+                        _that.Pull(_that.In);
                 }
 
                 public override void OnUpstreamFinish() => _that.Complete();
@@ -789,7 +845,7 @@ namespace Akka.Streams.Implementation.Fusing
                     if (_downstreamDemand < 0)
                         _downstreamDemand = long.MaxValue; // Long overflow, Reactive Streams Spec 3:17: effectively unbounded
                     if (!HasBeenPulled(In) && !IsClosed(In))
-                        Pull<T>(In);
+                        Pull(In);
                 }
             }
 
@@ -872,26 +928,41 @@ namespace Akka.Streams.Implementation.Fusing
             return Actor.Props.Create(() => new ActorGraphInterpreter(shell)).WithDeploy(Deploy.Local);
         }
 
-        private readonly ISet<GraphInterpreterShell> _activeInterpreters = new HashSet<GraphInterpreterShell>();
+        private ISet<GraphInterpreterShell> _activeInterpreters = new HashSet<GraphInterpreterShell>();
         private readonly Queue<GraphInterpreterShell> _newShells = new Queue<GraphInterpreterShell>();
         private readonly SubFusingActorMaterializerImpl _subFusingMaterializerImpl;
         private readonly GraphInterpreterShell _initial;
         private ILoggingAdapter _log;
+        //this limits number of messages that can be processed synchronously during one actor receive.
+        private readonly int _eventLimit;
+        private int _currentLimit;
+        //this is a var in order to save the allocation when no short-circuiting actually happens
+        private Queue<object> _shortCircuitBuffer;
 
         public ActorGraphInterpreter(GraphInterpreterShell shell)
         {
             _initial = shell;
 
             _subFusingMaterializerImpl = new SubFusingActorMaterializerImpl(shell.Materializer, RegisterShell);
+            _eventLimit = _initial.Materializer.Settings.SyncProcessingLimit;
+            _currentLimit = _eventLimit;
         }
 
         public ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+
+        private void EnqueueToShortCircuit(object input)
+        {
+            if(_shortCircuitBuffer == null)
+                _shortCircuitBuffer = new Queue<object>();
+
+            _shortCircuitBuffer.Enqueue(input);
+        }
 
         private bool TryInit(GraphInterpreterShell shell)
         {
             try
             {
-                shell.Init(Self, _subFusingMaterializerImpl);
+                _currentLimit = shell.Init(Self, _subFusingMaterializerImpl, EnqueueToShortCircuit, _currentLimit);
                 if (GraphInterpreter.IsDebug)
                     Console.WriteLine($"registering new shell in {_initial}\n  {shell.ToString().Replace("\n", "\n  ")}");
                 if (shell.IsTerminated)
@@ -910,7 +981,7 @@ namespace Akka.Streams.Implementation.Fusing
         public IActorRef RegisterShell(GraphInterpreterShell shell)
         {
             _newShells.Enqueue(shell);
-            Self.Tell(ShellRegistered.Instance);
+            EnqueueToShortCircuit(ShellRegistered.Instance);
             return Self;
         }
 
@@ -944,42 +1015,82 @@ namespace Akka.Streams.Implementation.Fusing
             TryInit(_initial);
             if (_activeInterpreters.Count == 0)
                 Context.Stop(Self);
+            else if (_shortCircuitBuffer != null)
+                ShortCircuitBatch();
+        }
+
+        private void ShortCircuitBatch()
+        {
+            while (_shortCircuitBuffer.Count != 0 && _currentLimit > 0 && _activeInterpreters.Count != 0)
+            {
+                var element = _shortCircuitBuffer.Dequeue();
+                var boundary = element as IBoundaryEvent;
+                if (boundary != null)
+                    ProcessEvent(boundary);
+                else if (element is ShellRegistered)
+                    FinishShellRegistration();
+            }
+
+            if(_shortCircuitBuffer.Count != 0 && _currentLimit == 0)
+                Self.Tell(ShellRegistered.Instance);
+        }
+
+        private void ProcessEvent(IBoundaryEvent b)
+        {
+            var shell = b.Shell;
+            if (!shell.IsTerminated && (shell.IsInitialized || TryInit(shell)))
+            {
+                try
+                {
+                    _currentLimit = shell.Receive(b, _currentLimit);
+                }
+                catch (Exception ex)
+                {
+                    shell.TryAbort(ex);
+                }
+
+                if (shell.IsTerminated)
+                {
+                    _activeInterpreters.Remove(shell);
+                    if(_activeInterpreters.Count == 0 && _newShells.Count == 0)
+                        Context.Stop(Self);
+                }
+            }
         }
 
         protected override bool Receive(object message)
         {
             if (message is IBoundaryEvent)
             {
-                var b = (IBoundaryEvent) message;
-                var shell = b.Shell;
-                if (!shell.IsTerminated && (shell.IsInitialized || TryInit(shell)))
-                {
-                    shell.Receive(b);
-                    if (shell.IsTerminated)
-                    {
-                        _activeInterpreters.Remove(shell);
-                        if (_activeInterpreters.Count == 0 && _newShells.Count == 0)
-                            Context.Stop(Self);
-                    }
-                }
+                _currentLimit = _eventLimit;
+                ProcessEvent((IBoundaryEvent)message);
+                if(_shortCircuitBuffer != null)
+                    ShortCircuitBatch();
             }
             else if (message is ShellRegistered)
-                FinishShellRegistration();
+            {
+                _currentLimit = _eventLimit;
+                if (_shortCircuitBuffer != null)
+                    ShortCircuitBatch();
+            }
             else if (message is StreamSupervisor.PrintDebugDump)
             {
-                Console.WriteLine("ActiveShells:");
+                var builder = new StringBuilder($"activeShells (actor: {Self}):\n");
+
                 _activeInterpreters.ForEach(shell =>
                 {
-                    Console.WriteLine("  " + shell.ToString().Replace(@"\n", @"\n "));
-                    shell.Interpreter.DumpWaits();
+                    builder.Append("  " + shell.ToString().Replace("\n", "\n  "));
+                    builder.Append(shell.Interpreter);
                 });
 
-                Console.WriteLine("NewShells:");
+                builder.AppendLine("NewShells:\n");
                 _newShells.ForEach(shell =>
                 {
-                    Console.WriteLine("  " + shell.ToString().Replace(@"\n", @"\n "));
-                    shell.Interpreter.DumpWaits();
+                    builder.Append("  " + shell.ToString().Replace("\n", "\n  "));
+                    builder.Append(shell.Interpreter);
                 });
+
+                Console.WriteLine(builder);
             }
             else
                 return false;
@@ -989,12 +1100,14 @@ namespace Akka.Streams.Implementation.Fusing
 
         protected override void PostStop()
         {
+            var ex = new AbruptTerminationException(Self);
             foreach (var shell in _activeInterpreters)
-                shell.TryAbort(new AbruptTerminationException(Self));
+                shell.TryAbort(ex);
+            _activeInterpreters = new HashSet<GraphInterpreterShell>();
             foreach (var shell in _newShells)
             {
                 if (TryInit(shell))
-                    shell.TryAbort(new AbruptTerminationException(Self));
+                    shell.TryAbort(ex);
             }
         }
     }

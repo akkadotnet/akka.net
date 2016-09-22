@@ -7,6 +7,7 @@
 
 using System;
 using Akka.Streams.Implementation.Fusing;
+using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 
 namespace Akka.Streams.Implementation
@@ -26,11 +27,14 @@ namespace Akka.Streams.Implementation
     {
         public static TimeSpan IdleTimeoutCheckInterval(TimeSpan timeout)
             => new TimeSpan(Math.Min(Math.Max(timeout.Ticks/8, 100*TimeSpan.TicksPerMillisecond), timeout.Ticks/2));
+
+        public const string GraphStageLogicTimer = "GraphStageLogicTimer";
     }
 
     internal sealed class Initial<T> : SimpleLinearGraphStage<T>
     {
-        #region InitialStageLogic
+        #region Logic
+
         private sealed class Logic : TimerGraphStageLogic
         {
             private readonly Initial<T> _stage;
@@ -54,8 +58,9 @@ namespace Akka.Streams.Implementation
                     FailStage(new TimeoutException($"The first element has not yet passed through in {_stage.Timeout}."));
             }
 
-            public override void PreStart() => ScheduleOnce("InitialTimeoutTimer", _stage.Timeout);
+            public override void PreStart() => ScheduleOnce(Timers.GraphStageLogicTimer, _stage.Timeout);
         }
+
         #endregion
 
         public readonly TimeSpan Timeout;
@@ -65,12 +70,17 @@ namespace Akka.Streams.Implementation
             Timeout = timeout;
         }
 
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.Initial;
+
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+        public override string ToString() => "InitialTimeoutTimer";
     }
 
     internal sealed class Completion<T> : SimpleLinearGraphStage<T>
     {
         #region stage logic
+
         private sealed class Logic : TimerGraphStageLogic
         {
             private readonly Completion<T> _stage;
@@ -85,35 +95,42 @@ namespace Akka.Streams.Implementation
             protected internal override void OnTimer(object timerKey)
                 => FailStage(new TimeoutException($"The stream has not been completed in {_stage.Timeout}."));
 
-            public override void PreStart() => ScheduleOnce("CompletionTimeoutTimer", _stage.Timeout);
+            public override void PreStart() => ScheduleOnce(Timers.GraphStageLogicTimer, _stage.Timeout);
         }
+
         #endregion
 
         public readonly TimeSpan Timeout;
+
         public Completion(TimeSpan timeout)
         {
             Timeout = timeout;
         }
 
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.Completion;
+
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+        public override string ToString() => "CompletionTimeout";
     }
 
     internal sealed class Idle<T> : SimpleLinearGraphStage<T>
     {
         #region stage logic
+
         private sealed class Logic : TimerGraphStageLogic
         {
             private readonly Idle<T> _stage;
-            private DateTime _nextDeadline;
+            private long _nextDeadline;
 
             public Logic(Idle<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                _nextDeadline = DateTime.UtcNow + stage.Timeout;
+                _nextDeadline = DateTime.UtcNow.Ticks + stage.Timeout.Ticks;
 
                 SetHandler(stage.Inlet, onPush: () =>
                 {
-                    _nextDeadline = DateTime.UtcNow + stage.Timeout;
+                    _nextDeadline = DateTime.UtcNow.Ticks + stage.Timeout.Ticks;
                     Push(stage.Outlet, Grab(stage.Inlet));
                 });
                 SetHandler(stage.Outlet, onPull: () => Pull(stage.Inlet));
@@ -121,13 +138,14 @@ namespace Akka.Streams.Implementation
 
             protected internal override void OnTimer(object timerKey)
             {
-                if (_nextDeadline <= DateTime.UtcNow)
+                if (_nextDeadline - DateTime.UtcNow.Ticks < 0)
                     FailStage(new TimeoutException($"No elements passed in the last {_stage.Timeout}."));
             }
 
             public override void PreStart()
-                => ScheduleRepeatedly("IdleTimeoutCheckTimer", Timers.IdleTimeoutCheckInterval(_stage.Timeout));
+                => ScheduleRepeatedly(Timers.GraphStageLogicTimer, Timers.IdleTimeoutCheckInterval(_stage.Timeout));
         }
+
         #endregion
 
         public readonly TimeSpan Timeout;
@@ -137,21 +155,80 @@ namespace Akka.Streams.Implementation
             Timeout = timeout;
         }
 
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.Idle;
+
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+        public override string ToString() => "IdleTimeout";
+    }
+
+    internal sealed class BackpressureTimeout<T> : SimpleLinearGraphStage<T>
+    {
+        #region stage logic
+
+        private sealed class Logic : TimerGraphStageLogic
+        {
+            private readonly BackpressureTimeout<T> _stage;
+            private long _nextDeadline;
+            private bool _waitingDemand = true;
+
+            public Logic(BackpressureTimeout<T> stage) : base(stage.Shape)
+            {
+                _stage = stage;
+                _nextDeadline = DateTime.UtcNow.Ticks + stage.Timeout.Ticks;
+
+                SetHandler(stage.Inlet, onPush: () =>
+                {
+                    Push(stage.Outlet, Grab(stage.Inlet));
+                    _nextDeadline = DateTime.UtcNow.Ticks + stage.Timeout.Ticks;
+                    _waitingDemand = true;
+                });
+                SetHandler(stage.Outlet, onPull: () =>
+                {
+                    _waitingDemand = false;
+                    Pull(stage.Inlet);
+                });
+            }
+
+            protected internal override void OnTimer(object timerKey)
+            {
+                if (_waitingDemand && (_nextDeadline - DateTime.UtcNow.Ticks < 0))
+                    FailStage(new TimeoutException($"No demand signalled in the last {_stage.Timeout}."));
+            }
+
+            public override void PreStart()
+                => ScheduleRepeatedly(Timers.GraphStageLogicTimer, Timers.IdleTimeoutCheckInterval(_stage.Timeout));
+        }
+
+        #endregion
+
+        public readonly TimeSpan Timeout;
+
+        public BackpressureTimeout(TimeSpan timeout)
+        {
+            Timeout = timeout;
+        }
+
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.BackpressureTimeout;
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+        public override string ToString() => "BackpressureTimeout";
     }
 
     internal sealed class IdleTimeoutBidi<TIn, TOut> : GraphStage<BidiShape<TIn, TIn, TOut, TOut>>
     {
-        #region stage logic
+        #region Logic
+
         private sealed class Logic : TimerGraphStageLogic
         {
             private readonly IdleTimeoutBidi<TIn, TOut> _stage;
-            private DateTime _nextDeadline;
+            private long _nextDeadline;
 
             public Logic(IdleTimeoutBidi<TIn, TOut> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                _nextDeadline = DateTime.UtcNow + _stage.Timeout;
+                _nextDeadline = DateTime.UtcNow.Ticks + _stage.Timeout.Ticks;
 
                 SetHandler(_stage.In1, onPush: () =>
                 {
@@ -178,15 +255,16 @@ namespace Akka.Streams.Implementation
 
             protected internal override void OnTimer(object timerKey)
             {
-                if (_nextDeadline <= DateTime.UtcNow)
+                if (_nextDeadline - DateTime.UtcNow.Ticks < 0)
                     FailStage(new TimeoutException($"No elements passed in the last {_stage.Timeout}."));
             }
 
             public override void PreStart()
-                => ScheduleRepeatedly("IdleTimeoutBidiCheckTimer", Timers.IdleTimeoutCheckInterval(_stage.Timeout));
+                => ScheduleRepeatedly(Timers.GraphStageLogicTimer, Timers.IdleTimeoutCheckInterval(_stage.Timeout));
 
-            private void OnActivity() => _nextDeadline = DateTime.UtcNow + _stage.Timeout;
+            private void OnActivity() => _nextDeadline = DateTime.UtcNow.Ticks + _stage.Timeout.Ticks;
         }
+
         #endregion
 
         public readonly TimeSpan Timeout;
@@ -202,19 +280,21 @@ namespace Akka.Streams.Implementation
             Shape = new BidiShape<TIn, TIn, TOut, TOut>(In1, Out1, In2, Out2);
         }
 
-        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("IdleTimeoutBidi");
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.IdleTimeoutBidi;
 
         public override BidiShape<TIn, TIn, TOut, TOut> Shape { get; }
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+        public override string ToString() => "IdleTimeoutBidi";
     }
 
     internal sealed class DelayInitial<T> : GraphStage<FlowShape<T, T>>
     {
         #region stage logic
+
         private sealed class Logic : TimerGraphStageLogic
         {
-            private const string DelayTimer = "DelayTimer";
             private readonly DelayInitial<T> _stage;
             private bool _isOpen;
 
@@ -241,9 +321,10 @@ namespace Akka.Streams.Implementation
                 if (_stage.Delay == TimeSpan.Zero)
                     _isOpen = true;
                 else
-                    ScheduleOnce(DelayTimer, _stage.Delay);
+                    ScheduleOnce(Timers.GraphStageLogicTimer, _stage.Delay);
             }
         }
+
         #endregion
 
         public readonly TimeSpan Delay;
@@ -256,31 +337,33 @@ namespace Akka.Streams.Implementation
             Shape = new FlowShape<T, T>(In, Out);
         }
 
-        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("DelayInitial");
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.DelayInitial;
 
         public override FlowShape<T, T> Shape { get; }
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+        public override string ToString() => "DelayTimer";
     }
 
     internal sealed class IdleInject<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>> where TIn : TOut
     {
-        #region stage logic
+        #region Logic
+
         private sealed class Logic : TimerGraphStageLogic
         {
-            private const string IdleTimer = "IdleInjectTimer";
             private readonly IdleInject<TIn, TOut> _stage;
-            private DateTime _nextDeadline;
+            private long _nextDeadline;
 
             public Logic(IdleInject<TIn, TOut> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                _nextDeadline = DateTime.UtcNow + _stage._timeout;
+                _nextDeadline = DateTime.UtcNow.Ticks + _stage._timeout.Ticks;
 
                 SetHandler(_stage._in, onPush: () =>
                 {
-                    _nextDeadline = DateTime.UtcNow + _stage._timeout;
-                    CancelTimer(IdleTimer);
+                    _nextDeadline = DateTime.UtcNow.Ticks + _stage._timeout.Ticks;
+                    CancelTimer(Timers.GraphStageLogicTimer);
                     if (IsAvailable(_stage._out))
                     {
                         Push(_stage._out, Grab(_stage._in));
@@ -305,30 +388,32 @@ namespace Akka.Streams.Implementation
                     }
                     else
                     {
-                        var timeLeft = _nextDeadline - DateTime.UtcNow;
-                        if (timeLeft <= TimeSpan.Zero)
+                        var time = DateTime.UtcNow.Ticks;
+                        if (_nextDeadline - time < 0)
                         {
-                            _nextDeadline = DateTime.UtcNow + _stage._timeout;
+                            _nextDeadline = time + _stage._timeout.Ticks;
                             Push(_stage._out, _stage._inject());
                         }
                         else
-                            ScheduleOnce(IdleTimer, timeLeft);
+                            ScheduleOnce(Timers.GraphStageLogicTimer, TimeSpan.FromTicks(_nextDeadline - time));
                     }
                 });
             }
 
             protected internal override void OnTimer(object timerKey)
             {
-                if (_nextDeadline <= DateTime.UtcNow && IsAvailable(_stage._out))
+                var time = DateTime.UtcNow.Ticks;
+                if ((_nextDeadline - time < 0) && IsAvailable(_stage._out))
                 {
                     Push(_stage._out, _stage._inject());
-                    _nextDeadline = DateTime.UtcNow + _stage._timeout;
+                    _nextDeadline = DateTime.UtcNow.Ticks + _stage._timeout.Ticks;
                 }
             }
 
             // Prefetching to ensure priority of actual upstream elements
             public override void PreStart() => Pull(_stage._in);
         }
+
         #endregion
 
         private readonly TimeSpan _timeout;
@@ -344,10 +429,12 @@ namespace Akka.Streams.Implementation
             Shape = new FlowShape<TIn, TOut>(_in, _out);
         }
 
-        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("IdleInject");
+        protected override Attributes InitialAttributes { get; } = DefaultAttributes.IdleInject;
 
         public override FlowShape<TIn, TOut> Shape { get; }
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+        public override string ToString() => "IdleTimer";
     }
 }

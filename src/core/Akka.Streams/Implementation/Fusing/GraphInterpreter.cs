@@ -7,7 +7,9 @@
 
 using System;
 using System.Linq;
+using System.Text;
 using System.Threading;
+using Akka.Actor;
 using Akka.Event;
 using Akka.Streams.Stage;
 using Akka.Streams.Util;
@@ -165,7 +167,7 @@ namespace Akka.Streams.Implementation.Fusing
             get
             {
                 if (CurrentInterpreter.Value[0] == null)
-                    throw new ApplicationException("Something went terribly wrong!");
+                    throw new InvalidOperationException("Something went terribly wrong!");
                 return (GraphInterpreter) CurrentInterpreter.Value[0];
             }
         }
@@ -182,6 +184,8 @@ namespace Akka.Streams.Implementation.Fusing
         public readonly IOutHandler[] OutHandlers;
         public readonly Action<GraphStageLogic, object, Action<object>> OnAsyncInput;
         public readonly bool FuzzingMode;
+
+        public IActorRef Context { get; }
 
         // Maintains additional information for events, basically elements in-flight, or failure.
         // Other events are encoded in the portStates bitfield.
@@ -211,7 +215,8 @@ namespace Akka.Streams.Implementation.Fusing
             IOutHandler[] outHandlers,
             GraphStageLogic[] logics,
             Action<GraphStageLogic, object, Action<object>> onAsyncInput,
-            bool fuzzingMode)
+            bool fuzzingMode,
+            IActorRef context)
         {
             Logics = logics;
             Assembly = assembly;
@@ -221,6 +226,7 @@ namespace Akka.Streams.Implementation.Fusing
             OutHandlers = outHandlers;
             OnAsyncInput = onAsyncInput;
             FuzzingMode = fuzzingMode;
+            Context = context;
 
             ConnectionSlots = new object[assembly.ConnectionCount];
             for (var i = 0; i < ConnectionSlots.Length; i++)
@@ -382,15 +388,15 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Executes pending events until the given limit is met. If there were remaining events, <see cref="IsSuspended"/> will return true.
         /// </summary>
-        public void Execute(int eventLimit)
+        public int Execute(int eventLimit)
         {
             if (IsDebug) Console.WriteLine($"{Name} ---------------- EXECUTE {QueueStatus()} (running={RunningStagesCount}, shutdown={ShutdownCounters()})");
             var currentInterpreterHolder = CurrentInterpreter.Value;
             var previousInterpreter = currentInterpreterHolder[0];
             currentInterpreterHolder[0] = this;
+            var eventsRemaining = eventLimit;
             try
             {
-                var eventsRemaining = eventLimit;
                 while (eventsRemaining > 0 && _queueTail != _queueHead)
                 {
                     var connection = Dequeue();
@@ -419,6 +425,7 @@ namespace Akka.Streams.Implementation.Fusing
             }
             if (IsDebug) Console.WriteLine($"{Name} ---------------- {QueueStatus()} (running={RunningStagesCount}, shutdown={ShutdownCounters()})");
             // TODO: deadlock detection
+            return eventsRemaining;
         }
 
         public void RunAsyncInput(GraphStageLogic logic, object evt, Action<object> handler)
@@ -552,7 +559,7 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// Returns true if the given stage is alredy completed
+        /// Returns true if the given stage is already completed
         /// </summary>
         internal bool IsStageCompleted(GraphStageLogic stage) => stage != null && _shutdownCounter[stage.StageId] == 0;
 
@@ -660,11 +667,33 @@ namespace Akka.Streams.Implementation.Fusing
         /// Only invoke this after the interpreter completely settled, otherwise the results might be off. This is a very
         /// simplistic tool, make sure you are understanding what you are doing and then it will serve you well.
         /// </summary>
-        public void DumpWaits()
+        public void DumpWaits() => Console.WriteLine(this);
+
+        public override string ToString()
         {
-            Console.WriteLine("digraph waits {");
+            var builder = new StringBuilder("digraph waits {\n");
+
             for (var i = 0; i < Assembly.Stages.Length; i++)
-                Console.WriteLine($@"N{i} [label=""{Assembly.Stages[i]}""]");
+                builder.AppendLine($"N{i} [label={Assembly.Stages[i]}]");
+
+            for (var i = 0; i < PortStates.Length; i++)
+            {
+                var state = PortStates[i];
+                if (state == InReady)
+                    builder.Append($"  {NameIn(i)} -> {NameOut(i)} [label=shouldPull; color=blue];");
+                else if (state == OutReady)
+                    builder.Append($"  {NameOut(i)} -> {NameIn(i)} [label=shouldPush; color=red];");
+                else if( (state | InClosed | OutClosed) == (InClosed | OutClosed))
+                    builder.Append($"  {NameIn(i)} -> {NameOut(i)} [style=dotted; label=closed dir=both];");
+            }
+
+            builder.AppendLine();
+            builder.AppendLine("}");
+            builder.Append($"// {QueueStatus()} (running={RunningStagesCount}, shutdown={ShutdownCounters()}");
+            return builder.ToString();
         }
-    }
+
+        private string NameIn(int port) => Assembly.InletOwners[port] == Boundary ? "Out" + port : "N" + port;
+
+        private string NameOut(int port) => Assembly.OutletOwners[port] == Boundary ? "Out" + port : "N" + port;}
 }

@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using Akka.Remote.TestKit.Proto;
 using Akka.Remote.Transport.Helios;
@@ -93,7 +94,7 @@ namespace Akka.Remote.TestKit
             if (role == Role.Client)
             {
                 var connection = new ClientBootstrap()
-                    .Channel<TcpSocketChannel>()
+                    .ChannelFactory(() => new TcpSocketChannel(socketAddress.AddressFamily))
                     .Option(ChannelOption.TcpNodelay, true)
                     .Group(GetClientWorkerPool(poolSize))
                     .Handler(new ActionChannelInitializer<TcpSocketChannel>(channel =>
@@ -107,7 +108,7 @@ namespace Akka.Remote.TestKit
             {
                 var connection = new ServerBootstrap()
                     .Group(GetServerPool(poolSize), GetServerWorkerPool(poolSize))
-                    .Channel<TcpServerSocketChannel>()
+                    .ChannelFactory(() => new TcpServerSocketChannel(socketAddress.AddressFamily))
                     .ChildOption(ChannelOption.TcpNodelay, true)
                     .ChildHandler(new ActionChannelInitializer<TcpSocketChannel>(channel =>
                     {

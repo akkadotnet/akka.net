@@ -19,7 +19,7 @@ namespace Akka.Cluster.Tools.Singleton
     public interface IClusterSingletonMessage { }
 
     [Serializable]
-    internal sealed class HandOverToMe : IClusterSingletonMessage
+    internal sealed class HandOverToMe : IClusterSingletonMessage, IDeadLetterSuppression
     {
         public static readonly HandOverToMe Instance = new HandOverToMe();
         private HandOverToMe() { }
@@ -40,7 +40,7 @@ namespace Akka.Cluster.Tools.Singleton
     }
 
     [Serializable]
-    internal sealed class TakeOverFromMe : IClusterSingletonMessage
+    internal sealed class TakeOverFromMe : IClusterSingletonMessage, IDeadLetterSuppression
     {
         public static readonly TakeOverFromMe Instance = new TakeOverFromMe();
         private TakeOverFromMe() { }
@@ -303,7 +303,7 @@ namespace Akka.Cluster.Tools.Singleton
             _terminationMessage = terminationMessage;
             _settings = settings;
 
-            _removalMargin = (settings.RemovalMargin <= TimeSpan.Zero) ? _cluster.Settings.DownRemovalMargin : settings.RemovalMargin;
+            _removalMargin = (settings.RemovalMargin <= TimeSpan.Zero) ? _cluster.DowningProvider.DownRemovalMargin : settings.RemovalMargin;
 
             var n = (int)(_removalMargin.TotalMilliseconds / _settings.HandOverRetryInterval.TotalMilliseconds);
 

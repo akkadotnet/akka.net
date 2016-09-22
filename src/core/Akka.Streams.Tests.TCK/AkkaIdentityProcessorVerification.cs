@@ -8,7 +8,7 @@
 using System;
 using Akka.Actor;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using Akka.TestKit.Internal;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
@@ -37,7 +37,7 @@ namespace Akka.Streams.Tests.TCK
         protected AkkaIdentityProcessorVerification(TestEnvironment environment, long publisherShutdownTimeoutMillis)
             : base(environment, publisherShutdownTimeoutMillis)
         {
-            System = ActorSystem.Create(GetType().Name, AkkaSpec.TestConfig);
+            System = ActorSystem.Create(GetType().Name, AkkaSpec.AkkaSpecConfig);
             System.EventStream.Publish(new Mute(new ErrorFilter(typeof(Exception), new ContainsString("Test exception"))));
 
             Materializer = ActorMaterializer.Create(System,

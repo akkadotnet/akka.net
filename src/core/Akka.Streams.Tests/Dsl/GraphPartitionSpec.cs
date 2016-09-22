@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -66,8 +67,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c1 = TestSubscriber.CreateProbe<string>(this);
-                var c2 = TestSubscriber.CreateProbe<string>(this);
+                var c1 = this.CreateSubscriberProbe<string>();
+                var c2 = this.CreateSubscriberProbe<string>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -95,8 +96,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c1 = TestSubscriber.CreateProbe<int>(this);
-                var c2 = TestSubscriber.CreateProbe<int>(this);
+                var c1 = this.CreateSubscriberProbe<int>();
+                var c2 = this.CreateSubscriberProbe<int>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -125,9 +126,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var p1 = TestPublisher.CreateProbe<int>(this);
-                var c1 = TestSubscriber.CreateProbe<int>(this);
-                var c2 = TestSubscriber.CreateProbe<int>(this);
+                var p1 = this.CreatePublisherProbe<int>();
+                var c1 = this.CreateSubscriberProbe<int>();
+                var c2 = this.CreateSubscriberProbe<int>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -184,7 +185,7 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                task.Wait(RemainingOrDefault).Should().BeTrue();
                 task.Result.ShouldAllBeEquivalentTo(input);
             }, Materializer);
         }
@@ -194,8 +195,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c1 = TestSubscriber.CreateProbe<int>(this);
-                var c2 = TestSubscriber.CreateProbe<int>(this);
+                var c1 = this.CreateSubscriberProbe<int>();
+                var c2 = this.CreateSubscriberProbe<int>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -223,7 +224,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c1 = TestSubscriber.CreateProbe<int>(this);
+                var c1 = this.CreateSubscriberProbe<int>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {

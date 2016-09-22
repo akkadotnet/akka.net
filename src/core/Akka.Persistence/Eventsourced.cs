@@ -53,6 +53,19 @@ namespace Akka.Persistence
         public Action<object> Handler { get; private set; }
     }
 
+    /// <summary>
+    /// message used to detect that recovery timed out
+    /// </summary>
+    public sealed class RecoveryTick
+    {
+        public RecoveryTick(bool snapshot)
+        {
+            Snapshot = snapshot;
+        }
+
+        public bool Snapshot { get; }
+    }
+
     public abstract partial class Eventsourced : ActorBase, IPersistentIdentity, IPersistenceStash, IPersistenceRecovery
     {
         private static readonly AtomicCounter InstanceCounter = new AtomicCounter(1);
@@ -141,7 +154,13 @@ namespace Akka.Persistence
         /// <summary>
         /// Returns true if this persistent entity is currently recovering.
         /// </summary>
-        public bool IsRecovering { get { return _currentState.IsRecoveryRunning; } }
+        public bool IsRecovering {
+            get
+            {
+                // _currentState is null if this is called from constructor
+                return _currentState?.IsRecoveryRunning ?? true;
+            }
+        }
 
         /// <summary>
         /// Returns true if this persistent entity has successfully finished recovery.
@@ -456,7 +475,7 @@ namespace Akka.Persistence
 
         private void FlushJournalBatch()
         {
-            if (!_isWriteInProgress)
+            if (!_isWriteInProgress && _journalBatch.Count > 0)
             {
                 Journal.Tell(new WriteMessages(_journalBatch.ToArray(), Self, _instanceId));
                 _journalBatch = new List<IPersistentEnvelope>(0);

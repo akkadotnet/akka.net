@@ -18,6 +18,7 @@ namespace Akka.Streams.Dsl.Internal
         }
 
         public TShape Shape { get; }
+
         public IModule Module { get; }
 
         public IGraph<TShape, TMat> WithAttributes(Attributes attributes) => new GraphImpl<TShape, TMat>(Shape, Module.WithAttributes(attributes));
@@ -27,5 +28,7 @@ namespace Akka.Streams.Dsl.Internal
         public IGraph<TShape, TMat> Named(string name) => AddAttributes(Attributes.CreateName(name));
 
         public IGraph<TShape, TMat> Async() => AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
+
+        public override string ToString() => $"Graph({Shape}, {Module})";
     }
 }

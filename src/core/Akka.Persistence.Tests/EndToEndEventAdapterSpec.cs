@@ -303,7 +303,7 @@ namespace Akka.Persistence.Tests
 
         private IActorRef Persister(string name, IActorRef probe, ActorSystem system)
         {
-            return (system ?? Sys).ActorOf(Props.Create(() => new EndToEndAdapterActor(name, "akka.persistence.journal." + _journalName, probe)), name);
+            return (system ?? Sys).ActorOf(Props.Create(() => new EndToEndAdapterActor(name, "akka.persistence.journal." + _journalName, probe)));
         }
 
         private T WithActorSystem<T>(string name, Config config, Func<ActorSystem, T> block)

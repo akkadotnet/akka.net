@@ -63,7 +63,7 @@ namespace Akka.Tests.Actor
             actor.Tell(PoisonPill.Instance);
             ExpectMsg<Terminated>();
 
-            actor.Tell(new Envelope { Message = "SomeUserMessage", Sender = TestActor });
+            actor.Tell(new Envelope("SomeUserMessage", TestActor));
             ExpectMsg<DeadLetter>(d => ((Envelope)d.Message).Message.Equals("SomeUserMessage"));
 
             //The actor should Terminate, exchange the mailbox to a DeadLetterMailbox and forward the user message to the DeadLetterMailbox
@@ -265,11 +265,10 @@ namespace Akka.Tests.Actor
                 TestActor = testActor;
             }
 
-            protected override void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
+            protected override void ProcessFailure(IActorContext context, bool restart, IActorRef child, Exception cause, ChildRestartStats stats, IReadOnlyCollection<ChildRestartStats> children)
             {
-                var child = failedChildStats.Child;
-                TestActor.Tell(new FF(new Failed(child, cause, failedChildStats.Uid)), child);
-                base.ProcessFailure(context, restart, cause, failedChildStats, allChildren);
+                TestActor.Tell(new FF(new Failed(child, cause, stats.Uid)), child);
+                base.ProcessFailure(context, restart, child, cause, stats, children);
             }
         }
 

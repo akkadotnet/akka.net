@@ -122,6 +122,11 @@ namespace Akka.Util.Internal
                 yield return current;
             }
         }
+
+        internal static IEnumerable<T> Tail<T>(this IEnumerable<T> items)
+        {
+            return items.Skip(1);
+        }
     }
 }
 

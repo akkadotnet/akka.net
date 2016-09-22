@@ -13,6 +13,8 @@ using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
+using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -57,12 +59,63 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        public void Throttle_for_single_cost_elements_must_accept_very_high_rates()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                Source.From(Enumerable.Range(1, 5))
+                    .Throttle(1, TimeSpan.FromTicks(1), 0, ThrottleMode.Shaping)
+                    .RunWith(this.SinkProbe<int>(), Materializer)
+                    .Request(5)
+                    .ExpectNext(1, 2, 3, 4, 5)
+                    .ExpectComplete();
+            }, Materializer);
+        }
+
+        [Fact]
+        public void Throttle_for_single_cost_elements_must_accept_very_low_rates()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var probe = Source.From(Enumerable.Range(1, 5))
+                    .Throttle(1, TimeSpan.FromDays(100), 1, ThrottleMode.Shaping)
+                    .RunWith(this.SinkProbe<int>(), Materializer);
+                probe.Request(5)
+                    .ExpectNext(1)
+                    .ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                probe.Cancel();
+            }, Materializer);
+        }
+
+        [Fact]
+        public void Throttle_for_single_cost_elements_must_()
+        {
+            var sharedThrottle = Flow.Create<int>().Throttle(1, TimeSpan.FromDays(1), 1, ThrottleMode.Enforcing);
+
+            // If there is accidental shared state then we would not be able to pass through the single element
+            var t = Source.Single(1)
+                .Via(sharedThrottle)
+                .Via(sharedThrottle)
+                .RunWith(Sink.First<int>(), Materializer);
+            t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            t.Result.Should().Be(1);
+
+            // It works with a new stream, too
+            t = Source.Single(2)
+                .Via(sharedThrottle)
+                .Via(sharedThrottle)
+                .RunWith(Sink.First<int>(), Materializer);
+            t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            t.Result.Should().Be(2);
+        }
+
+        [Fact]
         public void Throttle_for_single_cost_elements_must_emit_single_element_per_tick()
         {
             this.AssertAllStagesStopped(() =>
             {
-                var upstream = TestPublisher.CreateProbe<int>(this);
-                var downstream = TestSubscriber.CreateProbe<int>(this);
+                var upstream = this.CreatePublisherProbe<int>();
+                var downstream = this.CreateSubscriberProbe<int>();
 
                 Source.FromPublisher(upstream)
                     .Throttle(1, TimeSpan.FromMilliseconds(300), 0, ThrottleMode.Shaping)
@@ -87,8 +140,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var upstream = TestPublisher.CreateProbe<int>(this);
-                var downstream = TestSubscriber.CreateProbe<int>(this);
+                var upstream = this.CreatePublisherProbe<int>();
+                var downstream = this.CreateSubscriberProbe<int>();
 
                 Source.FromPublisher(upstream)
                     .Throttle(1, TimeSpan.FromMilliseconds(300), 0, ThrottleMode.Shaping)
@@ -112,7 +165,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var downstream = TestSubscriber.CreateProbe<int>(this);
+                var downstream = this.CreateSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 10))
                     .Throttle(1, TimeSpan.FromMilliseconds(300), 0, ThrottleMode.Shaping)
                     .RunWith(Sink.FromSubscriber(downstream), Materializer);
@@ -127,13 +180,13 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var probe =
                     Source.From(Enumerable.Range(1, 10))
-                        .Throttle(2, TimeSpan.FromMilliseconds(500), 0, ThrottleMode.Shaping)
+                        .Throttle(2, TimeSpan.FromMilliseconds(750), 0, ThrottleMode.Shaping)
                         .RunWith(this.SinkProbe<int>(), Materializer);
                 probe.Request(5);
-                var result = probe.ReceiveWhile(TimeSpan.FromMilliseconds(600), filter: x => x);
-                probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100))
+                var result = probe.ReceiveWhile(TimeSpan.FromMilliseconds(950), filter: x => x);
+                probe.ExpectNoMsg(TimeSpan.FromMilliseconds(150))
                     .ExpectNext(3)
-                    .ExpectNoMsg(TimeSpan.FromMilliseconds(100))
+                    .ExpectNoMsg(TimeSpan.FromMilliseconds(150))
                     .ExpectNext(4);
                 probe.Cancel();
                 // assertion may take longer then the throttle and therefore the next assertion fails
@@ -146,21 +199,28 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var upstream = TestPublisher.CreateProbe<int>(this);
-                var downstream = TestSubscriber.CreateProbe<int>(this);
+                var ms = TimeSpan.FromMilliseconds(300);
+                var upstream = this.CreatePublisherProbe<int>();
+                var downstream = this.CreateSubscriberProbe<int>();
 
                 Source.FromPublisher(upstream)
                     .Throttle(1, TimeSpan.FromMilliseconds(200), 5, ThrottleMode.Shaping)
                     .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
+                // Exhaust bucket first
+                downstream.Request(5);
+                Enumerable.Range(1, 5).ForEach(i => upstream.SendNext(i));
+                // Check later, takes to long
+                var exhaustElements = downstream.ReceiveWhile(ms, ms,
+                    msg => msg is TestSubscriber.OnNext<int> ? msg : null, 5);
                 downstream.Request(1);
-                upstream.SendNext(1);
+                upstream.SendNext(6);
                 downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                downstream.ExpectNext(1);
+                downstream.ExpectNext(6);
                 downstream.Request(5);
                 downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(1200));
                 var expected = new List<OnNext>();
-                for (var i = 2; i < 7; i++)
+                for (var i = 7; i < 12; i++)
                 {
                     upstream.SendNext(i);
                     expected.Add(new OnNext(i));
@@ -169,6 +229,10 @@ namespace Akka.Streams.Tests.Dsl
                     .ShouldAllBeEquivalentTo(expected);
                 
                 downstream.Cancel();
+
+                exhaustElements.Cast<TestSubscriber.OnNext<int>>()
+                    .Select(n => n.Element)
+                    .ShouldAllBeEquivalentTo(Enumerable.Range(1, 5));
             }, Materializer);
         }
 
@@ -177,30 +241,40 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var upstream = TestPublisher.CreateProbe<int>(this);
-                var downstream = TestSubscriber.CreateProbe<int>(this);
+                var upstream = this.CreatePublisherProbe<int>();
+                var downstream = this.CreateSubscriberProbe<int>();
 
                 Source.FromPublisher(upstream)
                     .Throttle(1, TimeSpan.FromMilliseconds(200), 5, ThrottleMode.Shaping)
                     .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
+                // Exhaust bucket first
+                downstream.Request(5);
+                Enumerable.Range(1, 5).ForEach(i => upstream.SendNext(i));
+                // Check later, takes too long
+                var exhaustElements = downstream.ReceiveWhile(filter: o => o, max: TimeSpan.FromMilliseconds(300), msgs: 5);
+
                 downstream.Request(1);
-                upstream.SendNext(1);
+                upstream.SendNext(6);
                 downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                downstream.ExpectNext(1);
+                downstream.ExpectNext(6);
                 downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
                 downstream.Request(5);
                 var expected = new List<OnNext>();
-                for (var i = 2; i < 5; i++)
+                for (var i = 7; i < 11; i++)
                 {
                     upstream.SendNext(i);
-                    if (i < 4)
+                    if (i < 9)
                         expected.Add(new OnNext(i));
                 }
                 downstream.ReceiveWhile(TimeSpan.FromMilliseconds(100), filter: x => x, msgs: 2)
                     .ShouldAllBeEquivalentTo(expected);
 
                 downstream.Cancel();
+                exhaustElements
+                    .Cast<TestSubscriber.OnNext<int>>()
+                    .Select(n => n.Element)
+                    .ShouldAllBeEquivalentTo(Enumerable.Range(1, 5));
             }, Materializer);
         }
 
@@ -209,11 +283,18 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t =
+                var t1 =
                     Source.From(Enumerable.Range(1, 5))
                         .Throttle(1, TimeSpan.FromMilliseconds(200), 5, ThrottleMode.Enforcing)
+                        .RunWith(Sink.Seq<int>(), Materializer); // Burst is 5 so this will not fail
+                t1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                t1.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 5));
+
+                var t2 =
+                    Source.From(Enumerable.Range(1, 6))
+                        .Throttle(1, TimeSpan.FromMilliseconds(200), 5, ThrottleMode.Enforcing)
                         .RunWith(Sink.Ignore<int>(), Materializer);
-                t.Invoking(task => task.Wait(TimeSpan.FromSeconds(2))).ShouldThrow<OverflowException>();
+                t2.Invoking(task => task.Wait(TimeSpan.FromSeconds(2))).ShouldThrow<OverflowException>();
             }, Materializer);
         }
 
@@ -275,8 +356,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var upstream = TestPublisher.CreateProbe<int>(this);
-                var downstream = TestSubscriber.CreateProbe<int>(this);
+                var upstream = this.CreatePublisherProbe<int>();
+                var downstream = this.CreateSubscriberProbe<int>();
 
                 Source.FromPublisher(upstream)
                     .Throttle(1, TimeSpan.FromMilliseconds(300), 0, x => x, ThrottleMode.Shaping)
@@ -300,7 +381,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var downstream = TestSubscriber.CreateProbe<int>(this);
+                var downstream = this.CreateSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 10))
                     .Throttle(2, TimeSpan.FromMilliseconds(200), 0, x => x, ThrottleMode.Shaping)
                     .RunWith(Sink.FromSubscriber(downstream), Materializer);
@@ -334,21 +415,28 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var upstream = TestPublisher.CreateProbe<int>(this);
-                var downstream = TestSubscriber.CreateProbe<int>(this);
+                var upstream = this.CreatePublisherProbe<int>();
+                var downstream = this.CreateSubscriberProbe<int>();
 
                 Source.FromPublisher(upstream)
                     .Throttle(2, TimeSpan.FromMilliseconds(400), 5, x => 1, ThrottleMode.Shaping)
                     .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
+                // Exhaust bucket first
+                downstream.Request(5);
+                Enumerable.Range(1, 5).ForEach(i => upstream.SendNext(i));
+                // Check later, takes too long
+                var exhaustElemens = downstream.ReceiveWhile(filter: o => o, max: TimeSpan.FromMilliseconds(300),
+                    msgs: 5);
+
                 downstream.Request(1);
-                upstream.SendNext(1);
+                upstream.SendNext(6);
                 downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                downstream.ExpectNext(1);
+                downstream.ExpectNext(6);
                 downstream.Request(5);
                 downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(1200));
                 var expected = new List<OnNext>();
-                for (var i = 2; i < 7; i++)
+                for (var i = 7; i < 12; i++)
                 {
                     upstream.SendNext(i);
                     expected.Add(new OnNext(i));
@@ -357,6 +445,10 @@ namespace Akka.Streams.Tests.Dsl
                     .ShouldAllBeEquivalentTo(expected);
 
                 downstream.Cancel();
+                exhaustElemens
+                    .Cast<TestSubscriber.OnNext<int>>()
+                    .Select(n => n.Element)
+                    .ShouldAllBeEquivalentTo(Enumerable.Range(1, 5));
             }, Materializer);
         }
 
@@ -365,30 +457,41 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var upstream = TestPublisher.CreateProbe<int>(this);
-                var downstream = TestSubscriber.CreateProbe<int>(this);
+                var upstream = this.CreatePublisherProbe<int>();
+                var downstream = this.CreateSubscriberProbe<int>();
 
                 Source.FromPublisher(upstream)
-                    .Throttle(2, TimeSpan.FromMilliseconds(400), 5, e => e < 4 ? 1 : 20, ThrottleMode.Shaping)
+                    .Throttle(2, TimeSpan.FromMilliseconds(400), 5, e => e < 9 ? 1 : 20, ThrottleMode.Shaping)
                     .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
+                // Exhaust bucket first
+                downstream.Request(5);
+                Enumerable.Range(1, 5).ForEach(i => upstream.SendNext(i));
+                // Check later, takes too long
+                var exhaustElements = downstream.ReceiveWhile(filter: o => o, max: TimeSpan.FromMilliseconds(300),
+                    msgs: 5);
+
                 downstream.Request(1);
-                upstream.SendNext(1);
+                upstream.SendNext(6);
                 downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                downstream.ExpectNext(1);
+                downstream.ExpectNext(6);
                 downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(500)); //wait to receive 2 in burst afterwards
                 downstream.Request(5);
                 var expected = new List<OnNext>();
-                for (var i = 2; i < 5; i++)
+                for (var i = 7; i < 10; i++)
                 {
                     upstream.SendNext(i);
-                    if (i < 4)
+                    if (i < 9)
                         expected.Add(new OnNext(i));
                 }
                 downstream.ReceiveWhile(TimeSpan.FromMilliseconds(200), filter: x => x, msgs: 2)
                     .ShouldAllBeEquivalentTo(expected);
 
                 downstream.Cancel();
+                exhaustElements
+                    .Cast<TestSubscriber.OnNext<int>>()
+                    .Select(n => n.Element)
+                    .ShouldAllBeEquivalentTo(Enumerable.Range(1, 5));
             }, Materializer);
         }
 
@@ -397,16 +500,23 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var t =
-                    Source.From(Enumerable.Range(1, 5))
+                var t1 =
+                    Source.From(Enumerable.Range(1, 4))
+                        .Throttle(2, TimeSpan.FromMilliseconds(200), 10, x => x, ThrottleMode.Enforcing)
+                        .RunWith(Sink.Seq<int>(), Materializer);
+                t1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                t1.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 4)); // Burst is 10 so this will not fail
+
+                var t2 =
+                    Source.From(Enumerable.Range(1, 6))
                         .Throttle(2, TimeSpan.FromMilliseconds(200), 5, x => x, ThrottleMode.Enforcing)
                         .RunWith(Sink.Ignore<int>(), Materializer);
-                t.Invoking(task => task.Wait(TimeSpan.FromSeconds(2))).ShouldThrow<OverflowException>();
+                t2.Invoking(task => task.Wait(TimeSpan.FromSeconds(2))).ShouldThrow<OverflowException>();
             }, Materializer);
         }
 
         [Fact]
-        public void Throttle_for_various_cost_elements_must_properly_combine_shape_and_throttle_modes()
+        public void Throttle_for_various_cost_elements_must_properly_combine_shape_and_enforce_modes()
         {
             this.AssertAllStagesStopped(() =>
             {
@@ -425,7 +535,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var ex = new SystemException();
+                var ex = new Exception();
                 Source.From(Enumerable.Range(1, 5))
                     .Throttle(2, TimeSpan.FromMilliseconds(200), 0, _ => { throw ex; }, ThrottleMode.Shaping)
                     .Throttle(1, TimeSpan.FromMilliseconds(100), 5, ThrottleMode.Enforcing)

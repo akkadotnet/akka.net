@@ -27,6 +27,7 @@ namespace Akka.IO
         private readonly int _defaultBufferSize;
         private readonly int _maxPoolEntries;
         private readonly ByteBuffer[] _pool;
+        private readonly object poolLock = new object();
         private int _buffersInPool;
 
         public DirectByteBufferPool(int defaultBufferSize, int maxPoolEntries)
@@ -55,7 +56,7 @@ namespace Akka.IO
         private ByteBuffer TakeBufferFromPool()
         {
             ByteBuffer buffer = null;
-            lock (_pool.SyncRoot)
+            lock (poolLock)
             {
                 if (_buffersInPool > 0)
                 {
@@ -71,7 +72,7 @@ namespace Akka.IO
 
         private void OfferBufferToPool(ByteBuffer buf)
         {
-            lock (_pool.SyncRoot)
+            lock (poolLock)
             {
                 if (_buffersInPool < _maxPoolEntries)
                 {

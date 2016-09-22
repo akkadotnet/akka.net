@@ -27,9 +27,15 @@ namespace Akka.Util
         private byte _creating = 0;
         private T _createdValue;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FastLazy{T}"/> class.
+        /// </summary>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown if the given <paramref name="producer"/> is undefined.
+        /// </exception>
         public FastLazy(Func<T> producer)
         {
-            if (producer == null) throw new ArgumentNullException(nameof(producer));
+            if (producer == null) throw new ArgumentNullException(nameof(producer), "Producer cannot be null");
             _producer = producer;
         }
 

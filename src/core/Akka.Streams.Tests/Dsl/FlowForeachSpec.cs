@@ -11,6 +11,7 @@ using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -65,7 +66,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var p = TestPublisher.CreateManualProbe<int>(this);
+                var p = this.CreateManualPublisherProbe<int>();
                 Source.FromPublisher(p).RunForeach(i => TestActor.Tell(i), Materializer).ContinueWith(task =>
                 {
                     if (task.Exception != null)

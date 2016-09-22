@@ -326,7 +326,7 @@ namespace Akka.Tests.Pattern
     }
 
 
-    internal class TestException : ApplicationException
+    internal class TestException : Exception
     {
         public TestException( )
         {

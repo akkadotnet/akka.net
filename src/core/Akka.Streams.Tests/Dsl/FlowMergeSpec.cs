@@ -23,7 +23,7 @@ namespace Akka.Streams.Tests.Dsl
     {
         protected override TestSubscriber.Probe<int> Setup(IPublisher<int> p1, IPublisher<int> p2)
         {
-            var subscriber = TestSubscriber.CreateProbe<int>(this);
+            var subscriber = this.CreateSubscriberProbe<int>();
             Source.FromPublisher(p1)
                 .Merge(Source.FromPublisher(p2))
                 .RunWith(Sink.FromSubscriber(subscriber), Materializer);
@@ -39,7 +39,7 @@ namespace Akka.Streams.Tests.Dsl
                 var source1 = Source.From(Enumerable.Range(0, 4));
                 var source2 = Source.From(new List<int>());
                 var source3 = Source.From(Enumerable.Range(4, 6));
-                var probe = TestSubscriber.CreateManualProbe<int>(this);
+                var probe = this.CreateManualSubscriberProbe<int>();
 
                 source1
                     .Merge(source2)
@@ -116,9 +116,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var up1 = TestPublisher.CreateManualProbe<int>(this);
-                var up2 = TestPublisher.CreateManualProbe<int>(this);
-                var down = TestSubscriber.CreateManualProbe<int>(this);
+                var up1 = this.CreateManualPublisherProbe<int>();
+                var up2 = this.CreateManualPublisherProbe<int>();
+                var down = this.CreateManualSubscriberProbe<int>();
 
                 var t =
                     Source.AsSubscriber<int>()

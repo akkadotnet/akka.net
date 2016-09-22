@@ -24,7 +24,7 @@ namespace Akka.Tests.IO
     public class TcpIntegrationSpec : AkkaSpec
     {
         public TcpIntegrationSpec()
-            : base(@"akka.loglevel = INFO
+            : base(@"akka.loglevel = DEBUG
                      akka.actor.serialize-creators = on")
         { }
 

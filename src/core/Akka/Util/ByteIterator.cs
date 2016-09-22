@@ -43,6 +43,8 @@ namespace Akka.Util
                 get { return _array[_from]; }
             }
 
+            /// <summary></summary>
+            /// <exception cref="IndexOutOfRangeException"></exception>
             public override byte Next()
             {
                 if (!HasNext) throw new IndexOutOfRangeException();
@@ -119,7 +121,8 @@ namespace Akka.Util
                 return result;
             }
 
-            
+            /// <summary></summary>
+            /// <exception cref="IndexOutOfRangeException"></exception>
             public override ByteIterator GetBytes(byte[] xs, int offset, int n)
             {
                 if (n > Len) throw new IndexOutOfRangeException();
@@ -336,6 +339,11 @@ namespace Akka.Util
         public abstract byte Next();
         protected abstract void Clear();
 
+        /// <summary>
+        /// N/A
+        /// </summary>
+        /// <exception cref="NotSupportedException"></exception>
+        /// <returns>N/A</returns>
         public virtual ByteIterator Clone()
         {
             throw new NotSupportedException();
@@ -356,11 +364,23 @@ namespace Akka.Util
                 : Take(until);
         }
 
+        /// <summary>
+        /// N/A
+        /// </summary>
+        /// <param name="p">N/A</param>
+        /// <exception cref="NotSupportedException"></exception>
+        /// <returns>N/A</returns>
         public virtual ByteIterator TakeWhile(Func<byte, bool> p)
         {
             throw new NotSupportedException();
         }
 
+        /// <summary>
+        /// N/A
+        /// </summary>
+        /// <param name="p">N/A</param>
+        /// <exception cref="NotSupportedException"></exception>
+        /// <returns>N/A</returns>
         public virtual ByteIterator DropWhile(Func<byte, bool> p)
         {
             throw new NotSupportedException();

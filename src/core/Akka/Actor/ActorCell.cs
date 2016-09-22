@@ -24,7 +24,7 @@ namespace Akka.Actor
         private IInternalActorRef _self;
         public const int UndefinedUid = 0;
         private Props _props;
-        private static readonly Props terminatedProps =new TerminatedProps();
+        private static readonly Props terminatedProps = new TerminatedProps();
 
         private const int DefaultState = 0;
         private const int SuspendedState = 1;
@@ -296,7 +296,7 @@ namespace Akka.Actor
             }
         }
 
-        public virtual void SendMessage(IActorRef sender, object message)
+        public virtual void SendMessage(Envelope message)
         {
             if (Mailbox == null)
             {
@@ -305,36 +305,43 @@ namespace Akka.Actor
                 //this._systemImpl.DeadLetters.Tell(new DeadLetter(message, sender, this.Self));
             }
 
-            if (_systemImpl.Settings.SerializeAllMessages)
+            try
             {
-                DeadLetter deadLetter;
-                var unwrapped = (deadLetter = message as DeadLetter) != null ? deadLetter.Message : message;
-                if (!(unwrapped is INoSerializationVerificationNeeded))
+                if (_systemImpl.Settings.SerializeAllMessages)
                 {
-                    Serializer serializer = _systemImpl.Serialization.FindSerializerFor(message);
-                    byte[] serialized = serializer.ToBinary(message);
-
-
-                    var manifestSerializer = serializer as SerializerWithStringManifest;
-                    if (manifestSerializer != null)
+                    DeadLetter deadLetter;
+                    var unwrapped = (deadLetter = message.Message as DeadLetter) != null ? deadLetter.Message : message.Message;
+                    if (!(unwrapped is INoSerializationVerificationNeeded))
                     {
-                        var manifest = manifestSerializer.Manifest(serialized);
-                        message = _systemImpl.Serialization.Deserialize(serialized, manifestSerializer.Identifier, manifest);
-                    }
-                    else
-                    {
-                        message = _systemImpl.Serialization.Deserialize(serialized, serializer.Identifier, message.GetType().AssemblyQualifiedName);
+                        Serializer serializer = _systemImpl.Serialization.FindSerializerFor(unwrapped);
+                        byte[] serialized = serializer.ToBinary(unwrapped);
+
+                        var manifestSerializer = serializer as SerializerWithStringManifest;
+                        if (manifestSerializer != null)
+                        {
+                            var manifest = manifestSerializer.Manifest(unwrapped);
+                            var deserialized = _systemImpl.Serialization.Deserialize(serialized, serializer.Identifier, manifest);
+                            message = new Envelope(deserialized, message.Sender);
+                        }
+                        else
+                        {
+                            var deserialized = _systemImpl.Serialization.Deserialize(serialized, serializer.Identifier, unwrapped.GetType().TypeQualifiedName());
+                            message = new Envelope(deserialized, message.Sender);
+                        }
                     }
                 }
+
+                Dispatcher.Dispatch(this, message);
             }
-
-            var m = new Envelope
+            catch (Exception e)
             {
-                Sender = sender,
-                Message = message,
-            };
+                _systemImpl.EventStream.Publish(new Error(e, _self.Parent.ToString(), ActorType, "Swallowing exception during message send"));
+            }
+        }
 
-            Dispatcher.Dispatch(this, m);
+        public virtual void SendMessage(IActorRef sender, object message)
+        {
+            SendMessage(new Envelope(message, sender, System));
         }
 
         protected void ClearActorCell()

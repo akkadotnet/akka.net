@@ -138,6 +138,10 @@ namespace Akka.Serialization
     {
         public const string SerializationIdentifiers = "akka.actor.serialization-identifiers";
 
+        /// <summary></summary>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown if the system couldn't find the given serializer <paramref name="type"/> id in the configuration.
+        /// </exception>
         public static int GetSerializerIdentifierFromConfig(Type type, ExtendedActorSystem system)
         {
             var config = system.Settings.Config.GetConfig(SerializationIdentifiers);
@@ -151,7 +155,7 @@ namespace Akka.Serialization
             }
             else
             {
-                throw new ArgumentException(string.Format("Couldn't find serializer id for [{0}] under [{1}] HOCON path", type, SerializationIdentifiers));
+                throw new ArgumentException($"Couldn't find serializer id for [{type}] under [{SerializationIdentifiers}] HOCON path", nameof(type));
             }
         }
     }

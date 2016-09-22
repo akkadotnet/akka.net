@@ -134,7 +134,7 @@ namespace Akka.Actor
         private VirtualPathContainer _tempContainer;
         private RootGuardianActorRef _rootGuardian;
         private LocalActorRef _userGuardian;    //This is called guardian in Akka
-        private MailboxType _defaultMailbox; 
+        private MailboxType _defaultMailbox;
         private LocalActorRef _systemGuardian;
 
         public LocalActorRefProvider(string systemName, Settings settings, EventStream eventStream)
@@ -150,7 +150,7 @@ namespace Akka.Actor
             _deployer = deployer ?? new Deployer(settings);
             _rootPath = new RootActorPath(new Address("akka", systemName));
             _log = Logging.GetLogger(eventStream, "LocalActorRefProvider(" + _rootPath.Address + ")");
-            if(deadLettersFactory == null)
+            if (deadLettersFactory == null)
                 deadLettersFactory = p => new DeadLetterActorRef(this, p, _eventStream);
             _deadLetters = deadLettersFactory(_rootPath / "deadLetters");
             _tempNumber = new AtomicCounterLong(1);
@@ -205,8 +205,6 @@ namespace Akka.Actor
             _extraNames.Add(name, actor);
         }
 
-
-
         private RootGuardianActorRef CreateRootGuardian(ActorSystemImpl system)
         {
             var supervisor = new RootGuardianSupervisor(_rootPath, this, _terminationPromise, _log);
@@ -227,47 +225,50 @@ namespace Akka.Actor
 
         private LocalActorRef CreateUserGuardian(LocalActorRef rootGuardian, string name)   //Corresponds to Akka's: override lazy val guardian: LocalActorRef
         {
-            return CreateRootGuardianChild(rootGuardian, name, () =>
-            {
-                var props = Props.Create<GuardianActor>(UserGuardianSupervisorStrategy);
+            var cell = rootGuardian.Cell;
+            cell.ReserveChild(name);
+            var props = Props.Create<GuardianActor>(UserGuardianSupervisorStrategy);
 
-                var userGuardian = new LocalActorRef(_system, props, DefaultDispatcher, _defaultMailbox, rootGuardian, RootPath/name);
-                return userGuardian;
-            });         
+            var userGuardian = new LocalActorRef(_system, props, DefaultDispatcher, _defaultMailbox, rootGuardian, RootPath / name);
+            cell.InitChild(userGuardian);
+            userGuardian.Start();
+            return userGuardian;
         }
 
         private LocalActorRef CreateSystemGuardian(LocalActorRef rootGuardian, string name, LocalActorRef userGuardian)     //Corresponds to Akka's: override lazy val guardian: systemGuardian
         {
-            return CreateRootGuardianChild(rootGuardian, name, () =>
-            {
-                var props = Props.Create(() => new SystemGuardianActor(userGuardian), _systemGuardianStrategy);
-
-                var systemGuardian = new LocalActorRef(_system, props, DefaultDispatcher, _defaultMailbox, rootGuardian, RootPath/name);
-                return systemGuardian;
-            });
-        }
-
-        private LocalActorRef CreateRootGuardianChild(LocalActorRef rootGuardian, string name, Func<LocalActorRef> childCreator)
-        {
             var cell = rootGuardian.Cell;
             cell.ReserveChild(name);
-            var child = childCreator();
-            cell.InitChild(child);
-            child.Start();
-            return child;
+            var props = Props.Create(() => new SystemGuardianActor(userGuardian), _systemGuardianStrategy);
+
+            var systemGuardian = new LocalActorRef(_system, props, DefaultDispatcher, _defaultMailbox, rootGuardian, RootPath / name);
+            cell.InitChild(systemGuardian);
+            systemGuardian.Start();
+            return systemGuardian;
         }
 
+        /// <summary>
+        /// Registers an actorRef at a path returned by <see cref="TempPath" />; do NOT pass in any other path.
+        /// </summary>
+        /// <param name="actorRef">The actor reference.</param>
+        /// <param name="path">A path returned by <see cref="TempPath" />. Do NOT pass in any other path!</param>
+        /// <exception cref="InvalidOperationException">This exception is thrown if the given <paramref name="path"/> is not on the temp path.</exception>
         public void RegisterTempActor(IInternalActorRef actorRef, ActorPath path)
         {
-            if(path.Parent != _tempNode)
-                throw new Exception("Cannot RegisterTempActor() with anything not obtained from tempPath()");
+            if (path.Parent != _tempNode)
+                throw new InvalidOperationException("Cannot RegisterTempActor() with anything not obtained from tempPath()");
             _tempContainer.AddChild(path.Name, actorRef);
         }
 
+        /// <summary>
+        /// Unregister a temporary actor (i.e. obtained from <see cref="TempPath" />); do NOT pass in any other path.
+        /// </summary>
+        /// <param name="path">A path returned by <see cref="TempPath" />. Do NOT pass in any other path!</param>
+        /// <exception cref="InvalidOperationException">This exception is thrown if the given <paramref name="path"/> is not on the temp path.</exception>
         public void UnregisterTempActor(ActorPath path)
         {
-            if(path.Parent != _tempNode)
-                throw new Exception("Cannot UnregisterTempActor() with anything not obtained from tempPath()");
+            if (path.Parent != _tempNode)
+                throw new InvalidOperationException("Cannot UnregisterTempActor() with anything not obtained from tempPath()");
             _tempContainer.RemoveChild(path.Name);
         }
 
@@ -276,7 +277,7 @@ namespace Akka.Actor
             _system = system;
             //The following are the lazy val statements in Akka
             var defaultDispatcher = system.Dispatchers.DefaultGlobalDispatcher;
-            _defaultMailbox = system.Mailboxes.Lookup(Mailboxes.DefaultMailboxId); 
+            _defaultMailbox = system.Mailboxes.Lookup(Mailboxes.DefaultMailboxId);
             _rootGuardian = CreateRootGuardian(system);
             _tempContainer = new VirtualPathContainer(system.Provider, _tempNode, _rootGuardian, _log);
             _rootGuardian.SetTempContainer(_tempContainer);
@@ -286,15 +287,15 @@ namespace Akka.Actor
 
             _rootGuardian.Start();
             // chain death watchers so that killing guardian stops the application
-            _systemGuardian.SendSystemMessage(new Watch(_userGuardian, _systemGuardian)); 
-            _rootGuardian.SendSystemMessage(new Watch(_systemGuardian, _rootGuardian)); 
+            _systemGuardian.SendSystemMessage(new Watch(_userGuardian, _systemGuardian));
+            _rootGuardian.SendSystemMessage(new Watch(_systemGuardian, _rootGuardian));
             _eventStream.StartDefaultLoggers(_system);
         }
 
         public IActorRef ResolveActorRef(string path)
         {
             ActorPath actorPath;
-            if(ActorPath.TryParse(path, out actorPath) && actorPath.Address == _rootPath.Address)
+            if (ActorPath.TryParse(path, out actorPath) && actorPath.Address == _rootPath.Address)
                 return ResolveActorRef(_rootGuardian, actorPath.Elements);
             _log.Debug("Resolve of unknown path [{0}] failed. Invalid format.", path);
             return _deadLetters;
@@ -305,10 +306,9 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="path">The actor path.</param>
         /// <returns>ActorRef.</returns>
-        /// <exception cref="System.NotSupportedException">The provided actor path is not valid in the LocalActorRefProvider</exception>
         public IActorRef ResolveActorRef(ActorPath path)
         {
-            if(path.Root == _rootPath)
+            if (path.Root == _rootPath)
                 return ResolveActorRef(_rootGuardian, path.Elements);
             _log.Debug("Resolve of foreign ActorPath [{0}] failed", path);
             return _deadLetters;
@@ -335,13 +335,13 @@ namespace Akka.Actor
 
         internal IInternalActorRef ResolveActorRef(IInternalActorRef actorRef, IReadOnlyCollection<string> pathElements)
         {
-            if(pathElements.Count == 0)
+            if (pathElements.Count == 0)
             {
                 _log.Debug("Resolve of empty path sequence fails (per definition)");
                 return _deadLetters;
             }
             var child = actorRef.GetChild(pathElements);
-            if(child.IsNobody())
+            if (child.IsNobody())
             {
                 _log.Debug("Resolve of path sequence [/{0}] failed", ActorPath.FormatPathElements(pathElements));
                 return new EmptyLocalActorRef(_system.Provider, actorRef.Path / pathElements, _eventStream);
@@ -349,7 +349,31 @@ namespace Akka.Actor
             return (IInternalActorRef)child;
         }
 
-
+        /// <summary>
+        /// Actor factory with create-only semantics: will create an actor as
+        /// described by <paramref name="props" /> with the given <paramref name="supervisor" /> and <paramref name="path" /> (may be different
+        /// in case of remote supervision). If <paramref name="systemService" /> is true, deployment is
+        /// bypassed (local-only). If a value for<paramref name="deploy" /> is passed in, it should be
+        /// regarded as taking precedence over the nominally applicable settings,
+        /// but it should be overridable from external configuration; the lookup of
+        /// the latter can be suppressed by setting "lookupDeploy" to "false".
+        /// </summary>
+        /// <exception cref="ConfigurationException">
+        /// This exception can be thrown for a number of reasons. The following are some examples:
+        /// <dl>
+        /// <dt><b>non-routers</b></dt>
+        /// <dd>The dispatcher in the given <paramref name="props"/> is not configured for the given <paramref name="path"/>.</dd>
+        /// <dd>or</dd>
+        /// <dd>There was a configuration problem while creating the given <paramref name="path"/> with the dispatcher and mailbox from the given <paramref name="props"/></dd>
+        /// <dt><b>routers</b></dt>
+        /// <dd>The dispatcher in the given <paramref name="props"/> is not configured for routees of the given <paramref name="path"/></dd>
+        /// <dd>or</dd>
+        /// <dd>The dispatcher in the given <paramref name="props"/> is not configured for router of the given <paramref name="path"/></dd>
+        /// <dd>or</dd>
+        /// <dd>$There was a configuration problem while creating the given <paramref name="path"/> with router dispatcher and mailbox and routee dispatcher and mailbox.</dd>
+        /// </dl>
+        /// </exception>
+        /// <returns></returns>
         public IInternalActorRef ActorOf(ActorSystemImpl system, Props props, IInternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
         {
             if (props.Deploy.RouterConfig is NoRouter)
@@ -359,7 +383,7 @@ namespace Akka.Actor
                     var d = Deployer.Lookup(path);
                     if (d != null && !(d.RouterConfig is NoRouter))
                         Log.Warning("Configuration says that [{0}] should be a router, but code disagrees. Remove the config or add a RouterConfig to its Props.",
-                                	path);
+                                    path);
                 }
 
                 var props2 = props;
@@ -376,7 +400,7 @@ namespace Akka.Actor
 
                 if (!system.Dispatchers.HasDispatcher(props2.Dispatcher))
                 {
-                    throw new ConfigurationException(string.Format("Dispatcher [{0}] not configured for path {1}", props2.Dispatcher, path));
+                    throw new ConfigurationException($"Dispatcher [{props2.Dispatcher}] not configured for path {path}");
                 }
 
                 try
@@ -396,9 +420,7 @@ namespace Akka.Actor
                 catch (Exception ex)
                 {
                     throw new ConfigurationException(
-                        string.Format(
-                            "Configuration problem while creating {0} with dispatcher [{1}] and mailbox [{2}]", path,
-                            props.Dispatcher, props.Mailbox), ex);
+                        $"Configuration problem while creating [{path}] with dispatcher [{props.Dispatcher}] and mailbox [{props.Mailbox}]", ex);
                 }
             }
             else //routers!!!
@@ -408,11 +430,11 @@ namespace Akka.Actor
                 var d = fromProps.Where(x => x != null).Aggregate((deploy1, deploy2) => deploy2.WithFallback(deploy1));
                 var p = props.WithRouter(d.RouterConfig);
 
-      
+
                 if (!system.Dispatchers.HasDispatcher(p.Dispatcher))
-                    throw new ConfigurationException(string.Format("Dispatcher [{0}] not configured for routees of path {1}", p.Dispatcher, path));
+                    throw new ConfigurationException($"Dispatcher [{p.Dispatcher}] not configured for routees of path [{path}]");
                 if (!system.Dispatchers.HasDispatcher(d.RouterConfig.RouterDispatcher))
-                    throw new ConfigurationException(string.Format("Dispatcher [{0}] not configured for router of path {1}", p.RouterConfig.RouterDispatcher, path));
+                    throw new ConfigurationException($"Dispatcher [{p.RouterConfig.RouterDispatcher}] not configured for router of path [{path}]");
 
                 var routerProps = Props.Empty.WithRouter(p.Deploy.RouterConfig).WithDispatcher(p.RouterConfig.RouterDispatcher);
                 var routeeProps = props.WithRouter(NoRouter.Instance);
@@ -431,13 +453,11 @@ namespace Akka.Actor
                     routedActorRef.Initialize(async);
                     return routedActorRef;
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    throw new ConfigurationException(string.Format("Configuration problem while creating [{0}] with router dispatcher [{1}] and mailbox {2}" +
-                                                                   " and routee dispatcher [{3}] and mailbox [{4}].", path, routerProps.Dispatcher, routerProps.Mailbox,
-                                                                   routeeProps.Dispatcher, routeeProps.Mailbox));
+                    throw new ConfigurationException(
+                        $"Configuration problem while creating [{path}] with router dispatcher [{routerProps.Dispatcher}] and mailbox [{routerProps.Mailbox}] and routee dispatcher [{routeeProps.Dispatcher}] and mailbox [{routeeProps.Mailbox}].", ex);
                 }
-
             }
         }
 

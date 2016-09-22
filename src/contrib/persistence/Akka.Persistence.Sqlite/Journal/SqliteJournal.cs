@@ -30,6 +30,7 @@ namespace Akka.Persistence.Sqlite.Journal
                 timestampColumnName: "timestamp",
                 isDeletedColumnName: "is_deleted",
                 tagsColumnName: "tags",
+                orderingColumnName: "ordering",
                 timeout: config.GetTimeSpan("connection-timeout")), 
                     Context.System.Serialization, 
                     GetTimestampProvider(config.GetString("timestamp-provider")));

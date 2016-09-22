@@ -102,24 +102,33 @@ namespace Akka.Serialization
             _serializerMap.Add(type, serializer);
         }
 
+        /// <summary></summary>
+        /// <exception cref="SerializationException">
+        /// This exception is thrown if the system cannot find the serializer with the given <paramref name="serializerId"/>.
+        /// </exception>
         public object Deserialize(byte[] bytes, int serializerId, Type type)
         {
             Serializer serializer;
             if (!_serializers.TryGetValue(serializerId, out serializer))
                 throw new SerializationException(
                     $"Cannot find serializer with id [{serializerId}]. The most probable reason" +
-                    " is that the configuration entry akka.actor.serializers is not in sync between the two systems.");
+                    " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems.");
             
             return serializer.FromBinary(bytes, type);
         }
 
+        /// <summary></summary>
+        /// <exception cref="SerializationException">
+        /// This exception is thrown if the system cannot find the serializer with the given <paramref name="serializerId"/>
+        /// or it couldn't find the given <paramref name="manifest"/> with the given <paramref name="serializerId"/>.
+        /// </exception>
         public object Deserialize(byte[] bytes, int serializerId, string manifest)
         {
             Serializer serializer;
             if (!_serializers.TryGetValue(serializerId, out serializer))
                 throw new SerializationException(
                     $"Cannot find serializer with id [{serializerId}]. The most probable reason" +
-                    " is that the configuration entry akka.actor.serializers is not in sync between the two systems.");
+                    " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems.");
  
             if (serializer is SerializerWithStringManifest)
                 return ((SerializerWithStringManifest)serializer).FromBinary(bytes, manifest);
@@ -148,6 +157,11 @@ namespace Akka.Serialization
 
         //cache to eliminate lots of typeof operator calls
         private readonly Type _objectType = typeof(object);
+
+        /// <summary></summary>
+        /// <exception cref="SerializationException">
+        /// This exception is thrown if the serializer of the given <paramref name="objectType"/> could not be found.
+        /// </exception>
         public Serializer FindSerializerForType(Type objectType)
         {
             Type type = objectType;
@@ -163,7 +177,7 @@ namespace Akka.Serialization
             if (_serializerMap.ContainsKey(_objectType) && _objectType.IsAssignableFrom(type))
                 return _serializerMap[_objectType];
 
-            throw new Exception("Serializer not found for type " + objectType.Name);
+            throw new SerializationException($"Serializer not found for type {objectType.Name}");
         }
 
         public static string SerializedActorPath(IActorRef actorRef)

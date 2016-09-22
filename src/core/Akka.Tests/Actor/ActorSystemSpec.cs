@@ -17,6 +17,7 @@ using System.Linq;
 using System.Threading;
 using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Event;
 using FluentAssertions.Execution;
 
 namespace Akka.Tests.Actor
@@ -135,7 +136,7 @@ namespace Akka.Tests.Actor
 
             actorSystem.Terminate().Wait(TimeSpan.FromSeconds(10));
             
-            var ex = Assert.Throws<Exception>(() => actorSystem.RegisterOnTermination(() => { }));
+            var ex = Assert.Throws<InvalidOperationException>(() => actorSystem.RegisterOnTermination(() => { }));
             Assert.Equal("ActorSystem already terminated.", ex.Message);
         }
 
@@ -234,11 +235,11 @@ namespace Akka.Tests.Actor
         [Fact]
         public void Setup_the_default_scheduler()
         {
-            Assert.True(Sys.Scheduler.GetType() == typeof(DedicatedThreadScheduler));
+            Assert.True(Sys.Scheduler.GetType() == typeof(HashedWheelTimerScheduler));
         }
 
         [Fact]
-        public void Support_using_a_customer_scheduler()
+        public void Support_using_a_custom_scheduler()
         {
             var actorSystem = ActorSystem.Create(Guid.NewGuid().ToString(), DefaultConfig.WithFallback("akka.scheduler.implementation = \"Akka.Tests.Actor.TestScheduler, Akka.Tests\""));
             Assert.True(actorSystem.Scheduler.GetType() == typeof(TestScheduler));
@@ -352,7 +353,7 @@ namespace Akka.Tests.Actor
 
     public class TestScheduler : IScheduler
     {
-        public TestScheduler(ActorSystem system)
+        public TestScheduler(Config config, ILoggingAdapter log)
         {
 
         }

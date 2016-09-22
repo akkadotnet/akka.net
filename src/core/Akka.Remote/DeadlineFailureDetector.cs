@@ -18,8 +18,17 @@ namespace Akka.Remote
     /// </summary>
     public class DeadlineFailureDetector : FailureDetector
     {
-        private TimeSpan _acceptableHeartbeatPause;
-        private Clock _clock;
+        private readonly Clock _clock;
+
+        private long _heartbeatTimestamp = 0L; //not used until active (first heartbeat)
+        private volatile bool _active = false;
+        private readonly long _deadlineMillis;
+
+        [Obsolete("Use DeadlineFailureDetector(acceptableHeartbeatPause, heartbeatInterval, clock) instead. (1.1.2)")]
+        public DeadlineFailureDetector(TimeSpan acceptableHeartbeatPause, Clock clock = null) 
+            : this(acceptableHeartbeatPause, TimeSpan.Zero, clock)
+        {
+        }
 
         /// <summary>
         /// Procedural constructor for <see cref="DeadlineFailureDetector"/>
@@ -28,13 +37,25 @@ namespace Akka.Remote
         /// heartbeats that will be accepted before considering it to be an anomaly.
         /// This margin is important to be able to survive sudden, occasional, pauses in heartbeat
         /// arrivals, due to for example garbage collect or network drop.</param>
-        /// <param name="clock">The clock, returning current time in milliseconds, but can be faked for testing
-        /// purposes. It is only used for measuring intervals (duration).</param>
-        public DeadlineFailureDetector(TimeSpan acceptableHeartbeatPause, Clock clock = null) : this(clock)
+        /// <param name="heartbeatInterval"></param>
+        /// <param name="clock">The clock, returning current time in milliseconds, but can be faked for testing purposes. It is only used for measuring intervals (duration).</param>
+        public DeadlineFailureDetector(
+            TimeSpan acceptableHeartbeatPause,
+            TimeSpan heartbeatInterval,
+            Clock clock = null)
         {
-            _acceptableHeartbeatPause = acceptableHeartbeatPause;
-            _acceptableHeartbeatMillis = Convert.ToInt64(acceptableHeartbeatPause.TotalMilliseconds);
-            if (_acceptableHeartbeatPause <= TimeSpan.Zero) throw new ArgumentException("acceptable-heartbeat-pause must be greater than zero");
+            if (acceptableHeartbeatPause <= TimeSpan.Zero)
+            {
+                throw new ArgumentException("failure-detector.acceptable-heartbeat-pause must be >= 0s");
+            }
+
+            if (heartbeatInterval <= TimeSpan.Zero)
+            {
+                throw new ArgumentException("failure-detector.heartbeat-interval must be > 0s");
+            }
+
+            _clock = clock ?? DefaultClock;
+            _deadlineMillis = Convert.ToInt64(acceptableHeartbeatPause.TotalMilliseconds + heartbeatInterval.TotalMilliseconds);
         }
 
         /// <summary>
@@ -43,38 +64,25 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="config"></param>
         /// <param name="ev"></param>
-        public DeadlineFailureDetector(Config config, EventStream ev) : this(config.GetTimeSpan("acceptable-heartbeat-pause")) { }
+        public DeadlineFailureDetector(Config config, EventStream ev) 
+            : this(
+                  config.GetTimeSpan("acceptable-heartbeat-pause"),
+                  config.GetTimeSpan("heartbeat-interval")) { }
 
-        protected DeadlineFailureDetector(Clock clock)
+        public override bool IsAvailable => IsAvailableTicks(_clock());
+
+        private bool IsAvailableTicks(long timestamp)
         {
-            _clock = clock ?? DefaultClock;
+            if (_active) return (Interlocked.Read(ref _heartbeatTimestamp) + _deadlineMillis) > timestamp;
+            return true; //treat unmanaged connections, e.g. with zero heartbeats, as healthy connections
         }
 
-        private long _heartbeatTimestamp = 0L;
-        private readonly long _acceptableHeartbeatMillis;
-        private volatile bool _active = false;
-
-        public override bool IsAvailable
-        {
-            get { return IsAvailableTicks(_clock()); }
-        }
-
-        public override bool IsMonitoring
-        {
-            get { return _active; }
-        }
+        public override bool IsMonitoring => _active;
 
         public override void HeartBeat()
         {
             Interlocked.Exchange(ref _heartbeatTimestamp, _clock());
             _active = true;
         }
-
-        private bool IsAvailableTicks(long timestamp)
-        {
-            if (_active) return (Interlocked.Read(ref _heartbeatTimestamp) + _acceptableHeartbeatMillis) > timestamp;
-            return true; //treat unmanaged connections, e.g. with zero heartbeats, as healthy connections
-        }
     }
 }
-

@@ -300,7 +300,7 @@ namespace Akka.Persistence.Tests
 
         private IActorRef Persister(string name, string journalName = null)
         {
-            return Sys.ActorOf(Props.Create(() => new PersistAllIncommingActor(name, "akka.persistence.journal." + (journalName ?? _journalName))), name);
+            return Sys.ActorOf(Props.Create(() => new PersistAllIncommingActor(name, "akka.persistence.journal." + (journalName ?? _journalName))));
         }
 
         private object ToJournal(object message, string journalName = null)

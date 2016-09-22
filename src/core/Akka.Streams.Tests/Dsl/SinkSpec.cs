@@ -8,7 +8,7 @@
 using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
@@ -27,9 +27,9 @@ namespace Akka.Streams.Tests.Dsl
 
         private TestSubscriber.ManualProbe<int>[] CreateProbes() => new[]
         {
-            this.CreateManualProbe<int>(),
-            this.CreateManualProbe<int>(),
-            this.CreateManualProbe<int>()
+            this.CreateManualSubscriberProbe<int>(),
+            this.CreateManualSubscriberProbe<int>(),
+            this.CreateManualSubscriberProbe<int>()
         };
 
         [Fact]
@@ -172,10 +172,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Sink_must_suitably_override_attribute_handling_methods()
-        {
-            var s = Sink.First<int>().WithAttributes(new Attributes()).Named("");
-        }
+        public void A_Sink_must_suitably_override_attribute_handling_methods() => Sink.First<int>().WithAttributes(new Attributes()).Named("");
 
         [Fact]
         public void A_Sink_must_support_contramap()

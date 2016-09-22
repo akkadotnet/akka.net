@@ -385,7 +385,7 @@ namespace Akka.Actor
                 var statsUid = childStats.Child.Path.Uid;
                 if (statsUid == f.Uid)
                 {
-                    var handled = _actor.SupervisorStrategyInternal.HandleFailure(this, f.Cause, childStats, ChildrenContainer.Stats);
+                    var handled = _actor.SupervisorStrategyInternal.HandleFailure(this, failedChild, f.Cause, childStats, ChildrenContainer.Stats);
                     if (!handled)
                         ExceptionDispatchInfo.Capture(f.Cause).Throw();
                 }

@@ -37,8 +37,8 @@ namespace Akka.Event
         /// Retrieves the log event class associated with the specified log level.
         /// </summary>
         /// <param name="logLevel">The log level used to lookup the associated class.</param>
+        /// <exception cref="ArgumentException">The exception is thrown if the given <paramref name="logLevel"/> is unknown.</exception>
         /// <returns>The log event class associated with the specified log level.</returns>
-        /// <exception cref="System.ArgumentException">Unknown LogLevel</exception>
         public static Type ClassFor(this LogLevel logLevel)
         {
             switch (logLevel)
@@ -52,7 +52,7 @@ namespace Akka.Event
                 case LogLevel.ErrorLevel:
                     return typeof (Error);
                 default:
-                    throw new ArgumentException("Unknown LogLevel", "logLevel");
+                    throw new ArgumentException("Unknown LogLevel", nameof(logLevel));
             }
         }
 
@@ -60,8 +60,8 @@ namespace Akka.Event
         /// Retrieves the log event class name associated with the specified log level.
         /// </summary>
         /// <param name="logLevel">The log level used to lookup the associated class.</param>
+        /// <exception cref="ArgumentException">The exception is thrown if the given <paramref name="logLevel"/> is unknown.</exception>
         /// <returns>The log event class name associated with the specified log level.</returns>
-        /// <exception cref="System.ArgumentException">Unknown LogLevel</exception>
         public static string StringFor(this LogLevel logLevel)
         {
             switch (logLevel)
@@ -77,7 +77,7 @@ namespace Akka.Event
                 case OffLogLevel:
                     return Off;
                 default:
-                    throw new ArgumentException("Unknown LogLevel", "logLevel");
+                    throw new ArgumentException("Unknown LogLevel", nameof(logLevel));
             }
         }
 
@@ -139,8 +139,8 @@ namespace Akka.Event
         /// Retrieves the log level from the specified string.
         /// </summary>
         /// <param name="logLevel">The string representation of the log level to lookup.</param>
+        /// <exception cref="ArgumentException">The exception is thrown if the given <paramref name="logLevel"/> is unknown.</exception>
         /// <returns>The log level that matches the specified string.</returns>
-        /// <exception cref="System.ArgumentException">Unknown log level</exception>
         public static LogLevel LogLevelFor(string logLevel)
         {
             if (!string.IsNullOrEmpty(logLevel))
@@ -161,7 +161,7 @@ namespace Akka.Event
                 case Off:
                     return OffLogLevel;
                 default:
-                    throw new ArgumentException(string.Format("Unknown LogLevel: \"{0}\". Valid values are: \"{1}\", \"{2}\", \"{3}\", \"{4}\"", logLevel, Debug, Info, Warning, Error), logLevel);
+                    throw new ArgumentException($@"Unknown LogLevel: ""{logLevel}"". Valid values are: ""{Debug}"", ""{Info}"", ""{Warning}"", ""{Error}""", nameof(logLevel));
             }
         }
 
@@ -169,8 +169,8 @@ namespace Akka.Event
         /// Retrieves the log level associated with the specified <typeparamref name="T">log event</typeparamref>.
         /// </summary>
         /// <typeparam name="T">The type of the log event.</typeparam>
+        /// <exception cref="ArgumentException">The exception is thrown if the given <paramref name="logLevel"/> is unknown.</exception>
         /// <returns>The log level associated with the specified type.</returns>
-        /// <exception cref="System.ArgumentException">Unknown log event type</exception>
         public static LogLevel LogLevelFor<T>() where T:LogEvent
         {
             var type = typeof(T);
@@ -179,7 +179,7 @@ namespace Akka.Event
             if(type == typeof(Warning)) return LogLevel.WarningLevel;
             if(type == typeof(Error)) return LogLevel.ErrorLevel;
 
-            throw new ArgumentException(string.Format("Unknown LogEvent type: \"{0}\". Valid types are: \"{1}\", \"{2}\", \"{3}\", \"{4}\"", type.FullName, typeof(Debug).FullName, typeof(Info).FullName, typeof(Warning).FullName, typeof(Error).FullName));
+            throw new ArgumentException($@"Unknown LogEvent type: ""{type.FullName}"". Valid types are: ""{typeof(Debug).FullName}"", ""{typeof(Info).FullName}"", ""{typeof(Warning).FullName}"", ""{typeof(Error).FullName}""");
             
         }
     }

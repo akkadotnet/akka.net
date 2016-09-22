@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Configuration;
@@ -78,6 +79,21 @@ namespace Akka.Persistence
         /// Maximum number of messages to replay. Default is no limit.
         /// </summary>
         public long ReplayMax { get; private set; }
+    }
+
+    public sealed class RecoveryTimedOutException : AkkaException
+    {
+        public RecoveryTimedOutException()
+        {
+        }
+
+        public RecoveryTimedOutException(string message, Exception cause = null) : base(message, cause)
+        {
+        }
+
+        public RecoveryTimedOutException(SerializationInfo info, StreamingContext context) : base(info, context)
+        {
+        }
     }
 
     /// <summary>

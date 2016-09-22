@@ -7,11 +7,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -31,7 +33,7 @@ namespace Akka.Streams.Tests.Dsl
         public void Single_Source_must_produce_element()
         {
             var p = Source.Single(1).RunWith(Sink.AsPublisher<int>(false), Materializer);
-            var c = TestSubscriber.CreateManualProbe<int>(this);
+            var c = this.CreateManualSubscriberProbe<int>();
             p.Subscribe(c);
             var sub = c.ExpectSubscription();
             sub.Request(1);
@@ -43,8 +45,8 @@ namespace Akka.Streams.Tests.Dsl
         public void Single_Source_must_reject_later_subscriber()
         {
             var p = Source.Single(1).RunWith(Sink.AsPublisher<int>(false), Materializer);
-            var c1 = TestSubscriber.CreateManualProbe<int>(this);
-            var c2 = TestSubscriber.CreateManualProbe<int>(this);
+            var c1 = this.CreateManualSubscriberProbe<int>();
+            var c2 = this.CreateManualSubscriberProbe<int>();
             p.Subscribe(c1);
 
             var sub1 = c1.ExpectSubscription();
@@ -60,12 +62,12 @@ namespace Akka.Streams.Tests.Dsl
         public void Empty_Source_must_complete_immediately()
         {
             var p = Source.Empty<int>().RunWith(Sink.AsPublisher<int>(false), Materializer);
-            var c = TestSubscriber.CreateManualProbe<int>(this);
+            var c = this.CreateManualSubscriberProbe<int>();
             p.Subscribe(c);
             c.ExpectSubscriptionAndComplete();
 
             //reject additional subscriber
-            var c2 = TestSubscriber.CreateManualProbe<int>(this);
+            var c2 = this.CreateManualSubscriberProbe<int>();
             p.Subscribe(c2);
             c2.ExpectSubscriptionAndError();
         }
@@ -73,14 +75,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Failed_Source_must_emit_error_immediately()
         {
-            var ex = new SystemException();
+            var ex = new Exception();
             var p = Source.Failed<int>(ex).RunWith(Sink.AsPublisher<int>(false), Materializer);
-            var c = TestSubscriber.CreateManualProbe<int>(this);
+            var c = this.CreateManualSubscriberProbe<int>();
             p.Subscribe(c);
             c.ExpectSubscriptionAndError();
 
             //reject additional subscriber
-            var c2 = TestSubscriber.CreateManualProbe<int>(this);
+            var c2 = this.CreateManualSubscriberProbe<int>();
             p.Subscribe(c2);
             c2.ExpectSubscriptionAndError();
         }
@@ -97,7 +99,7 @@ namespace Akka.Streams.Tests.Dsl
                 var f = t.Item1;
                 var neverPub = t.Item2;
 
-                var c = TestSubscriber.CreateManualProbe<object>(this);
+                var c = this.CreateManualSubscriberProbe<object>();
                 neverPub.Subscribe(c);
                 var subs = c.ExpectSubscription();
 
@@ -105,8 +107,7 @@ namespace Akka.Streams.Tests.Dsl
                 c.ExpectNoMsg(TimeSpan.FromMilliseconds(300));
 
                 subs.Cancel();
-                f.Task.Wait(500).Should().BeTrue();
-                f.Task.Result.Should().Be(null);
+                f.Task.AwaitResult().Should().Be(null);
             }, Materializer);
         }
 
@@ -124,9 +125,8 @@ namespace Akka.Streams.Tests.Dsl
                 
                 //external cancellation
                 neverPromise.TrySetResult(0).Should().BeTrue();
-
-                counterFuture.Wait(500).Should().BeTrue();
-                counterFuture.Result.Should().Be(0);
+                
+                counterFuture.AwaitResult().Should().Be(0);
             }, Materializer);
         }
 
@@ -144,9 +144,8 @@ namespace Akka.Streams.Tests.Dsl
 
                 //external cancellation
                 neverPromise.TrySetResult(6).Should().BeTrue();
-
-                counterFuture.Wait(500).Should().BeTrue();
-                counterFuture.Result.Should().Be(6);
+                
+                counterFuture.AwaitResult().Should().Be(6);
             }, Materializer);
         }
 
@@ -165,7 +164,7 @@ namespace Akka.Streams.Tests.Dsl
                 //external cancellation
                 neverPromise.SetException(new Exception("Boom"));
 
-                counterFuture.Invoking(f => f.Wait(500)).ShouldThrow<Exception>()
+                counterFuture.Invoking(f => f.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Exception>()
                     .WithMessage("Boom");
             }, Materializer);
         }
@@ -173,9 +172,9 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Composite_Source_must_merge_from_many_inputs()
         {
-            var probes = Enumerable.Range(1, 5).Select(_ => TestPublisher.CreateManualProbe<int>(this)).ToList();
+            var probes = Enumerable.Range(1, 5).Select(_ => this.CreateManualPublisherProbe<int>()).ToList();
             var source = Source.AsSubscriber<int>();
-            var outProbe = TestSubscriber.CreateManualProbe<int>(this);
+            var outProbe = this.CreateManualSubscriberProbe<int>();
 
             var s =
                 Source.FromGraph(GraphDsl.Create(source, source, source, source, source,
@@ -214,9 +213,9 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Composite_Source_must_combine_from_many_inputs_with_simplified_API()
         {
-            var probes = Enumerable.Range(1, 3).Select(_ => TestPublisher.CreateManualProbe<int>(this)).ToList();
+            var probes = Enumerable.Range(1, 3).Select(_ => this.CreateManualPublisherProbe<int>()).ToList();
             var source = probes.Select(Source.FromPublisher).ToList();
-            var outProbe = TestSubscriber.CreateManualProbe<int>(this);
+            var outProbe = this.CreateManualSubscriberProbe<int>();
 
             Source.Combine(source[0], source[1], i => new Merge<int, int>(i), source[2])
                 .To(Sink.FromSubscriber(outProbe))
@@ -243,9 +242,9 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Composite_Source_must_combine_from_two_inputs_with_simplified_API()
         {
-            var probes = Enumerable.Range(1, 2).Select(_ => TestPublisher.CreateManualProbe<int>(this)).ToList();
+            var probes = Enumerable.Range(1, 2).Select(_ => this.CreateManualPublisherProbe<int>()).ToList();
             var source = probes.Select(Source.FromPublisher).ToList();
-            var outProbe = TestSubscriber.CreateManualProbe<int>(this);
+            var outProbe = this.CreateManualSubscriberProbe<int>();
 
             Source.Combine(source[0], source[1], i => new Merge<int, int>(i))
                 .To(Sink.FromSubscriber(outProbe))
@@ -301,14 +300,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Unfold_Source_must_terminate_with_a_failure_if_there_is_an_exception_thrown()
         {
-            EventFilter.Exception<SystemException>(message: "expected").ExpectOne(() =>
+            EventFilter.Exception<Exception>(message: "expected").ExpectOne(() =>
             {
                 var task = Source.Unfold(Tuple.Create(0, 1), tuple =>
                 {
                     var a = tuple.Item1;
                     var b = tuple.Item2;
                     if (a > 10000000)
-                        throw new SystemException("expected");
+                        throw new Exception("expected");
                     return Tuple.Create(Tuple.Create(b, a + b), a);
                 }).RunAggregate(new LinkedList<int>(), (ints, i) =>
                 {
@@ -316,7 +315,7 @@ namespace Akka.Streams.Tests.Dsl
                     return ints;
                 }, Materializer);
                 task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
-                    .ShouldThrow<SystemException>()
+                    .ShouldThrow<Exception>()
                     .WithMessage("expected");
             });
         }
@@ -367,9 +366,81 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        public void Cycle_Source_must_continuously_generate_the_same_sequence()
+        {
+            var expected = new[] {1, 2, 3, 1, 2, 3, 1, 2, 3};
+            Source.Cycle(() => new[] {1, 2, 3}.AsEnumerable().GetEnumerator())
+                .Grouped(9)
+                .RunWith(Sink.First<IEnumerable<int>>(), Materializer)
+                .AwaitResult()
+                .ShouldAllBeEquivalentTo(expected);
+        }
+
+        [Fact]
+        public void Cycle_Source_must_throw_an_exception_in_case_of_empty_Enumerator()
+        {
+            var empty = Enumerable.Empty<int>().GetEnumerator();
+            var task = Source.Cycle(()=>empty).RunWith(Sink.First<int>(), Materializer);
+            task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<ArgumentException>();
+        }
+
+        [Fact]
+        public void Cycle_Source_must_throw_an_exception_in_case_of_empty_Enumerator2()
+        {
+            var b = false;
+            var single = Enumerable.Repeat(1, 1).GetEnumerator();
+            var empty = Enumerable.Empty<int>().GetEnumerator();
+            var task = Source.Cycle(() =>
+            {
+                if (b)
+                    return empty;
+                b = true;
+                return single;
+            }).RunWith(Sink.Last<int>(), Materializer);
+            task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<ArgumentException>();
+        }
+
+        [Fact]
         public void A_Source_must_suitably_override_attribute_handling_methods()
         {
             Source.Single(42).Async().AddAttributes(Attributes.None).Named("");
+        }
+
+        [Fact]
+        public void A_ZipN_Source_must_properly_ZipN()
+        {
+            var sources = new[]
+            {
+                Source.From(new[] {1, 2, 3}),
+                Source.From(new[] {10, 20, 30}),
+                Source.From(new[] {100, 200, 300}),
+            };
+
+            Source.ZipN(sources)
+                .RunWith(Sink.Seq<IImmutableList<int>>(), Materializer)
+                .AwaitResult()
+                .ShouldAllBeEquivalentTo(new[]
+                {
+                    new[] {1, 10, 100},
+                    new[] {2, 20, 200},
+                    new[] {3, 30, 300},
+                });
+        }
+
+        [Fact]
+        public void A_ZipWithN_Source_must_properly_ZipWithN()
+        {
+            var sources = new[]
+            {
+                Source.From(new[] {1, 2, 3}),
+                Source.From(new[] {10, 20, 30}),
+                Source.From(new[] {100, 200, 300}),
+            };
+
+            Source.ZipWithN(list => list.Sum(), sources)
+                .RunWith(Sink.Seq<int>(), Materializer)
+                .AwaitResult()
+                .ShouldAllBeEquivalentTo(new[] {111, 222, 333});
         }
     }
 }

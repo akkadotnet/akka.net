@@ -34,7 +34,7 @@ namespace Akka.Persistence.Tests
             else if (message is DeleteMessagesSuccess)
             {
                 if (AskedForDelete == null)
-                    throw new ApplicationException("Received DeleteMessagesSuccess without anyone asking for delete!");
+                    throw new ArgumentNullException("Received DeleteMessagesSuccess without anyone asking for delete!");
                 AskedForDelete.Tell(message);
             }
             else return false;

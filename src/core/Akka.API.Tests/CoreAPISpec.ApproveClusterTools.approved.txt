@@ -642,39 +642,37 @@ namespace Akka.Cluster.PubSub.Serializers.Proto
 }
 namespace Akka.Cluster.Tools.Client
 {
-    public class ClusterClient : Akka.Actor.ActorBase
+    public sealed class ClusterClient : Akka.Actor.ActorBase
     {
-        public readonly Akka.Cluster.Tools.Client.ClusterClientSettings Settings;
         public ClusterClient(Akka.Cluster.Tools.Client.ClusterClientSettings settings) { }
-        public Akka.Event.ILoggingAdapter Log { get; }
         protected override void PostStop() { }
         public static Akka.Actor.Props Props(Akka.Cluster.Tools.Client.ClusterClientSettings settings) { }
         protected override bool Receive(object message) { }
         public sealed class Publish
         {
-            public readonly object Message;
-            public readonly string Topic;
             public Publish(string topic, object message) { }
+            public object Message { get; }
+            public string Topic { get; }
         }
         public sealed class Send
         {
-            public readonly bool LocalAffinity;
-            public readonly object Message;
-            public readonly string Path;
             public Send(string path, object message, bool localAffinity = False) { }
+            public bool LocalAffinity { get; }
+            public object Message { get; }
+            public string Path { get; }
         }
         public sealed class SendToAll
         {
-            public readonly object Message;
-            public readonly string Path;
             public SendToAll(string path, object message) { }
+            public object Message { get; }
+            public string Path { get; }
         }
     }
-    public class ClusterClientReceptionist : Akka.Actor.IExtension
+    public sealed class ClusterClientReceptionist : Akka.Actor.IExtension
     {
         public ClusterClientReceptionist(Akka.Actor.ExtendedActorSystem system) { }
         public bool IsTerminated { get; }
-        public Akka.Actor.IActorRef PubSubMediator { get; }
+        public Akka.Actor.IActorRef Underlying { get; }
         public static Akka.Configuration.Config DefaultConfig() { }
         public static Akka.Cluster.Tools.Client.ClusterClientReceptionist Get(Akka.Actor.ActorSystem system) { }
         public void RegisterService(Akka.Actor.IActorRef actorRef) { }
@@ -687,55 +685,117 @@ namespace Akka.Cluster.Tools.Client
         public ClusterClientReceptionistExtensionProvider() { }
         public override Akka.Cluster.Tools.Client.ClusterClientReceptionist CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
     }
-    public sealed class ClusterClientSettings
+    public sealed class ClusterClients
+    {
+        public ClusterClients(System.Collections.Immutable.ImmutableHashSet<Akka.Actor.IActorRef> clusterClientsList) { }
+        public System.Collections.Immutable.ImmutableHashSet<Akka.Actor.IActorRef> ClusterClientsList { get; }
+    }
+    public sealed class ClusterClientSettings : Akka.Actor.INoSerializationVerificationNeeded
     {
         public readonly System.TimeSpan AcceptableHeartbeatPause;
         public readonly int BufferSize;
         public readonly System.TimeSpan EstablishingGetContactsInterval;
         public readonly System.TimeSpan HeartbeatInterval;
         public readonly System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> InitialContacts;
+        public readonly System.Nullable<System.TimeSpan> ReconnectTimeout;
         public readonly System.TimeSpan RefreshContactsInterval;
-        public ClusterClientSettings(System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> initialContacts, System.TimeSpan establishingGetContactsInterval, System.TimeSpan refreshContactsInterval, System.TimeSpan heartbeatInterval, System.TimeSpan acceptableHeartbeatPause, int bufferSize) { }
+        public ClusterClientSettings(System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> initialContacts, System.TimeSpan establishingGetContactsInterval, System.TimeSpan refreshContactsInterval, System.TimeSpan heartbeatInterval, System.TimeSpan acceptableHeartbeatPause, int bufferSize, System.Nullable<System.TimeSpan> reconnectTimeout = null) { }
         public static Akka.Cluster.Tools.Client.ClusterClientSettings Create(Akka.Actor.ActorSystem system) { }
+        public static Akka.Cluster.Tools.Client.ClusterClientSettings Create(Akka.Configuration.Config config) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithBufferSize(int bufferSize) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithEstablishingGetContactsInterval(System.TimeSpan value) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithHeartbeatInterval(System.TimeSpan value) { }
+        public Akka.Cluster.Tools.Client.ClusterClientSettings WithInitialContacts(System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> initialContacts) { }
+        [System.ObsoleteAttribute("Use WithInitialContacts(IImmutableSet<ActorPath> initialContacts) instead")]
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithInitialContacts(System.Collections.Generic.IEnumerable<Akka.Actor.ActorPath> initialContacts) { }
+        public Akka.Cluster.Tools.Client.ClusterClientSettings WithReconnectTimeout(System.Nullable<System.TimeSpan> reconnectTimeout) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithRefreshContactsInterval(System.TimeSpan value) { }
     }
-    public class ClusterReceptionist : Akka.Actor.ActorBase
+    public sealed class ClusterClientUnreachable : Akka.Cluster.Tools.Client.IClusterClientInteraction
+    {
+        public ClusterClientUnreachable(Akka.Actor.IActorRef clusterClient) { }
+        public Akka.Actor.IActorRef ClusterClient { get; }
+    }
+    public sealed class ClusterClientUp : Akka.Cluster.Tools.Client.IClusterClientInteraction
+    {
+        public ClusterClientUp(Akka.Actor.IActorRef clusterClient) { }
+        public Akka.Actor.IActorRef ClusterClient { get; }
+    }
+    public sealed class ClusterReceptionist : Akka.Actor.ActorBase
     {
         public ClusterReceptionist(Akka.Actor.IActorRef pubSubMediator, Akka.Cluster.Tools.Client.ClusterReceptionistSettings settings) { }
-        public Akka.Event.ILoggingAdapter Log { get; }
         protected override void PostStop() { }
         protected override void PreStart() { }
-        public static Akka.Actor.Props Props(Akka.Actor.IActorRef mediator, Akka.Cluster.Tools.Client.ClusterReceptionistSettings settings) { }
+        public static Akka.Actor.Props Props(Akka.Actor.IActorRef pubSubMediator, Akka.Cluster.Tools.Client.ClusterReceptionistSettings settings) { }
         protected override bool Receive(object message) { }
     }
-    public sealed class ClusterReceptionistSettings
+    public sealed class ClusterReceptionistSettings : Akka.Actor.INoSerializationVerificationNeeded
     {
+        public readonly System.TimeSpan AcceptableHeartbeatPause;
+        public readonly System.TimeSpan FailureDetectionInterval;
+        public readonly System.TimeSpan HeartbeatInterval;
         public readonly int NumberOfContacts;
         public readonly System.TimeSpan ResponseTunnelReceiveTimeout;
         public readonly string Role;
-        public ClusterReceptionistSettings(string role, int numberOfContacts, System.TimeSpan responseTunnelReceiveTimeout) { }
+        public ClusterReceptionistSettings(string role, int numberOfContacts, System.TimeSpan responseTunnelReceiveTimeout, System.TimeSpan heartbeatInterval, System.TimeSpan acceptableHeartbeatPause, System.TimeSpan failureDetectionInterval) { }
         public static Akka.Cluster.Tools.Client.ClusterReceptionistSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.Cluster.Tools.Client.ClusterReceptionistSettings Create(Akka.Configuration.Config config) { }
+        public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithHeartbeat(System.TimeSpan heartbeatInterval, System.TimeSpan acceptableHeartbeatPause, System.TimeSpan failureDetectionInterval) { }
         public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithNumberOfContacts(int numberOfContacts) { }
         public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithoutRole() { }
         public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithResponseTunnelReceiveTimeout(System.TimeSpan responseTunnelReceiveTimeout) { }
         public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithRole(string role) { }
     }
-    public interface IClusterClientMessage { }
-}
-namespace Akka.Cluster.Tools.Client.Serialization
-{
-    public class ClusterClientMessageSerializer : Akka.Serialization.SerializerWithStringManifest
+    public sealed class ContactPointAdded : Akka.Cluster.Tools.Client.IContactPointChange
     {
-        public ClusterClientMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
-        public override int Identifier { get; }
-        public override object FromBinary(byte[] binary, string manifest) { }
-        public override string Manifest(object o) { }
-        public override byte[] ToBinary(object o) { }
+        public ContactPointAdded(Akka.Actor.ActorPath contactPoint) { }
+        public Akka.Actor.ActorPath ContactPoint { get; }
+    }
+    public sealed class ContactPointRemoved : Akka.Cluster.Tools.Client.IContactPointChange
+    {
+        public ContactPointRemoved(Akka.Actor.ActorPath contactPoint) { }
+        public Akka.Actor.ActorPath ContactPoint { get; }
+    }
+    public sealed class ContactPoints
+    {
+        public ContactPoints(System.Collections.Immutable.ImmutableHashSet<Akka.Actor.ActorPath> contactPoints) { }
+        public System.Collections.Immutable.ImmutableHashSet<Akka.Actor.ActorPath> ContactPointsList { get; }
+    }
+    public sealed class GetClusterClients
+    {
+        public static readonly Akka.Cluster.Tools.Client.GetClusterClients Instance;
+    }
+    public sealed class GetContactPoints : Akka.Cluster.Tools.Client.IGetContactPoints
+    {
+        public static readonly Akka.Cluster.Tools.Client.GetContactPoints Instance;
+    }
+    public interface IClusterClientInteraction
+    {
+        Akka.Actor.IActorRef ClusterClient { get; }
+    }
+    public interface IClusterClientMessage { }
+    public interface IContactPointChange
+    {
+        Akka.Actor.ActorPath ContactPoint { get; }
+    }
+    public interface IGetContactPoints { }
+    public interface ISubscribeContactPoints { }
+    public interface IUnsubscribeContactPoints { }
+    public sealed class SubscribeClusterClients
+    {
+        public static readonly Akka.Cluster.Tools.Client.SubscribeClusterClients Instance;
+    }
+    public sealed class SubscribeContactPoints : Akka.Cluster.Tools.Client.ISubscribeContactPoints
+    {
+        public static readonly Akka.Cluster.Tools.Client.SubscribeContactPoints Instance;
+    }
+    public sealed class UnsubscribeClusterClients
+    {
+        public static readonly Akka.Cluster.Tools.Client.UnsubscribeClusterClients Instance;
+    }
+    public sealed class UnsubscribeContactPoints : Akka.Cluster.Tools.Client.IUnsubscribeContactPoints
+    {
+        public static readonly Akka.Cluster.Tools.Client.UnsubscribeContactPoints Instance;
     }
 }
 namespace Akka.Cluster.Tools.PublishSubscribe
@@ -857,7 +917,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class SubscribeAck : System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.SubscribeAck>
+    public sealed class SubscribeAck : Akka.Event.IDeadLetterSuppression, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.SubscribeAck>
     {
         public readonly Akka.Cluster.Tools.PublishSubscribe.Subscribe Subscribe;
         public SubscribeAck(Akka.Cluster.Tools.PublishSubscribe.Subscribe subscribe) { }
@@ -980,62 +1040,5 @@ namespace Akka.Cluster.Tools.Singleton.Serialization
         public override object FromBinary(byte[] binary, string manifest) { }
         public override string Manifest(object o) { }
         public override byte[] ToBinary(object obj) { }
-    }
-}
-public class static ClusterClientMessages
-{
-    public static Google.ProtocolBuffers.Descriptors.FileDescriptor Descriptor { get; }
-    public static void RegisterAllExtensions(Google.ProtocolBuffers.ExtensionRegistry registry) { }
-}
-public sealed class Contacts : Google.ProtocolBuffers.GeneratedMessage<Contacts, Contacts.Builder>
-{
-    public const int ContactPointsFieldNumber = 1;
-    public int ContactPointsCount { get; }
-    public System.Collections.Generic.IList<string> ContactPointsList { get; }
-    public static Contacts DefaultInstance { get; }
-    public override Contacts DefaultInstanceForType { get; }
-    public static Google.ProtocolBuffers.Descriptors.MessageDescriptor Descriptor { get; }
-    protected override Google.ProtocolBuffers.FieldAccess.FieldAccessorTable<Contacts, Contacts.Builder> InternalFieldAccessors { get; }
-    public override bool IsInitialized { get; }
-    public override int SerializedSize { get; }
-    protected override Contacts ThisMessage { get; }
-    public static Contacts.Builder CreateBuilder() { }
-    public static Contacts.Builder CreateBuilder(Contacts prototype) { }
-    public override Contacts.Builder CreateBuilderForType() { }
-    public string GetContactPoints(int index) { }
-    public static Contacts ParseDelimitedFrom(System.IO.Stream input) { }
-    public static Contacts ParseDelimitedFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static Contacts ParseFrom(Google.ProtocolBuffers.ByteString data) { }
-    public static Contacts ParseFrom(Google.ProtocolBuffers.ByteString data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static Contacts ParseFrom(byte[] data) { }
-    public static Contacts ParseFrom(byte[] data, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static Contacts ParseFrom(System.IO.Stream input) { }
-    public static Contacts ParseFrom(System.IO.Stream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public static Contacts ParseFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
-    public static Contacts ParseFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-    public override Contacts.Builder ToBuilder() { }
-    public override void WriteTo(Google.ProtocolBuffers.ICodedOutputStream output) { }
-    public sealed class Builder : Google.ProtocolBuffers.GeneratedBuilder<Contacts, Contacts.Builder>
-    {
-        public Builder() { }
-        public int ContactPointsCount { get; }
-        public Google.ProtocolBuffers.Collections.IPopsicleList<string> ContactPointsList { get; }
-        public override Contacts DefaultInstanceForType { get; }
-        public override Google.ProtocolBuffers.Descriptors.MessageDescriptor DescriptorForType { get; }
-        public override bool IsInitialized { get; }
-        protected override Contacts MessageBeingBuilt { get; }
-        protected override Contacts.Builder ThisBuilder { get; }
-        public Contacts.Builder AddContactPoints(string value) { }
-        public Contacts.Builder AddRangeContactPoints(System.Collections.Generic.IEnumerable<string> values) { }
-        public override Contacts BuildPartial() { }
-        public override Contacts.Builder Clear() { }
-        public Contacts.Builder ClearContactPoints() { }
-        public override Contacts.Builder Clone() { }
-        public string GetContactPoints(int index) { }
-        public override Contacts.Builder MergeFrom(Google.ProtocolBuffers.IMessage other) { }
-        public override Contacts.Builder MergeFrom(Contacts other) { }
-        public override Contacts.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input) { }
-        public override Contacts.Builder MergeFrom(Google.ProtocolBuffers.ICodedInputStream input, Google.ProtocolBuffers.ExtensionRegistry extensionRegistry) { }
-        public Contacts.Builder SetContactPoints(int index, string value) { }
     }
 }

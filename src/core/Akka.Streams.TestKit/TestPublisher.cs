@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Streams.Implementation;
 using Akka.TestKit;
 using Reactive.Streams;
@@ -21,7 +22,7 @@ namespace Akka.Streams.TestKit
     {
         #region messages
 
-        public interface IPublisherEvent : INoSerializationVerificationNeeded { }
+        public interface IPublisherEvent : INoSerializationVerificationNeeded, IDeadLetterSuppression { }
 
         public struct Subscribe : IPublisherEvent
         {
@@ -275,12 +276,12 @@ namespace Akka.Streams.TestKit
         /// <summary>
         /// Probe that implements <see cref="IPublisher{T}"/> interface.
         /// </summary>
-        public static ManualProbe<T> CreateManualProbe<T>(this TestKitBase testKit, bool autoOnSubscribe = true)
+        public static ManualProbe<T> CreateManualPublisherProbe<T>(this TestKitBase testKit, bool autoOnSubscribe = true)
         {
             return new ManualProbe<T>(testKit, autoOnSubscribe);
         }
 
-        public static Probe<T> CreateProbe<T>(this TestKitBase testKit, long initialPendingRequests = 0L)
+        public static Probe<T> CreatePublisherProbe<T>(this TestKitBase testKit, long initialPendingRequests = 0L)
         {
             return new Probe<T>(testKit, initialPendingRequests);
         }

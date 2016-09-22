@@ -35,6 +35,8 @@ namespace Akka.Actor
             _path = root / "_Root-guardian-supervisor";   //In akka this is root / "bubble-walker" 
         }
 
+        /// <summary></summary>
+        /// <exception cref="InvalidMessageException">This exception is thrown if the given <paramref name="message"/> is undefined.</exception>
         protected override void TellInternal(object message, IActorRef sender)
         {
             if (IsWalking)

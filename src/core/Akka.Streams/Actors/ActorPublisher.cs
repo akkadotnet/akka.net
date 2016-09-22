@@ -9,6 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
@@ -18,7 +19,7 @@ namespace Akka.Streams.Actors
 {
     #region Internal messages
 
-    public sealed class Subscribe<T> : INoSerializationVerificationNeeded
+    public sealed class Subscribe<T> : INoSerializationVerificationNeeded, IDeadLetterSuppression
     {
         public readonly ISubscriber<T> Subscriber;
         public Subscribe(ISubscriber<T> subscriber)
@@ -40,7 +41,7 @@ namespace Akka.Streams.Actors
 
     #endregion
 
-    public interface IActorPublisherMessage { }
+    public interface IActorPublisherMessage: IDeadLetterSuppression { }
 
     /// <summary>
     /// This message is delivered to the <see cref="ActorPublisher{T}"/> actor when the stream
@@ -50,10 +51,21 @@ namespace Akka.Streams.Actors
     public sealed class Request : IActorPublisherMessage
     {
         public readonly long Count;
+
         public Request(long count)
         {
             Count = count;
         }
+
+        /// <summary>
+        /// INTERNAL API: needed for stash support
+        /// </summary>
+        internal void MarkProcessed() => IsProcessed = true;
+
+        /// <summary>
+        /// INTERNAL API: needed for stash support
+        /// </summary>
+        internal bool IsProcessed { get; private set; }
     }
 
     /// <summary>
@@ -249,7 +261,6 @@ namespace Akka.Streams.Actors
             {
                 case LifecycleState.Active:
                 case LifecycleState.PreSubscriber:
-                case LifecycleState.CompleteThenStop:
                     _lifecycleState = LifecycleState.Completed;
                     _onError = null;
                     if (_subscriber != null)
@@ -266,7 +277,8 @@ namespace Akka.Streams.Actors
                     }
                     break;
                 case LifecycleState.ErrorEmitted: throw new IllegalStateException("OnComplete must not be called after OnError");
-                case LifecycleState.Completed: throw new IllegalStateException("OnComplete must only be called once");
+                case LifecycleState.Completed:
+                case LifecycleState.CompleteThenStop: throw new IllegalStateException("OnComplete must only be called once");
                 case LifecycleState.Canceled: break;
             }
         }
@@ -318,7 +330,6 @@ namespace Akka.Streams.Actors
             {
                 case LifecycleState.Active:
                 case LifecycleState.PreSubscriber:
-                case LifecycleState.CompleteThenStop:
                     _lifecycleState = LifecycleState.ErrorEmitted;
                     _onError = new OnErrorBlock(cause, false);
                     if (_subscriber != null)
@@ -335,7 +346,8 @@ namespace Akka.Streams.Actors
                     }
                     break;
                 case LifecycleState.ErrorEmitted: throw new IllegalStateException("OnError must only be called once");
-                case LifecycleState.Completed: throw new IllegalStateException("OnError must not be called after OnComplete");
+                case LifecycleState.Completed:
+                case LifecycleState.CompleteThenStop: throw new IllegalStateException("OnError must not be called after OnComplete");
                 case LifecycleState.Canceled: break;
             }
         }
@@ -385,18 +397,26 @@ namespace Akka.Streams.Actors
             if (message is Request)
             {
                 var req = (Request) message;
-                if (req.Count < 1)
+                if (req.IsProcessed)
                 {
-                    if (_lifecycleState == LifecycleState.Active)
-                        OnError(new ArgumentException("Number of requested elements must be positive. Rule 3.9"));
-                    else
-                        base.AroundReceive(receive, message);
+                    // it's an unstashed Request, demand is already handled
+                    base.AroundReceive(receive, req);
                 }
                 else
                 {
-                    _demand += req.Count;
-                    if (_demand < 0) _demand = long.MaxValue; // long overflow: effectively unbounded
-                    base.AroundReceive(receive, message);
+                    if (req.Count < 1)
+                    {
+                        if (_lifecycleState == LifecycleState.Active)
+                            OnError(new ArgumentException("Number of requested elements must be positive. Rule 3.9"));
+                    }
+                    else
+                    {
+                        _demand += req.Count;
+                        if (_demand < 0)
+                            _demand = long.MaxValue; // long overflow: effectively unbounded
+                        req.MarkProcessed();
+                        base.AroundReceive(receive, message);
+                    }
                 }
             }
             else if (message is Subscribe<T>)
@@ -436,8 +456,12 @@ namespace Akka.Streams.Actors
             }
             else if (message is Cancel)
             {
-                CancelSelf();
-                base.AroundReceive(receive, message);
+                if (_lifecycleState != LifecycleState.Canceled)
+                {
+                    // possible to receive again in case of stash
+                    CancelSelf();
+                    base.AroundReceive(receive, message);
+                }
             }
             else if (message is SubscriptionTimeoutExceeded)
             {

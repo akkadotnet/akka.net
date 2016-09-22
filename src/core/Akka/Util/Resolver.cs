@@ -40,9 +40,14 @@ namespace Akka.Util
             Arguments = args;
         }
 
+        /// <summary></summary>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is thrown if the current <see cref="Resolve.Resolver"/> is undefined.
+        /// </exception>
         public override ActorBase Produce()
         {
-            if (Resolver == null) {
+            if (Resolver == null)
+            {
                 throw new InvalidOperationException("Resolver is not initialized");
             }
             return Resolver.Resolve<TActor>(Arguments);
@@ -52,4 +57,3 @@ namespace Akka.Util
         public object[] Arguments { get; private set; }
     }
 }
-

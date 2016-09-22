@@ -156,7 +156,7 @@ namespace Akka.MultiNodeTestRunner
                                     } -Dmultinode.listen-address={listenAddress} -Dmultinode.listen-port={listenPort}";
                             var nodeIndex = nodeTest.Node;
                             //TODO: might need to do some validation here to avoid the 260 character max path error on Windows
-                            var folder = Directory.CreateDirectory(Path.Combine(OutputDirectory, nodeTest.MethodName));
+                            var folder = Directory.CreateDirectory(Path.Combine(OutputDirectory, nodeTest.TestName));
                             var logFilePath = Path.Combine(folder.FullName, "node" + nodeIndex + ".txt");
                             var fileActor =
                                 TestRunSystem.ActorOf(Props.Create(() => new FileSystemAppenderActor(logFilePath)));

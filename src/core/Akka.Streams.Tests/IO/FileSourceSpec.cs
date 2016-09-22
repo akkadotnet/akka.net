@@ -17,6 +17,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -25,7 +26,7 @@ namespace Akka.Streams.Tests.IO
 {
     public class FileSourceSpec : AkkaSpec
     {
-        private readonly string _testText = "";
+        private readonly string _testText;
         private readonly ActorMaterializer _materializer;
         private readonly FileInfo _testFilePath = new FileInfo(Path.Combine(Path.GetTempPath(), "file-source-spec.tmp"));
         private FileInfo _manyLinesPath;
@@ -56,7 +57,7 @@ namespace Akka.Streams.Tests.IO
                     .WithAttributes(bufferAttributes)
                     .RunWith(Sink.AsPublisher<ByteString>(false), _materializer);
 
-                var c = this.CreateManualProbe<ByteString>();
+                var c = this.CreateManualSubscriberProbe<ByteString>();
                 p.Subscribe(c);
                 var sub = c.ExpectSubscription();
 
@@ -111,7 +112,7 @@ namespace Akka.Streams.Tests.IO
                     .WithAttributes(bufferAttributes)
                     .RunWith(Sink.AsPublisher<ByteString>(false), _materializer);
 
-                var c = this.CreateManualProbe<ByteString>();
+                var c = this.CreateManualSubscriberProbe<ByteString>();
                 p.Subscribe(c);
                 var sub = c.ExpectSubscription();
 
@@ -155,7 +156,7 @@ namespace Akka.Streams.Tests.IO
             this.AssertAllStagesStopped(() =>
             {
                 var p = FileIO.FromFile(NotExistingFile()).RunWith(Sink.AsPublisher<ByteString>(false), _materializer);
-                var c = this.CreateManualProbe<ByteString>();
+                var c = this.CreateManualSubscriberProbe<ByteString>();
                 p.Subscribe(c);
 
                 c.ExpectSubscription();
@@ -241,6 +242,15 @@ namespace Akka.Streams.Tests.IO
             }
         }
 
+        [Fact]
+        public void FileSource_should_not_signal_OnComplete_more_than_once()
+        {
+            FileIO.FromFile(TestFile(), 2*_testText.Length)
+                .RunWith(this.SinkProbe<ByteString>(), _materializer)
+                .RequestNext(ByteString.FromString(_testText))
+                .ExpectComplete()
+                .ExpectNoMsg(TimeSpan.FromSeconds(1));
+        }
 
         private int LinesCount { get; } = 2000 + new Random().Next(300);
 

@@ -25,7 +25,7 @@ namespace Akka.Streams.Tests.Dsl
 
         protected override TestSubscriber.Probe<int> Setup(IPublisher<int> p1, IPublisher<int> p2)
         {
-            var subscriber = TestSubscriber.CreateProbe<int>(this);
+            var subscriber = this.CreateSubscriberProbe<int>();
             Source.FromPublisher(p1)
                 .ZipWith(Source.FromPublisher(p2), (i, i1) => i + i1)
                 .RunWith(Sink.FromSubscriber(subscriber), Materializer);
@@ -35,7 +35,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_ZipWith_for_Flow_must_work_in_the_happy_case()
         {
-            var probe = TestSubscriber.CreateManualProbe<int>(this);
+            var probe = this.CreateManualSubscriberProbe<int>();
             Source.From(Enumerable.Range(1, 4))
                 .ZipWith(Source.From(new[] {10, 20, 30, 40}.AsEnumerable()), (i, i1) => i + i1)
                 .RunWith(Sink.FromSubscriber(probe), Materializer);
@@ -57,7 +57,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_ZipWith_for_Flow_must_work_in_the_sad_case()
         {
-            var probe = TestSubscriber.CreateManualProbe<int>(this);
+            var probe = this.CreateManualSubscriberProbe<int>();
             Source.From(Enumerable.Range(1, 4))
                 .ZipWith(Source.From(Enumerable.Range(-2, 4)), (i, i1) => i/i1)
                 .RunWith(Sink.FromSubscriber(probe), Materializer);

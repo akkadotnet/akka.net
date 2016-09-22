@@ -1,5 +1,6 @@
 ﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding.Tests.MultiNode")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests.MultiNode")]
@@ -13,6 +14,7 @@ namespace Akka.Cluster
     public class Cluster : Akka.Actor.IExtension
     {
         public Cluster(Akka.Actor.Internal.ActorSystemImpl system) { }
+        public Akka.Cluster.IDowningProvider DowningProvider { get; }
         public Akka.Remote.DefaultFailureDetectorRegistry<Akka.Actor.Address> FailureDetector { get; }
         public bool IsTerminated { get; }
         public Akka.Actor.Address SelfAddress { get; }
@@ -149,6 +151,8 @@ namespace Akka.Cluster
     {
         public ClusterSettings(Akka.Configuration.Config config, string systemName) { }
         public System.Nullable<System.TimeSpan> AutoDownUnreachableAfter { get; }
+        public System.Type DowningProviderType { get; }
+        [System.ObsoleteAttribute("Use Cluster.DowningProvider.DownRemovalMargin")]
         public System.TimeSpan DownRemovalMargin { get; }
         public Akka.Configuration.Config FailureDetectorConfig { get; }
         public string FailureDetectorImplementationClass { get; }
@@ -176,6 +180,11 @@ namespace Akka.Cluster
         public bool VerboseHeartbeatLogging { get; }
     }
     public interface IClusterMessage { }
+    public interface IDowningProvider
+    {
+        Akka.Actor.Props DowningActorProps { get; }
+        System.TimeSpan DownRemovalMargin { get; }
+    }
     public class Member : System.IComparable<Akka.Cluster.Member>
     {
         public Akka.Actor.Address Address { get; }
@@ -201,6 +210,12 @@ namespace Akka.Cluster
         Exiting = 3,
         Down = 4,
         Removed = 5,
+    }
+    public sealed class NoDowning : Akka.Cluster.IDowningProvider
+    {
+        public NoDowning(Akka.Actor.ActorSystem system) { }
+        public Akka.Actor.Props DowningActorProps { get; }
+        public System.TimeSpan DownRemovalMargin { get; }
     }
     public class UniqueAddress : System.IComparable<Akka.Cluster.UniqueAddress>
     {

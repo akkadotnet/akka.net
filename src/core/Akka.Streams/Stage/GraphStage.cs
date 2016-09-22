@@ -231,7 +231,7 @@ namespace Akka.Streams.Stage
     internal static class TimerMessages
     {
         [Serializable]
-        public sealed class Scheduled
+        public sealed class Scheduled : IDeadLetterSuppression
         {
             public readonly object TimerKey;
             public readonly int TimerId;
@@ -283,36 +283,36 @@ namespace Akka.Streams.Stage
             private int _n;
             public readonly IInHandler Previous;
             private readonly Action<T> _andThen;
-            private readonly Action _onClose;
+            private readonly Action _onComplete;
             private readonly GraphStageLogic _logic;
 
-            public Reading(Inlet<T> inlet, int n, IInHandler previous, Action<T> andThen, Action onClose, GraphStageLogic logic)
+            public Reading(Inlet<T> inlet, int n, IInHandler previous, Action<T> andThen, Action onComplete, GraphStageLogic logic)
             {
                 _inlet = inlet;
                 _n = n;
                 Previous = previous;
                 _andThen = andThen;
-                _onClose = onClose;
+                _onComplete = onComplete;
                 _logic = logic;
             }
 
             public override void OnPush()
             {
-                var element = _logic.Grab<T>(_inlet);
-                if (_n == 1)
-                    _logic.SetHandler(_inlet, Previous);
-                else
-                {
-                    _n--;
+                var element = _logic.Grab(_inlet);
+                _n--;
+
+                if(_n > 0)
                     _logic.Pull(_inlet);
-                }
+                else
+                    _logic.SetHandler(_inlet, Previous);
+
                 _andThen(element);
             }
 
             public override void OnUpstreamFinish()
             {
                 _logic.SetHandler(_inlet, Previous);
-                _onClose();
+                _onComplete();
                 Previous.OnUpstreamFinish();
             }
 
@@ -452,9 +452,9 @@ namespace Akka.Streams.Stage
             private readonly bool _doFinish;
             private readonly bool _doFail;
 
-            public PassAlongHandler(Inlet<TIn> @from, Outlet<TOut> to, GraphStageLogic logic, bool doFinish, bool doFail)
+            public PassAlongHandler(Inlet<TIn> from, Outlet<TOut> to, GraphStageLogic logic, bool doFinish, bool doFail)
             {
-                From = @from;
+                From = from;
                 To = to;
                 _logic = logic;
                 _doFinish = doFinish;
@@ -701,7 +701,7 @@ namespace Akka.Streams.Stage
         /// There can only be one outstanding request at any given time.The method <see cref="HasBeenPulled"/> can be used
         /// query whether pull is allowed to be called or not.This method will also fail if the port is already closed.
         /// </summary>
-        protected internal void Pull<T>(Inlet inlet)
+        protected internal void Pull(Inlet inlet)
         {
             var conn = GetConnection(inlet);
             if ((Interpreter.PortStates[conn] & (GraphInterpreter.InReady | GraphInterpreter.InClosed)) == GraphInterpreter.InReady)
@@ -721,7 +721,7 @@ namespace Akka.Streams.Stage
         /// There can only be one outstanding request at any given time.The method <see cref="HasBeenPulled"/> can be used
         /// query whether pull is allowed to be called or not.This method will also fail if the port is already closed.
         /// </summary>
-        protected internal void Pull<T>(Inlet<T> inlet) => Pull<T>((Inlet)inlet);
+        protected internal void Pull<T>(Inlet<T> inlet) => Pull((Inlet)inlet);
 
         /// <summary>
         /// Requests an element on the given port unless the port is already closed.
@@ -729,10 +729,10 @@ namespace Akka.Streams.Stage
         /// There can only be one outstanding request at any given time.The method <see cref="HasBeenPulled"/> can be used
         /// query whether pull is allowed to be called or not.
         /// </summary>
-        protected internal void TryPull<T>(Inlet inlet)
+        protected internal void TryPull(Inlet inlet)
         {
             if (!IsClosed(inlet))
-                Pull<T>(inlet);
+                Pull(inlet);
         }
 
         /// <summary>
@@ -741,7 +741,7 @@ namespace Akka.Streams.Stage
         /// There can only be one outstanding request at any given time.The method <see cref="HasBeenPulled"/> can be used
         /// query whether pull is allowed to be called or not.
         /// </summary>
-        protected internal void TryPull<T>(Inlet<T> inlet) => TryPull<T>((Inlet)inlet);
+        protected internal void TryPull<T>(Inlet<T> inlet) => TryPull((Inlet)inlet);
 
         /// <summary>
         /// Requests to stop receiving events from a given input port. Cancelling clears any ungrabbed elements from the port.
@@ -931,9 +931,12 @@ namespace Akka.Streams.Stage
         /// Read a number of elements from the given inlet and continue with the given function,
         /// suspending execution if necessary. This action replaces the <see cref="InHandler"/>
         /// for the given inlet if suspension is needed and reinstalls the current
-        /// handler upon receiving the last <see cref="InHandler.OnPush"/> signal (before invoking the <paramref name="andThen"/> function).
+        /// handler upon receiving the last <see cref="InHandler.OnPush"/> signal.
+        /// 
+        /// If upstream closes before N elements have been read,
+        /// the <paramref name="onComplete"/> function is invoked with the elements which were read.
         /// </summary>
-        protected void ReadMany<T>(Inlet<T> inlet, int n, Action<IEnumerable<T>> andThen, Action<IEnumerable<T>> onClose)
+        protected void ReadMany<T>(Inlet<T> inlet, int n, Action<IEnumerable<T>> andThen, Action<IEnumerable<T>> onComplete)
         {
             if (n < 0)
                 throw new ArgumentException("Cannot read negative number of elements");
@@ -944,36 +947,29 @@ namespace Akka.Streams.Stage
                 var result = new T[n];
                 var pos = 0;
 
-                Action<T> realAndThen = elem =>
-                {
-                    result[pos] = elem;
-                    pos++;
-                    if (pos == n)
-                        andThen(result);
-                };
-                Action realOnClose = () => onClose(result.Take(pos));
-
                 if (IsAvailable(inlet))
                 {
-                    var element = Grab<T>(inlet);
-                    result[0] = element;
-                    if (n == 1)
-                        andThen(result);
-                    else
-                    {
-                        pos = 1;
-                        RequireNotReading(inlet);
-                        Pull(inlet);
-                        SetHandler(inlet, new Reading<T>(inlet, n - 1, GetHandler(inlet), realAndThen, realOnClose, this));
-                    }
+                    //If we already have data available, then shortcircuit and read the first
+                    result[pos] = Grab(inlet);
+                    pos++;
                 }
-                else
+
+                if (n != pos)
                 {
+                    // If we aren't already done
                     RequireNotReading(inlet);
                     if (!HasBeenPulled(inlet))
                         Pull(inlet);
-                    SetHandler(inlet, new Reading<T>(inlet, n, GetHandler(inlet), realAndThen, realOnClose, this));
+                    SetHandler(inlet, new Reading<T>(inlet, n - pos, GetHandler(inlet), element =>
+                    {
+                        result[pos] = element;
+                        pos++;
+                        if (pos == n)
+                            andThen(result);
+                    }, () => onComplete(result.Take(pos)), this));
                 }
+                else
+                    andThen(result);
             }
         }
 
@@ -1025,7 +1021,7 @@ namespace Akka.Streams.Stage
         /// signal (before invoking the <paramref name="andThen"/> function).
         /// </summary>
         protected internal void EmitMultiple<T>(Outlet<T> outlet, IEnumerable<T> elements, Action andThen)
-            => EmitMultiple<T>(outlet, elements.GetEnumerator(), andThen);
+            => EmitMultiple(outlet, elements.GetEnumerator(), andThen);
 
         /// <summary>
         /// Emit a sequence of elements through the given outlet, suspending execution if necessary.
@@ -1034,7 +1030,7 @@ namespace Akka.Streams.Stage
         /// signal.
         /// </summary>
         protected internal void EmitMultiple<T>(Outlet<T> outlet, IEnumerable<T> elements)
-            => EmitMultiple<T>(outlet, elements, DoNothing);
+            => EmitMultiple(outlet, elements, DoNothing);
 
         /// <summary>
         /// Emit a sequence of elements through the given outlet and continue with the given thunk
@@ -1073,7 +1069,7 @@ namespace Akka.Streams.Stage
         /// </summary>
         protected internal void EmitMultiple<T>(Outlet<T> outlet, IEnumerator<T> enumerator)
         {
-            EmitMultiple<T>(outlet, enumerator, DoNothing);
+            EmitMultiple(outlet, enumerator, DoNothing);
         }
 
         /// <summary>
@@ -1141,7 +1137,7 @@ namespace Akka.Streams.Stage
                     CompleteStage();
             }
 
-            SetHandler(@from, passHandler);
+            SetHandler(from, passHandler);
             if (doPull)
                 TryPull(from);
         }
@@ -1192,7 +1188,7 @@ namespace Akka.Streams.Stage
             {
                 var actorMaterializer = ActorMaterializer.Downcast(Interpreter.Materializer);
                 var provider = ((IInternalActorRef)actorMaterializer.Supervisor).Provider;
-                var path = actorMaterializer.Supervisor.Path / Stage.StageActorRef.Name.Next();
+                var path = actorMaterializer.Supervisor.Path / StageActorRef.Name.Next();
                 _stageActorRef = new StageActorRef(provider, actorMaterializer.Logger, r => GetAsyncCallback<Tuple<IActorRef, object>>(tuple => r(tuple)), receive, path);
             }
             else
@@ -1698,10 +1694,7 @@ namespace Akka.Streams.Stage
         {
             var death = message as DeathWatchNotification;
             if (death != null)
-            {
                 Tell(new Terminated(death.Actor, true, false), ActorRefs.NoSender);
-                return;
-            }
             else if (message is Watch)
             {
                 var w = (Watch) message;

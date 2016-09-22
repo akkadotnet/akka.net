@@ -289,7 +289,7 @@ namespace Akka.Streams
 
             public override bool Equals(object obj) => obj is Dispatcher && Equals((Dispatcher) obj);
 
-            public override int GetHashCode() => (Name != null ? Name.GetHashCode() : 0);
+            public override int GetHashCode() => Name?.GetHashCode() ?? 0;
 
             public override string ToString() => $"Dispatcher({Name})";
         }

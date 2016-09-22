@@ -16,6 +16,7 @@ using Akka.Pattern;
 using Akka.Routing;
 using Akka.Util;
 using Akka.Util.Internal;
+using Group = Akka.Cluster.Tools.PublishSubscribe.Internal.Group;
 using Status = Akka.Cluster.Tools.PublishSubscribe.Internal.Status;
 
 namespace Akka.Cluster.Tools.PublishSubscribe
@@ -111,6 +112,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         private readonly ICancelable _gossipCancelable;
         private readonly ICancelable _pruneCancelable;
         private readonly TimeSpan _pruneInterval;
+        private readonly PerGroupingBuffer _buffer;
 
         private ISet<Address> _nodes = new HashSet<Address>();
         private long deltaCount = 0L;
@@ -143,6 +145,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             _gossipCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_settings.GossipInterval, _settings.GossipInterval, Self, GossipTick.Instance, Self);
             _pruneInterval = new TimeSpan(_settings.RemovedTimeToLive.Ticks / 2);
             _pruneCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_pruneInterval, _pruneInterval, Self, Prune.Instance, Self);
+            _buffer = new PerGroupingBuffer();
 
             Receive<Send>(send =>
             {
@@ -183,12 +186,11 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             });
             Receive<Publish>(publish =>
             {
-                var topic = Uri.EscapeDataString(publish.Topic);
-                var path = Self.Path / topic;
+                string path = Internal.Utils.MakeKey(Self.Path / Internal.Utils.EncodeName(publish.Topic));
                 if (publish.SendOneMessageToEachGroup)
-                    PublishToEachGroup(path.ToStringWithoutAddress(), publish.Message);
+                    PublishToEachGroup(path, publish.Message);
                 else
-                    PublishMessage(path.ToStringWithoutAddress(), publish.Message);
+                    PublishMessage(path, publish.Message);
             });
             Receive<Put>(put =>
             {
@@ -198,7 +200,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 }
                 else
                 {
-                    PutToRegistry(put.Ref.Path.ToStringWithoutAddress(), put.Ref);
+                    PutToRegistry(Internal.Utils.MakeKey(put.Ref), put.Ref);
                     Context.Watch(put.Ref);
                 }
             });
@@ -218,23 +220,35 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Receive<Subscribe>(subscribe =>
             {
                 // each topic is managed by a child actor with the same name as the topic
-                var topic = Uri.EscapeDataString(subscribe.Topic);
-                var child = Context.Child(topic);
-                if (!ActorRefs.Nobody.Equals(child))
+                var encodedTopic = Internal.Utils.EncodeName(subscribe.Topic);
+
+                _buffer.BufferOr(Internal.Utils.MakeKey(Self.Path / encodedTopic), subscribe, Sender, () =>
                 {
-                    child.Forward(subscribe);
-                }
-                else
-                {
-                    var t = Context.ActorOf(Actor.Props.Create(() =>
-                        new Topic(_settings.RemovedTimeToLive, _settings.RoutingLogic)), topic);
-                    t.Forward(subscribe);
-                    HandleRegisterTopic(t);
-                }
+                    var child = Context.Child(encodedTopic);
+                    if (!child.IsNobody())
+                    {
+                        child.Forward(subscribe);
+                    }
+                    else
+                    {
+                        NewTopicActor(encodedTopic).Forward(subscribe);
+                    }
+                });
             });
             Receive<RegisterTopic>(register =>
             {
                 HandleRegisterTopic(register.TopicRef);
+            });
+            Receive<NoMoreSubscribers>(msg =>
+            {
+                var key = Internal.Utils.MakeKey(Sender);
+                _buffer.InitializeGrouping(key);
+                Sender.Tell(TerminateRequest.Instance);
+            });
+            Receive<NewSubscriberArrived>(msg =>
+            {
+                var key = Internal.Utils.MakeKey(Sender);
+                _buffer.ForwardMessages(key, Sender);
             });
             Receive<GetTopics>(getTopics =>
             {
@@ -246,10 +260,20 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             });
             Receive<Unsubscribe>(unsubscribe =>
             {
-                var topic = Uri.EscapeDataString(unsubscribe.Topic);
-                var child = Context.Child(topic);
-                if (!ActorRefs.Nobody.Equals(child))
-                    child.Forward(unsubscribe);
+                var encodedTopic = Internal.Utils.EncodeName(unsubscribe.Topic);
+
+                _buffer.BufferOr(Internal.Utils.MakeKey(Self.Path / encodedTopic), unsubscribe, Sender, () =>
+                {
+                    var child = Context.Child(encodedTopic);
+                    if (!child.IsNobody())
+                    {
+                        child.Forward(unsubscribe);
+                    }
+                    else
+                    {
+                        // no such topic here
+                    }
+                });
             });
             Receive<Unsubscribed>(unsubscribed =>
             {
@@ -300,7 +324,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Receive<Prune>(_ => HandlePrune());
             Receive<Terminated>(terminated =>
             {
-                var key = terminated.ActorRef.Path.ToStringWithoutAddress();
+                var key = Internal.Utils.MakeKey(terminated.ActorRef);
 
                 Bucket bucket;
                 if (_registry.TryGetValue(_cluster.SelfAddress, out bucket))
@@ -311,6 +335,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                         PutToRegistry(key, null); // remove
                     }
                 }
+                _buffer.RecreateAndForwardMessagesIfNeeded(key, () => NewTopicActor(terminated.ActorRef.Path.Name));
             });
             Receive<ClusterEvent.CurrentClusterState>(state =>
             {
@@ -438,7 +463,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
         private void HandleRegisterTopic(IActorRef actorRef)
         {
-            PutToRegistry(actorRef.Path.ToStringWithoutAddress(), actorRef);
+            PutToRegistry(Internal.Utils.MakeKey(actorRef), actorRef);
             Context.Watch(actorRef);
         }
 
@@ -521,6 +546,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
         private void HandlePrune()
         {
+            var modifications = new Dictionary<Address, Bucket>();
             foreach (var entry in _registry)
             {
                 var owner = entry.Key;
@@ -532,8 +558,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
                 if (oldRemoved.Any())
                 {
-                    _registry.Add(owner, new Bucket(bucket.Owner, bucket.Version, bucket.Content.RemoveRange(oldRemoved)));
+                    modifications.Add(owner, new Bucket(bucket.Owner, bucket.Version, bucket.Content.RemoveRange(oldRemoved)));
                 }
+            }
+
+            foreach (var entry in modifications)
+            {
+                _registry[entry.Key] = entry.Value;
             }
         }
 
@@ -560,7 +591,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         {
             base.PreStart();
             if (_cluster.IsTerminated) throw new IllegalStateException("Cluster node must not be terminated");
-            _cluster.Subscribe(Self, new[] { typeof(ClusterEvent.IMemberEvent) });
+            _cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent));
         }
 
         protected override void PostStop()
@@ -580,9 +611,16 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         private long _version = 0L;
         private long NextVersion()
         {
-            var current = DateTime.UtcNow.TimeOfDay.Ticks;
+            var current = DateTime.UtcNow.Ticks / 10000;
             _version = current > _version ? current : _version + 1;
             return _version;
+        }
+
+        private IActorRef NewTopicActor(string encodedTopic)
+        {
+            var t = Context.ActorOf(Actor.Props.Create(() => new Topic(_settings.RemovedTimeToLive, _settings.RoutingLogic)), encodedTopic);
+            HandleRegisterTopic(t);
+            return t;
         }
     }
 }

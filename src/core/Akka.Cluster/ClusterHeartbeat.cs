@@ -214,7 +214,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Sent at regular intervals for failure detection
         /// </summary>
-        internal sealed class Heartbeat : IClusterMessage, IPriorityMessage
+        internal sealed class Heartbeat : IClusterMessage, IPriorityMessage, IDeadLetterSuppression
         {
             public Heartbeat(Address from)
             {
@@ -241,7 +241,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Sends replies to <see cref="Heartbeat"/> messages
         /// </summary>
-        internal sealed class HeartbeatRsp : IClusterMessage, IPriorityMessage
+        internal sealed class HeartbeatRsp : IClusterMessage, IPriorityMessage, IDeadLetterSuppression
         {
             public HeartbeatRsp(UniqueAddress from)
             {

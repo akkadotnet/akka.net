@@ -44,9 +44,12 @@ namespace Akka.Streams.Implementation
                 _flowName = _materializer.CreateFlowName();
             }
 
-            protected override object MaterializeAtomic(IModule atomic, Attributes effectiveAttributes,
+            protected override object MaterializeAtomic(AtomicModule atomic, Attributes effectiveAttributes,
                 IDictionary<IModule, object> materializedValues)
             {
+                if(IsDebug)
+                    Console.WriteLine($"materializing {atomic}");
+
                 if (atomic is ISinkModule)
                 {
                     var sink = (ISinkModule) atomic;
@@ -324,7 +327,7 @@ namespace Akka.Streams.Implementation
     {
         #region Messages
         
-        public sealed class Materialize : INoSerializationVerificationNeeded
+        public sealed class Materialize : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             public readonly Props Props;
             public readonly string Name;

@@ -38,6 +38,11 @@ namespace Akka.Streams.Implementation
             throw new NotImplementedException();
         }
 
+        public override IFlow<TOut, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> mapFunc)
+        {
+            throw new NotImplementedException();
+        }
+
         public override TMat2 RunWith<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink, IMaterializer materializer)
         {
             throw new NotImplementedException();
